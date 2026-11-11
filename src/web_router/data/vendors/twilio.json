@@ -1,0 +1,489 @@
+{
+  "vendor": "twilio",
+  "name": "Twilio",
+  "category": "messaging",
+  "summary": "Twilio SMS and voice: send and read messages, list and place calls, phone numbers, usage records, balance and phone number lookup.",
+  "docs_url": "https://www.twilio.com/docs/usage/api",
+  "pricing_url": "https://www.twilio.com/en-us/pricing",
+  "base_url": "https://api.twilio.com/2010-04-01",
+  "hosts": {
+    "lookups": "https://lookups.twilio.com"
+  },
+  "auth": {
+    "credentials": {
+      "account_sid": {
+        "env": [
+          "TWILIO_ACCOUNT_SID"
+        ],
+        "description": "Your Twilio Account SID (AC...), from the Console home page."
+      },
+      "auth_token": {
+        "env": [
+          "TWILIO_AUTH_TOKEN"
+        ],
+        "description": "The account's Auth Token, from the Console home page."
+      }
+    },
+    "basic": {
+      "username": "{account_sid}",
+      "password": "{auth_token}"
+    }
+  },
+  "notes": [
+    "Account-scoped paths take the Account SID as AccountSid: pass the same AC... value the credentials use.",
+    "Paths end in .json; leave it off and the API answers XML.",
+    "Writes are form-encoded with PascalCase fields (To, From, Body).",
+    "Lists page by PageSize (max 1000) and PageToken; follow next_page_uri from the answer rather than building the token.",
+    "Dates in list filters are GMT YYYY-MM-DD; DateSent< and DateSent> give a range."
+  ],
+  "sources": [
+    "https://www.twilio.com/docs/messaging/api/message-resource",
+    "https://www.twilio.com/docs/voice/api/call-resource",
+    "https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource",
+    "https://www.twilio.com/docs/usage/api/usage-record",
+    "https://www.twilio.com/docs/lookup/v2-api",
+    "https://github.com/twilio/twilio-oai"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "twilio.messages.list",
+      "name": "List messages",
+      "summary": "SMS/MMS/WhatsApp messages sent and received, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Accounts/{AccountSid}/Messages.json",
+      "params": {
+        "AccountSid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
+        },
+        "To": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages to this number, E.164."
+        },
+        "From": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages from this number."
+        },
+        "DateSent": {
+          "in": "query",
+          "type": "string",
+          "description": "Sent on this GMT date, YYYY-MM-DD."
+        },
+        "DateSent_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Sent on or before this date.",
+          "wire_name": "DateSent<"
+        },
+        "DateSent_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Sent on or after this date.",
+          "wire_name": "DateSent>"
+        },
+        "PageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 1000, default 50."
+        },
+        "PageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Page token from next_page_uri."
+        },
+        "Page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page index, sent with PageToken."
+        }
+      },
+      "job": "messaging.messages.list",
+      "docs_url": "https://www.twilio.com/docs/messaging/api/message-resource",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/messaging/api/message-resource"
+      }
+    },
+    {
+      "id": "twilio.messages.get",
+      "name": "Get a message",
+      "summary": "One message with status, error code, price and segments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Accounts/{AccountSid}/Messages/{Sid}.json",
+      "params": {
+        "AccountSid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
+        },
+        "Sid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Message SID (SM... or MM...)."
+        }
+      },
+      "docs_url": "https://www.twilio.com/docs/messaging/api/message-resource",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/messaging/api/message-resource"
+      }
+    },
+    {
+      "id": "twilio.calls.list",
+      "name": "List calls",
+      "summary": "Calls to and from the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Accounts/{AccountSid}/Calls.json",
+      "params": {
+        "AccountSid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
+        },
+        "To": {
+          "in": "query",
+          "type": "string",
+          "description": "Only calls to this number."
+        },
+        "From": {
+          "in": "query",
+          "type": "string",
+          "description": "Only calls from this number."
+        },
+        "Status": {
+          "in": "query",
+          "type": "string",
+          "description": "Call status.",
+          "enum": [
+            "queued",
+            "ringing",
+            "in-progress",
+            "completed",
+            "busy",
+            "failed",
+            "no-answer",
+            "canceled"
+          ]
+        },
+        "StartTime_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Started on or after this UTC date, YYYY-MM-DD.",
+          "wire_name": "StartTime>"
+        },
+        "StartTime_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Started before this UTC date.",
+          "wire_name": "StartTime<"
+        },
+        "PageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 1000, default 50."
+        },
+        "PageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Page token from next_page_uri."
+        },
+        "Page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page index, sent with PageToken."
+        }
+      },
+      "docs_url": "https://www.twilio.com/docs/voice/api/call-resource",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/voice/api/call-resource"
+      }
+    },
+    {
+      "id": "twilio.phone_numbers.list",
+      "name": "List your phone numbers",
+      "summary": "Twilio numbers on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Accounts/{AccountSid}/IncomingPhoneNumbers.json",
+      "params": {
+        "AccountSid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
+        },
+        "PhoneNumber": {
+          "in": "query",
+          "type": "string",
+          "description": "Number or pattern; * matches any digit."
+        },
+        "FriendlyName": {
+          "in": "query",
+          "type": "string",
+          "description": "Friendly name."
+        },
+        "PageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 1000, default 50."
+        },
+        "PageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Page token from next_page_uri."
+        },
+        "Page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page index, sent with PageToken."
+        }
+      },
+      "docs_url": "https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/phone-numbers/api/incomingphonenumber-resource"
+      }
+    },
+    {
+      "id": "twilio.usage.records",
+      "name": "List usage records",
+      "summary": "Usage and cost by category over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Accounts/{AccountSid}/Usage/Records.json",
+      "params": {
+        "AccountSid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
+        },
+        "Category": {
+          "in": "query",
+          "type": "string",
+          "description": "Usage category, e.g. sms or calls."
+        },
+        "StartDate": {
+          "in": "query",
+          "type": "string",
+          "description": "GMT YYYY-MM-DD, or an offset like -30days."
+        },
+        "EndDate": {
+          "in": "query",
+          "type": "string",
+          "description": "GMT YYYY-MM-DD, or an offset like +30days."
+        },
+        "IncludeSubaccounts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include subaccounts' usage; default true."
+        },
+        "PageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 1000, default 50."
+        },
+        "PageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Page token from next_page_uri."
+        },
+        "Page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page index, sent with PageToken."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://www.twilio.com/docs/usage/api/usage-record",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/usage/api/usage-record"
+      }
+    },
+    {
+      "id": "twilio.balance.get",
+      "name": "Get account balance",
+      "summary": "The account's current balance and currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Accounts/{AccountSid}/Balance.json",
+      "params": {
+        "AccountSid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
+        }
+      },
+      "notes": [
+        "May lag recent charges; subaccounts carry no balance."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://github.com/twilio/twilio-oai",
+      "verified": {
+        "docs": "https://github.com/twilio/twilio-oai"
+      }
+    },
+    {
+      "id": "twilio.lookup",
+      "name": "Look up a phone number",
+      "summary": "Validity and formatting of a number, plus optional paid data such as line type or caller name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/PhoneNumbers/{PhoneNumber}",
+      "params": {
+        "PhoneNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "E.164 or national format (default country +1).",
+          "example": "+14155552671"
+        },
+        "Fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated data packages: line_type_intelligence, caller_name, sim_swap, call_forwarding, line_status, reassigned_number, sms_pumping_risk..."
+        },
+        "CountryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-2 country for a national-format number."
+        }
+      },
+      "host": "lookups",
+      "notes": [
+        "The basic lookup with no Fields is free; every data package in Fields is billed."
+      ],
+      "job": "phone.verify",
+      "docs_url": "https://www.twilio.com/docs/lookup/v2-api",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/lookup/v2-api"
+      }
+    },
+    {
+      "id": "twilio.messages.send",
+      "name": "Send a message",
+      "summary": "Send an SMS, MMS or WhatsApp message.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/Accounts/{AccountSid}/Messages.json",
+      "params": {
+        "AccountSid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
+        },
+        "To": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Recipient, E.164, or a channel address like whatsapp:+15552229999."
+        },
+        "From": {
+          "in": "body",
+          "type": "string",
+          "description": "Your Twilio number or sender id; or send MessagingServiceSid instead."
+        },
+        "MessagingServiceSid": {
+          "in": "body",
+          "type": "string",
+          "description": "Messaging Service to send from."
+        },
+        "Body": {
+          "in": "body",
+          "type": "string",
+          "description": "Text, up to 1600 characters."
+        },
+        "MediaUrl": {
+          "in": "body",
+          "type": "array",
+          "description": "Media URLs for MMS."
+        },
+        "StatusCallback": {
+          "in": "body",
+          "type": "string",
+          "description": "URL for delivery status callbacks."
+        }
+      },
+      "body_type": "form",
+      "notes": [
+        "Sends a real, billed message. Body or MediaUrl (or ContentSid) is needed."
+      ],
+      "job": "messaging.message.send",
+      "docs_url": "https://www.twilio.com/docs/messaging/api/message-resource",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/messaging/api/message-resource"
+      }
+    },
+    {
+      "id": "twilio.calls.create",
+      "name": "Place a call",
+      "summary": "Dial a number and run TwiML when it answers.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/Accounts/{AccountSid}/Calls.json",
+      "params": {
+        "AccountSid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Your Account SID (AC...), the same value as TWILIO_ACCOUNT_SID."
+        },
+        "To": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Number, SIP address or client to call."
+        },
+        "From": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Caller id: a Twilio number or verified caller id."
+        },
+        "Url": {
+          "in": "body",
+          "type": "string",
+          "description": "URL returning TwiML for the call."
+        },
+        "Twiml": {
+          "in": "body",
+          "type": "string",
+          "description": "TwiML instructions inline, max 4000 characters; wins over Url."
+        },
+        "Timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seconds to ring, default 60, max 600."
+        },
+        "Record": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Record the call."
+        },
+        "StatusCallback": {
+          "in": "body",
+          "type": "string",
+          "description": "URL for call status callbacks."
+        }
+      },
+      "body_type": "form",
+      "notes": [
+        "Places a real, billed call. One of Url, Twiml or ApplicationSid tells Twilio what to do."
+      ],
+      "docs_url": "https://www.twilio.com/docs/voice/api/call-resource",
+      "verified": {
+        "docs": "https://www.twilio.com/docs/voice/api/call-resource"
+      }
+    }
+  ]
+}

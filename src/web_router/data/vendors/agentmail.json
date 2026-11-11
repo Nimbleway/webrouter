@@ -1,0 +1,514 @@
+{
+  "vendor": "agentmail",
+  "name": "AgentMail",
+  "category": "messaging",
+  "summary": "Email inboxes for AI agents: create inboxes, read messages and threads, send and reply.",
+  "docs_url": "https://docs.agentmail.to/",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "AGENTMAIL_API_HOST"
+      ],
+      "default": "api.agentmail.to",
+      "choices": [
+        "api.agentmail.to",
+        "api.agentmail.eu"
+      ],
+      "description": "API host: api.agentmail.to (default) or api.agentmail.eu for the EU region."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AGENTMAIL_API_KEY"
+        ],
+        "description": "An AgentMail API key from the AgentMail console. Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every path is under /v0 and scoped to an inbox: messages and threads need the inbox_id returned by the inbox list.",
+    "Lists page by token: pass next_page_token from a response back as page_token.",
+    "Free plan: 3 inboxes and 100 emails a day. A 429 carries Retry-After."
+  ],
+  "sources": [
+    "https://docs.agentmail.to/quickstart",
+    "https://docs.agentmail.to/api-reference/inboxes/list.md",
+    "https://docs.agentmail.to/api-reference/inboxes/create.md",
+    "https://docs.agentmail.to/api-reference/inboxes/messages/list.md",
+    "https://docs.agentmail.to/api-reference/inboxes/messages/get.md",
+    "https://docs.agentmail.to/api-reference/inboxes/messages/send.md",
+    "https://docs.agentmail.to/api-reference/inboxes/messages/reply.md",
+    "https://docs.agentmail.to/api-reference/inboxes/threads/list.md",
+    "https://docs.agentmail.to/api-reference/inboxes/threads/get.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "agentmail.inboxes.list",
+      "name": "List inboxes",
+      "summary": "The inboxes in the organization.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/inboxes",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum items returned."
+        },
+        "page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for the next page."
+        },
+        "ascending": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Oldest first."
+        }
+      },
+      "job": "messaging.channels.list",
+      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/list.md",
+      "verified": {
+        "docs": "https://docs.agentmail.to/api-reference/inboxes/list.md"
+      }
+    },
+    {
+      "id": "agentmail.inboxes.create",
+      "name": "Create an inbox",
+      "summary": "A new email address for an agent.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v0/inboxes",
+      "params": {
+        "username": {
+          "in": "body",
+          "type": "string",
+          "description": "Address username; random when omitted."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "A verified domain of yours; defaults to agentmail.to."
+        },
+        "display_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Name shown with the address."
+        },
+        "client_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own id for the inbox."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "object",
+          "description": "Custom key/value metadata."
+        }
+      },
+      "notes": [
+        "Counts against the plan's inbox limit (3 on the free plan)."
+      ],
+      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/create.md",
+      "verified": {
+        "docs": "https://docs.agentmail.to/api-reference/inboxes/create.md"
+      }
+    },
+    {
+      "id": "agentmail.messages.list",
+      "name": "List messages in an inbox",
+      "summary": "Messages in an inbox, newest first, with filters on sender, recipient, subject, labels and time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/inboxes/{inbox_id}/messages",
+      "params": {
+        "inbox_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The inbox id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum items; at most 100 when filtering."
+        },
+        "page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for the next page."
+        },
+        "labels": {
+          "in": "query",
+          "type": "array",
+          "description": "Only messages with these labels."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages before this datetime."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages after this datetime."
+        },
+        "ascending": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Oldest first."
+        },
+        "include_spam": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include spam."
+        },
+        "include_blocked": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include blocked messages."
+        },
+        "include_unauthenticated": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include messages that failed authentication."
+        },
+        "include_trash": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include trash."
+        },
+        "from": {
+          "in": "query",
+          "type": "array",
+          "description": "Sender substrings; all must match."
+        },
+        "to": {
+          "in": "query",
+          "type": "array",
+          "description": "Recipient (to, cc or bcc) substrings; all must match."
+        },
+        "subject": {
+          "in": "query",
+          "type": "array",
+          "description": "Subject substrings; all must match."
+        }
+      },
+      "notes": [
+        "Spam, blocked, unauthenticated and trashed messages are left out unless the include_ flags are set."
+      ],
+      "job": "messaging.messages.list",
+      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/messages/list.md",
+      "verified": {
+        "docs": "https://docs.agentmail.to/api-reference/inboxes/messages/list.md"
+      }
+    },
+    {
+      "id": "agentmail.messages.get",
+      "name": "Get a message",
+      "summary": "One message with bodies, attachments metadata, labels and SPF/DKIM/DMARC results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/inboxes/{inbox_id}/messages/{message_id}",
+      "params": {
+        "inbox_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The inbox id."
+        },
+        "message_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The message id."
+        }
+      },
+      "notes": [
+        "extracted_text and extracted_html hold only the new content, without quoted earlier replies; text and html are the full bodies."
+      ],
+      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/messages/get.md",
+      "verified": {
+        "docs": "https://docs.agentmail.to/api-reference/inboxes/messages/get.md"
+      }
+    },
+    {
+      "id": "agentmail.threads.list",
+      "name": "List threads in an inbox",
+      "summary": "Conversation threads in an inbox, with filters on senders, recipients, subject, labels and time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/inboxes/{inbox_id}/threads",
+      "params": {
+        "inbox_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The inbox id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum items returned."
+        },
+        "page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for the next page."
+        },
+        "labels": {
+          "in": "query",
+          "type": "array",
+          "description": "Only threads with these labels."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Only threads before this datetime."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Only threads after this datetime."
+        },
+        "ascending": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Oldest first."
+        },
+        "include_spam": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include spam."
+        },
+        "include_blocked": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include blocked."
+        },
+        "include_unauthenticated": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include unauthenticated."
+        },
+        "include_trash": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include trash."
+        },
+        "senders": {
+          "in": "query",
+          "type": "array",
+          "description": "Sender substrings; all must match."
+        },
+        "recipients": {
+          "in": "query",
+          "type": "array",
+          "description": "Recipient substrings; all must match."
+        },
+        "subject": {
+          "in": "query",
+          "type": "array",
+          "description": "Subject substrings; all must match."
+        }
+      },
+      "job": "messaging.messages.list",
+      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/threads/list.md",
+      "verified": {
+        "docs": "https://docs.agentmail.to/api-reference/inboxes/threads/list.md"
+      }
+    },
+    {
+      "id": "agentmail.threads.get",
+      "name": "Get a thread",
+      "summary": "A thread with its messages.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/inboxes/{inbox_id}/threads/{thread_id}",
+      "params": {
+        "inbox_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The inbox id."
+        },
+        "thread_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The thread id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Messages returned, at most 100."
+        },
+        "page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for the next (older) page of messages."
+        }
+      },
+      "job": "messaging.thread.read",
+      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/threads/get.md",
+      "verified": {
+        "docs": "https://docs.agentmail.to/api-reference/inboxes/threads/get.md"
+      }
+    },
+    {
+      "id": "agentmail.messages.send",
+      "name": "Send an email",
+      "summary": "Send a new message from an inbox.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v0/inboxes/{inbox_id}/messages/send",
+      "params": {
+        "inbox_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The sending inbox id."
+        },
+        "to": {
+          "in": "body",
+          "type": "array",
+          "description": "Recipient address or list of addresses."
+        },
+        "cc": {
+          "in": "body",
+          "type": "array",
+          "description": "CC addresses."
+        },
+        "bcc": {
+          "in": "body",
+          "type": "array",
+          "description": "BCC addresses."
+        },
+        "reply_to": {
+          "in": "body",
+          "type": "array",
+          "description": "Reply-to addresses."
+        },
+        "subject": {
+          "in": "body",
+          "type": "string",
+          "description": "Subject."
+        },
+        "text": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-text body."
+        },
+        "html": {
+          "in": "body",
+          "type": "string",
+          "description": "HTML body."
+        },
+        "labels": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for the message."
+        },
+        "attachments": {
+          "in": "body",
+          "type": "array",
+          "description": "Objects with filename, content_type and either content (base64) or url."
+        },
+        "headers": {
+          "in": "body",
+          "type": "object",
+          "description": "Extra email headers."
+        }
+      },
+      "notes": [
+        "Sends real email. The whole request, with base64 attachments, is capped at 6 MB. Answers message_id and thread_id."
+      ],
+      "job": "messaging.message.send",
+      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/messages/send.md",
+      "verified": {
+        "docs": "https://docs.agentmail.to/api-reference/inboxes/messages/send.md"
+      }
+    },
+    {
+      "id": "agentmail.messages.reply",
+      "name": "Reply to a message",
+      "summary": "Reply in the message's thread.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/v0/inboxes/{inbox_id}/messages/{message_id}/reply",
+      "params": {
+        "inbox_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The inbox id."
+        },
+        "message_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The message being replied to."
+        },
+        "reply_all": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Reply to every recipient of the original."
+        },
+        "to": {
+          "in": "body",
+          "type": "array",
+          "description": "Recipient addresses."
+        },
+        "cc": {
+          "in": "body",
+          "type": "array",
+          "description": "CC addresses."
+        },
+        "bcc": {
+          "in": "body",
+          "type": "array",
+          "description": "BCC addresses."
+        },
+        "text": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-text body."
+        },
+        "html": {
+          "in": "body",
+          "type": "string",
+          "description": "HTML body."
+        },
+        "labels": {
+          "in": "body",
+          "type": "array",
+          "description": "Labels for the message."
+        },
+        "attachments": {
+          "in": "body",
+          "type": "array",
+          "description": "Objects with filename, content_type and either content (base64) or url."
+        }
+      },
+      "notes": [
+        "Sends real email."
+      ],
+      "job": "messaging.message.send",
+      "docs_url": "https://docs.agentmail.to/api-reference/inboxes/messages/reply.md",
+      "verified": {
+        "docs": "https://docs.agentmail.to/api-reference/inboxes/messages/reply.md"
+      }
+    }
+  ]
+}
