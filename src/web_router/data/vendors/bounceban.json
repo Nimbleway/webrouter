@@ -365,54 +365,6 @@
       "verified": {
         "docs": "https://bounceban.com/public/doc/llms-full.txt"
       }
-    },
-    {
-      "id": "bounceban.bulk.stop",
-      "name": "Stop a bulk task",
-      "summary": "Stops a queued or verifying task; credits for unverified emails are refunded.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v1/verify/bulk/stop",
-      "params": {
-        "id": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "The bulk task id."
-        }
-      },
-      "notes": [
-        "Emails already in flight get up to 60 seconds to finish. Answers 400 if the task is importing or already finished."
-      ],
-      "job": "jobs.cancel",
-      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
-      "verified": {
-        "docs": "https://bounceban.com/public/doc/llms-full.txt"
-      }
-    },
-    {
-      "id": "bounceban.bulk.delete",
-      "name": "Delete a bulk task",
-      "summary": "Permanently removes a task and all its results.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v1/verify/bulk/destroy",
-      "params": {
-        "id": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "The bulk task id."
-        }
-      },
-      "notes": [
-        "Irreversible."
-      ],
-      "job": "jobs.delete",
-      "docs_url": "https://bounceban.com/public/doc/llms-full.txt",
-      "verified": {
-        "docs": "https://bounceban.com/public/doc/llms-full.txt"
-      }
     }
   ]
 }

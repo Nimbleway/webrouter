@@ -2,7 +2,7 @@
   "vendor": "jina",
   "name": "Jina AI",
   "category": "search",
-  "summary": "Jina Reader (any URL to LLM-ready markdown), Jina web search returning read pages, and Jina's embeddings and reranker models.",
+  "summary": "Jina Reader (any URL to LLM-ready markdown) and Jina web search returning read pages.",
   "docs_url": "https://jina.ai/reader",
   "pricing_url": "https://jina.ai/reader#pricing",
   "base_url": "https://r.jina.ai",
@@ -219,136 +219,6 @@
       "docs_url": "https://s.jina.ai/openapi.json",
       "verified": {
         "docs": "https://s.jina.ai/openapi.json"
-      }
-    },
-    {
-      "id": "jina.embeddings",
-      "name": "Create embeddings",
-      "summary": "Dense vectors for text (and, with multimodal models, images, audio, video or PDFs).",
-      "kind": "read",
-      "method": "POST",
-      "path": "/v1/embeddings",
-      "params": {
-        "model": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Model, e.g. jina-embeddings-v4, jina-embeddings-v5-text-small, jina-embeddings-v5-omni-small, jina-clip-v2. The model fixes which other fields apply.",
-          "example": "jina-embeddings-v4"
-        },
-        "input": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "A string, a doc object, or a list of them."
-        },
-        "task": {
-          "in": "body",
-          "type": "string",
-          "description": "Task adapter for v3+ models, e.g. retrieval.query, retrieval.passage, text-matching."
-        },
-        "dimensions": {
-          "in": "body",
-          "type": "integer",
-          "description": "Output dimensions (v4: 1-2048, v5: 1-1024)."
-        },
-        "embedding_type": {
-          "in": "body",
-          "type": "string",
-          "description": "float, base64, binary or ubinary (or a list)."
-        },
-        "normalized": {
-          "in": "body",
-          "type": "boolean",
-          "description": "L2-normalise (default true on models that accept it)."
-        },
-        "truncate": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Truncate over-long input instead of failing. Default false."
-        }
-      },
-      "notes": [
-        "Read over POST, billed by input tokens. Needs a key."
-      ],
-      "job": "ai.embeddings",
-      "host": "api",
-      "credentials": [
-        "api_key"
-      ],
-      "docs_url": "https://api.jina.ai/openapi.json",
-      "verified": {
-        "docs": "https://api.jina.ai/openapi.json"
-      }
-    },
-    {
-      "id": "jina.rerank",
-      "name": "Rerank documents for a query",
-      "summary": "Documents reordered by relevance_score, each with its original index.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/v1/rerank",
-      "params": {
-        "model": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Reranker, e.g. jina-reranker-v3, jina-reranker-v3.5, jina-reranker-m0, jina-reranker-v2-base-multilingual.",
-          "example": "jina-reranker-v3"
-        },
-        "query": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "The query."
-        },
-        "documents": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "Strings or text doc objects to rank."
-        },
-        "top_n": {
-          "in": "body",
-          "type": "integer",
-          "description": "Return only the top N; default all."
-        },
-        "return_documents": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Include document text in results, default true."
-        }
-      },
-      "notes": [
-        "Read over POST, billed by tokens. Needs a key."
-      ],
-      "job": "ai.rerank",
-      "host": "api",
-      "credentials": [
-        "api_key"
-      ],
-      "docs_url": "https://api.jina.ai/openapi.json",
-      "verified": {
-        "docs": "https://api.jina.ai/openapi.json"
-      }
-    },
-    {
-      "id": "jina.models",
-      "name": "List models",
-      "summary": "Jina's embedding and reranker models.",
-      "kind": "read",
-      "method": "GET",
-      "path": "/v1/models",
-      "params": {},
-      "notes": [
-        "The only api.jina.ai endpoint that needs no key."
-      ],
-      "job": "ai.models",
-      "host": "api",
-      "credentials": [],
-      "docs_url": "https://api.jina.ai/openapi.json",
-      "verified": {
-        "docs": "https://api.jina.ai/openapi.json"
       }
     }
   ]

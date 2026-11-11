@@ -633,27 +633,6 @@
       }
     },
     {
-      "id": "leadocean.exports.cancel",
-      "name": "Cancel an export",
-      "summary": "Cancels a queued or running export; rows already written stay billed and downloadable.",
-      "kind": "write",
-      "method": "DELETE",
-      "path": "/v1/exports/{id}",
-      "params": {
-        "id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The export id."
-        }
-      },
-      "job": "jobs.cancel",
-      "docs_url": "https://api.leadocean.io/openapi.json",
-      "verified": {
-        "docs": "https://api.leadocean.io/openapi.json"
-      }
-    },
-    {
       "id": "leadocean.account.get",
       "name": "Get account, plan and records left",
       "summary": "Plan, records left, subscription state, export windows and rate.",

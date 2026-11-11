@@ -311,60 +311,6 @@
       "verified": {
         "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
       }
-    },
-    {
-      "id": "morphosource.media.download",
-      "name": "Request a media download link",
-      "summary": "Records a download request with your use statement and agreement to the media's terms, and returns a direct download URL for your account.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/api/download/{media_id}",
-      "params": {
-        "media_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "9-digit media id."
-        },
-        "use_statement": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Free-text description of the intended use, at least 50 characters."
-        },
-        "use_categories": {
-          "in": "body",
-          "type": "array",
-          "description": "One or more of: Completing Class Assignment(s) (Grades K-6); Completing Class Assignment(s) (Grades 7-12); Completing Class Assignment(s) (University or Post-Secondary); Completing Class Assignment(s) (Post-Graduate); Educator Resource (Grades K-6); Educator Resource (Grades 7-12); Educator Resource (University or Post-Secondary); Educator Resource (Post-Graduate); Research; Art; Personal Interest; 3D Printing; Commercial Use.",
-          "example": [
-            "Research"
-          ]
-        },
-        "use_category_other": {
-          "in": "body",
-          "type": "string",
-          "description": "A custom use category, instead of use_categories."
-        },
-        "agreements_accepted": {
-          "in": "body",
-          "type": "boolean",
-          "required": true,
-          "description": "true to agree to every use and reuse term of MorphoSource and of the data contributor."
-        }
-      },
-      "notes": [
-        "A write: it registers a download on your account and accepts the media's terms on your behalf. Read the media's license and restrictions first.",
-        "Needs the API key, and one of use_categories or use_category_other.",
-        "Fetching the returned URL also needs the key in the Authorization header; the URL is tied to your account."
-      ],
-      "credentials": [
-        "api_key"
-      ],
-      "job": "science.specimens.download",
-      "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/stzmm22vruz2k-download-media-file",
-      "verified": {
-        "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
-      }
     }
   ]
 }

@@ -2,7 +2,7 @@
   "vendor": "virustotal",
   "name": "VirusTotal",
   "category": "security",
-  "summary": "Threat-intelligence reports on files, URLs, domains and IP addresses: multi-engine antivirus verdicts, reputation and relationships, plus URL scanning.",
+  "summary": "Threat-intelligence reports on files, URLs, domains and IP addresses: multi-engine antivirus verdicts, reputation and relationships.",
   "docs_url": "https://docs.virustotal.com/reference/overview",
   "pricing_url": "https://docs.virustotal.com/reference/public-vs-premium-api",
   "base_url": "https://www.virustotal.com/api/v3",
@@ -80,30 +80,6 @@
       "docs_url": "https://docs.virustotal.com/reference/url-info",
       "verified": {
         "docs": "https://docs.virustotal.com/reference/url-info"
-      }
-    },
-    {
-      "id": "virustotal.urls.scan",
-      "name": "Submit a URL for scanning",
-      "summary": "Queues a fresh analysis of a URL and returns an analysis id.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/urls",
-      "params": {
-        "url": {
-          "in": "body",
-          "required": true,
-          "description": "The URL to scan."
-        }
-      },
-      "body_type": "form",
-      "notes": [
-        "Form-encoded. Marked write: the URL is shared with the VirusTotal community. Poll virustotal.analyses.get with the returned data.id."
-      ],
-      "job": "security.url.scan",
-      "docs_url": "https://docs.virustotal.com/reference/scan-url",
-      "verified": {
-        "docs": "https://docs.virustotal.com/reference/scan-url"
       }
     },
     {

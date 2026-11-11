@@ -2,7 +2,7 @@
   "vendor": "browseruse",
   "name": "Browser Use",
   "category": "scraping",
-  "summary": "Run Browser Use Cloud agents that carry out a task in a hosted stealth browser, and read their status, steps and results.",
+  "summary": "Browser Use Cloud: the status, steps and results of agent runs, and the account.",
   "docs_url": "https://docs.browser-use.com/cloud/api-reference.md",
   "pricing_url": "https://browser-use.com/pricing",
   "base_url": "https://api.browser-use.com/api",
@@ -50,77 +50,6 @@
       "docs_url": "https://docs.browser-use.com/cloud/api-v2/billing/get-account-billing.md",
       "verified": {
         "docs": "https://docs.browser-use.com/cloud/api-v2/billing/get-account-billing.md"
-      }
-    },
-    {
-      "id": "browseruse.runs.create",
-      "name": "Start an agent run",
-      "summary": "Give a cloud browser agent a task in plain language; optionally continue an existing session or ask for structured output.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v4/runs",
-      "params": {
-        "task": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "What the agent should do in this run.",
-          "example": "Find the current price of the top result for 'usb-c hub' on amazon.com"
-        },
-        "outputSchema": {
-          "in": "body",
-          "type": "object",
-          "description": "Optional JSON Schema the final output must follow."
-        },
-        "model": {
-          "in": "body",
-          "type": "string",
-          "description": "The model to drive the agent. Default gpt-6-luna with high reasoning; bu-ultrafast and bu-fast are low-latency presets that take no modelParams."
-        },
-        "modelParams": {
-          "in": "body",
-          "type": "object",
-          "description": "Provider-native request parameters for the chosen model, forwarded unchanged."
-        },
-        "sessionId": {
-          "in": "body",
-          "type": "string",
-          "description": "Continue this session (same browser if it is still open); omit to start a new session."
-        },
-        "workspaceId": {
-          "in": "body",
-          "type": "string",
-          "description": "Files workspace to use."
-        },
-        "browserSettings": {
-          "in": "body",
-          "type": "object",
-          "description": "Browser settings for a new session; omitted on a follow-up keeps the session's browser."
-        },
-        "keepAlive": {
-          "in": "body",
-          "type": "integer",
-          "description": "Seconds the browser stays open after the run, 120-14400 (default 120), so a follow-up reuses the page."
-        },
-        "maxCostUsd": {
-          "in": "body",
-          "type": "number",
-          "description": "Budget in USD for model and search charges. New API sessions default to $25."
-        },
-        "judge": {
-          "in": "body",
-          "type": "object",
-          "description": "Have an LLM judge the finished run; send {} for defaults."
-        }
-      },
-      "notes": [
-        "A write: the agent acts on live websites on your behalf and spends credits. Fields that let it pay (stripeLinkConnectionId), use secrets (secretBindings, opVaultId) or get an email inbox (agentmail) are deliberately left out of this entry.",
-        "Returns at once with the run and session ids; poll runs.status."
-      ],
-      "job": "web.browse",
-      "docs_url": "https://docs.browser-use.com/cloud/api-v4/runs/create-run.md",
-      "verified": {
-        "docs": "https://docs.browser-use.com/cloud/api-v4/runs/create-run.md"
       }
     },
     {
@@ -235,30 +164,6 @@
       "docs_url": "https://docs.browser-use.com/cloud/api-v4/runs/list-runs.md",
       "verified": {
         "docs": "https://docs.browser-use.com/cloud/api-v4/runs/list-runs.md"
-      }
-    },
-    {
-      "id": "browseruse.runs.cancel",
-      "name": "Cancel a run",
-      "summary": "Stop an in-flight run so it bills nothing further.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v4/runs/{run_id}/cancel",
-      "params": {
-        "run_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The run id."
-        }
-      },
-      "notes": [
-        "Idempotent: a run already completed, failed or cancelled is returned as it is."
-      ],
-      "job": "jobs.cancel",
-      "docs_url": "https://docs.browser-use.com/cloud/api-v4/runs/cancel-run.md",
-      "verified": {
-        "docs": "https://docs.browser-use.com/cloud/api-v4/runs/cancel-run.md"
       }
     }
   ]

@@ -396,36 +396,6 @@
       }
     },
     {
-      "id": "aiark.people.find_emails",
-      "name": "Find emails for a search result set",
-      "summary": "Starts an asynchronous job to find verified emails for a previous search; poll people.find_emails_status then read people.find_emails_results.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v1/people/email-finder",
-      "params": {
-        "trackId": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "trackId from a people.search response; single use, expires after 6 hours."
-        },
-        "webhook": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "HTTPS URL notified when the job completes."
-        }
-      },
-      "notes": [
-        "Spends credits: 1 per found valid email. Needs an HTTPS webhook."
-      ],
-      "job": "people.email.find",
-      "docs_url": "https://docs.ai-ark.com/reference/people-email-finder-by-track-id.md",
-      "verified": {
-        "docs": "https://docs.ai-ark.com/reference/people-email-finder-by-track-id.md"
-      }
-    },
-    {
       "id": "aiark.people.find_emails_status",
       "name": "Email finder job statistics",
       "summary": "Free.",

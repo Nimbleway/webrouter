@@ -2,7 +2,7 @@
   "vendor": "sendgrid",
   "name": "SendGrid",
   "category": "messaging",
-  "summary": "Twilio SendGrid email: send mail, delivery statistics, email activity, bounces and spam reports, and credit balance.",
+  "summary": "Twilio SendGrid email: delivery statistics, email activity, bounces and spam reports, and credit balance.",
   "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/how-to-use-the-sendgrid-v3-api",
   "pricing_url": "https://sendgrid.com/en-us/pricing",
   "base_url": "https://{host}",
@@ -256,76 +256,6 @@
       "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/users-api/retrieve-your-credit-balance",
       "verified": {
         "docs": "https://www.twilio.com/docs/sendgrid/api-reference/users-api/retrieve-your-credit-balance"
-      }
-    },
-    {
-      "id": "sendgrid.mail.send",
-      "name": "Send an email",
-      "summary": "Send one message to one or more personalizations; answers 202 Accepted.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v3/mail/send",
-      "params": {
-        "personalizations": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "Envelopes: objects with to (list of {email, name}), optional cc, bcc, subject, dynamic_template_data."
-        },
-        "from": {
-          "in": "body",
-          "type": "object",
-          "required": true,
-          "description": "Sender {email, name}, a verified sender or authenticated domain."
-        },
-        "subject": {
-          "in": "body",
-          "type": "string",
-          "description": "Subject, unless every personalization or the template sets one."
-        },
-        "content": {
-          "in": "body",
-          "type": "array",
-          "description": "Bodies: objects with type (text/plain, text/html) and value."
-        },
-        "template_id": {
-          "in": "body",
-          "type": "string",
-          "description": "Template id; a d- id is a dynamic template."
-        },
-        "reply_to": {
-          "in": "body",
-          "type": "object",
-          "description": "Reply-to {email, name}."
-        },
-        "attachments": {
-          "in": "body",
-          "type": "array",
-          "description": "Objects with base64 content, filename and type."
-        },
-        "categories": {
-          "in": "body",
-          "type": "array",
-          "description": "Category names for stats."
-        },
-        "send_at": {
-          "in": "body",
-          "type": "integer",
-          "description": "Unix time to send, at most 72 hours ahead."
-        },
-        "headers": {
-          "in": "body",
-          "type": "object",
-          "description": "Extra email headers."
-        }
-      },
-      "notes": [
-        "Sends real email. 202 means accepted for delivery, not delivered. Up to 1000 personalizations per request."
-      ],
-      "job": "messaging.message.send",
-      "docs_url": "https://www.twilio.com/docs/sendgrid/api-reference/mail-send/mail-send",
-      "verified": {
-        "docs": "https://github.com/twilio/sendgrid-oai"
       }
     }
   ]

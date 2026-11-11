@@ -323,27 +323,6 @@
       }
     },
     {
-      "id": "firecrawl.crawl.cancel",
-      "name": "Cancel a crawl",
-      "summary": "Stop a running crawl job.",
-      "kind": "write",
-      "method": "DELETE",
-      "path": "/crawl/{id}",
-      "params": {
-        "id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Crawl job id."
-        }
-      },
-      "job": "jobs.cancel",
-      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-delete",
-      "verified": {
-        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-delete"
-      }
-    },
-    {
       "id": "firecrawl.crawl.active",
       "name": "List active crawls",
       "summary": "Crawls currently running for your team.",

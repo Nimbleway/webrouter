@@ -2,7 +2,7 @@
   "vendor": "perplexity",
   "name": "Perplexity",
   "category": "search",
-  "summary": "Perplexity's Search API, Agent API with web search, and embeddings.",
+  "summary": "Perplexity's Search API and Agent API with web search.",
   "docs_url": "https://docs.perplexity.ai/docs/getting-started/overview",
   "pricing_url": "https://docs.perplexity.ai/docs/getting-started/pricing",
   "base_url": "https://api.perplexity.ai",
@@ -232,27 +232,6 @@
       }
     },
     {
-      "id": "perplexity.agent.cancel",
-      "name": "Cancel an Agent response",
-      "summary": "Request cancellation of a running background response.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v1/agent/{id}/cancel",
-      "params": {
-        "id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Response id, resp_..."
-        }
-      },
-      "job": "jobs.cancel",
-      "docs_url": "https://docs.perplexity.ai/api-reference/agent-cancel-post.md",
-      "verified": {
-        "docs": "https://docs.perplexity.ai/api-reference/agent-cancel-post.md"
-      }
-    },
-    {
       "id": "perplexity.models.list",
       "name": "List Agent API models",
       "summary": "Model ids usable with the Agent API.",
@@ -263,59 +242,6 @@
       "docs_url": "https://docs.perplexity.ai/api-reference/models-get.md",
       "verified": {
         "docs": "https://docs.perplexity.ai/api-reference/models-get.md"
-      }
-    },
-    {
-      "id": "perplexity.embeddings.create",
-      "name": "Create embeddings",
-      "summary": "Embeddings for up to 512 texts.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/v1/embeddings",
-      "params": {
-        "input": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Text to embed, a string or an array of strings; up to 512 texts, each under 32K tokens.",
-          "example": [
-            "hello world"
-          ]
-        },
-        "model": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Embedding model.",
-          "example": "pplx-embed-v1-0.6b",
-          "enum": [
-            "pplx-embed-v1-0.6b",
-            "pplx-embed-v1-4b"
-          ]
-        },
-        "dimensions": {
-          "in": "body",
-          "type": "integer",
-          "description": "Output dimensions: 128-1024 for the 0.6b model, 128-2560 for the 4b model."
-        },
-        "encoding_format": {
-          "in": "body",
-          "type": "string",
-          "description": "Output encoding.",
-          "enum": [
-            "base64_int8",
-            "base64_binary"
-          ]
-        }
-      },
-      "notes": [
-        "A read over POST: it computes vectors and changes nothing in your data.",
-        "Embeddings come back base64 encoded (int8 or packed binary), not as float arrays."
-      ],
-      "job": "ai.embeddings",
-      "docs_url": "https://docs.perplexity.ai/api-reference/embeddings-post.md",
-      "verified": {
-        "docs": "https://docs.perplexity.ai/api-reference/embeddings-post.md"
       }
     }
   ]

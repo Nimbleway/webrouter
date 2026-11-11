@@ -2,7 +2,7 @@
   "vendor": "google-calendar",
   "name": "Google Calendar",
   "category": "productivity",
-  "summary": "Read a Google user's calendars, events and free/busy times, and create events, through the Google Calendar API v3.",
+  "summary": "Read a Google user's calendars, events and free/busy times through the Google Calendar API v3.",
   "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference",
   "base_url": "https://www.googleapis.com/calendar/v3",
   "auth": {
@@ -285,83 +285,6 @@
       "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query",
       "verified": {
         "docs": "https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query"
-      }
-    },
-    {
-      "id": "google-calendar.events.create",
-      "name": "Create an event",
-      "summary": "Adds an event to a calendar, optionally inviting guests.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/calendars/{calendarId}/events",
-      "params": {
-        "calendarId": {
-          "in": "path",
-          "required": true,
-          "description": "Calendar id; 'primary' is the signed-in user's main calendar. Others from calendars.list.",
-          "example": "primary"
-        },
-        "start": {
-          "in": "body",
-          "type": "object",
-          "required": true,
-          "description": "{dateTime: RFC3339, timeZone} or {date: 'yyyy-mm-dd'} for all-day. timeZone is required for recurring events.",
-          "example": {
-            "dateTime": "2026-11-10T10:00:00-05:00"
-          }
-        },
-        "end": {
-          "in": "body",
-          "type": "object",
-          "required": true,
-          "description": "Exclusive end, same shape as start.",
-          "example": {
-            "dateTime": "2026-11-10T10:30:00-05:00"
-          }
-        },
-        "summary": {
-          "in": "body",
-          "description": "Event title."
-        },
-        "description": {
-          "in": "body",
-          "description": "Event description; may contain HTML."
-        },
-        "location": {
-          "in": "body",
-          "description": "Free-text location."
-        },
-        "attendees": {
-          "in": "body",
-          "type": "array",
-          "description": "[{email}, ...] guests to invite."
-        },
-        "sendUpdates": {
-          "in": "query",
-          "description": "Who is emailed about the new event.",
-          "enum": [
-            "all",
-            "externalOnly",
-            "none"
-          ]
-        },
-        "conferenceDataVersion": {
-          "in": "query",
-          "type": "integer",
-          "description": "1 to allow conferenceData, e.g. creating a Google Meet link; default 0.",
-          "enum": [
-            0,
-            1
-          ]
-        }
-      },
-      "notes": [
-        "With attendees and sendUpdates=all, invitations go out to other people."
-      ],
-      "job": "calendar.events.create",
-      "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference/events/insert",
-      "verified": {
-        "docs": "https://developers.google.com/workspace/calendar/api/v3/reference/events/insert"
       }
     }
   ]

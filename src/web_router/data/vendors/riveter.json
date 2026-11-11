@@ -2,7 +2,7 @@
   "vendor": "riveter",
   "name": "Riveter",
   "category": "scraping",
-  "summary": "Riveter's AI web data API: scrape a page, quick web search, one-off research answers, and enrichment runs that fill new columns for rows of companies, people or URLs.",
+  "summary": "Riveter's AI web data API: scrape a page, quick web search, one-off research answers, and the results of enrichment runs.",
   "docs_url": "https://docs.riveterhq.com/",
   "pricing_url": "https://www.riveterhq.com/pricing",
   "base_url": "https://api.riveterhq.com/v1",
@@ -181,81 +181,6 @@
       }
     },
     {
-      "id": "riveter.enrich",
-      "name": "Enrich rows",
-      "summary": "Start a run that fills new columns for rows sent inline (or a saved dataset) with AI web research.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/enrich",
-      "params": {
-        "input": {
-          "in": "body",
-          "type": "object",
-          "description": "Inline rows: column header to an array of strings, one per row; all arrays the same length.",
-          "example": {
-            "company": [
-              "Stripe",
-              "Ramp"
-            ]
-          }
-        },
-        "prompt": {
-          "in": "body",
-          "type": "string",
-          "description": "The task the agent follows for every row; needs attributes."
-        },
-        "attributes": {
-          "in": "body",
-          "type": "array",
-          "description": "Output column names (max 20), typed from their names; needs prompt."
-        },
-        "output": {
-          "in": "body",
-          "type": "object",
-          "description": "Per-column configuration keyed by output column name, instead of prompt + attributes."
-        },
-        "enrichment_id": {
-          "in": "body",
-          "type": "string",
-          "description": "Use a saved enrichment's configuration (enr_...)."
-        },
-        "dataset_id": {
-          "in": "body",
-          "type": "string",
-          "description": "Fill a saved dataset's cells instead of inline rows (ds_...)."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "URL Riveter POSTs the results to when the run finishes."
-        },
-        "run_key": {
-          "in": "body",
-          "type": "string",
-          "description": "Idempotency key; becomes the run id run_<key>."
-        },
-        "estimate_cost": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Price the request without running or charging it. Default false."
-        },
-        "max_credits": {
-          "in": "body",
-          "type": "number",
-          "description": "Credit ceiling; a request whose estimate exceeds it is refused with 422 and costs nothing."
-        }
-      },
-      "notes": [
-        "A write: it starts a billed run and, with dataset_id, writes cells into the dataset. Rows come from exactly one of input or dataset_id.",
-        "Returns a run; read it with runs.result."
-      ],
-      "job": "lists.enrich",
-      "docs_url": "https://docs.riveterhq.com/#tag/enrich/post/enrich",
-      "verified": {
-        "docs": "https://www.riveterhq.com/openapi.json"
-      }
-    },
-    {
       "id": "riveter.runs.get",
       "name": "Get run status",
       "summary": "A run's status and progress.",
@@ -303,27 +228,6 @@
       },
       "job": "jobs.result",
       "docs_url": "https://docs.riveterhq.com/#tag/runs/get/runs/{id}/result",
-      "verified": {
-        "docs": "https://www.riveterhq.com/openapi.json"
-      }
-    },
-    {
-      "id": "riveter.runs.stop",
-      "name": "Stop a run",
-      "summary": "Stop a run early.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/runs/{id}/stop",
-      "params": {
-        "id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The run id (run_...)."
-        }
-      },
-      "job": "jobs.cancel",
-      "docs_url": "https://docs.riveterhq.com/#tag/runs/post/runs/{id}/stop",
       "verified": {
         "docs": "https://www.riveterhq.com/openapi.json"
       }

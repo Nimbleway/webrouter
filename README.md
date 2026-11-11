@@ -1437,10 +1437,13 @@ response.data  # Google's JSON, untouched
 # A path the catalog does not name, still with the vendor's credentials:
 router.vendor_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
 
-# A write: refused unless you say so. Dry-run first where the vendor can.
-router.call_vendor(
-    "google-ads.campaign_budgets.mutate",
-    {"customer_id": "1234567890", "operations": [...], "validateOnly": True},
+# The catalog names only endpoints that read. A write goes through vendor_request,
+# refused unless you say so. Dry-run first where the vendor can.
+router.vendor_request(
+    "google-ads",
+    "POST",
+    "/customers/1234567890/campaignBudgets:mutate",
+    body={"operations": [...], "validateOnly": True},
     allow_writes=True,
 )
 ```

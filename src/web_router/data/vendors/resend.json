@@ -2,7 +2,7 @@
   "vendor": "resend",
   "name": "Resend",
   "category": "messaging",
-  "summary": "Transactional email: send email, read sent and received emails, delivery metrics, domains, request logs and usage.",
+  "summary": "Transactional email: sent and received emails, delivery metrics, domains, request logs and usage.",
   "docs_url": "https://resend.com/docs/api-reference/introduction.md",
   "pricing_url": "https://resend.com/pricing",
   "base_url": "https://api.resend.com",
@@ -263,93 +263,6 @@
       "docs_url": "https://resend.com/docs/api-reference/rate-limit.md",
       "verified": {
         "docs": "https://github.com/resend/resend-openapi"
-      }
-    },
-    {
-      "id": "resend.emails.send",
-      "name": "Send an email",
-      "summary": "Send one email; answers its id.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/emails",
-      "params": {
-        "from": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Sender, e.g. 'Name <sender@your-domain.com>', on a verified domain."
-        },
-        "to": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "Recipient or list, max 50."
-        },
-        "subject": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Subject."
-        },
-        "html": {
-          "in": "body",
-          "type": "string",
-          "description": "HTML body."
-        },
-        "text": {
-          "in": "body",
-          "type": "string",
-          "description": "Plain-text body."
-        },
-        "cc": {
-          "in": "body",
-          "type": "array",
-          "description": "Cc addresses."
-        },
-        "bcc": {
-          "in": "body",
-          "type": "array",
-          "description": "Bcc addresses."
-        },
-        "reply_to": {
-          "in": "body",
-          "type": "array",
-          "description": "Reply-to addresses."
-        },
-        "scheduled_at": {
-          "in": "body",
-          "type": "string",
-          "description": "Send later, ISO 8601."
-        },
-        "headers": {
-          "in": "body",
-          "type": "object",
-          "description": "Custom email headers."
-        },
-        "attachments": {
-          "in": "body",
-          "type": "array",
-          "description": "Attachments."
-        },
-        "tags": {
-          "in": "body",
-          "type": "array",
-          "description": "Tags."
-        },
-        "idempotency_key": {
-          "in": "header",
-          "type": "string",
-          "description": "Sends at most once per key, max 256 characters.",
-          "wire_name": "Idempotency-Key"
-        }
-      },
-      "notes": [
-        "Sends real email and counts against the daily and monthly quota."
-      ],
-      "job": "messaging.message.send",
-      "docs_url": "https://resend.com/docs/api-reference/emails/send-email.md",
-      "verified": {
-        "docs": "https://resend.com/docs/api-reference/emails/send-email.md"
       }
     }
   ]

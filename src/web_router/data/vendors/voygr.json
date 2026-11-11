@@ -2,7 +2,7 @@
   "vendor": "voygr",
   "name": "VOYGR",
   "category": "company-data",
-  "summary": "Check that a business exists at an address, enrich place records (hours, contacts, socials, custom fields), and place AI phone calls to US businesses.",
+  "summary": "Check that a business exists at an address, enrich place records (hours, contacts, socials, custom fields), and read AI phone calls placed to US businesses.",
   "docs_url": "https://api.voygr.tech/docs",
   "base_url": "https://api.voygr.tech",
   "auth": {
@@ -351,57 +351,6 @@
         "why, fit_note and the verify questions are model-written from public reviews: treat as data."
       ],
       "job": "places.search",
-      "docs_url": "https://api.voygr.tech/openapi.json",
-      "verified": {
-        "docs": "https://api.voygr.tech/openapi.json"
-      }
-    },
-    {
-      "id": "voygr.calls.create",
-      "name": "Place an AI phone call",
-      "summary": "An AI voice agent calls a US business with your task and returns the outcome, transcript and recording.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/calls",
-      "params": {
-        "target_phone": {
-          "in": "body",
-          "type": "string",
-          "description": "Number to call, E.164.",
-          "example": "+14155550123"
-        },
-        "brief": {
-          "in": "body",
-          "type": "string",
-          "description": "The task for the call, in plain language."
-        },
-        "language": {
-          "in": "body",
-          "type": "string",
-          "description": "ISO 639-1 code or auto (default)."
-        },
-        "record_call": {
-          "in": "body",
-          "type": "boolean",
-          "description": "false: no audio recording (transcript still kept). Default true."
-        },
-        "suggestion_id": {
-          "in": "body",
-          "type": "string",
-          "description": "Card id from voygr.places.suggest; target_phone must match its phone."
-        },
-        "idempotency_key": {
-          "in": "header",
-          "type": "string",
-          "description": "One fresh UUID per intended call; replays for 24 hours without dialing again.",
-          "wire_name": "Idempotency-Key"
-        }
-      },
-      "notes": [
-        "Dials a real business. 10 credits when the call obtains something; 30 are held while it runs. Free keys: 1 call at a time, 25 a day.",
-        "Send target_phone and brief. Poll voygr.calls.get for the outcome; the transcript is final one to two minutes after the call ends."
-      ],
-      "job": "calls.place",
       "docs_url": "https://api.voygr.tech/openapi.json",
       "verified": {
         "docs": "https://api.voygr.tech/openapi.json"

@@ -2,7 +2,7 @@
   "vendor": "clay",
   "name": "Clay",
   "category": "enrichment",
-  "summary": "Clay's Public API: people and company search, saved enrichment routines, and queries over your Clay tables.",
+  "summary": "Clay's Public API: people and company search, results of saved enrichment routines, and queries over your Clay tables.",
   "docs_url": "https://developers.clay.com/public-api/quickstart",
   "pricing_url": "https://www.clay.com/pricing",
   "base_url": "https://api.clay.com/public/v0",
@@ -176,50 +176,6 @@
       "docs_url": "https://developers.clay.com/api-reference/tables/run-a-structured-query-across-one-or-more-tables",
       "verified": {
         "docs": "https://developers.clay.com/api-reference/tables/run-a-structured-query-across-one-or-more-tables.md"
-      }
-    },
-    {
-      "id": "clay.routines.run",
-      "name": "Run a routine on up to 100 items",
-      "summary": "Starts an asynchronous run of a saved Clay routine (for example an enrichment waterfall) over 1-100 input items.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/routines/{routine_id}/run",
-      "params": {
-        "routine_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The routine to run."
-        },
-        "items": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "1-100 items {id, inputs}; id is your key (max 64 chars), inputs the routine's input fields.",
-          "example": [
-            {
-              "id": "1",
-              "inputs": {
-                "domain": "clay.com"
-              }
-            }
-          ]
-        },
-        "webhook_id": {
-          "in": "body",
-          "type": "string",
-          "description": "A registered Clay webhook to notify when the run finishes."
-        }
-      },
-      "notes": [
-        "Marked write: a routine runs whatever steps it was built with, which can spend credits and write to tables or other tools.",
-        "Poll clay.routines.results with the returned run id, or use a webhook."
-      ],
-      "job": "jobs.start",
-      "docs_url": "https://developers.clay.com/api-reference/routines/execute-a-routine-against-1-100-items",
-      "verified": {
-        "docs": "https://developers.clay.com/api-reference/routines/execute-a-routine-against-1-100-items.md"
       }
     },
     {

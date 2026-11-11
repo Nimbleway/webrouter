@@ -2,7 +2,7 @@
   "vendor": "linkedin",
   "name": "LinkedIn",
   "category": "social",
-  "summary": "LinkedIn's official API for the signed-in member: identity, reading and publishing posts for a member or company page.",
+  "summary": "LinkedIn's official API for the signed-in member: identity, and posts by a member or company page.",
   "docs_url": "https://learn.microsoft.com/en-us/linkedin/",
   "base_url": "https://api.linkedin.com",
   "settings": {
@@ -170,106 +170,6 @@
       "verified": {
         "docs": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
       }
-    },
-    {
-      "id": "linkedin.posts.create",
-      "name": "Publish a post",
-      "summary": "Creates a post as a member or an organization page: text, article link, or media you uploaded earlier.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/rest/posts",
-      "params": {
-        "author": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "urn:li:person:{id} or urn:li:organization:{id}.",
-          "example": "urn:li:organization:5515715"
-        },
-        "commentary": {
-          "in": "body",
-          "type": "string",
-          "description": "Post text.",
-          "example": "Sample text Post"
-        },
-        "visibility": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Who sees it.",
-          "example": "PUBLIC",
-          "enum": [
-            "PUBLIC",
-            "CONNECTIONS"
-          ]
-        },
-        "distribution": {
-          "in": "body",
-          "type": "object",
-          "required": true,
-          "description": "{feedDistribution: MAIN_FEED, targetEntities: [], thirdPartyDistributionChannels: []}."
-        },
-        "lifecycleState": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "PUBLISHED is the only value accepted on creation.",
-          "enum": [
-            "PUBLISHED"
-          ]
-        },
-        "isReshareDisabledByAuthor": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Stop others resharing."
-        },
-        "content": {
-          "in": "body",
-          "type": "object",
-          "description": "Optional media or article: {media:{id,title}} or {article:{source,thumbnail,title,description}}. Image, video and document URNs come from LinkedIn's Images, Videos and Documents APIs."
-        },
-        "reshareContext": {
-          "in": "body",
-          "type": "object",
-          "description": "{parent: <post URN>} to reshare a post."
-        }
-      },
-      "job": "social.publish",
-      "docs_url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api",
-      "verified": {
-        "docs": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
-      },
-      "notes": [
-        "Publishes publicly as the author. As a member it needs w_member_social; as a page, w_organization_social and an admin-type role.",
-        "Succeeds with 201 and an empty body: the new post's URN is in the x-restli-id response header.",
-        "Article posts must set title, description and thumbnail yourself; LinkedIn does not scrape the URL.",
-        "A member's token is limited to 150 requests a day."
-      ]
-    },
-    {
-      "id": "linkedin.posts.delete",
-      "name": "Delete a post",
-      "summary": "Deletes a post by URN.",
-      "kind": "write",
-      "method": "DELETE",
-      "path": "/rest/posts/{post_urn}",
-      "params": {
-        "post_urn": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Share or ugcPost URN, URL-encoded (urn%3Ali%3Ashare%3A123).",
-          "example": "urn:li:share:6844785523593134080"
-        }
-      },
-      "job": "social.publish",
-      "docs_url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api",
-      "verified": {
-        "docs": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
-      },
-      "notes": [
-        "Idempotent: deleting a deleted post still answers 204."
-      ]
     }
   ]
 }

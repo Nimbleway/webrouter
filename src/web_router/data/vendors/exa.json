@@ -2,7 +2,7 @@
   "vendor": "exa",
   "name": "Exa",
   "category": "search",
-  "summary": "Neural web search, page contents, cited answers, Agent runs and Websets from Exa.",
+  "summary": "Neural web search, page contents, cited answers, Agent runs and existing Websets from Exa.",
   "docs_url": "https://exa.ai/docs/reference/getting-started",
   "pricing_url": "https://exa.ai/pricing",
   "base_url": "https://api.exa.ai",
@@ -358,50 +358,6 @@
       }
     },
     {
-      "id": "exa.websets.create",
-      "name": "Create a Webset",
-      "summary": "Create a Webset, a persistent searchable collection that starts building as soon as it is created.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v0/websets",
-      "params": {
-        "title": {
-          "in": "body",
-          "type": "string",
-          "description": "Name of the Webset."
-        },
-        "search": {
-          "in": "body",
-          "type": "object",
-          "description": "Initial search, e.g. {\"query\": \"...\", \"count\": 10}."
-        },
-        "enrichments": {
-          "in": "body",
-          "type": "array",
-          "description": "Enrichments run on each item, each with description and format."
-        },
-        "externalId": {
-          "in": "body",
-          "type": "string",
-          "description": "Your own identifier for the Webset."
-        },
-        "metadata": {
-          "in": "body",
-          "type": "object",
-          "description": "Key-value metadata."
-        }
-      },
-      "notes": [
-        "Creates a stored resource and consumes credits as it fills.",
-        "Async: poll websets.get until its status is idle."
-      ],
-      "job": "lists.create",
-      "docs_url": "https://exa.ai/docs/websets/api/websets/create-a-webset.md",
-      "verified": {
-        "docs": "https://exa.ai/docs/websets/api/websets/create-a-webset.md"
-      }
-    },
-    {
       "id": "exa.websets.get",
       "name": "Get a Webset",
       "summary": "A Webset by id or externalId, with its status, searches and enrichments.",
@@ -491,112 +447,6 @@
       "docs_url": "https://exa.ai/docs/websets/api/websets/items/list-all-items-for-a-webset.md",
       "verified": {
         "docs": "https://exa.ai/docs/websets/api/websets/items/list-all-items-for-a-webset.md"
-      }
-    },
-    {
-      "id": "exa.websets.searches.create",
-      "name": "Add a search to a Webset",
-      "summary": "Run a further search whose items are added to an existing Webset.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v0/websets/{webset}/searches",
-      "params": {
-        "webset": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Webset id."
-        },
-        "query": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Natural-language description of what to find."
-        },
-        "count": {
-          "in": "body",
-          "type": "integer",
-          "required": true,
-          "description": "Items the search tries to find.",
-          "example": 10
-        },
-        "behavior": {
-          "in": "body",
-          "type": "string",
-          "description": "override replaces earlier results, append adds to them.",
-          "enum": [
-            "override",
-            "append"
-          ]
-        },
-        "criteria": {
-          "in": "body",
-          "type": "array",
-          "description": "Criteria every item is checked against; generated from the query when omitted."
-        },
-        "entity": {
-          "in": "body",
-          "type": "object",
-          "description": "Entity type to look for, e.g. {\"type\": \"company\"}."
-        }
-      },
-      "notes": [
-        "Consumes credits and changes the Webset's contents."
-      ],
-      "job": "lists.search",
-      "docs_url": "https://exa.ai/docs/websets/api/websets/searches/create-a-search.md",
-      "verified": {
-        "docs": "https://exa.ai/docs/websets/api/websets/searches/create-a-search.md"
-      }
-    },
-    {
-      "id": "exa.websets.enrichments.create",
-      "name": "Add an enrichment to a Webset",
-      "summary": "Extract an extra field from every item of a Webset.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v0/websets/{webset}/enrichments",
-      "params": {
-        "webset": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Webset id or externalId."
-        },
-        "description": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "What to extract for each item.",
-          "example": "Annual revenue"
-        },
-        "format": {
-          "in": "body",
-          "type": "string",
-          "description": "Type of the extracted value.",
-          "enum": [
-            "text",
-            "date",
-            "number",
-            "options",
-            "email",
-            "phone",
-            "url"
-          ]
-        },
-        "options": {
-          "in": "body",
-          "type": "array",
-          "description": "Choices when format is options."
-        }
-      },
-      "notes": [
-        "Consumes credits and adds a column to every item."
-      ],
-      "job": "lists.enrich",
-      "docs_url": "https://exa.ai/docs/websets/api/websets/enrichments/create-an-enrichment.md",
-      "verified": {
-        "docs": "https://exa.ai/docs/websets/api/websets/enrichments/create-an-enrichment.md"
       }
     }
   ]

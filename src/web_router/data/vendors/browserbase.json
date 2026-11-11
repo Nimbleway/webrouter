@@ -2,7 +2,7 @@
   "vendor": "browserbase",
   "name": "Browserbase",
   "category": "scraping",
-  "summary": "Fetch pages, search the web and run hosted browser agents on Browserbase, and inspect its browser sessions.",
+  "summary": "Fetch pages and search the web on Browserbase, and read its browser sessions and agent runs.",
   "docs_url": "https://docs.browserbase.com/reference/api/overview.md",
   "pricing_url": "https://www.browserbase.com/pricing",
   "base_url": "https://api.browserbase.com",
@@ -148,56 +148,6 @@
       }
     },
     {
-      "id": "browserbase.agents.runs.create",
-      "name": "Run a browser agent",
-      "summary": "Start a hosted agent that completes a natural-language task with web search and a browser.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v1/agents/runs",
-      "params": {
-        "task": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "What the agent should accomplish."
-        },
-        "agentId": {
-          "in": "body",
-          "type": "string",
-          "description": "Run a saved custom agent, using its systemPrompt and resultSchema unless overridden."
-        },
-        "resultSchema": {
-          "in": "body",
-          "type": "object",
-          "description": "JSON Schema the run's result should follow."
-        },
-        "browserSettings": {
-          "in": "body",
-          "type": "object",
-          "description": "Session settings: context {id, persist}, proxies (true or a list), verified."
-        },
-        "variables": {
-          "in": "body",
-          "type": "object",
-          "description": "Named values the agent can use as %name% placeholders: {name: {value, description}}. Not persisted."
-        },
-        "pauseWhen": {
-          "in": "body",
-          "type": "string",
-          "description": "When the agent should pause and wait for your input (e.g. a verification code); the run then goes to PAUSED."
-        }
-      },
-      "notes": [
-        "A write: the agent acts on live websites and its browser time is billed.",
-        "Returns the run id at once; poll agents.runs.get."
-      ],
-      "job": "web.browse",
-      "docs_url": "https://docs.browserbase.com/reference/api/run-an-agent.md",
-      "verified": {
-        "docs": "https://docs.browserbase.com/reference/api/run-an-agent.md"
-      }
-    },
-    {
       "id": "browserbase.agents.runs.get",
       "name": "Get an agent run",
       "summary": "A run's status, result and session.",
@@ -255,30 +205,6 @@
       "docs_url": "https://docs.browserbase.com/reference/api/list-run-messages.md",
       "verified": {
         "docs": "https://docs.browserbase.com/reference/api/list-run-messages.md"
-      }
-    },
-    {
-      "id": "browserbase.agents.runs.stop",
-      "name": "Stop an agent run",
-      "summary": "Ask an in-progress run to wind down to STOPPED.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/v1/agents/runs/{runId}/stop",
-      "params": {
-        "runId": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "The run id."
-        }
-      },
-      "notes": [
-        "Stopping a run that has already finished returns a conflict."
-      ],
-      "job": "jobs.cancel",
-      "docs_url": "https://docs.browserbase.com/reference/api/stop-a-run.md",
-      "verified": {
-        "docs": "https://docs.browserbase.com/reference/api/stop-a-run.md"
       }
     },
     {

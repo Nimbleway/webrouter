@@ -474,47 +474,6 @@
       "verified": {
         "docs": "https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files"
       }
-    },
-    {
-      "id": "github.issues.comment",
-      "name": "Comment on an issue or pull request",
-      "summary": "Posts a comment to an issue or PR conversation, notifying its participants.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/repos/{owner}/{repo}/issues/{issue_number}/comments",
-      "params": {
-        "owner": {
-          "in": "path",
-          "required": true,
-          "description": "Account that owns the repository (not case sensitive).",
-          "example": "python"
-        },
-        "repo": {
-          "in": "path",
-          "required": true,
-          "description": "Repository name without .git (not case sensitive).",
-          "example": "cpython"
-        },
-        "issue_number": {
-          "in": "path",
-          "type": "integer",
-          "required": true,
-          "description": "The issue or PR number."
-        },
-        "body": {
-          "in": "body",
-          "required": true,
-          "description": "The comment text (Markdown)."
-        }
-      },
-      "notes": [
-        "Sends notifications; creating content quickly triggers secondary rate limits."
-      ],
-      "job": "code.issues.comment",
-      "docs_url": "https://docs.github.com/en/rest/issues/comments#create-an-issue-comment",
-      "verified": {
-        "docs": "https://docs.github.com/en/rest/issues/comments#create-an-issue-comment"
-      }
     }
   ]
 }

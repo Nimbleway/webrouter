@@ -2,7 +2,7 @@
   "vendor": "google-tag-manager",
   "name": "Google Tag Manager",
   "category": "analytics",
-  "summary": "Your Tag Manager accounts, containers and workspaces: read tags, triggers and variables, create container versions, and publish them live.",
+  "summary": "Your Tag Manager accounts, containers and workspaces: read tags, triggers and variables.",
   "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2",
   "base_url": "https://tagmanager.googleapis.com/tagmanager/v2",
   "auth": {
@@ -307,98 +307,6 @@
       "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.variables/list",
       "verified": {
         "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces.variables/list"
-      }
-    },
-    {
-      "id": "google-tag-manager.workspaces.create_version",
-      "name": "Create a container version from a workspace",
-      "summary": "Snapshots the workspace into a new container version. Does not publish it.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/accounts/{account_id}/containers/{container_id}/workspaces/{workspace_id}:create_version",
-      "params": {
-        "account_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "GTM account id, digits.",
-          "example": "6000000000"
-        },
-        "container_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "GTM container id, digits (not the GTM-XXXX public id).",
-          "example": "12345678"
-        },
-        "workspace_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "GTM workspace id; the default workspace is usually 1 or 2 - list workspaces to find it.",
-          "example": "2"
-        },
-        "name": {
-          "in": "body",
-          "type": "string",
-          "description": "Name of the version to create."
-        },
-        "notes": {
-          "in": "body",
-          "type": "string",
-          "description": "Notes for the version."
-        }
-      },
-      "notes": [
-        "Does not make anything live: publish the returned version with google-tag-manager.versions.publish."
-      ],
-      "job": "analytics.versions.create",
-      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces/create_version",
-      "verified": {
-        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.workspaces/create_version"
-      }
-    },
-    {
-      "id": "google-tag-manager.versions.publish",
-      "name": "Publish a container version live",
-      "summary": "Makes a container version the live one for the container: the site's tags change.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/accounts/{account_id}/containers/{container_id}/versions/{version_id}:publish",
-      "params": {
-        "account_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "GTM account id, digits.",
-          "example": "6000000000"
-        },
-        "container_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "GTM container id, digits (not the GTM-XXXX public id).",
-          "example": "12345678"
-        },
-        "version_id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Container version id, from create_version's answer or a versions list."
-        },
-        "fingerprint": {
-          "in": "query",
-          "type": "string",
-          "description": "When given, must match the stored version's fingerprint or the call is refused."
-        }
-      },
-      "notes": [
-        "Takes effect on the real site immediately. The request body must be empty."
-      ],
-      "job": "analytics.versions.publish",
-      "docs_url": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.versions/publish",
-      "verified": {
-        "docs": "https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2/accounts.containers.versions/publish"
       }
     }
   ]
