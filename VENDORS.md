@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-139 vendors, 1328 endpoints.
+144 vendors, 1366 endpoints.
 
 ### advertising
 
@@ -191,10 +191,15 @@ The tables below are generated from `src/web_router/data/vendors/` by
 |---|---|---|---|---|---|
 | [Alpha Vantage](https://www.alphavantage.co/documentation/) `alphavantage` | Stock, forex and crypto prices, company fundamentals, earnings, market news sentiment and technical indicators. | 10 read | key in query | `ALPHAVANTAGE_API_KEY` | docs 2026-11-09 |
 | [Benzinga](https://docs.benzinga.com/introduction/introduction) `benzinga` | Benzinga financial news, analyst ratings, consensus price targets, and earnings, guidance and dividend calendars. | 7 read | key in query | `BENZINGA_API_KEY` | docs 2026-11-09 |
+| [Binance](https://developers.binance.com/docs/binance-spot-api-docs/rest-api) `binance` | Binance spot exchange public market data: prices, 24h tickers, order books, trades, candles and symbol rules, keyless. | 8 read | none | none | docs 2026-11-09 |
 | [US Bureau of Labor Statistics](https://www.bls.gov/developers/api_signature_v2.htm) `bls` | US labor and price statistics (CPI, PPI, employment, unemployment, wages) as time series from the BLS Public Data API v2. | 5 read | key in query | `BLS_API_KEY` | docs 2026-11-09 |
 | [EDINET](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf) `edinet` | Japan FSA's EDINET disclosure system: daily lists of securities filings (annual and quarterly reports, large shareholding reports) and the filings themselves as XBRL, PDF or CSV. | 2 read | key in query | `EDINET_API_KEY` | docs 2026-11-09 |
+| [US Energy Information Administration](https://www.eia.gov/opendata/documentation.php) `eia` | US energy statistics (electricity, petroleum, natural gas, coal, prices, production, consumption) from the EIA Open Data API v2. | 8 read | key in query | `EIA_API_KEY` | docs 2026-11-09 |
+| [Eurostat](https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access) `eurostat` | Eurostat EU statistics (prices and inflation, energy, labour, trade, GDP, population, regions) as JSON-stat or SDMX, keyless. | 4 read | none | none | docs 2026-11-09 |
 | [Financial Datasets](https://docs.financialdatasets.ai/introduction) `financialdatasets` | US public-company prices, financial statements, metrics, SEC filings, insider and institutional holdings, and macro series. | 29 read | key in header | `FINANCIAL_DATASETS_API_KEY` | docs 2026-11-08 |
+| [Kalshi](https://docs.kalshi.com/getting_started/quick_start_market_data) `kalshi` | Public market data from Kalshi, a prediction market exchange: series, events, markets, order books, trades and candlesticks. | 8 read | none | none | docs 2026-11-09 |
 | [Nasdaq Data Link](https://data.nasdaq.com/tablesapi) `nasdaq-data-link` | Financial, economic and alternative datasets from Nasdaq Data Link through its Tables API: filter rows and columns of any table you can access, and read table metadata. | 2 read | key in query | `NASDAQ_DATA_LINK_API_KEY` | docs 2026-11-09 |
+| [Polygon.io (Massive)](https://polygon.io/docs/rest/stocks/aggregates) `polygon` | US stock bars, snapshots, trades, reference data, dividends and news from Polygon.io, now branded Massive. | 10 read | key in query | `POLYGON_API_KEY` | docs 2026-11-08 |
 | [Polymarket](https://docs.polymarket.com/) `polymarket` | Public prediction-market data from Polymarket: search, events and markets (Gamma API), order books, prices and price history (CLOB API), trades, holders and open interest (Data API). | 10 read | none | none | docs 2026-11-09 |
 | [SEC EDGAR](https://www.sec.gov/search-filings/edgar-application-programming-interfaces) `sec-edgar` | US public company filing histories and XBRL financial data (company facts, single concepts, cross-company frames) from the SEC's free EDGAR APIs. | 5 read | none | none | docs 2026-11-09 |
 | [Stripe](https://docs.stripe.com/api) `stripe` | Payments data from a Stripe account: charges, customers, payment intents, invoices, subscriptions and the balance. | 10 read | key in header | `STRIPE_SECRET_KEY` | docs 2026-11-09 |
