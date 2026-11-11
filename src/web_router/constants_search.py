@@ -25,6 +25,9 @@ def described(model: type[BaseModel], field: str) -> str:
     return description
 
 
+DATA_API_SEARCH_OPTIONS = frozenset({"data_apis", "data_apis_only", "configured_only"})
+"""The search options that steer data API discovery: the router's own, served whatever the backend."""
+
 MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "What to search for."},
     "max_results": {"type": "integer", "minimum": 1, "description": described(SearchRequest, "max_results")},
@@ -51,6 +54,25 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
         "enum": list(get_args(ResearchEffort)),
         "description": described(SearchRequest, "effort"),
     },
+    "data_apis": {
+        "type": "boolean",
+        "description": (
+            "Also list the data APIs whose catalog entries match the query, under `data_apis`: found locally at no "
+            "cost, never called. On by default; false for the web results alone."
+        ),
+    },
+    "data_apis_only": {
+        "type": "boolean",
+        "description": (
+            "List the matching data APIs alone and call no web backend. Takes no web option but `max_results`, "
+            "which then caps the matches."
+        ),
+    },
+    "configured_only": {
+        "type": "boolean",
+        "description": "List only the data APIs whose credentials are set here. Unset also lists the rest, "
+        "each with the variable that would add it.",
+    },
 }
 
 MCP_DESC_SEARCH = (
@@ -61,7 +83,9 @@ MCP_DESC_SEARCH = (
     "text comes back per result; `effort` how hard the backend looks, and higher effort costs more and "
     "takes longer by a vendor-specific amount, so leave it unset unless needed. When the page that answers "
     "needs a login, a form or other interaction, suggest a browser (`browser_open`) to the user "
-    "rather than only listing the steps."
+    "rather than only listing the steps. `data_apis` lists data APIs that match the query -- a vendor's own API, "
+    "such as an SEO or ads platform -- which this call never runs: `call_vendor` runs one on the user's own key, "
+    "so offer it only when its data answers better than the pages do."
 )
 
 MSG_UNSUPPORTED_DEPTH = (

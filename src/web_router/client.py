@@ -50,8 +50,8 @@ from web_router.client_requests import (
     build_browser_request,
     build_extract_request,
     build_research_request,
-    build_search_request,
 )
+from web_router.client_search import AsyncSearch, SyncSearch
 from web_router.client_vendors import AsyncVendors, SyncVendors, VendorCredentials, _VendorLookup
 from web_router.constants import (
     BROWSE_TIMEOUT,
@@ -91,11 +91,8 @@ from web_router.types import (
     ExtractFormat,
     ExtractResponse,
     Provider,
-    Recency,
     ResearchEffort,
     ResearchResponse,
-    SearchDepth,
-    SearchResponse,
     StealthLevel,
     Viewport,
     provider_name,
@@ -268,7 +265,9 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchmark, SyncPlan, SyncBudget, SyncVendors):
+class WebRouter(
+    _BaseRouter[BrowserHandle], SyncSearch, SyncAnswer, SyncLiveData, SyncBenchmark, SyncPlan, SyncBudget, SyncVendors
+):
     """Synchronous router.
 
     Example:
@@ -312,38 +311,6 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
         if async_only:
             self._close_refused_router()  # built by name above, and this router is never returned to close it
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
-
-    def search(
-        self,
-        query: str,
-        *,
-        provider: str | Provider | SearchProvider | None = None,
-        max_results: int | None = None,
-        search_depth: SearchDepth | None = None,
-        include_domains: list[str] | None = None,
-        exclude_domains: list[str] | None = None,
-        country: str | None = None,
-        locale: str | None = None,
-        recency: Recency | None = None,
-        effort: ResearchEffort | None = None,
-        provider_options: dict[str, Any] | None = None,
-        budget: Budget | None = None,
-    ) -> SearchResponse:
-        """Search the web through ``provider`` (or the router's default)."""
-        request = build_search_request(
-            query,
-            max_results=max_results,
-            search_depth=search_depth,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            country=country,
-            locale=locale,
-            recency=recency,
-            effort=effort,
-            provider_options=provider_options,
-        )
-        chain = self.get_provider(provider)
-        return self._routed(chain, request, budget, chain.search)
 
     def extract(
         self,
@@ -601,7 +568,14 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
 
 
 class AsyncWebRouter(
-    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncLiveData, AsyncBenchmark, AsyncPlan, AsyncBudget, AsyncVendors
+    _BaseRouter[AsyncBrowserHandle],
+    AsyncSearch,
+    AsyncAnswer,
+    AsyncLiveData,
+    AsyncBenchmark,
+    AsyncPlan,
+    AsyncBudget,
+    AsyncVendors,
 ):
     """Asynchronous router.
 
@@ -609,38 +583,6 @@ class AsyncWebRouter(
         >>> async with AsyncWebRouter("nimble") as router:
         ...     response = await router.search("latest nvidia earnings")
     """
-
-    async def search(
-        self,
-        query: str,
-        *,
-        provider: str | Provider | SearchProvider | None = None,
-        max_results: int | None = None,
-        search_depth: SearchDepth | None = None,
-        include_domains: list[str] | None = None,
-        exclude_domains: list[str] | None = None,
-        country: str | None = None,
-        locale: str | None = None,
-        recency: Recency | None = None,
-        effort: ResearchEffort | None = None,
-        provider_options: dict[str, Any] | None = None,
-        budget: Budget | None = None,
-    ) -> SearchResponse:
-        """Search the web through ``provider`` (or the router's default)."""
-        request = build_search_request(
-            query,
-            max_results=max_results,
-            search_depth=search_depth,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            country=country,
-            locale=locale,
-            recency=recency,
-            effort=effort,
-            provider_options=provider_options,
-        )
-        chain = self.get_provider(provider)
-        return await self._arouted(chain, request, budget, chain.asearch)
 
     async def extract(
         self,

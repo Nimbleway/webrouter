@@ -669,6 +669,29 @@ when you switch providers. `search_depth` is how much text comes back per
 result; `effort` is how hard the backend looks. The exact field each backend
 sends is in its `contracts/search/<name>.json`.
 
+### Data APIs that match the search
+
+A search also lists the data APIs whose catalog entries match the query — a
+vendor's own API, such as Datadog's monitors or Google Ads' reports (see
+[Vendor data](#vendor-data)) — under `response.data_apis`, beside the web
+results:
+
+```python
+response = router.search("datadog monitors")
+response.data_apis[0].endpoint  # 'datadog.monitors.list', the name call_vendor takes
+response.data_apis[0].configured  # False until its credentials are set
+response.data_apis[0].missing  # the variable to set for each one that is not
+```
+
+Matching reads the local catalog, so it costs nothing and calls nothing; a match
+is never run, and calling it stays `call_vendor()`'s. Only read endpoints are
+listed, at most three, and only on a query word in an endpoint's id, job or
+vendor name, so most web searches list none. `data_apis=False` leaves them out,
+`configured_only=True` keeps the ones you hold credentials for, and
+`data_apis_only=True` lists them alone and calls no web backend (its
+`provider` is `"data-apis"`); it refuses every web option but `max_results`,
+which then caps the matches.
+
 ### Search depth
 
 Three levels, each defined by size, mapped onto each backend's own knobs. A

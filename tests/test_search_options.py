@@ -8,6 +8,7 @@ import pytest
 
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
+from web_router.constants_search import DATA_API_SEARCH_OPTIONS
 from web_router.integrations.anthropic import WebRouterTools
 from web_router.types import NORMALIZED_PARAMETERS, Recency, ResearchEffort, SearchRequest
 from web_router.types_answer import AnswerRequest
@@ -51,7 +52,7 @@ def test_the_mcp_schema_offers_every_level_and_says_what_effort_costs() -> None:
 
 
 def test_the_mcp_schema_lists_every_shared_option() -> None:
-    assert set(MCP_SEARCH_PROPERTIES) == NORMALIZED_PARAMETERS | {"query"}
+    assert set(MCP_SEARCH_PROPERTIES) == NORMALIZED_PARAMETERS | DATA_API_SEARCH_OPTIONS | {"query"}
 
 
 @pytest.mark.parametrize("name, value", [("recency", "year"), ("effort", "high")])

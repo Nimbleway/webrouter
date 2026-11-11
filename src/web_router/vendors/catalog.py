@@ -93,8 +93,9 @@ class VendorCatalog:
         category: str | None = None,
         kind: str | None = None,
         limit: int | None = None,
+        min_score: int = 0,
     ) -> list[VendorEndpoint]:
-        """Endpoints whose words match ``query``, best match first.
+        """Endpoints whose words match ``query``, best match first, scoring at least ``min_score``.
 
         A plain word-overlap score over the id, name, summary, job and the
         vendor's own name and category, with filler words ("a", "for", "the")
@@ -117,7 +118,7 @@ class VendorCatalog:
             if kind is not None and endpoint.kind != kind:
                 continue
             score = _score(words, endpoint, owner)
-            if words and score == 0:
+            if (words and score == 0) or score < min_score:
                 continue
             scored.append((-score, endpoint.id, endpoint))
         scored.sort(key=lambda row: (row[0], row[1]))
