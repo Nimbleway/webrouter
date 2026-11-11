@@ -2,9 +2,9 @@
 #    uv export --no-hashes --no-emit-project --all-extras --no-dev -o requirements.txt
 annotated-types==0.8.0
     # via pydantic
-anthropic==1.11.0
+anthropic==2.8.0
     # via webrouter
-anyio==4.15.1
+anyio==4.16.0
     # via
     #   anthropic
     #   httpx
@@ -19,18 +19,19 @@ attrs==26.1.0
     # via
     #   jsonschema
     #   referencing
-botocore==1.43.117
+botocore==1.43.127
     # via webrouter
 certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
+    #   langchain-core
     #   requests
 cffi==2.1.1 ; platform_python_implementation != 'PyPy'
     # via cryptography
-charset-normalizer==3.5.1
+charset-normalizer==3.5.2
     # via requests
-click==8.5.0 ; sys_platform != 'emscripten'
+click==8.5.1 ; sys_platform != 'emscripten'
     # via uvicorn
 cryptography==50.0.2
     # via pyjwt
@@ -49,7 +50,7 @@ h11==0.16.0
     #   uvicorn
 httpcore==1.0.9
     # via httpx
-httpcore2==2.13.1 ; sys_platform != 'emscripten'
+httpcore2==2.16.0 ; sys_platform != 'emscripten'
     # via httpx2
 httpx==0.28.1
     # via
@@ -57,7 +58,7 @@ httpx==0.28.1
     #   nimble-python
     #   tavily-python
     #   webrouter
-httpx2==2.13.1
+httpx2==2.16.0
     # via
     #   anthropic
     #   langsmith
@@ -71,37 +72,39 @@ idna==3.20
     #   httpx
     #   httpx2
     #   requests
-jiter==0.17.0
+jiter==0.19.0
     # via
     #   anthropic
     #   openai
 jmespath==1.1.0
     # via botocore
-jsonpatch==1.33
+jsonpatch==1.45
     # via langchain-core
-jsonpointer==3.1.1
+jsonpointer==3.10
     # via jsonpatch
 jsonschema==4.26.0
     # via mcp
 jsonschema-specifications==2025.9.1
     # via jsonschema
-langchain-core==1.6.5
+langchain-core==1.7.7
     # via webrouter
-langchain-protocol==0.0.19
+langchain-protocol==0.0.21
     # via langchain-core
-langsmith==0.14.1
+langsmith==0.14.17
     # via langchain-core
-mcp==2.2.0
+mcp==2.3.0
     # via webrouter
-mcp-types==2.2.0
+mcp-types==2.3.0
     # via mcp
 nimble-python==1.6.0
     # via webrouter
-openai==3.45.0
+openai==3.49.0
     # via webrouter
 opentelemetry-api==1.45.2
-    # via mcp
-orjson==3.12.0 ; platform_python_implementation != 'PyPy'
+    # via
+    #   anthropic
+    #   mcp
+orjson==3.13.0 ; platform_python_implementation != 'PyPy'
     # via langsmith
 packaging==26.3
     # via
@@ -109,13 +112,13 @@ packaging==26.3
     #   langsmith
 pillow==13.0.0
     # via webrouter
-playwright==1.63.0
+playwright==1.65.0
     # via webrouter
 pyarrow==26.0.1
     # via webrouter
-pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+pycparser==3.12 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
     # via cffi
-pydantic==2.13.5
+pydantic==2.14.3
     # via
     #   anthropic
     #   langchain-core
@@ -125,17 +128,15 @@ pydantic==2.13.5
     #   nimble-python
     #   openai
     #   webrouter
-pydantic-core==2.46.5
+pydantic-core==2.50.4
     # via pydantic
-pyee==13.0.1
-    # via playwright
 pyjwt==2.15.1
     # via mcp
 python-dateutil==2.9.0.post0
     # via botocore
 python-dotenv==1.2.4
     # via webrouter
-python-multipart==0.0.32
+python-multipart==0.0.33
     # via mcp
 pywin32==312 ; sys_platform == 'win32'
     # via mcp
@@ -145,7 +146,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-regex==2026.9.10
+regex==2026.11.9
     # via tiktoken
 requests==2.34.2
     # via
@@ -155,7 +156,7 @@ requests==2.34.2
     #   tiktoken
 requests-toolbelt==1.0.0
     # via langsmith
-rpds-py==2026.6.3
+rpds-py==2026.9.1
     # via
     #   jsonschema
     #   referencing
@@ -167,19 +168,19 @@ sniffio==1.3.1
     #   langsmith
     #   nimble-python
     #   openai
-sse-starlette==3.4.11
+sse-starlette==3.7.0
     # via mcp
-starlette==1.6.0
+starlette==1.10.0
     # via
     #   mcp
     #   sse-starlette
-tavily-python==0.8.4
+tavily-python==0.8.5
     # via webrouter
-tenacity==9.1.4
+tenacity==9.2.1
     # via langchain-core
 tiktoken==0.14.0
     # via tavily-python
-truststore==0.10.4 ; sys_platform != 'emscripten'
+truststore==0.10.5 ; sys_platform != 'emscripten'
     # via
     #   httpcore2
     #   httpx2
@@ -198,12 +199,11 @@ typing-extensions==4.16.0
     #   opentelemetry-api
     #   pydantic
     #   pydantic-core
-    #   pyee
     #   referencing
     #   starlette
     #   typing-inspection
     #   webrouter
-typing-inspection==0.4.4
+typing-inspection==0.4.5
     # via
     #   mcp
     #   pydantic
@@ -211,15 +211,15 @@ urllib3==2.8.0
     # via
     #   botocore
     #   requests
-uuid-utils==0.17.1
+uuid-utils==0.19.0
     # via
     #   langchain-core
     #   langsmith
-uvicorn==0.53.0 ; sys_platform != 'emscripten'
+uvicorn==0.54.0 ; sys_platform != 'emscripten'
     # via mcp
-websockets==16.1.1
+websockets==17.4
     # via langsmith
-xxhash==4.0.1
+xxhash==4.1.0
     # via langsmith
 zstandard==0.25.0
     # via langsmith

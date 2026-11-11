@@ -8,8 +8,9 @@ rules every change here follows.
 ## What this is
 
 `web-router` puts one typed interface in front of many web APIs: `search`,
-`extract`, `run_template` (a backend's saved Extract Template, with
-`templates` and `template` to find one), `answer` (a backend's written answer
+`extract`, `live_data` (a vendor's ready-made scraper for one site -- Nimble,
+Apify, Bright Data, Oxylabs -- fetched for this call, with `live_data_sources`
+and `live_data_source` to find one), `answer` (a backend's written answer
 with its sources, in one call), `research`, `open_browser` (a browser
 session) and `browse` (a hosted browser agent). Each call behaves the same
 whichever backend serves it. Beside them, `call_vendor` reaches a vendor's own
