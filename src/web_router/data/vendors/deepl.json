@@ -1,0 +1,340 @@
+{
+  "vendor": "deepl",
+  "name": "DeepL",
+  "category": "ai",
+  "summary": "Machine translation and text improvement (rephrasing in a style or tone), with glossaries, supported-language lookups and usage.",
+  "docs_url": "https://developers.deepl.com/docs",
+  "pricing_url": "https://www.deepl.com/pro-api",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "DEEPL_API_HOST"
+      ],
+      "default": "api.deepl.com",
+      "choices": [
+        "api.deepl.com",
+        "api-free.deepl.com"
+      ],
+      "description": "api-free.deepl.com for a DeepL API Free key (one ending in ':fx'), api.deepl.com for Pro. A key only works on its own host."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "auth_key": {
+        "env": [
+          "DEEPL_AUTH_KEY",
+          "DEEPL_API_KEY"
+        ],
+        "description": "a DeepL API authentication key (deepl.com/your-account/keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "DeepL-Auth-Key {auth_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Free keys end in ':fx' and must use api-free.deepl.com; set DEEPL_API_HOST accordingly.",
+    "Billed per character translated; context is not billed. A 456 status means the character quota is used up: do not retry.",
+    "Retry 429 and 5xx with backoff; requests are limited to 128 KiB in total."
+  ],
+  "sources": [
+    "https://developers.deepl.com/api-reference/openapi.json",
+    "https://developers.deepl.com/api-reference/translate/request-translation",
+    "https://developers.deepl.com/api-reference/improve-text/request-text-improvement",
+    "https://developers.deepl.com/api-reference/usage-and-quota",
+    "https://developers.deepl.com/api-reference/languages/retrieve-languages-by-resource",
+    "https://developers.deepl.com/api-reference/multilingual-glossaries/list-all-glossaries",
+    "https://developers.deepl.com/api-reference/multilingual-glossaries/retrieve-glossary-entries"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "deepl.text.translate",
+      "name": "Translate text",
+      "summary": "Translate one or more texts into a target language, detecting the source when not given.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/translate",
+      "params": {
+        "text": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Texts to translate (UTF-8); each is translated on its own and returned in order.",
+          "example": [
+            "Hello, world!"
+          ]
+        },
+        "target_lang": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Target language code, e.g. DE, EN-US, PT-BR.",
+          "example": "DE"
+        },
+        "source_lang": {
+          "in": "body",
+          "type": "string",
+          "description": "Source language code; detected when omitted."
+        },
+        "context": {
+          "in": "body",
+          "type": "string",
+          "description": "Extra text that guides the translation without being translated (not billed)."
+        },
+        "formality": {
+          "in": "body",
+          "type": "string",
+          "description": "Formality, for target languages that support it (prefer_ falls back silently).",
+          "enum": [
+            "default",
+            "more",
+            "less",
+            "prefer_more",
+            "prefer_less"
+          ]
+        },
+        "model_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Quality versus latency.",
+          "enum": [
+            "quality_optimized",
+            "prefer_quality_optimized",
+            "latency_optimized"
+          ]
+        },
+        "split_sentences": {
+          "in": "body",
+          "type": "string",
+          "description": "0 no splitting, 1 on punctuation and newlines, nonewlines on punctuation only.",
+          "enum": [
+            "0",
+            "1",
+            "nonewlines"
+          ]
+        },
+        "preserve_formatting": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Keep the original formatting."
+        },
+        "glossary_id": {
+          "in": "body",
+          "type": "string",
+          "description": "One glossary to apply (needs source_lang)."
+        },
+        "tag_handling": {
+          "in": "body",
+          "type": "string",
+          "description": "Treat the text as markup.",
+          "enum": [
+            "xml",
+            "html"
+          ]
+        },
+        "custom_instructions": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 10 instructions, 300 characters each."
+        },
+        "show_billed_characters": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include the billed character count in the response."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Results are in translations[] with detected_source_language and text."
+      ],
+      "job": "ai.translate",
+      "docs_url": "https://developers.deepl.com/api-reference/translate/request-translation",
+      "verified": {
+        "docs": "https://developers.deepl.com/api-reference/translate/request-translation"
+      }
+    },
+    {
+      "id": "deepl.text.improve",
+      "name": "Improve text",
+      "summary": "Correct and rephrase text, optionally in a writing style or tone (DeepL Write).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/write/rephrase",
+      "params": {
+        "text": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Texts to improve; returned in order.",
+          "example": [
+            "I has a apple."
+          ]
+        },
+        "target_lang": {
+          "in": "body",
+          "type": "string",
+          "description": "Language of the output, e.g. en-US, de, fr.",
+          "enum": [
+            "de",
+            "en",
+            "en-GB",
+            "en-US",
+            "es",
+            "fr",
+            "it",
+            "ja",
+            "ko",
+            "pt",
+            "pt-BR",
+            "pt-PT",
+            "zh",
+            "zh-Hans"
+          ]
+        },
+        "writing_style": {
+          "in": "body",
+          "type": "string",
+          "description": "Style; prefer_ falls back to default where unsupported.",
+          "enum": [
+            "academic",
+            "business",
+            "casual",
+            "default",
+            "simple",
+            "prefer_academic",
+            "prefer_business",
+            "prefer_casual",
+            "prefer_simple"
+          ]
+        },
+        "tone": {
+          "in": "body",
+          "type": "string",
+          "description": "Tone; prefer_ falls back to default where unsupported.",
+          "enum": [
+            "confident",
+            "default",
+            "diplomatic",
+            "enthusiastic",
+            "friendly",
+            "prefer_confident",
+            "prefer_diplomatic",
+            "prefer_enthusiastic",
+            "prefer_friendly"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "docs_url": "https://developers.deepl.com/api-reference/improve-text/request-text-improvement",
+      "verified": {
+        "docs": "https://developers.deepl.com/api-reference/improve-text/request-text-improvement"
+      }
+    },
+    {
+      "id": "deepl.languages.list",
+      "name": "List supported languages",
+      "summary": "Languages a DeepL resource supports, with source/target roles and features.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/languages",
+      "params": {
+        "resource": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Which resource to list languages for.",
+          "example": "translate_text",
+          "enum": [
+            "translate_text",
+            "translate_document",
+            "glossary",
+            "voice",
+            "write",
+            "style_rules",
+            "translation_memory"
+          ]
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Also include non-stable languages or features (see the docs for values)."
+        }
+      },
+      "job": "reference.languages",
+      "docs_url": "https://developers.deepl.com/api-reference/languages/retrieve-languages-by-resource",
+      "verified": {
+        "docs": "https://developers.deepl.com/api-reference/languages/retrieve-languages-by-resource"
+      }
+    },
+    {
+      "id": "deepl.usage.get",
+      "name": "Get usage and limits",
+      "summary": "Characters (and documents, minutes) used and allowed in the current billing period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/usage",
+      "params": {},
+      "notes": [
+        "Free and Pro Classic accounts get only character_count and character_limit (plus document fields)."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://developers.deepl.com/api-reference/usage-and-quota",
+      "verified": {
+        "docs": "https://developers.deepl.com/api-reference/usage-and-quota"
+      }
+    },
+    {
+      "id": "deepl.glossaries.list",
+      "name": "List glossaries",
+      "summary": "Every v3 multilingual glossary on the account, without entries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/glossaries",
+      "params": {},
+      "docs_url": "https://developers.deepl.com/api-reference/multilingual-glossaries/list-all-glossaries",
+      "verified": {
+        "docs": "https://developers.deepl.com/api-reference/multilingual-glossaries/list-all-glossaries"
+      }
+    },
+    {
+      "id": "deepl.glossaries.entries",
+      "name": "Get glossary entries",
+      "summary": "The term pairs of one glossary dictionary, as TSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/glossaries/{glossary_id}/entries",
+      "params": {
+        "glossary_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Glossary id from deepl.glossaries.list."
+        },
+        "source_lang": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Source language of the dictionary, e.g. en."
+        },
+        "target_lang": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target language of the dictionary, e.g. de."
+        }
+      },
+      "docs_url": "https://developers.deepl.com/api-reference/multilingual-glossaries/retrieve-glossary-entries",
+      "verified": {
+        "docs": "https://developers.deepl.com/api-reference/multilingual-glossaries/retrieve-glossary-entries"
+      }
+    }
+  ]
+}

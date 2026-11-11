@@ -1,0 +1,382 @@
+{
+  "vendor": "mistral",
+  "name": "Mistral AI",
+  "category": "ai",
+  "summary": "Mistral language models for chat, embeddings, document OCR, moderation and speech.",
+  "docs_url": "https://docs.mistral.ai/api/",
+  "pricing_url": "https://docs.mistral.ai/inference/pricing",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "MISTRAL_API_HOST"
+      ],
+      "default": "api.mistral.ai",
+      "choices": [
+        "api.mistral.ai",
+        "api.eu.mistral.ai",
+        "api.us.mistral.ai"
+      ],
+      "description": "api.eu.mistral.ai or api.us.mistral.ai to keep inference in the EU or US (extra charge, regional models only); api.mistral.ai otherwise."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MISTRAL_API_KEY"
+        ],
+        "description": "a Mistral API key (Mistral AI Studio, API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Model aliases ending in -latest (mistral-large-latest, mistral-small-latest, mistral-ocr-latest) move to new versions; pin a dated name for stable output.",
+    "Billed per token; OCR per 1,000 pages (more for annotated pages); see the pricing page.",
+    "Regional hosts serve only the models hosted in that region."
+  ],
+  "sources": [
+    "https://docs.mistral.ai/api/",
+    "https://docs.mistral.ai/openapi.yaml",
+    "https://docs.mistral.ai/inference/regional-inference",
+    "https://docs.mistral.ai/models/ocr-4-1",
+    "https://docs.mistral.ai/inference/conversations/chat-completion"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "mistral.chat.complete",
+      "name": "Create a chat completion",
+      "summary": "Send a conversation to a Mistral model and get the reply.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model id, e.g. mistral-large-latest; list them with mistral.models.list.",
+          "example": "mistral-large-latest"
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Conversation as {role, content} messages.",
+          "example": [
+            {
+              "role": "user",
+              "content": "Hello"
+            }
+          ]
+        },
+        "temperature": {
+          "in": "body",
+          "type": "number",
+          "description": "Sampling temperature; 0.0 to 0.7 recommended."
+        },
+        "top_p": {
+          "in": "body",
+          "type": "number",
+          "description": "Nucleus sampling mass."
+        },
+        "max_tokens": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum tokens to generate."
+        },
+        "stop": {
+          "in": "body",
+          "type": "array",
+          "description": "Stop sequences."
+        },
+        "random_seed": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seed for deterministic sampling."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"type\":\"json_object\"} or a json_schema for structured output."
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Function tools the model may call."
+        },
+        "tool_choice": {
+          "in": "body",
+          "type": "string",
+          "description": "none, auto, any or required, or a named tool."
+        },
+        "reasoning_effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Reasoning effort for reasoning models."
+        },
+        "safe_prompt": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Inject Mistral's safety prompt."
+        }
+      },
+      "notes": [
+        "Do not set stream: true; this client returns one JSON body."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://docs.mistral.ai/api/",
+      "verified": {
+        "docs": "https://docs.mistral.ai/api/"
+      }
+    },
+    {
+      "id": "mistral.embeddings.create",
+      "name": "Create embeddings",
+      "summary": "Embed text into vectors for search and clustering.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/embeddings",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Embedding model, e.g. mistral-embed.",
+          "example": "mistral-embed"
+        },
+        "input": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Text or list of texts to embed.",
+          "example": [
+            "Embed this sentence."
+          ]
+        },
+        "output_dimension": {
+          "in": "body",
+          "type": "integer",
+          "description": "Output dimension, where the model supports it."
+        },
+        "output_dtype": {
+          "in": "body",
+          "type": "string",
+          "description": "Vector element type.",
+          "enum": [
+            "float",
+            "int8",
+            "uint8",
+            "binary",
+            "ubinary"
+          ]
+        },
+        "encoding_format": {
+          "in": "body",
+          "type": "string",
+          "description": "float or base64.",
+          "enum": [
+            "float",
+            "base64"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "ai.embeddings",
+      "docs_url": "https://docs.mistral.ai/api/",
+      "verified": {
+        "docs": "https://docs.mistral.ai/api/"
+      }
+    },
+    {
+      "id": "mistral.ocr",
+      "name": "OCR a document or image",
+      "summary": "Turn a PDF or image into Markdown per page, with optional images, tables and structured annotations.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/ocr",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "OCR model: mistral-ocr-latest, mistral-ocr-4-1 or mistral-ocr-4.",
+          "example": "mistral-ocr-latest"
+        },
+        "document": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{\"type\":\"document_url\",\"document_url\":...} for a PDF, or {\"type\":\"image_url\",\"image_url\":...} for an image (URL or data URI)."
+        },
+        "pages": {
+          "in": "body",
+          "type": "string",
+          "description": "Pages to process, 0-based: a list or a string like '0,1,2' or '0-5'."
+        },
+        "include_image_base64": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return extracted images as base64."
+        },
+        "table_format": {
+          "in": "body",
+          "type": "string",
+          "description": "How tables are rendered in the output."
+        },
+        "extract_header": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Move page headers into a separate header field."
+        },
+        "extract_footer": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Move page footers into a separate footer field."
+        },
+        "document_annotation_format": {
+          "in": "body",
+          "type": "object",
+          "description": "A json_schema response format to extract structured data from the whole document."
+        },
+        "document_annotation_prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Prompt guiding document_annotation_format."
+        }
+      },
+      "notes": [
+        "A read over POST; synchronous.",
+        "Results are in pages[].markdown."
+      ],
+      "job": "document.extract",
+      "docs_url": "https://docs.mistral.ai/api/",
+      "verified": {
+        "docs": "https://docs.mistral.ai/api/"
+      }
+    },
+    {
+      "id": "mistral.moderations",
+      "name": "Moderate text",
+      "summary": "Classify text against Mistral's moderation categories.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/moderations",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Moderation model, e.g. mistral-moderation-latest.",
+          "example": "mistral-moderation-latest"
+        },
+        "input": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Text or list of texts to classify."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "docs_url": "https://docs.mistral.ai/api/",
+      "verified": {
+        "docs": "https://docs.mistral.ai/api/"
+      }
+    },
+    {
+      "id": "mistral.speech.generate",
+      "name": "Generate speech from text",
+      "summary": "Text-to-speech in a preset or custom voice.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/audio/speech",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text to speak."
+        },
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "Speech model id."
+        },
+        "voice_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Preset or custom voice id (list them with GET /v1/audio/voices)."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Audio format.",
+          "enum": [
+            "pcm",
+            "wav",
+            "mp3",
+            "flac",
+            "opus"
+          ]
+        }
+      },
+      "notes": [
+        "Do not set stream: true.",
+        "The reply is JSON with the audio base64-encoded in audio_data."
+      ],
+      "job": "ai.speech.generate",
+      "docs_url": "https://docs.mistral.ai/api/",
+      "verified": {
+        "docs": "https://docs.mistral.ai/api/"
+      }
+    },
+    {
+      "id": "mistral.models.list",
+      "name": "List models",
+      "summary": "Models available to the key, with capabilities and context length.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/models",
+      "params": {},
+      "job": "ai.models",
+      "docs_url": "https://docs.mistral.ai/api/",
+      "verified": {
+        "docs": "https://docs.mistral.ai/api/"
+      }
+    },
+    {
+      "id": "mistral.models.get",
+      "name": "Get a model",
+      "summary": "Details of one model.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/models/{model_id}",
+      "params": {
+        "model_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model id.",
+          "example": "mistral-large-latest"
+        }
+      },
+      "job": "ai.models",
+      "docs_url": "https://docs.mistral.ai/api/",
+      "verified": {
+        "docs": "https://docs.mistral.ai/api/"
+      }
+    }
+  ]
+}
