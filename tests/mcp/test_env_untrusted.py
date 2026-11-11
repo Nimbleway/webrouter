@@ -35,6 +35,7 @@ from web_router.constants import (
     MCP_ENV_STATUS_NOTHING_NEW,
     MCP_ENV_STATUS_UNREADABLE,
     MCP_ENV_STATUS_USED,
+    MCP_MSG_ENV_HINT,
     MCP_TOOL_LOAD_ENV,
     PROVIDER_AGENTCORE,
     PROVIDER_TAVILY,
@@ -181,6 +182,21 @@ def test_a_project_env_with_blank_keys_gets_a_hint_naming_it(
     assert hint == MCP_MSG_ENV_HINT_EXPLICIT_UNUSED.format(
         env_var=ENV_MCP_PROJECT_ENV_FILE, path=lookup.path, status=MCP_ENV_STATUS_NO_CREDENTIALS
     )
+
+
+def test_a_project_env_with_nothing_new_gets_the_general_hint(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project .env whose keys the environment already set added nothing, so the hint doesn't point at it."""
+    monkeypatch.setenv(ENV_JINA_API_KEY, "jina-test-value")
+    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_JINA_API_KEY}=other-jina-value\n")
+    monkeypatch.setenv(ENV_MCP_PROJECT_ENV_FILE, MCP_ENV_FILE)
+
+    sources = EnvSources.at_startup()
+    hint = WebRouterTools(env=sources).capabilities()["env"]["hint"]
+
+    assert statuses(sources)[-1] == (MCP_ENV_SOURCE_PROJECT, MCP_ENV_STATUS_NOTHING_NEW)
+    assert hint == MCP_MSG_ENV_HINT.format(env_var=ENV_MCP_ENV_FILE, user_dir=user_config_dir())
 
 
 def test_a_used_explicit_file_that_left_the_server_keyless_gets_a_hint_naming_it(

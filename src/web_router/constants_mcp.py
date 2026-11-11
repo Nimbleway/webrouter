@@ -204,7 +204,7 @@ MCP_MSG_ENV_HINT_EXPLICIT_MISSING = (
     "names {path}, which does not exist: have the user create that file and put their keys in it, then call "
     "load_env with its path. Only the file's path is ever needed -- never paste a key into the conversation."
 )
-"""Said instead of ``MCP_MSG_ENV_HINT`` when the user set ``WEB_ROUTER_ENV_FILE`` and it names no file."""
+"""Said instead of ``MCP_MSG_ENV_HINT`` when a file the user named does not exist."""
 
 MCP_MSG_ENV_HINT_EXPLICIT_UNUSED = (
     "No API keys were found, so only the keyless backends are configured; they work meanwhile. {env_var} "
