@@ -1,0 +1,404 @@
+{
+  "vendor": "environmentagency",
+  "name": "Environment Agency (UK) flood monitoring",
+  "category": "other",
+  "summary": "Live flood warnings and alerts for England, flood areas, and river, sea, groundwater and rainfall readings from Environment Agency monitoring stations.",
+  "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+  "base_url": "https://environment.data.gov.uk/flood-monitoring",
+  "notes": [
+    "Keyless and free under the Open Government Licence v3.0; attribute as using Environment Agency flood and river level data from the real-time data API (Beta). No service-level guarantee; follow HTTP redirects.",
+    "Covers England only. Every endpoint is a GET returning JSON (items under 'items', paging under 'meta'); append .csv to a path for CSV.",
+    "Paging is _limit and _offset. Readings default to 500 rows and cap _limit at 10000; flood areas default to 500.",
+    "Do not poll station by station: the documented pattern for current values is one call to /data/readings?latest every 15 minutes.",
+    "Geographic filters take lat, long (WGS84 decimal degrees) and dist in kilometres, all three together.",
+    "Flood warning severityLevel: 1 severe flood warning, 2 flood warning, 3 flood alert, 4 warning no longer in force."
+  ],
+  "sources": [
+    "https://environment.data.gov.uk/flood-monitoring/doc/reference"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "environmentagency.floods.list",
+      "name": "List current flood warnings and alerts",
+      "summary": "Flood warnings and alerts in force in England, with severity, area, message and time raised.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/id/floods",
+      "params": {
+        "min_severity": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "min-severity",
+          "description": "Only warnings at this severity or more severe (1 is most severe, 4 least).",
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "example": 3
+        },
+        "county": {
+          "in": "query",
+          "description": "Only warnings whose area touches this county name.",
+          "example": "Somerset"
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude of the centre of a search circle; use with long and dist."
+        },
+        "long": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude of the centre of a search circle; use with lat and dist."
+        },
+        "dist": {
+          "in": "query",
+          "type": "number",
+          "description": "Radius of the search circle in km."
+        }
+      },
+      "notes": [
+        "Lists only warnings currently in force; there is no history here."
+      ],
+      "job": "alerts.flood.list",
+      "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "verified": {
+        "docs": "https://environment.data.gov.uk/flood-monitoring/doc/reference"
+      }
+    },
+    {
+      "id": "environmentagency.flood_areas.list",
+      "name": "List flood alert and warning areas",
+      "summary": "The geographic areas warnings are issued for, with code, description, river or sea and polygon link.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/id/floodAreas",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude of the centre of a search circle; use with long and dist."
+        },
+        "long": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude of the centre of a search circle; use with lat and dist."
+        },
+        "dist": {
+          "in": "query",
+          "type": "number",
+          "description": "Radius of the search circle in km."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "_limit",
+          "description": "Maximum areas to return; default 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "_offset",
+          "description": "Zero-based index of the first area to return."
+        }
+      },
+      "job": "alerts.areas.list",
+      "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "verified": {
+        "docs": "https://environment.data.gov.uk/flood-monitoring/doc/reference"
+      }
+    },
+    {
+      "id": "environmentagency.flood_areas.get",
+      "name": "Get one flood area",
+      "summary": "One flood alert or warning area by its code.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/id/floodAreas/{area_code}",
+      "params": {
+        "area_code": {
+          "in": "path",
+          "required": true,
+          "description": "The flood area code (floodAreaID), as found on a warning.",
+          "example": "122WAC953"
+        }
+      },
+      "job": "alerts.areas.get",
+      "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "verified": {
+        "docs": "https://environment.data.gov.uk/flood-monitoring/doc/reference"
+      }
+    },
+    {
+      "id": "environmentagency.stations.list",
+      "name": "List monitoring stations",
+      "summary": "River level, flow, tidal, groundwater and rainfall stations, with location, river and the measures each reports.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/id/stations",
+      "params": {
+        "parameter": {
+          "in": "query",
+          "description": "Only stations measuring this parameter, by short name such as 'level', 'flow', 'wind' or 'temperature'.",
+          "example": "level"
+        },
+        "qualifier": {
+          "in": "query",
+          "description": "Only stations with a measure of this qualifier, e.g. 'Stage', 'Downstream Stage', 'Tidal Level', 'Groundwater'."
+        },
+        "label": {
+          "in": "query",
+          "description": "Only stations with this exact label."
+        },
+        "town": {
+          "in": "query",
+          "description": "Only stations in this town."
+        },
+        "catchmentName": {
+          "in": "query",
+          "description": "Only stations in this catchment."
+        },
+        "riverName": {
+          "in": "query",
+          "description": "Only stations on this river.",
+          "example": "River Thames"
+        },
+        "stationReference": {
+          "in": "query",
+          "description": "Only the station with this reference."
+        },
+        "RLOIid": {
+          "in": "query",
+          "description": "Only the station with this River Levels on the Internet id."
+        },
+        "search": {
+          "in": "query",
+          "description": "Only stations whose label contains this text."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude of the centre of a search circle; use with long and dist."
+        },
+        "long": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude of the centre of a search circle; use with lat and dist."
+        },
+        "dist": {
+          "in": "query",
+          "type": "number",
+          "description": "Radius of the search circle in km."
+        },
+        "type": {
+          "in": "query",
+          "description": "Only stations of this type.",
+          "enum": [
+            "SingleLevel",
+            "MultiTraceLevel",
+            "Coastal",
+            "Groundwater",
+            "Meteorological"
+          ]
+        },
+        "status": {
+          "in": "query",
+          "description": "Only stations with this status.",
+          "enum": [
+            "Active",
+            "Closed",
+            "Suspended"
+          ]
+        },
+        "view": {
+          "in": "query",
+          "wire_name": "_view",
+          "description": "'full' adds stage and downstage scale data.",
+          "enum": [
+            "full"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "_limit",
+          "description": "Maximum stations to return."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "_offset",
+          "description": "Zero-based index of the first station to return."
+        }
+      },
+      "job": "monitoring.stations.list",
+      "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "verified": {
+        "docs": "https://environment.data.gov.uk/flood-monitoring/doc/reference"
+      }
+    },
+    {
+      "id": "environmentagency.stations.get",
+      "name": "Get one monitoring station",
+      "summary": "A station's full description: location, river, measures, and typical and record levels (stageScale) where known.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/id/stations/{station_id}",
+      "params": {
+        "station_id": {
+          "in": "path",
+          "required": true,
+          "description": "The station reference (notation).",
+          "example": "1491TH"
+        }
+      },
+      "job": "monitoring.stations.get",
+      "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "verified": {
+        "docs": "https://environment.data.gov.uk/flood-monitoring/doc/reference"
+      }
+    },
+    {
+      "id": "environmentagency.readings.list",
+      "name": "List readings across all stations",
+      "summary": "Readings from every measure, filtered by time, parameter or station; latest gives the current value of each.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/readings",
+      "params": {
+        "latest": {
+          "in": "query",
+          "description": "A flag: present (send an empty string) to return only the most recent reading of each measure."
+        },
+        "today": {
+          "in": "query",
+          "description": "A flag: present (send an empty string) to return today's readings."
+        },
+        "date": {
+          "in": "query",
+          "description": "Readings on this day, YYYY-MM-DD.",
+          "example": "2026-11-01"
+        },
+        "startdate": {
+          "in": "query",
+          "description": "Start of a date range, YYYY-MM-DD; use with enddate."
+        },
+        "enddate": {
+          "in": "query",
+          "description": "End of a date range, YYYY-MM-DD; use with startdate."
+        },
+        "parameter": {
+          "in": "query",
+          "description": "Only readings of this parameter, by short name such as 'level' or 'flow'."
+        },
+        "qualifier": {
+          "in": "query",
+          "description": "Only readings of measures with this qualifier."
+        },
+        "stationReference": {
+          "in": "query",
+          "description": "Only readings from this station reference."
+        },
+        "station": {
+          "in": "query",
+          "description": "Only readings from this station, given by its full URI."
+        },
+        "view": {
+          "in": "query",
+          "wire_name": "_view",
+          "description": "'full' expands each reading's measure.",
+          "enum": [
+            "full"
+          ]
+        },
+        "sorted": {
+          "in": "query",
+          "wire_name": "_sorted",
+          "description": "A flag: present (send an empty string) to sort newest first."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "_limit",
+          "description": "Maximum readings to return; default 500, maximum 10000."
+        }
+      },
+      "notes": [
+        "date, today or latest without a station or _sorted have no default limit and can return very large results; set _limit."
+      ],
+      "job": "monitoring.readings.list",
+      "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "verified": {
+        "docs": "https://environment.data.gov.uk/flood-monitoring/doc/reference"
+      }
+    },
+    {
+      "id": "environmentagency.stations.readings",
+      "name": "List one station's readings",
+      "summary": "Readings for every measure at one station, for a day, a date range, since a time, or the latest.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/id/stations/{station_id}/readings",
+      "params": {
+        "station_id": {
+          "in": "path",
+          "required": true,
+          "description": "The station reference (notation).",
+          "example": "1491TH"
+        },
+        "latest": {
+          "in": "query",
+          "description": "A flag: present (send an empty string) to return only the most recent reading of each measure."
+        },
+        "today": {
+          "in": "query",
+          "description": "A flag: present (send an empty string) to return today's readings."
+        },
+        "date": {
+          "in": "query",
+          "description": "Readings on this day, YYYY-MM-DD."
+        },
+        "startdate": {
+          "in": "query",
+          "description": "Start of a date range, YYYY-MM-DD; use with enddate."
+        },
+        "enddate": {
+          "in": "query",
+          "description": "End of a date range, YYYY-MM-DD; use with startdate."
+        },
+        "since": {
+          "in": "query",
+          "description": "Readings strictly after this date-time (not inclusive), ISO 8601.",
+          "example": "2026-11-09T06:00:00Z"
+        },
+        "view": {
+          "in": "query",
+          "wire_name": "_view",
+          "description": "'full' expands each reading's measure.",
+          "enum": [
+            "full"
+          ]
+        },
+        "sorted": {
+          "in": "query",
+          "wire_name": "_sorted",
+          "description": "A flag: present (send an empty string) to sort newest first."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "_limit",
+          "description": "Maximum readings to return; default 500, maximum 10000."
+        }
+      },
+      "job": "monitoring.readings.list",
+      "docs_url": "https://environment.data.gov.uk/flood-monitoring/doc/reference",
+      "verified": {
+        "docs": "https://environment.data.gov.uk/flood-monitoring/doc/reference"
+      }
+    }
+  ]
+}

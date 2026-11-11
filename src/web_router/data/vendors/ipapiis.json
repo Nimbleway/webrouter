@@ -1,0 +1,146 @@
+{
+  "vendor": "ipapiis",
+  "name": "ipapi.is",
+  "category": "other",
+  "summary": "IP address intelligence: geolocation, ASN, owning company and abuse contact, and VPN, proxy, Tor, datacenter and crawler detection.",
+  "docs_url": "https://ipapi.is/developers.html",
+  "pricing_url": "https://ipapi.is/pricing.html",
+  "base_url": "https://api.ipapi.is",
+  "hosts": {
+    "account": "https://ipapi.is/app/api"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "IPAPI_IS_API_KEY"
+        ],
+        "required": false,
+        "description": "an ipapi.is API key (free account: 1,000 requests a day). Optional for single IP lookups, required for ASN lookups and the account endpoint"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Without a key: 30 lookups per IP per UTC day, with a minimal response and no detection flags; the next requests get 429 ERR_FREE_TIER_EXHAUSTED, and persisting can get the IP firewalled for 24 hours.",
+    "A free account key allows 1,000 requests a day; errors are not counted. 429 ERR_QUOTA_EXCEEDED means the daily quota is spent.",
+    "Switch parameters (pretty, geoloc_meta, all_companies) take effect only with the exact value 1.",
+    "Errors are JSON with error and error_code (e.g. 400 ERR_INVALID_IP_OR_ASN, 403 ERR_FORBIDDEN_API_KEY_REQUIRED)."
+  ],
+  "sources": [
+    "https://ipapi.is/developers.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ipapiis.ip.lookup",
+      "name": "Look up an IP address",
+      "summary": "Location, ASN, company, abuse contact and is_vpn/is_proxy/is_tor/is_datacenter/is_abuser/is_mobile/is_crawler flags for an IPv4 or IPv6 address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "q": {
+          "in": "query",
+          "description": "The IP address; omit for the caller's own IP.",
+          "example": "32.43.11.44"
+        },
+        "all_companies": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 returns every matching WHOIS record as an array in company.",
+          "enum": [
+            1
+          ]
+        },
+        "geoloc_meta": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds location.geofeed.",
+          "enum": [
+            1
+          ]
+        },
+        "format": {
+          "in": "query",
+          "description": "Response format; default json.",
+          "enum": [
+            "json",
+            "html",
+            "toon",
+            "csv",
+            "text"
+          ]
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://ipapi.is/developers.html",
+      "verified": {
+        "docs": "https://ipapi.is/developers.html"
+      }
+    },
+    {
+      "id": "ipapiis.asn.lookup",
+      "name": "Look up an autonomous system",
+      "summary": "Details of an autonomous system number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "The ASN with the AS prefix.",
+          "example": "AS15169"
+        },
+        "format": {
+          "in": "query",
+          "description": "Response format; default json.",
+          "enum": [
+            "json",
+            "html",
+            "toon",
+            "csv",
+            "text"
+          ]
+        }
+      },
+      "notes": [
+        "Needs a key."
+      ],
+      "job": "ip.asn",
+      "credentials": [
+        "api_key"
+      ],
+      "docs_url": "https://ipapi.is/developers.html",
+      "verified": {
+        "docs": "https://ipapi.is/developers.html"
+      }
+    },
+    {
+      "id": "ipapiis.account.get",
+      "name": "Get plan and usage",
+      "summary": "The key's plan, daily limit and requests used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account",
+      "params": {},
+      "job": "account.usage",
+      "host": "account",
+      "credentials": [
+        "api_key"
+      ],
+      "docs_url": "https://ipapi.is/developers.html",
+      "verified": {
+        "docs": "https://ipapi.is/developers.html"
+      }
+    }
+  ]
+}

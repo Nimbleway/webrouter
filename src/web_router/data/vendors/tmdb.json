@@ -1,0 +1,400 @@
+{
+  "vendor": "tmdb",
+  "name": "TMDB (The Movie Database)",
+  "category": "other",
+  "summary": "Movie, TV series and people metadata: search, details, discovery filters, trending titles and streaming availability.",
+  "docs_url": "https://developer.themoviedb.org/docs/getting-started",
+  "base_url": "https://api.themoviedb.org/3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TMDB_API_KEY"
+        ],
+        "description": "A TMDB v3 API key (account settings > API, after accepting the terms of use). Sent as the api_key query parameter; the API Read Access Token, sent as a Bearer header, is the documented alternative."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit: roughly 40 requests per second, subject to change; back off on HTTP 429.",
+    "Lists are paged: page starts at 1, and each page holds 20 results; total_pages and total_results come back with them.",
+    "Image fields (poster_path, profile_path, backdrop_path) are path fragments: build full URLs from the images base URL and sizes that GET /configuration returns.",
+    "append_to_response on the details calls folds up to 20 sub-requests (credits, videos, images, external_ids, watch/providers...) into one call."
+  ],
+  "sources": [
+    "https://developer.themoviedb.org/docs/getting-started",
+    "https://developer.themoviedb.org/docs/authentication-application",
+    "https://developer.themoviedb.org/docs/rate-limiting"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "tmdb.search.multi",
+      "name": "Search movies, TV shows and people",
+      "summary": "One search across movies, TV series and people; each result carries media_type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/multi",
+      "params": {
+        "query": {
+          "in": "query",
+          "required": true,
+          "description": "Search text.",
+          "example": "dune"
+        },
+        "include_adult": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include adult titles, default false."
+        },
+        "language": {
+          "in": "query",
+          "description": "Language of returned text, default en-US."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        }
+      },
+      "job": "media.titles.search",
+      "docs_url": "https://developer.themoviedb.org/reference/search-multi",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/search-multi"
+      }
+    },
+    {
+      "id": "tmdb.search.movie",
+      "name": "Search movies",
+      "summary": "Movies by title, optionally narrowed by year or region.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/movie",
+      "params": {
+        "query": {
+          "in": "query",
+          "required": true,
+          "description": "Search text."
+        },
+        "year": {
+          "in": "query",
+          "description": "Release year."
+        },
+        "primary_release_year": {
+          "in": "query",
+          "description": "Primary release year."
+        },
+        "region": {
+          "in": "query",
+          "description": "ISO 3166-1 country code."
+        },
+        "include_adult": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include adult titles, default false."
+        },
+        "language": {
+          "in": "query",
+          "description": "Language of returned text, default en-US."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        }
+      },
+      "job": "media.titles.search",
+      "docs_url": "https://developer.themoviedb.org/reference/search-movie",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/search-movie"
+      }
+    },
+    {
+      "id": "tmdb.search.tv",
+      "name": "Search TV series",
+      "summary": "TV series by name, optionally narrowed by first air year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/tv",
+      "params": {
+        "query": {
+          "in": "query",
+          "required": true,
+          "description": "Search text."
+        },
+        "first_air_date_year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Year of first air date, 1000-9999."
+        },
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Year, 1000-9999."
+        },
+        "include_adult": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include adult titles, default false."
+        },
+        "language": {
+          "in": "query",
+          "description": "Language of returned text, default en-US."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        }
+      },
+      "job": "media.titles.search",
+      "docs_url": "https://developer.themoviedb.org/reference/search-tv",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/search-tv"
+      }
+    },
+    {
+      "id": "tmdb.movie.get",
+      "name": "Get movie details",
+      "summary": "A movie's overview, genres, runtime, release date, budget, revenue, ratings and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/movie/{movie_id}",
+      "params": {
+        "movie_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "TMDB movie id.",
+          "example": 550
+        },
+        "append_to_response": {
+          "in": "query",
+          "description": "Comma-separated sub-requests to include, up to 20 (e.g. credits,videos,release_dates)."
+        },
+        "language": {
+          "in": "query",
+          "description": "Language of returned text, default en-US."
+        }
+      },
+      "job": "media.titles.get",
+      "docs_url": "https://developer.themoviedb.org/reference/movie-details",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/movie-details"
+      }
+    },
+    {
+      "id": "tmdb.tv.get",
+      "name": "Get TV series details",
+      "summary": "A series' overview, seasons, episode counts, networks, status and ratings.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tv/{series_id}",
+      "params": {
+        "series_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "TMDB series id."
+        },
+        "append_to_response": {
+          "in": "query",
+          "description": "Comma-separated sub-requests to include, up to 20."
+        },
+        "language": {
+          "in": "query",
+          "description": "Language of returned text, default en-US."
+        }
+      },
+      "job": "media.titles.get",
+      "docs_url": "https://developer.themoviedb.org/reference/tv-series-details",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/tv-series-details"
+      }
+    },
+    {
+      "id": "tmdb.person.get",
+      "name": "Get person details",
+      "summary": "An actor's or crew member's biography, birth date, known-for department and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/{person_id}",
+      "params": {
+        "person_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "TMDB person id."
+        },
+        "append_to_response": {
+          "in": "query",
+          "description": "Comma-separated sub-requests to include (e.g. movie_credits,tv_credits), up to 20."
+        },
+        "language": {
+          "in": "query",
+          "description": "Language of returned text, default en-US."
+        }
+      },
+      "job": "media.people.get",
+      "docs_url": "https://developer.themoviedb.org/reference/person-details",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/person-details"
+      }
+    },
+    {
+      "id": "tmdb.discover.movie",
+      "name": "Discover movies by filters",
+      "summary": "Movies filtered by genre, dates, ratings, language, cast, companies or streaming provider, sorted as asked.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discover/movie",
+      "params": {
+        "sort_by": {
+          "in": "query",
+          "description": "Default popularity.desc; also revenue, primary_release_date, title, original_title, vote_average, vote_count with .asc or .desc."
+        },
+        "with_genres": {
+          "in": "query",
+          "description": "Genre ids; comma means AND, pipe means OR."
+        },
+        "primary_release_date_gte": {
+          "in": "query",
+          "wire_name": "primary_release_date.gte",
+          "description": "Earliest primary release date, YYYY-MM-DD."
+        },
+        "primary_release_date_lte": {
+          "in": "query",
+          "wire_name": "primary_release_date.lte",
+          "description": "Latest primary release date, YYYY-MM-DD."
+        },
+        "primary_release_year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Primary release year."
+        },
+        "vote_average_gte": {
+          "in": "query",
+          "type": "number",
+          "wire_name": "vote_average.gte",
+          "description": "Minimum average rating."
+        },
+        "vote_count_gte": {
+          "in": "query",
+          "type": "number",
+          "wire_name": "vote_count.gte",
+          "description": "Minimum number of votes."
+        },
+        "with_original_language": {
+          "in": "query",
+          "description": "Original language (ISO 639-1)."
+        },
+        "with_cast": {
+          "in": "query",
+          "description": "Person ids in the cast; comma AND, pipe OR."
+        },
+        "with_companies": {
+          "in": "query",
+          "description": "Production company ids."
+        },
+        "with_keywords": {
+          "in": "query",
+          "description": "Keyword ids."
+        },
+        "region": {
+          "in": "query",
+          "description": "Country code; release-date filters then use that region's date."
+        },
+        "watch_region": {
+          "in": "query",
+          "description": "Country for the streaming filters."
+        },
+        "with_watch_providers": {
+          "in": "query",
+          "description": "Streaming provider ids; needs watch_region."
+        },
+        "with_watch_monetization_types": {
+          "in": "query",
+          "description": "flatrate, free, ads, rent or buy; needs watch_region."
+        },
+        "include_adult": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include adult titles, default false."
+        },
+        "language": {
+          "in": "query",
+          "description": "Language of returned text, default en-US."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        }
+      },
+      "job": "media.titles.discover",
+      "docs_url": "https://developer.themoviedb.org/reference/discover-movie",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/discover-movie"
+      }
+    },
+    {
+      "id": "tmdb.trending.all",
+      "name": "Get trending titles and people",
+      "summary": "Trending movies, TV series and people today or this week.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/trending/all/{time_window}",
+      "params": {
+        "time_window": {
+          "in": "path",
+          "required": true,
+          "description": "day or week.",
+          "enum": [
+            "day",
+            "week"
+          ]
+        },
+        "language": {
+          "in": "query",
+          "description": "Language of returned text, default en-US."
+        }
+      },
+      "job": "media.titles.trending",
+      "docs_url": "https://developer.themoviedb.org/reference/trending-all",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/trending-all"
+      }
+    },
+    {
+      "id": "tmdb.movie.watch_providers",
+      "name": "Get where a movie streams",
+      "summary": "Streaming, rental and purchase providers for a movie, per country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/movie/{movie_id}/watch/providers",
+      "params": {
+        "movie_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "TMDB movie id."
+        }
+      },
+      "notes": [
+        "The data comes from JustWatch, and TMDB requires that it be attributed to JustWatch wherever it is shown."
+      ],
+      "job": "media.titles.availability",
+      "docs_url": "https://developer.themoviedb.org/reference/movie-watch-providers",
+      "verified": {
+        "docs": "https://developer.themoviedb.org/reference/movie-watch-providers"
+      }
+    }
+  ]
+}
