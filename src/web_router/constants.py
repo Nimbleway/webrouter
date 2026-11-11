@@ -856,100 +856,11 @@ EVALS_GRADE_BY_LETTER: dict[str, str] = {"A": "correct", "B": "incorrect", "C": 
 
 EVALS_GRADE_PATTERN = r"\b([ABC])\b"
 
-SIMPLEQA_URL = "https://openaipublic.blob.core.windows.net/simple-evals/simple_qa_test_set.csv"
-"""Where openai/simple-evals reads the SimpleQA test set from."""
-
-SIMPLEQA_NAME = "simpleqa"
-
-SIMPLEQA_QUESTION_COLUMN = "problem"
-
-SIMPLEQA_ANSWER_COLUMN = "answer"
-
 SIMPLEQA_SEED = 0
 """The seed openai/simple-evals samples with, so ``limit=500`` is the slice every published figure used."""
 
-SIMPLEQA_DOWNLOAD_TIMEOUT = 60.0
-
-EVALS_CSV_SET = "csv"
-EVALS_QUESTION_SETS: dict[str, tuple[str, tuple[str, ...]]] = {
-    "simpleqa": ("simpleqa", ()),
-    "simpleqa-verified": ("simpleqa_verified", ()),
-    "frames": ("frames", ()),
-    "sealqa-0": ("sealqa", ("seal-0",)),
-    "sealqa-hard": ("sealqa", ("seal-hard",)),
-    EVALS_CSV_SET: ("from_csv", ()),
-}
-"""Each question set by the name a caller picks it with: the :class:`~web_router.evals.Dataset` loader that reads
-it, and that loader's leading arguments. ``csv`` is the caller's own file."""
-
 EVALS_CONCURRENCY = 4
 """Questions in flight at once. Each is one benchmark fan-out plus two judge calls per provider."""
-
-SIMPLEQA_VERIFIED_URL = (
-    "https://huggingface.co/datasets/google/simpleqa-verified/resolve/"
-    "0dc97e0d28d8233463e005cdc4475cc2a13ba2dc/simpleqa_verified.csv"
-)
-"""Google DeepMind's SimpleQA Verified (2025): 1,000 single-fact questions, pinned to one commit of the dataset.
-
-Pinned rather than read from ``main`` so every run reads the same questions and gold answers; moving the pin is
-a deliberate change. Questions frontier models get wrong without search, which is what makes it the set a
-no-search baseline is measured on.
-"""
-
-SIMPLEQA_VERIFIED_NAME = "simpleqa-verified"
-
-FRAMES_URL = "https://huggingface.co/datasets/google/frames-benchmark/resolve/main/test.tsv"
-"""Google's FRAMES test set: multi-hop questions whose answers take several documents to put together."""
-
-FRAMES_NAME = "frames"
-
-FRAMES_QUESTION_COLUMN = "Prompt"
-
-FRAMES_ANSWER_COLUMN = "Answer"
-
-FRAMES_METADATA_COLUMNS: tuple[str, ...] = ("reasoning_types", "wiki_links")
-"""The upstream columns a FRAMES question keeps in its metadata; the numbered link columns repeat ``wiki_links``."""
-
-SEALQA_URL = "https://huggingface.co/datasets/vtllms/sealqa/resolve/0c298f519c871579c75920189b3858da29fe2c81/{file}"
-"""SealQA (2025): questions built so that search returns conflicting, noisy or unhelpful results, at a pinned commit.
-
-Pinned because SealQA refreshes its answers on a schedule; moving the pin is a deliberate change. Published as
-Parquet, so reading it needs ``pyarrow`` (the ``evals`` extra).
-"""
-
-SEALQA_SPLITS: dict[str, str] = {"seal-0": "seal-0.parquet", "seal-hard": "seal-hard.parquet"}
-"""Split -> file. Seal-0 (111 questions) is the subset frontier models answer worst; Seal-Hard (254) contains it."""
-
-SEALQA_METADATA_COLUMNS: tuple[str, ...] = (
-    "urls",
-    "freshness",
-    "question_types",
-    "effective_year",
-    "search_results",
-    "topic",
-)
-"""The upstream columns a SealQA question keeps in its metadata. ``canary`` is dropped: it exists to mark copies."""
-
-EVALS_URL_DECODE_PASSES = 4
-"""How many times a result URL is percent-decoded before it is matched against a set's withheld markers.
-
-Enough for any real double or triple encoding; a URL still changing after this many passes is withheld rather than
-decoded further, so a pathological one costs a bounded amount of work.
-"""
-
-SEALQA_WITHHELD_MARKERS: tuple[str, ...] = (
-    "sealqa",
-    "2506.01062",
-    "1fJunutgxNaiU6-Met_wzyEdG-tXQLfrM",
-    "19SGV6dJkaqF9ziaoIMnx9PJwih8nDwzp",
-)
-"""What marks a URL as one of SealQA's own pages, which may carry its questions and answers.
-
-Its name, which the dataset's path and its copies carry; its paper's arXiv id, on arXiv or any host that mirrors
-it by id (alphaXiv, Hugging Face's paper page, Semantic Scholar); and the ids of the grading notebook and the folder
-of older releases its dataset card links. Only these are withheld, so an unrelated paper on arXiv or dataset on
-Hugging Face still reaches the judge -- checked against the card at the pinned commit on 2026-10-08.
-"""
 
 # --- Integrations -----------------------------------------------------------
 # web_router.integrations: search and extract as tools for an agent framework.

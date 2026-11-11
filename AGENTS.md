@@ -110,7 +110,8 @@ src/web_router/
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
-│   │                   SealQA, or a CSV; seeded sampling; answer-key pages withheld
+│   │                   SealQA, Nimble's unlabeled due-diligence and lead-enrichment,
+│   │                   or a CSV; seeded sampling; answer-key pages withheld
 │   ├── judge.py        Judge ABC, OpenAIJudge and AnthropicJudge: synthesize,
 │   │                   then grade
 │   ├── run.py          the loop: benchmark per question, judge per row, score
@@ -119,6 +120,8 @@ src/web_router/
 │                       a provider's own go in constants_<provider>.py (older
 │                       providers' are still here)
 ├── constants_answer.py answer()'s messages and MCP tool text, imported from here by name
+├── constants_evals.py the question sets' sources, names and columns, and the
+│                       messages their loaders raise
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
