@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-315 vendors, 2550 endpoints.
+320 vendors, 2567 endpoints.
 
 ### advertising
 
@@ -58,6 +58,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Moz](https://moz.com/help/links-api) `moz` | Moz Links API: Domain Authority, Page Authority, backlinks, anchor text, linking domains and top pages. | 9 read | key in header | `MOZ_API_TOKEN` | docs 2026-11-08 |
 | [Semrush](https://developer.semrush.com/api/v3/analytics/basic-docs/) `semrush` | Semrush Analytics API: domain overviews, organic and paid keywords, keyword research and backlink reports. | 14 read | key in query | `SEMRUSH_API_KEY` | docs 2026-11-08 |
 | [SE Ranking](https://seranking.com/api/data/) `seranking` | SE Ranking Data API: domain analysis, keyword research and backlink data. | 11 read | key in header | `SERANKING_API_KEY` | docs 2026-11-08 |
+| [Serpstat](https://api-docs.serpstat.com/docs/serpstat-public-api/jenasqbwtxdlr-introduction-to-serpstat-api) `serpstat` | SEO data: domain visibility and organic keywords, competitors, keyword volumes and ideas, stored Google top-100 results and backlink summaries, over a JSON-RPC API. | 8 read | key in query | `SERPSTAT_API_KEY` | docs 2026-11-09 |
 | [SpyFu](https://developer.spyfu.com/) `spyfu` | SpyFu competitive research API: domain stats, organic and paid keywords, competitors, top pages and keyword data. | 8 read | key in query | `SPYFU_API_KEY` | docs 2026-11-08 |
 
 ### observability
@@ -357,8 +358,12 @@ The tables below are generated from `src/web_router/data/vendors/` by
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Azure Retail Prices](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices) `azure-retail-prices` | Keyless Microsoft retail (pay-as-you-go, reservation, savings plan) prices for every Azure service, SKU and region. | 1 read | none | none | docs 2026-11-09 |
+| [CISA Known Exploited Vulnerabilities (KEV) catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) `cisa-kev` | CISA's catalog of CVEs known to be exploited in the wild, with vendor, product, date added, required action, due date and ransomware use, as free JSON and CSV feeds. | 3 read | none | none | docs 2026-11-09 |
 | [Context7](https://context7.com/docs/api-guide) `context7` | Up-to-date, version-specific documentation and code snippets for software libraries, ranked for a question; plus reading one web page narrowed to a question. | 5 read | key in header | `CONTEXT7_API_KEY` | docs 2026-11-09 |
+| [CVE Program CVE Services](https://cveawg.mitre.org/api-docs/) `cve-services` | Official CVE Records (JSON 5 format: descriptions, affected products, references, CNA and ADP containers) and CVE ID status from the CVE Program's API. | 3 read | none | none | docs 2026-11-09 |
 | [GitHub](https://docs.github.com/en/rest) `github` | Repositories, issues, pull requests, commits and code search on GitHub through its REST API. | 9 read, 1 write | key in header | `GITHUB_TOKEN` | docs 2026-11-09 |
+| [Google Cloud Billing Catalog](https://docs.cloud.google.com/billing/v1/how-tos/catalog-api) `google-cloud-billing` | Public list prices of Google Cloud: every service and each service's SKUs with description, regions and pricing tiers, from the Cloud Billing Catalog API. | 2 read | key in query | `GOOGLE_CLOUD_BILLING_API_KEY` | docs 2026-11-09 |
 | [Supabase](https://supabase.com/docs/reference/api/introduction) `supabase` | Supabase Management API: the user's projects and organisations, SQL against a project's Postgres, logs, health, advisors, edge functions and storage buckets. | 9 read, 1 write | key in header | `SUPABASE_ACCESS_TOKEN` | docs 2026-11-09 |
 
 ### other
