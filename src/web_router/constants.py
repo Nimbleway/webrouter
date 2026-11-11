@@ -2480,13 +2480,13 @@ A level no member in the chain serves raises, naming why each one was passed ove
 
 MSG_AUTO_BROWSER_NO_ELIGIBLE = (
     "In the `auto` browser chain, {skipped}. Drop the option, set a credential for a backend that "
-    "maps it, or name one -- see the browser table in README.md."
+    "maps it, or name one -- see https://docs.webrouter.net/browser"
 )
 """Raised before anything is opened, so nothing is billed for a session no member could honour."""
 
 MSG_AUTO_BROWSER_NO_ELIGIBLE_MISSING = (
     "In the `auto` browser chain, {skipped}. Set the option a backend needs, leave the one that needs "
-    "it unset, or name a backend -- see the browser table in README.md."
+    "it unset, or name a backend -- see https://docs.webrouter.net/browser"
 )
 """Raised instead when a member would have served the request but for an option it needs beside another."""
 
@@ -2555,7 +2555,7 @@ MSG_OPTION_VALUE = "{name}={value!r}"
 
 MSG_UNSUPPORTED_STEALTH = (
     "It serves {levels}. Ask for one of those, leave stealth unset for the backend's own default, or "
-    "name a provider that serves the level -- see the browser table in README.md."
+    "name a provider that serves the level -- see https://docs.webrouter.net/browser"
 )
 """Follows :data:`MSG_UNSUPPORTED_VALUES` for a stealth level: another level is never served in its place."""
 

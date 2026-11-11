@@ -87,7 +87,8 @@ git pull && make setup
 
 ## Where to look
 
-- [README.md](README.md) — the API, every backend, and what each option does
+- [README.md](README.md): the project overview, advanced APIs and contributor-facing reference
+- [Documentation](https://docs.webrouter.net): getting started, core methods, providers and errors
 - [docs/mcp.md](docs/mcp.md) — the MCP server in depth
 - [examples/](examples/) — runnable scripts (`uv run python examples/main.py`)
 - [CONTRIBUTING.md](CONTRIBUTING.md) — adding a provider and opening a pull request

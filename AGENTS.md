@@ -1330,7 +1330,7 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    open-release sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test that opens, asks and releases, and
    asks the backend afterwards through `tests/providers/_browser_live.py`.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the browser support tables in `docs/browser.mdx` and `CHANGELOG.md`.
 
 ## Adding a browse provider
 
@@ -1370,7 +1370,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>_browse.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the browse support table in `docs/browser.mdx` and `CHANGELOG.md`.
 
 ## Adding a search provider
 

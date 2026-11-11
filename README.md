@@ -4,7 +4,7 @@
 
 <h1 align="center">WebRouter</h1>
 
-<p align="center"><strong>An open source standard that connects your agent to the internet.</strong></p>
+<p align="center"><strong>The open source standard for agent web access.</strong></p>
 
 <p align="center">
   <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/pypi/v/webrouter?color=202c26&label=pypi" alt="PyPI"></a>
@@ -14,138 +14,39 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
+  <a href="https://docs.webrouter.net"><strong>Documentation</strong></a> ·
+  <a href="https://docs.webrouter.net/quickstart">Quickstart</a> ·
+  <a href="https://docs.webrouter.net/providers">Providers</a> ·
+  <a href="https://github.com/Nimbleway/webrouter/tree/main/examples">Examples</a> ·
+  <a href="https://discord.gg/MGztFWSjZh">Discord</a>
 </p>
 
-Connect your agent to every web tool through one interface: search, extract, live data, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
+WebRouter connects agents to search, extract, live data, answer, research and
+browsers through one typed interface, across many providers.
 
-```bash
-pip install "webrouter[all]"
-```
-
-```python
-from web_router import Provider, WebRouter
-
-WebRouter().search("what is retrieval augmented generation")  # no key needed
-WebRouter(Provider.NIMBLE).search("...")  # or name one
-WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
-
-WebRouter().extract("https://example.com")  # page contents, also keyless
-
-WebRouter().live_data("walmart_pdp", {"product_id": "..."}, provider="nimble")  # a site's fields, fetched now
-
-WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
-
-WebRouter().call_vendor("datadog.logs.search", {"filter": {"query": "status:error"}})  # your own vendor accounts
-
-WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
-
-with WebRouter("local").open_browser() as browser:  # a browser to drive, also keyless
-    browser.goto("https://example.com")
-
-WebRouter(Provider.BROWSER_USE).browse("...")  # a hosted browser agent does the task
-```
+- **Agent web primitives.** Find pages, read them, ask for an answer, run
+  deep research, call a site's structured scraper, or drive a browser.
+- **Smart routing.** Static fallback and optional routers trade off cost,
+  latency and coverage for each task and the providers you have keys for.
+- **No vendor lock-in.** Calls and results keep the same shape when you switch
+  providers. WebRouter is Apache 2.0 and runs with your own keys.
+- **Providers and vendor APIs.** Use one call shape across web providers, then
+  use the curated catalog for provider-specific APIs.
+- **Governance and security.** Control provider selection and routing, keep
+  keys scoped to their provider, reject unsupported constraints, and require
+  explicit opt-in for vendor writes.
 
 <p align="center"><em>Useful? Star the repo so more agent developers can find it.</em> ⭐</p>
 
 > **Beta:** the API may change before 1.0.
 
-Every provider has its own SDK, its own parameter names and its own response
-shape. "How many results" is `max_results` on Tavily, `count` on Brave and
-You.com, `numResults` on Exa. The page text is `content` on Tavily, `text` on
-Exa, `snippet` on Perplexity, and nested under `contents` on You.com. Swapping
-backends means rewriting the call, the options and the parsing.
-
-WebRouter normalizes all three:
-
-```python
-response = router.search(query, max_results=5, search_depth="fast")
-
-[result.content for result in response.results]  # same field, every backend
-```
-
-The extract backends disagree just as widely. A page body is `data.markdown` on
-Nimble, `raw_content` on Tavily, `text` on Exa, `results[].content` on Oxylabs
-and `body` inside an envelope on Bright Data — and most of them take one URL per
-call while two take a list:
-
-```python
-pages = router.extract(response.urls[:5], format="markdown")
-
-[document.content for document in pages.documents]  # same field, every backend
-```
-
-Nothing is hidden to get there. Unmapped provider fields stay in
-`SearchResult.extra` / `ExtractedDocument.extra`, the untouched payloads stay in
-`raw`, and an option a backend cannot honour **raises instead of being quietly
-dropped** — so a call never runs under weaker constraints than you asked for.
-
-> **Status: early preview.** `search`, `extract`, `live_data` (with
-> `live_data_sources` and `live_data_source` beside it), `research`, `open_browser`
-> and `browse` are implemented; `benchmark()` and `benchmark_extract()`
-> compare search and extract backends on your own queries and URLs, and
-> `evaluate()` scores search accuracy with an LLM judge —
-> see [Benchmarking providers](#benchmarking-providers) and
-> [Evaluating accuracy](#evaluating-accuracy). The API may change before 1.0.
-
-## Install
-
-Install the package from PyPI, with the extras you need:
-
-```bash
-pip install "webrouter[all]"         # any virtualenv
-uv add "webrouter[all]"              # a uv project
-pip install "webrouter[mcp,browser]" # the MCP server with its browser tools
-```
-
-Then put the keys you hold in your environment or a `.env` file; none is
-required. [`.env.example`](.env.example) names each variable.
-
-**From source**, for contributors or to track `main`: the one prerequisite is
-[uv](https://docs.astral.sh/uv/getting-started/installation/), which fetches
-the right Python itself.
-
-```bash
-git clone https://github.com/Nimbleway/webrouter.git
-cd webrouter
-make setup              # every extra: the library, the MCP server, the browser tools and a local Chromium
-cp .env.example .env    # then fill in only the keys you hold; none is required
-```
-
-Using a coding agent? Tell it *"clone https://github.com/Nimbleway/webrouter
-and set it up"*. [CLAUDE.md](CLAUDE.md) walks it through the rest. To use the
-clone from another project, install it in editable mode
-(`uv add --editable "/path/to/webrouter[all]"` or
-`pip install -e "/path/to/webrouter[all]"`), so `git pull && make setup` in the
-clone is the whole update.
-
-You can install fewer extras by naming them in place of `all`:
-
-`search`, `extract`, `research`, `browser`, `mcp`, `evals` and `langchain`.
-Extras are named after the **methods you call**, not the backends behind them:
-`search` brings in every provider that can serve one, so choosing between them
-stays a runtime decision — `WebRouter(Provider.BRAVE)` — instead of something you have
-to get right at install time.
-
-Three extras are not methods. `mcp` names a transport — it installs the
-[MCP server](#the-mcp-server), which exposes the methods above rather than
-adding one of its own. It does not include `browser`: the server's `browser_*`
-tools need Playwright, so they appear only with `webrouter[mcp,browser]`.
-`evals` installs the OpenAI and Anthropic SDKs behind the built-in judges that
-[`evaluate()`](#evaluating-accuracy) grades answers with; bring your own judge
-and you do not need it. `langchain` installs `langchain-core` for the
-[LangChain tools](#langchain) — the agent loop and the model stay your own
-install. `browser` is named after what it lets a browser
-handle do — drive the page — rather than after `open_browser`, which needs no
-Playwright: a vendor session opens over httpx, which `[all]` installs, and
-`local` needs only the standard library and a Chrome or Chromium. `remote`
-installs httpx for the built-in [`remote` router](#a-router-service-routerremote),
-for an install that carries no method extra; `[all]` includes it.
-
 ## Quickstart
 
-No key needed to try it — the default provider uses the backends that offer an
-anonymous tier:
+Install WebRouter and make a search with no API key:
+
+```bash
+pip install "webrouter[all]"
+```
 
 ```python
 from web_router import WebRouter
@@ -156,70 +57,32 @@ for result in response.results:
     print(result.title, result.url)
 
 print(response.provider)  # which backend actually answered
-```
 
-Name a provider once you have a key for one. `Provider` is an enum of the
-built-in backends, and it is the form worth writing: your editor completes it,
-and a typo is caught where you type it rather than at the first call.
-
-```python
-from web_router import Provider, WebRouter
-
-router = WebRouter(Provider.NIMBLE)  # reads NIMBLE_API_KEY from the environment
-response = router.search("who founded nimbleway", max_results=5, country="US")
-
-router.search("...", provider=Provider.BRAVE)  # per-call override
-```
-
-`country` is a good illustration of the contract: Nimble maps it, and a backend
-that does not raises `UnsupportedParameterError` rather than quietly running the
-search unfiltered.
-
-**Plain strings work anywhere a `Provider` does** — `WebRouter("nimble")` is the
-same call. The enum covers the built-ins, so the string form is what names a
-backend you added with `register_provider`, or one that arrives from a config
-file, an environment variable or a CLI flag. Prefer the enum when you are
-writing the name yourself; reach for a string when something else supplies it.
-
-Searching and then reading the pages you found is the two methods together:
-
-```python
-response = router.search("latest nvidia earnings", max_results=5)
-pages = router.extract(response.urls[:3], format="markdown")
-
+pages = WebRouter().extract(response.urls[:3], format="markdown")
 for document in pages.documents:
     print(document.url, len(document.content))
 ```
 
-Async works the same way:
+The [full Quickstart](https://docs.webrouter.net/quickstart) adds a named
+provider, API keys, async usage, install extras and source setup.
 
-```python
-import asyncio
-from web_router import AsyncWebRouter, Provider
+[Runnable examples](https://github.com/Nimbleway/webrouter/tree/main/examples)
+cover each core method, routing, integrations and common errors. Most need no
+credentials.
 
+## Documentation
 
-async def main():
-    async with AsyncWebRouter(Provider.NIMBLE) as router:
-        response = await router.search("latest nvidia earnings", max_results=3)
-        pages = await router.extract(response.urls, format="markdown")
-        print(pages.urls)
+The docs site is the canonical guide for getting started and for the core
+methods. This README keeps the advanced and contributor-facing surfaces that
+have not moved there yet.
 
-
-asyncio.run(main())
-```
-
-### Runnable examples
-
-[`examples/`](examples/README.md) has a script per topic — routing, every error
-and its fix, depth measured across backends, adding your own provider — and
-**most need no credentials**, routing through the keyless backends —
-[`browser_session.py`](examples/browser_session.py) drives a local Chromium
-with none. [`main.py`](examples/main.py) is a guided tour of search and extract
-in one file:
-
-```bash
-uv run --env-file .env python examples/main.py
-```
+| Start here | Core methods | Reference |
+| --- | --- | --- |
+| [Introduction](https://docs.webrouter.net) | [Search](https://docs.webrouter.net/search) | [Configuration](https://docs.webrouter.net/configuration) |
+| [Quickstart](https://docs.webrouter.net/quickstart) | [Extract](https://docs.webrouter.net/extract) | [Errors](https://docs.webrouter.net/errors) |
+| [How it works](https://docs.webrouter.net/how-it-works) | [Answer](https://docs.webrouter.net/answer) | [Providers](https://docs.webrouter.net/providers) |
+| [Examples](https://github.com/Nimbleway/webrouter/tree/main/examples) | [Research](https://docs.webrouter.net/research) | [MCP server](https://github.com/Nimbleway/webrouter/blob/main/docs/mcp.md) |
+|  | [Browser sessions and agents](https://docs.webrouter.net/browser) |  |
 
 ## Provider support
 
@@ -261,7 +124,7 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.AUTO` *(default)* | `auto` | — | every backend you hold a key for, in the order the frozen benchmark results rank them, then the keyless ones — so a key held only for research serves searches too, and those calls bill; see [Working with no credentials](#working-with-no-credentials) | every option some member maps, each request routed to a member that maps what it sets |
 
 A backend maps an option only where its API has a documented field or query
-operator for it; [Search options](#search-options) says how each one does, and
+operator for it; [Search](https://docs.webrouter.net/search) says how each one does, and
 `contracts/search/<name>.json` holds the exact fields sent. Mapping another is a
 small PR and the most useful thing to contribute — see
 [CONTRIBUTING.md](CONTRIBUTING.md#promoting-a-provider-option).
@@ -286,7 +149,7 @@ which ones this environment can use.
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
 | `Provider.BROWSERBASE` | `browserbase` | [Browserbase Fetch](https://docs.browserbase.com/features/fetch) — a plain fetch, never a rendered page; the one backend that maps `profile` | `BROWSERBASE_API_KEY` | `markdown`, `html` |
 | `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable, DeepSeek and Browserbase | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it; `profile` routed to one that maps it |
-| `Provider.MAX` | `max` | — | the same members as `auto`, **all at once**; the first document back wins, and every fetch started is paid for -- see [The fastest answer any backend can give](#the-fastest-answer-any-backend-can-give-max) | as `auto` |
+| `Provider.MAX` | `max` |  | the same members as `auto`, **all at once**; the first document back wins, and every fetch started is paid for -- see [The fastest answer any backend can give](https://docs.webrouter.net/extract#the-fastest-answer-any-backend-can-give-max) | as `auto` |
 
 Two need more than a key. Oxylabs authenticates with the username and password
 created under Web Scraper API in its dashboard — not the ones you sign in with —
@@ -326,15 +189,9 @@ conversation.
 
 ### Live data
 
-A live data source is a vendor's ready-made scraper for one site -- Nimble's
-Extract Templates, Apify's Actors, Bright Data's scrapers, the Oxylabs Web
-API's dedicated scrapers. Given its own inputs it fetches the site **for this call**
-and answers with structured records. That is the rule a backend joins under:
-it fetches on request. Data a vendor collected earlier and serves from storage
-is that vendor's own API, reached through `call_vendor()`. There is no keyless
-tier and no `auto`: a run fetches and parses on the backend's account, and a
-source's name belongs to one vendor, so `provider` is required on all three
-calls.
+Four backends serve live data. There is no keyless tier and no `auto`, so the
+provider is required for every call. See the detailed [Live data](#live-data-1)
+guide below.
 
 | Pass | Name | Provider | Credentials | Page formats beside the records |
 | --- | --- | --- | --- | --- |
@@ -359,8 +216,10 @@ from the price list `web_router.prices` reads (see
 `[answer]` installs these. One question, answered in one call: the backend
 searches and writes the answer itself. No keyless tier, since every backend
 bills the call; `auto` tries the ones you hold a key for, in the order `make chains` ranks them on the
-answer benchmark. See
-[Asking for an answer](#asking-for-an-answer) for what an unnamed call does.
+answer benchmark. It ranks accuracy first and, where accuracy is too close to
+tell apart, the cheaper at list price: Perplexity, You.com, Linkup, Parallel,
+Exa, then Brave, which the scan has not measured. [Answer](https://docs.webrouter.net/answer)
+explains what an unnamed call does.
 
 | Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
 | --- | --- | --- | --- | --- | --- |
@@ -456,27 +315,14 @@ difference matters:
 
 Each has an integration test that skips itself until a credential is there.
 
-### Browser sessions and browse
-
-`open_browser()` has five backends and `auto`, and `browse()` three and
-`auto`. Their tables sit with the methods they serve, because each comes with
-more to say than a row: see [Session backends](#session-backends) and
-[Browse backends](#browse-backends).
-
 ### Working with no credentials
 
-`auto` is the default for every method, so a router you never configured still
-searches, extracts and opens a browser — the Quickstart's first example is exactly that. It tries the backends
-you have a key for first — a credential in the environment says which one you
-want — and falls back to the anonymous tiers when there is none: Tavily keyless,
-then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
-Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
-session. Research, browse, `answer()` and live data have no
-anonymous tier, because every call bills; with no key they raise, naming the
-variables that would fix it. This is the one list of keyless backends; the MCP
-server and `.env.example` point here. `response.provider` names whichever one served it,
-never `"auto"`, so you can always tell. The anonymous tiers are rate-limited, which is
-why it is a chain: when one is throttled, the next answers.
+`auto` prefers the providers you configured, then falls back to rate-limited
+keyless members for search, extract and local browser sessions. The
+[Providers guide](https://docs.webrouter.net/providers#working-with-no-credentials)
+covers the simple no-key path; the table below keeps the exact order.
+`response.provider` always names the backend that answered. Answer, research,
+browse and live data have no anonymous tier.
 
 Every backend you hold a key for is a candidate, in a fixed order:
 
@@ -591,307 +437,6 @@ never quietly demoted to an anonymous one:
 WebRouter(Provider.TAVILY).search("...")  # ConfigurationError if TAVILY_API_KEY is unset
 ```
 
-## How it works
-
-| Piece | Role |
-| --- | --- |
-| `WebRouter` / `AsyncWebRouter` | The facade you call. Holds provider config and routes each call. |
-| `SearchProvider` / `ExtractProvider` | The contract a backend implements, one per method: `_search`/`_asearch`, `_extract`/`_aextract`. |
-| `SearchRequest` / `ExtractRequest` | A normalized call, before any provider sees it. |
-| `SearchResponse` / `SearchResult` | A normalized answer, plus the provider's untouched payload in `raw`. |
-| `ExtractResponse` / `ExtractedDocument` | The same for a page fetch, plus `failures` for the URLs that did not come back. |
-| `LiveDataProvider` | The contract for a live data backend: `_list` its catalogue, `_get` one source, `_run` it. |
-| `LiveDataRequest` / `LiveDataResponse` | A normalized run -- a source's name and its own inputs -- and the `records` it extracted. `LiveDataSource` describes one, `LiveDataSourcePage` a page of the catalogue. |
-| `ResearchProvider` | The contract for an agentic backend: `_start` a run, `_fetch` where it got to. |
-| `ResearchRequest` / `ResearchResponse` | A normalized run, and its answer — prose, structure, and the `citations` behind either. |
-| `ResearchJob` | A run in progress. Polls with back-off, blocks with a timeout, and never fabricates an answer it does not have. |
-| `BrowseProvider` / `BrowseJob` | The same job shape for a hosted browser agent: `BrowseRequest` in, `BrowseResponse` — answer, structure, `steps` — out. Research and browse share one job core. |
-| `BrowserProvider` | The contract for a browser session backend: `_open` a session, `_release` it. |
-| `BrowserHandle` / `AsyncBrowserHandle` | An open session and its `cdp_url`, with the page actions, released when the `with` block ends however it ends. |
-
-Four rules keep the abstraction honest:
-
-**Unset stays unset.** Fields you leave alone are not sent, so each backend
-applies its own defaults rather than inheriting ours. (Three deliberate
-exceptions: an extract sends a format even when you named none, `markdown`
-wherever the backend can return it — so the same call answers alike whichever
-backend serves it, and `document.format` is true because it was asked for, not
-because a vendor default has not moved. A
-browser session opened with no `timeout` gets ten minutes rather than the
-vendor's own limit, because it is billed until something ends it. And `local`
-is headless unless you say otherwise, because there is no vendor default to
-keep and a window would open on your screen.)
-
-**Nothing is silently dropped.** If a provider does not map an option you set —
-or cannot return the `format` you asked for — it says so instead of quietly
-doing something weaker:
-
-```python
-WebRouter(Provider.LINKUP).search("...", country="US")
-# UnsupportedParameterError: Provider 'linkup' does not map 'country'. Pass it
-# through provider_options if the underlying API supports it, or add the
-# mapping -- see CONTRIBUTING.md.
-```
-
-**Nothing is thrown away.** Unmapped provider fields land in `SearchResult.extra`
-or `ExtractedDocument.extra`, and the complete payloads in `raw`, so
-normalization is never lossy.
-
-**Nothing fails quietly.** An extract over several URLs reports the ones that
-did not come back in `failures` and returns the rest; a call that produced no
-document at all raises. An empty answer is never something you have to go
-looking for.
-
-## Search options
-
-```python
-response = router.search(
-    "nvidia q3 earnings",
-    max_results=10,
-    search_depth="fast",  # "lite" | "fast" | "deep"
-    include_domains=["reuters.com", "bloomberg.com"],
-    exclude_domains=["example.com"],
-    country="US",
-    locale="en",
-    recency="week",  # "day" | "week" | "month" | "year"
-    effort="low",  # "low" | "medium" | "high" | "max"
-)
-```
-
-Every option except `query` is optional. Which ones a given provider maps is in
-the support table above; setting one it does not map raises rather than being
-ignored, and so does a value it cannot serve — a depth level it lacks, a country
-off its list — before anything is sent, so `auto` passes that backend over.
-
-That is the whole surface. It is deliberately small: these are the options that
-mean the same thing on every backend, so code written against them keeps working
-when you switch providers. `search_depth` is how much text comes back per
-result; `effort` is how hard the backend looks. The exact field each backend
-sends is in its `contracts/search/<name>.json`.
-
-### Search depth
-
-Three levels, each defined by size, mapped onto each backend's own knobs. A
-backend whose longest body is short of a page refuses `deep` rather than serving
-less under its name.
-
-| Depth | What you get | Nimble | Tavily | You.com, You.com MCP | Exa, Exa MCP | WebIQ | Parallel | Perplexity | Keenable | Brave | DeepSeek |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `lite` | A snippet, up to about 500 characters | `lite` | `basic`, cut to 500 | no extraction, cut to 500 | highlights ≤ 500, cut to 500 | passage ≤ 500 | excerpts ≤ 500, cut to 500 | 100 tokens a page | snippet ≤ 500 | its snippets, cut to 500 | its default |
-| `fast` | A truncated body, a few thousand characters | `standard` | `advanced` | `highlights` | text ≤ 3,000 | passage ≤ 3,000 | excerpts ≤ 3,000 | 1,024 tokens a page | snippet ≤ 3,000 | refused | refused |
-| `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
-
-Linkup, AgentCore and Parallel MCP do not map it. Where a vendor's size setting
-does not bind (Tavily's `basic` returns up to three chunks of about 500
-characters, You.com's snippets can run past 500, Exa's highlights cap,
-Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
-summary, and Brave has no size setting at all), WebRouter cuts `lite` to a snippet of about 500
-characters itself; the vendor's full text stays in `raw`.
-Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
-
-`result.content` always holds the fullest text available. Some backends return
-the body in the field others use for the snippet; that is normalized away, so
-`content` is the field to read whatever the backend did.
-
-`result.description` is the provider's snippet **when it returns one as a
-separate field**. Not every backend does at every depth — Nimble at `fast`
-returns the page body and no snippet, so `description` holds that body and is
-identical to `content`. Read `description` when you want the short form and
-have checked your backend supplies one; read `content` when you want text.
-
-### Effort
-
-`effort` is anchored on each backend's own tiers: `medium` is what it does
-unset, `low` its fastest tier, `max` its most thorough, and `high` between them
-or the same as `max`. A backend with fewer tiers serves several levels with one
-setting rather than raising. **Higher effort costs more and takes longer, by a
-vendor-specific amount; leave it unset unless needed.**
-
-| Effort | Exa | Exa MCP | Linkup | Parallel | Perplexity | Keenable |
-| --- | --- | --- | --- | --- | --- | --- |
-| `low` | `lite` | `lite` | `flash` | `turbo` | `fast` | `realtime` |
-| `medium` | its default | its default | `fast` | `fast` | its default | its default |
-| `high` | `deep-lite` | its default | `standard` | `advanced` | its default | `pro` |
-| `max` | `deep` | its default | `deep` | `advanced` | its default | `pro` |
-
-Linkup bills `deep` at ten times its other depths, and Parallel `advanced` at
-five times `fast`. Parallel refuses `low` beside a domain filter with a path,
-which its turbo mode cannot take. The other backends have no search tier and
-refuse `effort`.
-
-### Recency
-
-`recency` keeps to sources the backend dates within the last day, week, month
-or year — by publication date where it has one. A backend that takes a start
-date gets today (UTC) minus 1, 7, 30 or 365 days.
-
-| Backend | Sent as |
-| --- | --- |
-| Nimble | `time_range` |
-| Tavily | `time_range` with `filter_by_published_date`, so pages it cannot date are dropped |
-| You.com, You.com MCP | `freshness` |
-| Brave | `freshness`, by the date Brave holds for a page (published or last modified) |
-| Perplexity | `search_recency_filter` |
-| Exa, Exa MCP, Linkup, Parallel, AgentCore | a start date (`startPublishedDate`, `fromDate`, `after_date`, `publishedDateFilter.from`) |
-| Keenable | `published_after` (`1d`, `7d`, `1mo`, `1y`) |
-| DeepSeek | `after:YYYY-MM-DD` in the query |
-
-WebIQ and Parallel MCP do not map it.
-
-### Values a backend refuses
-
-Each of these raises `UnsupportedParameterError` before anything is sent (a
-query too long for its operators raises `ProviderError`), and `auto` moves on:
-
-| Backend | Refused |
-| --- | --- |
-| You.com, You.com MCP | a `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once |
-| Brave | a `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
-| Tavily | a `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
-| Parallel | a `country` off its 37 codes; both domain lists at once; more than 200 domains |
-| Perplexity | both domain lists at once; more than 20 domains; a `locale` that is not a bare two-letter language (`en`, not `en-US`) |
-| WebIQ | a `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
-| Keenable | more than one `include_domains` entry |
-| DeepSeek | a query past 128 characters with its operators |
-| Brave, WebIQ, DeepSeek, You.com MCP | a domain filter that is not a host name (optionally with a path), since it goes into the query as `site:` (for You.com MCP, `include_domains` only; `exclude_domains` is a tool argument) |
-
-## Extracting page contents
-
-`extract()` is the other half: give it URLs you already have and it returns the
-pages, through whichever backend you point it at.
-
-```python
-response = router.extract(
-    ["https://example.com", "https://www.iana.org/domains/reserved"],
-    format="markdown",  # "markdown" | "html" | "text"
-)
-
-for document in response.documents:
-    print(document.url, document.format, len(document.content))
-```
-
-One URL or many — `router.extract("https://example.com")` is the same call, and
-the answer has the same shape. Backends that take a single URL per request are
-fanned out for you, concurrently on `AsyncWebRouter`, and the documents come back
-in the order you asked for them.
-
-### Formats
-
-`format` is the extract equivalent of `search_depth`: three names for what the
-page should come back as, mapped onto each backend's own vocabulary.
-
-| Format | What you get | Nimble | Tavily | Firecrawl | Oxylabs | Bright Data | Jina | Linkup | Browserbase |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `markdown` | Structure kept, markup dropped | `formats: [markdown]` | `format: markdown` | `formats: [markdown]` | `markdown: true` | `data_format: markdown` | `X-Return-Format: markdown` | always returned | `format: markdown` |
-| `html` | The page's HTML as fetched | `formats: [html]` | — | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` | `format: raw` (the body as served) |
-| `text` | Visible text, no markup | — | `format: text` | — | — | — | `X-Return-Format: text` | — | — |
-
-Exa is left out of the table because it has one row to give: its Contents API
-returns `text` and nothing else, asked for as `text: true`. WebIQ is left out
-too: Browse takes `contentFormat: markdown` or `text`, and its `html` is a
-simplified markup rather than the page as fetched, so `html` is refused. It
-reads WebIQ's own index, so a page WebIQ has not crawled comes back as a
-failure. Keenable is left out as well: its Fetch API has no format field and
-returns markdown alone, so `html` and `text` are refused. WebRouter asks it for
-up to 500,000 characters, since it otherwise cuts a page at 50,000. DeepSeek is
-left out too: its Fetch API returns markdown alone.
-
-A backend that cannot produce the format you asked for **raises rather than
-returning a different one under the same name**, because code that pipes
-`document.content` into a markdown parser has no way to notice HTML:
-
-```python
-WebRouter(Provider.TAVILY).extract("https://example.com", format="html")
-# UnsupportedFormatError: Provider 'tavily' cannot return 'html' content; it
-# returns 'markdown', 'text'. Ask for one of those, name a provider that returns
-# 'html', or add the mapping -- see CONTRIBUTING.md.
-```
-
-`document.format` always says which representation `document.content` holds.
-Leave `format` unset and you get `markdown` from every backend that can return
-it, Nimble, Oxylabs and Bright Data included, whose own APIs default to HTML:
-an agent reading the page pays for every character. Exa, which returns only
-text, returns `text` and says so. Ask for `html` by name to get the markup. `auto` takes all three formats and sends each call only to a
-member that returns the one asked for.
-
-### Partial failure
-
-Extracting several URLs can partly succeed, and it says so rather than pretending
-otherwise. What came back is in `documents`; every URL that did not is in
-`failures` with the reason:
-
-```python
-response = router.extract(["https://example.com", "https://nope.invalid"])
-
-response.urls  # ['https://example.com/']
-response.failures[0].url  # 'https://nope.invalid'
-response.failures[0].error  # why it did not come back
-```
-
-A call where **nothing** came back raises instead, so a bad credential can never
-look like a page with no text. This works the same way whether the backend
-reports its own per-URL failures (Tavily, Exa) or was fanned out one URL at a
-time (everything else) — that uniformity is enforced in `ExtractProvider`, not
-asked of each provider.
-
-`response.raw` holds the untouched payloads, one per API call that answered: a
-single entry from a backend that took every URL at once, one per URL that came
-back from a backend that did not. A call that failed outright is in `failures`
-instead — there was no payload to keep.
-
-### The fastest answer any backend can give: `max`
-
-`auto` tries its backends one after another and stops at the first that works.
-`max` sends the same request to **every backend at once** and returns the first
-document that comes back:
-
-```python
-response = WebRouter(Provider.MAX).extract(url, format="markdown")
-response.provider  # whoever answered first -- never 'max'
-```
-
-It is for the caller who wants the fastest working extract and is willing to
-pay for it: every fetch `max` starts is billed by its backend, so a call costs
-up to one extract **per configured backend per URL**. Most backends take one
-URL per request, and a loser keeps fetching the URLs it has not reached after
-the winner has returned, so ten URLs through three backends can bill thirty
-fetches where `auto` bills ten. That is why it is never the default and has to
-be named. The members are exactly the ones `auto` would try, in the
-same order, chosen the same way: a `chain` set under `"auto"` in
-`provider_config` narrows `max` too, so a paid backend taken out of one is out
-of both, and `max` races a different list only when its own `"max"` entry
-names one. `format` routes the same way, to the members that can return it.
-
-Only a document wins. A backend that refused the fetch, could not be built or
-answered with nothing is that backend's loss, not the call's, and when every
-backend loses the error names each one's reason. What a slower backend would
-have returned is never judged: the first document is the answer, which is the
-"never invent data" rule applied to a race. With several URLs it is the first
-*complete* answer: a backend that fetched part of the list and failed the rest
-is held while another can still answer, and returned, `failures` and all, only
-when none can do better. On the sync router the losers finish on their own
-threads and `close()` waits for them before shutting their clients; on the
-async router they are cancelled.
-
-**`hedge` keeps the cost down.** With a hedge, the first member runs alone for
-that many seconds and the rest start only if it has not answered by then:
-
-```python
-router = WebRouter(Provider.MAX, provider_config={"max": {"hedge": 0.8}})
-```
-
-A page the first backend returns within the hedge costs one fetch; only the
-slow ones pay for the race. A first member that fails, or answers in part,
-before the hedge runs out starts the rest at once. Unset, every member starts
-together. The hedge covers the first member's whole call, however many URLs it
-carries: it caps the cost of a one-URL request, not of a list, since a first
-member slower than the hedge on a list of URLs starts every other member on
-the whole list.
-
-`max` is left out of `benchmark()`'s default set as `auto` is: a row for it
-would repeat one of the others under a name that says nothing about who
-answered.
-
 ## Live data
 
 A live data source is a vendor's ready-made scraper for one site -- a
@@ -986,465 +531,6 @@ and the `Template*` types, are deprecated aliases of `live_data_sources()`,
 `live_data_source()`, `live_data()` and the `LiveData*` types: they still
 work, with a `DeprecationWarning`, until a later release removes them.
 
-## Asking for an answer
-
-`answer()` asks one question and returns the backend's own written answer with
-the sources it rests on, in one call. It sits between `search()`, which returns
-the pages, and `research()`, a job of minutes.
-
-Three steps to a first answer:
-
-1. Install with the `answer` extra: `pip install "webrouter[answer]"`
-   (`make setup` in a clone installs every extra).
-2. Set one answer backend's key in your environment or `.env`, for example
-   `PERPLEXITY_API_KEY` -- the [answer table](#answer) lists each one's variable.
-3. Ask:
-
-```python
-from web_router import WebRouter
-
-with WebRouter() as router:
-    response = router.answer("who won the 2022 world cup final")  # the one backend you hold a key for
-
-print(response.answer)
-for citation in response.citations:
-    print(citation.field or "-", citation.url)
-```
-
-```text
-Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra time.[2]
-- https://football.fandom.com/wiki/2022_FIFA_World_Cup_Final
-[2] https://www.world-cup-schedule.com/blog/who-won-2022-world-cup-argentina-france-final
-...
-```
-
-With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
-Which one: they score alike on accuracy (see [Choosing one](#answer)), so pick
-on what you need -- Linkup had the lowest median latency in that scan (0.9 s); Perplexity, You.com
-and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
-Linkup tie each source to a sentence. [`examples/answer.py`](examples/answer.py)
-runs the whole flow, errors included.
-
-Nothing here writes, joins or edits the answer: it is the backend's, as it came.
-An empty one comes back as `""` rather than an error, with its sources and
-`raw`, so "the backend had nothing" reads differently from a failure. Where a
-backend marks which source backs which sentence, the marker is in
-`citation.field`; where it does not (Parallel), every citation backs the answer
-as a whole. `outcome` is `partial` only when the backend says it stopped early.
-
-The options are `include_domains`, `exclude_domains`, `country`, `locale` and
-`recency` (`"day"`, `"week"`, `"month"` or `"year"`). Windows count whole days;
-where the router sets the start date itself (Linkup), it counts back from
-today's date in UTC. A backend that does not
-map one raises `UnsupportedParameterError` before anything is sent -- the
-[answer table](#answer) says which backend maps what.
-
-With `provider` unset, the router's default answers when it is an answer
-backend. On the usual default, `auto`, that is every answer backend you hold a
-key for (in the environment or in `provider_config`), in the order `make chains`
-ranks them on 300 benchmark questions -- accuracy first, and where accuracy is too close to tell
-apart, the cheaper at list price: Perplexity, You.com, Linkup, Parallel, Exa, then Brave, which
-the scan has not measured. A backend that does not
-map an option you set is passed over without being called; one that fails, or
-answers with nothing, is passed over for the next, and each one tried bills.
-`provider_config={"auto": {"chain": {"answer": [...]}}}` sets the order. With no
-key, the call raises `NoAnswerProviderError` (a `ProviderNotFoundError`) naming
-the variables to set. On a router whose default is not an answer backend
-(`WebRouter("nimble")`), the one answer backend you hold a key for serves the
-call; with several, name one, or pass `provider="auto"`.
-
-"Answer" means two other things nearby. `SearchResponse.answer` is an answer a
-search backend volunteered beside its results, unasked (You.com's knowledge
-panel); `answer()` is one you asked for, with its sources.
-
-## Researching a question
-
-`research()` behaves differently enough to be worth a section. A search answers in a second. A research run reasons over
-several turns — searching, reading, cross-checking — and answers in minutes.
-
-```python
-response = router.research("how did nvidia's datacenter revenue mix shift in 2025")
-
-print(response.answer)
-for citation in response.citations:
-    print(citation.url, citation.field or "")
-```
-
-The line between this and `search` is not "does it reason". It is **whether the
-work fits inside one request/response**. A written answer that comes back in
-one call is `answer()`. A run that
-takes minutes, can be polled, can be cancelled and bills by the unit of effort is
-a job, and it needs a different shape.
-
-### Asking for structure instead of prose
-
-Pass a schema and the answer comes back as an object. Either JSON Schema or the
-pydantic model to take one from:
-
-```python
-class Company(BaseModel):
-    name: str
-    what_they_sell: str
-    headquarters: str | None = None
-
-
-response = router.research("what does nimbleway sell", output_schema=Company)
-response.structured  # {'name': 'Nimble', ...}
-```
-
-Add `records` on top of a schema and the run becomes an **enrichment**: the same
-schema, filled in once per row you already hold: `structured` comes back as one
-row per record. Nimble, the backend that maps it, refuses one at `effort="low"`;
-its default effort runs one, as the example below does (checked live).
-
-```python
-router.research(
-    "fill in what each company sells and where it is headquartered",
-    output_schema=Company,
-    records=[{"name": "Nimble"}, {"name": "Tavily"}],
-)
-```
-
-### Effort
-
-`effort` is research's equivalent of `search_depth` — four levels mapped onto
-each backend's own vocabulary, which disagree more here than anywhere else in
-the package:
-
-| Effort | Nimble | Parallel | Perplexity | Linkup | You.com |
-| --- | --- | --- | --- | --- | --- |
-| `low` | `low` | `lite` | `low` | `S` | `lite` |
-| `medium` | `medium` | `core` | `medium` | `M` | `standard` |
-| `high` | `high` | `pro` | `high` | `L` | `deep` |
-| `max` | `x-high` | `ultra` | `xhigh` | `XL` | `exhaustive` |
-
-A backend with fewer tiers maps more than one level onto the same setting rather
-than inventing a distinction it does not have. Nimble's own `max` is not open yet, so `max` sends its deepest tier,
-`x-high`. Parallel's `base` has no normalized level of its own and is reachable through
-`provider_options`, as is You.com's `frontier`.
-
-Parallel is the one backend that *requires* an effort, so leaving it unset sends
-`medium` rather than omitting the field — the same deliberate exception to
-"unset means unset" that `extract` makes for `format`, and for the same reason:
-the alternative is a value that depends on a vendor default nobody declared.
-
-### Not waiting for it
-
-`research()` blocks, which is wrong anywhere a minutes-long wait is — a request
-handler, a UI, an MCP server. `submit_research()` hands back the job instead:
-
-```python
-job = router.submit_research("...", effort="high")
-
-job.job_id  # the backend's own id for the run
-job.status()  # where it is now, without blocking
-job.result(timeout=30)  # block for a while; raises ResearchTimeoutError if it is not done
-```
-
-Running out of time **raises rather than returning an empty answer**, and leaves
-the run going rather than cancelling it — the exception carries the job id, so
-picking the same run back up costs nothing where starting it again would cost
-the whole run. `job.cancel()` stops one where the backend supports it, and
-returns `False` where it does not rather than pretending.
-
-The async router is the same call with `await`, which is what makes several
-research runs at once reasonable there and not on the sync one.
-
-### What comes back
-
-```python
-response.answer  # prose, when the run produced prose
-response.structured  # the object, when a schema was asked for
-response.citations  # what the answer rests on
-response.outcome  # 'complete', or 'partial' when the backend said it stopped early
-response.provider  # who actually answered -- never 'auto'
-response.raw  # every untouched payload the run took
-```
-
-`Citation.field` says **which part of the answer a source backs** — a JSON path
-into `structured`, or a marker in `answer` — for the backends that attribute per
-field. `None` means it cites the answer as a whole.
-
-`outcome` is `"partial"` only when the backend itself reported stopping early:
-an exhausted budget, a truncated generation. A run that simply found little is
-`"complete"`, because it finished the work it was asked to do. Nothing here is
-inferred.
-
-## Browser sessions
-
-`open_browser()` is the one method that returns neither an answer nor a job but
-a **resource**: a live browser, and a handle on it. Drive it with the handle's
-own page actions, or hand its `cdp_url` to Playwright, browser-use or
-Stagehand. A cloud session bills for as long as it is open, so the handle is a
-context manager that releases it however the block ends:
-
-```python
-from web_router import WebRouter
-
-with WebRouter().open_browser(timeout=300) as browser:
-    browser.goto("https://example.com")
-    print(browser.provider, browser.snapshot().tree)
-# released here -- on an exception too, and on router.close()
-```
-
-A session opened with no `timeout` gets `BROWSER_TIMEOUT`, ten minutes, rather
-than the vendor's own limit, which on some backends is hours: a session you
-forgot to release should cost ten minutes of credit, not an afternoon's. Pass a
-larger `timeout` to go past it. Releasing twice is a no-op, and a handle
-garbage-collected while still open warns with `ResourceWarning`.
-
-**Connect once per session.** Several backends — Browserbase and Hyperbrowser
-among them — end a session when its CDP client disconnects, so a driver that
-reconnects for each action finds the session gone after the first. The handle's
-own actions already work this way: the first one connects, and the rest reuse
-that connection until the handle is released.
-
-`cdp_url` is a credential — whoever holds it drives the browser, and Steel puts
-your API key in it — so `BrowserSession.cdp_url` is a `SecretStr`, and neither
-the session's `repr` nor its serialization carries it or the raw payload.
-`browser.cdp_url` returns the plain string, because asking for it by name is the
-one moment you need it.
-
-### Session backends
-
-Opening a session on a vendor goes over its REST API with httpx, which `[all]`
-installs; `local` needs only the standard library and a Chrome or Chromium. The
-page actions need the `[browser]` extra, which is Playwright.
-
-| Pass | Name | Provider | Credentials | Options mapped | Verified how |
-| --- | --- | --- | --- | --- | --- |
-| `Provider.AUTO` *(default)* | `auto` | — | whatever its chain holds; none for `local` | every option some member maps, routed per request; `provider_options` is refused | Falls through only when a member refuses to open (no key, a 4xx, no connection); anything that may have opened a session is raised |
-| `Provider.STEEL` | `steel` | [Steel Sessions](https://docs.steel.dev) | `STEEL_API_KEY` | `timeout`, `idle_timeout`, `solve_captchas`, `proxy_country` (no enumerated country list; `stealth` not mapped — Steel has no on/off or tiered stealth field), `profile` (an id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `solve_captchas`/`proxy_country` await a live run |
-| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Sessions](https://docs.browserbase.com) | `BROWSERBASE_API_KEY` | `timeout`, `stealth` (`low`/`high`, via `browserSettings.verified` — `advancedStealth` is deprecated), `solve_captchas`, `proxy_country`, `profile` (a context id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` await a live run |
-| `Provider.HYPERBROWSER` | `hyperbrowser` | [Hyperbrowser Sessions](https://hyperbrowser.ai/docs) | `HYPERBROWSER_API_KEY` | `timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country`, `profile` (an id), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` await a live run |
-| `Provider.ANCHOR` | `anchor` | [Anchor Browser](https://docs.anchorbrowser.io) | `ANCHOR_API_KEY` | `timeout`, `idle_timeout` (rounded up to whole minutes), `stealth`, `solve_captchas`, `proxy_country`, `profile` (a name), `persist_profile` | `profile`, `persist_profile` and `control_url()` **live**, 2026-10-20; the rest from documentation — `stealth`/`solve_captchas`/`proxy_country` await a live run. Headful and recorded by default, and left that way |
-| `Provider.KERNEL` | `kernel` | [Kernel Browsers](https://kernel.sh/docs) | `KERNEL_API_KEY` | `idle_timeout` (whole seconds, 10 s to 72 h), `stealth` (one tier, which also brings Kernel's CAPTCHA solver and proxy), `headless`, `viewport`, `profile` (an id), `persist_profile`. `timeout`, `solve_captchas` and `proxy_country` raise | **Live**, 2026-10-20: open, drive, status, release, `control_url()`, and every mapped option |
-| `Provider.LOCAL` | `local` | Google Chrome or Chromium on this machine | none (`CHROME_PATH` optional) | `headless`, `timeout`, `viewport` | **Live** against Google Chrome on macOS: launch, CDP `/json/version`, release, lifetime expiry, exit cleanup. `headless=False` is not exercised by a test |
-
-`auto` opens through the first vendor you hold a key for, in the order **Steel,
-Browserbase, Hyperbrowser, Anchor, Kernel**, and then **`local`** — a key in the
-environment says which backend you want, so `local` is the fallback, never a
-substitute for a vendor you are paying for. Each member is checked against the
-request on its class before anything opens, so a member that does not map an
-option you set is passed over: `idle_timeout` skips Browserbase, Hyperbrowser
-and `local`, `timeout` skips Kernel, and `headless` every vendor but Kernel. The ten-minute default does not count as an
-option you set. `provider_options` is refused, because it is one backend's own
-fields and `local` would read it as Chrome switches — name the backend you
-wrote it for. `profile` and `persist_profile` are refused for the same reason:
-a profile is saved on one backend. `auto` never opens a second session in one call: it moves on only
-after a failure that proves nothing opened, and a read timeout, a 5xx or an
-unreadable answer, which may have left a session billing, is raised instead.
-The handle it returns is the member's own, so `browser.provider` names the
-backend that served it.
-
-`stealth` is a level, not a switch: `"off"`, `"low"` (the backend's standard
-stealth) or `"high"` (its strongest, often plan-gated), and unset leaves the
-backend's own default. A backend without the level you ask for raises
-`UnsupportedParameterError` naming it rather than serving another one, and
-`auto` passes such a member over, as it does one that serves an option only
-beside another you left unset. Hyperbrowser, Browserbase, Anchor and Kernel map it; Steel does not.
-
-`provider_options` on a named backend merges beneath the mapped options, and
-setting a field a mapped option also sets — including a `timeout` filled in
-from the default — raises `ConfigurationError` rather than one side silently
-winning.
-
-### Logging in once, and reusing the login
-
-A site behind a login needs a person to log in once. `control_url()` hands back
-a page where that person sees the session and can type into it; with `profile`
-and `persist_profile=True`, what they leave behind — cookies, local storage —
-is saved when the session is released, and a later session opened on the same
-`profile` starts logged in:
-
-```python
-from web_router import WebRouter
-
-with WebRouter("browserbase") as router:
-    with router.open_browser(profile="<context id>", persist_profile=True) as browser:
-        print("Log in here:", browser.control_url())
-        input("Press Enter once you are logged in. ")
-    # Released: the login is saved to the profile. Give it a few seconds.
-
-    with router.open_browser(profile="<context id>") as browser:
-        browser.goto("https://example.com/account")  # already logged in
-```
-
-`control_url()` is a credential, like `cdp_url`: whoever opens it drives the
-browser, and on Steel, Kernel, Hyperbrowser and Anchor no account login stands
-in the way. Give it only to the person logging in, and do not log it. It is
-`None` on a backend that offers no such page. `live_view_url` stays for pages
-that show a session without granting control — today Steel's dashboard page,
-which asks for a Steel login. Browserbase hands out its page only on request,
-so `control_url()` asks for it the first time it is called; every other
-backend returned it on open. On an `AsyncBrowserHandle`, `await
-browser.control_url()`.
-
-| Backend | `profile` is | `control_url()` is | Make a profile |
-| --- | --- | --- | --- |
-| `browserbase` | a context id | `debuggerFullscreenUrl`, fetched on first call | `POST /v1/contexts` |
-| `steel` | a profile id | `debugUrl` | open a session with `provider_options={"persistProfile": True}` and read `raw["profileId"]` |
-| `hyperbrowser` | a profile id | `liveUrl` | `POST /api/profile` |
-| `anchor` | a name you choose | its `live_view_url` | none: the first session that saves to a name creates it |
-| `kernel` | a profile id | `browser_live_view_url`, for a session with `headless=False` | `POST /profiles` |
-| `local` | — | `None`: open it with `headless=False` and the window is on your screen | — |
-
-WebRouter takes a profile you already have; making, listing and deleting them
-stays with each vendor's own API or dashboard. `persist_profile` without a
-`profile` raises, rather than making a new one where the vendor would (Steel).
-Each backend saves as the session ends, not at the release call, so wait a few
-seconds before opening on the profile again; Steel answers 409 until its upload
-reports `READY`. Two sessions writing to one profile at once overwrite each
-other. Every row was checked live on 2026-10-20: a cookie and a localStorage
-entry set in one session were there in the next.
-
-### Driving the page
-
-A handle can drive its session's page itself, the same way whichever backend
-serves it: the actions run over the session's CDP URL through Playwright, once
-for every backend, never through a vendor's own endpoints. They need the
-`[browser]` extra, and nothing else — no `playwright install`, because the
-browser is the session's.
-
-```python
-from web_router import WebRouter
-
-with WebRouter("local").open_browser() as browser:
-    browser.goto("https://news.ycombinator.com")  # PageState: url, title, status_code
-    page = browser.snapshot()  # PageSnapshot: url, title, tree
-    print(page.tree)
-    # - link "Hacker News" [ref=e6]
-    # - textbox [ref=e312]
-    browser.click(ref="e6")  # or selector="a.morelink"
-    browser.type("web-router", ref="e312", submit=True)
-    browser.press("Escape")
-    png = browser.screenshot(full_page=True).png  # Screenshot: png, width, height, url
-    text = browser.read().content  # ExtractedDocument; format="text" or "html"
-```
-
-`snapshot()` returns the page's accessibility tree, one element per line, each
-tagged with a ref to pass to `click` or `type`. Unnamed wrapper elements and
-link URLs are left out to keep it short. Treat a ref as opaque: it is good
-until the next snapshot or navigation, and one used after that, or after its
-element was re-rendered, raises `StaleElementError` rather than clicking
-whatever now sits there. A real page's tree runs to tens of thousands of
-characters; `snapshot(max_chars=...)` cuts it at a line boundary and sets
-`truncated`, and the refs past the cut are not offered. A `Screenshot`
-serializes to JSON with its PNG as base64.
-
-Every action waits up to `BROWSER_ACTION_TIMEOUT` (30 seconds) unless you pass
-`timeout=`, except `press`, which waits on nothing. Sync handles on one thread
-share one Playwright, each with its own connection. The sync handle refuses to
-run inside an event loop, because Playwright's sync API does; use
-`AsyncWebRouter` there, whose handle has the same actions, awaited:
-
-```python
-async with AsyncWebRouter("local") as router, await router.open_browser() as browser:
-    await browser.goto("https://example.com")
-    page = await browser.snapshot()
-```
-
-Failures raise a `BrowserActionError`, carrying the `provider`, `session_id`
-and `action`, with Playwright's error on `__cause__` — or one of its
-subclasses, so an agent can tell them apart: `StaleElementError`,
-`ElementNotFoundError` (a selector matched nothing in time), `NavigationError`
-(`goto` could not load the page), `BrowserActionTimeoutError` and
-`PageClosedError` (the page, the connection or the session is gone).
-
-[`examples/browser_session.py`](examples/browser_session.py) runs all of this
-against `local`, sync and async, with no key.
-
-### Session backend notes
-
-**Steel.** Its `cdp_url` carries your API key in its query string, which is
-Steel's own connection scheme. It keeps a session across a reconnect, as
-`local` does. Proxies, stealth, CAPTCHA solving, profiles, viewport and
-headless are reachable through `provider_options` until a live call confirms a
-mapping for them. `profile` and `persist_profile` map onto `profileId` and
-`persistProfile`. `live_view_url` is its `sessionViewerUrl`, a dashboard page
-that asks for a Steel login; its `debugUrl` needs none, so it is
-`control_url()`.
-
-**Browserbase.** Its `cdp_url` is the `connectUrl` it returns, which is enough
-on its own to drive the session. It solves CAPTCHAs unless
-`browserSettings.solveCaptchas` is set to `false` through `provider_options`;
-it ends a session when its CDP client disconnects, unless `keepAlive` is set;
-and it has no idle timeout, so `idle_timeout` is refused. It reports a session
-that ended because its client disconnected the same way as one that was
-released, so `status()` says `"released"` for both. `profile` is a context id,
-sent with `persist_profile` as `browserSettings.context`. Its live view lets
-whoever opens it drive the session and takes a second request, so
-`live_view_url` stays `None` and `control_url()` makes that request when first
-called; `expires_at` is the `expiresAt` it reports.
-
-**Hyperbrowser.** Its `cdp_url` is the `wsEndpoint` it reports, which carries a
-session token. It takes its lifetime in whole minutes, so `timeout` is rounded
-up, and it has no idle timeout, so `idle_timeout` raises. A session ends when
-its CDP client disconnects and when every page in it is closed; Hyperbrowser
-keeps one alive across a disconnect only with `keepAlive=true` on the connect
-URL, which WebRouter does not add. Its `liveUrl` lets whoever opens it drive
-the session, so it is `control_url()`, never `live_view_url`. `profile` and
-`persist_profile` map onto `profile.id` and `profile.persistChanges`.
-`stealth="off"` sends `useStealth: false` and `useUltraStealth: false`,
-`"low"` sends `useStealth: true`, `"high"` sends `useUltraStealth: true`
-(enterprise-only on Hyperbrowser's own plans). `solve_captchas` maps onto
-`solveCaptchas`, sent as `false` too when asked for. `proxy_country` turns
-`useProxy` on and sends `proxyCountry` upper-cased, refused outside the
-country list Hyperbrowser's API reference publishes. All three are mapped from
-documentation, unverified against a live call.
-
-**Anchor.** Both lifetimes are whole minutes, rounded up. Its `idle_timeout`
-starts counting only once the last connection closes, so a client that stays
-connected but idle keeps the session, and its bill, alive until `timeout`.
-`stealth`, `solve_captchas` and `proxy_country` are mapped from documentation
-alone — **unverified against a live call**. Anchor has one stealth tier, so `"low"` and `"high"` both turn on
-`browser.extra_stealth.active`, and `"off"` turns it off explicitly. Anchor
-silently disables extra stealth unless its proxy is active, so asking for
-`stealth="low"` or `"high"` without `proxy_country` raises before a session
-opens rather than opening one with less stealth than asked for.
-`proxy_country` is sent lower-case, as Anchor's guide shows it, and is checked
-against every country its proxy guide lists. `profile` is a profile's name,
-sent with `persist_profile` under `browser.profile`. Its live view is
-interactive unless the session was opened read-only, so it is `control_url()`,
-never `live_view_url`.
-
-**Kernel.** Its `cdp_url` is the `cdp_ws_url` it returns, which carries a
-session token. Kernel has no lifetime limit, only an idle one: `idle_timeout`
-maps onto `timeout_seconds`, which counts down only while no CDP, WebDriver or
-live-view client is connected, and Kernel deletes the session when it runs
-out — after 60 seconds if you leave it unset, so connect soon after opening.
-`timeout` raises, and the ten-minute default is not sent. Kernel has one
-stealth switch, so `"low"` and `"high"` both send `stealth: true`, and `"off"`
-sends `false`; stealth also turns on Kernel's CAPTCHA solver and its stealth
-proxy, which is why `solve_captchas` raises rather than claiming a separate
-switch. `proxy_country` raises too: a country needs a proxy created first
-through Kernel's Proxies API, and an existing one can be passed as
-`provider_options={"proxy": {"id": ...}}`. `profile` is a Kernel profile's
-id — pass a name as `provider_options={"profile": {"name": ...}}` — and
-`persist_profile` sends `profile.save_changes`, refused without a `profile`.
-Its live view lets whoever opens it drive the session, so it is
-`control_url()`, never `live_view_url`; Kernel offers one only for a session
-with `headless=False`. A deleted session, whether released or
-idled out, reads as `"released"`: Kernel answers 404 for both and does not say
-which. Every mapping was checked live on 2026-10-20.
-
-**`local`** starts a fresh browser process per session, with a temporary
-profile and its DevTools port pinned to `127.0.0.1`, and stops it and deletes
-the profile on release, when its `timeout` runs out, or when your Python
-process exits. It looks for `executable_path` in `provider_config`, then
-`CHROME_PATH`, then the usual Chrome and Chromium install locations, then
-Playwright's downloaded Chromium, and raises `ConfigurationError` naming
-`uvx playwright install chromium` when it finds none. It is headless unless you
-pass `headless=False` — the one place an unset option is filled in because the
-binary's own default, a window, would open on your screen. It maps `viewport`
-through CDP's `Browser.setContentsSize` once the browser is up, which gives a
-page of exactly that size; `--window-size` cannot, because it sizes the outer
-window and even headless Chrome renders a smaller page inside it (800x600 gives
-an 800x513 page). A browser too old to have that command fails the open. Its
-`provider_options` are Chrome command-line switches, so
-`{"window-size": "800,600"}` sets the outer size if that is what you want --
-though not beside `viewport`, which refuses every switch that sizes the window.
-
 ## Vendor data
 
 `call_vendor()` reaches a vendor's own API with your account's credentials —
@@ -1519,101 +605,6 @@ To pin a vendor's file or add one without forking, point
 shipped vendor replaces it whole. [AGENTS.md](AGENTS.md#adding-a-vendor) has
 the format's rules.
 
-## Browse
-
-`browse()` hands a task to a vendor's browser agent, which drives one of the
-vendor's own browsers through it and answers minutes later. It is research's
-shape on the same job core: `browse()` blocks until the answer is in, and
-`submit_browse()` hands back a `BrowseJob` to poll instead.
-
-```python
-response = router.browse(
-    "find the title of the top story and how many points it has",
-    start_url="https://news.ycombinator.com",
-)
-
-response.answer  # prose, when the agent answered in prose
-response.structured  # an object, only when the backend says it fits a schema you asked for
-response.steps  # what the backend reported doing, in order: action, url, detail, screenshot_url
-response.outcome  # 'complete', or 'partial' only when the backend said it stopped early
-response.provider  # who ran it -- never 'auto'
-response.raw  # every untouched payload; kept out of repr and serialization
-
-job = router.submit_browse("...", start_url="https://example.com")
-job.result(timeout=60)  # raises BrowseTimeoutError and leaves the task going
-```
-
-Waiting defaults to `BROWSE_TIMEOUT`, fifteen minutes. Running out raises
-`BrowseTimeoutError` carrying the job id, and leaves the task going rather than
-cancelling it; `job.cancel()` stops one where the backend can. `raw` stays out
-of `repr` and serialization because a task payload can carry the URL of the
-session the agent ran in, and live-view, session and recording-control URLs
-are never promoted to plain fields.
-
-A backend that cannot start without a page raises `MissingParameterError` when
-`start_url` is unset, before anything is billed. One with no structured output
-refuses `output_schema` rather than handing back prose under the name of a
-schema. [`examples/browse.py`](examples/browse.py) runs a task both ways.
-
-### Browse backends
-
-Every task bills, so there is no keyless tier. Each backend talks to its REST
-API over httpx, which `[all]` installs.
-
-| Pass | Name | Provider | Credentials | Options mapped | Verified how |
-| --- | --- | --- | --- | --- | --- |
-| `Provider.AUTO` *(default)* | `auto` | — | Browser Use, Skyvern or Browserbase, whichever you hold | whatever the member it routes to maps | Routes around a member before any task starts; with no member left it raises, naming why each was skipped |
-| `Provider.BROWSER_USE` | `browser-use` | [Browser Use Cloud API v2](https://docs.browser-use.com/cloud/api-v2-overview) | `BROWSER_USE_API_KEY` | `start_url`, `output_schema`, `max_steps`, `allowed_domains` | **Live**, 2026-10-21: a prose task, and each mapped option |
-| `Provider.SKYVERN` | `skyvern` | [Skyvern run-task API](https://skyvern.com/docs/sdk-reference/tasks/run-task) | `SKYVERN_API_KEY` | `start_url` (optional) | **Documentation only** — no key was available. `output_schema`, `max_steps` and `allowed_domains` are refused; most answers are only in `raw` (see below) |
-| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Agents](https://docs.browserbase.com/platform/agents/overview) | `BROWSERBASE_API_KEY` | none beyond the task | **Live**, 2026-09-30 and 2026-10-21: a prose task. `start_url` is refused; a schema goes through `provider_options` as `resultSchema`, which awaits a live run |
-
-`auto` tries **Browser Use, Skyvern, then Browserbase**, only those you hold a
-key for, and nothing after them. Browser Use comes first because it answers in
-prose and reports the steps it took; Browserbase last, because its Agents API
-has no start URL. A member is skipped, on its class and before any task is
-billed, when it does not map an option you set, refuses `start_url`, or needs
-one you left out; with none left, `MissingParameterError` or
-`UnsupportedParameterError` lists why each was passed over. It falls through to
-the next member only on a failure that proves no task was created — a missing
-credential, a 4xx, a connection that never reached it — and once a task has
-started no second one is. The answer and the job id name the backend that took
-the task.
-
-### Browse backend notes
-
-**Browser Use** runs each task in a session it creates for it, and cancelling a
-task stops that session too. Its steps carry the page, the screenshot, the
-agent's note on the step (its `memory`) and, for a step that took one action,
-that action as Browser Use wrote it; the full list of stringified actions, the
-step number and the always-empty `nextGoal` are in each step's `extra`.
-`output_schema` is sent as Browser Use's `structuredOutput`, and its answer
-comes back as `structured`; an answer that is not JSON stays in `answer`
-rather than being dropped. `allowed_domains` blocks navigation elsewhere, but
-the agent may still answer from what it already knows, so check
-`steps` when it matters where an answer came from. A finished task is
-`complete` even when Browser Use's self-reported `isSuccess` is `false`, which
-stays in `raw`.
-
-**Skyvern** answers in an object whose keys its agent chose unless a
-`data_extraction_schema` is sent, and that is not mapped yet, so most Skyvern
-answers are only in `raw[0]["output"]`: `answer` is set only when the output is
-a string, and `structured` stays empty, because an object nobody asked the
-shape of is not structured output. Its recording URL is a presigned link
-carrying credentials, so it also stays in `raw`. `timed_out` covers both the
-`max_steps` limit and the clock, with nothing to tell them apart, so it fails
-the task rather than reading as `partial`. Its `data_extraction_schema`,
-`max_steps`, engine and browser session are reachable through
-`provider_options` until a live call confirms a mapping.
-
-**Browserbase**'s Agents API has no start URL, so `start_url` raises
-`UnsupportedParameterError` rather than being folded into the task. A prose
-`result` is the `answer`; an object or list `result` is `structured`, because
-Browserbase returns one only for a `resultSchema`, which reaches it through
-`provider_options` alongside `agentId`, `variables` and `browserSettings` until
-a live call confirms mapping `output_schema`. A run started with no `agentId`
-may create a new Agent in your Browserbase account each time. `steps` is empty:
-the transcript is a separate endpoint this provider does not read.
-
 ## The MCP server
 
 The package ships a **self-hosted stdio MCP server**, so an agent can call these
@@ -1621,24 +612,9 @@ methods as tools: `search`, `extract`, the live data tools, `answer`, `research`
 `browse`, the `browser_*` tools for driving a browser itself, and `web_run`,
 `budget_start` and `budget_status` for [smart routing](#smart-routing-experimental).
 It runs in your own process and sends each key only to the backend it belongs to.
-
-Inside the clone, the committed `.mcp.json` already starts it. To use it from
-every project, register it once at user scope:
-
-```bash
-claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
-```
-
-It works with **no API key at all**: search and extract run on the keyless
-backends above. Every key you add unlocks more backends and fallbacks, and
-research, browse and cloud browsers need one. Put your keys in a `.env` in your
-user config directory, or point `WEB_ROUTER_ENV_FILE` at one; a project's
-`.env` can add keys but never replace yours.
-
-[docs/mcp.md](docs/mcp.md) covers the rest: Claude Desktop and Cursor setup,
-where keys are read from and `load_env`, the tools and their costs, how
-results are shaped and redacted, the browser tools' guards, and routing and
-budgets.
+The [MCP guide](https://github.com/Nimbleway/webrouter/blob/main/docs/mcp.md)
+covers installation, client setup, credentials, tool costs, browser guards,
+routing and budgets.
 
 ## Integrating a framework
 
@@ -1660,7 +636,7 @@ When integrating WebRouter:
 - [ ] Document credential environment variables (`NIMBLE_API_KEY`, etc.)
 - [ ] Document the `auto` behavior above
 
-Error types are in [Errors](#errors). Adding a backend, or keeping one private,
+Error types are in [Errors](https://docs.webrouter.net/errors). Adding a backend, or keeping one private,
 is [Adding a provider](CONTRIBUTING.md#adding-a-provider).
 
 ## LangChain
@@ -1987,7 +963,7 @@ Two things about the knobs. A `Dataset` is a model, so loop over
 `max_results` go to every provider in the call unchanged, which is what makes
 the rows comparable — so to pin each backend to a particular vendor tier, run
 `evaluate()` once per depth on the same dataset and set the tables side by
-side. The [search-depth table](#search-depth) says what each vendor makes of
+side. The [search-depth guide](https://docs.webrouter.net/search#search-depth) says what each vendor makes of
 `lite` / `fast` / `deep`; for example Nimble's `lite` and Tavily's `basic` are
 both `search_depth="lite"`, while You.com's `highlights` extraction is
 `search_depth="fast"`.
@@ -2769,99 +1745,6 @@ whole list, as Tavily's and Exa's do.
 `perplexity.py` and `firecrawl.py` are the shortest complete examples, and
 [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-provider) has the full checklist —
 keyless endpoints, redirects, and reusing an existing provider's normalization.
-
-## Errors
-
-Every exception the router raises derives from `WebRouterError` and imports
-from `web_router`, so one `except` covers the lot:
-
-```python
-from web_router import Provider, WebRouter, WebRouterError
-
-try:
-    WebRouter(Provider.TAVILY).search("...")
-except WebRouterError as exc:
-    print(exc)
-```
-
-| Exception | Raised when | Typical fix |
-| --- | --- | --- |
-| `ConfigurationError` | No API key for a provider you named | Set the variable it names, or pass `provider_config` |
-| `ProviderNotInstalledError` | The extra carrying the provider's SDK is not installed | `make setup` in the clone installs every extra; the message names the one missing |
-| `ProviderNotFoundError` | Unknown provider name, or one that does not serve the method you called | The message lists every name that method does serve |
-| `UnsupportedParameterError` | The provider does not map an option you set | Use `provider_options`, or add the mapping |
-| `UnsupportedFormatError` | The extract or live data backend cannot return the `format` you asked for | Ask for one it can — the message lists them — or name another backend |
-| `LiveDataSourceNotFoundError` | A live data run or describe named a source the vendor does not have | A `ProviderError`; list the vendor's sources with `live_data_sources()` — names are the vendor's own |
-| `MissingParameterError` | The browse backend cannot start without an option you left unset — `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
-| `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost — the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
-| `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
-| `ProviderError` | The backend itself failed — HTTP error, SDK exception, bad credentials | Depends on the backend; the original error is wrapped, not swallowed |
-| `VendorNotFoundError` | `call_vendor()` or `vendor_endpoint()` named a vendor or endpoint the catalog does not hold | The message lists what it does hold; `find_vendor_endpoints()` searches it |
-| `VendorWriteRefusedError` | A vendor call would change data and `allow_writes=True` was not passed; nothing was sent | Pass it once you mean it, after the vendor's dry-run option where it has one |
-| `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
-| `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
-| `DeadlineExceededError` | A search, extract, live data run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
-| `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
-
-These are **siblings, not a hierarchy**: `ProviderNotInstalledError` is not a
-subclass of `ConfigurationError`, so `except ConfigurationError` will not catch
-a missing extra. Catch `WebRouterError` unless you mean one specific case.
-
-## Configuration
-
-Keys are read from the environment, or passed explicitly through
-`provider_config={Provider.NIMBLE: {"api_key": "..."}}`:
-
-| Provider | Variable | Serves |
-| --- | --- | --- |
-| Nimble | `NIMBLE_API_KEY` | search, extract, research |
-| Tavily | `TAVILY_API_KEY` | search, extract |
-| Exa | `EXA_API_KEY` | search, extract, answer |
-| You.com | `YOU_API_KEY` | search, research, answer |
-| Brave | `BRAVE_SEARCH_API_KEY` | search |
-| Brave | `BRAVE_ANSWER_API_KEY` (the Answers plan, separate from the search key) | answer |
-| Parallel | `PARALLEL_API_KEY` | search, research, answer |
-| Perplexity | `PERPLEXITY_API_KEY` | search, research, answer |
-| Linkup | `LINKUP_API_KEY` | search, extract, research, answer |
-| WebIQ | `WEBIQ_API_KEY` | search, extract |
-| Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
-| DeepSeek | `DEEPSEEK_API_KEY` | search, extract |
-| AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](docs/agentcore-setup.md))* | search |
-| Firecrawl | `FIRECRAWL_API_KEY` | extract |
-| Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
-| Oxylabs Web API | `OXYLABS_WEB_API_KEY` | live data |
-| Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
-| Jina Reader | `JINA_API_KEY` *(optional — raises the rate limit)* | extract |
-| Steel | `STEEL_API_KEY` | open_browser |
-| Browserbase | `BROWSERBASE_API_KEY` | open_browser, browse |
-| Hyperbrowser | `HYPERBROWSER_API_KEY` | open_browser |
-| Anchor | `ANCHOR_API_KEY` | open_browser |
-| Kernel | `KERNEL_API_KEY` | open_browser |
-| Browser Use | `BROWSER_USE_API_KEY` | browse |
-| Skyvern | `SKYVERN_API_KEY` | browse |
-| `local` | *none — keyless* (`CHROME_PATH` optional, the browser to launch) | open_browser |
-| `you-mcp` | *none — keyless* | search |
-| `exa-mcp` | *none — keyless* | search |
-| `parallel-mcp` | *none — keyless* | search |
-| `auto` | *none — keyless* | search, extract, open_browser |
-| OpenAI *(the default `evaluate()` judge, not a backend)* | `OPENAI_API_KEY` | evaluate |
-| Anthropic *(`AnthropicJudge` for `evaluate()`, not a backend)* | `ANTHROPIC_API_KEY` | evaluate |
-| Your router service *(`router="remote"`, not a backend)* | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` *(optional; `router_config["api_key"]` wins)* | routing |
-
-A key set once serves every method of a provider that has several. See
-[`.env.example`](.env.example). The library reads the environment only; the
-MCP server is the one place a `.env` is read for you — see
-[docs/mcp.md](docs/mcp.md#then-add-whichever-keys-you-have).
-`configured_providers()` and
-`configured_extract_providers()` — and `configured_research_providers()`,
-`configured_browser_providers()` and `configured_browse_providers()` — report
-which of these the current environment actually satisfies — a backend needing two variables only when it has both.
-
-WebRouter does not log or store keys, and a provider's `__repr__` omits them so
-a stray log of a provider does not leak one. Provider clients also never follow redirects —
-`httpx` would replay the auth header to the redirect target, including one on
-another host — so a provider sending a credential rejects
-`follow_redirects=True`. See [SECURITY.md](SECURITY.md#credentials).
 
 ## Development
 
