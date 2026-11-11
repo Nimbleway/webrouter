@@ -96,15 +96,6 @@
           "type": "integer",
           "description": "Accept an account-private cached result up to this many days old, 0 to 30."
         },
-        "save_to_cache": {
-          "in": "body",
-          "description": "Write the new result to the shared cache, not at all, or privately.",
-          "enum": [
-            "YES",
-            "NO",
-            "PRIVATE"
-          ]
-        },
         "get_ported_date": {
           "in": "body",
           "description": "Return ported_date when available; default NO.",
@@ -140,7 +131,8 @@
       },
       "notes": [
         "A read over POST that spends credits (credits_spent per result). Cached network data (cache_days_*) can lower the charge; ported dates, usa_status and landline status add to it.",
-        "The response is always {results: [...]}; each item has error 'NONE' or its own error, e.g. TOO_MANY_REQUESTS for one throttled item in a batch."
+        "The response is always {results: [...]}; each item has error 'NONE' or its own error, e.g. TOO_MANY_REQUESTS for one throttled item in a batch.",
+        "Whether a new result is stored in hlrlookup's cache follows the account's own cache setting; the save_to_cache option is left out because it can write to the cache shared by every hlrlookup user."
       ],
       "job": "phone.verify",
       "docs_url": "https://www.hlrlookup.com/hlr-api-v2.openapi.json",
@@ -195,15 +187,6 @@
           "type": "integer",
           "description": "Accept an account-private cached result up to this many days old, 0 to 30."
         },
-        "save_to_cache": {
-          "in": "body",
-          "description": "Write the new result to the shared cache, not at all, or privately.",
-          "enum": [
-            "YES",
-            "NO",
-            "PRIVATE"
-          ]
-        },
         "get_ported_date": {
           "in": "body",
           "description": "Return ported_date when available; default NO.",
@@ -215,7 +198,8 @@
       },
       "notes": [
         "A read over POST that spends credits: half the price of an HLR lookup; a ported date is charged on top. For +1 (NANP) numbers telephone_number_type is left out of results.",
-        "usa_status and landline status do not work on this endpoint."
+        "usa_status and landline status do not work on this endpoint.",
+        "Whether a new result is stored in hlrlookup's cache follows the account's own cache setting; the save_to_cache option is left out because it can write to the cache shared by every hlrlookup user."
       ],
       "job": "phone.carrier",
       "docs_url": "https://www.hlrlookup.com/hlr-api-v2.openapi.json",
@@ -269,19 +253,11 @@
           "in": "body",
           "type": "integer",
           "description": "Accept an account-private cached result up to this many days old, 0 to 30."
-        },
-        "save_to_cache": {
-          "in": "body",
-          "description": "Write the new result to the shared cache, not at all, or privately.",
-          "enum": [
-            "YES",
-            "NO",
-            "PRIVATE"
-          ]
         }
       },
       "notes": [
-        "A read over POST. Returns no live_status, current network or porting."
+        "A read over POST. Returns no live_status, current network or porting.",
+        "Whether a new result is stored in hlrlookup's cache follows the account's own cache setting; the save_to_cache option is left out because it can write to the cache shared by every hlrlookup user."
       ],
       "job": "phone.validate",
       "docs_url": "https://www.hlrlookup.com/hlr-api-v2.openapi.json",
