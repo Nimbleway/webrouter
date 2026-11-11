@@ -1,0 +1,7 @@
+name: WebRouter CodeQL config
+
+# Tests assert on result URLs by substring and write placeholder keys to temporary
+# .env files. CodeQL reads both as security issues, though neither ships or handles
+# untrusted input. Library code under src/ is still scanned in full.
+paths-ignore:
+  - tests
