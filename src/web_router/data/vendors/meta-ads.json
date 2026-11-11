@@ -1,0 +1,217 @@
+{
+  "vendor": "meta-ads",
+  "name": "Meta Ads (Marketing API)",
+  "category": "advertising",
+  "summary": "Your Facebook and Instagram ad accounts: account details, campaigns, and performance insights (spend, reach, clicks, conversions) at any level and breakdown.",
+  "docs_url": "https://developers.facebook.com/docs/marketing-apis",
+  "base_url": "https://graph.facebook.com/{api_version}",
+  "settings": {
+    "api_version": {
+      "env": [
+        "META_GRAPH_API_VERSION"
+      ],
+      "default": "v25.0",
+      "choices": [
+        "v25.0",
+        "v26.0",
+        "v27.0"
+      ],
+      "description": "Graph API version. Meta retires old versions after about two years; pin one only to stay on it deliberately."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "META_ADS_ACCESS_TOKEN"
+        ],
+        "description": "a long-lived access token with the ads_read permission (a system-user token from Meta Business Settings > System users, or a user token from a Meta app)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: reaches ad accounts the token's user or system user was given access to.",
+    "Ad account ids carry the act_ prefix in paths. Insights money fields (spend) come back as strings in the account currency, not cents.",
+    "Pagination is cursor style: the answer's paging.next URL, or paging.cursors.after passed back as after.",
+    "This catalog covers reads only; creating or changing campaigns is not included."
+  ],
+  "sources": [
+    "https://developers.facebook.com/docs/marketing-apis",
+    "https://developers.facebook.com/docs/marketing-api/reference/ad-account/insights/",
+    "https://developers.facebook.com/docs/marketing-api/reference/ad-account/campaigns/",
+    "https://developers.facebook.com/docs/marketing-api/reference/ad-account/"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "meta-ads.account.get",
+      "name": "Get an ad account",
+      "summary": "Name, currency, status, timezone and amount spent of one ad account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ad_account_id}",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ad account id WITH the act_ prefix.",
+          "example": "act_1234567890"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated AdAccount fields, e.g. name,currency,account_status,amount_spent,timezone_name."
+        }
+      },
+      "notes": [
+        "account_status is numeric: 1 active, 2 disabled, 3 unsettled."
+      ],
+      "job": "ads.accounts.get",
+      "docs_url": "https://developers.facebook.com/docs/marketing-api/reference/ad-account/",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/marketing-api/reference/ad-account/"
+      }
+    },
+    {
+      "id": "meta-ads.campaigns.list",
+      "name": "List an ad account's campaigns",
+      "summary": "Campaigns with the fields you ask for.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ad_account_id}/campaigns",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ad account id WITH the act_ prefix.",
+          "example": "act_1234567890"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated campaign fields, e.g. name,objective,status."
+        },
+        "effective_status": {
+          "in": "query",
+          "type": "array",
+          "description": "Filter by status: ACTIVE, PAUSED, ARCHIVED, DELETED.",
+          "example": [
+            "ACTIVE",
+            "PAUSED"
+          ]
+        },
+        "date_preset": {
+          "in": "query",
+          "type": "string",
+          "description": "Date range for any insights fields requested, e.g. last_7d."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "notes": [
+        "With no effective_status filter, archived and deleted campaigns are left out."
+      ],
+      "job": "ads.campaigns.list",
+      "docs_url": "https://developers.facebook.com/docs/marketing-api/reference/ad-account/campaigns/",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/marketing-api/reference/ad-account/campaigns/"
+      }
+    },
+    {
+      "id": "meta-ads.insights.get",
+      "name": "Get ad performance insights",
+      "summary": "Spend, impressions, clicks, conversions and more for an account, campaign, ad set or ad, by day or breakdown.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ad_account_id}/insights",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ad account id WITH the act_ prefix.",
+          "example": "act_1234567890"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated metrics, e.g. impressions,spend,clicks,ctr,actions. Default is impressions and spend."
+        },
+        "level": {
+          "in": "query",
+          "type": "string",
+          "description": "Roll rows up at this level.",
+          "enum": [
+            "account",
+            "campaign",
+            "adset",
+            "ad"
+          ]
+        },
+        "date_preset": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative range, e.g. last_7d, last_30d (default), this_month, maximum. Ignored when time_range is set."
+        },
+        "time_range": {
+          "in": "query",
+          "type": "object",
+          "description": "{'since':'YYYY-MM-DD','until':'YYYY-MM-DD'}.",
+          "example": {
+            "since": "2026-10-01",
+            "until": "2026-10-31"
+          }
+        },
+        "time_increment": {
+          "in": "query",
+          "type": "string",
+          "description": "all_days (default), monthly, or 1-90 for N-day buckets."
+        },
+        "breakdowns": {
+          "in": "query",
+          "type": "array",
+          "description": "Split rows by age, gender, country, region, publisher_platform...; only some combinations are allowed.",
+          "example": [
+            "country"
+          ]
+        },
+        "filtering": {
+          "in": "query",
+          "type": "array",
+          "description": "[{field, operator, value}] filters; operators include EQUAL, IN, GREATER_THAN, CONTAIN."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "paging.cursors.after from the previous answer."
+        }
+      },
+      "notes": [
+        "Large queries can time out; narrow the date range or level, or request fewer breakdowns.",
+        "Conversions appear under actions as {action_type, value} lists, not as flat fields."
+      ],
+      "job": "ads.report.query",
+      "docs_url": "https://developers.facebook.com/docs/marketing-api/reference/ad-account/insights/",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/marketing-api/reference/ad-account/insights/"
+      }
+    }
+  ]
+}
