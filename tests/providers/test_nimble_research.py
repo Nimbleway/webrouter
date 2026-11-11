@@ -13,7 +13,6 @@ import pytest
 
 from web_router.constants import (
     NIMBLE_RESEARCH_AGENT_NAMES,
-    NIMBLE_RESEARCH_EFFORT,
     NIMBLE_RESEARCH_SOURCE_GROUP,
     NIMBLE_RESEARCH_USE_CASE_ENRICHMENT,
     NIMBLE_RESEARCH_USE_CASE_RESEARCH,
@@ -173,10 +172,12 @@ def test_the_two_use_cases_do_not_share_an_agent(provider: NimbleResearchProvide
     assert research["agent_name"] != enrichment["agent_name"]
 
 
-@pytest.mark.parametrize("effort", ["low", "medium", "high", "max"])
-def test_effort_maps_onto_nimbles_own_tiers(provider: NimbleResearchProvider, effort: Any) -> None:
+@pytest.mark.parametrize(
+    ("effort", "expected"), [("low", "low"), ("medium", "medium"), ("high", "high"), ("max", "x-high")]
+)
+def test_effort_maps_onto_nimbles_own_tiers(provider: NimbleResearchProvider, effort: Any, expected: str) -> None:
     payload = provider._build_payload(ResearchRequest(query="q", effort=effort))
-    assert payload["effort"] == NIMBLE_RESEARCH_EFFORT[effort]
+    assert payload["effort"] == expected
 
 
 def test_an_unset_option_is_never_sent(provider: NimbleResearchProvider) -> None:

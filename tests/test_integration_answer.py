@@ -16,7 +16,8 @@ import pytest
 
 from tests.conftest import billing_aware
 from web_router import WebRouter
-from web_router.constants import ANSWER_ENV_BY_PROVIDER, PERPLEXITY_OUTPUT_SEARCH_RESULTS
+from web_router.constants import ANSWER_ENV_BY_PROVIDER
+from web_router.constants_perplexity import PERPLEXITY_OUTPUT_SEARCH_RESULTS
 from web_router.registry_answer import available_answer_providers, get_answer_provider_class
 
 pytestmark = pytest.mark.integration
