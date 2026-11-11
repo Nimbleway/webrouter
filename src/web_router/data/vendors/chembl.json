@@ -1,0 +1,314 @@
+{
+  "vendor": "chembl",
+  "name": "ChEMBL",
+  "category": "other",
+  "summary": "EMBL-EBI's ChEMBL database of bioactive molecules: molecules and their properties, targets, bioactivity measurements, approved drugs, and substructure and similarity search.",
+  "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+  "base_url": "https://www.ebi.ac.uk/chembl/api/data",
+  "notes": [
+    "Free and keyless.",
+    "Responses default to XML: these entries use the .json suffix, which the API accepts on every resource (a format query parameter overrides the suffix).",
+    "Results are paged with limit and offset; page_meta in each response gives the total count and next/previous links.",
+    "Any field can be filtered with the field__operator query language (exact, iexact, contains, icontains, startswith, endswith, regex, gt, gte, lt, lte, range, in, isnull), e.g. pref_name__icontains=kinase or molecule_properties__mw_freebase__lte=300. Only the common filters are named here; send others as a raw call to the same path.",
+    "order_by=field sorts ascending, order_by=-field descending; only=field1,field2 returns just those fields.",
+    "Percent-encode SMILES in paths: they often contain #, % or \\."
+  ],
+  "sources": [
+    "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "chembl.molecules.search",
+      "name": "Search molecules",
+      "summary": "Full-text search over molecule records.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/molecule/search.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text.",
+          "example": "aspirin"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return."
+        }
+      },
+      "job": "science.compounds.search",
+      "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+      "verified": {
+        "docs": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+      }
+    },
+    {
+      "id": "chembl.molecules.list",
+      "name": "List molecules",
+      "summary": "Molecules filtered by any field, e.g. approved drugs (max_phase=4) or Rule-of-Five compliant ones.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/molecule.json",
+      "params": {
+        "molecule_chembl_id__in": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ChEMBL ids.",
+          "example": "CHEMBL25,CHEMBL941"
+        },
+        "pref_name__icontains": {
+          "in": "query",
+          "type": "string",
+          "description": "Preferred name contains (case-insensitive)."
+        },
+        "max_phase": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum development phase; 4 means approved drugs."
+        },
+        "molecule_properties__num_ro5_violations": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of Rule-of-Five violations."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Field to sort by; prefix - for descending."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        }
+      },
+      "job": "science.compounds.search",
+      "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+      "verified": {
+        "docs": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+      }
+    },
+    {
+      "id": "chembl.molecules.get",
+      "name": "Get a molecule",
+      "summary": "One molecule's information, including properties, structural representations and synonyms.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/molecule/{molecule_chembl_id}.json",
+      "params": {
+        "molecule_chembl_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The molecule's ChEMBL id.",
+          "example": "CHEMBL25"
+        }
+      },
+      "job": "science.compounds.get",
+      "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+      "verified": {
+        "docs": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+      }
+    },
+    {
+      "id": "chembl.molecules.similarity",
+      "name": "Find similar molecules",
+      "summary": "Molecules at or above a Tanimoto similarity cut-off to a SMILES, InChI Key or ChEMBL id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/similarity/{structure}/{similarity}.json",
+      "params": {
+        "structure": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A SMILES (percent-encoded), an InChI Key present in ChEMBL, or a molecule ChEMBL id.",
+          "example": "CHEMBL25"
+        },
+        "similarity": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Similarity cut-off in percent.",
+          "example": 80
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        }
+      },
+      "job": "science.compounds.search",
+      "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+      "verified": {
+        "docs": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+      }
+    },
+    {
+      "id": "chembl.molecules.substructure",
+      "name": "Search by substructure",
+      "summary": "Molecules containing a substructure given as SMILES, InChI Key or ChEMBL id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/substructure/{structure}.json",
+      "params": {
+        "structure": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A SMILES (percent-encoded), an InChI Key present in ChEMBL, or a molecule ChEMBL id.",
+          "example": "CC(=O)Oc1ccccc1C(=O)O"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        }
+      },
+      "job": "science.compounds.search",
+      "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+      "verified": {
+        "docs": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+      }
+    },
+    {
+      "id": "chembl.targets.search",
+      "name": "Search targets",
+      "summary": "Full-text search over targets (proteins and non-protein targets).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/target/search.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text.",
+          "example": "lipoxygenase"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        }
+      },
+      "job": "science.targets.search",
+      "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+      "verified": {
+        "docs": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+      }
+    },
+    {
+      "id": "chembl.activities.list",
+      "name": "List bioactivity measurements",
+      "summary": "Activity values recorded in assays, filtered by target, molecule, potency or assay type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/activity.json",
+      "params": {
+        "target_chembl_id__in": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated target ChEMBL ids.",
+          "example": "CHEMBL5552"
+        },
+        "molecule_chembl_id__in": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated molecule ChEMBL ids."
+        },
+        "pchembl_value__gte": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum pChEMBL value."
+        },
+        "assay_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Assay type, e.g. B (binding) or F (functional)."
+        },
+        "only": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return.",
+          "example": "molecule_chembl_id,pchembl_value"
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Field to sort by; prefix - for descending."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        }
+      },
+      "notes": [
+        "Unfiltered there are more than 13 million activities: always filter."
+      ],
+      "job": "science.bioactivity",
+      "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+      "verified": {
+        "docs": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+      }
+    },
+    {
+      "id": "chembl.status",
+      "name": "Get API status",
+      "summary": "API status with the ChEMBL database version and API software version.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/status.json",
+      "params": {},
+      "job": "index.metadata",
+      "docs_url": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services",
+      "verified": {
+        "docs": "https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services"
+      }
+    }
+  ]
+}
