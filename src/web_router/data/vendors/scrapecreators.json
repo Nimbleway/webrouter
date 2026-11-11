@@ -23,10 +23,11 @@
     ]
   },
   "notes": [
-    "Credit-based: each request uses credits and some options (download_media, include_replies, long transcription) cost more. account.credits shows the balance.",
+    "Credit-based: each request uses credits and some options (include_replies, long transcription) cost more. account.credits shows the balance.",
     "Public data only, found by URL or handle; paging is by a cursor-like token whose name differs per endpoint (cursor, max_cursor, next_max_id, continuationToken, after, page).",
     "Set trim=true where offered for a much smaller response; cache_max_age lets a cached answer stand in for a fresh call.",
-    "X and LinkedIn post search go through Google, so coverage is partial."
+    "X and LinkedIn post search go through Google, so coverage is partial.",
+    "download_media is left out: it stores the media in the user's Scrape Creators account."
   ],
   "sources": [
     "https://docs.scrapecreators.com/openapi.json",
@@ -46,7 +47,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.tiktok.profile",
@@ -83,7 +85,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.tiktok.profile_videos",
@@ -138,7 +141,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.tiktok.video",
@@ -169,10 +173,6 @@
           "type": "boolean",
           "description": "True for a smaller response."
         },
-        "download_media": {
-          "in": "query",
-          "type": "boolean"
-        },
         "cache_max_age": {
           "in": "query",
           "type": "string",
@@ -191,9 +191,7 @@
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
       },
-      "notes": [
-        "download_media=true stores the media and costs extra credits."
-      ]
+      "notes": []
     },
     {
       "id": "scrapecreators.tiktok.comments",
@@ -224,7 +222,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.tiktok.search",
@@ -362,7 +361,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.instagram.post",
@@ -388,10 +388,6 @@
           "type": "boolean",
           "description": "True for a smaller response."
         },
-        "download_media": {
-          "in": "query",
-          "type": "boolean"
-        },
         "include_play_count": {
           "in": "query",
           "type": "boolean"
@@ -413,7 +409,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.instagram.comments",
@@ -488,7 +485,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.youtube.channel_videos",
@@ -532,7 +530,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.youtube.video",
@@ -570,7 +569,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.youtube.transcript",
@@ -612,7 +612,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.youtube.comments",
@@ -647,7 +648,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.youtube.search",
@@ -724,7 +726,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.x.profile",
@@ -757,7 +760,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.x.user_posts",
@@ -783,7 +787,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.x.post",
@@ -821,7 +826,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.linkedin.profile",
@@ -842,7 +848,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.linkedin.company",
@@ -863,7 +870,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.linkedin.company_posts",
@@ -889,7 +897,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.reddit.subreddit",
@@ -926,7 +935,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.reddit.subreddit_posts",
@@ -993,7 +1003,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.reddit.search",
@@ -1056,7 +1067,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     },
     {
       "id": "scrapecreators.reddit.comments",
@@ -1087,7 +1099,8 @@
       "docs_url": "https://docs.scrapecreators.com/openapi.json",
       "verified": {
         "docs": "https://docs.scrapecreators.com/openapi.json"
-      }
+      },
+      "notes": []
     }
   ]
 }

@@ -42,18 +42,24 @@
         "in": "header",
         "name": "x-cg-demo-api-key",
         "value": "{demo_api_key}",
-        "optional": true
+        "optional": true,
+        "when": {
+          "host": "api.coingecko.com"
+        }
       },
       {
         "in": "header",
         "name": "x-cg-pro-api-key",
         "value": "{pro_api_key}",
-        "optional": true
+        "optional": true,
+        "when": {
+          "host": "pro-api.coingecko.com"
+        }
       }
     ]
   },
   "notes": [
-    "Set COINGECKO_HOST to pro-api.coingecko.com for a paid key; the default api.coingecko.com is the Demo (free) host and takes the Demo key.",
+    "Set COINGECKO_HOST to pro-api.coingecko.com for a paid key; the default api.coingecko.com is the Demo (free) host. Each key is sent only to its own host: the Demo key to api.coingecko.com, the paid key to pro-api.coingecko.com.",
     "Each successful call spends 1 monthly credit; rate limits depend on the plan.",
     "Some endpoints and parameters need Analyst plan or above; the Demo plan covers a subset.",
     "Coin ids are CoinGecko slugs (bitcoin, not BTC); look them up with coingecko.search or coingecko.coins.list."
