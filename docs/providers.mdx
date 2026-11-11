@@ -45,15 +45,15 @@ used here for identification only.
 
 ## Working with no credentials
 
-`auto` is the default for every method, so a router you never configured still
-searches, extracts and opens a browser; the Quickstart's first example is exactly that. It tries the backends
-you have a key for first (a credential in the environment says which one you
-want) and falls back to the anonymous tiers when there is none: Tavily keyless,
-then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
-Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
-session. Research, browse, `answer()` and live data have no
-anonymous tier, because every call bills; with no key they raise, naming the
-variables that would fix it. This is the one list of keyless backends; the MCP
-server and `.env.example` point here. `response.provider` names whichever one served it,
-never `"auto"`, so you can always tell. The anonymous tiers are rate-limited, which is
-why it is a chain: when one is throttled, the next answers.
+You can start with no API keys. `auto`, the default for every method, uses the providers you have a key for first, and falls back to free tiers when you have none.
+
+| Method | Free tiers, tried in this order |
+| --- | --- |
+| Search | Tavily, then You.com, Exa and Parallel (their open MCP servers), then Keenable |
+| Extract | Tavily, then Jina Reader, Firecrawl, then Keenable |
+| Browser session | `local` (a Chromium on your machine) |
+| Answer, research, browse | None: every call is billed, so they need a key |
+
+- **Rate limits.** Free tiers are rate-limited. When one is throttled, the next in the list answers.
+- **Which one answered.** `response.provider` names the provider that served the call, never `"auto"`.
+- **Missing key.** A method with no free tier raises an error that names the key to set.
