@@ -8,6 +8,9 @@ this module never imports the replay. Imported as a sibling, by name, as
     uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --router always:nimble
     uv run --all-extras python benchmarks/providers/route_eval.py --router mypkg.routers:pick \
         --joined benchmarks/providers/results/frozen-joined
+    uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60 \
+        --router mypkg.routers:pick --against examples/router_rules.py:route \
+        --joined benchmarks/providers/results/frozen-joined
 
 Experimental until 1.0, like the rest of route-eval.
 """
@@ -23,7 +26,7 @@ from typing import Any
 from route_eval_paths import DEFAULT_PATH_ROUTERS
 from route_eval_rank import noise_floor
 from route_eval_report import markdown
-from route_eval_routers import ALWAYS
+from route_eval_routers import ALWAYS, ORACLE
 
 DEFAULT_SETS = ("sealqa-hard-254", "simpleqa-300-v2", "tools-effort-60")
 DEFAULT_ROUTERS = ("always:webiq",)
@@ -33,6 +36,10 @@ DEFAULT_TEST_FRACTION = 0.5
 DEFAULTS_HELP = f"{', '.join(DEFAULT_ROUTERS)}; on a mixed set {', '.join(DEFAULT_PATH_ROUTERS)}"
 
 MSG_NOWHERE = "{spec!r} is a candidate in none of the sets: {sets}"
+MSG_AGAINST_ORACLE = (
+    "--against oracle: the oracle is the yardstick, not a router to compare with; "
+    "each router's tool confusion matrix already sets it against the oracle"
+)
 
 
 def skip_absent_specs(specs: Sequence[str], candidates: Sequence[str]) -> list[str]:
@@ -49,11 +56,20 @@ def parse_args(argv: list[str], description: str) -> argparse.Namespace:
         action="append",
         help=f"router to score (default: {DEFAULTS_HELP})",
     )
+    parser.add_argument(
+        "--against",
+        action="append",
+        default=[],
+        help="router every other one is compared with, where they disagree, held out (static always is)",
+    )
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED, help="the train and held-out split's seed")
     parser.add_argument("--test-fraction", type=float, default=DEFAULT_TEST_FRACTION, help="share held out")
     parser.add_argument("--joined", type=Path, default=None, help="frozen.py join's output, for the question text")
     parser.add_argument("--json", type=Path, default=None, help="also write the numbers here")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if ORACLE in args.against:
+        parser.error(MSG_AGAINST_ORACLE)
+    return args
 
 
 def run(
@@ -70,10 +86,11 @@ def run(
             test_fraction=args.test_fraction,
             joined=args.joined,
             skip_absent=not args.sets,  # the default sets mix backends and paths; a named set is held to its own
+            against=args.against,
         )
         for name in args.sets or default_sets
     ]
-    for spec in args.routers or ():
+    for spec in (*(args.routers or ()), *args.against):
         if all(spec in s["skipped"] for s in summaries):
             raise SystemExit(MSG_NOWHERE.format(spec=spec, sets=", ".join(s["set"] for s in summaries)))
     if args.json:

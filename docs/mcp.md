@@ -2,8 +2,8 @@
 
 A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
 Desktop, Cursor, anything that speaks MCP — the methods this package
-routes: `search`, `extract`, `answer`, `research` and a vendor's templates (`templates`,
-`template`, `run_template`) — plus `browse` for a hosted browser agent, the
+routes: `search`, `extract`, `answer`, `research` and a vendor's live data (`live_data_sources`,
+`live_data_source`, `live_data`) — plus `browse` for a hosted browser agent, the
 `browser_*` tools for driving a browser yourself, and `web_run`, which picks the
 method for a request in words.
 
@@ -202,9 +202,9 @@ the client's `env` block or a file the server already read takes a restart.
 | --- | --- | --- |
 | `search` | Find pages: ranked links with their titles and page text. | about a second |
 | `extract` | Read pages you already have URLs for, as markdown, HTML or text. `provider="max"` reads through every configured backend at once and returns the first answer, at one fetch per backend per URL. | about a second |
-| `templates` | List a vendor's templates: saved, site-specific extractions, each turning one kind of page into a record. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). `provider` is required, as on the two tools below. Paged with `limit` and `offset`. | about a second, and free |
-| `template` | Describe one template: the `input_schema` a run must pass as `inputs`, the `output_schema` of the record, and `samples`, recorded runs to copy a first call from. | about a second, and free |
-| `run_template` | Run a template on one page and get its record back. | about a second, and it bills one template run -- on Nimble, one flat rate for every template, on [its pricing page](https://www.nimbleway.com/pricing) |
+| `live_data_sources` | List a vendor's live data sources: ready-made scrapers for one site each -- Nimble's templates, Apify's Actors, Bright Data's scrapers, Oxylabs' dedicated scrapers -- each turning one kind of page into records, fetched on every run. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). `provider` is required, as on the two tools below. Paged with `limit` and `offset`; `query` finds sources by keyword, searched by the vendor where it has a search (Apify) and matched here otherwise, and the answer's `search` says which (`native` or `local`). | about a second, and free |
+| `live_data_source` | Describe one source: the `input_schema` a run must pass as `inputs`, the `output_schema` of each record, and `samples`, recorded runs to copy a first call from. A schema the vendor does not publish is `null`. | about a second, and free |
+| `live_data` | Run a source and get its `records` back, fetched for this call, with `fetched_at` when the vendor states it. | seconds to a few minutes (Apify waits up to 300 s), and it bills one run at the vendor's own rate -- see `benchmarks/providers/PRICING.md` |
 | `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries the marker in `field`. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
@@ -284,7 +284,69 @@ environment -- once, when the server starts:
 - unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
   with an `http(s)` URL is read with `extract`, anything else searched;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
-  installed -- any form `router=` takes on the library;
+  installed -- any form `router=` takes on the library. It is imported before
+  any `.env` file loads, so code that runs at import sees only the server's own
+  process environment. The built-in
+  [decision-API routers](../README.md#decision-apis-deciderrouter-routerllm-and-routersystemone),
+  `llm` and `systemone`, need a `router_config`: name them with
+  `WEB_ROUTER_MCP_ROUTER_CONFIG`, below, or build one here: a
+  `my_router.py` holding
+
+  ```python
+  from web_router.routing.decider_llm import llm_router
+
+  ROUTER = llm_router(preset="openai", model="<model>")  # or decider_systemone.systemone_router(preset="typesafe")
+  ```
+
+  and `WEB_ROUTER_MCP_ROUTER=my_router:ROUTER`. The preset's key
+  (`OPENAI_API_KEY`, `TYPESAFE_API_KEY`, ...) is read from the server's
+  environment when it starts. Each `web_run` then sends that vendor the
+  prompt, its URLs whole, the budget and the candidate ids with their
+  estimated cost and p90 latency, never a provider key;
+- `WEB_ROUTER_MCP_ROUTER=remote` asks your router service over HTTP, the
+  library's built-in [`remote` router](../README.md#a-router-service-routerremote):
+  `WEB_ROUTER_REMOTE_ROUTER_URL` is its URL (`https`, or `http` to
+  `localhost` or a loopback address; no credentials or query) and
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` its optional bearer key, both read once
+  from the same process environment at startup;
+- `WEB_ROUTER_MCP_ROUTER=<name>` names any other built-in router, such as
+  [`fallback`](../README.md#chaining-routers-routerfallback), with its
+  `router_config` as a JSON object in `WEB_ROUTER_MCP_ROUTER_CONFIG`, the
+  same keys the library takes, flat for one router:
+  `WEB_ROUTER_MCP_ROUTER=llm WEB_ROUTER_MCP_ROUTER_CONFIG='{"preset": "openai", "model": "gpt-4.1-mini"}'`.
+  Only `web_run` asks the router here, so `route_tools` in the config changes
+  nothing. A
+  config entry `api_key_env` names the variable holding a key: its value is
+  read once at startup and put in its place as `api_key`, so the router never
+  reads the environment again. When the variable is unset, `remote` starts
+  with no key (`""`), while `llm` and `systemone` stop the server from
+  starting. For example, a router
+  service with a local classifier service behind it:
+
+  ```bash
+  WEB_ROUTER_MCP_ROUTER=fallback
+  WEB_ROUTER_MCP_ROUTER_CONFIG='{"routers": [
+    {"name": "remote", "url": "https://router.example.com/route", "api_key_env": "ROUTER_KEY"},
+    {"name": "remote", "url": "http://127.0.0.1:8080/route", "timeout_s": 0.2}]}'
+  ```
+
+  Set, `WEB_ROUTER_MCP_ROUTER_CONFIG` is the whole config: `remote` then takes
+  its URL from it, not from `WEB_ROUTER_REMOTE_ROUTER_URL`. A `remote` router
+  or member whose config sets no `api_key` (nor `api_key_env`) still sends
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY`, read when it is built at startup.
+
+  **A router's key comes from the server's own process environment only.**
+  An `llm` or `systemone` preset given no key reads its vendor's variable
+  (`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `TYPESAFE_API_KEY` ...), which is
+  often a provider credential too. The server captures it, and every
+  `api_key_env`, as `api_key` at startup, before it reads any `.env` file, so
+  neither a project's `.env` nor `load_env` can supply or replace a router's
+  key: export it where the server starts. A preset's variable that is unset
+  there stops the server, and a vendor's variable named for a router that
+  posts to any other host is refused. The capabilities resource names a
+  preset's host too, as the record does: `llm(api.openai.com)`,
+  `systemone(api.typesafe.ai)`. A value that is not
+  a JSON object, or one set beside no built-in router, stops the server;
 - `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
   order, which is `search`.
 
@@ -296,7 +358,7 @@ Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
 loopback, private or cloud-metadata host is not sent to a backend as a URL.
 It is a check of the host as written: it resolves no DNS and follows no
 redirect. The same check holds for the URLs an agent passes the direct tools:
-`extract`'s `urls`, `browse`'s `start_url` and any URL among `run_template`'s
+`extract`'s `urls`, `browse`'s `start_url` and any URL among `live_data`'s
 `inputs` that is not a public `http(s)` one -- `file:`, loopback, private,
 metadata -- refuses the call before anything is sent, naming the URL's scheme
 and host and why. So a page that steers the model cannot have your keyed
@@ -308,14 +370,19 @@ admitted there. A refused URL stays in the prompt text, though, and the prompt
 itself goes to the backend that serves it, as its search query or browse task, as it
 would through `search`. The built-in router runs in the server's process and
 sends nothing out; an operator's router runs there too, but it is your code,
-and may send the prompt on, to a model's server for instance.
+and may send the prompt on, to a model's server for instance. The `remote`
+router sends each `web_run` prompt, the URLs in it whole, the budget and the
+candidate ids (`tool:provider`, which name the backends configured here) to
+your service, and never a key value; a service that fails or runs past its
+time leaves `web_run` on the static order. A `fallback` router sends the
+same to every service it asks, in order, one that times out included.
 
 **The budget.** Every billed tool -- `search`, `extract`, `answer`, `research`,
-`browse`, `run_template`, `browser_open` and `web_run` -- spends from one budget
+`browse`, `live_data`, `browser_open` and `web_run` -- spends from one budget
 per connection, a shared budget as `wr.budget(...)` is in the library. Each
 attempt reserves its estimated list price before it starts, and a call that
 does not fit is refused with `BudgetExceededError` before anything bills. A
-template run is charged its list price; a cloud browser per minute of its
+live data run is charged its list price; a cloud browser per minute of its
 lifetime (`timeout`), rounded up to whole minutes, on the dearest backend that
 can serve the options asked for. A browser option that can bill an extra
 charge (a proxy country, stealth, CAPTCHA solving, a profile) makes a paid
@@ -327,7 +394,9 @@ server charges itself run on the budget's clock, and `research` and `browse`
 wait no longer than it has left.
 
 - **The operator's ceiling**: `WEB_ROUTER_MCP_MAX_COST_USD` and
-  `WEB_ROUTER_MCP_TIME_LIMIT_S`. With no `budget_start`, the whole connection
+  `WEB_ROUTER_MCP_TIME_LIMIT_S`. It counts what the backends charge; a router
+  that bills for itself, such as `llm` or `systemone`, is billed by its vendor
+  and is not counted. With no `budget_start`, the whole connection
   is one task under it, its clock running from the connection's start. The
   agent cannot reset or raise it.
 - **`budget_start(max_cost_usd, time_limit_s)`** opens a new task inside the
@@ -358,14 +427,19 @@ wait no longer than it has left.
 With no ceiling and no `budget_start`, nothing is held, and every tool runs as
 it would with no budget.
 
-The three variables are read from the server's own process environment, once,
+These variables are read from the server's own process environment, once,
 at startup. No `.env` file and no `load_env` call can set or change them, and a
 value the server cannot read -- an empty one included -- stops it from
 starting rather than leaving the connection without the ceiling you meant. The capabilities resource reports
 all of it under `routing`: the router (`rules`, `operator` for yours -- never
-its `<module>:<attribute>` -- or `off`), where it runs (`router_runs`: `in_process` for the built-in router or
-none, `operator` with a `router_note` for yours), a `prompt_note` saying the
-prompt goes to the backend, the `url_policy` with a `url_policy_note` saying
+its `<module>:<attribute>` -- `remote(<scheme>://<host>)` for a service, never its path, query or key,
+`fallback(<member>, ...)` for a fallback, or
+`off`), where it runs (`router_runs`: `in_process` for the built-in router or
+none, `operator` with a `router_note` for yours, `remote` with a `router_note` naming each host prompts go to --
+a service, or a built-in `llm` or `systemone` router's vendor host --
+`built_in` for a built-in router whose config names no URL),
+a `prompt_note` saying the
+prompt goes to the backend, and to each router service's host, the `url_policy` with a `url_policy_note` saying
 where it holds, the ceiling, and the budget in
 force (`null` with none).
 
@@ -595,14 +669,14 @@ that is certain to throw. With no key at all, search and extract offer `auto`
 and the keyless backends the README lists in
 [Working with no credentials](../README.md#working-with-no-credentials) (and
 extract also `max`, which races them); research and browse offer only `auto`,
-which has nothing to run on; and the template tools and `answer` offer nothing,
+which has nothing to run on; and the live data tools and `answer` offer nothing,
 since every backend bills. Once a key is set, `answer` with no `provider` tries
 the configured answer backends in ranked order. A tool with nothing to run on
 says so in its own description, in as many words, rather than pretending to
 work.
 
 The resource `web-router://capabilities` carries the same lists as JSON, plus `browse` and `browser`
--- the three template tools under one `template` key --
+-- the three live data tools under one `live_data` key --
 so a client can learn what this install can do without a round trip through the
 model — and the `env` object [above](#what-the-server-found), saying where those
 keys came from.
@@ -653,7 +727,10 @@ the server is restarted.
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
-| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_ROUTER_CONFIG` | unset | With `WEB_ROUTER_MCP_ROUTER` naming a built-in router (or any name registered with `register_router` in the server's process, an override of a built-in name included), its `router_config` as a JSON object; each `api_key_env` in it is read once at startup and handed to the router as `api_key`, so a router's factory gets `api_key`, never `api_key_env`. Anything but a JSON object, or a value set beside no built-in router, stops the server from starting. Read from the real environment only. |
+| `WEB_ROUTER_REMOTE_ROUTER_URL` | unset | With `WEB_ROUTER_MCP_ROUTER=remote`, your router service's URL: `https`, or `http` to a loopback host. Missing, or any other URL, stops the server from starting. Read from the real environment only. |
+| `WEB_ROUTER_REMOTE_ROUTER_API_KEY` | unset | The bearer key sent to that service, never logged or shown. Read from the real environment only -- no `.env` file and no `load_env` call sets it. |
 | `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. An empty value stops the server from starting. |
 | `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. An empty value stops the server from starting. |
 | `WEB_ROUTER_ALLOW_VENDOR_WRITES` | unset | `1` lets `call_vendor` send calls that change data on a vendor (a budget change, a deleted monitor), and only those the model marks `allow_writes: true`. Off by default: the model can read your vendor accounts but not change them. |
