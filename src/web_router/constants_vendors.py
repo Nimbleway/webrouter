@@ -85,6 +85,8 @@ VENDOR_REQUEST_HEADERS: Final = {"Accept": "application/json"}
 """Sent on every vendor call, before the vendor's own headers, which may override them."""
 
 VENDOR_CONTENT_TYPE_HEADER: Final = "content-type"
+VENDOR_TEXT_CONTENT_MARKERS: Final = ("text/", "json", "xml", "javascript", "csv", "yaml", "x-www-form-urlencoded")
+"""A content type holding one of these is decoded as text; any other non-empty body is kept as bytes."""
 
 VENDOR_DROPPED_RESPONSE_HEADERS: Final = frozenset({"set-cookie"})
 """Response headers never handed back: a vendor's session cookie is a credential the caller did not ask for."""

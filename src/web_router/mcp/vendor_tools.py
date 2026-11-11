@@ -107,7 +107,7 @@ async def call_vendor_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) 
         raise VendorWriteRefusedError(exc.vendor, exc.target, message) from None
     # The router masked every credential it sent; this also hides the session ids and tokens a vendor makes up,
     # before the answer is kept, so fetch_raw shows no more than the answer itself does.
-    raw, _ = redact(response.model_dump())
+    raw, _ = redact(response.model_dump(mode="json"))
     record = tools.store.add(MCP_TOOL_CALL_VENDOR, raw=raw)
     return shape_vendor_response(response, record.handle, budget=max_response_chars())
 

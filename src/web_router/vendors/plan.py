@@ -50,6 +50,19 @@ def _query_pairs(name: str, value: Any) -> list[tuple[str, str]]:
     return [(name, _text(value))]
 
 
+def _off_constant(endpoint: VendorEndpoint, params: Mapping[str, Any]) -> set[str]:
+    """Inputs given another value than the only one their ``enum`` allows: a constant such as Majestic's ``cmd``."""
+    return {
+        name
+        for name, spec in endpoint.params.items()
+        if spec.enum is not None and len(spec.enum) == 1 and params.get(name) not in (None, spec.enum[0])
+    }
+
+
+def _fixed_values(endpoint: VendorEndpoint, names: set[str]) -> str:
+    return ", ".join(f"{name}={endpoint.params[name].enum[0]!r}" for name in sorted(names))  # type: ignore[index]
+
+
 def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str, Any]) -> _Plan:
     """Place each input where the endpoint declares it, refusing undeclared and missing ones."""
     unknown = set(params) - set(endpoint.params)
@@ -64,6 +77,10 @@ def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str,
     }
     if missing:
         raise MissingParameterError(vendor.vendor, missing, detail=f"{endpoint.id} requires them.")
+    fixed = _off_constant(endpoint, params)
+    if fixed:
+        detail = f"{endpoint.id} fixes them: {_fixed_values(endpoint, fixed)}."
+        raise UnsupportedParameterError(vendor.vendor, fixed, detail=detail)
     plan = _Plan(vendor=vendor, endpoint=endpoint.id, method=endpoint.method, path=endpoint.path)
     plan.body_type = endpoint.body_type
     plan.host = endpoint.host

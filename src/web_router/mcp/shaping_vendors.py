@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from web_router.constants import MCP_JSON_INDENT
-from web_router.constants_vendors_mcp import MCP_MSG_VENDOR_TRUNCATED
+from web_router.constants_vendors_mcp import MCP_MSG_VENDOR_BINARY, MCP_MSG_VENDOR_TRUNCATED
 from web_router.mcp.shaping import redact, redaction_note, render, truncate
 from web_router.vendors.credentials import CredentialSource, missing_credentials
 from web_router.vendors.schema import Vendor, VendorEndpoint
@@ -156,6 +156,9 @@ def shape_endpoint(
 def shape_vendor_response(response: VendorResponse, handle: str, *, budget: int) -> dict[str, Any]:
     """The vendor's answer, whole when it fits, else cut as text with the handle that holds the rest."""
     data, count = redact(response.data if response.data is not None else response.text)
+    if response.content is not None:
+        size, kind = len(response.content), response.content_type or "an unknown type"
+        data = MCP_MSG_VENDOR_BINARY.format(size=size, content_type=kind, handle=handle)
     payload: dict[str, Any] = {
         "vendor": response.vendor,
         "endpoint": response.endpoint,

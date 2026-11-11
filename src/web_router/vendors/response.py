@@ -17,6 +17,7 @@ from web_router.constants_vendors import (
     VENDOR_DROPPED_RESPONSE_HEADERS,
     VENDOR_ERROR_BODY_LIMIT,
     VENDOR_MASK,
+    VENDOR_TEXT_CONTENT_MARKERS,
 )
 from web_router.exceptions import ProviderError
 from web_router.vendors.masking import mask, mask_answer
@@ -64,7 +65,10 @@ def response(prepared: Prepared, answer: httpx.Response) -> VendorResponse:
         raise ProviderError(plan.vendor.vendor, detail)
     data: Any = None
     text: str | None = None
-    if answer.content:
+    content: bytes | None = None
+    if answer.content and not _is_text(answer.headers.get(VENDOR_CONTENT_TYPE_HEADER)):
+        content = answer.content
+    elif answer.content:
         try:
             data = mask_answer(answer.json(), prepared.secrets)
         except ValueError:
@@ -80,13 +84,23 @@ def response(prepared: Prepared, answer: httpx.Response) -> VendorResponse:
         vendor=plan.vendor.vendor,
         endpoint=plan.endpoint,
         method=plan.method,
-        url=str(shown),
+        # Masked again for the secrets themselves: a key sent as an ordinary input is no credential placement.
+        url=mask_answer(str(shown), prepared.secrets),
         status_code=answer.status_code,
         data=data,
         text=text,
+        content=content,
         content_type=content_type,
         headers=headers,
     )
+
+
+def _is_text(content_type: str | None) -> bool:
+    """No content type, or one naming text, JSON, XML and the like: decode it. Anything else stays bytes."""
+    if not content_type:
+        return True
+    lowered = content_type.lower()
+    return any(marker in lowered for marker in VENDOR_TEXT_CONTENT_MARKERS)
 
 
 def transport_error(prepared: Prepared, exc: httpx.HTTPError) -> ProviderError:
