@@ -2331,10 +2331,6 @@ PERPLEXITY_RESEARCH_STATES: dict[str, ResearchState] = {
 PERPLEXITY_INCOMPLETE_STATUS = "incomplete"
 """The status that means Perplexity stopped the run early -- the one case its research is ``partial``."""
 
-PERPLEXITY_OUTPUT_MESSAGE = "message"
-PERPLEXITY_OUTPUT_SEARCH_RESULTS = "search_results"
-PERPLEXITY_OUTPUT_TEXT = "output_text"
-
 # --- Linkup research --------------------------------------------------------
 
 LINKUP_RESEARCH_PATH = "/v1/research"
