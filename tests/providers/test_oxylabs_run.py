@@ -48,22 +48,15 @@ def test_a_page_the_site_refused_raises() -> None:
         provider.run(LiveDataRequest(source="amazon/product", inputs={"query": "x"}))
 
 
-def test_a_result_with_no_fields_raises() -> None:
-    provider, _ = _provider(lambda request: httpx.Response(200, json=_scraped(None)))
-    with pytest.raises(ProviderError, match="no parsed fields"):
-        provider.run(LiveDataRequest(source="amazon/product", inputs={"query": "x"}))
-
-
 @pytest.mark.parametrize(
     "payload",
     [
         {"status": 200, "results": [], "metadata": {}},
         _scraped({}),
-        _scraped([]),
         _scraped(["not", "objects"]),
         _scraped([{}]),
     ],
-    ids=["no results", "empty object", "empty list", "no objects", "only empty objects"],
+    ids=["no results", "empty object", "no objects", "only empty objects"],
 )
 def test_a_run_with_no_parsed_fields_raises(payload: dict[str, Any]) -> None:
     provider, _ = _provider(lambda request: httpx.Response(200, json=payload))

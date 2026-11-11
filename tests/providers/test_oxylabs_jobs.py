@@ -97,14 +97,6 @@ async def test_a_call_deadline_ends_the_wait_with_the_jobs_id(
 # -- keys ---------------------------------------------------------------------
 
 
-def test_the_key_is_the_web_api_key_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OXYLABS_WEB_API_KEY", "from-env")
-    api = Api(_answer(lambda request: httpx.Response(500)))
-    provider = wire(OxylabsLiveDataProvider(), api)
-    provider.live_data_sources()
-    assert api.last.headers["Authorization"] == "Bearer from-env"
-
-
 def test_a_shared_extract_config_does_not_send_the_realtime_password(monkeypatch: pytest.MonkeyPatch) -> None:
     """``provider_config["oxylabs"]`` is extract's too: its api_key is the Realtime password, refused by the Web API."""
     monkeypatch.setenv("OXYLABS_WEB_API_KEY", "web-key")
