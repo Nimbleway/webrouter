@@ -26,8 +26,8 @@
   "notes": [
     "This entry covers the v3 API (the v2 endpoints are legacy).",
     "Two steps: search or prospecting returns a no-PII preview and ids; enrich reveals emails and phones and spends credits.",
-    "Almost every call is a POST with a JSON body. Reveal calls can also write results into the user's Lusha tables when tableId is given.",
-    "Tables, subscriptions (webhooks), signals, lookalikes, ICP scoring and audit-log endpoints are not in this entry."
+    "Almost every call is a POST with a JSON body.",
+    "Tables (and the tableId option that writes results into one), subscriptions (webhooks), signals, lookalikes, ICP scoring and audit-log endpoints are not in this entry."
   ],
   "sources": [
     "https://docs.lusha.com/openapi.json",
@@ -112,15 +112,10 @@
           "in": "body",
           "type": "boolean",
           "description": "Set false to skip third-party waterfall providers for this call. Defaults to true when Data Waterfall is on for the account."
-        },
-        "tableId": {
-          "in": "body",
-          "type": "string",
-          "description": "Also add the contacts to this Lusha table; that writes to the user's table."
         }
       },
       "notes": [
-        "A read over POST: nothing in your account is changed. Passing tableId also writes to a Lusha table.",
+        "A read over POST: nothing in your account is changed.",
         "Spends credits per revealed field; billing.creditsCharged in the answer is the total.",
         "With Data Waterfall enabled, results may carry a job; poll lusha.contacts.job."
       ],
@@ -218,15 +213,10 @@
           "in": "body",
           "type": "object",
           "description": "{includePartialProfiles, excludeDnc, maxContactsPerCompany (1-20)}."
-        },
-        "tableId": {
-          "in": "body",
-          "type": "string",
-          "description": "Also persist results to this Lusha table."
         }
       },
       "notes": [
-        "A read over POST: nothing in your account is changed. Passing tableId also writes to a Lusha table.",
+        "A read over POST: nothing in your account is changed.",
         "Charged per result (api_search), plus a charge per matched signal when signals are requested. No emails or phones; use contacts.enrich."
       ],
       "job": "people.search",
@@ -321,15 +311,10 @@
           "in": "body",
           "type": "array",
           "description": "Extra premium fields (for example employeesByDepartment, directParent, ultimateParent); each is charged separately per result."
-        },
-        "tableId": {
-          "in": "body",
-          "type": "string",
-          "description": "Also add the companies to this Lusha table."
         }
       },
       "notes": [
-        "A read over POST: nothing in your account is changed. Passing tableId also writes to a Lusha table.",
+        "A read over POST: nothing in your account is changed.",
         "Charged per successful result (reveal_company), plus per revealed field."
       ],
       "job": "company.enrich",
@@ -397,15 +382,10 @@
           "in": "body",
           "type": "object",
           "description": "{includePartialProfiles}."
-        },
-        "tableId": {
-          "in": "body",
-          "type": "string",
-          "description": "Also persist results to this Lusha table."
         }
       },
       "notes": [
-        "A read over POST: nothing in your account is changed. Passing tableId also writes to a Lusha table.",
+        "A read over POST: nothing in your account is changed.",
         "Charged per result (api_search), plus a charge per matched signal when signals are requested."
       ],
       "job": "company.search",
