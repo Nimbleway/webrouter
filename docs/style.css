@@ -16,3 +16,10 @@ html.dark .code-block-fade-overlay {
 html.dark #sidebar {
   border-right-color: rgba(209, 221, 191, 0.1);
 }
+
+/* "Made by Nimble" footer mark: quiet until hovered */
+.nimble-mark{display:inline-flex;align-items:center;gap:.4rem;color:inherit;opacity:.45;font-size:.75rem;text-decoration:none;transition:opacity .2s}
+.nimble-mark:hover,.nimble-mark:focus-visible{opacity:1}
+.nimble-mark-icon{width:16px;height:16px;background-color:currentColor;-webkit-mask:url(/logo/nimble.svg) center/contain no-repeat;mask:url(/logo/nimble.svg) center/contain no-repeat}
+.nimble-mark-text{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .25s}
+.nimble-mark:hover .nimble-mark-text,.nimble-mark:focus-visible .nimble-mark-text{max-width:8rem}
