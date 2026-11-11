@@ -1,0 +1,102 @@
+{
+  "vendor": "wafuelwatch",
+  "name": "WA FuelWatch",
+  "category": "other",
+  "summary": "Western Australian retail fuel prices by suburb, region, brand and fuel type, today's and tomorrow's, from the WA Government's FuelWatch feed.",
+  "docs_url": "https://www.fuelwatch.wa.gov.au/tools/rss",
+  "base_url": "https://www.fuelwatch.wa.gov.au",
+  "notes": [
+    "Free and keyless. The answer is RSS 2.0 XML, not JSON: one item per service station with price, trading name, address and suburb.",
+    "One day per request. Today's prices are available around the clock; tomorrow's (Day=tomorrow) only after 2:30pm.",
+    "Attribution: FuelWatch must be acknowledged as the source, with a link to www.fuelwatch.wa.gov.au.",
+    "Only stations inside the FuelWatch boundaries must report prices; coverage outside them is partial."
+  ],
+  "sources": [
+    "https://www.fuelwatch.wa.gov.au/tools/rss"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "wafuelwatch.prices",
+      "name": "Get fuel prices for a suburb or region",
+      "summary": "Cheapest stations' prices for one fuel type, one day, in a suburb (and its neighbours), a town/shire region or a state region.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fuelwatch/fuelWatchRSS",
+      "params": {
+        "Product": {
+          "in": "query",
+          "type": "integer",
+          "description": "Fuel type, default 1: 1 unleaded, 2 premium unleaded, 4 diesel, 5 LPG, 6 98 RON, 10 E85, 11 brand diesel.",
+          "enum": [
+            1,
+            2,
+            4,
+            5,
+            6,
+            10,
+            11
+          ],
+          "example": 1
+        },
+        "Suburb": {
+          "in": "query",
+          "description": "Suburb name; one per request.",
+          "example": "Cloverdale"
+        },
+        "Surrounding": {
+          "in": "query",
+          "description": "Include surrounding suburbs, default yes.",
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "Region": {
+          "in": "query",
+          "type": "integer",
+          "description": "Town/shire region id instead of Suburb, e.g. 25 Metro North of River, 26 Metro South of River, 27 Metro East/Hills, 16 Bunbury, 18 Mandurah, 28 Augusta/Margaret River (full list on the docs page)."
+        },
+        "StateRegion": {
+          "in": "query",
+          "type": "integer",
+          "description": "WA state region: 1 Gascoyne, 2 Goldfields-Esperance, 3 Great Southern, 4 Kimberley, 5 Mid-West, 6 Peel, 7 Pilbara, 8 South-West, 9 Wheatbelt, 98 Metro.",
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            98
+          ]
+        },
+        "Brand": {
+          "in": "query",
+          "type": "integer",
+          "description": "Brand id, e.g. 5 BP, 6 Caltex, 11 Mobil, 14 Shell, 23 United, 29 7-Eleven (full list on the docs page)."
+        },
+        "Day": {
+          "in": "query",
+          "description": "Default today; tomorrow only after 2:30pm.",
+          "enum": [
+            "today",
+            "tomorrow",
+            "yesterday"
+          ]
+        }
+      },
+      "notes": [
+        "Use Suburb or Region, not both. The docs describe the feed as the 10 cheapest prices for the area."
+      ],
+      "job": "fuel.prices",
+      "docs_url": "https://www.fuelwatch.wa.gov.au/tools/rss",
+      "verified": {
+        "docs": "https://www.fuelwatch.wa.gov.au/tools/rss"
+      }
+    }
+  ]
+}
