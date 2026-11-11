@@ -2020,7 +2020,8 @@ paid for. `evaluate()` is `search` only, for the same reason `benchmark()` is.
 ## Smart routing (experimental)
 
 Everything in this section is experimental: any name in it may change before
-1.0. With no router and no budget, nothing here changes a call.
+1.0. With no budget, nothing here changes a call to a method: the default router,
+`features`, is asked by `plan()` and `run()` only.
 
 A router is your code. WebRouter shows it a prompt and the candidates that
 could serve it, each priced and timed; the router picks the method and orders
@@ -2113,7 +2114,8 @@ the network and the hour: rerun the script for your own router.
 
 `plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method
 (`tool`), its options (`params`), the backends in order (`providers`) and the
-decision record. With no router it is a search, unless `tool` pins a method.
+decision record. Unless you set `router=`, the built-in `features` router picks the
+method; with `router=None` it is a search, unless `tool` pins a method.
 `run(plan)` calls that method on `auto` in that order and returns its own
 response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
 `ResearchResponse` or `BrowseResponse`. `run(prompt)` does both. A saved
@@ -2242,11 +2244,16 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships one keyless router, `web_router.routing.rules.rules`: a
-prompt with a URL is extracted, anything else searched, and two model routers,
+The library ships one keyless router, `router="features"`, attached by default:
+it reads four features in the prompt -- its opening verb, a URL (a bare host such
+as `nfl.com` included), a call for many items, a research word -- and picks the
+method a table learned on 1,920 labelled requests gives for them. It is asked by
+`plan()` and `run()` only, so `search()` and the other methods run as before;
+`read_features(prompt)` shows how it reads one, and `router=None` turns it off.
+There are also two model routers,
 `router="llm"` and `router="systemone"`: see
 [Decision APIs](#decision-apis-deciderrouter-routerllm-and-routersystemone).
-Six example routers, tested offline: [rules](examples/router_rules.py), a
+Six example routers, tested offline: [rules of your own](examples/router_rules.py), a
 [scikit-learn classifier](examples/router_classifier.py), a
 [decider of your own](examples/router_decider.py), the built-in
 [`llm` router on a preset](examples/router_llm.py),
@@ -2385,7 +2392,7 @@ field may be left out or `null`):
 
 [`examples/router_remote_server.py`](examples/router_remote_server.py) is a
 reference service in the standard library: the wire format around the
-built-in rules router, to run beside your code or port. It binds 127.0.0.1
+built-in features router, to run beside your code or port. It binds 127.0.0.1
 (any other host needs the key), answers only a `Host` naming it, checks the bearer key in constant time and
 caps a request at 1 MB.
 

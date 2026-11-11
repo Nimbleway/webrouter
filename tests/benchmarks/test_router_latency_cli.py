@@ -49,7 +49,7 @@ def test_an_async_run_calls_and_closes_every_router_on_one_loop(latency: ModuleT
 
 def test_a_router_named_twice_is_refused(latency: ModuleType) -> None:
     with pytest.raises(SystemExit, match="more than once"):
-        latency.main(["--router", "rules", "--router", "rules", "--dry-run"])
+        latency.main(["--router", "features", "--router", "features", "--dry-run"])
 
 
 def test_the_dry_run_counts_calls_and_prices_the_llm_without_calling(
@@ -57,7 +57,7 @@ def test_the_dry_run_counts_calls_and_prices_the_llm_without_calling(
 ) -> None:
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setattr(latency, "ENV_FILE", Path("/nonexistent/.env"))
-    latency.main(["--router", "rules", "--router", "llm", "--llm-model", "m", "--llm-price", "1,2", "--dry-run",
+    latency.main(["--router", "features", "--router", "llm", "--llm-model", "m", "--llm-price", "1,2", "--dry-run",
                   "--set", "tools-effort-60", "-n", "10", "--warmup", "1", "--cold", "2", "--e2e", "3"])  # fmt: skip
     out = capsys.readouterr().out
     assert "calls to the router: 18" in out  # 1 + 1 + 10 + 2 + 1 + 3

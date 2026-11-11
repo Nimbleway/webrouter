@@ -1,6 +1,6 @@
 """router-latency's routers: each one named on the command line, how it is built, what it needs and what it costs.
 
-``rules`` and ``llm`` are built in (``llm`` on ``$LLM_ROUTER_PRESET``, ``openai`` unless set); ``sklearn`` and
+``features`` and ``llm`` are built in (``llm`` on ``$LLM_ROUTER_PRESET``, ``openai`` unless set); ``sklearn`` and
 ``jev`` are the examples in ``examples/``, loaded as route-eval loads a ``path/file.py:attr``.
 ``remote:<url>`` is the built-in ``remote`` router, built in ``router_latency_remote``.
 Any other ``module:attr`` or ``path/file.py:attr`` names a router of your own.
@@ -32,8 +32,8 @@ from web_router.routing.decider_question import question_for
 
 EXAMPLES = Path(__file__).resolve().parents[2] / "examples"
 
-RULES, SKLEARN, LLM, JEV, REMOTE = "rules", "sklearn", "llm", "jev", "remote:"
-KNOWN = (RULES, SKLEARN, LLM, JEV, REMOTE + "<url>")
+FEATURES, SKLEARN, LLM, JEV, REMOTE = "features", "sklearn", "llm", "jev", "remote:"
+KNOWN = (FEATURES, SKLEARN, LLM, JEV, REMOTE + "<url>")
 
 LLM_MODEL_ENV, LLM_PRESET_ENV, JEV_KEY_ENV = "LLM_ROUTER_MODEL", "LLM_ROUTER_PRESET", "TYPESAFE_API_KEY"
 CHARS_PER_TOKEN = 4
@@ -80,10 +80,10 @@ def example(name: str) -> ModuleType:
     return load_file(EXAMPLES / name)
 
 
-def _rules() -> Any:
-    from web_router.routing.rules import rules
+def _features() -> Any:
+    from web_router.routing.features import FeaturesRouter
 
-    return rules
+    return FeaturesRouter()
 
 
 def _sklearn() -> Any:
@@ -185,8 +185,8 @@ def router_spec(
     jev_price: float | None = None,
 ) -> RouterSpec:
     """The router a command-line name stands for. Nothing is built, and nothing called, until ``build()``."""
-    if spec == RULES:
-        return RouterSpec(RULES, "web_router.routing.rules.rules (built in; the MCP server's default)", _rules)
+    if spec == FEATURES:
+        return RouterSpec(FEATURES, "web_router.routing.features.FeaturesRouter (built in; the default)", _features)
     if spec == SKLEARN:
         return RouterSpec(SKLEARN, "examples/router_classifier.py ClassifierRouter, toy-trained", _sklearn)
     if spec == LLM:

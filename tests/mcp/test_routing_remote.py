@@ -114,5 +114,5 @@ async def test_load_env_never_sets_the_service_url_or_key(
         f"{ENV_REMOTE_ROUTER_API_KEY}=k\nTAVILY_API_KEY=t\n"
     )
     await outcome(tools, "load_env", path=str(env_file))
-    assert tools.capabilities()["routing"]["router"] == "rules"
+    assert tools.capabilities()["routing"]["router"] == "features"
     assert ENV_REMOTE_ROUTER_URL not in os.environ and ENV_REMOTE_ROUTER_API_KEY not in os.environ

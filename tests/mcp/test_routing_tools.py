@@ -16,6 +16,7 @@ from tests.mcp.conftest import URL, Table, ok_on, outcome, routed
 from tests.routing_helpers import MEMBERS
 from web_router import RouteDecision, RouteRequest
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_PRICE_UNKNOWN
+from web_router.constants_features import FEATURES_ROUTER_NAME
 from web_router.constants_mcp import (
     ENV_MCP_ROUTER,
     MCP_ROUTER_OFF,
@@ -24,7 +25,6 @@ from web_router.constants_mcp import (
     MCP_TOOL_BUDGET_STATUS,
     MCP_TOOL_WEB_RUN,
 )
-from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.routing import Budget
 from web_router.routing.pool_bind import current_pool
 
@@ -42,7 +42,7 @@ async def test_a_dry_run_plans_with_the_rules_router_and_runs_nothing(
     plan = await ok_on(routed(), MCP_TOOL_WEB_RUN, prompt=prompt, dry_run=True)
     assert (plan["dry_run"], plan["tool"]) == (True, tool)
     assert plan["providers"][tool] == list(MEMBERS)
-    assert plan["decision"]["router"] == RULES_ROUTER_NAME
+    assert plan["decision"]["router"] == FEATURES_ROUTER_NAME
     assert members == [], "a dry run calls no backend"
 
 
@@ -50,7 +50,7 @@ async def test_web_run_runs_the_plan_shaped_like_the_method_with_a_handle_and_it
     tools = routed()
     shaped = await ok_on(tools, MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
     assert shaped["tool"] == "extract" and members == ["first"]
-    assert shaped["decision"]["router"] == RULES_ROUTER_NAME and shaped["decision"]["ran"] == 0
+    assert shaped["decision"]["router"] == FEATURES_ROUTER_NAME and shaped["decision"]["ran"] == 0
     raw = await ok_on(tools, "fetch_raw", handle=shaped["handle"])
     assert raw["tool"] == MCP_TOOL_WEB_RUN
 

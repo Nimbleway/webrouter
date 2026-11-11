@@ -2,9 +2,9 @@
 
 Experimental. A name maps to a factory, called with ``router_config``'s
 entries as keyword arguments when a router is built; what it returns is
-attached as any ``router=`` object is. ``remote``, ``llm``, ``systemone`` and
-``fallback``, which asks a list of routers in turn, are built in and imported
-only when used; registering a name overrides a built-in one of that name, and
+attached as any ``router=`` object is. ``features``, the default, ``remote``,
+``llm``, ``systemone`` and ``fallback``, which asks a list of routers in turn,
+are built in and imported only when used; registering a name overrides a built-in one of that name, and
 unregistering it brings the built-in back.
 
 A router the routers build by name is theirs: closing them calls its
@@ -22,6 +22,7 @@ from typing import Any
 
 from web_router.constants_decider import LLM_ROUTER_NAME, SYSTEMONE_ROUTER_NAME
 from web_router.constants_fallback import FALLBACK_ROUTER_NAME
+from web_router.constants_features import FEATURES_ROUTER_NAME
 from web_router.constants_invoke import (
     MSG_ROUTER_BUILT_NONE,
     MSG_ROUTER_CONFIG_MISSING,
@@ -44,6 +45,7 @@ _BUILTIN_ROUTERS: dict[str, tuple[str, str]] = {
     LLM_ROUTER_NAME: ("web_router.routing.decider_llm", "llm_router"),
     SYSTEMONE_ROUTER_NAME: ("web_router.routing.decider_systemone", "systemone_router"),
     FALLBACK_ROUTER_NAME: ("web_router.routing.fallback", "FallbackRouter"),
+    FEATURES_ROUTER_NAME: ("web_router.routing.features", "FeaturesRouter"),
 }
 """Built-in name -> (module, factory), imported on first use so ``import web_router`` pulls in none of them."""
 

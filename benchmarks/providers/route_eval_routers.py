@@ -36,6 +36,7 @@ from web_router.routing.contract import RouteRequest
 STATIC = "static"
 ORACLE = "oracle"
 ALWAYS = "always:"
+FEATURES = "features"
 
 STATIC_ORDER: dict[str, tuple[str, ...]] = {
     "search": tuple(name for name, _ in AutoProvider.default_chain(frozenset((*AUTO_PREFERRED, *AUTO_APPENDED)))),
@@ -111,6 +112,10 @@ def load_router(spec: str, method: str) -> Router:
         return oracle_router(method)
     if spec.startswith(ALWAYS):
         return always_router(spec.removeprefix(ALWAYS))
+    if spec == FEATURES:
+        from web_router.routing.features import FeaturesRouter
+
+        return adapt(FeaturesRouter().route)
     target, sep, attr = spec.rpartition(":")
     if not sep or not target or not attr:
         raise SystemExit(MSG_BAD_ROUTER.format(spec=spec))

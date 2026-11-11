@@ -12,6 +12,7 @@ import pytest
 from tests.mcp.conftest import Table, ok_on, outcome, routed
 from web_router import RouteDecision, RouteRequest
 from web_router.constants_budget import SKIP_PRICE_UNKNOWN
+from web_router.constants_features import FEATURES_ROUTER_NAME
 from web_router.constants_mcp import (
     ENV_MCP_MAX_COST_USD,
     ENV_MCP_ROUTER,
@@ -20,7 +21,6 @@ from web_router.constants_mcp import (
     MCP_ROUTER_OPERATOR,
     MCP_TOOL_WEB_RUN,
 )
-from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.mcp.budget import ConnectionBudget, charged
@@ -80,7 +80,7 @@ async def test_load_env_never_sets_or_changes_the_ceiling_or_router(
     env_file.write_text(f"{ENV_MCP_MAX_COST_USD}=999\n{ENV_MCP_ROUTER}={MCP_ROUTER_OFF}\nTAVILY_API_KEY=k\n")
     await outcome(tools, "load_env", path=str(env_file))
     routing = tools.capabilities()["routing"]
-    assert routing["ceiling"]["max_cost_usd"] == 1.5 and routing["router"] == RULES_ROUTER_NAME
+    assert routing["ceiling"]["max_cost_usd"] == 1.5 and routing["router"] == FEATURES_ROUTER_NAME
     assert tools.router._router is not None, "the rebuilt router keeps the router attached"
 
 
@@ -90,7 +90,7 @@ async def test_load_env_never_sets_or_changes_the_ceiling_or_router(
 def test_the_capabilities_routing_section() -> None:
     routing = routed(Budget(max_cost_usd=2.0, time_limit_s=600)).capabilities()["routing"]
     assert {key: routing[key] for key in ("router", "router_runs", "url_policy")} == {
-        "router": RULES_ROUTER_NAME,
+        "router": FEATURES_ROUTER_NAME,
         "router_runs": "in_process",
         "url_policy": "public_only",
     }

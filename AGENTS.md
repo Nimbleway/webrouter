@@ -169,6 +169,7 @@ src/web_router/
 │                       kept apart so constants_routing.py stays small
 ├── constants_invoke.py a router's default timeout, its name attribute, and messages
 ├── constants_fallback.py the fallback router's name, member naming and messages
+├── constants_features.py the features router's name and the reason it gives
 ├── constants_mcp_router.py the MCP server's built-in router config variable, notes, messages
 ├── constants_remote.py the remote router's and the wire format's names, env vars,
 │                       limits and messages
@@ -260,7 +261,9 @@ src/web_router/
 │   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
 │   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
 │   │                   check before dispatch (no DNS, no redirects)
-│   └── rules.py        rules(): the built-in keyless router, URL to extract, else search
+│   └── features/       router="features", the default: FeaturesRouter and read_features
+│                       (router.py), the prompt's four features (sensors.py) and the method
+│                       table learned offline (mapping.py); asked by plan and run only
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
 ├── constants_mcp.py    the MCP server's instructions, and its routing tools' names, schemas,

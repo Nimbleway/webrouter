@@ -7,8 +7,9 @@ candidates, asks the attached router, and merges its answer by the merge rule.
 :meth:`run` calls the planned method on ``auto`` in the planned order, and
 returns that method's own response with the plan's decision record on it,
 and what the call tried: its attempts, its hops and the position that ran.
-With no router the plan is the static order: ``search``, unless ``tool``
-pins another method.
+Unless ``router=`` says otherwise, the built-in ``features`` router picks the
+method (:mod:`web_router.routing.features`). With ``router=None`` the plan is
+the static order: ``search``, unless ``tool`` pins another method.
 
 A prompt is sent as each method's main input: search, answer and research
 take it as ``query``, browse as ``task`` and starts on its first URL, and

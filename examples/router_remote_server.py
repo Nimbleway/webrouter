@@ -1,11 +1,11 @@
-"""A router service in the standard library: what `router="remote"` asks, answered by the built-in rules router.
+"""A router service in the standard library: what `router="remote"` asks, answered by the built-in features router.
 
 `WebRouter(router="remote", router_config={"url": ...})` posts each routed
 call's `RouteRequest` as JSON and reads a `RouteDecision` back -- the wire
 format, schema 1, whose JSON Schema files ship in the package under
 `web_router/data/schemas/router/v1/`. This server implements it in a few
 lines: it checks the bearer key, reads the request, asks
-`web_router.routing.rules.rules` (a URL extracts, anything else searches) and
+`web_router.FeaturesRouter` (the method a prompt's features pick, keyless) and
 answers. Swap `decide` for your own logic, or port it to any language: a
 service reads `"schema": 1` JSON, ignores request fields it does not know, and
 answers `{"schema": 1, ...}` with any of the decision's optional fields.
@@ -38,8 +38,7 @@ from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
-from web_router import WebRouter
-from web_router.routing.rules import rules
+from web_router import FeaturesRouter, WebRouter
 from web_router.routing.wire import decision_to_wire, request_from_wire
 
 PATH = "/route"
@@ -54,11 +53,12 @@ PROMPTS = (
 )
 
 Decide = Callable[[dict[str, Any]], dict[str, Any]]
+_FEATURES = FeaturesRouter()
 
 
 def decide(body: dict[str, Any]) -> dict[str, Any]:
-    """One request in, one decision out: the wire format around the built-in rules router."""
-    return decision_to_wire(rules(request_from_wire(body)))
+    """One request in, one decision out: the wire format around the built-in features router."""
+    return decision_to_wire(_FEATURES.route(request_from_wire(body)))
 
 
 class RouterServer(ThreadingHTTPServer):

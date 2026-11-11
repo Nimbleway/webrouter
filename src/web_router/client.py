@@ -59,6 +59,7 @@ from web_router.constants import (
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     RESEARCH_TIMEOUT,
 )
+from web_router.constants_features import FEATURES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -114,7 +115,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | str | None = None,
+        router: RouterLike | str | None = FEATURES_ROUTER_NAME,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
@@ -128,8 +129,8 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
             provider_config: Constructor kwargs per provider, keyed by provider name --
                 ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is the only place
                 credentials are passed explicitly; everything else comes from the environment.
-            router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
-                ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental) -- see
+            router, route_tools, fail_on_router_error: a router (the built-in ``features`` unless set, ``None`` for
+                none), the tools that ask it (its own ``route_tools``, else all five) and if its failure raises -- see
                 :mod:`web_router.routing.invoke`. A name such as ``"remote"`` builds a registered router from
                 ``router_config``, and closing this router closes it -- see :mod:`web_router.routing.registry`.
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
@@ -285,7 +286,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | str | None = None,
+        router: RouterLike | str | None = FEATURES_ROUTER_NAME,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
@@ -294,9 +295,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
     ) -> None:
         """
         Raises:
-            ConfigurationError: for a backend handed an ``async_client``, which
-                this router, calling synchronously, could never use: through
-                ``auto`` the call would quietly go to another backend instead.
+            ConfigurationError: for a backend handed an ``async_client``, which this router, calling synchronously,
+                could never use: through ``auto`` the call would quietly go to another backend instead.
         """
         super().__init__(
             provider,

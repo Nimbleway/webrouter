@@ -9,7 +9,7 @@ never one number. It runs outside CI: ``--dry-run`` prints what a run would
 call and what it would cost, and calls nothing.
 
     uv run --all-extras --with scikit-learn python benchmarks/providers/router_latency.py \
-        --router rules --router sklearn
+        --router features --router sklearn
     uv run --all-extras python benchmarks/providers/router_latency.py --router llm --router jev \
         --llm-model <model> --llm-price 0.15,0.60 --dry-run
     uv run --all-extras python benchmarks/providers/router_latency.py --router remote:http://127.0.0.1:8765/route \

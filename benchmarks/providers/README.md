@@ -630,7 +630,8 @@ uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort
 That scores your router, the rules router, `static` and `oracle`, and compares
 your router with the rules router and with the static order, and the rules
 router with the static order. Your router loads as any route-eval router does:
-`module:attr` or `path/file.py:attr`.
+`module:attr` or `path/file.py:attr`; `--router features` scores the built-in
+default.
 
 ## Router latency: which tools a router should order
 
@@ -640,7 +641,7 @@ to a tool in `route_tools`, and each ask adds the router's time to the call.
 outside CI.
 
 ```bash
-uv run --all-extras --with scikit-learn python benchmarks/providers/router_latency.py --router rules --router sklearn
+uv run --all-extras --with scikit-learn python benchmarks/providers/router_latency.py --router features --router sklearn
 uv run --all-extras python benchmarks/providers/router_latency.py --router llm --router jev \
     --llm-model <model> --llm-price <in>,<out> --jev-price <usd> --dry-run
 uv run --all-extras python benchmarks/providers/router_latency.py \
@@ -657,7 +658,7 @@ number up. The latency belongs to the router, not the tool, so the result is a
 row per router: a router declares the tools it fits as its own `route_tools`
 (see the README's Smart routing), and a caller's `route_tools` always wins.
 
-**How it times.** A router is one of `rules` (the built-in rules router),
+**How it times.** A router is one of `features` (the built-in default router),
 `llm` (the built-in `router="llm"`, on the preset `LLM_ROUTER_PRESET` names,
 `openai` unless set), `sklearn` and `jev` (the examples in `examples/`), `remote:<url>` (a
 router service in the wire format, schema 1; `--remote-rtt-ms` adds the same

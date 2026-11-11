@@ -17,7 +17,7 @@ from router_latency_tools import CHAIN_ALL, CHAINS, SHARE
 
 DEFAULT_SETS = ("tools-effort-60", "simpleqa-300-v2")
 """route-eval's public prompts: the mixed tool set, and SimpleQA's search questions."""
-DEFAULT_ROUTERS = ("rules", "sklearn")
+DEFAULT_ROUTERS = ("features", "sklearn")
 """The routers that run in this process and bill nothing."""
 DEFAULT_N = 200
 DEFAULT_WARMUP = 5
@@ -92,7 +92,7 @@ def _price(text: str) -> tuple[float, float]:
 
 def parse_args(argv: Sequence[str], *, description: str) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=description)
-    p.add_argument("--router", dest="routers", action="append", help=f"rules, sklearn, llm, jev, remote:<url>, "
+    p.add_argument("--router", dest="routers", action="append", help=f"features, sklearn, llm, jev, remote:<url>, "
                    f"module:attr or path/file.py:attr (default: {', '.join(DEFAULT_ROUTERS)})")  # fmt: skip
     p.add_argument("--set", dest="sets", action="append", help=f"frozen set (default: {', '.join(DEFAULT_SETS)})")
     p.add_argument("--joined", type=Path, default=JOINED_DIR, help="frozen.py join's output, the question text")

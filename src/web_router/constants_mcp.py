@@ -39,7 +39,7 @@ ENV_MCP_TIME_LIMIT_S = "WEB_ROUTER_MCP_TIME_LIMIT_S"
 ENV_MCP_ROUTER = "WEB_ROUTER_MCP_ROUTER"
 """``<module>:<attribute>``, the router ``web_run`` plans with; ``remote`` for a router service at
 ``WEB_ROUTER_REMOTE_ROUTER_URL``; another built-in router by name, configured by
-``WEB_ROUTER_MCP_ROUTER_CONFIG``; ``off`` for none. The built-in rules router when unset.
+``WEB_ROUTER_MCP_ROUTER_CONFIG``; ``off`` for none. The built-in ``features`` router when unset.
 
 The three are read once, when the server starts, from the process environment
 only: no ``.env`` file and no ``load_env`` call can set or change them.
@@ -73,7 +73,7 @@ MCP_MSG_URL_REFUSED = (
 """A URL an agent passed that fails :data:`MCP_URL_POLICY`, each named by its scheme and host only."""
 
 MCP_ROUTER_IN_PROCESS = "in_process"
-"""Where ``web_run``'s router runs with the built-in rules router or none: in this process, sending nothing out."""
+"""Where ``web_run``'s router runs with the built-in ``features`` router or none: in this process, sending nothing."""
 
 MCP_ROUTER_OPERATOR = "operator"
 MCP_ROUTER_OPERATOR_NOTE = (

@@ -281,8 +281,9 @@ unchanged: `search`, `extract` and the rest never ask the router.
 The router is set by the operator -- whoever starts the server and sets its
 environment -- once, when the server starts:
 
-- unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
-  with an `http(s)` URL is read with `extract`, anything else searched;
+- unset, the built-in `features` router (`web_router.FeaturesRouter`): it reads
+  the prompt's opening verb, a URL, a call for many items and a research word,
+  and picks the method a table learned offline gives for them;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library. It is imported before
   any `.env` file loads, so code that runs at import sees only the server's own
@@ -431,7 +432,7 @@ These variables are read from the server's own process environment, once,
 at startup. No `.env` file and no `load_env` call can set or change them, and a
 value the server cannot read -- an empty one included -- stops it from
 starting rather than leaving the connection without the ceiling you meant. The capabilities resource reports
-all of it under `routing`: the router (`rules`, `operator` for yours -- never
+all of it under `routing`: the router (`features`, `operator` for yours -- never
 its `<module>:<attribute>` -- `remote(<scheme>://<host>)` for a service, never its path, query or key,
 `fallback(<member>, ...)` for a fallback, or
 `off`), where it runs (`router_runs`: `in_process` for the built-in router or
@@ -727,7 +728,7 @@ the server is restarted.
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
-| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_ROUTER` | `features` | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
 | `WEB_ROUTER_MCP_ROUTER_CONFIG` | unset | With `WEB_ROUTER_MCP_ROUTER` naming a built-in router (or any name registered with `register_router` in the server's process, an override of a built-in name included), its `router_config` as a JSON object; each `api_key_env` in it is read once at startup and handed to the router as `api_key`, so a router's factory gets `api_key`, never `api_key_env`. Anything but a JSON object, or a value set beside no built-in router, stops the server from starting. Read from the real environment only. |
 | `WEB_ROUTER_REMOTE_ROUTER_URL` | unset | With `WEB_ROUTER_MCP_ROUTER=remote`, your router service's URL: `https`, or `http` to a loopback host. Missing, or any other URL, stops the server from starting. Read from the real environment only. |
 | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` | unset | The bearer key sent to that service, never logged or shown. Read from the real environment only -- no `.env` file and no `load_env` call sets it. |

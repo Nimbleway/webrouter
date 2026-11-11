@@ -172,4 +172,4 @@ def test_both_routers_take_the_same_routing_arguments() -> None:
     for cls in (WebRouter, AsyncWebRouter):
         parameters = inspect.signature(cls).parameters
         assert all(parameters[name].kind is inspect.Parameter.KEYWORD_ONLY for name in names)
-        assert (parameters["router"].default, parameters["fail_on_router_error"].default) == (None, False)
+        assert (parameters["router"].default, parameters["fail_on_router_error"].default) == ("features", False)

@@ -128,6 +128,7 @@ from web_router.routing import (
 )
 from web_router.routing.decider import Decider, DeciderQuestion, DeciderReply
 from web_router.routing.decider_router import DeciderRouter
+from web_router.routing.features import FeaturesRouter, read_features
 from web_router.routing.pool_status import BudgetStatus
 from web_router.routing.registry import available_routers, register_router, unregister_router
 from web_router.types import (
@@ -237,6 +238,7 @@ __all__ = [
     "ExtractRequest",
     "ExtractResponse",
     "ExtractedDocument",
+    "FeaturesRouter",
     "LiveDataJobError",
     "LiveDataProvider",
     "LiveDataRequest",
@@ -309,6 +311,7 @@ __all__ = [
     "configured_live_data_providers",
     "configured_providers",
     "configured_research_providers",
+    "read_features",
     "register_answer_provider",
     "register_browse_provider",
     "register_browser_provider",
