@@ -1447,8 +1447,8 @@ when a caller names them: a preset's variable (`OPENAI_API_KEY`, `ANTHROPIC_API_
 `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), or the one `api_key_env`
 names, once, when the router is built; `KEY_HOMES` in `constants_decider.py` sends each preset variable
 only to its vendor's host. `.env` is gitignored — keep it that way. `LIVE_DATA_ENV_BY_PROVIDER`, in
-`constants_live_data.py`, is live data's table, and names Nimble's, Bright
-Data's and Oxylabs' keys again: one key, several classes.
+`constants_live_data.py`, is live data's table: Apify's token, and Nimble's,
+Bright Data's and Oxylabs' keys again: one key, several classes.
 
 **The library never loads `.env` itself.** Only these entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,
