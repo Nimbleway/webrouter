@@ -1,0 +1,402 @@
+{
+  "vendor": "companies-house",
+  "name": "Companies House",
+  "category": "company-data",
+  "summary": "The UK company register: company profiles, officers, filing history, persons with significant control, charges and insolvency.",
+  "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference",
+  "base_url": "https://api.company-information.service.gov.uk",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "COMPANIES_HOUSE_API_KEY"
+        ],
+        "description": "A Companies House REST API key (developer.company-information.service.gov.uk > Your applications, a live application). Sent as the HTTP Basic username with an empty password."
+      }
+    },
+    "basic": {
+      "username": "{api_key}",
+      "password": ""
+    }
+  },
+  "notes": [
+    "Rate limit: 600 requests per five minutes.",
+    "Company numbers keep leading zeros (00000006). Paging is items_per_page plus start_index.",
+    "Filing documents themselves are served by the separate Document API, not in this entry."
+  ],
+  "sources": [
+    "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference",
+    "https://developer.company-information.service.gov.uk/authentication",
+    "https://developer-specs.company-information.service.gov.uk/guides/rateLimiting"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "companies-house.company.get",
+      "name": "Get a company profile",
+      "summary": "Name, status, type, incorporation date, registered office, SIC codes, accounts and confirmation statement dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/{company_number}",
+      "params": {
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number, keeping leading zeros.",
+          "example": "00000006"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/company-profile/company-profile",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/company-profile/company-profile"
+      }
+    },
+    {
+      "id": "companies-house.companies.search",
+      "name": "Search companies",
+      "summary": "Companies matching a name or number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/companies",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search term.",
+          "example": "tesco"
+        },
+        "items_per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "start_index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first result, for paging."
+        },
+        "restrictions": {
+          "in": "query",
+          "type": "string",
+          "description": "Space-separated restriction options; see the reference page."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/search/search-companies",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/search/search-companies"
+      }
+    },
+    {
+      "id": "companies-house.companies.advanced_search",
+      "name": "Filter companies",
+      "summary": "Companies by name fragments, status, type, SIC codes, location and incorporation or dissolution dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/advanced-search/companies",
+      "params": {
+        "company_name_includes": {
+          "in": "query",
+          "type": "string",
+          "description": "Name must include this."
+        },
+        "company_name_excludes": {
+          "in": "query",
+          "type": "string",
+          "description": "Name must not include this."
+        },
+        "company_status": {
+          "in": "query",
+          "type": "string",
+          "description": "Status filter; comma-separate several, e.g. active."
+        },
+        "company_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Company type filter; comma-separate several, e.g. ltd."
+        },
+        "company_subtype": {
+          "in": "query",
+          "type": "string",
+          "description": "Company subtype filter; comma-separate several."
+        },
+        "sic_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "SIC codes; comma-separate several.",
+          "example": "62012"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location filter."
+        },
+        "incorporated_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Incorporated on or after, YYYY-MM-DD."
+        },
+        "incorporated_to": {
+          "in": "query",
+          "type": "string",
+          "description": "Incorporated on or before, YYYY-MM-DD."
+        },
+        "dissolved_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Dissolved on or after, YYYY-MM-DD."
+        },
+        "dissolved_to": {
+          "in": "query",
+          "type": "string",
+          "description": "Dissolved on or before, YYYY-MM-DD."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1 to 5000."
+        },
+        "start_index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index to start from, for paging."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/search/advanced-company-search",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/search/advanced-company-search"
+      }
+    },
+    {
+      "id": "companies-house.officers.search",
+      "name": "Search officers",
+      "summary": "Officers (directors, secretaries) matching a name, with links to their appointments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/officers",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The name to search."
+        },
+        "items_per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "start_index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first result, for paging."
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/search/search-officers",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/search/search-officers"
+      }
+    },
+    {
+      "id": "companies-house.officers.list",
+      "name": "List a company's officers",
+      "summary": "Current and resigned directors, secretaries and LLP members with roles and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/{company_number}/officers",
+      "params": {
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number, keeping leading zeros.",
+          "example": "00000006"
+        },
+        "items_per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "start_index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first result, for paging."
+        },
+        "register_view": {
+          "in": "query",
+          "type": "string",
+          "description": "true for register-specific information; only active officers when the register is held at Companies House. Default false.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "register_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Officer type in the register view; only with register_view=true.",
+          "enum": [
+            "directors",
+            "secretaries",
+            "llp_members"
+          ]
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "appointed_on",
+            "resigned_on",
+            "surname"
+          ]
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/officers/list",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/officers/list"
+      }
+    },
+    {
+      "id": "companies-house.filings.list",
+      "name": "List filing history",
+      "summary": "The company's filings: accounts, confirmation statements, officer changes, with document links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/{company_number}/filing-history",
+      "params": {
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number, keeping leading zeros.",
+          "example": "00000006"
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated filing categories to include, e.g. accounts,officers."
+        },
+        "items_per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "start_index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first result, for paging."
+        }
+      },
+      "job": "company.documents",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/filing-history/list",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/filing-history/list"
+      }
+    },
+    {
+      "id": "companies-house.psc.list",
+      "name": "List persons with significant control",
+      "summary": "Individuals and entities with significant control (beneficial owners) and their nature of control.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/{company_number}/persons-with-significant-control",
+      "params": {
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number, keeping leading zeros.",
+          "example": "00000006"
+        },
+        "items_per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "start_index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first result, for paging."
+        },
+        "register_view": {
+          "in": "query",
+          "type": "string",
+          "description": "true for register-specific information.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "notes": [
+        "The spec marks items_per_page, start_index and register_view required; send them if the call is refused without."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/persons-with-significant-control/list",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/persons-with-significant-control/list"
+      }
+    },
+    {
+      "id": "companies-house.charges.list",
+      "name": "List charges",
+      "summary": "Mortgages and charges registered against the company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/{company_number}/charges",
+      "params": {
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number, keeping leading zeros.",
+          "example": "00000006"
+        },
+        "items_per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "start_index": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first result, for paging."
+        }
+      },
+      "job": "company.charges",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/charges/list",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/charges/list"
+      }
+    },
+    {
+      "id": "companies-house.insolvency.get",
+      "name": "Get insolvency information",
+      "summary": "Insolvency cases, practitioners and dates; 404 when the company has none.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/{company_number}/insolvency",
+      "params": {
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number, keeping leading zeros.",
+          "example": "00000006"
+        }
+      },
+      "job": "company.insolvency",
+      "docs_url": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/insolvency/get",
+      "verified": {
+        "docs": "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference/insolvency/get"
+      }
+    }
+  ]
+}
