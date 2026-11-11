@@ -120,12 +120,14 @@ def _broken_poll(failure: str) -> Any:
             return httpx.Response(202, json=PENDING)
         if failure == "connection":
             raise httpx.ConnectError("connection reset", request=request)
+        if failure == "timeout":
+            raise httpx.ReadTimeout("read timed out", request=request)
         return httpx.Response(200, content=b"<html>not json</html>")
 
     return respond
 
 
-@pytest.mark.parametrize("failure", ["connection", "not json"])
+@pytest.mark.parametrize("failure", ["connection", "timeout", "not json"])
 async def test_a_poll_that_breaks_below_http_still_names_the_job(monkeypatch: pytest.MonkeyPatch, failure: str) -> None:
     monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
     request = LiveDataRequest(source="chatgpt", inputs={"query": "hello"})
