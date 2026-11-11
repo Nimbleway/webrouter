@@ -1841,8 +1841,8 @@ its own pages and copies before judging, so a backend is not scored on finding t
 key (each row's `withheld` counts them).
 `Dataset.public_benchmarks("due-diligence" | "lead-enrichment")` reads one of two
 unlabeled sets Nimble publishes in [Public-benchmarks](https://github.com/Nimbleway/Public-benchmarks),
-pinned to one commit: 1,000 questions each that an investment analyst asks about a company
-or fund, and that a sales or RevOps team asks about an account. They carry no answers, so
+pinned to one commit: questions people search for about a company or fund to invest in,
+and about a company they want to sell to. They carry no answers, so
 `evaluate()` refuses them before any search: judge `benchmark()`'s rows with your own grader.
 A `Question`'s `answer` is `None` in such a set, and `answer_column=None` reads your own CSV
 the same way. `Dataset.for_set(name)` loads any of

@@ -21,23 +21,17 @@ from web_router.evals import datasets as datasets_module
 
 __all__ = ["registered"]  # the fixture, imported for the tests below
 
-HEADER = ["question", "category", "use_case", "persona", "endpoint_fit"]
+HEADER = ["question", "category"]
 ROWS = [
-    [
-        "How many customers does Gong serve as of 2026?",
-        "customers_partners",
-        "Customer base",
-        "Account executive",
-        "search",
-    ],
-    ["Who is Rippling's CFO?", "leadership_contacts", "Finance leadership", "SDR", "research"],
+    ["Who are Ramp's customers?", "customers_and_market"],
+    ["Who is Snowflake's CTO?", "leadership_and_ownership"],
 ]
 
 
-def _published(path: Path, rows: list[list[str]] = ROWS) -> Path:
+def _published(path: Path, rows: list[list[str]] = ROWS, header: list[str] = HEADER) -> Path:
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(HEADER)
+    writer.writerow(header)
     writer.writerows(rows)
     path.write_text(buffer.getvalue(), encoding="utf-8")
     return path
@@ -80,14 +74,17 @@ def test_a_published_set_is_read_by_name_from_a_local_copy(tmp_path: Path, name:
     dataset = Dataset.for_set(name, path=_published(tmp_path / "questions.csv"))
 
     assert dataset.name == name and len(dataset) == 2
-    assert all(question.answer is None for question in dataset.questions)
-    assert dataset.questions[1].metadata == {
-        "category": "leadership_contacts",
-        "use_case": "Finance leadership",
-        "persona": "SDR",
-        "endpoint_fit": "research",
-    }
+    assert all(question.answer is None and question.metadata == {} for question in dataset.questions)
     assert len(Dataset.for_set(name, path=tmp_path / "questions.csv", limit=1)) == 1
+
+
+def test_a_published_set_reads_an_answer_column_as_gold_and_ignores_the_rest(tmp_path: Path) -> None:
+    rows = [[question, category, "Alice"] for question, category in ROWS]
+    copy = _published(tmp_path / "questions.csv", rows, ["question", "category", "answer"])
+
+    dataset = Dataset.public_benchmarks("lead-enrichment", path=copy)
+
+    assert [(question.answer, question.metadata) for question in dataset.questions] == [("Alice", {}), ("Alice", {})]
 
 
 @pytest.mark.parametrize(

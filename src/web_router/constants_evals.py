@@ -114,12 +114,14 @@ PUBLIC_BENCHMARKS_SETS: dict[str, str] = {
 }
 """Each unlabeled set published in Nimbleway/Public-benchmarks, by name -> its folder there.
 
-``due-diligence``: 1,000 questions a hedge-fund or investment analyst asks while researching a company or fund.
-``lead-enrichment``: 1,000 questions a sales or RevOps team asks about an account. Neither carries answers.
+``due-diligence``: questions people search for when researching a company or fund to invest in.
+``lead-enrichment``: questions people search for about a company they want to sell to. Neither carries answers.
 """
 
 PUBLIC_BENCHMARKS_QUESTION_COLUMN = "question"
-"""The column holding the question; ``category``, ``use_case``, ``persona`` and ``endpoint_fit`` go to metadata."""
+
+PUBLIC_BENCHMARKS_ANSWER_COLUMN = "answer"
+"""Read as gold when a set has it; every other column (``category`` and the like) is ignored."""
 
 MSG_EVALS_UNKNOWN_PUBLIC_SET = "Public-benchmarks has no question set {name!r}; choose one of {sets}."
 

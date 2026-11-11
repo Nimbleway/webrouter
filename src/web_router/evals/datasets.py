@@ -40,6 +40,7 @@ from web_router.constants_evals import (
     FRAMES_QUESTION_COLUMN,
     FRAMES_URL,
     MSG_EVALS_UNKNOWN_PUBLIC_SET,
+    PUBLIC_BENCHMARKS_ANSWER_COLUMN,
     PUBLIC_BENCHMARKS_COMMIT,
     PUBLIC_BENCHMARKS_QUESTION_COLUMN,
     PUBLIC_BENCHMARKS_SETS,
@@ -344,13 +345,10 @@ class Dataset(BaseModel):
         limit: int | None = None,
         seed: int = SIMPLEQA_SEED,
     ) -> Dataset:
-        """An unlabeled set from Nimbleway/Public-benchmarks, read at a pinned commit unless a local copy is given.
+        """A set from Nimbleway/Public-benchmarks, read at a pinned commit unless a local copy is given.
 
-        ``due-diligence``: questions a hedge-fund or investment analyst asks while researching a company or fund.
-        ``lead-enrichment``: questions a sales or RevOps team asks about an account. Each question targets one use
-        case, at most five per use case. Neither has answers, so :meth:`~web_router.WebRouter.evaluate` refuses
-        them: judge :meth:`~web_router.WebRouter.benchmark`'s rows yourself. Every ``metadata`` carries
-        ``category``, ``use_case``, ``persona`` and ``endpoint_fit`` (``search`` or ``research``).
+        ``due-diligence`` and ``lead-enrichment``: what people search about a company to invest in or sell to. Only
+        ``question`` is read, and ``answer`` when present. With no answers, ``evaluate()`` refuses them.
         """
         if name not in PUBLIC_BENCHMARKS_SETS:
             raise ValueError(MSG_EVALS_UNKNOWN_PUBLIC_SET.format(name=name, sets=sorted(PUBLIC_BENCHMARKS_SETS)))
@@ -360,9 +358,13 @@ class Dataset(BaseModel):
         else:
             source = PUBLIC_BENCHMARKS_URL.format(commit=PUBLIC_BENCHMARKS_COMMIT, folder=PUBLIC_BENCHMARKS_SETS[name])
             text = _fetch(source).decode("utf-8")
-        rows = list(csv.DictReader(io.StringIO(text)))
+        reader = csv.DictReader(io.StringIO(text))
+        answer = (
+            PUBLIC_BENCHMARKS_ANSWER_COLUMN if PUBLIC_BENCHMARKS_ANSWER_COLUMN in (reader.fieldnames or ()) else None
+        )
+        rows = [{key: row[key] for key in (PUBLIC_BENCHMARKS_QUESTION_COLUMN, answer) if key} for row in reader]
         return cls.from_rows(
-            name, rows, question_column=PUBLIC_BENCHMARKS_QUESTION_COLUMN, answer_column=None, source=source
+            name, rows, question_column=PUBLIC_BENCHMARKS_QUESTION_COLUMN, answer_column=answer, source=source
         ).sample(limit, seed)
 
 
