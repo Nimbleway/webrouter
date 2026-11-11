@@ -1,0 +1,159 @@
+{
+  "vendor": "unesco-uis",
+  "name": "UNESCO Institute for Statistics Data API",
+  "category": "other",
+  "summary": "UNESCO education, science, culture and communication indicators by country and region and year, with indicator and geo-unit definitions, from the keyless UIS Data API.",
+  "docs_url": "https://api.uis.unesco.org/api/public/documentation",
+  "base_url": "https://api.uis.unesco.org/api/public",
+  "notes": [
+    "Keyless and, per the docs, without rate limiting. Data is CC BY-SA 4.0.",
+    "A data query returns at most 100,000 records; a larger one fails with 400 rather than paging, so narrow by indicator, geoUnit or years.",
+    "Data is versioned: pass an explicit version (from versions.default) for reproducible, cache-friendly answers; without one the current default version is used.",
+    "Find indicator ids with indicators.list and country/region ids with geounits.list."
+  ],
+  "sources": [
+    "https://api.uis.unesco.org/api/public/documentation",
+    "https://api.uis.unesco.org/api/public/openapi/schema.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "unesco-uis.indicators.data",
+      "name": "Get indicator data",
+      "summary": "Values of indicators for countries or regions by year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/indicators",
+      "params": {
+        "indicator": {
+          "in": "query",
+          "type": "array",
+          "description": "Indicator ids; alone, returns every geo unit's data for them."
+        },
+        "geoUnit": {
+          "in": "query",
+          "type": "array",
+          "description": "Country or region ids; alone, returns every indicator for them."
+        },
+        "geoUnitType": {
+          "in": "query",
+          "type": "string",
+          "description": "Only national or only regional data; both when unset.",
+          "enum": [
+            "NATIONAL",
+            "REGIONAL"
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "First year, inclusive."
+        },
+        "end": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last year, inclusive."
+        },
+        "footnotes": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include footnotes per data point."
+        },
+        "indicatorMetadata": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include indicator metadata."
+        },
+        "version": {
+          "in": "query",
+          "type": "string",
+          "description": "Data version; the current default when unset."
+        }
+      },
+      "notes": [
+        "Give indicator, geoUnit or both. Over 100,000 records fails with 400."
+      ],
+      "job": "economics.series",
+      "docs_url": "https://api.uis.unesco.org/api/public/documentation/operations/getIndicatorData",
+      "verified": {
+        "docs": "https://api.uis.unesco.org/api/public/openapi/schema.json"
+      }
+    },
+    {
+      "id": "unesco-uis.indicators.list",
+      "name": "List indicators",
+      "summary": "Every indicator's id and definition.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/definitions/indicators",
+      "params": {
+        "version": {
+          "in": "query",
+          "type": "string",
+          "description": "Data version; the current default when unset."
+        },
+        "glossaryTerms": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include glossary terms."
+        },
+        "disaggregations": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include disaggregations."
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://api.uis.unesco.org/api/public/documentation/operations/listIndicators",
+      "verified": {
+        "docs": "https://api.uis.unesco.org/api/public/openapi/schema.json"
+      }
+    },
+    {
+      "id": "unesco-uis.geounits.list",
+      "name": "List countries and regions",
+      "summary": "Every geo unit (country or region) id usable in data queries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/definitions/geounits",
+      "params": {
+        "version": {
+          "in": "query",
+          "type": "string",
+          "description": "Data version; the current default when unset."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://api.uis.unesco.org/api/public/documentation/operations/listGeoUnits",
+      "verified": {
+        "docs": "https://api.uis.unesco.org/api/public/openapi/schema.json"
+      }
+    },
+    {
+      "id": "unesco-uis.versions.default",
+      "name": "Get the default data version",
+      "summary": "The newest published data version, used when a query names none.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/versions/default",
+      "job": "datasets.list",
+      "docs_url": "https://api.uis.unesco.org/api/public/documentation/operations/getPublishedDefaultVersion",
+      "verified": {
+        "docs": "https://api.uis.unesco.org/api/public/openapi/schema.json"
+      }
+    },
+    {
+      "id": "unesco-uis.versions.list",
+      "name": "List data versions",
+      "summary": "Every published data version.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/versions",
+      "job": "datasets.list",
+      "docs_url": "https://api.uis.unesco.org/api/public/documentation/operations/listPublishedVersions",
+      "verified": {
+        "docs": "https://api.uis.unesco.org/api/public/openapi/schema.json"
+      }
+    }
+  ]
+}
