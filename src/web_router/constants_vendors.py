@@ -169,7 +169,7 @@ MSG_VENDOR_CATALOG_ENDPOINT_PREFIX: Final = "endpoint id {endpoint!r} must start
 MSG_VENDOR_CATALOG_PATH_PARAM: Final = "endpoint {endpoint!r}: path placeholder {{{name}}} has no 'path' parameter"
 MSG_VENDOR_CATALOG_PATH_UNUSED: Final = "endpoint {endpoint!r}: path parameter {name!r} is not in the path"
 MSG_VENDOR_CATALOG_BODY_ON_GET: Final = "endpoint {endpoint!r}: a {method} request cannot carry body parameters"
-VENDOR_CALLBACK_KEY: Final = re.compile(r"webhook|callback", re.IGNORECASE)
+VENDOR_CALLBACK_KEY: Final = re.compile(r"webhook|callback|pingback|postback", re.IGNORECASE)
 """A key inside an object input that names one is refused: it would send the answer to an address the caller picks."""
 MSG_VENDOR_CALLBACK_REFUSED: Final = (
     "Callback and webhook URLs are left out of vendor calls; poll for the result instead."

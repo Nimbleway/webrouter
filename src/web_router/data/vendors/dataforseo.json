@@ -29,9 +29,10 @@
   "notes": [
     "Every POST takes a JSON ARRAY of task objects, e.g. [{\"keyword\": \"...\", \"location_code\": 2840, \"language_code\": \"en\"}]; the params below describe one task object. Live calls accept one task per call.",
     "Billing is prepaid in USD per task (the cost field of each answer); minimum top-up is $50 and new accounts get $1 trial credit. Prices vary by endpoint and mode: Google organic SERP is $0.0006 per SERP (standard queue), $0.0012 (priority) or $0.002 (live).",
-    "Live endpoints answer in one call (about 6 seconds for SERP); the queue pattern is task_post, then tasks_ready or a pingback, then task_get. Results are kept 30 days.",
+    "Live endpoints answer in one call (about 6 seconds for SERP); the queue pattern is task_post, then tasks_ready, then task_get. Results are kept 30 days.",
     "Answers wrap a tasks array; check each task's status_code and status_message as well as the HTTP status.",
-    "Most calls need a location and a language; give either the code or the full name of each. Valid values come from each product's locations and languages endpoints."
+    "Most calls need a location and a language; give either the code or the full name of each. Valid values come from each product's locations and languages endpoints.",
+    "pingback_url and postback_url are left out: each sends the result to an address the caller picks; poll tasks_ready instead."
   ],
   "sources": [
     "https://docs.dataforseo.com/v3/",
@@ -214,11 +215,6 @@
             2
           ]
         },
-        "pingback_url": {
-          "in": "body",
-          "type": "string",
-          "description": "URL DataForSEO calls with GET when the task completes; $id and $tag work as variables."
-        },
         "tag": {
           "in": "body",
           "type": "string",
@@ -226,7 +222,8 @@
         }
       },
       "notes": [
-        "Starts a job that only produces data; the call returns a task id. Fetch results with dataforseo.serp.google_organic_task_get, or list finished ids with the tasks_ready endpoint.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "The call returns a task id. Fetch results with dataforseo.serp.google_organic_task_get, or list finished ids with the tasks_ready endpoint.",
         "Cost: $0.0006 per SERP in the standard queue (about 5 minutes) or $0.0012 in the priority queue (about 1 minute).",
         "The body is sent as a one-task JSON array, as DataForSEO requires; one call is one task."
       ],
