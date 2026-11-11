@@ -88,7 +88,7 @@ class _Planner(RouterSetup):
     ) -> Plan:
         req, found, kept, refused = plan_for
         name = None if self._router is None else self._router.name
-        out = decided(req, found, outcome, router=name, url_check=self._url_check, refused=refused)
+        out = decided(req, found, outcome, router=name, url_check=self._router_url_check, refused=refused)
         params = {**base_params(out.tool, req.prompt, kept), **out.params}
         if out.tool == "extract" and not params["urls"]:
             # A pinned extract, or one with no search backend to move to: unpinned, the merge rule searches instead.
