@@ -1632,8 +1632,10 @@ claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --
 It works with **no API key at all**: search and extract run on the keyless
 backends above. Every key you add unlocks more backends and fallbacks, and
 research, browse and cloud browsers need one. Put your keys in a `.env` in your
-user config directory, or point `WEB_ROUTER_ENV_FILE` at one; a project's
-`.env` can add keys but never replace yours.
+user config directory, or point `WEB_ROUTER_ENV_FILE` at one. A `.env` in
+whatever project the server starts in is not read, unless that project's client
+config names it in `WEB_ROUTER_PROJECT_ENV_FILE`, as this repo's `.mcp.json`
+does; that file is read last and only adds keys.
 
 [docs/mcp.md](docs/mcp.md) covers the rest: Claude Desktop and Cursor setup,
 where keys are read from and `load_env`, the tools and their costs, how

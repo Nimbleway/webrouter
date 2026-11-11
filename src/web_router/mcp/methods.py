@@ -34,7 +34,7 @@ from web_router.constants_live_data import (
     MCP_TOOL_LIVE_DATA_SOURCE,
     MCP_TOOL_LIVE_DATA_SOURCES,
 )
-from web_router.mcp.env_credentials import env_names
+from web_router.mcp.env_credentials import ENV_ONLY, env_names
 from web_router.providers.base import _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
@@ -143,14 +143,18 @@ def configured() -> dict[str, list[str]]:
 
 
 def unlock() -> dict[str, dict[str, list[str]]]:
-    """Per method, the backends no key has reached yet and the variables that would add each -- names only."""
+    """Per method, the backends no key has reached yet and the variables a ``.env`` would add each with -- names only.
+
+    An :data:`ENV_ONLY` variable is left out, and so is a backend whose every variable is one: no ``.env`` can
+    set it.
+    """
     unlock: dict[str, dict[str, list[str]]] = {}
     for method in EACH_METHOD:
         configured = set(method.configured())
         missing = {
-            provider: [name for name in env_names(env) if not os.environ.get(name)]
+            provider: [name for name in env_names(env) if not os.environ.get(name) and name not in ENV_ONLY]
             for provider, env in method.env.items()
-            if env and provider not in configured
+            if provider not in configured and any(name not in ENV_ONLY for name in env_names(env))
         }
         if missing:
             unlock[method.key] = missing

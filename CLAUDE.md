@@ -70,8 +70,9 @@ path of this clone:
 claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
 ```
 
-`--project` keeps the working directory, so the server reads the `.env` of the
-project the user is in. For Claude Desktop, Cursor and other clients, see
+`--project` keeps the working directory, but the server does not read a `.env`
+there: keys go in the user config directory's `.env`, or in a file named by
+`WEB_ROUTER_ENV_FILE`. For Claude Desktop, Cursor and other clients, see
 [docs/mcp.md](docs/mcp.md). After adding keys, the server needs a restart, or
 call its `load_env` tool with the path of the user's `.env`.
 

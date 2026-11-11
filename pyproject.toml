@@ -114,7 +114,7 @@ vendors = [
 mcp = [
     "webrouter[search,extract,research,answer,vendors]",
     "mcp>=2.2,<3",
-    # The server's entry point loads the project .env, so keys reach it
+    # The server reads the user's .env files (and a project's that opts in), so keys reach it
     # without being exported; the library itself never reads dotfiles.
     "python-dotenv>=1.0",
 ]

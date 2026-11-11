@@ -63,11 +63,13 @@ aws bedrock-agentcore-control get-gateway --gateway-identifier "$GATEWAY_ID" --q
 
 ## 3. Use it
 
-Export the URL. The library reads the process environment, not a `.env` file. The MCP server loads `AGENTCORE_GATEWAY_URL` from its `.env` but never AWS keys, by design: it finds those through botocore, in your `~/.aws` profile or the environment it was started with.
+Export the URL. The library reads the process environment, not a `.env` file. The MCP server, too, reads `AGENTCORE_GATEWAY_URL` from the environment it was started with, never from a `.env`; it finds AWS credentials through botocore, in your `~/.aws` profile or that same environment.
 
 ```bash
 export AGENTCORE_GATEWAY_URL=https://<id>.gateway.bedrock-agentcore.us-east-1.amazonaws.com/mcp
 ```
+
+For an MCP client, put it in the server's `env` block or pass `claude mcp add -e AGENTCORE_GATEWAY_URL=...`, then restart the client.
 
 Whoever calls it needs `bedrock-agentcore:InvokeGateway` on the gateway, granted to
 their own IAM user or role: the policy above is the gateway's, not the caller's, and

@@ -22,11 +22,11 @@ MCP_SERVER_INSTRUCTIONS = (
     "Results are shortened to fit a context window: each carries a handle, and `fetch_raw` returns the "
     "backend's untouched payload for it. "
     "The web-router://capabilities resource lists the backends configured here, and its `unlock` lists, per "
-    "method, each backend still missing a key and the variable that would add it. Every key the user adds "
+    "method, each backend still missing a key and the variable a .env would add it with. Every key the user adds "
     "unlocks more backends and fallbacks, and research, browse and cloud browsers need one at all -- with a "
     "key for every backend, every capability is available. When a method has nothing to run on, or the user "
-    "wants more, point them there and to .env.example, have them put keys in their .env themselves, and call "
-    "`load_env` with the path they give."
+    "wants more, point them there and to .env.example; have them put keys in their .env themselves, then call "
+    "`load_env` with the path they give (except AGENTCORE_GATEWAY_URL, which is set in the server's environment)."
 )
 
 
@@ -172,12 +172,54 @@ MCP_MSG_KEY_HINT = (
 )
 """Said instead, once, after a library error that named ``provider_config``."""
 
+MCP_MSG_ENV_ONLY_HINT = " Through this server: it is set in the server's environment, and the server is restarted."
+"""Said instead of :data:`MCP_MSG_KEY_HINT` when the setting is one no file may set: ``AGENTCORE_GATEWAY_URL``."""
+
 MCP_RESOURCE_NOT_FOUND = -32002
 """The JSON-RPC error code MCP gives a read of a resource the server does not have."""
 
 MCP_MSG_UNKNOWN_ARGUMENTS = "{tool} does not take {names}, so nothing was run. It takes: {allowed}."
 MCP_NO_ARGUMENTS = "no arguments"
 """An argument the tool does not declare -- a typo, a guessed option -- refused rather than dropped."""
+
+MCP_MSG_ENV_ONLY = (
+    "{names} is read from the environment only, so the file's value was ignored: "
+    "set it in the server's environment and restart the server."
+)
+MCP_MSG_ENV_ONLY_FILE = "{path} sets no provider key, so nothing was loaded. {note}"
+"""A ``.env`` that sets a variable the server takes only from its environment: ``AGENTCORE_GATEWAY_URL``."""
+
+ENV_MCP_PROJECT_ENV_FILE = "WEB_ROUTER_PROJECT_ENV_FILE"
+"""A project's own dotenv file, which that project's client config opts in to: this repo's ``.mcp.json`` sets ``.env``.
+
+Read last at startup, so it only adds keys and never replaces one already set.
+Read from the real environment only. A relative path is taken from the working
+directory, and a missing file is no error: a fresh clone has no ``.env`` yet.
+"""
+
+MCP_ENV_SOURCE_PROJECT = ENV_MCP_PROJECT_ENV_FILE
+
+MCP_MSG_ENV_HINT_EXPLICIT_MISSING = (
+    "No API keys were found, so only the keyless backends are configured; they work meanwhile. {env_var} "
+    "names {path}, which does not exist: have the user create that file and put their keys in it, then call "
+    "load_env with its path. Only the file's path is ever needed -- never paste a key into the conversation."
+)
+"""Said instead of ``MCP_MSG_ENV_HINT`` when a file the user named does not exist."""
+
+MCP_MSG_ENV_HINT_EXPLICIT_UNUSED = (
+    "No API keys were found, so only the keyless backends are configured; they work meanwhile. {env_var} "
+    "names {path} ({status}): have the user put their keys there, then call load_env with its path. Only the "
+    "file's path is ever needed -- never paste a key into the conversation."
+)
+"""Said instead of ``MCP_MSG_ENV_HINT`` when a file the user named was read but gave the server no key."""
+
+MCP_MSG_ENV_HINT_EXPLICIT_UNREADABLE = (
+    "No API keys were found, so only the keyless backends are configured; they work meanwhile. {env_var} "
+    "names {path}, which the server cannot read as a .env file ({reason}): have the user fix that or point "
+    "{env_var} at a readable .env file with their keys, then call load_env with its path. Only the file's path "
+    "is ever needed -- never paste a key into the conversation."
+)
+"""Said instead of ``MCP_MSG_ENV_HINT`` when a file the user named is a directory or a file the server cannot read."""
 
 MCP_MSG_ROUTER_SPEC = (
     "{env_var}={value!r} names no router: expected <module>:<attribute>, a built-in router's name, or 'off'."

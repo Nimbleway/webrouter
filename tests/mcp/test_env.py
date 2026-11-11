@@ -16,6 +16,7 @@ import pytest
 
 from tests.mcp.env_helpers import KEY, OTHER_KEY, holds, is_set, statuses, write
 from web_router.constants import (
+    ENV_AGENTCORE_GATEWAY_URL,
     ENV_APPDATA,
     ENV_BRAVE_API_KEY,
     ENV_EXA_API_KEY,
@@ -28,7 +29,6 @@ from web_router.constants import (
     MCP_ENV_FILE,
     MCP_ENV_FILE_MAX_BYTES,
     MCP_ENV_POINTER_FILE,
-    MCP_ENV_SOURCE_CWD,
     MCP_ENV_SOURCE_EXPLICIT,
     MCP_ENV_SOURCE_REMEMBERED,
     MCP_ENV_SOURCE_USER,
@@ -41,22 +41,13 @@ from web_router.constants import (
 from web_router.mcp.env import EnvFileError, EnvSources, user_config_dir
 
 
-def test_the_entry_point_reads_credentials_from_its_working_directory(isolated_home: Path) -> None:
-    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=from-file\n")
-
-    sources = EnvSources.at_startup()
-
-    assert holds(ENV_NIMBLE_API_KEY, "from-file")
-    assert sources.report()["loaded"] == {ENV_NIMBLE_API_KEY: str(Path.cwd() / MCP_ENV_FILE)}
-    assert statuses(sources)[-1] == (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_USED)
-
-
 def test_every_place_is_read_and_an_earlier_one_wins_per_variable(
     isolated_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     explicit = write(isolated_home / "elsewhere" / "keys.env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
     user_env = write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={OTHER_KEY}\n{ENV_EXA_API_KEY}={KEY}\n")
-    project = write(Path.cwd() / MCP_ENV_FILE, f"{ENV_EXA_API_KEY}={OTHER_KEY}\n{ENV_NIMBLE_API_KEY}={KEY}\n")
+    remembered = write(isolated_home / "saved.env", f"{ENV_EXA_API_KEY}={OTHER_KEY}\n{ENV_NIMBLE_API_KEY}={KEY}\n")
+    write(user_config_dir() / MCP_ENV_POINTER_FILE, f"{remembered}\n")
     monkeypatch.setenv(ENV_MCP_ENV_FILE, str(explicit))
 
     sources = EnvSources.at_startup()
@@ -65,26 +56,26 @@ def test_every_place_is_read_and_an_earlier_one_wins_per_variable(
     assert sources.report()["loaded"] == {
         ENV_BRAVE_API_KEY: str(explicit),
         ENV_EXA_API_KEY: str(user_env),
-        ENV_NIMBLE_API_KEY: str(project),
+        ENV_NIMBLE_API_KEY: str(remembered),
     }
     assert statuses(sources) == [
         (MCP_ENV_SOURCE_EXPLICIT, MCP_ENV_STATUS_USED),
         (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
-        (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_USED),
+        (MCP_ENV_SOURCE_REMEMBERED, MCP_ENV_STATUS_USED),
     ]
 
 
-def test_a_project_env_only_adds_and_never_hides_the_users_keys(isolated_home: Path) -> None:
-    """A user-scoped server starts in every project; one that commits a key must not take the user's traffic."""
+def test_a_remembered_file_only_adds_and_never_hides_the_users_keys(isolated_home: Path) -> None:
     write(user_config_dir() / MCP_ENV_FILE, f"{ENV_TAVILY_API_KEY}={KEY}\n")
-    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_TAVILY_API_KEY}={OTHER_KEY}\n")
+    remembered = write(isolated_home / "saved.env", f"{ENV_TAVILY_API_KEY}={OTHER_KEY}\n")
+    write(user_config_dir() / MCP_ENV_POINTER_FILE, f"{remembered}\n")
 
     sources = EnvSources.at_startup()
 
     assert holds(ENV_TAVILY_API_KEY, KEY)
     assert statuses(sources) == [
         (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
-        (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_NOTHING_NEW),
+        (MCP_ENV_SOURCE_REMEMBERED, MCP_ENV_STATUS_NOTHING_NEW),
     ]
 
 
@@ -96,24 +87,24 @@ def test_the_user_config_dir_is_read_from_any_working_directory(isolated_home: P
 
     assert holds(ENV_BRAVE_API_KEY, KEY)
     assert sources.report()["loaded"] == {ENV_BRAVE_API_KEY: str(user_env)}
-    assert statuses(sources) == [
-        (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
-        (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_MISSING),
-    ]
+    assert statuses(sources) == [(MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED)]
 
 
-def test_a_file_that_sets_no_credential_does_not_hide_the_next_one(isolated_home: Path) -> None:
-    # A client starts a user-scoped server in whatever project is open, and
-    # that project's own .env says nothing about web-router.
-    write(Path.cwd() / MCP_ENV_FILE, "DATABASE_URL=postgres://localhost/app\n")
+def test_a_file_that_sets_no_credential_does_not_hide_the_next_one(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A file named by its client config that says nothing about web-router.
+    write(isolated_home / "app.env", "DATABASE_URL=postgres://localhost/app\n")
+    monkeypatch.setenv(ENV_MCP_ENV_FILE, str(isolated_home / "app.env"))
     write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
 
     sources = EnvSources.at_startup()
 
     assert holds(ENV_BRAVE_API_KEY, KEY)
+    assert not sources.report()["explicit_file_missing"]
     assert statuses(sources) == [
+        (MCP_ENV_SOURCE_EXPLICIT, MCP_ENV_STATUS_NO_CREDENTIALS),
         (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_USED),
-        (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_NO_CREDENTIALS),
     ]
 
 
@@ -159,7 +150,7 @@ def test_a_remembered_path_is_read_on_the_next_start_and_only_adds_to_the_user_e
 
 def test_a_variable_already_exported_wins_over_the_file(isolated_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(ENV_NIMBLE_API_KEY, "exported")
-    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=from-file\n{ENV_BRAVE_API_KEY}={KEY}\n")
+    write(user_config_dir() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=from-file\n{ENV_BRAVE_API_KEY}={KEY}\n")
 
     sources = EnvSources.at_startup()
 
@@ -172,7 +163,7 @@ def test_a_variable_already_exported_wins_over_the_file(isolated_home: Path, mon
 def test_only_credentials_load_so_a_foreign_env_cannot_set_policy(
     isolated_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A user-scoped server can start in any workspace; that workspace's ``.env`` is not the operator.
+    """A remembered file is a path a conversation recorded, not the operator's own configuration.
 
     Flipping :data:`ENV_MCP_BROWSER_ALLOW_FILE_URLS` would open ``file:``
     navigation, and :data:`ENV_LOCAL_BROWSER_PATH` names the binary ``local``
@@ -180,10 +171,11 @@ def test_only_credentials_load_so_a_foreign_env_cannot_set_policy(
     """
     monkeypatch.delenv(ENV_MCP_BROWSER_ALLOW_FILE_URLS, raising=False)
     monkeypatch.delenv(ENV_LOCAL_BROWSER_PATH, raising=False)
-    write(
-        Path.cwd() / MCP_ENV_FILE,
+    remembered = write(
+        isolated_home / "saved.env",
         f"{ENV_MCP_BROWSER_ALLOW_FILE_URLS}=1\n{ENV_LOCAL_BROWSER_PATH}=/tmp/evil\n{ENV_MCP_ENV_FILE}=/tmp/x\n",
     )
+    write(user_config_dir() / MCP_ENV_POINTER_FILE, f"{remembered}\n")
 
     EnvSources.at_startup()
 
@@ -197,7 +189,7 @@ def test_nothing_is_interpolated_so_a_file_cannot_copy_another_secret(
 ) -> None:
     # Expanded, this would send another service's secret to Brave with every search.
     monkeypatch.setenv("SOME_OTHER_SECRET", OTHER_KEY)
-    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}=${{SOME_OTHER_SECRET}}\n")
+    write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}=${{SOME_OTHER_SECRET}}\n")
 
     EnvSources.at_startup()
 
@@ -213,16 +205,20 @@ def test_nothing_found_anywhere_is_a_no_op_so_a_fresh_install_still_starts(isola
 
 def test_an_empty_assignment_is_no_credential(isolated_home: Path) -> None:
     # A copied .env.example is every name with no value.
-    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_NIMBLE_API_KEY}=\n{ENV_BRAVE_API_KEY}=\n")
+    write(
+        user_config_dir() / MCP_ENV_FILE,
+        f"{ENV_NIMBLE_API_KEY}=\n{ENV_BRAVE_API_KEY}=\n{ENV_AGENTCORE_GATEWAY_URL}=\n",
+    )
 
     sources = EnvSources.at_startup()
 
     assert not is_set(ENV_NIMBLE_API_KEY)
-    assert statuses(sources)[-1] == (MCP_ENV_SOURCE_CWD, MCP_ENV_STATUS_NO_CREDENTIALS)
+    assert statuses(sources)[-1] == (MCP_ENV_SOURCE_USER, MCP_ENV_STATUS_NO_CREDENTIALS)
+    assert "note" not in sources.report()["searched"][-1]
 
 
 def test_the_report_names_variables_and_never_values(isolated_home: Path) -> None:
-    write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
     sources = EnvSources.at_startup()
     extra = write(isolated_home / "more.env", f"{ENV_NIMBLE_API_KEY}={OTHER_KEY}\n")
     sources.load(str(extra))

@@ -29,7 +29,6 @@ from mcp_types import Tool
 
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
-    ENV_MCP_ENV_FILE,
     MCP_ARG_HANDLE,
     MCP_ARG_MAX_CHARS,
     MCP_ARG_PATH,
@@ -50,7 +49,6 @@ from web_router.constants import (
     MCP_MSG_BROWSER_LOWERED,
     MCP_MSG_BROWSER_OPENED,
     MCP_MSG_ENV_BAD_ARGUMENTS,
-    MCP_MSG_ENV_HINT,
     MCP_MSG_ENV_NOTHING_NEW,
     MCP_MSG_ENV_REMEMBERED,
     MCP_MSG_INSTRUCTIONS_NO_KEYS,
@@ -100,7 +98,7 @@ from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
 from web_router.mcp import methods, schema
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
-from web_router.mcp.env import EnvSources, user_config_dir
+from web_router.mcp.env import EnvSources
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
 from web_router.mcp.routing_config import McpRouting
@@ -234,7 +232,7 @@ class WebRouterTools:
         """
         env = self.env.report()
         if not self.keyed():
-            env["hint"] = MCP_MSG_ENV_HINT.format(env_var=ENV_MCP_ENV_FILE, user_dir=user_config_dir())
+            env["hint"] = self.env.hint()
         return {
             **methods.configured(),
             "default_provider": self.router.default_provider,
@@ -382,7 +380,7 @@ class WebRouterTools:
         if applied.already_set:
             payload["already_set"] = list(applied.already_set)
         payload["configured"] = methods.configured()
-        notes = [] if applied.loaded else [MCP_MSG_ENV_NOTHING_NEW]
+        notes = ([] if applied.loaded else [MCP_MSG_ENV_NOTHING_NEW]) + applied.notes()
         if applied.remembered is not None:
             notes.append(MCP_MSG_ENV_REMEMBERED.format(pointer=applied.remembered))
         if notes:
