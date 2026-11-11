@@ -13,9 +13,10 @@ import httpx
 import pytest
 
 from tests.providers._live_data_http import Api, wire
-from tests.providers._oxylabs import BASE, PENDING, _answer, _job, _scraped, _sent
+from tests.providers._oxylabs import BASE, PENDING, _answer, _job, _provider, _scraped, _sent
 from web_router import WebRouter
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers.oxylabs_live_data import OxylabsLiveDataProvider
 from web_router.types_live_data import LiveDataRequest
 
@@ -51,6 +52,18 @@ def test_a_job_still_running_past_the_wait_names_it(monkeypatch: pytest.MonkeyPa
     provider, _ = _job([PENDING], monkeypatch)
     with pytest.raises(ProviderError, match="GET /v1/async/scrape/7497734325668954113"):
         provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
+
+
+def test_a_lost_job_is_not_reported_as_an_unknown_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The source resolved and the job was accepted: a 404 on its poll names the job, not a missing scraper."""
+    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
+    submitted = {"status": "pending", "metadata": {"request_id": "42"}}
+    provider, _ = _provider(
+        lambda r: httpx.Response(202, json=submitted) if r.method == "POST" else httpx.Response(404)
+    )
+    with pytest.raises(ProviderError, match="job 42") as caught:
+        provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
+    assert not isinstance(caught.value, LiveDataSourceNotFoundError)
 
 
 # -- keys ---------------------------------------------------------------------

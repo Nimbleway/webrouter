@@ -41,6 +41,7 @@ from web_router.constants_live_data_vendors import (
     MSG_OXYLABS_FAULTED,
     MSG_OXYLABS_NO_FIELDS,
     MSG_OXYLABS_NOT_FETCHED,
+    MSG_OXYLABS_POLL_FAILED,
     MSG_OXYLABS_STILL_RUNNING,
     OXYLABS_API_KEY_PREFIX,
     OXYLABS_ASYNC,
@@ -184,16 +185,17 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
         scraper = self._resolve(request.source, self._known())
         with self._named(request.source):
             payload = self._send("POST", scraper.path, json=self._build_payload(request))
-            if not scraper.realtime:
-                payload = self._wait(request, payload)
+        # Past the submit the source is known and the job billed: a 404 now is the job's, not the source's.
+        if not scraper.realtime:
+            payload = self._wait(request, payload)
         return self._to_response(request, payload)
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
         scraper = self._resolve(request.source, await self._aknown())
         with self._named(request.source):
             payload = await self._asend("POST", scraper.path, json=self._build_payload(request))
-            if not scraper.realtime:
-                payload = await self._await(request, payload)
+        if not scraper.realtime:
+            payload = await self._await(request, payload)
         return self._to_response(request, payload)
 
     @staticmethod
@@ -224,6 +226,10 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
         message = MSG_OXYLABS_STILL_RUNNING.format(source=request.source, seconds=self.wait_seconds, job_id=job_id)
         return ProviderError(self.name, message)
 
+    def _poll_failed(self, request: LiveDataRequest, job_id: str, exc: ProviderError) -> ProviderError:
+        message = MSG_OXYLABS_POLL_FAILED.format(job_id=job_id, source=request.source, error=exc)
+        return ProviderError(self.name, message, original=exc.original)
+
     def _wait(self, request: LiveDataRequest, payload: Any) -> Any:
         job_id = self._job_id(request, payload)
         deadline = time.monotonic() + self.wait_seconds
@@ -231,7 +237,10 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
             if time.monotonic() >= deadline:
                 raise self._still_running(request, job_id)
             time.sleep(self.poll_seconds)
-            payload = self._send("GET", f"{OXYLABS_ASYNC_PREFIX}/{job_id}")
+            try:
+                payload = self._send("GET", f"{OXYLABS_ASYNC_PREFIX}/{job_id}")
+            except ProviderError as exc:
+                raise self._poll_failed(request, job_id, exc) from exc
         return payload
 
     async def _await(self, request: LiveDataRequest, payload: Any) -> Any:
@@ -241,7 +250,10 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
             if time.monotonic() >= deadline:
                 raise self._still_running(request, job_id)
             await asyncio.sleep(self.poll_seconds)
-            payload = await self._asend("GET", f"{OXYLABS_ASYNC_PREFIX}/{job_id}")
+            try:
+                payload = await self._asend("GET", f"{OXYLABS_ASYNC_PREFIX}/{job_id}")
+            except ProviderError as exc:
+                raise self._poll_failed(request, job_id, exc) from exc
         return payload
 
     def _to_response(self, request: LiveDataRequest, payload: Any) -> LiveDataResponse:

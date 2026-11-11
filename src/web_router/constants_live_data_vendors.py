@@ -86,6 +86,12 @@ MSG_OXYLABS_NOT_FETCHED: Final = "Oxylabs could not fetch {source!r}: status {st
 
 MSG_OXYLABS_FAULTED: Final = "Oxylabs' job {job_id} for {source!r} faulted: status {status}"
 
+MSG_OXYLABS_POLL_FAILED: Final = (
+    "Oxylabs' job {job_id} for {source!r} was submitted, but reading it failed: {error}. "
+    "It may still finish: GET /v1/async/scrape/{job_id}"
+)
+"""A poll that failed after the submit: the job is billed, so its id is named, never "no such source"."""
+
 MSG_OXYLABS_STILL_RUNNING: Final = (
     "Oxylabs is still running {source!r} after {seconds:.0f} s; nothing is lost. Fetch it later: "
     "GET /v1/async/scrape/{job_id}"
