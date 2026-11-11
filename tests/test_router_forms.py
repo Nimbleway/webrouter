@@ -59,9 +59,9 @@ def test_anything_else_is_a_configuration_error(router: Any) -> None:
 
 
 @pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
-@pytest.mark.parametrize("name", ["acme", "remote"])
-def test_a_router_given_by_name_is_refused_by_both_routers(cls: type, name: str) -> None:
-    with pytest.raises(ConfigurationError, match="router="):
+@pytest.mark.parametrize(("name", "says"), [("acme", "names no registered router"), ("remote", "needs router_config")])
+def test_an_unregistered_name_or_remote_with_no_url_is_refused_by_both_routers(cls: type, name: str, says: str) -> None:
+    with pytest.raises(ConfigurationError, match=says):
         cls(router=name)
 
 
