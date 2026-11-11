@@ -7,7 +7,7 @@ import importlib
 import pytest
 
 from tests._live_data_fake import FakeLiveDataProvider
-from web_router.exceptions import LiveDataSourceNotFoundError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.live_data_compat import OLD_HOMES, RENAMED
 
 

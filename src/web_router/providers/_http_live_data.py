@@ -17,7 +17,8 @@ from typing import Any, ClassVar, TypeVar
 import httpx
 
 from web_router.constants_live_data import LIVE_DATA_HTTP_TIMEOUT
-from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.exceptions import ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.live_data_catalogue import check_page
 from web_router.providers._http import _HttpProvider
 from web_router.providers._utils import compact

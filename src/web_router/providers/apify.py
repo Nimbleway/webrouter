@@ -39,7 +39,7 @@ from web_router.constants_apify import (
     APIFY_STORE_PATH,
 )
 from web_router.constants_live_data import ENV_APIFY_TOKEN
-from web_router.exceptions import LiveDataSourceNotFoundError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.live_data_search import NativeSourceSearch
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.types import Provider
@@ -56,11 +56,7 @@ _STORE_MAPPED = frozenset({"username", "name", "title", "description", "categori
 
 
 def actor_id(source: str) -> str:
-    """Apify's path form of an Actor name: ``username~name``, from either spelling.
-
-    Anything that is not an Actor id or ``username~name`` is refused before a request is built:
-    a ``?`` or ``#`` in the path would send the call to a different endpoint.
-    """
+    """Apify's path form of an Actor name, ``username~name``, from either spelling; anything else is refused."""
     actor = source.strip().replace("/", "~")
     if not APIFY_ACTOR_NAME.fullmatch(actor):
         raise LiveDataSourceNotFoundError(Provider.APIFY.value, source)
@@ -188,8 +184,7 @@ class ApifyLiveDataProvider(HttpLiveDataProvider, NativeSourceSearch):
 
 def _input_schema(build: dict[str, Any]) -> dict[str, Any] | None:
     """The build's input schema: ``actorDefinition.input`` as an object, else the deprecated ``inputSchema`` string."""
-    definition = build.get("actorDefinition") or {}
-    schema = definition.get("input")
+    schema = (build.get("actorDefinition") or {}).get("input")
     if isinstance(schema, dict):
         return schema
     return _json_object(build.get("inputSchema"))
@@ -197,12 +192,9 @@ def _input_schema(build: dict[str, Any]) -> dict[str, Any] | None:
 
 def _json_object(value: Any) -> dict[str, Any] | None:
     """A JSON object from a dict or from a JSON string holding one; ``None`` for anything else."""
-    if isinstance(value, dict):
-        return value
     if isinstance(value, str):
         try:
-            decoded = json.loads(value)
+            value = json.loads(value)
         except ValueError:
             return None
-        return decoded if isinstance(decoded, dict) else None
-    return None
+    return value if isinstance(value, dict) else None

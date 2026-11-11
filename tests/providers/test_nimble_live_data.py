@@ -29,6 +29,7 @@ pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
 
 from web_router.providers.nimble_live_data import NimbleLiveDataProvider
+from web_router.providers.nimble_live_data_map import to_page, to_response, to_source
 
 
 @pytest.fixture
@@ -74,7 +75,7 @@ def test_a_bare_record_under_parsing_is_the_record(provider: NimbleLiveDataProvi
     """The shape the live API answered with: the template's fields straight under `data.parsing`."""
     payload = _run_payload(RECORD)
 
-    response = provider._to_response(LiveDataRequest(source=TEMPLATE, inputs={"url": URL}), payload)
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE, inputs={"url": URL}), payload)
 
     assert response.provider == "nimble"
     assert response.source == TEMPLATE
@@ -93,7 +94,7 @@ def test_a_wrapped_record_is_unwrapped(provider: NimbleLiveDataProvider) -> None
     """The SDK's `ParsingSuccessResult`: the record under `entities` beside a status."""
     payload = _run_payload({"status": "success", "entities": RECORD})
 
-    response = provider._to_response(LiveDataRequest(source=TEMPLATE), payload)
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
 
     assert response.data == RECORD
 
@@ -102,7 +103,7 @@ def test_a_parsing_error_is_a_failure_not_an_empty_record(provider: NimbleLiveDa
     payload = _run_payload({"status": "error", "error": "selector matched nothing"})
 
     with pytest.raises(ProviderError, match="selector matched nothing") as caught:
-        provider._to_response(LiveDataRequest(source=TEMPLATE), payload)
+        to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
 
     assert TEMPLATE in str(caught.value)
 
@@ -113,7 +114,7 @@ def test_a_record_whose_own_field_is_called_status_is_not_mistaken_for_a_report(
     """Only the two wrapped shapes carry `entities` or `error` beside `status`; a record may use the word too."""
     record = {"status": "error", "title": "Out of stock"}
 
-    response = provider._to_response(LiveDataRequest(source=TEMPLATE), _run_payload(record))
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), _run_payload(record))
 
     assert response.data == record
 
@@ -124,14 +125,14 @@ def test_a_record_with_a_status_and_entities_beside_other_fields_is_kept_whole(
     """A wrapper is exactly the SDK's two fields; a record whose schema names both and more is a record."""
     record = {"status": "success", "entities": {"brand": "Acme"}, "title": "Widget"}
 
-    response = provider._to_response(LiveDataRequest(source=TEMPLATE), _run_payload(record))
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), _run_payload(record))
 
     assert response.data == record
 
 
 def test_a_fetched_page_with_no_record_raises(provider: NimbleLiveDataProvider) -> None:
     with pytest.raises(ProviderError, match="without a record"):
-        provider._to_response(LiveDataRequest(source=TEMPLATE), _run_payload(None))
+        to_response(provider.name, LiveDataRequest(source=TEMPLATE), _run_payload(None))
 
 
 @pytest.mark.parametrize("status_code", [404.0, 403, 500.0, 503])
@@ -142,7 +143,7 @@ def test_an_error_page_the_site_served_is_a_failed_run_not_a_record(
     payload = _run_payload({"title": "404 Error"}, status_code=status_code)
 
     with pytest.raises(ProviderError, match=f"HTTP {int(status_code)}") as caught:
-        provider._to_response(LiveDataRequest(source=TEMPLATE), payload)
+        to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
 
     assert TEMPLATE in str(caught.value)
 
@@ -151,7 +152,7 @@ def test_a_page_the_site_served_with_a_success_status_is_still_a_record(provider
     """The control for the test above: the same payload at 200 returns its record."""
     payload = _run_payload({"title": "404 Error"}, status_code=200.0)
 
-    response = provider._to_response(LiveDataRequest(source=TEMPLATE), payload)
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
 
     assert response.data == {"title": "404 Error"}
     assert response.status_code == 200
@@ -162,7 +163,7 @@ def test_a_status_other_than_success_raises_with_the_warnings(provider: NimbleLi
     payload = _run_payload(None, status="blocked", warnings=["challenge not solved"])
 
     with pytest.raises(ProviderError) as caught:
-        provider._to_response(LiveDataRequest(source=TEMPLATE), payload)
+        to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
 
     assert "blocked" in str(caught.value) and "challenge not solved" in str(caught.value)
 
@@ -172,7 +173,7 @@ def test_a_format_asked_for_comes_back_as_the_page_beside_the_record(provider: N
     payload["data"]["markdown"] = "# A Light in the Attic"
 
     request = LiveDataRequest(source=TEMPLATE, inputs={"url": URL}, format="markdown")
-    response = provider._to_response(request, payload)
+    response = to_response(provider.name, request, payload)
 
     assert response.document is not None
     assert response.document.url == URL
@@ -186,7 +187,7 @@ def test_pagination_and_unmapped_data_land_in_extra(provider: NimbleLiveDataProv
     payload = _run_payload(RECORD, pagination={"next_page_params": {"page": 2}})
     payload["data"]["links"] = ["https://books.example/"]
 
-    response = provider._to_response(LiveDataRequest(source=TEMPLATE), payload)
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
 
     assert response.extra["pagination"] == {"next_page_params": {"page": 2}}
     assert response.extra["links"] == ["https://books.example/"]
@@ -198,7 +199,7 @@ def test_pagination_and_unmapped_data_land_in_extra(provider: NimbleLiveDataProv
 def test_a_published_template_is_described_from_its_version(provider: NimbleLiveDataProvider) -> None:
     item = _item(_version())
 
-    template = provider._to_source(item)
+    template = to_source(provider.name, item)
 
     assert template.provider == "nimble"
     assert template.name == TEMPLATE
@@ -219,7 +220,7 @@ def test_a_published_template_is_described_from_its_version(provider: NimbleLive
 
 
 def test_an_unpublished_template_has_no_schemas_and_says_so(provider: NimbleLiveDataProvider) -> None:
-    template = provider._to_source(_item(None))
+    template = to_source(provider.name, _item(None))
 
     assert template.published is False
     assert template.input_schema is None and template.output_schema is None
@@ -230,7 +231,7 @@ def test_an_unpublished_template_has_no_schemas_and_says_so(provider: NimbleLive
 def test_a_listing_is_a_page_with_its_place_in_the_catalogue(provider: NimbleLiveDataProvider) -> None:
     payload = {"items": [_item(_version()), _item(None, name="draft")], "total": 250, "limit": 100, "offset": 0}
 
-    page = provider._to_page(payload)
+    page = to_page(provider.name, payload)
 
     assert page.provider == "nimble"
     assert page.names == [TEMPLATE, "draft"]
@@ -263,7 +264,7 @@ def test_a_malformed_sample_is_skipped_and_a_sample_with_no_input_takes_none(
         )
     )
 
-    template = provider._to_source(item)
+    template = to_source(provider.name, item)
 
     assert template.samples == [
         LiveDataSample(input={"url": URL}, output=None),

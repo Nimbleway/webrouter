@@ -42,7 +42,8 @@ from web_router.constants_live_data_vendors import (
     OXYLABS_PARSE_OK,
     OXYLABS_SOURCES,
 )
-from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.exceptions import ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers._utils import resolve_setting
 from web_router.types_live_data import (

@@ -26,7 +26,7 @@ RENAMED: dict[str, tuple[str, str]] = {
     "TemplateSample": ("web_router.types_live_data", "LiveDataSample"),
     "TEMPLATE_PARAMETERS": ("web_router.types_live_data", "LIVE_DATA_PARAMETERS"),
     "TemplateProvider": ("web_router.providers.base", "LiveDataProvider"),
-    "TemplateNotFoundError": ("web_router.exceptions", "LiveDataSourceNotFoundError"),
+    "TemplateNotFoundError": ("web_router.exceptions_live_data", "LiveDataSourceNotFoundError"),
     "available_template_providers": ("web_router.registry", "available_live_data_providers"),
     "configured_template_providers": ("web_router.registry", "configured_live_data_providers"),
     "register_template_provider": ("web_router.registry", "register_live_data_provider"),

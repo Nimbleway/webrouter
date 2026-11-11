@@ -53,7 +53,6 @@ from web_router.exceptions import (
     ConfigurationError,
     DeadlineExceededError,
     ElementNotFoundError,
-    LiveDataSourceNotFoundError,
     MissingParameterError,
     NavigationError,
     NoAnswerProviderError,
@@ -69,6 +68,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.exceptions_budget import BudgetExceededError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.live_data_search import NativeSourceSearch
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (

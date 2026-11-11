@@ -23,7 +23,8 @@ from tests.providers._nimble_live_data_payloads import (
     _run_payload,
     _version,
 )
-from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.exceptions import ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.types_live_data import LiveDataRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")

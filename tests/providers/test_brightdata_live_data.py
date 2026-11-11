@@ -14,7 +14,8 @@ import pytest
 
 from tests.providers._live_data_http import Api, wire
 from web_router import WebRouter
-from web_router.exceptions import LiveDataSourceNotFoundError, ProviderError
+from web_router.exceptions import ProviderError
+from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers.brightdata_live_data import BrightDataLiveDataProvider
 from web_router.types_live_data import LiveDataRequest
 
