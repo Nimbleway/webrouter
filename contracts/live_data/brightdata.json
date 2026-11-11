@@ -1,0 +1,64 @@
+{
+  "provider": "brightdata",
+  "method": "live_data",
+  "class": "web_router.providers.brightdata_live_data.BrightDataLiveDataProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.brightdata.com",
+    "paths": {
+      "run_path": "/datasets/v3/scrape"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "BRIGHTDATA_API_TOKEN"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.input": [
+      {
+        "url": "https://example.com"
+      }
+    ]
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "refused": "UnsupportedFormatError"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": [
+    "https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests",
+    "https://docs.brightdata.com/api-reference/scrapers/management-apis/get-scrapers",
+    "https://docs.brightdata.com/products/scrapers/error-codes"
+  ],
+  "verified": {
+    "format": "docs: https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests"
+  },
+  "vendor_options": {
+    "type": {
+      "status": "not_supported",
+      "note": "Set by the source: a `…_by_<method>` name sends `discover_new`; an option cannot change it."
+    },
+    "discover_by": {
+      "status": "not_supported",
+      "note": "Set by the source: `amazon_products_by_keyword` sends `keyword`; an option cannot change it."
+    },
+    "limit_per_input": {
+      "status": "passthrough",
+      "note": "Query parameter: the most records one input may return."
+    },
+    "custom_output_fields": {
+      "status": "passthrough",
+      "note": "Query parameter: the output fields to keep, pipe-separated."
+    }
+  }
+}
