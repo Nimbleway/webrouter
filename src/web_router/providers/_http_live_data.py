@@ -10,7 +10,7 @@ A subclass is left with the vendor's own paths, payloads and shapes.
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any, ClassVar, TypeVar
 
@@ -23,6 +23,7 @@ from web_router.live_data_catalogue import check_page
 from web_router.providers._http import _HttpProvider
 from web_router.providers._utils import compact
 from web_router.providers.base import LiveDataProvider
+from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
 
 _T = TypeVar("_T")
 
@@ -68,6 +69,26 @@ class HttpLiveDataProvider(_HttpProvider, LiveDataProvider):
         check_page(limit, offset)
         start = offset or 0
         return list(items[start:] if limit is None else items[start : start + limit]), start
+
+    def _paged(
+        self,
+        every: Sequence[_T],
+        listed: Callable[[_T], LiveDataSource],
+        *,
+        limit: int | None,
+        offset: int | None,
+        raw: Callable[[list[_T]], Any] | None = None,
+    ) -> LiveDataSourcePage:
+        """One page of a catalogue read whole: each entry on it as ``listed`` describes it, and ``raw`` of the page."""
+        page, start = self._local_page(every, limit=limit, offset=offset)
+        return LiveDataSourcePage(
+            provider=self.name,
+            sources=[listed(item) for item in page],
+            total=len(every),
+            offset=start,
+            limit=limit,
+            raw=raw(page) if raw is not None else None,
+        )
 
     @contextmanager
     def _named(self, source: str) -> Iterator[None]:

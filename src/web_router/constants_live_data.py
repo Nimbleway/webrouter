@@ -172,7 +172,7 @@ LIVE_DATA_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     Provider.NIMBLE.value: ("NIMBLE_API_KEY",),
     Provider.APIFY.value: (ENV_APIFY_TOKEN,),
     Provider.BRIGHTDATA.value: ("BRIGHTDATA_API_TOKEN",),
-    Provider.OXYLABS.value: ("OXYLABS_USERNAME", "OXYLABS_PASSWORD"),
+    Provider.OXYLABS.value: ("OXYLABS_WEB_API_KEY",),
 }
 """Which variables each live data provider needs, all of them.
 
@@ -182,4 +182,6 @@ variable the provider's other methods read. A live data run fetches and
 parses on the backend's account, so there is no keyless tier, and no ``auto``:
 a source's name belongs to one vendor. Bright Data's live data needs its token
 alone -- the zone is its Web Unlocker's, which a scraper does not use.
+Oxylabs' live data runs on its Web API, whose key is not the Realtime
+username and password its extract uses.
 """

@@ -22,7 +22,7 @@ session logged into, whose cookies ride along; only Browserbase maps it.
 
 **`live_data`** — a vendor's ready-made scraper for one site (Nimble's
 Extract Templates, Apify's Store Actors, Bright Data's scrapers, Oxylabs'
-dedicated sources), run for this call and answering with structured
+Web API scrapers), run for this call and answering with structured
 `records` shaped by the source's own output schema rather than page text. Its
 inputs are the source's own -- a URL for some, an id, a slug or a search term
 for others -- which is why it is a method and not an option on `extract`.
@@ -348,7 +348,11 @@ src/web_router/
     ├── _http_live_data.py   HttpLiveDataProvider: the base of the three below
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
-    ├── oxylabs_live_data.py     live data: Oxylabs' dedicated sources, parsed
+    ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
+    ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
+    ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
+    ├── oxylabs_jobs.py          waiting on a job-only scraper; every error after the submit names the job
+    ├── oxylabs_response.py      a scrape's answer as a live data response
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
     ├── tavily_extract.py  extract, and the SDK clients, key and timeout both classes share
     ├── exa.py          search + extract, via httpx (its research API is retired);
@@ -1498,8 +1502,8 @@ when a caller names them: a preset's variable (`OPENAI_API_KEY`, `ANTHROPIC_API_
 `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), or the one `api_key_env`
 names, once, when the router is built; `KEY_HOMES` in `constants_decider.py` sends each preset variable
 only to its vendor's host. `.env` is gitignored — keep it that way. `LIVE_DATA_ENV_BY_PROVIDER`, in
-`constants_live_data.py`, is live data's table: Apify's token, and Nimble's,
-Bright Data's and Oxylabs' keys again: one key, several classes.
+`constants_live_data.py`, is live data's table: Apify's token, Oxylabs' Web API key
+(not its extract credentials), and Nimble's and Bright Data's keys again: one key, several classes.
 
 **The library never loads `.env` itself.** Only these entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,

@@ -147,10 +147,9 @@ def test_the_live_data_env_table_names_the_same_variables_as_the_other_methods()
     from web_router.constants import (
         ENV_BRIGHTDATA_API_KEY,
         ENV_NIMBLE_API_KEY,
-        ENV_OXYLABS_PASSWORD,
-        ENV_OXYLABS_USERNAME,
     )
+    from web_router.constants_live_data_vendors import ENV_OXYLABS_WEB_API_KEY
 
     assert LIVE_DATA_ENV_BY_PROVIDER["nimble"] == (ENV_NIMBLE_API_KEY,)
     assert LIVE_DATA_ENV_BY_PROVIDER["brightdata"] == (ENV_BRIGHTDATA_API_KEY,)
-    assert LIVE_DATA_ENV_BY_PROVIDER["oxylabs"] == (ENV_OXYLABS_USERNAME, ENV_OXYLABS_PASSWORD)
+    assert LIVE_DATA_ENV_BY_PROVIDER["oxylabs"] == (ENV_OXYLABS_WEB_API_KEY,)

@@ -1,51 +1,56 @@
-"""Oxylabs live data: its dedicated sources -- ``amazon_product``, ``google_search`` and the rest -- run with parsing.
+"""Oxylabs live data: the Web API's dedicated scrapers -- ``amazon/product``, ``google/search`` and the rest.
 
-A source is a scraper Oxylabs maintains for one kind of page, named as its
-API names it, run through the same Realtime endpoint Oxylabs' extract uses
-with ``parse: true``, so the answer is the page's fields rather than its HTML.
-The inputs are the source's own: ``query`` (an ASIN, a search term) for some,
-``url`` for others, plus its parameters such as ``domain`` and
-``geo_location`` -- sent as given.
+A source is one of the scrape endpoints Oxylabs maintains for one kind of
+page, named by its path after ``/v1/scrape/``: ``amazon/product`` is
+``POST /v1/scrape/amazon/product``. The catalogue is the Web API's own list,
+``GET /v1/scrapers``, read once per provider and kept, as Oxylabs advises: it
+changes on their deploys, not per request. A description asks the endpoint
+itself with ``OPTIONS``, which answers with every parameter's type, whether it
+is required, its allowed values and default, so ``input_schema`` is the
+vendor's own, not a guess. The generic ``/v1/scrape`` is not a source: it is a
+page fetch, which ``extract`` covers.
 
-Written from https://developers.oxylabs.io (Realtime integration, dedicated
-parsers, response codes), read on 2026-11-09. Verified live on 2026-11-10: runs
-of ``amazon_product`` and ``google_search``. A source Oxylabs does not have
-answers 400 "Unsupported source.", raised as a ``ProviderError``.
+A run asks for ``output: ["json"]``, the scraper's parsed fields
+(:mod:`~web_router.providers.oxylabs_response`); a scraper Oxylabs runs only
+as a job is submitted and polled for up to five minutes
+(:mod:`~web_router.providers.oxylabs_jobs`).
 
-Oxylabs has no endpoint that lists its sources, so the catalogue is the list
-of sources with a dedicated parser that its docs publish, and a description
-carries no input schema: the docs do not give every source's inputs. A
-result's ``created_at`` is kept in ``extra`` rather than reported as
-``fetched_at``, because the docs never say it is the fetch time or name its
-timezone. A page that was not fetched, or not parsed, raises; a partial parse
-(``parse_status_code`` 12004 or 12005) is a record, with its code in ``extra``.
+This is Oxylabs' Web API, authenticated with ``OXYLABS_WEB_API_KEY`` as a
+bearer token -- not the Realtime API that Oxylabs' extract calls with
+``OXYLABS_USERNAME`` and ``OXYLABS_PASSWORD``. Written from
+https://developers.oxylabs.io/products/web-api (endpoint discovery, dedicated
+scrapers, delivery modes, troubleshooting), read on 2026-11-10. **Not yet
+verified live**: no Web API key was available.
 """
 
 from __future__ import annotations
 
-from base64 import b64encode
+import asyncio
+import time
 from typing import Any, ClassVar
 
-from web_router.constants import (
-    ENV_OXYLABS_PASSWORD,
-    ENV_OXYLABS_USERNAME,
-    OXYLABS_BASE_URL,
-    OXYLABS_EXTRACT_PATH,
-    PROVIDER_OXYLABS,
-)
+from web_router.constants import PROVIDER_OXYLABS
 from web_router.constants_live_data_vendors import (
-    MSG_OXYLABS_NO_RESULTS,
-    MSG_OXYLABS_NOT_FETCHED,
-    MSG_OXYLABS_NOT_PARSED,
-    OXYLABS_DOCS_URL,
-    OXYLABS_FAILED_FETCH_FLOOR,
-    OXYLABS_PARSE_OK,
-    OXYLABS_SOURCES,
+    ENV_OXYLABS_WEB_API_KEY,
+    MSG_OXYLABS_JOB_RESULT_FAILED,
+    MSG_OXYLABS_POLL_FAILED,
+    OXYLABS_API_KEY_PREFIX,
+    OXYLABS_JOB_POLL_SECONDS,
+    OXYLABS_JOB_WAIT_SECONDS,
+    OXYLABS_OUTPUT,
+    OXYLABS_SCRAPE_PREFIX,
+    OXYLABS_SCRAPERS_PATH,
+    OXYLABS_TRANSPORT_PARAMS,
+    OXYLABS_WEB_API_BASE_URL,
 )
-from web_router.exceptions import ProviderError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
+from web_router.providers._deadline import job_deadline
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers._utils import resolve_setting
+from web_router.providers.oxylabs_jobs import JobWait, job_id, wait_until
+from web_router.providers.oxylabs_options import input_schema
+from web_router.providers.oxylabs_response import to_response
+from web_router.providers.oxylabs_scrapers import Scraper, catalogue, listed, source_name
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
@@ -54,108 +59,140 @@ from web_router.types_live_data import (
     LiveDataSourcePage,
 )
 
-_RESULT_MAPPED = frozenset({"content", "url", "status_code"})
-
 
 class OxylabsLiveDataProvider(HttpLiveDataProvider):
-    """Runs Oxylabs' dedicated sources, parsed, as live data sources."""
+    """Runs the Oxylabs Web API's dedicated scrapers as live data sources."""
 
     name: ClassVar[str] = PROVIDER_OXYLABS
     supported_parameters: ClassVar[frozenset[str]] = LIVE_DATA_PARAMETERS
 
-    run_path: ClassVar[str] = OXYLABS_EXTRACT_PATH
-    base_url: ClassVar[str] = OXYLABS_BASE_URL
-    env_api_key: ClassVar[str] = ENV_OXYLABS_PASSWORD
+    base_url: ClassVar[str] = OXYLABS_WEB_API_BASE_URL
+    scrapers_path: ClassVar[str] = OXYLABS_SCRAPERS_PATH
+    run_path: ClassVar[str] = OXYLABS_SCRAPE_PREFIX + "/{source}"
+    """A realtime run; a scraper with no realtime endpoint is sent to ``/v1/async/scrape/{source}`` instead."""
+    env_api_key: ClassVar[str] = ENV_OXYLABS_WEB_API_KEY
+    api_key_prefix: ClassVar[str] = OXYLABS_API_KEY_PREFIX
+    key_argument: ClassVar[str] = "web_api_key"
+    """The constructor argument that carries the key: ``api_key`` is extract's Realtime password."""
 
-    def __init__(self, *, username: str | None = None, **kwargs: Any) -> None:
+    poll_seconds: ClassVar[float] = OXYLABS_JOB_POLL_SECONDS
+    wait_seconds: ClassVar[float] = OXYLABS_JOB_WAIT_SECONDS
+
+    def __init__(self, *, web_api_key: str | None = None, username: str | None = None, **kwargs: Any) -> None:
         """
         Args:
-            username: Oxylabs API username. Falls back to ``OXYLABS_USERNAME``.
-            **kwargs: ``api_key`` is the password and falls back to ``OXYLABS_PASSWORD``.
+            web_api_key: The Web API key. Falls back to ``OXYLABS_WEB_API_KEY``.
+            username: Accepted and unused: it is the Realtime username Oxylabs'
+                extract reads from the same ``provider_config["oxylabs"]`` entry.
+            **kwargs: As :class:`~web_router.providers._http_live_data.HttpLiveDataProvider`,
+                but ``api_key`` is never read: in the shared entry it is
+                extract's Realtime password, which must not reach the Web API
+                as a bearer token, so the Web API key has a name of its own.
         """
-        # Resolved before super(), which needs it to build the auth header.
-        self._username = resolve_setting(username, env_var=ENV_OXYLABS_USERNAME, provider=self.name, setting="username")
+        del username
+        kwargs["api_key"] = resolve_setting(
+            web_api_key, env_var=ENV_OXYLABS_WEB_API_KEY, provider=PROVIDER_OXYLABS, setting="web_api_key"
+        )
         super().__init__(**kwargs)
+        self._catalogue: dict[str, Scraper] | None = None
 
-    def _auth_headers(self, key: str) -> dict[str, str]:
-        """Oxylabs takes HTTP Basic credentials, not a bearer token."""
-        return {self.api_key_header: "Basic " + b64encode(f"{self._username}:{key}".encode()).decode()}
+    # -- names --------------------------------------------------------------
+
+    def _known(self) -> dict[str, Scraper]:
+        if self._catalogue is None:
+            self._catalogue = catalogue(self._send("GET", OXYLABS_SCRAPERS_PATH))
+        return self._catalogue
+
+    async def _aknown(self) -> dict[str, Scraper]:
+        if self._catalogue is None:
+            self._catalogue = catalogue(await self._asend("GET", OXYLABS_SCRAPERS_PATH))
+        return self._catalogue
+
+    def _resolve(self, source: str, known: dict[str, Scraper]) -> Scraper:
+        scraper = known.get(source_name(source))
+        if scraper is None:
+            raise LiveDataSourceNotFoundError(self.name, source)
+        return scraper
 
     # -- run ----------------------------------------------------------------
 
     def _run(self, request: LiveDataRequest) -> LiveDataResponse:
-        return self._to_response(request, self._send("POST", self.run_path, json=self._build_payload(request)))
+        scraper = self._resolve(request.source, self._known())
+        with self._named(request.source):
+            payload = self._send("POST", scraper.path, json=self._build_payload(request))
+        # Past the submit the source is known and the job billed: a 404 now is the job's, not the source's.
+        if scraper.realtime:
+            return to_response(self.name, request, payload)
+        job = self._job(request, payload)
+        payload = self._wait(job, payload)
+        with job.naming(MSG_OXYLABS_JOB_RESULT_FAILED):
+            return to_response(self.name, request, payload)
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
-        return self._to_response(request, await self._asend("POST", self.run_path, json=self._build_payload(request)))
+        scraper = self._resolve(request.source, await self._aknown())
+        with self._named(request.source):
+            payload = await self._asend("POST", scraper.path, json=self._build_payload(request))
+        if scraper.realtime:
+            return to_response(self.name, request, payload)
+        job = self._job(request, payload)
+        payload = await self._await(job, payload)
+        with job.naming(MSG_OXYLABS_JOB_RESULT_FAILED):
+            return to_response(self.name, request, payload)
 
     @staticmethod
     def _build_payload(request: LiveDataRequest) -> dict[str, Any]:
-        # Inputs and options as given, then the fields that name the source and turn parsing on, so that
-        # neither can be overridden into running a different scraper than the response is attributed to.
-        return {**dict(request.inputs), **request.provider_options, "source": request.source, "parse": True}
+        # Inputs and options as given, then the output that makes the answer a scraper's fields: neither can
+        # ask for HTML instead, nor move the result to a webhook or a bucket this call would never read.
+        given = {**request.inputs, **request.provider_options}
+        return {**{k: v for k, v in given.items() if k not in OXYLABS_TRANSPORT_PARAMS}, "output": list(OXYLABS_OUTPUT)}
 
-    def _to_response(self, request: LiveDataRequest, payload: dict[str, Any]) -> LiveDataResponse:
-        records: list[dict[str, Any]] = []
-        extras: list[dict[str, Any]] = []
-        results = (payload or {}).get("results") or []
-        if not results:
-            raise ProviderError(self.name, MSG_OXYLABS_NO_RESULTS.format(source=request.source))
-        for result in results:
-            self._check(request, result)
-            records.append(result["content"])
-            extras.append({key: value for key, value in result.items() if key not in _RESULT_MAPPED})
-        first = results[0]
-        return LiveDataResponse(
-            provider=self.name,
-            source=request.source,
-            inputs=dict(request.inputs),
-            records=records,
-            url=first.get("url"),
-            status_code=first.get("status_code"),
-            extra={"results": extras},
-            raw=payload,
+    def _job(self, request: LiveDataRequest, payload: Any) -> JobWait:
+        return JobWait(
+            self.name, request, job_id(self.name, request, payload), wait_until(self.wait_seconds), self.poll_seconds
         )
 
-    def _check(self, request: LiveDataRequest, result: dict[str, Any]) -> None:
-        """Raise for a result whose page was not fetched or not parsed; partial parses pass, no parse status fails."""
-        status, url, content = result.get("status_code"), result.get("url"), result.get("content")
-        if isinstance(status, int) and status >= OXYLABS_FAILED_FETCH_FLOOR:
-            raise ProviderError(
-                self.name, MSG_OXYLABS_NOT_FETCHED.format(source=request.source, status=status, url=url)
-            )
-        code = content.get("parse_status_code") if isinstance(content, dict) else None
-        if code not in OXYLABS_PARSE_OK:
-            raise ProviderError(self.name, MSG_OXYLABS_NOT_PARSED.format(source=request.source, code=code, url=url))
+    def _wait(self, job: JobWait, payload: Any) -> Any:
+        with job_deadline(job.until):
+            while not job.done(payload):
+                time.sleep(job.pause())
+                job.check()
+                with job.naming(MSG_OXYLABS_POLL_FAILED):
+                    payload = self._send("GET", job.path)
+        return payload
+
+    async def _await(self, job: JobWait, payload: Any) -> Any:
+        with job_deadline(job.until):
+            while not job.done(payload):
+                await asyncio.sleep(job.pause())
+                job.check()
+                with job.naming(MSG_OXYLABS_POLL_FAILED):
+                    payload = await self._asend("GET", job.path)
+        return payload
 
     # -- catalogue ----------------------------------------------------------
 
     def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
-        names, start = self._local_page(OXYLABS_SOURCES, limit=limit, offset=offset)
-        return LiveDataSourcePage(
-            provider=self.name,
-            sources=[self._source(name) for name in names],
-            total=len(OXYLABS_SOURCES),
-            offset=start,
-            limit=limit,
-        )
+        return self._to_page(self._known(), limit=limit, offset=offset)
 
     async def _alist(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
-        return self._list(limit=limit, offset=offset)
+        return self._to_page(await self._aknown(), limit=limit, offset=offset)
+
+    def _to_page(self, known: dict[str, Scraper], *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+        """One page of the scrapers. Oxylabs answers with every path at once, so the paging is done here."""
+        return self._paged(list(known.values()), lambda scraper: listed(self.name, scraper), limit=limit, offset=offset)
 
     def _get(self, name: str) -> LiveDataSource:
-        if name not in OXYLABS_SOURCES:
-            raise LiveDataSourceNotFoundError(self.name, name)
-        return self._source(name)
+        scraper = self._resolve(name, self._known())
+        with self._named(name):
+            spec = self._send("OPTIONS", scraper.path)
+        return self._described(scraper, spec)
 
     async def _aget(self, name: str) -> LiveDataSource:
-        return self._get(name)
+        scraper = self._resolve(name, await self._aknown())
+        with self._named(name):
+            spec = await self._asend("OPTIONS", scraper.path)
+        return self._described(scraper, spec)
 
-    def _source(self, name: str) -> LiveDataSource:
-        return LiveDataSource(
-            provider=self.name,
-            name=name,
-            description=f"Oxylabs' dedicated {name} parser; inputs (query or url, and parameters): {OXYLABS_DOCS_URL}",
-            domain=name.split("_", 1)[0],
-            published=True,
-        )
+    def _described(self, scraper: Scraper, spec: Any) -> LiveDataSource:
+        schema = input_schema(spec, leave_out=OXYLABS_TRANSPORT_PARAMS) if isinstance(spec, dict) else None
+        return listed(self.name, scraper).model_copy(update={"input_schema": schema, "raw": spec})
