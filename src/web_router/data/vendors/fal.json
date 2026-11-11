@@ -1,0 +1,303 @@
+{
+  "vendor": "fal",
+  "name": "fal.ai",
+  "category": "media-generation",
+  "summary": "Hosted image, video, audio and 3D generation models run through fal's queue API, plus model search, pricing and usage.",
+  "docs_url": "https://fal.ai/docs/api-reference/inference-api/index",
+  "pricing_url": "https://fal.ai/pricing",
+  "base_url": "https://queue.fal.run",
+  "hosts": {
+    "platform": "https://api.fal.ai/v1"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FAL_KEY"
+        ],
+        "description": "a fal API key (fal.ai/dashboard/keys), sent as 'Authorization: Key <key>'. Usage data needs a key with the BILLING preset."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Key {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Submitting a job is model-specific (each model has its own input schema), so it is not a named endpoint here: send a raw POST to /{owner}/{app} (or /{owner}/{app}/{path} for ids with more than two segments, e.g. fal-ai/flux/dev) with the model's input as the JSON body. The answer gives request_id plus status_url, response_url and cancel_url.",
+    "Then poll fal.requests.status until COMPLETED and read fal.requests.result. Status and result take only the first two segments of the model id (owner and app).",
+    "Every submit spends money at the model's price (fal.models.pricing); results expire after an hour (6 minutes when 10 KB or larger).",
+    "The synchronous fal.run host, cancellation and fal Serverless deployment are not in this entry."
+  ],
+  "sources": [
+    "https://fal.ai/docs/api-reference/inference-api/index",
+    "https://fal.ai/docs/api-reference/inference-api/queue/submit",
+    "https://fal.ai/docs/api-reference/inference-api/queue/submit-path",
+    "https://fal.ai/docs/api-reference/inference-api/queue/status",
+    "https://fal.ai/docs/api-reference/inference-api/queue/result",
+    "https://fal.ai/docs/documentation/model-apis/authentication/key-based",
+    "https://fal.ai/docs/platform-apis/v1/models",
+    "https://fal.ai/docs/platform-apis/v1/models/pricing",
+    "https://fal.ai/docs/platform-apis/v1/models/usage"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fal.models.search",
+      "name": "Search models",
+      "summary": "Lists, finds or searches fal's hosted model endpoints by text, category or id, with metadata and optionally the input schema.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models",
+      "host": "platform",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-text search over name, description and category.",
+          "example": "text to video"
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category filter, e.g. text-to-image, image-to-video, training.",
+          "example": "text-to-image"
+        },
+        "endpoint_id": {
+          "in": "query",
+          "type": "array",
+          "description": "1-50 endpoint ids to fetch directly.",
+          "example": [
+            "fal-ai/flux/dev"
+          ]
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "active",
+            "deprecated"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "relevant",
+            "recent"
+          ]
+        },
+        "expand": {
+          "in": "query",
+          "type": "array",
+          "description": "openapi-3.0 adds each endpoint's full input/output schema; enterprise_status adds enterprise readiness.",
+          "example": [
+            "openapi-3.0"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous page; keep the other parameters unchanged."
+        }
+      },
+      "notes": [
+        "Works without a key, at lower rate limits. Use expand=openapi-3.0 to learn a model's input fields before submitting to it."
+      ],
+      "job": "ai.models",
+      "docs_url": "https://fal.ai/docs/platform-apis/v1/models",
+      "verified": {
+        "docs": "https://fal.ai/docs/platform-apis/v1/models"
+      }
+    },
+    {
+      "id": "fal.models.pricing",
+      "name": "Get model prices",
+      "summary": "Unit price and billing unit for given endpoint ids; most models bill per output (image, video), some per GPU time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models/pricing",
+      "host": "platform",
+      "params": {
+        "endpoint_id": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "1-50 endpoint ids.",
+          "example": [
+            "fal-ai/flux/dev"
+          ]
+        }
+      },
+      "job": "ai.models.pricing",
+      "docs_url": "https://fal.ai/docs/platform-apis/v1/models/pricing",
+      "verified": {
+        "docs": "https://fal.ai/docs/platform-apis/v1/models/pricing"
+      }
+    },
+    {
+      "id": "fal.usage.list",
+      "name": "Get usage and spend",
+      "summary": "Billed usage per endpoint over a date range: quantity, unit price, discounts and total cost, optionally as a time series.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/models/usage",
+      "host": "platform",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 start; default 24 hours ago.",
+          "example": "2025-01-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 end, exclusive; default now.",
+          "example": "2025-02-01"
+        },
+        "endpoint_id": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these endpoint ids (1-50)."
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "minute",
+            "hour",
+            "day",
+            "week",
+            "month"
+          ],
+          "description": "Bucket size; auto-picked from the range when unset."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Time zone for bucketing; default UTC."
+        },
+        "expand": {
+          "in": "query",
+          "type": "array",
+          "description": "time_series (default), summary, auth_method.",
+          "example": [
+            "summary"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page."
+        }
+      },
+      "notes": [
+        "Needs a key with the BILLING preset (or the matching permission)."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://fal.ai/docs/platform-apis/v1/models/usage",
+      "verified": {
+        "docs": "https://fal.ai/docs/platform-apis/v1/models/usage"
+      }
+    },
+    {
+      "id": "fal.requests.status",
+      "name": "Get a queued request's status",
+      "summary": "IN_QUEUE (with queue_position), IN_PROGRESS or COMPLETED for a request submitted to the queue.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{owner}/{app}/requests/{request_id}/status",
+      "params": {
+        "owner": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model owner, the first segment of the model id.",
+          "example": "fal-ai"
+        },
+        "app": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model app name, the second segment, without any further endpoint path.",
+          "example": "flux"
+        },
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Request id the submit call returned."
+        },
+        "logs": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "1",
+            "0"
+          ],
+          "description": "1 includes runner logs, where the model offers them."
+        }
+      },
+      "notes": [
+        "COMPLETED is also the state of a failed or cancelled request; fetch the result to tell them apart. NOT_FOUND means an unknown id."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://fal.ai/docs/api-reference/inference-api/queue/status",
+      "verified": {
+        "docs": "https://fal.ai/docs/api-reference/inference-api/queue/status"
+      }
+    },
+    {
+      "id": "fal.requests.result",
+      "name": "Get a queued request's result",
+      "summary": "The model's output (image/video/audio URLs and fields) for a completed request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{owner}/{app}/requests/{request_id}",
+      "params": {
+        "owner": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model owner, the first segment of the model id.",
+          "example": "fal-ai"
+        },
+        "app": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model app name, the second segment, without any further endpoint path.",
+          "example": "flux"
+        },
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Request id the submit call returned."
+        }
+      },
+      "notes": [
+        "Kept 1 hour after completion, only 6 minutes when the result is 10 KB or larger. A model error comes back as that error."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://fal.ai/docs/api-reference/inference-api/queue/result",
+      "verified": {
+        "docs": "https://fal.ai/docs/api-reference/inference-api/queue/result"
+      }
+    }
+  ]
+}

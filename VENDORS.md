@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-238 vendors, 2037 endpoints.
+244 vendors, 2075 endpoints.
 
 ### advertising
 
@@ -309,6 +309,17 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Wolfram|Alpha](https://products.wolframalpha.com/api) `wolframalpha` | Computational answers to natural-language questions (math, science, units, data on places, finance, dates and more): LLM-ready text, one-line answers, structured result pods or a rendered result image. | 4 read | key in query | `WOLFRAM_ALPHA_APPID` | docs 2026-11-09 |
 | [xAI (Grok)](https://docs.x.ai/developers/rest-api-reference/inference.md) `xai` | Grok language models with server-side web and X search, image generation and model listings through the xAI API. | 7 read | key in header | `XAI_API_KEY` | docs 2026-11-09 |
 | [Zhipu AI (BigModel)](https://docs.bigmodel.cn/cn/guide/start/introduction) `zhipu` | GLM chat models, a web search API built for LLMs, a web page reader, embeddings and image generation on Zhipu's BigModel open platform (mainland China). | 6 read | key in header | `ZAI_API_KEY` | docs 2026-11-09 |
+
+### media-generation
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Creatify](https://docs.creatify.ai/introduction) `creatify` | AI video ads from a product link: scrape a URL, generate avatar-led short videos, and list avatars and voices. | 6 read | key in header | `CREATIFY_API_ID`, `CREATIFY_API_KEY` | docs 2026-11-09 |
+| [fal.ai](https://fal.ai/docs/api-reference/inference-api/index) `fal` | Hosted image, video, audio and 3D generation models run through fal's queue API, plus model search, pricing and usage. | 5 read | key in header | `FAL_KEY` | docs 2026-11-09 |
+| [Higgsfield](https://docs.higgsfield.ai/docs) `higgsfield` | Image and video generation (SOUL, Kling, Seedance, Wan and more) through one asynchronous request API. | 4 read, 2 write | key in header | `HF_API_KEY_ID`, `HF_API_KEY_SECRET` | docs 2026-11-09 |
+| [Ideogram](https://developer.ideogram.ai/v2/ideogram-api/api-overview) `ideogram` | Text-to-image with strong typography (Ideogram 4.5), prompt enhancement, and hosted video models. | 5 read | key in header | `IDEOGRAM_API_KEY` | docs 2026-11-09 |
+| [Runway](https://docs.dev.runwayml.com/api/) `runway` | Video, image and audio generation (Gen-4.5 and hosted third-party models) as asynchronous tasks. | 6 read, 1 write | key in header | `RUNWAYML_API_SECRET` | docs 2026-11-09 |
+| [Shotstack](https://shotstack.io/docs/api/) `shotstack` | Render videos, images and audio from a JSON timeline or saved template, generate AI assets, and inspect media. | 9 read | key in header | `SHOTSTACK_API_KEY` | docs 2026-11-09 |
 
 ### developer
 
