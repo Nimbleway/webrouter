@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from tests.vendors.data import OAUTH, shipped_dir
-from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_CUSTOM_CATEGORY, VENDOR_ENV_CATALOG_DIR
+from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
 from web_router.vendors.catalog import builtin_catalog, get_catalog, load_vendor_file, reload_catalog
 
 SHIPPED = builtin_catalog()
@@ -42,15 +42,20 @@ def test_a_shipped_file(path: Path) -> None:
         assert credential.env, name
 
 
-def test_every_shipped_write_says_so() -> None:
-    """A mutate, delete or create endpoint not marked write would skip the allow_writes gate."""
+def test_no_shipped_endpoint_is_a_write() -> None:
+    """The shipped catalog reads only (AGENTS.md, "Adding a vendor"): writes go through vendor_request."""
+    writes = [endpoint.id for vendor in SHIPPED.all() for endpoint in vendor.endpoints if endpoint.kind == "write"]
+    assert writes == []
+
+
+def test_a_shipped_post_that_sounds_like_a_write_says_why_it_reads() -> None:
+    """No DELETE, PUT or PATCH ships, and a POST whose path sounds like a write has a note saying why it reads."""
     pattern = re.compile(r"(mutate|delete|remove|create|update|send|post|publish|upload)", re.IGNORECASE)
     for vendor in SHIPPED.all():
         for endpoint in vendor.endpoints:
-            if endpoint.method == "DELETE" or (endpoint.method in {"PUT", "PATCH"}):
-                assert endpoint.kind == "write", endpoint.id
+            assert endpoint.method not in {"DELETE", "PUT", "PATCH"}, endpoint.id
             if pattern.search(endpoint.path.rsplit("/", 1)[-1]) and endpoint.method != "GET":
-                assert endpoint.kind == "write" or endpoint.notes, f"{endpoint.id}: explain why this POST reads"
+                assert endpoint.notes, f"{endpoint.id}: explain why this POST reads"
 
 
 def test_every_shelf_is_used_and_none_is_a_catch_all() -> None:
@@ -60,7 +65,7 @@ def test_every_shelf_is_used_and_none_is_a_catch_all() -> None:
     """
     assert "other" not in VENDOR_CATEGORIES
     shipped = {vendor.category for vendor in SHIPPED.all()}
-    assert shipped == set(VENDOR_CATEGORIES) - {VENDOR_CUSTOM_CATEGORY}
+    assert shipped == set(VENDOR_CATEGORIES) - {"custom"}
 
 
 def test_shipped_env_variables_belong_to_one_vendor() -> None:

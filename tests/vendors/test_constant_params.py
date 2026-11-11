@@ -24,3 +24,26 @@ def test_a_constant_set_to_another_command_is_refused() -> None:
 def test_the_constant_itself_is_sent() -> None:
     plan = _plan({**_ITEM, "cmd": "GetIndexItemInfo"})
     assert ("cmd", "GetIndexItemInfo") in plan.query  # type: ignore[attr-defined]
+
+
+def test_a_json_true_matches_a_constant_written_as_the_string_true() -> None:
+    catalog = builtin_catalog()
+    endpoint = catalog.endpoint("signalbase.funding.search")
+    params = {name: spec.example for name, spec in endpoint.params.items() if spec.required}
+    plan = plan_endpoint(catalog.vendor("signalbase"), endpoint, {**params, "count": True})
+    assert plan is not None
+
+
+def _enrow(settings: dict[str, object]) -> object:
+    catalog = builtin_catalog()
+    params = {"fullname": "Jane Doe", "company_domain": "example.com", "settings": settings}
+    return plan_endpoint(catalog.vendor("enrow"), catalog.endpoint("enrow.email.find"), params)
+
+
+def test_a_webhook_inside_an_object_input_is_refused() -> None:
+    with pytest.raises(UnsupportedParameterError, match=r"settings\.webhook"):
+        _enrow({"webhook": "https://example.org/x"})
+
+
+def test_the_object_input_still_takes_its_documented_keys() -> None:
+    assert _enrow({"country_code": "US"}).body["settings"] == {"country_code": "US"}  # type: ignore[attr-defined]

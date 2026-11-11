@@ -6,6 +6,7 @@ the package, the way the other method families keep their own.
 
 from __future__ import annotations
 
+import re
 from typing import Final
 
 VENDOR_CATALOG_DIR: Final = "data/vendors"
@@ -132,9 +133,6 @@ VENDOR_CATEGORIES: Final = tuple(VENDOR_CATEGORY_DESCRIPTIONS)
 """The shelves a vendor is listed under, one per vendor. There is no catch-all for shipped vendors: one that
 fits none needs a new shelf."""
 
-VENDOR_CUSTOM_CATEGORY: Final = "custom"
-"""The one shelf no shipped vendor uses: for a file in the user's own catalog directory that fits no other."""
-
 MSG_VENDOR_OAUTH_LITERAL: Final = (
     "oauth2.{field} is sent as written and cannot hold a placeholder: {value!r}. Use the literal value."
 )
@@ -171,6 +169,11 @@ MSG_VENDOR_CATALOG_ENDPOINT_PREFIX: Final = "endpoint id {endpoint!r} must start
 MSG_VENDOR_CATALOG_PATH_PARAM: Final = "endpoint {endpoint!r}: path placeholder {{{name}}} has no 'path' parameter"
 MSG_VENDOR_CATALOG_PATH_UNUSED: Final = "endpoint {endpoint!r}: path parameter {name!r} is not in the path"
 MSG_VENDOR_CATALOG_BODY_ON_GET: Final = "endpoint {endpoint!r}: a {method} request cannot carry body parameters"
+VENDOR_CALLBACK_KEY: Final = re.compile(r"webhook|callback", re.IGNORECASE)
+"""A key inside an object input that names one is refused: it would send the answer to an address the caller picks."""
+MSG_VENDOR_CALLBACK_REFUSED: Final = (
+    "Callback and webhook URLs are left out of vendor calls; poll for the result instead."
+)
 MSG_VENDOR_CATALOG_WHEN: Final = "injection {injection!r}: when {name}={value!r} names no choice of a setting"
 MSG_VENDOR_CATALOG_UNKNOWN_REF: Final = (
     "auth references {{{name}}}, which is neither a credential, a setting nor access_token"

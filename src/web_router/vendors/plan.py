@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import quote
 
-from web_router.constants_vendors import MSG_VENDOR_BAD_PATH
+from web_router.constants_vendors import MSG_VENDOR_BAD_PATH, MSG_VENDOR_CALLBACK_REFUSED, VENDOR_CALLBACK_KEY
 from web_router.exceptions import ConfigurationError, MissingParameterError, UnsupportedParameterError
 from web_router.vendors.catalog import get_catalog
 from web_router.vendors.schema import Vendor, VendorEndpoint, VendorParam
@@ -50,21 +50,34 @@ def _query_pairs(name: str, value: Any) -> list[tuple[str, str]]:
     return [(name, _text(value))]
 
 
-def _off_constant(endpoint: VendorEndpoint, params: Mapping[str, Any]) -> set[str]:
-    """Inputs given another value than the only one their ``enum`` allows: a constant such as Majestic's ``cmd``."""
-    return {
-        name
-        for name, spec in endpoint.params.items()
-        if spec.enum is not None and len(spec.enum) == 1 and params.get(name) not in (None, spec.enum[0])
-    }
+def _callback_keys(value: Any, path: str = "") -> list[str]:
+    """Where an object input names a webhook or callback URL, at any depth: the catalog leaves those out."""
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, inner in value.items():
+            where = f"{path}.{key}" if path else str(key)
+            if VENDOR_CALLBACK_KEY.search(str(key)):
+                found.append(where)
+            found += _callback_keys(inner, where)
+    elif isinstance(value, list):
+        for inner in value:
+            found += _callback_keys(inner, path)
+    return found
 
 
-def _fixed_values(endpoint: VendorEndpoint, names: set[str]) -> str:
-    return ", ".join(f"{name}={endpoint.params[name].enum[0]!r}" for name in sorted(names))  # type: ignore[index]
+def _off_constant(endpoint: VendorEndpoint, params: Mapping[str, Any]) -> dict[str, tuple[Any, Any]]:
+    """Each input given another value than the only one its ``enum`` allows (a constant such as Majestic's
+    ``cmd``), as (given, allowed). Compared as sent, so a JSON ``true`` matches a constant ``"true"``."""
+    off: dict[str, tuple[Any, Any]] = {}
+    for name, spec in endpoint.params.items():
+        given = params.get(name)
+        if spec.enum and len(spec.enum) == 1 and given is not None and _text(given) != _text(spec.enum[0]):
+            off[name] = (given, spec.enum[0])
+    return off
 
 
-def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str, Any]) -> _Plan:
-    """Place each input where the endpoint declares it, refusing undeclared and missing ones."""
+def _refuse_bad_inputs(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str, Any]) -> None:
+    """Undeclared, missing, callback-carrying and off-constant inputs, each refused before anything is sent."""
     unknown = set(params) - set(endpoint.params)
     if unknown:
         detail = f"{endpoint.id} takes: {', '.join(sorted(endpoint.params)) or 'no parameters'}."
@@ -77,10 +90,19 @@ def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str,
     }
     if missing:
         raise MissingParameterError(vendor.vendor, missing, detail=f"{endpoint.id} requires them.")
-    fixed = _off_constant(endpoint, params)
-    if fixed:
-        detail = f"{endpoint.id} fixes them: {_fixed_values(endpoint, fixed)}."
-        raise UnsupportedParameterError(vendor.vendor, fixed, detail=detail)
+    callbacks = [where for name, value in params.items() for where in _callback_keys(value, name)]
+    if callbacks:
+        raise UnsupportedParameterError(vendor.vendor, callbacks, detail=MSG_VENDOR_CALLBACK_REFUSED)
+    off = _off_constant(endpoint, params)
+    if off:
+        fixed = ", ".join(f"{name}={allowed!r}" for name, (_, allowed) in sorted(off.items()))
+        given = {name: value for name, (value, _) in off.items()}
+        raise UnsupportedParameterError(vendor.vendor, off, values=given, detail=f"{endpoint.id} takes only {fixed}.")
+
+
+def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str, Any]) -> _Plan:
+    """Place each input where the endpoint declares it, refusing undeclared and missing ones."""
+    _refuse_bad_inputs(vendor, endpoint, params)
     plan = _Plan(vendor=vendor, endpoint=endpoint.id, method=endpoint.method, path=endpoint.path)
     plan.body_type = endpoint.body_type
     plan.host = endpoint.host
