@@ -68,7 +68,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.exceptions_budget import BudgetExceededError
-from web_router.exceptions_live_data import LiveDataSourceNotFoundError
+from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotFoundError
 from web_router.live_data_search import NativeSourceSearch
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -235,6 +235,7 @@ __all__ = [
     "ExtractRequest",
     "ExtractResponse",
     "ExtractedDocument",
+    "LiveDataJobError",
     "LiveDataProvider",
     "LiveDataRequest",
     "LiveDataResponse",

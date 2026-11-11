@@ -1,4 +1,4 @@
-"""The error a live data run or describe raises for a source name the backend does not have.
+"""The errors live data raises: a source name the backend does not have, and a billed job that did not finish.
 
 Kept apart from :mod:`web_router.exceptions`, which is at its size limit, as
 :mod:`web_router.exceptions_budget` is; it imports that module, never the reverse.
@@ -35,3 +35,17 @@ class LiveDataSourceNotFoundError(ProviderError):
         self.source = source
         self.template = source
         super().__init__(provider, MSG_LIVE_DATA_SOURCE_NOT_FOUND.format(name=source) + hint, original=original)
+
+
+class LiveDataJobError(ProviderError):
+    """A live data run the backend took as a job failed, or was still running, after it was submitted.
+
+    The job is billed once submitted, so :attr:`job_id` names it on every
+    error after that point -- a faulted job, a poll that failed, or a wait cut
+    short by the call's deadline -- and the job can be read later rather than
+    paid for again.
+    """
+
+    def __init__(self, provider: str, message: str, *, job_id: str, original: BaseException | None = None) -> None:
+        super().__init__(provider, message, original=original)
+        self.job_id = job_id

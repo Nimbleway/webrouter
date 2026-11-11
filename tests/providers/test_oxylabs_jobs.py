@@ -8,6 +8,7 @@ synthetic. Not yet verified live.
 from __future__ import annotations
 
 import os
+import time
 
 import httpx
 import pytest
@@ -16,7 +17,8 @@ from tests.providers._live_data_http import Api, wire
 from tests.providers._oxylabs import BASE, PENDING, _answer, _job, _provider, _scraped, _sent
 from web_router import WebRouter
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.exceptions_live_data import LiveDataSourceNotFoundError
+from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotFoundError
+from web_router.providers._deadline import call_deadline
 from web_router.providers.oxylabs_live_data import OxylabsLiveDataProvider
 from web_router.types_live_data import LiveDataRequest
 
@@ -64,6 +66,32 @@ def test_a_lost_job_is_not_reported_as_an_unknown_source(monkeypatch: pytest.Mon
     with pytest.raises(ProviderError, match="job 42") as caught:
         provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
     assert not isinstance(caught.value, LiveDataSourceNotFoundError)
+
+
+def test_a_failed_poll_names_the_job_the_caller_can_read_later(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
+    provider, _ = _provider(lambda r: httpx.Response(202, json=PENDING) if r.method == "POST" else httpx.Response(500))
+    with pytest.raises(LiveDataJobError, match="7497734325668954113") as caught:
+        provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
+    assert caught.value.job_id == "7497734325668954113"
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+async def test_a_call_deadline_ends_the_wait_with_the_jobs_id(
+    monkeypatch: pytest.MonkeyPatch, asynchronous: bool
+) -> None:
+    """The job is billed: a wait cut short by the caller's deadline still says which job to read later."""
+    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.05)
+    provider, _ = _provider(lambda r: httpx.Response(202 if r.method == "POST" else 200, json=PENDING))
+    request = LiveDataRequest(source="chatgpt", inputs={"query": "hello"})
+    started = time.monotonic()
+    with call_deadline(0.8), pytest.raises(LiveDataJobError, match="still running") as caught:
+        if asynchronous:
+            await provider.arun(request)
+        else:
+            provider.run(request)
+    assert caught.value.job_id == "7497734325668954113"
+    assert time.monotonic() - started < 0.8
 
 
 # -- keys ---------------------------------------------------------------------

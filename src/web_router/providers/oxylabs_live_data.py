@@ -50,6 +50,7 @@ from web_router.constants_live_data_vendors import (
     OXYLABS_BATCH_PREFIX,
     OXYLABS_DOCS_URL,
     OXYLABS_FAILED_FETCH_FLOOR,
+    OXYLABS_JOB_DEADLINE_MARGIN,
     OXYLABS_JOB_DONE,
     OXYLABS_JOB_FAULTED,
     OXYLABS_JOB_POLL_SECONDS,
@@ -62,7 +63,8 @@ from web_router.constants_live_data_vendors import (
     OXYLABS_WEB_API_BASE_URL,
 )
 from web_router.exceptions import ProviderError
-from web_router.exceptions_live_data import LiveDataSourceNotFoundError
+from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotFoundError
+from web_router.providers._deadline import current_deadline, job_deadline
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers._utils import resolve_setting
 from web_router.providers.oxylabs_options import input_schema
@@ -213,7 +215,7 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
             first = (body.get("results") or [{}])[0]
             status = (first.get("metadata") or {}).get("status_code")
             message = MSG_OXYLABS_FAULTED.format(job_id=job_id, source=request.source, status=status)
-            raise ProviderError(self.name, message)
+            raise LiveDataJobError(self.name, message, job_id=job_id)
         return state == OXYLABS_JOB_DONE
 
     def _job_id(self, request: LiveDataRequest, payload: Any) -> str:
@@ -222,38 +224,62 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
             raise ProviderError(self.name, MSG_OXYLABS_FAULTED.format(job_id="?", source=request.source, status=None))
         return job_id
 
-    def _still_running(self, request: LiveDataRequest, job_id: str) -> ProviderError:
-        message = MSG_OXYLABS_STILL_RUNNING.format(source=request.source, seconds=self.wait_seconds, job_id=job_id)
-        return ProviderError(self.name, message)
+    def _still_running(self, request: LiveDataRequest, job_id: str, seconds: float) -> LiveDataJobError:
+        message = MSG_OXYLABS_STILL_RUNNING.format(source=request.source, seconds=seconds, job_id=job_id)
+        return LiveDataJobError(self.name, message, job_id=job_id)
 
-    def _poll_failed(self, request: LiveDataRequest, job_id: str, exc: ProviderError) -> ProviderError:
+    def _poll_failed(self, request: LiveDataRequest, job_id: str, exc: ProviderError) -> LiveDataJobError:
         message = MSG_OXYLABS_POLL_FAILED.format(job_id=job_id, source=request.source, error=exc)
-        return ProviderError(self.name, message, original=exc.original)
+        return LiveDataJobError(self.name, message, job_id=job_id, original=exc.original)
+
+    def _wait_until(self) -> float:
+        """When the wait gives up: after :attr:`wait_seconds`, or just before the call's deadline when that is sooner.
+
+        Stopping short of the call's deadline is what keeps the job's id: at the
+        deadline itself the router raises its own error, which names no job.
+        """
+        until = time.monotonic() + self.wait_seconds
+        call = current_deadline()
+        return until if call is None else min(until, call.at - OXYLABS_JOB_DEADLINE_MARGIN)
 
     def _wait(self, request: LiveDataRequest, payload: Any) -> Any:
         job_id = self._job_id(request, payload)
-        deadline = time.monotonic() + self.wait_seconds
-        while not self._state(request, job_id, payload):
-            if time.monotonic() >= deadline:
-                raise self._still_running(request, job_id)
-            time.sleep(self.poll_seconds)
-            try:
-                payload = self._send("GET", f"{OXYLABS_ASYNC_PREFIX}/{job_id}")
-            except ProviderError as exc:
-                raise self._poll_failed(request, job_id, exc) from exc
+        started, until = time.monotonic(), self._wait_until()
+        # Each poll is clamped to the wait's end, so a slow one fails as a poll -- naming the job -- not as the call.
+        with job_deadline(until):
+            while not self._state(request, job_id, payload):
+                if time.monotonic() >= until:
+                    raise self._still_running(request, job_id, until - started)
+                time.sleep(max(0.0, min(self.poll_seconds, until - time.monotonic())))
+                if time.monotonic() >= until:
+                    raise self._still_running(request, job_id, until - started)
+                failed = None
+                try:
+                    payload = self._send("GET", f"{OXYLABS_ASYNC_PREFIX}/{job_id}")
+                except ProviderError as exc:
+                    failed = exc
+                if failed is not None:
+                    # Raised outside the except, so the deadline check reads it as the job's failure, not a timeout.
+                    raise self._poll_failed(request, job_id, failed)
         return payload
 
     async def _await(self, request: LiveDataRequest, payload: Any) -> Any:
         job_id = self._job_id(request, payload)
-        deadline = time.monotonic() + self.wait_seconds
-        while not self._state(request, job_id, payload):
-            if time.monotonic() >= deadline:
-                raise self._still_running(request, job_id)
-            await asyncio.sleep(self.poll_seconds)
-            try:
-                payload = await self._asend("GET", f"{OXYLABS_ASYNC_PREFIX}/{job_id}")
-            except ProviderError as exc:
-                raise self._poll_failed(request, job_id, exc) from exc
+        started, until = time.monotonic(), self._wait_until()
+        with job_deadline(until):
+            while not self._state(request, job_id, payload):
+                if time.monotonic() >= until:
+                    raise self._still_running(request, job_id, until - started)
+                await asyncio.sleep(max(0.0, min(self.poll_seconds, until - time.monotonic())))
+                if time.monotonic() >= until:
+                    raise self._still_running(request, job_id, until - started)
+                failed = None
+                try:
+                    payload = await self._asend("GET", f"{OXYLABS_ASYNC_PREFIX}/{job_id}")
+                except ProviderError as exc:
+                    failed = exc
+                if failed is not None:
+                    raise self._poll_failed(request, job_id, failed)
         return payload
 
     def _to_response(self, request: LiveDataRequest, payload: Any) -> LiveDataResponse:
