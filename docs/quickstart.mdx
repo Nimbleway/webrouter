@@ -1,0 +1,139 @@
+---
+title: "Quickstart"
+description: "Install WebRouter and make your first calls: search and extract with no key, then name a provider. Plus extras and installing from source."
+icon: "rocket"
+---
+
+This page takes you from install to a working search and extract in four steps. No key is needed to start: the default provider uses the backends that offer an anonymous tier.
+
+<Steps>
+  <Step title="Install">
+    <CodeGroup>
+    ```bash pip
+    pip install "webrouter[all]"
+    ```
+
+    ```bash uv
+    uv add "webrouter[all]"
+    ```
+
+    ```bash MCP server
+    pip install "webrouter[mcp,browser]"  # the MCP server with its browser tools
+    ```
+    </CodeGroup>
+
+    The package is `webrouter`; the import name is `web_router`. Put the keys you hold in your environment or a `.env` file; none is required. [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names each variable.
+  </Step>
+  <Step title="Search with no key">
+    ```python quickstart.py wrap
+    from web_router import WebRouter
+
+    response = WebRouter().search("what is retrieval augmented generation", max_results=5)
+
+    for result in response.results:
+        print(result.title, result.url)
+
+    print(response.provider)  # which backend actually answered
+    ```
+
+    <Accordion title="Example output">
+    ```text
+    Retrieval-augmented generation - Wikipedia https://en.wikipedia.org/wiki/Retrieval-augmented_generation
+    What is Retrieval Augmented Generation (RAG)? | Databricks https://www.databricks.com/blog/what-is-retrieval-augmented-generation
+    What Is Retrieval-Augmented Generation aka RAG | NVIDIA Blogs https://blogs.nvidia.com/blog/what-is-retrieval-augmented-generation
+    What is RAG (Retrieval Augmented Generation)? | IBM https://www.ibm.com/think/topics/retrieval-augmented-generation
+    What is Retrieval-Augmented Generation (RAG)? | Google Cloud https://cloud.google.com/use-cases/retrieval-augmented-generation
+    tavily
+    ```
+    Run with no keys set. Results and the answering provider vary from run to run.
+    </Accordion>
+  </Step>
+  <Step title="Read the pages you found">
+    ```python
+    pages = WebRouter().extract(response.urls[:3], format="markdown")
+
+    for document in pages.documents:
+        print(document.url, len(document.content))
+    ```
+  </Step>
+  <Step title="Name a provider">
+    Once you have a key for one, name it. `Provider` is an enum of the built-in backends, so your editor completes it and a typo is caught where you type it.
+
+    ```python
+    from web_router import Provider, WebRouter
+
+    router = WebRouter(Provider.NIMBLE)  # reads NIMBLE_API_KEY from the environment
+    response = router.search("who founded nimbleway", max_results=5, country="US")
+
+    router.search("...", provider=Provider.BRAVE)  # per-call override
+    ```
+
+    A backend that does not map an option you set, such as `country`, raises `UnsupportedParameterError` rather than quietly running the search unfiltered. See [Providers](/providers) for which keys unlock which backends.
+  </Step>
+</Steps>
+
+<Accordion title="Async">
+```python
+import asyncio
+from web_router import AsyncWebRouter, Provider
+
+
+async def main():
+    async with AsyncWebRouter(Provider.NIMBLE) as router:
+        response = await router.search("latest nvidia earnings", max_results=3)
+        pages = await router.extract(response.urls, format="markdown")
+        print(pages.urls)
+
+
+asyncio.run(main())
+```
+</Accordion>
+
+## Install options
+
+You can install fewer extras by naming them in place of `all`. Extras are named after the **methods you call**, not the backends behind them: `search` brings in every provider that can serve one, so choosing between them stays a runtime decision.
+
+| Extra | Installs |
+| --- | --- |
+| `search`, `extract`, `research` | Every provider that can serve that method |
+| `browser` | Playwright, so a browser handle can drive the page |
+| `mcp` | The MCP server, which exposes the methods as tools. Add `browser` for its `browser_*` tools |
+| `evals` | The OpenAI and Anthropic SDKs behind the built-in judges of `evaluate()` |
+| `langchain` | `langchain-core` for the LangChain tools |
+| `remote` | httpx for the built-in `remote` router |
+| `all` | Everything above |
+
+`open_browser` needs no Playwright: a vendor session opens over httpx, which `[all]` installs, and `local` needs only the standard library and a Chrome or Chromium.
+
+<Accordion title="From source">
+For contributors or to track `main`: the one prerequisite is
+[uv](https://docs.astral.sh/uv/getting-started/installation/), which fetches
+the right Python itself.
+
+```bash wrap
+git clone https://github.com/Nimbleway/webrouter.git
+cd webrouter
+make setup              # every extra: the library, the MCP server, the browser tools and a local Chromium
+cp .env.example .env    # then fill in only the keys you hold; none is required
+```
+
+Using a coding agent? Tell it *"clone https://github.com/Nimbleway/webrouter
+and set it up"*. [CLAUDE.md](https://github.com/Nimbleway/webrouter/blob/main/CLAUDE.md) walks it through the rest. To use the
+clone from another project, install it in editable mode
+(`uv add --editable "/path/to/webrouter[all]"` or
+`pip install -e "/path/to/webrouter[all]"`), so `git pull && make setup` in the
+clone is the whole update.
+</Accordion>
+
+## Runnable examples
+
+[`examples/`](https://github.com/Nimbleway/webrouter/blob/main/examples/README.md) has a script per topic (routing, every error
+and its fix, depth measured across backends, adding your own provider), and
+**most need no credentials**, routing through the keyless backends;
+[`browser_session.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/browser_session.py) drives a local Chromium
+with none. [`main.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/main.py) is a guided tour of search and extract
+in one file:
+
+```bash
+uv run --env-file .env python examples/main.py
+```

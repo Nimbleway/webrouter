@@ -1,0 +1,59 @@
+---
+title: "Provider support"
+description: "Which providers serve each WebRouter method, the key each one needs, and which methods work with no credentials at all."
+sidebarTitle: "Providers"
+mode: "wide"
+icon: "plug"
+---
+
+Pick a provider by name, or let `auto` pick for you. A provider serves only the methods marked for it; ask a method for another's provider and it says so, naming the ones it does serve.
+
+Your queries go to the provider you select, and each provider's terms govern your use of its
+results. WebRouter does not change them. Provider names and logos are trademarks of their owners,
+used here for identification only.
+
+## Which provider serves which method
+
+| Provider | Search | Extract | Answer | Research | Browser session | Browse |
+| --- | --- | --- | --- | --- | --- | --- |
+| [AWS AgentCore](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html) | ✓ |  |  |  |  |  |
+| [Anchor](https://anchorbrowser.io) |  |  |  |  | ✓ |  |
+| [Brave](https://brave.com/search/api/) | ✓ |  | ✓ |  |  |  |
+| [Bright Data](https://brightdata.com) |  | ✓ |  |  |  |  |
+| [Browser Use](https://browser-use.com) |  |  |  |  |  | ✓ |
+| [Browserbase](https://www.browserbase.com) |  | ✓ |  |  | ✓ | ✓ |
+| [DeepSeek](https://api-docs.deepseek.com) | ✓ | ✓ |  |  |  |  |
+| [Exa](https://exa.ai) | ✓ keyless | ✓ | ✓ |  |  |  |
+| [Firecrawl](https://firecrawl.dev) |  | ✓ keyless |  |  |  |  |
+| [Hyperbrowser](https://hyperbrowser.ai) |  |  |  |  | ✓ |  |
+| [Jina Reader](https://jina.ai/reader) |  | ✓ keyless |  |  |  |  |
+| [Keenable](https://docs.keenable.ai) | ✓ keyless | ✓ keyless |  |  |  |  |
+| [Kernel](https://kernel.sh) |  |  |  |  | ✓ |  |
+| [Linkup](https://www.linkup.so) | ✓ | ✓ | ✓ | ✓ |  |  |
+| [Local Chromium](https://www.chromium.org) |  |  |  |  | ✓ keyless |  |
+| [Nimble](https://nimbleway.com) | ✓ | ✓ |  | ✓ |  |  |
+| [Oxylabs](https://oxylabs.io) |  | ✓ |  |  |  |  |
+| [Parallel](https://parallel.ai) | ✓ keyless |  | ✓ | ✓ |  |  |
+| [Perplexity](https://docs.perplexity.ai) | ✓ |  | ✓ | ✓ |  |  |
+| [Skyvern](https://skyvern.com) |  |  |  |  |  | ✓ |
+| [Steel](https://steel.dev) |  |  |  |  | ✓ |  |
+| [Tavily](https://tavily.com) | ✓ keyless | ✓ keyless |  |  |  |  |
+| [WebIQ](https://webiq.microsoft.ai) | ✓ | ✓ |  |  |  |  |
+| [You.com](https://you.com/platform) | ✓ keyless |  | ✓ | ✓ |  |  |
+
+**✓** the provider serves this method, with its key ([Configuration](/configuration) names each variable). **keyless** means it also works with no key, rate-limited. `auto` is the default for every method and picks among the providers you can use.
+
+## Working with no credentials
+
+You can start with no API keys. `auto`, the default for every method, uses the providers you have a key for first, and falls back to free tiers when you have none.
+
+| Method | Free tiers, tried in this order |
+| --- | --- |
+| Search | Tavily, then You.com, Exa and Parallel (their open MCP servers), then Keenable |
+| Extract | Tavily, then Jina Reader, Firecrawl, then Keenable |
+| Browser session | `local` (a Chromium on your machine) |
+| Answer, research, browse | None: every call is billed, so they need a key |
+
+- **Rate limits.** Free tiers are rate-limited. When one is throttled, the next in the list answers.
+- **Which one answered.** `response.provider` names the provider that served the call, never `"auto"`.
+- **Missing key.** A method with no free tier raises an error that names the key to set.
