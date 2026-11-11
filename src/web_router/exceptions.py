@@ -47,7 +47,6 @@ from web_router.constants import (
     MSG_OPTION_VALUE,
     MSG_PROVIDER_NOT_INSTALLED,
     MSG_RESEARCH_TIMEOUT,
-    MSG_TEMPLATE_NOT_FOUND,
     MSG_UNKNOWN_PROVIDER,
     MSG_UNSUPPORTED_FORMAT,
     MSG_UNSUPPORTED_FORMAT_ADVICE,
@@ -315,20 +314,6 @@ class ProviderError(WebRouterError):
         super().__init__(f"[{provider}] {message}")
         self.provider = provider
         self.original = original
-
-
-class TemplateNotFoundError(ProviderError):
-    """A template run or describe named a template the backend does not have.
-
-    A :class:`ProviderError`, because the backend answered and said so, with
-    its own class so a caller can tell a wrong name from a run that failed.
-    Template names are the vendor's own: the same page has a different name
-    on each.
-    """
-
-    def __init__(self, provider: str, template: str, *, original: BaseException | None = None) -> None:
-        self.template = template
-        super().__init__(provider, MSG_TEMPLATE_NOT_FOUND.format(name=template), original=original)
 
 
 class BrowserActionError(WebRouterError):
