@@ -36,7 +36,7 @@
   "notes": [
     "Every endpoint is a POST, and the API key and account email go in the JSON body beside the call's own fields, as Adyntel's examples show; the router adds both.",
     "Credits: roughly one per page (about 30 ads); a 204 (no ads found) is not charged. 401 means bad credentials, 402 not enough credits.",
-    "Pagination: send the previous answer's continuation_token back with the same other fields. The last page returns a null token.",
+    "Pagination (all but meta.keyword_search): send the previous answer's continuation_token back with the same other fields. The last page returns a null token.",
     "all_ads and webhook_url are left out of this catalog: they push results to another URL and can burn many credits."
   ],
   "sources": [
@@ -271,7 +271,7 @@
         }
       },
       "notes": [
-        "A read over POST. The answer has continuation_token and is_result_complete; false means more exist."
+        "A read over POST. The answer has continuation_token and is_result_complete, but this endpoint documents no way to send the token back for more."
       ],
       "job": "ads.library.search",
       "docs_url": "https://docs.adyntel.com/ad-libraries/meta-ad-search.md",
