@@ -276,14 +276,10 @@
         },
         "columns": {
           "in": "query",
-          "type": "array",
+          "type": "string",
           "required": true,
           "description": "Metric columns, comma-separated: SPEND_IN_DOLLAR, IMPRESSION_1, CLICKTHROUGH_1, TOTAL_CONVERSIONS, ...",
-          "example": [
-            "SPEND_IN_DOLLAR",
-            "IMPRESSION_1",
-            "CLICKTHROUGH_1"
-          ]
+          "example": "SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1"
         },
         "granularity": {
           "in": "query",
@@ -300,17 +296,41 @@
         },
         "click_window_days": {
           "in": "query",
-          "type": "number",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
           "description": "Conversion attribution window in days for a pin click."
         },
         "engagement_window_days": {
           "in": "query",
-          "type": "number",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
           "description": "Conversion attribution window in days for an engagement action."
         },
         "view_window_days": {
           "in": "query",
-          "type": "number",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
           "description": "Conversion attribution window in days for a view action."
         },
         "conversion_report_time": {
@@ -368,14 +388,10 @@
         },
         "columns": {
           "in": "query",
-          "type": "array",
+          "type": "string",
           "required": true,
           "description": "Metric columns, comma-separated: SPEND_IN_DOLLAR, IMPRESSION_1, CLICKTHROUGH_1, TOTAL_CONVERSIONS, ...",
-          "example": [
-            "SPEND_IN_DOLLAR",
-            "IMPRESSION_1",
-            "CLICKTHROUGH_1"
-          ]
+          "example": "SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1"
         },
         "granularity": {
           "in": "query",
@@ -392,17 +408,41 @@
         },
         "click_window_days": {
           "in": "query",
-          "type": "number",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
           "description": "Conversion attribution window in days for a pin click."
         },
         "engagement_window_days": {
           "in": "query",
-          "type": "number",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
           "description": "Conversion attribution window in days for an engagement action."
         },
         "view_window_days": {
           "in": "query",
-          "type": "number",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
           "description": "Conversion attribution window in days for a view action."
         },
         "conversion_report_time": {
