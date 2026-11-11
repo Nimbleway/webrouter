@@ -8,6 +8,7 @@ from typing import Any, ClassVar, get_args
 
 import pytest
 
+from tests._live_data_fake import FakeLiveDataProvider
 from web_router.exceptions import ProviderError
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -16,21 +17,20 @@ from web_router.providers.base import (
     ExtractProvider,
     ResearchProvider,
     SearchProvider,
-    TemplateProvider,
 )
 from web_router.registry import (
     register_browse_provider,
     register_browser_provider,
     register_extract_provider,
+    register_live_data_provider,
     register_provider,
     register_research_provider,
-    register_template_provider,
     unregister_browse_provider,
     unregister_browser_provider,
     unregister_extract_provider,
+    unregister_live_data_provider,
     unregister_provider,
     unregister_research_provider,
-    unregister_template_provider,
 )
 from web_router.registry_answer import register_answer_provider, unregister_answer_provider
 from web_router.types import (
@@ -39,7 +39,6 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
-    TEMPLATE_PARAMETERS,
     BrowseProgress,
     BrowseRequest,
     BrowseResponse,
@@ -60,11 +59,6 @@ from web_router.types import (
     SearchResponse,
     SearchResult,
     StealthLevel,
-    Template,
-    TemplatePage,
-    TemplateRequest,
-    TemplateResponse,
-    TemplateSample,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
@@ -164,112 +158,11 @@ def fake_extract_provider() -> Any:
     unregister_extract_provider("fake")
 
 
-FAKE_TEMPLATE_NAMES = ("books_pdp", "jobs_listing")
-"""The two templates the fake backend holds."""
-
-
-class FakeTemplateProvider(TemplateProvider):
-    """An in-memory Extract Template backend so router tests never touch the network.
-
-    Holds a two-template catalogue, describes either, and runs any name it is
-    given with a record echoing the inputs, so a test can assert on what
-    reached it. ``unknown_names`` raises on a name, as a real backend's 404 would.
-    """
-
-    name = "fake"
-    supported_parameters = TEMPLATE_PARAMETERS
-    supported_formats: frozenset[ExtractFormat] = frozenset({"markdown", "html"})
-
-    unknown_names: ClassVar[frozenset[str]] = frozenset()
-    run_raises: ClassVar[Exception | None] = None
-    """What every run raises instead of answering, so a chain test sets a member's behaviour on its class."""
-    list_raises: ClassVar[Exception | None] = None
-
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self.requests: list[TemplateRequest] = []
-        self.listed: list[tuple[int | None, int | None]] = []
-        self.described: list[str] = []
-        self.closed = False
-
-    def _describe(self, name: str) -> Template:
-        if name in self.unknown_names:
-            raise RuntimeError(f"HTTP 404: no template {name}")
-        return Template(
-            provider=self.name,
-            name=name,
-            description=f"what {name} extracts",
-            domain="example.com",
-            entity_type="Product Detail Page (PDP)",
-            input_schema={"type": "object", "required": ["url"], "properties": {"url": {"type": "string"}}},
-            output_schema={"type": "object", "properties": {"title": {"type": "string"}}},
-            samples=[TemplateSample(input={"url": "https://example.com/p/1"}, output={"title": "A"})],
-            version=1,
-            published=True,
-            raw={"name": name},
-        )
-
-    def _respond(self, request: TemplateRequest) -> TemplateResponse:
-        self.requests.append(request)
-        if self.run_raises is not None:
-            raise self.run_raises
-        document = (
-            ExtractedDocument(url="https://example.com/page", content="# Page", format=request.format)
-            if request.format
-            else None
-        )
-        return TemplateResponse(
-            provider=self.name,
-            template=request.template,
-            inputs=dict(request.inputs),
-            data={"title": "Example", "inputs": dict(request.inputs)},
-            url="https://example.com/page",
-            document=document,
-            request_id="task-1",
-            raw={"template": request.template, "inputs": dict(request.inputs)},
-        )
-
-    def _run(self, request: TemplateRequest) -> TemplateResponse:
-        return self._respond(request)
-
-    async def _arun(self, request: TemplateRequest) -> TemplateResponse:
-        return self._respond(request)
-
-    def _list(self, *, limit: int | None, offset: int | None) -> TemplatePage:
-        self.listed.append((limit, offset))
-        if self.list_raises is not None:
-            raise self.list_raises
-        return TemplatePage(
-            provider=self.name,
-            templates=[self._describe(name) for name in FAKE_TEMPLATE_NAMES],
-            total=len(FAKE_TEMPLATE_NAMES),
-            offset=offset,
-            limit=limit,
-            raw={"items": list(FAKE_TEMPLATE_NAMES)},
-        )
-
-    async def _alist(self, *, limit: int | None, offset: int | None) -> TemplatePage:
-        return self._list(limit=limit, offset=offset)
-
-    def _get(self, name: str) -> Template:
-        self.described.append(name)
-        return self._describe(name)
-
-    async def _aget(self, name: str) -> Template:
-        return self._get(name)
-
-    def close(self) -> None:
-        self.closed = True
-
-    async def aclose(self) -> None:
-        self.closed = True
-
-
 @pytest.fixture
-def fake_template_provider() -> Any:
-    register_template_provider("fake", FakeTemplateProvider)
-    yield FakeTemplateProvider
-    unregister_template_provider("fake")
+def fake_live_data_provider() -> Any:
+    register_live_data_provider("fake", FakeLiveDataProvider)
+    yield FakeLiveDataProvider
+    unregister_live_data_provider("fake")
 
 
 @contextmanager

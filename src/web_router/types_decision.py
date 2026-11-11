@@ -48,6 +48,23 @@ class DecisionAttempt(BaseModel):
     seconds: float | None = Field(default=None, description="Wall-clock seconds the attempt took.")
 
 
+MemberOutcome = Literal["ok", "router_timeout", "router_error", "router_invalid", "router_empty"]
+"""What a composite router's member came to: ``ok`` when it decided something, else why it was passed over."""
+
+
+class DecisionMember(BaseModel):
+    """A router a composite router, such as ``fallback``, asked: how it answered, and how long it took."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(description="The member, as the composite names it: never its import path or a URL's path.")
+    outcome: MemberOutcome = Field(
+        description="ok when it decided something; else why the composite asked the next member."
+    )
+    ms: float = Field(description="Milliseconds from asking it to its answer, or to giving up on it.")
+    counted: bool = Field(description="Whether its decision is the one the composite answered with.")
+
+
 REASON_DESCRIPTION = (
     "The router's own reason. When the static order ran instead of the router's decision, why: "
     "router_timeout, router_error, router_invalid, or router_empty for a decision that decided nothing."
@@ -74,6 +91,9 @@ class DecisionRecord(BaseModel):
     hops: list[DecisionHop] | None = Field(default=None, description="The candidates the call moved past.")
     attempts: list[DecisionAttempt] | None = Field(default=None, description="Every candidate tried, in order.")
     reason: str | None = Field(default=None, description=REASON_DESCRIPTION)
+    members: list[DecisionMember] | None = Field(
+        default=None, description="The routers a composite router asked, in order; None for any other router."
+    )
     router_timeout: bool | None = Field(default=None, description="Whether the router ran out of time.")
     router_ms: float | None = Field(default=None, description="Milliseconds the router took.")
     dropped: dict[str, str] | None = Field(default=None, description="Candidates left out before routing -> why.")
