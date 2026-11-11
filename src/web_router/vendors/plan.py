@@ -116,8 +116,7 @@ def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str,
         wire = spec.wire_name or name
         if spec.location == "path":
             path_values[wire] = quote(_text(value), safe="")
-        elif spec.location == "query" and spec.type == "string":
-            # A list for an input declared one string goes as one JSON value (Meta's list filters), not repeated keys.
+        elif spec.location == "query" and spec.style == "json":
             plan.query.append((wire, _text(value)))
         elif spec.location == "query":
             plan.query += _query_pairs(wire, value)

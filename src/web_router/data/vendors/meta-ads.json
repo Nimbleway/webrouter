@@ -104,7 +104,8 @@
           "in": "query",
           "type": "string",
           "description": "JSON array of statuses: ACTIVE, PAUSED, ARCHIVED, DELETED, e.g. [\"ACTIVE\",\"PAUSED\"].",
-          "example": "[\"ACTIVE\",\"PAUSED\"]"
+          "example": "[\"ACTIVE\",\"PAUSED\"]",
+          "style": "json"
         },
         "date_preset": {
           "in": "query",
@@ -180,12 +181,14 @@
           "in": "query",
           "type": "string",
           "description": "JSON array of breakdowns: age, gender, country, region, publisher_platform...; only some combinations are allowed. E.g. [\"country\"].",
-          "example": "[\"country\"]"
+          "example": "[\"country\"]",
+          "style": "json"
         },
         "filtering": {
           "in": "query",
           "type": "string",
-          "description": "JSON array of {field, operator, value} filters; operators include EQUAL, IN, GREATER_THAN, CONTAIN. E.g. [{\"field\":\"campaign.effective_status\",\"operator\":\"IN\",\"value\":[\"ACTIVE\"]}]."
+          "description": "JSON array of {field, operator, value} filters; operators include EQUAL, IN, GREATER_THAN, CONTAIN. E.g. [{\"field\":\"campaign.effective_status\",\"operator\":\"IN\",\"value\":[\"ACTIVE\"]}].",
+          "style": "json"
         },
         "limit": {
           "in": "query",

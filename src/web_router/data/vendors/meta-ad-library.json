@@ -74,7 +74,8 @@
           "type": "string",
           "required": true,
           "description": "JSON array of ISO country codes the ad reached, e.g. [\"US\",\"GB\"], or [\"ALL\"].",
-          "example": "[\"US\"]"
+          "example": "[\"US\"]",
+          "style": "json"
         },
         "search_terms": {
           "in": "query",
@@ -93,7 +94,8 @@
         "search_page_ids": {
           "in": "query",
           "type": "string",
-          "description": "JSON array of Facebook Page ids, up to 10, e.g. [\"123\",\"456\"]."
+          "description": "JSON array of Facebook Page ids, up to 10, e.g. [\"123\",\"456\"].",
+          "style": "json"
         },
         "ad_active_status": {
           "in": "query",
@@ -118,7 +120,8 @@
         "languages": {
           "in": "query",
           "type": "string",
-          "description": "JSON array of ISO 639-1 codes (plus CMN, YUE), e.g. [\"en\",\"es\"]."
+          "description": "JSON array of ISO 639-1 codes (plus CMN, YUE), e.g. [\"en\",\"es\"].",
+          "style": "json"
         },
         "media_type": {
           "in": "query",
@@ -135,12 +138,14 @@
         "publisher_platforms": {
           "in": "query",
           "type": "string",
-          "description": "JSON array of FACEBOOK, INSTAGRAM, AUDIENCE_NETWORK, MESSENGER, WHATSAPP, OCULUS, THREADS, STREAMING_SERVICES."
+          "description": "JSON array of FACEBOOK, INSTAGRAM, AUDIENCE_NETWORK, MESSENGER, WHATSAPP, OCULUS, THREADS, STREAMING_SERVICES.",
+          "style": "json"
         },
         "bylines": {
           "in": "query",
           "type": "string",
-          "description": "JSON array of full 'paid for by' disclaimers. Political ads only."
+          "description": "JSON array of full 'paid for by' disclaimers. Political ads only.",
+          "style": "json"
         },
         "unmask_removed_content": {
           "in": "query",

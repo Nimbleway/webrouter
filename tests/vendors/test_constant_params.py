@@ -59,3 +59,16 @@ def test_a_list_for_an_input_declared_one_string_goes_as_one_json_value() -> Non
     assert [pair for pair in plan.query if pair[0] == "effective_status"] == [  # type: ignore[attr-defined]
         ("effective_status", '["ACTIVE","PAUSED"]')
     ]
+
+
+def test_a_list_for_a_repeatable_input_still_goes_as_repeated_keys() -> None:
+    catalog = builtin_catalog()
+    endpoint = catalog.endpoint("telnyx.number_lookup")
+    required = {
+        name: spec.example or "+15551234567" for name, spec in endpoint.params.items() if spec.location == "path"
+    }
+    plan = plan_endpoint(catalog.vendor("telnyx"), endpoint, {**required, "type": ["carrier", "caller-name"]})
+    assert [pair for pair in plan.query if pair[0] == "type"] == [  # type: ignore[attr-defined]
+        ("type", "carrier"),
+        ("type", "caller-name"),
+    ]

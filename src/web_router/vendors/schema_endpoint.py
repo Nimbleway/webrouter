@@ -32,6 +32,10 @@ class VendorParam(_Strict):
         default=None,
         description="The name the vendor uses, when it is not a valid Python identifier (e.g. 'filter[query]').",
     )
+    style: Literal["json"] | None = Field(
+        default=None,
+        description="'json': a list or object in the query goes as one JSON value, not as repeated keys.",
+    )
 
 
 class VendorVerification(_Strict):
