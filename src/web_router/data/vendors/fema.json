@@ -1,0 +1,672 @@
+{
+  "vendor": "fema",
+  "name": "OpenFEMA",
+  "category": "other",
+  "summary": "FEMA open data: disaster declarations, assistance and mitigation funding, and National Flood Insurance Program claims and policies, queryable with OData-style filters.",
+  "docs_url": "https://www.fema.gov/about/openfema/api",
+  "base_url": "https://www.fema.gov/api/open",
+  "notes": [
+    "Keyless and free.",
+    "Dataset names in the path and field names in $select/$filter are case-sensitive; the filter parser is strict about spaces, quotes and case.",
+    "Each dataset is versioned in the path (v1, v2, ...); a newer version can replace an older one, so check datasets.list.",
+    "Paging: $top (default 1000, max 10000) with $skip; set $count=true to get the total in metadata (otherwise it reads 0)."
+  ],
+  "sources": [
+    "https://www.fema.gov/about/openfema/api",
+    "https://www.fema.gov/about/openfema/data-sets"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fema.disasters.declarations",
+      "name": "Search disaster declarations",
+      "summary": "Every federally declared disaster since 1953 (major disaster, emergency, fire management) by declared area, with incident type, dates and programs declared.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/DisasterDeclarationsSummaries",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter",
+          "example": "state eq 'TX' and declarationDate ge '2024-01-01'"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "disasters.search",
+      "docs_url": "https://www.fema.gov/openfema-data-page/disaster-declarations-summaries-v2",
+      "verified": {
+        "docs": "https://www.fema.gov/openfema-data-page/disaster-declarations-summaries-v2"
+      }
+    },
+    {
+      "id": "fema.disasters.summaries",
+      "name": "Get disaster financial summaries",
+      "summary": "Per-disaster approved applications and individual, public and hazard-mitigation assistance amounts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/FemaWebDisasterSummaries",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "disasters.finance",
+      "docs_url": "https://www.fema.gov/openfema-data-page/fema-web-disaster-summaries-v1",
+      "verified": {
+        "docs": "https://www.fema.gov/openfema-data-page/fema-web-disaster-summaries-v1"
+      }
+    },
+    {
+      "id": "fema.disasters.areas",
+      "name": "List declared areas",
+      "summary": "Declared disasters by area: disaster number, declaration type, state, incident dates and type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/FemaWebDeclarationAreas",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "disasters.search",
+      "docs_url": "https://www.fema.gov/openfema-data-page/fema-web-declaration-areas-v1",
+      "verified": {
+        "docs": "https://www.fema.gov/openfema-data-page/fema-web-declaration-areas-v1"
+      }
+    },
+    {
+      "id": "fema.assistance.public_projects",
+      "name": "Search Public Assistance funded projects",
+      "summary": "Obligated Public Assistance projects (project worksheets) with their applicants.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/PublicAssistanceFundedProjectsDetails",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "disasters.finance",
+      "docs_url": "https://www.fema.gov/openfema-data-page/public-assistance-funded-projects-details-v2",
+      "verified": {
+        "docs": "https://www.fema.gov/openfema-data-page/public-assistance-funded-projects-details-v2"
+      }
+    },
+    {
+      "id": "fema.assistance.housing_owners",
+      "name": "Get housing assistance for owners",
+      "summary": "Housing Assistance for homeowners by state, county and zip per declaration, aggregated and without PII.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/HousingAssistanceOwners",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "disasters.finance",
+      "docs_url": "https://www.fema.gov/openfema-data-page/housing-assistance-program-data-owners-v2",
+      "verified": {
+        "docs": "https://www.fema.gov/openfema-data-page/housing-assistance-program-data-owners-v2"
+      }
+    },
+    {
+      "id": "fema.mitigation.projects",
+      "name": "Search Hazard Mitigation Assistance projects",
+      "summary": "Hazard mitigation projects funded by FEMA grant programs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/HazardMitigationAssistanceProjects",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "disasters.finance",
+      "docs_url": "https://www.fema.gov/openfema-data-page/hazard-mitigation-assistance-projects-v4",
+      "verified": {
+        "docs": "https://www.fema.gov/openfema-data-page/hazard-mitigation-assistance-projects-v4"
+      }
+    },
+    {
+      "id": "fema.nfip.claims",
+      "name": "Search NFIP flood insurance claims",
+      "summary": "Redacted National Flood Insurance Program claims transactions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/NfipClaims",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "insurance.claims",
+      "docs_url": "https://www.fema.gov/openfema-data-page/nfip-redacted-claims-v3",
+      "verified": {
+        "docs": "https://www.fema.gov/openfema-data-page/nfip-redacted-claims-v3"
+      }
+    },
+    {
+      "id": "fema.nfip.policies",
+      "name": "Search NFIP flood insurance policies",
+      "summary": "Redacted National Flood Insurance Program policy transactions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/NfipPolicies",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "insurance.policies",
+      "docs_url": "https://www.fema.gov/openfema-data-page/nfip-redacted-policies-v3",
+      "verified": {
+        "docs": "https://www.fema.gov/openfema-data-page/nfip-redacted-policies-v3"
+      }
+    },
+    {
+      "id": "fema.datasets.list",
+      "name": "List OpenFEMA datasets",
+      "summary": "Every dataset with its name, version, description and update dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/OpenFemaDataSets",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://www.fema.gov/about/openfema/api",
+      "verified": {
+        "docs": "https://www.fema.gov/about/openfema/api"
+      }
+    },
+    {
+      "id": "fema.datasets.fields",
+      "name": "List dataset fields",
+      "summary": "Field names, types and descriptions of each dataset, for $select and $filter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/OpenFemaDataSetFields",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter: eq ne gt ge lt le, and/or/not, in (...), startswith/endswith/substringof/contains; strings single-quoted, dates ISO-8601.",
+          "wire_name": "$filter"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma-separated (case-sensitive).",
+          "wire_name": "$select"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated, each optionally asc/desc.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; default 1000, at most 10000.",
+          "wire_name": "$top"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging.",
+          "wire_name": "$skip"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include the total matching count in metadata.",
+          "wire_name": "$count"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "wire_name": "$format",
+          "enum": [
+            "json",
+            "jsona",
+            "jsonl",
+            "geojson",
+            "csv",
+            "parquet"
+          ]
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://www.fema.gov/about/openfema/api",
+      "verified": {
+        "docs": "https://www.fema.gov/about/openfema/api"
+      }
+    }
+  ]
+}
