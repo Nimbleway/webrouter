@@ -30,6 +30,7 @@ import json
 from typing import Any, ClassVar
 
 from web_router.constants_apify import (
+    APIFY_ACTOR_NAME,
     APIFY_ACTOR_PATH,
     APIFY_BASE_URL,
     APIFY_DEFAULT_BUILD_PATH,
@@ -38,6 +39,7 @@ from web_router.constants_apify import (
     APIFY_STORE_PATH,
 )
 from web_router.constants_live_data import ENV_APIFY_TOKEN
+from web_router.exceptions import LiveDataSourceNotFoundError
 from web_router.live_data_search import NativeSourceSearch
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.types import Provider
@@ -54,8 +56,15 @@ _STORE_MAPPED = frozenset({"username", "name", "title", "description", "categori
 
 
 def actor_id(source: str) -> str:
-    """Apify's path form of an Actor name: ``username~name``, from either spelling."""
-    return source.strip().replace("/", "~")
+    """Apify's path form of an Actor name: ``username~name``, from either spelling.
+
+    Anything that is not an Actor id or ``username~name`` is refused before a request is built:
+    a ``?`` or ``#`` in the path would send the call to a different endpoint.
+    """
+    actor = source.strip().replace("/", "~")
+    if not APIFY_ACTOR_NAME.fullmatch(actor):
+        raise LiveDataSourceNotFoundError(Provider.APIFY.value, source)
+    return actor
 
 
 class ApifyLiveDataProvider(HttpLiveDataProvider, NativeSourceSearch):

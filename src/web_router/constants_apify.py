@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Final
 
 APIFY_BASE_URL: Final = "https://api.apify.com"
@@ -19,3 +20,6 @@ APIFY_RUN_PATH: Final = "/v2/actors/{actor}/run-sync-get-dataset-items"
 """Run and wait, up to 300 s; answers 201 with the dataset items as a JSON array, or 408 past the limit."""
 
 APIFY_ITEMS_FORMAT: Final = "json"
+
+APIFY_ACTOR_NAME: Final = re.compile(r"[A-Za-z0-9._-]+(~[A-Za-z0-9._-]+)?")
+"""An Actor id or ``username~name``: anything else (``?``, ``#``, a space) would change the request's path."""
