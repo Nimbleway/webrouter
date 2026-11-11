@@ -10,7 +10,8 @@
       "env": [
         "OPENFOODFACTS_USER_AGENT"
       ],
-      "description": "the custom User-Agent Open Food Facts asks every client to send, as AppName/Version (ContactEmail), e.g. 'MyApp/1.0 (me@example.com)'"
+      "default": "WebRouter (+https://github.com/Nimbleway/webrouter)",
+      "description": "the custom User-Agent Open Food Facts asks every client to send, as AppName/Version (ContactEmail), e.g. 'MyApp/1.0 (me@example.com)'; the default names WebRouter, so set your own with contact details for heavy use."
     }
   },
   "headers": {
@@ -159,9 +160,9 @@
         }
       },
       "notes": [
-        "Nutrient filters go in the parameter name, e.g. sugars_100g<10 or salt_serving>1; send them as raw query keys.",
+        "Nutrient filters put the condition in the parameter name, e.g. sugars_100g<10 or salt_serving>1; this entry cannot take them, so send them as a raw call to /api/v2/search.",
         "page_count in the answer is the number of products on this page, not the number of pages; total pages = floor((count - 1) / page_size) + 1.",
-        "Language-specific tag filters put the language in the name, e.g. categories_tags_en=orange-juices."
+        "Language-specific tag filters put the language in the name, e.g. categories_tags_en=orange-juices; send them as a raw call to the same path."
       ],
       "job": "products.search",
       "docs_url": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-v2/",

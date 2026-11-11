@@ -87,6 +87,9 @@ MCP_MSG_VENDOR_CALL_ARGS: Final = (
     "call_vendor needs either 'endpoint' (with 'params'), or 'vendor', 'method' and 'path' -- not both."
 )
 MCP_MSG_VENDOR_TRUNCATED: Final = "The answer was cut to fit; the whole of it is behind handle {handle!r} (fetch_raw)."
+MCP_MSG_VENDOR_BINARY: Final = (
+    "{size} bytes of {content_type}, not text; fetch_raw on handle {handle!r} returns them in content, URL-safe base64."
+)
 
 VENDOR_MCP_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_VENDORS: MCP_VENDORS_PROPERTIES,

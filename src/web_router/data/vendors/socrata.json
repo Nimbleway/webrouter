@@ -162,6 +162,7 @@
         "q": {
           "in": "query",
           "type": "string",
+          "required": true,
           "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
           "example": "building permits"
         },
@@ -242,6 +243,7 @@
         "q": {
           "in": "query",
           "type": "string",
+          "required": true,
           "description": "Words matched against name, description, category, tags, column names and descriptions, and attribution.",
           "example": "building permits"
         },

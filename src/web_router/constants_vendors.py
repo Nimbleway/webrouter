@@ -85,6 +85,8 @@ VENDOR_REQUEST_HEADERS: Final = {"Accept": "application/json"}
 """Sent on every vendor call, before the vendor's own headers, which may override them."""
 
 VENDOR_CONTENT_TYPE_HEADER: Final = "content-type"
+VENDOR_TEXT_CONTENT_MARKERS: Final = ("text/", "json", "xml", "javascript", "csv", "yaml", "x-www-form-urlencoded")
+"""A content type holding one of these is decoded as text; any other non-empty body is kept as bytes."""
 
 VENDOR_DROPPED_RESPONSE_HEADERS: Final = frozenset({"set-cookie"})
 """Response headers never handed back: a vendor's session cookie is a credential the caller did not ask for."""
@@ -122,12 +124,16 @@ VENDOR_CATEGORY_DESCRIPTIONS: Final = {
     "security": "Vulnerabilities, advisories and threat intelligence.",
     "developer": "Package registries, code hosting, cloud platforms and their prices.",
     "observability": "Logs, metrics, errors and uptime.",
+    "custom": "Vendors from your own catalog directory (WEB_ROUTER_VENDOR_CATALOG) that fit no shipped shelf.",
 }
 """Each shelf a vendor is listed under, with what belongs on it; ``VENDORS.md`` prints the line under its heading."""
 
 VENDOR_CATEGORIES: Final = tuple(VENDOR_CATEGORY_DESCRIPTIONS)
-"""The shelves a vendor is listed under, one per vendor. There is no catch-all: a vendor that fits none
-needs a new shelf."""
+"""The shelves a vendor is listed under, one per vendor. There is no catch-all for shipped vendors: one that
+fits none needs a new shelf."""
+
+VENDOR_CUSTOM_CATEGORY: Final = "custom"
+"""The one shelf no shipped vendor uses: for a file in the user's own catalog directory that fits no other."""
 
 MSG_VENDOR_OAUTH_LITERAL: Final = (
     "oauth2.{field} is sent as written and cannot hold a placeholder: {value!r}. Use the literal value."

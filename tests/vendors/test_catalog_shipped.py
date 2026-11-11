@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from tests.vendors.data import OAUTH, shipped_dir
-from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
+from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_CUSTOM_CATEGORY, VENDOR_ENV_CATALOG_DIR
 from web_router.vendors.catalog import builtin_catalog, get_catalog, load_vendor_file, reload_catalog
 
 SHIPPED = builtin_catalog()
@@ -54,9 +54,13 @@ def test_every_shipped_write_says_so() -> None:
 
 
 def test_every_shelf_is_used_and_none_is_a_catch_all() -> None:
-    """A vendor that fits no shelf needs a new one, not an "other" bin, and no shelf sits empty."""
+    """A vendor that fits no shelf needs a new one, not an "other" bin, and no shelf sits empty.
+
+    The custom shelf is the exception: it is for a user's own files and ships empty.
+    """
     assert "other" not in VENDOR_CATEGORIES
-    assert {vendor.category for vendor in SHIPPED.all()} == set(VENDOR_CATEGORIES)
+    shipped = {vendor.category for vendor in SHIPPED.all()}
+    assert shipped == set(VENDOR_CATEGORIES) - {VENDOR_CUSTOM_CATEGORY}
 
 
 def test_shipped_env_variables_belong_to_one_vendor() -> None:

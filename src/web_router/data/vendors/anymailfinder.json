@@ -25,7 +25,7 @@
   },
   "notes": [
     "You are charged only when a valid email is returned; not found, blacklisted and (since 2026-10-05) risky results are free. Repeat searches within 30 days are free.",
-    "Searches wait for the answer unless the x-webhook-url header is set, in which case the result is POSTed there.",
+    "Searches wait for the answer.",
     "Bulk and GeoLead jobs are not included here beyond status; credits are charged on first download of results."
   ],
   "sources": [
@@ -89,12 +89,6 @@
           "in": "body",
           "type": "string",
           "description": "LinkedIn profile URL; may be sent on its own."
-        },
-        "webhook_url": {
-          "in": "header",
-          "type": "string",
-          "description": "If set, the result is POSTed to this URL instead of waiting for the response.",
-          "wire_name": "x-webhook-url"
         }
       },
       "notes": [
@@ -136,12 +130,6 @@
           "in": "body",
           "type": "string",
           "description": "Company name, used if no domain is given."
-        },
-        "webhook_url": {
-          "in": "header",
-          "type": "string",
-          "description": "If set, the result is POSTed to this URL instead of waiting for the response.",
-          "wire_name": "x-webhook-url"
         }
       },
       "notes": [
@@ -183,12 +171,6 @@
             "generic",
             "personal"
           ]
-        },
-        "webhook_url": {
-          "in": "header",
-          "type": "string",
-          "description": "If set, the result is POSTed to this URL instead of waiting for the response.",
-          "wire_name": "x-webhook-url"
         }
       },
       "notes": [
@@ -214,12 +196,6 @@
           "type": "string",
           "required": true,
           "description": "The LinkedIn profile URL."
-        },
-        "webhook_url": {
-          "in": "header",
-          "type": "string",
-          "description": "If set, the result is POSTed to this URL instead of waiting for the response.",
-          "wire_name": "x-webhook-url"
         }
       },
       "notes": [
@@ -245,12 +221,6 @@
           "type": "string",
           "required": true,
           "description": "The email to validate."
-        },
-        "webhook_url": {
-          "in": "header",
-          "type": "string",
-          "description": "If set, the result is POSTed to this URL instead of waiting for the response.",
-          "wire_name": "x-webhook-url"
         }
       },
       "notes": [
@@ -276,12 +246,6 @@
           "type": "string",
           "required": true,
           "description": "The email of the person to look up."
-        },
-        "webhook_url": {
-          "in": "header",
-          "type": "string",
-          "description": "If set, the result is POSTed to this URL instead of waiting for the response.",
-          "wire_name": "x-webhook-url"
         }
       },
       "notes": [

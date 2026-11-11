@@ -41,8 +41,19 @@
       "summary": "Typeahead matches with ids, to feed the other endpoints.",
       "kind": "read",
       "method": "GET",
-      "path": "/names/candidates/",
+      "path": "/names/{type}/",
       "params": {
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "candidates",
+            "committees"
+          ],
+          "description": "What to match: candidates or committees.",
+          "example": "candidates"
+        },
         "q": {
           "in": "query",
           "type": "string",

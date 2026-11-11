@@ -1234,17 +1234,30 @@ it is a format change to discuss first, not a branch in `caller.py`.
 2. Accuracy beats coverage. An endpoint goes in only when its method, path
    and inputs are known; an undocumented parameter is left out. The rules
    that hold for providers hold here: never invent a value, never drop one.
-3. `kind: write` for anything that changes the user's data or account,
-   sends something to other people, or deletes; every DELETE, PUT and PATCH.
-   A read over POST says so in its notes. A write is what `allow_writes`
-   gates, so a write marked `read` is a safety bug.
+3. Read or write. Sort every call into one of four kinds:
+   1. a pure read;
+   2. a metered read, or one that starts a temporary job: still `read`,
+      and its first note says it starts a billed job;
+   3. a read with an input that writes (saves to a list or table, writes
+      a shared cache): leave that input out, or make the call a write;
+   4. a write: anything that changes the user's data or account, sends
+      something to other people, or deletes; every DELETE, PUT and PATCH.
+
+   The shipped catalog holds kinds 1 and 2 only; `vendor_request` and a
+   user's own catalog directory carry writes. A read over POST says so in
+   its notes. A write is what `allow_writes` gates, so a write marked
+   `read` is a safety bug. A callback or webhook URL input is left out
+   too: it sends the answer to an address the caller picks. A parameter
+   whose `enum` has one value is a constant (Majestic's `cmd`): any other
+   value is refused, so a read cannot be pointed at a write command.
 4. `base_url` is https. A part of the host that varies (region, data
    centre) is a setting with an exhaustive `choices` list -- the format
    refuses one without, because a free-form host could carry the credential
    anywhere.
 5. Category: the shelf in `VENDOR_CATEGORY_DESCRIPTIONS` (`constants_vendors.py`) whose
    line describes what the vendor holds. There is no catch-all: a vendor that fits no shelf
-   needs a new one, with its description, which `VENDORS.md` prints under its heading.
+   needs a new one, with its description, which `VENDORS.md` prints under its heading. The
+   `custom` shelf is for a user's own catalog directory and is never used by a shipped file.
 6. Credentials: the variable names the vendor's own docs use, or the one
    `.env.example` already uses for that vendor, else `<VENDOR>_API_KEY`. Two
    vendors never share a variable (a test checks).

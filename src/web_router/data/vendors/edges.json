@@ -69,7 +69,7 @@
           "required": true,
           "description": "{linkedin_profile_url}: a linkedin.com/in/, /pub/, /sales/people/ or /sales/lead/ URL.",
           "example": {
-            "linkedin_profile_url": "https://www.linkedin.com/in/williamhgates"
+            "linkedin_profile_url": "https://www.linkedin.com/in/jane-doe-example"
           }
         },
         "parameters": {

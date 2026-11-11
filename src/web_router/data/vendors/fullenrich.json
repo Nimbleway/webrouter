@@ -89,22 +89,12 @@
               "last_name": "Démogé",
               "domain": "fullenrich.com",
               "company_name": "FullEnrich",
-              "linkedin_url": "https://www.linkedin.com/in/demoge/",
+              "linkedin_url": "https://www.linkedin.com/in/jane-doe-example/",
               "enrich_fields": [
                 "contact.work_emails"
               ]
             }
           ]
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "URL that receives a POST when the whole enrichment is done."
-        },
-        "webhook_events": {
-          "in": "body",
-          "type": "object",
-          "description": "{contact_finished: URL} to receive each contact as it finishes."
         },
         "silentFail": {
           "in": "query",
@@ -114,7 +104,7 @@
       },
       "notes": [
         "Spends credits only on results: 1 per work email found, 3 per personal email, 10 per mobile phone (custom plans may differ). Re-enriching the same input within 3 months costs 0.",
-        "Asynchronous: poll fullenrich.contact.enrich_result with the enrichment_id, or use a webhook (FullEnrich's recommended way).",
+        "Asynchronous: poll fullenrich.contact.enrich_result with the enrichment_id.",
         "The example contact is FullEnrich's free test contact; it costs 0 credits only with exactly that data."
       ],
       "job": "jobs.start",
@@ -176,16 +166,6 @@
               "email": "someone@example.com"
             }
           ]
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "URL that receives a POST when the whole lookup is done."
-        },
-        "webhook_events": {
-          "in": "body",
-          "type": "object",
-          "description": "{contact_finished: URL} for each email as it finishes."
         },
         "silentFail": {
           "in": "query",

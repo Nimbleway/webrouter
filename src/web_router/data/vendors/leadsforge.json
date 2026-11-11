@@ -25,7 +25,7 @@
   "notes": [
     "The Swagger file declares an apiKey in the Authorization header; this entry sends the bare key with no Bearer prefix.",
     "Credits: search gives 1,000 free requests a month (each cursor page counts), then 1 credit; email enrichment 1 credit per hit, phone 10 per hit, misses free; lookalike search 1 credit per company, preview 300 free a month. GET /balance lists the current prices.",
-    "Async flow for enrichment, company followers and Sales Navigator: start a job (returns a jobID), poll its status endpoint until status is completed, then page through the results endpoint with offset and limit. A webhookURL can be given instead of polling.",
+    "Async flow for enrichment, company followers and Sales Navigator: start a job (returns a jobID), poll its status endpoint until status is completed, then page through the results endpoint with offset and limit.",
     "Send an Idempotency-Key header on job starts to retry safely: a repeat returns the existing job instead of charging again.",
     "Controlled search filters (industries, seniorities, departments, company types, funding types, revenue ranges) need exact values from the /search/filters endpoints, which this entry leaves out.",
     "Left out because they write to the user's account: Google Maps discovery, which creates a list in the app, and the batch calls' saveToList, which saves results to a lead list."
@@ -362,11 +362,6 @@
           "type": "string",
           "description": "Your own id for the request."
         },
-        "webhookURL": {
-          "in": "body",
-          "type": "string",
-          "description": "URL that gets a POST when the job completes."
-        },
         "Idempotency-Key": {
           "in": "header",
           "type": "string",
@@ -411,11 +406,6 @@
           "type": "string",
           "description": "Your own id for the request."
         },
-        "webhookURL": {
-          "in": "body",
-          "type": "string",
-          "description": "URL that gets a POST when the job completes."
-        },
         "Idempotency-Key": {
           "in": "header",
           "type": "string",
@@ -459,11 +449,6 @@
           "in": "body",
           "type": "string",
           "description": "Your own id for the request."
-        },
-        "webhookURL": {
-          "in": "body",
-          "type": "string",
-          "description": "URL that gets a POST when the job completes."
         },
         "Idempotency-Key": {
           "in": "header",
@@ -766,11 +751,6 @@
           "in": "body",
           "type": "string",
           "description": "Your own id."
-        },
-        "webhookURL": {
-          "in": "body",
-          "type": "string",
-          "description": "URL that gets a POST when the job ends."
         },
         "Idempotency-Key": {
           "in": "header",

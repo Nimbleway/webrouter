@@ -126,7 +126,7 @@
           "type": "string",
           "required": true,
           "description": "LinkedIn profile URL starting with https://www.linkedin.com/in/, /pub/, /sales/people/ or /sales/lead/.",
-          "example": "https://www.linkedin.com/in/williamhgates/"
+          "example": "https://www.linkedin.com/in/jane-doe-example/"
         },
         "full_enrich": {
           "in": "query",

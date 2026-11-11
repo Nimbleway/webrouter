@@ -47,7 +47,7 @@
           "in": "query",
           "type": "string",
           "description": "Person profile URL.",
-          "example": "https://www.linkedin.com/in/williamhgates/"
+          "example": "https://www.linkedin.com/in/jane-doe-example/"
         },
         "twitter_profile_url": {
           "in": "query",
@@ -836,15 +836,10 @@
           "type": "string",
           "required": true,
           "description": "Person profile URL."
-        },
-        "callback_url": {
-          "in": "query",
-          "type": "string",
-          "description": "Webhook notified when processing finishes."
         }
       },
       "notes": [
-        "May answer asynchronously; give callback_url to be notified."
+        "May answer asynchronously, and then delivers the result only to a callback URL, which this entry leaves out."
       ],
       "job": "people.email.find",
       "docs_url": "https://enrichlayer.com/docs/api/v2/contact-api/work-email-lookup",

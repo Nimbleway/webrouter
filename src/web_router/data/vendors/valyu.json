@@ -182,11 +182,6 @@
           "in": "body",
           "type": "boolean",
           "description": "Run in the background and return a job_id; required above 10 URLs."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL called when an async job finishes."
         }
       },
       "notes": [
@@ -269,11 +264,6 @@
           "in": "body",
           "type": "array",
           "description": "markdown (default), pdf and others."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL called on completion."
         }
       },
       "notes": [

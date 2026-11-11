@@ -345,11 +345,11 @@
     },
     {
       "id": "fema.mitigation.projects",
-      "name": "Search Hazard Mitigation Assistance projects",
-      "summary": "Hazard mitigation projects funded by FEMA grant programs.",
+      "name": "Search Hazard Mitigation Assistance subapplications",
+      "summary": "Hazard mitigation project subapplications under FEMA grant programs, with status, amounts and hazards.",
       "kind": "read",
       "method": "GET",
-      "path": "/v4/HazardMitigationAssistanceProjects",
+      "path": "/v2/HmaSubapplications",
       "params": {
         "filter": {
           "in": "query",
@@ -403,9 +403,9 @@
         }
       },
       "job": "disasters.finance",
-      "docs_url": "https://www.fema.gov/openfema-data-page/hazard-mitigation-assistance-projects-v4",
+      "docs_url": "https://www.fema.gov/openfema-data-page/HMA-Subapplications-v2",
       "verified": {
-        "docs": "https://www.fema.gov/openfema-data-page/hazard-mitigation-assistance-projects-v4"
+        "docs": "https://www.fema.gov/openfema-data-page/HMA-Subapplications-v2"
       }
     },
     {

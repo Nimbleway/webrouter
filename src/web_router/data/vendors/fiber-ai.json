@@ -46,13 +46,7 @@
       "kind": "read",
       "method": "GET",
       "path": "/v1/get-org-credits",
-      "params": {
-        "apiKey": {
-          "in": "query",
-          "type": "string",
-          "description": "Fiber API key; also sent in the x-api-key header by this entry, so usually left out."
-        }
-      },
+      "params": {},
       "notes": [
         "Free. Check it before chargeable calls."
       ],
@@ -383,7 +377,7 @@
           "type": "string",
           "required": true,
           "description": "LinkedIn slug, profile URL, Sales Navigator URN or numeric user id.",
-          "example": "williamhgates"
+          "example": "jane-doe-example"
         },
         "getDetailedEducation": {
           "in": "body",
@@ -461,7 +455,7 @@
           "type": "string",
           "required": true,
           "description": "LinkedIn profile URL, slug, Sales Navigator URN or numeric user id.",
-          "example": "https://www.linkedin.com/in/williamhgates/"
+          "example": "https://www.linkedin.com/in/jane-doe-example/"
         },
         "enrichmentType": {
           "in": "body",

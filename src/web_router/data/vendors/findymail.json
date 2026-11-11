@@ -94,11 +94,6 @@
           "required": true,
           "description": "Company domain or name.",
           "example": "example.com"
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "Optional webhook URL that receives the result instead of waiting."
         }
       },
       "notes": [
@@ -124,11 +119,6 @@
           "type": "string",
           "required": true,
           "description": "LinkedIn profile URL."
-        },
-        "webhook_url": {
-          "in": "body",
-          "type": "string",
-          "description": "Optional webhook URL that receives the result instead of waiting."
         }
       },
       "notes": [

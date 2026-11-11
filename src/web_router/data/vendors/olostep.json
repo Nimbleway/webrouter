@@ -206,11 +206,6 @@
           "type": "boolean",
           "description": "Respect robots.txt; default true."
         },
-        "webhook": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL called when the crawl completes."
-        },
         "scrape_options": {
           "in": "body",
           "type": "object",
@@ -218,6 +213,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST: it starts a job that only produces data.",
         "Async: may take 1-10 minutes; poll crawls.get, then list pages with crawls.pages."
       ],
@@ -458,14 +454,10 @@
           "in": "body",
           "type": "object",
           "description": "Return links present on each page."
-        },
-        "webhook": {
-          "in": "body",
-          "type": "string",
-          "description": "HTTPS URL called when the batch completes."
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST: it starts a job that only produces data.",
         "Async: poll batches.get; per-item content is fetched with the retrieve endpoint."
       ],

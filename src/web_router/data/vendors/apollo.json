@@ -222,12 +222,12 @@
         "run_waterfall_email": {
           "in": "query",
           "type": "boolean",
-          "description": "Run email waterfall enrichment; needs webhook_url or poll_only."
+          "description": "Run email waterfall enrichment; needs poll_only=true."
         },
         "run_waterfall_phone": {
           "in": "query",
           "type": "boolean",
-          "description": "Run phone waterfall enrichment; needs webhook_url or poll_only."
+          "description": "Run phone waterfall enrichment; needs poll_only=true."
         },
         "reveal_personal_emails": {
           "in": "query",
@@ -237,23 +237,18 @@
         "reveal_phone_number": {
           "in": "query",
           "type": "boolean",
-          "description": "Return all phone numbers incl. mobile (adds 8 credits when found); needs webhook_url or poll_only."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "Public HTTPS URL that receives phone/waterfall results. Omit with poll_only."
+          "description": "Return all phone numbers incl. mobile (adds 8 credits when found); needs poll_only=true."
         },
         "poll_only": {
           "in": "query",
           "type": "boolean",
-          "description": "Poll for phone/waterfall results by request_id instead of a webhook."
+          "description": "Poll for phone/waterfall results by request_id."
         }
       },
       "notes": [
         "A read over POST, parameters in the query string.",
         "1 credit for demographic or email data found, plus 8 for a returned mobile number; 0 credits when nothing is found. Low-confidence matches are charged only if data you did not send comes back. Waterfall costs depend on your waterfall vendors.",
-        "Phone and waterfall results arrive asynchronously: set webhook_url, or poll_only=true and poll with the returned request_id."
+        "Phone and waterfall results arrive asynchronously: set poll_only=true and poll with the returned request_id."
       ],
       "job": "people.enrich",
       "docs_url": "https://docs.apollo.io/reference/people-enrichment",
@@ -272,12 +267,12 @@
         "run_waterfall_email": {
           "in": "query",
           "type": "boolean",
-          "description": "Run email waterfall enrichment; needs webhook_url or poll_only."
+          "description": "Run email waterfall enrichment; needs poll_only=true."
         },
         "run_waterfall_phone": {
           "in": "query",
           "type": "boolean",
-          "description": "Run phone waterfall enrichment; needs webhook_url or poll_only."
+          "description": "Run phone waterfall enrichment; needs poll_only=true."
         },
         "reveal_personal_emails": {
           "in": "query",
@@ -287,17 +282,12 @@
         "reveal_phone_number": {
           "in": "query",
           "type": "boolean",
-          "description": "Return all phone numbers incl. mobile (adds 8 credits when found); needs webhook_url or poll_only."
-        },
-        "webhook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "Public HTTPS URL that receives phone/waterfall results. Omit with poll_only."
+          "description": "Return all phone numbers incl. mobile (adds 8 credits when found); needs poll_only=true."
         },
         "poll_only": {
           "in": "query",
           "type": "boolean",
-          "description": "Poll for phone/waterfall results by request_id instead of a webhook."
+          "description": "Poll for phone/waterfall results by request_id."
         },
         "details": {
           "in": "body",

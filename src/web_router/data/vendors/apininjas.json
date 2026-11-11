@@ -1,7 +1,7 @@
 {
   "vendor": "apininjas",
   "name": "API Ninjas",
-  "category": "developer",
+  "category": "maps",
   "summary": "One key for many small reference-data APIs: WHOIS and DNS, IP geolocation, sanctions screening, earnings call transcripts, geocoding and more.",
   "docs_url": "https://api-ninjas.com/api",
   "pricing_url": "https://api-ninjas.com/pricing",

@@ -383,6 +383,7 @@ Maps, places, routing and geolocation.
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
 | [Amap (Gaode) Web Service](https://lbs.amap.com/api/webservice/summary) `amap` | China maps from Amap/Gaode: geocoding and reverse geocoding, POI search by keyword, area or id, driving and transit routes, and city weather. | 8 read | key in query | `AMAP_API_KEY` | docs 2026-11-09 |
+| [API Ninjas](https://api-ninjas.com/api) `apininjas` | One key for many small reference-data APIs: WHOIS and DNS, IP geolocation, sanctions screening, earnings call transcripts, geocoding and more. | 8 read | key in header | `APININJAS_API_KEY` | docs 2026-11-09 |
 | [ArcGIS Online](https://developers.arcgis.com/rest/users-groups-and-items/search/) `arcgis` | Search ArcGIS Online's public content (feature layers, map services, web maps, datasets) and read an item's metadata and data. | 4 read | key in query | `ARCGIS_API_KEY` | docs 2026-11-09 |
 | [Foursquare Places API](https://docs.foursquare.com/fsq-developers-places/reference/places-api-overview) `foursquare` | Search 100M+ points of interest by name, category or location, and read a place's details, tips and photos. | 6 read | key in header | `FOURSQUARE_API_KEY` | docs 2026-11-09 |
 | [Google Business Profile](https://developers.google.com/my-business) `google-business-profile` | Your Google Business Profile locations and their customer reviews. | 3 read | OAuth refresh token | `GOOGLE_BUSINESS_PROFILE_CLIENT_ID`, `GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET`, `GOOGLE_BUSINESS_PROFILE_REFRESH_TOKEN` | docs 2026-11-08 |
@@ -526,7 +527,6 @@ Package registries, code hosting, cloud platforms and their prices.
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
-| [API Ninjas](https://api-ninjas.com/api) `apininjas` | One key for many small reference-data APIs: WHOIS and DNS, IP geolocation, sanctions screening, earnings call transcripts, geocoding and more. | 8 read | key in header | `APININJAS_API_KEY` | docs 2026-11-09 |
 | [Azure Retail Prices](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices) `azure-retail-prices` | Keyless Microsoft retail (pay-as-you-go, reservation, savings plan) prices for every Azure service, SKU and region. | 1 read | none | none | docs 2026-11-09 |
 | [Context7](https://context7.com/docs/api-guide) `context7` | Up-to-date, version-specific documentation and code snippets for software libraries, ranked for a question; plus reading one web page narrowed to a question. | 5 read | key in header | `CONTEXT7_API_KEY` | docs 2026-11-09 |
 | [Docker Hub](https://docs.docker.com/reference/api/hub/latest/) `docker-hub` | Docker Hub repositories and image tags: descriptions, pull and star counts, last update, tag digests, sizes and platforms. | 4 read | key in header | `DOCKER_HUB_TOKEN` | docs 2026-11-09 |
