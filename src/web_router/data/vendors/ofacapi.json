@@ -1,0 +1,229 @@
+{
+  "vendor": "ofacapi",
+  "name": "OFAC-API (sanctions screening)",
+  "category": "other",
+  "summary": "Fuzzy screening of people, companies, vessels and aircraft against OFAC SDN and 20+ other sanctions, PEP and watch lists, single, batch or as async bulk jobs.",
+  "docs_url": "https://docs.ofac-api.com/",
+  "pricing_url": "https://www.ofac-api.com/pricing",
+  "base_url": "https://api.ofac-api.com/v4",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OFAC_API_KEY"
+        ],
+        "description": "An ofac-api.com API key, sent in the apiKey header (the request body's apiKey field also works)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "apiKey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Screening and search are reads sent as POST with a JSON body.",
+    "Always check error and errorMessage in the body: a 200 can still say the account is over its monthly limit.",
+    "Matches come back only when their score clears minScore (default 95, range 80-100); lower it for looser fuzzy matching.",
+    "Batches: up to 500 cases per screen or search call; larger sets (up to 100,000) go through jobs.create and are polled with jobs.get."
+  ],
+  "sources": [
+    "https://docs.ofac-api.com/",
+    "https://docs.ofac-api.com/authentication",
+    "https://docs.ofac-api.com/screening-api/request",
+    "https://docs.ofac-api.com/screening-api/response",
+    "https://docs.ofac-api.com/search-api/request",
+    "https://docs.ofac-api.com/jobs-api/request",
+    "https://docs.ofac-api.com/datasources"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ofacapi.screen",
+      "name": "Screen names against sanctions lists",
+      "summary": "Scored matches for each case, with the fields that matched and the full sanction record.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/screen",
+      "params": {
+        "cases": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Cases, each {name (required), id (recommended, echoed back), type (person|organization|vessel|aircraft), dob YYYY-MM-DD, gender, citizenship, nationality, phoneNumber, emailAddress, cryptoId, address {address1, address2, city, stateOrProvince, postalCode, country}, identification [{idNumber, type, country}]}.",
+          "example": [
+            {
+              "id": "1",
+              "name": "Vladimir Putin",
+              "type": "person"
+            }
+          ]
+        },
+        "minScore": {
+          "in": "body",
+          "type": "integer",
+          "description": "Lowest match score returned, 80 to 100, default 95."
+        },
+        "sources": {
+          "in": "body",
+          "type": "array",
+          "description": "Sanction list codes to check, e.g. SDN, NONSDN, UN, OFSI, FCDO, DFAT, SECO, PEP, INTERPOL, FINCEN (full list on the Data Sources page). All configured lists when omitted."
+        },
+        "types": {
+          "in": "body",
+          "type": "array",
+          "description": "Entity types to evaluate: person, organization, vessel, aircraft."
+        },
+        "options": {
+          "in": "body",
+          "type": "object",
+          "description": "{caseReportPdf: {include: true}} adds a Base64 PDF report per case (subscription only, at most 100 cases)."
+        }
+      },
+      "notes": [
+        "A read over POST. type on a case improves matching but does not filter; types at the top level filters."
+      ],
+      "job": "compliance.sanctions.screen",
+      "docs_url": "https://docs.ofac-api.com/screening-api/request",
+      "verified": {
+        "docs": "https://docs.ofac-api.com/screening-api/request"
+      }
+    },
+    {
+      "id": "ofacapi.search",
+      "name": "Search sanctions lists",
+      "summary": "Sanction records matching a name, address, ID number or crypto wallet, without screening scores.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "cases": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Cases, each {name (required), id, cryptoId, address {address1, address2, city, stateOrProvince, postalCode, country}, identification [{idNumber, type, country}]}.",
+          "example": [
+            {
+              "id": "1",
+              "name": "Banco Nacional de Cuba"
+            }
+          ]
+        },
+        "sources": {
+          "in": "body",
+          "type": "array",
+          "description": "Sanction list codes to check, e.g. SDN, NONSDN, UN, OFSI, FCDO, DFAT, SECO, PEP, INTERPOL, FINCEN (full list on the Data Sources page). All configured lists when omitted."
+        },
+        "types": {
+          "in": "body",
+          "type": "array",
+          "description": "Entity types to evaluate: person, organization, vessel, aircraft."
+        }
+      },
+      "notes": [
+        "A read over POST. Up to 500 cases per call."
+      ],
+      "job": "compliance.sanctions.search",
+      "docs_url": "https://docs.ofac-api.com/search-api/request",
+      "verified": {
+        "docs": "https://docs.ofac-api.com/search-api/request"
+      }
+    },
+    {
+      "id": "ofacapi.jobs.create",
+      "name": "Start a bulk screening job",
+      "summary": "Queue up to 100,000 cases for asynchronous screening; returns a job id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/jobs",
+      "params": {
+        "cases": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Cases, each {name (required), id (recommended, echoed back), type (person|organization|vessel|aircraft), dob YYYY-MM-DD, gender, citizenship, nationality, phoneNumber, emailAddress, cryptoId, address {address1, address2, city, stateOrProvince, postalCode, country}, identification [{idNumber, type, country}]}."
+        },
+        "sources": {
+          "in": "body",
+          "type": "array",
+          "description": "Sanction list codes to check, e.g. SDN, NONSDN, UN, OFSI, FCDO, DFAT, SECO, PEP, INTERPOL, FINCEN (full list on the Data Sources page). All configured lists when omitted."
+        },
+        "types": {
+          "in": "body",
+          "type": "array",
+          "description": "Entity types to evaluate: person, organization, vessel, aircraft."
+        },
+        "jobName": {
+          "in": "body",
+          "type": "string",
+          "description": "Display name for the job."
+        },
+        "webhookUrl": {
+          "in": "body",
+          "type": "string",
+          "description": "HTTPS URL called when the job finishes; an http URL is refused."
+        },
+        "idempotency_key": {
+          "in": "header",
+          "type": "string",
+          "description": "A UUID v4; retrying with the same key returns the original job.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "Poll ofacapi.jobs.get with the returned id until COMPLETED."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.ofac-api.com/jobs-api/request",
+      "verified": {
+        "docs": "https://docs.ofac-api.com/jobs-api/request"
+      }
+    },
+    {
+      "id": "ofacapi.jobs.list",
+      "name": "List screening jobs",
+      "summary": "Recent bulk jobs and their status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Jobs to return, default 10, max 100."
+        }
+      },
+      "job": "jobs.list",
+      "docs_url": "https://docs.ofac-api.com/jobs-api/request",
+      "verified": {
+        "docs": "https://docs.ofac-api.com/jobs-api/request"
+      }
+    },
+    {
+      "id": "ofacapi.jobs.get",
+      "name": "Get a screening job",
+      "summary": "Status of a bulk job and, once COMPLETED, a reportUrl to download the results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job UUID."
+        }
+      },
+      "notes": [
+        "reportUrl expires 24 hours after this call; call again for a fresh link."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.ofac-api.com/jobs-api/request",
+      "verified": {
+        "docs": "https://docs.ofac-api.com/jobs-api/request"
+      }
+    }
+  ]
+}
