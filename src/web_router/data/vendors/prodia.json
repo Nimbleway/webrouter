@@ -1,0 +1,193 @@
+{
+  "vendor": "prodia",
+  "name": "Prodia",
+  "category": "media-generation",
+  "summary": "Fast image and video generation inference (FLUX, SDXL, Seedream, Veo, Kling, Wan and more) through one job endpoint.",
+  "docs_url": "https://docs.prodia.com/reference/inference/",
+  "pricing_url": "https://docs.prodia.com/reference/pricing/",
+  "base_url": "https://inference.prodia.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "PRODIA_TOKEN"
+        ],
+        "description": "A Prodia API token from the API dashboard (app.prodia.com/api). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Every job is {type, config}: type names the model and task (e.g. inference.flux-fast.schnell.txt2img.v2, inference.veo.fast.txt2vid.v1) and config holds that type's fields. Job types and their configs are listed in the docs and the explorer (app.prodia.com/explorer).",
+    "Jobs that need input images or video send them as multipart parts, which this catalog cannot send; text-only jobs go as JSON.",
+    "Add price=true to get the job's cost in dollars in its result (only on success).",
+    "429 means no capacity or too many async jobs; honour Retry-After.",
+    "Async job results expire 1 hour after creation (404 after that); download outputs promptly. Output files are served by GET /v2/job/async/{id}/output/{filename} as raw bytes."
+  ],
+  "sources": [
+    "https://docs.prodia.com/llms.txt",
+    "https://docs.prodia.com/llms/reference/inference.md",
+    "https://docs.prodia.com/llms/reference/async.md",
+    "https://docs.prodia.com/llms/reference/price.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "prodia.job.run",
+      "name": "Run a generation job (synchronous)",
+      "summary": "Runs one job and blocks until done; the answer is the output file, or a multipart job + output.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/job",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Job type, e.g. inference.flux-fast.schnell.txt2img.v2.",
+          "example": "inference.flux-fast.schnell.txt2img.v2"
+        },
+        "config": {
+          "in": "body",
+          "type": "object",
+          "description": "Type-specific configuration, e.g. {prompt: ...}; most generation types require at least a prompt.",
+          "example": {
+            "prompt": "grainy photograph of a space explorer"
+          }
+        },
+        "price": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds price {product, dollars} to the job result."
+        },
+        "accept": {
+          "in": "header",
+          "type": "string",
+          "wire_name": "Accept",
+          "description": "Output format: an image or video type (image/jpeg, image/png, video/mp4) for the raw file, or multipart/form-data for the job JSON plus output.",
+          "example": "image/jpeg"
+        }
+      },
+      "notes": [
+        "A read over POST that is billed per job (see the pricing page). Video can take minutes: use prodia.job.start instead."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://docs.prodia.com/reference/inference/",
+      "verified": {
+        "docs": "https://docs.prodia.com/llms/reference/inference.md"
+      }
+    },
+    {
+      "id": "prodia.job.start",
+      "name": "Start an async generation job",
+      "summary": "Creates a job and returns at once with its id and state (processing).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/job/async",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Job type, e.g. inference.veo.fast.txt2vid.v1.",
+          "example": "inference.veo.fast.txt2vid.v1"
+        },
+        "config": {
+          "in": "body",
+          "type": "object",
+          "description": "Type-specific configuration.",
+          "example": {
+            "prompt": "Running in the woods with a dog.",
+            "aspect_ratio": "16:9",
+            "resolution": "720p"
+          }
+        },
+        "price": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds price to the finished job's result."
+        }
+      },
+      "notes": [
+        "A read over POST that is billed per job. Beta. Not every job type allows async (400 says to use the sync API). Poll prodia.job.state until processed or failed."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://docs.prodia.com/reference/async/",
+      "verified": {
+        "docs": "https://docs.prodia.com/llms/reference/async.md"
+      }
+    },
+    {
+      "id": "prodia.job.state",
+      "name": "Get an async job's state",
+      "summary": "Plain-text state: processing, processed or failed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/job/async/{id}/job.state.current",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job id from prodia.job.start."
+        }
+      },
+      "notes": [
+        "Success is processed (not completed, as on the sync API)."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.prodia.com/reference/async/",
+      "verified": {
+        "docs": "https://docs.prodia.com/llms/reference/async.md"
+      }
+    },
+    {
+      "id": "prodia.job.get",
+      "name": "Get an async job's metadata",
+      "summary": "Full job JSON: config, timestamps, metrics, price and error details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/job/async/{id}/job.json",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job id."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.prodia.com/reference/async/",
+      "verified": {
+        "docs": "https://docs.prodia.com/llms/reference/async.md"
+      }
+    },
+    {
+      "id": "prodia.job.outputs",
+      "name": "List an async job's output files",
+      "summary": "The output files a finished job produced, to download by filename.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/job/async/{id}/output",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job id."
+        }
+      },
+      "job": "jobs.results",
+      "docs_url": "https://docs.prodia.com/reference/async/",
+      "verified": {
+        "docs": "https://docs.prodia.com/llms/reference/async.md"
+      }
+    }
+  ]
+}
