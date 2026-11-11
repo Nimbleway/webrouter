@@ -30,7 +30,7 @@ caller gets. :meth:`WebRouter.benchmark_extract` is the same consumer of :meth:`
 from __future__ import annotations
 
 import threading
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from contextlib import AsyncExitStack, ExitStack, suppress
 from types import TracebackType
 from typing import Any, Generic, TypeVar
@@ -39,6 +39,7 @@ from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
+from web_router.client_config import config_for
 from web_router.client_plan import AsyncPlan, SyncPlan
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
@@ -53,11 +54,7 @@ from web_router.client_template import AsyncTemplate, SyncTemplate
 from web_router.constants import (
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
-    DELEGATING_PROVIDERS,
-    MAX_INHERITS_FROM_AUTO,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
-    PROVIDER_AUTO,
-    PROVIDER_MAX,
     RESEARCH_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
@@ -118,7 +115,8 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | None = None,
+        router: RouterLike | str | None = None,
+        router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
@@ -127,16 +125,15 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         Args:
             provider: Name of the default provider, e.g. ``"nimble"`` or
                 :attr:`Provider.NIMBLE`. Omit it to let ``auto`` choose.
-            provider_config: Constructor kwargs per provider, keyed by provider
-                name -- ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is
-                the only place credentials are passed explicitly; everything
-                else comes from the environment.
+            provider_config: Constructor kwargs per provider, keyed by provider name --
+                ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is the only place
+                credentials are passed explicitly; everything else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
-                ask it (all five by default) and whether its failure raises (experimental) -- see
-                :mod:`web_router.routing.invoke`. ``url_policy="public_only"`` refuses private hosts in a
-                plan's or a router's URLs (experimental) -- see :mod:`web_router.routing.url_policy`.
+                ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental) -- see
+                :mod:`web_router.routing.invoke`. A name such as ``"remote"`` builds a registered router from
+                ``router_config``, and closing this router closes it -- see :mod:`web_router.routing.registry`.
+                ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
         """
-        self._attach_router(router, route_tools, fail_on_router_error, url_policy)
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
         # search-only backend still extracts through `provider=`, and the
@@ -165,40 +162,17 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         # A threading lock on both routers: the async one is as easily shared across threads, each with its own
         # loop, and nothing awaits while it is held, so it can never stall an event loop.
         self._handles_lock = threading.Lock()
-        # One lock for the instance caches: evaluate() calls benchmark()
-        # from worker threads, so two rows can race the same check-then-create
-        # and the loser's client would never be closed. Nothing awaits while it
-        # is held.
+        # One lock for the instance caches: evaluate() calls benchmark() from worker threads, so two rows can race
+        # the same check-then-create and the loser's client would never be closed. Nothing awaits while it is held.
         self._providers_lock = threading.Lock()
         # Rows the sync benchmark() gave up on whose calls still run; close()
         # waits for them so it never shuts a provider under a live search.
         self._stragglers = Stragglers()
+        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config)
 
     def _config_for(self, key: str) -> dict[str, Any]:
-        """Constructor kwargs for one backend: its ``provider_config`` entry, and every entry for a delegating one.
-
-        Each of those builds its own members, so it is handed the config they
-        would get by name -- a key passed in code reaches Nimble the same way
-        through ``auto`` or ``max`` as through ``provider="nimble"``. ``max``
-        races the members ``auto`` would try, so a ``chain`` or
-        ``members_config`` set under ``auto`` is its own unless it sets one.
-        """
-        config = dict(self._config.get(key, {}))
-        if key == PROVIDER_MAX:
-            shared = self._config.get(PROVIDER_AUTO, {})
-            for entry in MAX_INHERITS_FROM_AUTO:
-                if entry in shared and entry not in config:
-                    config[entry] = shared[entry]
-        if key in DELEGATING_PROVIDERS:
-            siblings: dict[str, dict[str, Any]] = {name: c for name, c in self._config.items() if name != key}
-            # An explicit members_config is laid over the sibling entries, member by member, never in place of them.
-            explicit: dict[str, dict[str, Any]] = {
-                provider_name(name): dict(c) for name, c in (config.get("members_config") or {}).items()
-            }
-            config["members_config"] = {
-                name: {**siblings.get(name, {}), **explicit.get(name, {})} for name in {*siblings, *explicit}
-            }
-        return config
+        """Constructor kwargs for one backend: see :func:`~web_router.client_config.config_for`."""
+        return config_for(self._config, key)
 
     def get_provider(self, name: str | Provider | SearchProvider | None = None) -> SearchProvider:
         """Return the named search provider, constructing and caching it on first use.
@@ -345,7 +319,8 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | None = None,
+        router: RouterLike | str | None = None,
+        router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
@@ -360,12 +335,14 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             provider,
             provider_config=provider_config,
             router=router,
+            router_config=router_config,
             route_tools=route_tools,
             fail_on_router_error=fail_on_router_error,
             url_policy=url_policy,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:
+            self._close_refused_router()  # built by name above, and this router is never returned to close it
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
 
     def search(
@@ -617,7 +594,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         return self._track(self.get_browser_provider(provider).open(request))
 
     def close(self) -> None:
-        """Release every browser session still open, then close every provider this router built.
+        """Release every browser session still open, then close every provider, and the router, built here.
 
         A provider passed in already constructed is the caller's to close; this
         router never cached it and must not shut its client down. Sessions are
@@ -632,6 +609,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             # Callbacks run last-in, first-out: the providers are pushed first
             # so they close after the releases, which need their clients. A
             # release that fails does not stop the rest.
+            stack.callback(self._close_router)
             for instance in self._all_instances():
                 stack.callback(instance.close)
             for handle in self._open_handles():
@@ -870,11 +848,12 @@ class AsyncWebRouter(
         return self._track(await self.get_browser_provider(provider).aopen(request))
 
     async def aclose(self) -> None:
-        """Release every browser session still open, then close every provider this router built.
+        """Release every browser session still open, then close every provider, and the router, built here.
 
         The same ownership rule and ordering as :meth:`WebRouter.close`.
         """
         async with AsyncExitStack() as stack:
+            stack.push_async_callback(self._aclose_router)
             for instance in self._all_instances():
                 stack.push_async_callback(instance.aclose)
             for handle in self._open_handles():
