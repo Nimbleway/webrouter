@@ -1,0 +1,562 @@
+{
+  "vendor": "icypeas",
+  "name": "Icypeas",
+  "category": "enrichment",
+  "summary": "Find and verify professional emails, search a people and company database, and scrape profile and company data.",
+  "docs_url": "https://api-doc.icypeas.com/",
+  "pricing_url": "https://www.icypeas.com/pricing",
+  "base_url": "https://app.icypeas.com/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ICYPEAS_API_KEY"
+        ],
+        "description": "An Icypeas API key (Icypeas dashboard > API). Sent as is in the Authorization header, no Bearer prefix."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call but the two scrape GETs is a POST.",
+    "Single email and domain searches are asynchronous: they return an _id; read the result with results.read or a webhook.",
+    "Credits: email search 1 and domain search 1 when found, verification 0.1, lead database about 0.02 per result, profile or company scrape from 0.5.",
+    "The multi-row url-search, scrape and reverse-lookup batch endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://api-doc.icypeas.com/",
+    "https://api-doc.icypeas.com/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "icypeas.account.subscription",
+      "name": "Get subscription and credits",
+      "summary": "Plan and credit balance of a user.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/a/actions/subscription-information",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Account email."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.email.find",
+      "name": "Find an email from a name and domain",
+      "summary": "Email of a person at a company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/email-search",
+      "params": {
+        "firstname": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "First name; may be empty if lastname is set."
+        },
+        "lastname": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Last name; may be empty if firstname is set."
+        },
+        "domainOrCompany": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Domain or company name.",
+          "example": "example.com"
+        },
+        "custom": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional {webhookUrl, externalId}: a webhook for this search and your own id."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing.",
+        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single), or set custom.webhookUrl.",
+        "1 credit when an email is found."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api-doc.icypeas.com/reference/email-search",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/email-search"
+      }
+    },
+    {
+      "id": "icypeas.email.verify",
+      "name": "Verify an email address",
+      "summary": "Deliverability check.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/email-verification",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email to verify."
+        },
+        "custom": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional {webhookUrl, externalId}: a webhook for this search and your own id."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing.",
+        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single), or set custom.webhookUrl.",
+        "0.1 credit per verification (per the docs overview)."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://api-doc.icypeas.com/reference/email-verification",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/email-verification"
+      }
+    },
+    {
+      "id": "icypeas.domain.search",
+      "name": "Search emails at a domain",
+      "summary": "Emails found for a domain or company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/domain-search",
+      "params": {
+        "domainOrCompany": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Domain or company name."
+        },
+        "custom": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional {webhookUrl, externalId}: a webhook for this search and your own id."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing.",
+        "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single), or set custom.webhookUrl.",
+        "1 credit when emails are found."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://api-doc.icypeas.com/reference/domain-search",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/domain-search"
+      }
+    },
+    {
+      "id": "icypeas.bulk.start",
+      "name": "Start a bulk email search",
+      "summary": "Bulk domain search, email search or email verification, up to 5,000 rows.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/bulk-search",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Name of the bulk search."
+        },
+        "task": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What to run.",
+          "enum": [
+            "domain-search",
+            "email-search",
+            "email-verification"
+          ]
+        },
+        "data": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Rows: email-search rows have three items (first name, last name, domain or company); the other tasks one item."
+        },
+        "custom": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional {webhookUrlItem, webhookUrlBulkDone, externalIds, includeResultsInWebhook}."
+        }
+      },
+      "notes": [
+        "Starts a job that only produces data. Track it with icypeas.bulk.progress and read rows with icypeas.results.read (mode bulk, file id).",
+        "Charged per row at the single-search rate."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://api-doc.icypeas.com/reference/bulk-search",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/bulk-search"
+      }
+    },
+    {
+      "id": "icypeas.bulk.progress",
+      "name": "List bulk searches and progress",
+      "summary": "Bulk searches and whether they are done.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search-files/read",
+      "params": {
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Files to fetch, default 10, max 50."
+        },
+        "file": {
+          "in": "body",
+          "type": "string",
+          "description": "A single file id."
+        },
+        "status": {
+          "in": "body",
+          "type": "string",
+          "description": "Only in_progress or done.",
+          "enum": [
+            "in_progress",
+            "done"
+          ]
+        },
+        "next": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Paginate: true next page, false previous."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Pagination token array from the previous answer."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.results.read",
+      "name": "Read search results",
+      "summary": "Results of single or bulk searches.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/bulk-single-searchs/read",
+      "params": {
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "single or bulk.",
+          "enum": [
+            "single",
+            "bulk"
+          ]
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "The _id of one item."
+        },
+        "file": {
+          "in": "body",
+          "type": "string",
+          "description": "Bulk file id, to read only that bulk's rows."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results, default 10, max 100."
+        },
+        "next": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Paginate: true next page."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Pagination token array from the previous answer."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing.",
+        "No charge for reading."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.company.count",
+      "name": "Count companies in the lead database",
+      "summary": "Free count for a company query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/find-companies/count",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Company query object; fields are in the Icypeas lead database reference."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing.",
+        "Free."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.company.search",
+      "name": "Fetch companies from the lead database",
+      "summary": "Companies matching a query, with pagination.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/find-companies",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Company query object; fields are in the Icypeas lead database reference."
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "{token, size}; size 1 to 200, default 100; token comes from the previous answer."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing.",
+        "Lead database results cost about 0.02 credit per result (docs overview)."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.people.count",
+      "name": "Count people in the lead database",
+      "summary": "Free count for a people query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/find-people/count",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "People query object; fields are in the Icypeas lead database reference."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing.",
+        "Free."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.people.search",
+      "name": "Fetch people from the lead database",
+      "summary": "People matching a query, with pagination.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/find-people",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "People query object; fields are in the Icypeas lead database reference."
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "{token, size}; token comes from the previous answer."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing.",
+        "Lead database results cost about 0.02 credit per result (docs overview)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.profile.find_url",
+      "name": "Find one profile URL",
+      "summary": "LinkedIn profile URL for a person.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/url-search/profile",
+      "params": {
+        "firstname": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "First name."
+        },
+        "lastname": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Last name."
+        },
+        "companyOrDomain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name or domain; may be empty if jobTitle is given."
+        },
+        "jobTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Job title; may be empty if companyOrDomain is given."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.company.find_url",
+      "name": "Find one company URL",
+      "summary": "LinkedIn company URL for a company name or domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/url-search/company",
+      "params": {
+        "companyOrDomain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company name, domain or website."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.email.reverse_lookup",
+      "name": "Look up a person from an email",
+      "summary": "Reverse lookup of a professional email.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/reverse-email-lookup",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Professional email address."
+        }
+      },
+      "notes": [
+        "A read over POST: starts a search, changes nothing."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.profile.scrape",
+      "name": "Scrape one profile",
+      "summary": "Profile data for a LinkedIn profile URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/scrape/profile",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Profile URL."
+        }
+      },
+      "notes": [
+        "Profile and company data cost from 0.5 credit (docs overview)."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    },
+    {
+      "id": "icypeas.company.scrape",
+      "name": "Scrape one company",
+      "summary": "Company data for a LinkedIn company URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/scrape/company",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company URL."
+        }
+      },
+      "notes": [
+        "Profile and company data cost from 0.5 credit (docs overview)."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api-doc.icypeas.com/reference/",
+      "verified": {
+        "docs": "https://api-doc.icypeas.com/reference/"
+      }
+    }
+  ]
+}
