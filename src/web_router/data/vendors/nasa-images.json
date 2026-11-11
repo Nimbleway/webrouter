@@ -1,0 +1,206 @@
+{
+  "vendor": "nasa-images",
+  "name": "NASA Image and Video Library",
+  "category": "search",
+  "summary": "Search NASA's public image, video and audio library and get each asset's files, metadata and captions from the free images-api.nasa.gov API.",
+  "docs_url": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf",
+  "base_url": "https://images-api.nasa.gov",
+  "notes": [
+    "Keyless and free.",
+    "Search and album results are Collection+JSON: items under collection.items, the total under collection.metadata.total_hits, and the next page as a collection.links entry with rel=next.",
+    "metadata and captions return only a location URL; fetch that file (on images-assets.nasa.gov) for the actual metadata or VTT/SRT captions."
+  ],
+  "sources": [
+    "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nasa-images.search",
+      "name": "Search the media library",
+      "summary": "Images, videos and audio matching free text and/or field filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text matched against all indexed metadata.",
+          "example": "apollo 11"
+        },
+        "center": {
+          "in": "query",
+          "type": "string",
+          "description": "NASA center that published the media.",
+          "example": "JSC"
+        },
+        "description": {
+          "in": "query",
+          "type": "string",
+          "description": "Terms to find in Description fields."
+        },
+        "description_508": {
+          "in": "query",
+          "type": "string",
+          "description": "Terms to find in 508 Description fields."
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Terms to find in Keywords fields, comma-separated."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Terms to find in Location fields."
+        },
+        "media_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict to image, video and/or audio, comma-separated.",
+          "example": "image"
+        },
+        "nasa_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The media asset's NASA ID."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page (default 100)."
+        },
+        "photographer": {
+          "in": "query",
+          "type": "string",
+          "description": "Primary photographer's name."
+        },
+        "secondary_creator": {
+          "in": "query",
+          "type": "string",
+          "description": "Secondary photographer or videographer's name."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Terms to find in Title fields."
+        },
+        "year_start": {
+          "in": "query",
+          "type": "string",
+          "description": "First year of results, YYYY."
+        },
+        "year_end": {
+          "in": "query",
+          "type": "string",
+          "description": "Last year of results, YYYY."
+        }
+      },
+      "notes": [
+        "At least one parameter is required."
+      ],
+      "job": "media.stock.search",
+      "docs_url": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf",
+      "verified": {
+        "docs": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf"
+      }
+    },
+    {
+      "id": "nasa-images.asset",
+      "name": "Get an asset's files",
+      "summary": "Manifest of an asset's file URLs (original, medium, small, thumbnail, metadata.json).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/asset/{nasa_id}",
+      "params": {
+        "nasa_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The media asset's NASA ID.",
+          "example": "as11-40-5874"
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf",
+      "verified": {
+        "docs": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf"
+      }
+    },
+    {
+      "id": "nasa-images.metadata",
+      "name": "Get an asset's metadata location",
+      "summary": "URL of the asset's metadata.json file.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/metadata/{nasa_id}",
+      "params": {
+        "nasa_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The media asset's NASA ID.",
+          "example": "as11-40-5874"
+        }
+      },
+      "docs_url": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf",
+      "verified": {
+        "docs": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf"
+      }
+    },
+    {
+      "id": "nasa-images.captions",
+      "name": "Get a video's captions location",
+      "summary": "URL of a video asset's VTT or SRT captions file.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/captions/{nasa_id}",
+      "params": {
+        "nasa_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The video asset's NASA ID.",
+          "example": "172_ISS-Slosh"
+        }
+      },
+      "docs_url": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf",
+      "verified": {
+        "docs": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf"
+      }
+    },
+    {
+      "id": "nasa-images.album",
+      "name": "List an album's contents",
+      "summary": "Assets in a named media album.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/album/{album_name}",
+      "params": {
+        "album_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Album name (case-sensitive).",
+          "example": "apollo"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "media.list",
+      "docs_url": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf",
+      "verified": {
+        "docs": "https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf"
+      }
+    }
+  ]
+}

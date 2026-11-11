@@ -1,0 +1,140 @@
+{
+  "vendor": "springer-nature",
+  "name": "Springer Nature",
+  "category": "search",
+  "summary": "Metadata and abstracts for Springer Nature journal articles, book chapters and protocols, plus open-access full text in JATS, from the Springer Nature APIs.",
+  "docs_url": "https://dev.springernature.com/docs/introduction",
+  "pricing_url": "https://dev.springernature.com/subscription/",
+  "base_url": "https://api.springernature.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SPRINGER_NATURE_API_KEY"
+        ],
+        "description": "API key from the API Management page of a dev.springernature.com account; sent as the api_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Basic (free) plan: 100 requests a minute and 500 a day per API; Premium raises it (Meta and Metadata 300/min, 10,000/day).",
+    "Page with s (start, from 1) and p (page size, default 10). Max p: Meta API 25 on Basic, 100 on Premium; Open Access API 20.",
+    "Which query constraints work depends on the plan; Premium-only filters fail on a Basic key."
+  ],
+  "sources": [
+    "https://dev.springernature.com/docs/quick-start/authentication",
+    "https://dev.springernature.com/docs/api-endpoints/meta-api",
+    "https://dev.springernature.com/docs/api-endpoints/open-access",
+    "https://dev.springernature.com/docs/supported-query-params",
+    "https://dev.springernature.com/docs/advanced-querying/pagination-limits",
+    "https://dev.springernature.com/docs/rate-limit-details/rate-limits"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "springer-nature.meta.search",
+      "name": "Search article and chapter metadata",
+      "summary": "Versioned metadata (title, DOI, authors, abstract, journal or book, subjects, links) for matching documents, with facets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/meta/v2/json",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Query of constraint:argument pairs separated by spaces (doi:, keyword:, subject:, journal:, title:, name:, year:, issn:, isbn:, type:Book|Journal, openaccess:true...); quote multi-word arguments with %22. Some constraints are Premium-only.",
+          "example": "keyword:test"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based index of the first result (default 1)."
+        },
+        "p": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page (default 10; max 25 Basic, 100 Premium)."
+        }
+      },
+      "job": "scholar.search",
+      "docs_url": "https://dev.springernature.com/docs/api-endpoints/meta-api",
+      "verified": {
+        "docs": "https://dev.springernature.com/docs/api-endpoints/meta-api"
+      }
+    },
+    {
+      "id": "springer-nature.openaccess.search",
+      "name": "Search open-access metadata",
+      "summary": "Metadata for matching open-access articles and chapters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/openaccess/json",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Query of constraint:argument pairs separated by spaces (doi:, keyword:, subject:, journal:, title:, name:, year:, issn:, isbn:, type:Book|Journal, openaccess:true...); quote multi-word arguments with %22. Some constraints are Premium-only.",
+          "example": "keyword:test"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based index of the first result (default 1)."
+        },
+        "p": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page (default 10, max 20)."
+        }
+      },
+      "job": "scholar.search",
+      "docs_url": "https://dev.springernature.com/docs/api-endpoints/open-access",
+      "verified": {
+        "docs": "https://dev.springernature.com/docs/api-endpoints/open-access"
+      }
+    },
+    {
+      "id": "springer-nature.openaccess.jats",
+      "name": "Get open-access full text",
+      "summary": "Full text of matching open-access articles and chapters as JATS XML, where available.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/openaccess/jats",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Query of constraint:argument pairs separated by spaces (doi:, keyword:, subject:, journal:, title:, name:, year:, issn:, isbn:, type:Book|Journal, openaccess:true...); quote multi-word arguments with %22. Some constraints are Premium-only.",
+          "example": "keyword:test"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based index of the first result (default 1)."
+        },
+        "p": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page (default 10, max 20)."
+        }
+      },
+      "notes": [
+        "Returns XML; narrow q to a doi: to get one document."
+      ],
+      "docs_url": "https://dev.springernature.com/docs/api-endpoints/open-access",
+      "verified": {
+        "docs": "https://dev.springernature.com/docs/api-endpoints/open-access"
+      }
+    }
+  ]
+}
