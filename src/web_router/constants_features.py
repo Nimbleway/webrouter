@@ -11,5 +11,14 @@ from typing import Final
 FEATURES_ROUTER_NAME: Final = "features"
 """The name ``router=`` takes for the built-in keyless router that reads a prompt's features, and the default."""
 
+FEATURES_TIMEOUT_S: Final = 1.0
+"""Seconds it has to answer: it runs in this process, but a pasted document of a megabyte takes it ~0.1 s to read,
+past the 50 ms a router that declares none gets."""
+
+MSG_FEATURES_CONFIG: Final = (
+    "router='features', the default, takes no router_config; name the router router_config configures with "
+    "router='name'."
+)
+
 FEATURES_REASON: Final = "features: verb={verb} has_url={has_url} plural={plural} kw_research={kw_research}"
 """What its decision gives as the reason: the row of the table it read the method from."""

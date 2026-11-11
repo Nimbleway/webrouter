@@ -700,7 +700,7 @@ simulated 40 ms round trip. The run cost about $0.10.
 
 | Router | p50 ms | p90 ms | Timeouts | First call ms | Added wall time p50 ms | search | answer |
 |---|--:|--:|--:|--:|--:|---|---|
-| rules | 0.375 | 0.553 | 0% | 0.23 | 0.98 | consult (0.12%) | consult (0.02%) |
+| rules (removed; measured before `features` replaced it) | 0.375 | 0.553 | 0% | 0.23 | 0.98 | consult (0.12%) | consult (0.02%) |
 | sklearn | 2.07 | 2.61 | 0% | 1.9 | 2.5 | consult (0.65%) | consult (0.11%) |
 | llm (`gpt-4.1-mini`) | 1223 | 1714 | 0% | 2084 | 1389 | skip (387%) | skip (65%) |
 | jev (`jev-1.14.0`) | 242 | 271 | 0.5% | 278 | 237 | skip (76%) | consult (13%) |
@@ -713,7 +713,7 @@ gives these same verdicts.
 
 What the examples declare from it: search and answer as measured, extract,
 research and browse by judgement, since they take seconds to minutes. The
-rules and sklearn routers pass every measured tool and declare no
+former rules router and the sklearn example pass every measured tool and declare no
 `route_tools`. The LLM router declares `("research", "browse")` (it never picks
 extract with no URL in the prompt), and Jev `("answer", "extract", "research",
 "browse")`. A remote service declares its own through `router_config`; at the

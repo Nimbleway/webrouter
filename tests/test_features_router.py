@@ -8,7 +8,16 @@ import pytest
 
 from tests.plan_helpers import called_fixture  # noqa: F401  (fixture)
 from tests.routing_helpers import MEMBERS
-from web_router import AsyncWebRouter, Candidate, FeaturesRouter, RouteDecision, RouteRequest, WebRouter, read_features
+from web_router import (
+    AsyncWebRouter,
+    Candidate,
+    ConfigurationError,
+    FeaturesRouter,
+    RouteDecision,
+    RouteRequest,
+    WebRouter,
+    read_features,
+)
 from web_router.routing.features import FEATURE_MAPPING, Features, Verb
 from web_router.routing.registry import available_routers
 
@@ -103,6 +112,22 @@ def test_a_pinned_method_is_left_as_pinned() -> None:
     assert FeaturesRouter().route(_request("Who is the CEO of Example Corp?", pinned="research")) == RouteDecision()
 
 
+def test_a_pinned_method_still_gets_the_bare_host_it_reads() -> None:
+    decision = FeaturesRouter().route(_request("summarize nfl.com", pinned="extract"))
+    assert decision == RouteDecision(
+        params={"extract": {"urls": ["https://nfl.com"]}, "browse": {"start_url": "https://nfl.com"}}
+    )
+
+
+def test_router_config_without_a_router_name_says_to_name_one() -> None:
+    with pytest.raises(ConfigurationError, match="router='features', the default, takes no router_config"):
+        WebRouter(router_config={"url": "https://router.example.com/route"})
+
+
+def test_it_has_time_for_a_long_prompt() -> None:
+    assert FeaturesRouter.timeout_s >= 1.0
+
+
 def test_it_is_a_built_in_router_asked_by_plan_and_run_only() -> None:
     assert "features" in available_routers()
     assert FeaturesRouter.route_tools == ()
@@ -122,6 +147,13 @@ def test_the_default_plans_a_bare_host_it_reads() -> None:
     with _wr() as wr:
         plan = wr.plan("Go to nfl.com and find the standings")
     assert (plan.tool, plan.params["start_url"]) == ("browse", "https://nfl.com")
+
+
+@pytest.mark.usefixtures("called")
+def test_a_pinned_extract_of_a_bare_host_plans_it() -> None:
+    with _wr() as wr:
+        plan = wr.plan("summarize nfl.com", tool="extract")
+    assert (plan.tool, list(plan.params["urls"])) == ("extract", ["https://nfl.com"])
 
 
 @pytest.mark.usefixtures("called")

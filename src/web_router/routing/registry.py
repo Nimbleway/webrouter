@@ -22,7 +22,7 @@ from typing import Any
 
 from web_router.constants_decider import LLM_ROUTER_NAME, SYSTEMONE_ROUTER_NAME
 from web_router.constants_fallback import FALLBACK_ROUTER_NAME
-from web_router.constants_features import FEATURES_ROUTER_NAME
+from web_router.constants_features import FEATURES_ROUTER_NAME, MSG_FEATURES_CONFIG
 from web_router.constants_invoke import (
     MSG_ROUTER_BUILT_NONE,
     MSG_ROUTER_CONFIG_MISSING,
@@ -136,6 +136,9 @@ def resolve_router(
             raise ConfigurationError(MSG_ROUTER_CONFIG_UNNAMED)
         return router, None
     key = _checked_name(router)
+    if key == FEATURES_ROUTER_NAME and router_config is not None and key not in _CUSTOM_ROUTERS:
+        # The default: a router_config here was meant for a router the caller forgot to name.
+        raise ConfigurationError(MSG_FEATURES_CONFIG)
     factory = _factory(key)
     built = factory(**_fitted(key, factory, dict(router_config or {})))
     if built is None:  # attached as is, None would turn routing off without a word

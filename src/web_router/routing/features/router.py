@@ -11,7 +11,9 @@ the caller pinned is left as pinned.
 
 from __future__ import annotations
 
-from web_router.constants_features import FEATURES_REASON, FEATURES_ROUTER_NAME
+from typing import Any
+
+from web_router.constants_features import FEATURES_REASON, FEATURES_ROUTER_NAME, FEATURES_TIMEOUT_S
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 from web_router.routing.features.mapping import Features
 from web_router.routing.features.sensors import find_url, kw_research, plural, verb
@@ -19,9 +21,16 @@ from web_router.routing.features.sensors import find_url, kw_research, plural, v
 
 def read_features(prompt: str) -> Features:
     """The four features the method table reads in ``prompt``; :attr:`Features.tool` is the method it picks."""
-    return Features(
-        verb=verb(prompt), has_url=find_url(prompt) is not None, plural=plural(prompt), kw_research=kw_research(prompt)
+    return _read(prompt)[0]
+
+
+def _read(prompt: str) -> tuple[Features, str | None]:
+    """The features, and the URL behind ``has_url``: read once, for the method and the URL it runs on."""
+    url = find_url(prompt)
+    features = Features(
+        verb=verb(prompt), has_url=url is not None, plural=plural(prompt), kw_research=kw_research(prompt)
     )
+    return features, url
 
 
 class FeaturesRouter:
@@ -29,6 +38,7 @@ class FeaturesRouter:
 
     router_name = FEATURES_ROUTER_NAME
     route_tools: tuple[ToolName, ...] = ()
+    timeout_s = FEATURES_TIMEOUT_S
 
     def __repr__(self) -> str:
         return "FeaturesRouter()"
@@ -37,15 +47,18 @@ class FeaturesRouter:
         """The table's method for ``req.prompt``; extract and browse on the URL the sensors read, bare hosts included.
 
         Extract reads the URLs the plan read, or the sensors' one when the plan read none (a bare host). An
-        extract left with no URL searches instead, by the merge rule.
+        extract left with no URL searches instead, by the merge rule. A pinned method is left as pinned: only the
+        URL is given, so a pinned extract or browse of a bare host still has one.
         """
+        features, url = _read(req.prompt)
+        params: dict[ToolName, dict[str, Any]] | None = (
+            {"extract": {"urls": list(req.urls) or [url]}, "browse": {"start_url": url}} if url else None
+        )
         if req.pinned_tool is not None:
-            return RouteDecision()
-        features = read_features(req.prompt)
-        url = find_url(req.prompt)
+            return RouteDecision(params=params)
         return RouteDecision(
             tools=[features.tool],
-            params=({"extract": {"urls": list(req.urls) or [url]}, "browse": {"start_url": url}} if url else None),
+            params=params,
             reason=FEATURES_REASON.format(
                 verb=features.verb.value,
                 has_url=features.has_url,

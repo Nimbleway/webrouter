@@ -129,10 +129,10 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
             provider_config: Constructor kwargs per provider, keyed by provider name --
                 ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is the only place
                 credentials are passed explicitly; everything else comes from the environment.
-            router, route_tools, fail_on_router_error: a router (the built-in ``features`` unless set, ``None`` for
-                none), the tools that ask it (its own ``route_tools``, else all five) and if its failure raises -- see
-                :mod:`web_router.routing.invoke`. A name such as ``"remote"`` builds a registered router from
-                ``router_config``, and closing this router closes it -- see :mod:`web_router.routing.registry`.
+            router, route_tools, fail_on_router_error (experimental): a router that orders ``auto``'s backends
+                (``features`` unless set, ``None`` for none), the tools that ask it (its own ``route_tools``, else all
+                five) and if its failure raises -- see :mod:`web_router.routing.invoke`. A name such as ``"remote"``
+                builds one from ``router_config``, closed with this router -- see :mod:`web_router.routing.registry`.
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
             vendor_credentials: for :meth:`call_vendor`, read before the environment -- see
                 :mod:`web_router.client_vendors`.
