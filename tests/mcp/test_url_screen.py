@@ -7,7 +7,8 @@ from typing import Any
 import pytest
 
 from tests.mcp.conftest import FAKE
-from web_router.constants import MCP_TOOL_BROWSE, MCP_TOOL_EXTRACT, MCP_TOOL_RUN_TEMPLATE
+from web_router.constants import MCP_TOOL_BROWSE, MCP_TOOL_EXTRACT
+from web_router.constants_live_data import MCP_TOOL_LIVE_DATA
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
 from web_router.mcp.urls import screen
@@ -35,15 +36,15 @@ async def test_a_refusal_names_the_host_and_never_the_path(tools: WebRouterTools
     ("tool", "arguments"),
     [
         (MCP_TOOL_BROWSE, {"task": "read it", "start_url": "http://169.254.169.254/"}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "file:///etc/passwd"}}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "file:/etc/passwd"}}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"urls": ["JavaScript:alert(1)"]}}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"page": {"at": ["http://10.0.0.1/"]}}}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "//127.0.0.1/admin"}}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "http:/127.0.0.1/"}}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "gopher:/127.0.0.1"}}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"url": "http:\n//127.0.0.1/"}}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "t", "provider": FAKE, "inputs": {"q": "see http://10.0.0.1/x now"}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"url": "file:///etc/passwd"}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"url": "file:/etc/passwd"}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"urls": ["JavaScript:alert(1)"]}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"page": {"at": ["http://10.0.0.1/"]}}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"url": "//127.0.0.1/admin"}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"url": "http:/127.0.0.1/"}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"url": "gopher:/127.0.0.1"}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"url": "http:\n//127.0.0.1/"}}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t", "provider": FAKE, "inputs": {"q": "see http://10.0.0.1/x now"}}),
         (MCP_TOOL_EXTRACT, {"urls": {"http://127.0.0.1/": 1}}),
     ],
 )
@@ -58,9 +59,9 @@ async def test_browse_and_a_template_run_screen_their_urls_too(
 async def test_a_template_input_that_is_not_a_url_is_left_alone(tools: WebRouterTools) -> None:
     result = await call_tool(
         tools,
-        MCP_TOOL_RUN_TEMPLATE,
+        MCP_TOOL_LIVE_DATA,
         {
-            "template": "t",
+            "source": "t",
             "provider": FAKE,
             "inputs": {"asin": "B0:12", "q": "http: 404, reviews of https://example.com"},
         },
