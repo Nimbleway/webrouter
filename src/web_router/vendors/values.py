@@ -81,6 +81,32 @@ def render(vendor: Vendor, template: str, values: Mapping[str, str]) -> str:
     return template.format_map(values)
 
 
+def excluded_credentials(plan: _Plan) -> set[str]:
+    """The vendor's credentials this endpoint's own list leaves out; none when it has no list."""
+    if plan.credentials is None:
+        return set()
+    return set(plan.vendor.auth.credentials) - set(plan.credentials)
+
+
+def vendor_headers(plan: _Plan, values: Mapping[str, str]) -> dict[str, str]:
+    """The vendor-wide headers, rendered; one naming a credential the endpoint excludes is left off."""
+    excluded = excluded_credentials(plan)
+    vendor = plan.vendor
+    return {
+        name: render(vendor, value, values)
+        for name, value in vendor.headers.items()
+        if not placeholders(value) & excluded
+    }
+
+
+def basic_auth(plan: _Plan, values: Mapping[str, str]) -> tuple[str, str] | None:
+    """HTTP Basic for this call, or None: none declared, or it names a credential the endpoint excludes."""
+    basic = plan.vendor.auth.basic
+    if basic is None or (placeholders(basic.username) | placeholders(basic.password)) & excluded_credentials(plan):
+        return None
+    return render(plan.vendor, basic.username, values), render(plan.vendor, basic.password, values)
+
+
 def applied(plan: _Plan, values: Mapping[str, str]) -> list[VendorInjection]:
     """The injections this call carries.
 
@@ -90,12 +116,12 @@ def applied(plan: _Plan, values: Mapping[str, str]) -> list[VendorInjection]:
     """
     vendor = plan.vendor
     required = needed(plan)
-    excluded = set(vendor.auth.credentials) - set(plan.credentials) if plan.credentials is not None else set()
+    excluded = excluded_credentials(plan)
     skippable = set(vendor.auth.credentials) | (set() if wants_token(plan) else {ACCESS_TOKEN})
     carried = []
     for injection in vendor.auth.inject:
         names = placeholders(injection.value)
-        if names & excluded:
+        if names & excluded or any(values.get(name) != value for name, value in (injection.when or {}).items()):
             continue
         absent = {name for name in names if name not in values}
         if absent and (injection.optional or not (absent & required or absent - skippable)):

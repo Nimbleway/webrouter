@@ -36,7 +36,7 @@ from web_router.vendors.response import Prepared, response, send_kwargs, transpo
 from web_router.vendors.schema import ACCESS_TOKEN
 from web_router.vendors.tokens import TokenCache, TokenRequest, token_request
 from web_router.vendors.types import VendorResponse
-from web_router.vendors.values import applied, render, resolve, wants_token
+from web_router.vendors.values import applied, basic_auth, render, resolve, vendor_headers, wants_token
 
 
 class VendorCaller:
@@ -85,7 +85,7 @@ class VendorCaller:
                 MSG_VENDOR_HOST_ESCAPE.format(vendor=vendor.vendor, host=actual.host, expected=expected.host)
             )
         headers = dict(VENDOR_REQUEST_HEADERS)
-        headers.update({name: render(vendor, value, values) for name, value in vendor.headers.items()})
+        headers.update(vendor_headers(plan, values))
         headers.update(plan.headers)
         query = list(plan.query)
         body = plan.body
@@ -105,12 +105,7 @@ class VendorCaller:
             else:
                 query = [pair for pair in query if pair[0] != injection.name] + [(injection.name, rendered)]
                 masked.add(injection.name)
-        auth = None
-        if vendor.auth.basic is not None:
-            auth = (
-                render(vendor, vendor.auth.basic.username, values),
-                render(vendor, vendor.auth.basic.password, values),
-            )
+        auth = basic_auth(plan, values)
         secret_names = set(vendor.auth.credentials) | {ACCESS_TOKEN}
         secrets = [value for name, value in values.items() if name in secret_names]
         return Prepared(plan, url, query, headers, auth, secrets, masked, body)

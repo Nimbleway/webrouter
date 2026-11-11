@@ -94,6 +94,10 @@ class VendorInjection(_Strict):
     optional: bool = Field(
         default=False, description="Skip this one, rather than fail, when a value it names is not set."
     )
+    when: dict[str, str] | None = Field(
+        default=None,
+        description="Carried only when each named setting has this value, e.g. a key header that belongs to one host.",
+    )
 
 
 class VendorBasicAuth(_Strict):

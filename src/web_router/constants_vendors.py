@@ -171,6 +171,7 @@ MSG_VENDOR_CATALOG_ENDPOINT_PREFIX: Final = "endpoint id {endpoint!r} must start
 MSG_VENDOR_CATALOG_PATH_PARAM: Final = "endpoint {endpoint!r}: path placeholder {{{name}}} has no 'path' parameter"
 MSG_VENDOR_CATALOG_PATH_UNUSED: Final = "endpoint {endpoint!r}: path parameter {name!r} is not in the path"
 MSG_VENDOR_CATALOG_BODY_ON_GET: Final = "endpoint {endpoint!r}: a {method} request cannot carry body parameters"
+MSG_VENDOR_CATALOG_WHEN: Final = "injection {injection!r}: when {name}={value!r} names no choice of a setting"
 MSG_VENDOR_CATALOG_UNKNOWN_REF: Final = (
     "auth references {{{name}}}, which is neither a credential, a setting nor access_token"
 )

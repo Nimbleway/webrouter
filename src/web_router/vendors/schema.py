@@ -28,6 +28,7 @@ from web_router.constants_vendors import (
     MSG_VENDOR_CATALOG_SCHEME,
     MSG_VENDOR_CATALOG_SETTING_CHOICES,
     MSG_VENDOR_CATALOG_UNKNOWN_REF,
+    MSG_VENDOR_CATALOG_WHEN,
     VENDOR_CATEGORIES,
     VENDOR_ID_PATTERN,
 )
@@ -123,6 +124,11 @@ class Vendor(_Strict):
                     raise ValueError(MSG_VENDOR_CATALOG_SETTING_CHOICES.format(name=name))
 
     def _check_references(self) -> None:
+        for injection in self.auth.inject:
+            for name, value in (injection.when or {}).items():
+                choices = self.settings[name].choices if name in self.settings else None
+                if not choices or value not in choices:
+                    raise ValueError(MSG_VENDOR_CATALOG_WHEN.format(injection=injection.name, name=name, value=value))
         known = set(self.auth.credentials) | set(self.settings)
         if self.auth.oauth2 is not None:
             known.add(ACCESS_TOKEN)
