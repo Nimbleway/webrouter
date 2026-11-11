@@ -1,0 +1,585 @@
+{
+  "vendor": "minimax",
+  "name": "MiniMax",
+  "category": "media-generation",
+  "summary": "MiniMax speech, video (H3), image, music and chat models through the MiniMax API Platform.",
+  "docs_url": "https://platform.minimax.io/docs/api-reference/api-overview",
+  "pricing_url": "https://platform.minimax.io/docs/pricing/overview",
+  "base_url": "https://api.minimax.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MINIMAX_API_KEY"
+        ],
+        "description": "a MiniMax API key (platform.minimax.io, API Keys > Create new secret key); M Plan subscribers use their Subscription Key"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Video and long text-to-speech are asynchronous: create a task, then poll the query endpoint with the task_id.",
+    "Audio and image results are time-limited URLs (24 hours) or inline hex/base64.",
+    "Rate limits and billing depend on the model; M Plan Subscription Keys are separate from pay-as-you-go keys."
+  ],
+  "sources": [
+    "https://platform.minimax.io/docs/api-reference/api-overview",
+    "https://platform.minimax.io/docs/api-reference/speech-t2a-http",
+    "https://platform.minimax.io/docs/api-reference/speech-t2a-async-create",
+    "https://platform.minimax.io/docs/api-reference/video-generation-v2-create",
+    "https://platform.minimax.io/docs/api-reference/image-generation-t2i",
+    "https://platform.minimax.io/docs/api-reference/music-generation"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "minimax.speech.generate",
+      "name": "Text to speech (synchronous)",
+      "summary": "Turns up to 10,000 characters of text into audio in one call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/t2a_v2",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Speech model.",
+          "example": "speech-2.8-hd",
+          "enum": [
+            "speech-2.8-hd",
+            "speech-2.8-turbo",
+            "speech-2.6-hd",
+            "speech-2.6-turbo",
+            "speech-02-hd",
+            "speech-02-turbo",
+            "speech-01-hd",
+            "speech-01-turbo"
+          ]
+        },
+        "text": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text to speak, under 10,000 characters.",
+          "example": "Hello from MiniMax."
+        },
+        "stream": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Stream the audio; default false."
+        },
+        "voice_setting": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Voice choice and delivery: {\"voice_id\": required, \"speed\": 0.5-2, \"vol\": (0,10], \"pitch\": -12..12, \"emotion\": happy|sad|angry|fearful|disgusted|surprised|calm|fluent|whisper}.",
+          "example": {
+            "voice_id": "English_expressive_narrator"
+          }
+        },
+        "audio_setting": {
+          "in": "body",
+          "type": "object",
+          "description": "Output: {\"sample_rate\", \"bitrate\", \"format\": mp3|pcm|flac|wav|pcmu_raw|pcmu_wav|opus, \"channel\": 1|2}."
+        },
+        "language_boost": {
+          "in": "body",
+          "type": "string",
+          "description": "Boost recognition of a language or dialect, e.g. English, Chinese, or auto."
+        },
+        "text_normalization_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "basic (fast rules) or quality (LLM plus rules).",
+          "enum": [
+            "basic",
+            "quality"
+          ]
+        },
+        "subtitle_enable": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return subtitle timestamps; default false."
+        },
+        "output_format": {
+          "in": "body",
+          "type": "string",
+          "description": "hex (default, audio inline) or url; non-streaming only.",
+          "enum": [
+            "url",
+            "hex"
+          ]
+        }
+      },
+      "notes": [
+        "Without output_format url the audio comes back as a hex string inside the JSON.",
+        "Billed per character; Chinese characters count double."
+      ],
+      "job": "ai.speech.generate",
+      "docs_url": "https://platform.minimax.io/docs/api-reference/speech-t2a-http",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/speech-t2a-http"
+      }
+    },
+    {
+      "id": "minimax.speech.async_create",
+      "name": "Text to speech (asynchronous, long text)",
+      "summary": "Starts a long-form speech job for up to 100,000 characters, or a text file.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/t2a_async_v2",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Speech model.",
+          "example": "speech-2.8-hd",
+          "enum": [
+            "speech-2.8-hd",
+            "speech-2.8-turbo",
+            "speech-2.6-hd",
+            "speech-2.6-turbo",
+            "speech-02-hd",
+            "speech-02-turbo",
+            "speech-01-hd",
+            "speech-01-turbo"
+          ]
+        },
+        "text": {
+          "in": "body",
+          "type": "string",
+          "description": "Text, up to 100,000 characters; exclusive with text_file_id."
+        },
+        "text_file_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "Id of an uploaded text file; exclusive with text."
+        },
+        "voice_setting": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Voice choice and delivery; voice_id is required.",
+          "example": {
+            "voice_id": "English_expressive_narrator"
+          }
+        },
+        "audio_setting": {
+          "in": "body",
+          "type": "object",
+          "description": "Output: audio_sample_rate, bitrate, format, channel (default 2)."
+        },
+        "language_boost": {
+          "in": "body",
+          "type": "string",
+          "description": "Language or dialect to boost, or auto."
+        }
+      },
+      "notes": [
+        "Asynchronous: the response carries a task_id. Poll minimax.speech.async_query with it until the task succeeds.",
+        "Billable characters: each Chinese character counts as 2, others as 1."
+      ],
+      "job": "ai.speech.generate",
+      "docs_url": "https://platform.minimax.io/docs/api-reference/speech-t2a-async-create",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/speech-t2a-async-create"
+      }
+    },
+    {
+      "id": "minimax.speech.async_query",
+      "name": "Query an asynchronous speech task",
+      "summary": "Status and result of a job started by minimax.speech.async_create.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/query/t2a_async_query_v2",
+      "params": {
+        "task_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The task_id returned when the task was submitted."
+        }
+      },
+      "notes": [
+        "Polls the task started by minimax.speech.async_create."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://platform.minimax.io/docs/api-reference/speech-t2a-async-query",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/speech-t2a-async-query"
+      }
+    },
+    {
+      "id": "minimax.video.create",
+      "name": "Create a video generation task",
+      "summary": "Starts an asynchronous text, image, first-and-last-frame or reference video job with MiniMax-H3.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/video_generation",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Video model.",
+          "example": "MiniMax-H3",
+          "enum": [
+            "MiniMax-H3",
+            "MiniMax-H3-Highspeed",
+            "MiniMax-H3-Lite",
+            "MiniMax-H3-Max"
+          ]
+        },
+        "content": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Multimodal input parts, each with a type: text, image_url, video_url or audio_url, optionally with a role such as first_frame, last_frame, reference_video.",
+          "example": [
+            {
+              "type": "text",
+              "text": "A fox running through snow"
+            }
+          ]
+        },
+        "resolution": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "480P, 768P or 2K; 2K only on MiniMax-H3.",
+          "example": "768P",
+          "enum": [
+            "480P",
+            "768P",
+            "2K"
+          ]
+        },
+        "duration": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Seconds, 4 to 15 (5 to 15 on MiniMax-H3-Max).",
+          "example": 5
+        },
+        "ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Aspect ratio; default adaptive.",
+          "enum": [
+            "adaptive",
+            "21:9",
+            "16:9",
+            "4:3",
+            "1:1",
+            "3:4",
+            "9:16"
+          ]
+        },
+        "extra": {
+          "in": "body",
+          "type": "object",
+          "description": "MiniMax-H3-Max only: {\"prompt_expansion_mode\": disabled|balanced|quality}."
+        },
+        "callback_url": {
+          "in": "body",
+          "type": "string",
+          "description": "URL notified on status changes; it must answer a challenge verification."
+        }
+      },
+      "notes": [
+        "Asynchronous: the response carries a task_id. Poll minimax.video.query with it; on success the video URL is in content.url.",
+        "Billed per task by model, resolution and duration."
+      ],
+      "job": "ai.video.generate",
+      "docs_url": "https://platform.minimax.io/docs/api-reference/video-generation-v2-create",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/video-generation-v2-create"
+      }
+    },
+    {
+      "id": "minimax.video.query",
+      "name": "Query a video generation task",
+      "summary": "Status of a task from minimax.video.create, with the video URL when it succeeded.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/query/video_generation/{task_id}",
+      "params": {
+        "task_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The task_id returned by minimax.video.create."
+        }
+      },
+      "notes": [
+        "Polls the task started by minimax.video.create. Task records are kept for 7 days."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://platform.minimax.io/docs/api-reference/video-generation-v2-query",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/video-generation-v2-query"
+      }
+    },
+    {
+      "id": "minimax.image.generate",
+      "name": "Generate an image",
+      "summary": "Text-to-image with image-01.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/image_generation",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Image model.",
+          "example": "image-01",
+          "enum": [
+            "image-01"
+          ]
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Image description, up to 1500 characters.",
+          "example": "A watercolor lighthouse at dusk"
+        },
+        "aspect_ratio": {
+          "in": "body",
+          "type": "string",
+          "description": "Default 1:1.",
+          "enum": [
+            "1:1",
+            "16:9",
+            "4:3",
+            "3:2",
+            "2:3",
+            "3:4",
+            "9:16",
+            "21:9"
+          ]
+        },
+        "width": {
+          "in": "body",
+          "type": "integer",
+          "description": "Pixels, 512 to 2048 and divisible by 8; set together with height."
+        },
+        "height": {
+          "in": "body",
+          "type": "integer",
+          "description": "Pixels, 512 to 2048 and divisible by 8; set together with width."
+        },
+        "response_format": {
+          "in": "body",
+          "type": "string",
+          "description": "url (default) or base64.",
+          "enum": [
+            "url",
+            "base64"
+          ]
+        },
+        "seed": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seed for reproducible output."
+        },
+        "n": {
+          "in": "body",
+          "type": "integer",
+          "description": "Images per request, 1 to 9; default 1."
+        },
+        "prompt_optimizer": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Auto-improve the prompt; default false."
+        }
+      },
+      "notes": [
+        "Image URLs expire after 24 hours."
+      ],
+      "job": "ai.image.generate",
+      "docs_url": "https://platform.minimax.io/docs/api-reference/image-generation-t2i",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/image-generation-t2i"
+      }
+    },
+    {
+      "id": "minimax.music.generate",
+      "name": "Generate a song",
+      "summary": "Music from a style prompt and lyrics; or a cover of reference audio.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/music_generation",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Music model; music-3.0 is recommended, music-cover for covers, -free variants for the free tier.",
+          "example": "music-3.0",
+          "enum": [
+            "music-3.0",
+            "music-2.6",
+            "music-cover",
+            "music-3.0-free",
+            "music-2.6-free",
+            "music-cover-free"
+          ]
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Style, mood and scenario, e.g. Pop, melancholic, perfect for a rainy night."
+        },
+        "lyrics": {
+          "in": "body",
+          "type": "string",
+          "description": "Lyrics, lines separated by \\n, with tags such as [Verse] and [Chorus]."
+        },
+        "lyrics_optimizer": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Write lyrics from the prompt."
+        },
+        "is_instrumental": {
+          "in": "body",
+          "type": "boolean",
+          "description": "No vocals."
+        },
+        "output_format": {
+          "in": "body",
+          "type": "string",
+          "description": "url or hex; streaming supports hex only.",
+          "enum": [
+            "url",
+            "hex"
+          ]
+        },
+        "audio_setting": {
+          "in": "body",
+          "type": "object",
+          "description": "sample_rate (16000-44100), bitrate, format mp3|wav|pcm."
+        },
+        "audio_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Reference audio URL, for music-cover models."
+        }
+      },
+      "notes": [
+        "Synchronous. url links expire after 24 hours."
+      ],
+      "docs_url": "https://platform.minimax.io/docs/api-reference/music-generation",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/music-generation"
+      }
+    },
+    {
+      "id": "minimax.voices.list",
+      "name": "List voices",
+      "summary": "System, cloned or generated voices usable as voice_id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/get_voice",
+      "params": {
+        "voice_type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Which voices to list.",
+          "example": "system",
+          "enum": [
+            "system",
+            "voice_cloning",
+            "voice_generation",
+            "all"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only lists voices."
+      ],
+      "docs_url": "https://platform.minimax.io/docs/api-reference/voice-management-get",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/voice-management-get"
+      }
+    },
+    {
+      "id": "minimax.chat.complete",
+      "name": "Create a chat completion",
+      "summary": "OpenAI-compatible chat with MiniMax-M3 models.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "params": {
+        "model": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Model id.",
+          "example": "MiniMax-M3.1-Flash",
+          "enum": [
+            "MiniMax-M3.1-Flash",
+            "MiniMax-M3"
+          ]
+        },
+        "messages": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Conversation messages.",
+          "example": [
+            {
+              "role": "user",
+              "content": "Hello"
+            }
+          ]
+        },
+        "max_completion_tokens": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on generated tokens."
+        },
+        "reasoning_effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Thinking depth, MiniMax-M3.1-Flash only.",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ]
+        },
+        "tools": {
+          "in": "body",
+          "type": "array",
+          "description": "Function tool definitions."
+        },
+        "stream": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Leave false."
+        }
+      },
+      "notes": [
+        "temperature and top_p have no effect on these models."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://platform.minimax.io/docs/api-reference/text-chat-openai",
+      "verified": {
+        "docs": "https://platform.minimax.io/docs/api-reference/text-chat-openai"
+      }
+    }
+  ]
+}
