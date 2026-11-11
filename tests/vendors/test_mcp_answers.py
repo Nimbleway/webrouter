@@ -9,7 +9,7 @@ import pytest
 
 from tests.vendors.conftest import Recorder
 from web_router import AsyncWebRouter
-from web_router.constants_vendors import MCP_TOOL_CALL_VENDOR, MCP_TOOL_VENDOR_ENDPOINT, MCP_TOOL_VENDORS
+from web_router.constants_vendors_mcp import MCP_TOOL_CALL_VENDOR, MCP_TOOL_VENDOR_ENDPOINT, MCP_TOOL_VENDORS
 from web_router.mcp.tools import WebRouterTools
 from web_router.vendors.caller import VendorCaller
 

@@ -11,12 +11,12 @@ as every other tool's, for the tokens a vendor might echo back.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from typing import Any
 
 from web_router.constants import MCP_JSON_INDENT
-from web_router.constants_vendors import MCP_MSG_VENDOR_TRUNCATED
+from web_router.constants_vendors_mcp import MCP_MSG_VENDOR_TRUNCATED
 from web_router.mcp.shaping import redact, redaction_note, render, truncate
-from web_router.vendors.catalog import VendorCatalog
 from web_router.vendors.credentials import CredentialSource, missing_credentials
 from web_router.vendors.schema import Vendor, VendorEndpoint
 from web_router.vendors.types import VendorResponse, VendorSummary
@@ -71,13 +71,16 @@ def shape_vendor_list(rows: list[VendorSummary], *, budget: int) -> dict[str, An
 
 
 def shape_endpoint_list(
-    endpoints: list[VendorEndpoint], catalog: VendorCatalog, credentials: CredentialSource, *, budget: int
+    endpoints: list[VendorEndpoint], vendors: Mapping[str, Vendor], credentials: CredentialSource, *, budget: int
 ) -> dict[str, Any]:
-    """Matching endpoints, best first: the id to call, what it does, and whether it is usable here."""
+    """Matching endpoints, best first: the id to call, what it does, and whether it is usable here.
+
+    ``vendors`` holds each endpoint's vendor, by slug.
+    """
     missing: dict[tuple[str, tuple[str, ...] | None], list[str]] = {}
     rows = []
     for endpoint in endpoints:
-        vendor = catalog.vendor(endpoint.vendor)
+        vendor = vendors[endpoint.vendor]
         key = (vendor.vendor, tuple(endpoint.credentials) if endpoint.credentials is not None else None)
         if key not in missing:
             missing[key] = missing_credentials(vendor, credentials, endpoint)
