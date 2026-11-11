@@ -89,6 +89,8 @@ MSG_OXYLABS_NOT_FETCHED: Final = "Oxylabs could not fetch {source!r}: status {st
 
 MSG_OXYLABS_FAULTED: Final = "Oxylabs' job {job_id} for {source!r} faulted: status {status}"
 
+MSG_OXYLABS_NO_JOB_ID: Final = "Oxylabs accepted the job for {source!r} but returned no job id to read it by"
+
 MSG_OXYLABS_POLL_FAILED: Final = (
     "Oxylabs' job {job_id} for {source!r} was submitted, but reading it failed: {error}. "
     "It may still finish: GET /v1/async/scrape/{job_id}"

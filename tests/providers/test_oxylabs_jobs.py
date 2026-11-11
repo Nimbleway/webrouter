@@ -74,7 +74,7 @@ def test_an_async_only_scraper_with_no_request_id_raises(monkeypatch: pytest.Mon
     monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
     monkeypatch.setattr(OxylabsLiveDataProvider, "wait_seconds", 0.2)
     provider, api = _provider(lambda r: httpx.Response(202, json={"status": "pending"}))
-    with pytest.raises(ProviderError, match="faulted"):
+    with pytest.raises(ProviderError, match="returned no job id"):
         provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
     assert [r for r in _sent(api, "GET") if r.url.path != "/v1/scrapers"] == []
 

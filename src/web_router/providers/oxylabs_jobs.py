@@ -17,6 +17,7 @@ from typing import Any, NoReturn
 
 from web_router.constants_live_data_vendors import (
     MSG_OXYLABS_FAULTED,
+    MSG_OXYLABS_NO_JOB_ID,
     MSG_OXYLABS_STILL_RUNNING,
     OXYLABS_ASYNC_PREFIX,
     OXYLABS_JOB_DEADLINE_MARGIN,
@@ -33,7 +34,7 @@ def job_id(provider: str, request: LiveDataRequest, payload: Any) -> str:
     """The id Oxylabs gave a submitted job; raises when the answer has none, as there is then nothing to poll."""
     found = str(((payload if isinstance(payload, dict) else {}).get("metadata") or {}).get("request_id") or "")
     if not found:
-        raise ProviderError(provider, MSG_OXYLABS_FAULTED.format(job_id="?", source=request.source, status=None))
+        raise ProviderError(provider, MSG_OXYLABS_NO_JOB_ID.format(source=request.source))
     return found
 
 
