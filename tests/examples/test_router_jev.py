@@ -134,6 +134,12 @@ class TestJev:
         assert plan.tool == "extract"
         assert plan.providers["extract"][0] == "jina"
 
+    def test_it_orders_every_tool_but_search_unless_the_caller_says_otherwise(self) -> None:
+        with WebRouter(router=_jev("answer:exa")) as client:
+            assert client._route_tools == {"answer", "extract", "research", "browse"}
+        with WebRouter(router=_jev("answer:exa"), route_tools=("search",)) as client:
+            assert client._route_tools == {"search"}
+
     def test_without_a_key_it_says_what_to_set(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:

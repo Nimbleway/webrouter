@@ -1,0 +1,48 @@
+{
+  "provider": "nimble",
+  "method": "live_data",
+  "class": "web_router.providers.nimble_live_data.NimbleLiveDataProvider",
+  "transport": {
+    "kind": "sdk"
+  },
+  "credentials": [
+    "NIMBLE_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.params.url": "https://example.com",
+    "body.template": "probe-source"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "body.formats": [
+          "markdown"
+        ]
+      },
+      "html": {
+        "body.formats": [
+          "html"
+        ]
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": [
+    "https://docs.nimbleway.com/api-reference/extract-templates-api/run-extract-template",
+    "https://docs.nimbleway.com/nimble-sdk/web-tools/extract/template",
+    "nimble-python Nimble.extract.templates.run"
+  ],
+  "verified": {
+    "format": "live: tests/providers/test_nimble_live_data_sdk.py::test_live_catalogue_and_run"
+  },
+  "vendor_options": {
+    "localization": {
+      "status": "passthrough",
+      "note": "Boolean; location-based pricing and availability, for templates that support it; needed with zip_code or store_id in inputs."
+    }
+  }
+}

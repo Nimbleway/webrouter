@@ -12,13 +12,16 @@ from typing import Any, ClassVar
 from web_router.constants import ENV_YOU_API_KEY, PROVIDER_YOU, YOU_API_KEY_HEADER
 from web_router.constants_you import (
     MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE,
+    MSG_YOU_ANSWER_RECENCY,
     YOU_ANSWER_MARKER,
     YOU_ANSWER_PARAM_NAMES,
     YOU_ANSWER_PATH,
+    YOU_ANSWER_REFUSED_RECENCY,
     YOU_FRESHNESS_FIELD,
     YOU_RECENCY,
     YOU_RESEARCH_BASE_URL,
 )
+from web_router.exceptions import UnsupportedParameterError
 from web_router.providers._http import HttpAnswerProvider
 from web_router.providers._utils import build_payload, mapped
 from web_router.providers.answer import refuse_domain_pair
@@ -38,7 +41,8 @@ class YouAnswerProvider(HttpAnswerProvider):
 
     ``include_domains``, ``exclude_domains`` and ``country`` map to You.com's own
     fields, and ``recency`` to ``freshness``. The two domain lists cannot be sent
-    together, so asking for both raises before the call. ``locale`` is refused:
+    together, so asking for both raises before the call, as does ``recency="day"``:
+    live, You.com cited pages several days old for it. ``locale`` is refused:
     ``language`` showed no effect live.
     """
 
@@ -52,6 +56,10 @@ class YouAnswerProvider(HttpAnswerProvider):
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
         refuse_domain_pair(self.name, request, MSG_YOU_ANSWER_DOMAINS_EXCLUSIVE)
+        if request.recency in YOU_ANSWER_REFUSED_RECENCY:
+            raise UnsupportedParameterError(
+                self.name, {"recency"}, values={"recency": request.recency}, detail=MSG_YOU_ANSWER_RECENCY
+            )
         return build_payload(
             request,
             YOU_ANSWER_PARAM_NAMES,
