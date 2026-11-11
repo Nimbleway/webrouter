@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from web_router.client_requests import build_search_request
 from web_router.constants_vendors import (
     DATA_API_MIN_SCORE,
     DATA_API_SEARCH_LIMIT,
@@ -46,7 +47,7 @@ def find_matches(
                 missing=missing,
             )
         )
-        if len(matches) == (limit or DATA_API_SEARCH_LIMIT):
+        if len(matches) >= (DATA_API_SEARCH_LIMIT if limit is None else limit):
             break
     return matches
 
@@ -76,8 +77,10 @@ def matches_only(
     """
     if not data_apis:
         raise ValueError(MSG_DATA_APIS_ONLY_OFF)
+    # The web path's own checks -- a query, and max_results of at least 1 -- hold here too.
+    request = build_search_request(query, provider_options=None, max_results=max_results)
     refused = sorted(name for name, value in web_options.items() if value is not None)
     if refused:
         raise ValueError(MSG_DATA_APIS_ONLY_CONFLICT.format(names=", ".join(refused)))
-    matches = find_matches(query, source, configured_only=configured_only, limit=max_results)
-    return SearchResponse(provider=DATA_APIS_ONLY_PROVIDER, query=query, data_apis=matches)
+    matches = find_matches(request.query, source, configured_only=configured_only, limit=request.max_results)
+    return SearchResponse(provider=DATA_APIS_ONLY_PROVIDER, query=request.query, data_apis=matches)

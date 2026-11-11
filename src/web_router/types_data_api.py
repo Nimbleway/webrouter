@@ -6,7 +6,7 @@ this, never the reverse.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,6 +29,18 @@ class DataApiMatch(BaseModel):
     missing: list[str] = Field(
         default_factory=list, description="The variable to set for each required credential that is not, first choice."
     )
+
+    def brief(self, limit: int = 300) -> dict[str, Any]:
+        """This match for a model's context: its text fields cut to ``limit`` characters, the docs URL left out.
+
+        A catalog file from ``WEB_ROUTER_VENDOR_CATALOG`` can carry a summary of
+        any length, and the MCP search tool's budget only trims web results.
+        """
+        row = self.model_dump(exclude={"docs_url"})
+        for field in ("name", "summary"):
+            if len(row[field]) > limit:
+                row[field] = row[field][: limit - 1] + "\u2026"
+        return row
 
 
 DATA_APIS_DESCRIPTION = (

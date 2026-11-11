@@ -81,3 +81,28 @@ async def test_the_async_router_lists_the_same_matches(fake_provider: Any) -> No
     with WebRouter("fake", vendor_credentials=DATADOG) as router:
         assert response.data_apis == router.search("datadog monitors").data_apis
     assert only.data_apis == response.data_apis
+
+
+@pytest.mark.parametrize(
+    ("query", "max_results"), [("datadog monitors", 0), ("datadog monitors", -1), ("", None)], ids=["zero", "neg", "q"]
+)
+def test_data_apis_only_holds_the_web_paths_checks(query: str, max_results: int | None) -> None:
+    with WebRouter() as router, pytest.raises(ValueError):
+        router.search(query, data_apis_only=True, max_results=max_results)
+
+
+def test_a_match_is_importable_and_its_brief_form_is_bounded() -> None:
+    from web_router import DataApiMatch
+
+    match = DataApiMatch(
+        endpoint="acme.x",
+        data_api="acme",
+        name="n" * 500,
+        summary="s" * 500,
+        kind="read",
+        docs_url="https://x",
+        configured=True,
+    )
+    brief = match.brief(50)
+    assert len(brief["name"]) == len(brief["summary"]) == 50
+    assert "docs_url" not in brief
