@@ -1,0 +1,1093 @@
+{
+  "vendor": "scrapecreators",
+  "name": "Scrape Creators",
+  "category": "social",
+  "summary": "Public social media data over one API: TikTok, Instagram, YouTube, X, LinkedIn and Reddit profiles, posts, comments and search.",
+  "docs_url": "https://docs.scrapecreators.com",
+  "base_url": "https://api.scrapecreators.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SCRAPECREATORS_API_KEY"
+        ],
+        "description": "Scrape Creators API key (dashboard > API Key)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-based: each request uses credits and some options (download_media, include_replies, long transcription) cost more. account.credits shows the balance.",
+    "Public data only, found by URL or handle; paging is by a cursor-like token whose name differs per endpoint (cursor, max_cursor, next_max_id, continuationToken, after, page).",
+    "Set trim=true where offered for a much smaller response; cache_max_age lets a cached answer stand in for a fresh call.",
+    "X and LinkedIn post search go through Google, so coverage is partial."
+  ],
+  "sources": [
+    "https://docs.scrapecreators.com/openapi.json",
+    "https://docs.scrapecreators.com"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "scrapecreators.account.credits",
+      "name": "Get the credit balance",
+      "summary": "Credits left on the account (field creditCount).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/account/credit-balance",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.tiktok.profile",
+      "name": "Get a TikTok profile",
+      "summary": "Public bio, identity and stats of a TikTok account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/tiktok/profile",
+      "params": {
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "description": "The account handle, without @."
+        },
+        "user_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The platform's numeric user id."
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.tiktok.profile_videos",
+      "name": "List a TikTok user's videos",
+      "summary": "Videos posted by a user, latest or most popular, paged by max_cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/tiktok/profile/videos",
+      "params": {
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The account handle, without @."
+        },
+        "user_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The platform's numeric user id."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "latest",
+            "popular"
+          ]
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code to route the request through."
+        },
+        "include_pinned": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include pinned posts (default true)."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "max_cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "max_cursor from the previous response."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.tiktok.video",
+      "name": "Get a TikTok video",
+      "summary": "Metadata and stats of one video by URL, optionally with its transcript.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/tiktok/video",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code to route the request through."
+        },
+        "get_transcript": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True to include native captions."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "download_media": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      },
+      "notes": [
+        "download_media=true stores the media and costs extra credits."
+      ]
+    },
+    {
+      "id": "scrapecreators.tiktok.comments",
+      "name": "List comments on a TikTok video",
+      "summary": "Top-level comments of a video URL, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/tiktok/video/comments",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "number",
+          "description": "Cursor from the previous response."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.tiktok.search",
+      "name": "Search TikTok videos by keyword",
+      "summary": "Videos matching a keyword, with date and sort filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/tiktok/search/keyword",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "date_posted": {
+          "in": "query",
+          "type": "string",
+          "description": "Posting-date window.",
+          "enum": [
+            "yesterday",
+            "this-week",
+            "this-month",
+            "last-3-months",
+            "last-6-months",
+            "all-time"
+          ]
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "relevance",
+            "most-liked",
+            "date-posted"
+          ]
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code to route the request through."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "number",
+          "description": "Cursor from the previous response."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      },
+      "notes": [
+        "region sets where the request is routed from; it does not filter results by country."
+      ]
+    },
+    {
+      "id": "scrapecreators.instagram.profile",
+      "name": "Get an Instagram profile",
+      "summary": "Public profile data of an Instagram account by handle.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/instagram/profile",
+      "params": {
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The account handle, without @."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      },
+      "notes": [
+        "Can be slower than other calls because it needs several requests to Instagram."
+      ]
+    },
+    {
+      "id": "scrapecreators.instagram.posts",
+      "name": "List an Instagram user's posts",
+      "summary": "Paged feed of public posts, reels and carousels, paged by next_max_id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/instagram/user/posts",
+      "params": {
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The account handle, without @."
+        },
+        "require_play_counts": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "next_max_id": {
+          "in": "query",
+          "type": "string",
+          "description": "next_max_id from the previous response."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.instagram.post",
+      "name": "Get an Instagram post or reel",
+      "summary": "Caption, counts and media links of one post by URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/instagram/post",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code to route the request through."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "download_media": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "include_play_count": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.instagram.comments",
+      "name": "List comments on an Instagram post",
+      "summary": "Comments of a post or reel URL, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/instagram/post/comments",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "include_replies": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous response."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      },
+      "notes": [
+        "include_replies=true costs extra credits."
+      ]
+    },
+    {
+      "id": "scrapecreators.youtube.channel",
+      "name": "Get a YouTube channel",
+      "summary": "Channel profile and counts; pass one of channelId, handle or url.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/youtube/channel",
+      "params": {
+        "channelId": {
+          "in": "query",
+          "type": "string",
+          "description": "YouTube channel id."
+        },
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "description": "The account handle, without @."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Full URL of the item."
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.youtube.channel_videos",
+      "name": "List a YouTube channel's videos",
+      "summary": "Videos uploaded by a channel, paged by continuationToken.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/youtube/channel-videos",
+      "params": {
+        "channelId": {
+          "in": "query",
+          "type": "string",
+          "description": "YouTube channel id."
+        },
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "description": "The account handle, without @."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "latest",
+            "popular"
+          ]
+        },
+        "includeExtras": {
+          "in": "query",
+          "type": "string",
+          "description": "Add likes, comment count and description to each item."
+        },
+        "continuationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "continuationToken from the previous response."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.youtube.video",
+      "name": "Get a YouTube video or short",
+      "summary": "Title, description, counts and publish date of one video URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/youtube/video",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code."
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.youtube.transcript",
+      "name": "Get a YouTube video transcript",
+      "summary": "Public captions of a video, with timestamps.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/youtube/video/transcript",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code."
+        },
+        "original_audio": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.youtube.comments",
+      "name": "List comments on a YouTube video",
+      "summary": "Comments and replies of a video URL, paged by continuationToken.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/youtube/video/comments",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "top or newest.",
+          "enum": [
+            "top",
+            "newest"
+          ]
+        },
+        "continuationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "continuationToken from the previous response."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.youtube.search",
+      "name": "Search YouTube",
+      "summary": "Videos, shorts, channels or playlists matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/youtube/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "uploadDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Upload-date window.",
+          "enum": [
+            "today",
+            "this_week",
+            "this_month",
+            "this_year"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "relevance",
+            "popular"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Result type.",
+          "enum": [
+            "videos",
+            "shorts",
+            "channels",
+            "playlists"
+          ]
+        },
+        "duration": {
+          "in": "query",
+          "type": "string",
+          "description": "Video length bucket.",
+          "enum": [
+            "under_3_min",
+            "between_3_and_20_min",
+            "over_20_min"
+          ]
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code to route the request through."
+        },
+        "includeExtras": {
+          "in": "query",
+          "type": "string",
+          "description": "Add likes, comment count and description to each item."
+        },
+        "continuationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "continuationToken from the previous response."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.x.profile",
+      "name": "Get an X profile",
+      "summary": "Public profile and stats of an X account by handle.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/twitter/profile",
+      "params": {
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The account handle, without @."
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.x.user_posts",
+      "name": "List an X user's tweets",
+      "summary": "Tweets from a profile; X exposes only about 100 popular ones, not a chronological feed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/twitter/user-tweets",
+      "params": {
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The account handle, without @."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.x.post",
+      "name": "Get a tweet",
+      "summary": "Text, author and engagement of one tweet URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/twitter/tweet",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.linkedin.profile",
+      "name": "Get a LinkedIn profile",
+      "summary": "Public profile data from a LinkedIn profile URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/linkedin/profile",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.linkedin.company",
+      "name": "Get a LinkedIn company page",
+      "summary": "Company details from a company page URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/linkedin/company",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.linkedin.company_posts",
+      "name": "List a LinkedIn company's posts",
+      "summary": "Posts of a company or school page, paged by page number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/linkedin/company/posts",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "page": {
+          "in": "query",
+          "type": "number",
+          "description": "Page number."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.reddit.subreddit",
+      "name": "Get a subreddit's details",
+      "summary": "Description and activity counts of a subreddit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/reddit/subreddit/details",
+      "params": {
+        "subreddit": {
+          "in": "query",
+          "type": "string",
+          "description": "Subreddit name, case-sensitive."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Full URL of the item."
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.reddit.subreddit_posts",
+      "name": "List a subreddit's posts",
+      "summary": "Posts with sort and timeframe, paged by after.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/reddit/subreddit",
+      "params": {
+        "subreddit": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Subreddit name, case-sensitive."
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "string",
+          "description": "Time window.",
+          "enum": [
+            "all",
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "best",
+            "hot",
+            "new",
+            "top",
+            "rising"
+          ]
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "cache_max_age": {
+          "in": "query",
+          "type": "string",
+          "description": "Accept a cached answer this old or newer (1d to 30d).",
+          "enum": [
+            "1d",
+            "3d",
+            "7d",
+            "14d",
+            "30d"
+          ]
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "after token from the previous response."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.reddit.search",
+      "name": "Search Reddit",
+      "summary": "Posts or comments across Reddit matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/reddit/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Search posts or comments.",
+          "enum": [
+            "posts",
+            "comments"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "relevance",
+            "new",
+            "top",
+            "comment_count"
+          ]
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "string",
+          "description": "Time window.",
+          "enum": [
+            "all",
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "after token from the previous response."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    },
+    {
+      "id": "scrapecreators.reddit.comments",
+      "name": "List comments on a Reddit post",
+      "summary": "Post details and comments for a post URL, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/reddit/post/comments",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        },
+        "trim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for a smaller response."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous response."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.scrapecreators.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.scrapecreators.com/openapi.json"
+      }
+    }
+  ]
+}

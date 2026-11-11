@@ -1,0 +1,751 @@
+{
+  "vendor": "harvestapi",
+  "name": "HarvestAPI",
+  "category": "social",
+  "summary": "LinkedIn data without a LinkedIn login: profiles, companies, jobs, posts, comments and reactions, searchable by filters.",
+  "docs_url": "https://docs.harvestapi.io",
+  "base_url": "https://api.harvestapi.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HARVESTAPI_API_KEY"
+        ],
+        "description": "A HarvestAPI key (harvestapi.io/admin/api-keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Public LinkedIn data only. The API also has connection and messaging calls that use your own LinkedIn account; they are not listed here.",
+    "Paging is by page number, and list endpoints that return a paginationToken want it back for later pages.",
+    "Concurrency is limited by plan (1 request at once on Free, up to 40 on Business); extra requests queue (10 deep), then error.",
+    "Many filters take comma-separated lists; all parameters are query strings."
+  ],
+  "sources": [
+    "https://docs.harvestapi.io",
+    "https://docs.harvestapi.io/guides/concurrency.md",
+    "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+    "https://docs.harvestapi.io/platform-api-reference/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "harvestapi.account.me",
+      "name": "Get your API user",
+      "summary": "Details of the account tied to the API key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/my-api-user",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://docs.harvestapi.io/platform-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/platform-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.profile",
+      "name": "Get a LinkedIn profile",
+      "summary": "Profile details by URL, public identifier or id; optionally find the email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/profile",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "URL, public identifier or id of the target."
+        },
+        "main": {
+          "in": "query",
+          "type": "string",
+          "description": "'true' for only the main profile version."
+        },
+        "findEmail": {
+          "in": "query",
+          "type": "string",
+          "description": "'true' to also find the email (SMTP-verified)."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      },
+      "notes": [
+        "Give query."
+      ]
+    },
+    {
+      "id": "harvestapi.linkedin.profile_search",
+      "name": "Search LinkedIn profiles",
+      "summary": "Profiles by name, company, school, title or location, paged by page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/profile-search",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search keywords."
+        },
+        "currentCompany": {
+          "in": "query",
+          "type": "string",
+          "description": "Company id or URL; comma-separated for several."
+        },
+        "pastCompany": {
+          "in": "query",
+          "type": "string",
+          "description": "Past company id or URL, comma-separated."
+        },
+        "school": {
+          "in": "query",
+          "type": "string",
+          "description": "School id or URL, comma-separated."
+        },
+        "firstName": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "lastName": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Job title."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location text."
+        },
+        "geoId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn Geo ID; overrides location."
+        },
+        "industryId": {
+          "in": "query",
+          "type": "string",
+          "description": "Industry id, comma-separated for several."
+        },
+        "keywordsCompany": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in company name."
+        },
+        "keywordsSchool": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in school name."
+        },
+        "followerOf": {
+          "in": "query",
+          "type": "string",
+          "description": "Only followers of this profile (URL or id)."
+        },
+        "page": {
+          "in": "query",
+          "type": "string",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.profile_by_email",
+      "name": "Find a profile by work email",
+      "summary": "Reverse lookup of the person behind a work email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/profile-by-email",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The work email to look up."
+        },
+        "firstName": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "lastName": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.profile_posts",
+      "name": "List a profile's posts",
+      "summary": "Posts by a profile, paged by page and paginationToken.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/profile-posts",
+      "params": {
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "description": "Profile URL, public identifier or id."
+        },
+        "postedLimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Posted within: 24h, week or month."
+        },
+        "scrapePostedLimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by age after scraping: 1h, 24h, week, month, 3months, ..."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous page, where the endpoint asks for it."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.profile_comments",
+      "name": "List comments a profile wrote",
+      "summary": "Comments by a profile, each with its post.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/profile-comments",
+      "params": {
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "description": "Profile URL, public identifier or id."
+        },
+        "postedLimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Posted within: 24h, week or month."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous page, where the endpoint asks for it."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.profile_reactions",
+      "name": "List a profile's reactions",
+      "summary": "Posts a profile reacted to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/profile-reactions",
+      "params": {
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "description": "Profile URL, public identifier or id."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous page, where the endpoint asks for it."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.company",
+      "name": "Get a LinkedIn company",
+      "summary": "Company details by URL, universal name or id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/company",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "URL, public identifier or id of the target."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.company_search",
+      "name": "Search LinkedIn companies",
+      "summary": "Companies by name keywords, location, size and industry.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/company-search",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search keywords."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location text."
+        },
+        "geoId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn Geo ID; overrides location."
+        },
+        "companySize": {
+          "in": "query",
+          "type": "string",
+          "description": "Size bands such as 1-10, 11-50; comma-separated."
+        },
+        "industryId": {
+          "in": "query",
+          "type": "string",
+          "description": "Industry id, comma-separated for several."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.company_posts",
+      "name": "List a company's posts",
+      "summary": "Posts of a company page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/company-posts",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company URL, universal name or id."
+        },
+        "postedLimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Posted within: 24h, week or month."
+        },
+        "scrapePostedLimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by age after scraping: 1h, 24h, week, month, 3months, ..."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous page, where the endpoint asks for it."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.company_people_stats",
+      "name": "Get a company's people statistics",
+      "summary": "Where employees are located, where they studied, and similar breakdowns.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/company-people-stats",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "URL, public identifier or id of the target."
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.job",
+      "name": "Get a LinkedIn job",
+      "summary": "Job details by id or URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/job",
+      "params": {
+        "jobId": {
+          "in": "query",
+          "type": "string",
+          "description": "Job id."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.job_search",
+      "name": "Search LinkedIn jobs",
+      "summary": "Jobs by title with company, location, level and salary filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/job-search",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search keywords."
+        },
+        "companyId": {
+          "in": "query",
+          "type": "string",
+          "description": "Company id, comma-separated for several."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location text."
+        },
+        "geoId": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn Geo ID; overrides location."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "relevance or date."
+        },
+        "workplaceType": {
+          "in": "query",
+          "type": "string",
+          "description": "office, hybrid or remote; comma-separated."
+        },
+        "employmentType": {
+          "in": "query",
+          "type": "string",
+          "description": "Employment types, comma-separated."
+        },
+        "salary": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum salary band: 40k+ up to higher."
+        },
+        "postedLimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Posted within: 24h, week or month."
+        },
+        "experienceLevel": {
+          "in": "query",
+          "type": "string",
+          "description": "Experience levels, comma-separated."
+        },
+        "industryId": {
+          "in": "query",
+          "type": "string",
+          "description": "Industry id, comma-separated for several."
+        },
+        "functionId": {
+          "in": "query",
+          "type": "string",
+          "description": "Job function id."
+        },
+        "under10Applicants": {
+          "in": "query",
+          "type": "string",
+          "description": "'true' for jobs with fewer than 10 applicants."
+        },
+        "easyApply": {
+          "in": "query",
+          "type": "string",
+          "description": "'true' for Easy Apply jobs only."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.post",
+      "name": "Get a LinkedIn post",
+      "summary": "Post details by URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/post",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.post_search",
+      "name": "Search LinkedIn posts",
+      "summary": "Posts by keywords, author, mentions and date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/post-search",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search keywords."
+        },
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "description": "Profile URL, public identifier or id."
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company URL, universal name or id."
+        },
+        "authorsCompany": {
+          "in": "query",
+          "type": "string",
+          "description": "Companies where the authors work, comma-separated."
+        },
+        "authorsIndustryId": {
+          "in": "query",
+          "type": "string",
+          "description": "Industry ids of the authors' companies."
+        },
+        "mentioningMember": {
+          "in": "query",
+          "type": "string",
+          "description": "Posts mentioning these profiles."
+        },
+        "mentioningCompany": {
+          "in": "query",
+          "type": "string",
+          "description": "Posts mentioning these companies."
+        },
+        "contentType": {
+          "in": "query",
+          "type": "string",
+          "description": "Content types such as videos, images, documents."
+        },
+        "authorKeywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in the author's profile."
+        },
+        "group": {
+          "in": "query",
+          "type": "string",
+          "description": "Group URL or id."
+        },
+        "postedLimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Posted within: 24h, week or month."
+        },
+        "scrapePostedLimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by age after scraping: 1h, 24h, week, month, 3months, ..."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "relevance or date."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous page, where the endpoint asks for it."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.post_comments",
+      "name": "List comments on a post",
+      "summary": "Comments of a post by URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/post-comments",
+      "params": {
+        "post": {
+          "in": "query",
+          "type": "string",
+          "description": "URL of the post."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "relevance or date."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous page, where the endpoint asks for it."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      },
+      "notes": [
+        "With sortBy=relevance, pages after the first need the paginationToken of the previous page."
+      ]
+    },
+    {
+      "id": "harvestapi.linkedin.comment_replies",
+      "name": "List replies to a comment",
+      "summary": "Replies to one comment by its URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/post-comment-replies",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Full URL of the item."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous page, where the endpoint asks for it."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "harvestapi.linkedin.post_reactions",
+      "name": "List reactions on a post",
+      "summary": "Who reacted to a post.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin/post-reactions",
+      "params": {
+        "post": {
+          "in": "query",
+          "type": "string",
+          "description": "URL of the post."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "relevance or date."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.harvestapi.io/linkedin-api-reference/openapi.json"
+      }
+    }
+  ]
+}
