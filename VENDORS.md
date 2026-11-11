@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-86 vendors, 858 endpoints.
+94 vendors, 900 endpoints.
 
 ### advertising
 
@@ -131,6 +131,19 @@ The tables below are generated from `src/web_router/data/vendors/` by
 | [Whitepages Pro](https://api.whitepages.com/docs) `whitepages` | US people search, reverse phone lookup and property records (owners, residents, tax and mortgage history). | 7 read | key in header | `WHITEPAGES_API_KEY` | docs 2026-11-09 |
 | [Wiza](https://docs.wiza.co/) `wiza` | Reveal emails and phones from profile URLs or names, enrich companies, and search prospects. | 5 read | key in header | `WIZA_API_KEY` | docs 2026-11-08 |
 | [ZoomInfo](https://docs.gtm.ai/reference/api-overview) `zoominfo` | B2B contact and company search and enrichment, scoops, intent and lookups from ZoomInfo's Data API. | 9 read | OAuth refresh token | `ZOOMINFO_CLIENT_ID`, `ZOOMINFO_CLIENT_SECRET` | docs 2026-11-09 |
+
+### email-verification
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [BounceBan](https://bounceban.com/public/doc/api.html) `bounceban` | Email verification that also scores catch-all and gateway-protected addresses, with single, bulk-list and account calls. | 9 read, 2 write | key in header | `BOUNCEBAN_API_KEY` | docs 2026-11-08 |
+| [Filtrat](https://filtrat.io/v1/docs) `filtrat` | Email verification, work-email finding from a name and domain or a LinkedIn URL, bulk list jobs, and email-to-LinkedIn lookup. | 8 read, 1 write | key in header | `FILTRAT_API_KEY` | docs 2026-11-08 |
+| [MillionVerifier](https://developer.millionverifier.com/) `millionverifier` | Real-time email verification with a quality grade, result code, role and free-provider flags, and a credit balance check. | 2 read | key in query | `MILLIONVERIFIER_API_KEY` | docs 2026-11-08 |
+| [OrbiSearch](https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md) `orbisearch` | Email verification that resolves catch-all domains, single or in bulk. | 4 read | key in header | `ORBISEARCH_API_KEY` | docs 2026-11-09 |
+| [Scrubby](https://docs.scrubby.io/) `scrubby` | Email validation with instant single checks, queued bulk batches and slower deep verification. | 5 read | key in header | `SCRUBBY_API_KEY` | docs 2026-11-08 |
+| [Trestle](https://docs.trestleiq.com/api-reference) `trestleiq` | Phone validation, caller identification and lead-contact grading (phone, email, address, IP) from Trestle's identity data. | 3 read | key in header | `TRESTLEIQ_API_KEY` | docs 2026-11-08 |
+| [Kitt](https://documenter.getpostman.com/view/479833/2s93m62NHf) `trykitt` | Find and verify work emails in real time, with a credit balance and job lookup. | 5 read | key in header | `TRYKITT_API_KEY` | docs 2026-11-08 |
+| [ZeroBounce](https://www.zerobounce.net/docs/email-validation-api-quickstart) `zerobounce` | Real-time email validation with status, sub-status, domain and activity signals, plus credit and usage checks. | 3 read | key in query | `ZEROBOUNCE_API_KEY` | docs 2026-11-08 |
 
 ### developer
 
