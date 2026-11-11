@@ -94,6 +94,12 @@ MSG_OXYLABS_POLL_FAILED: Final = (
 )
 """A poll that failed after the submit: the job is billed, so its id is named, never "no such source"."""
 
+MSG_OXYLABS_JOB_RESULT_FAILED: Final = (
+    "Oxylabs' job {job_id} for {source!r} finished, but its result could not be used: {error}. "
+    "Read it: GET /v1/async/scrape/{job_id}"
+)
+"""A finished job whose answer raised: the job is billed, so its id is named here too."""
+
 MSG_OXYLABS_STILL_RUNNING: Final = (
     "Oxylabs is still running {source!r} after {seconds:.0f} s; nothing is lost. Fetch it later: "
     "GET /v1/async/scrape/{job_id}"

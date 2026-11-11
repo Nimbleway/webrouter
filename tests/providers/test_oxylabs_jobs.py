@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import time
+from typing import Any
 
 import httpx
 import pytest
@@ -102,6 +103,39 @@ async def test_a_call_deadline_ends_the_wait_with_the_jobs_id(
             provider.run(request)
     assert caught.value.job_id == "7497734325668954113"
     assert time.monotonic() - started < 0.8
+
+
+def test_a_finished_job_with_no_fields_still_names_the_job(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The job finished and was billed: a result that cannot be used keeps its id, so it can be read again."""
+    done = {**_scraped({}), "status": "done", "metadata": PENDING["metadata"]}
+    provider, _ = _job([PENDING, done], monkeypatch)
+    with pytest.raises(LiveDataJobError, match="no parsed fields") as caught:
+        provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
+    assert caught.value.job_id == "7497734325668954113"
+
+
+def _broken_poll(failure: str) -> Any:
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return httpx.Response(202, json=PENDING)
+        if failure == "connection":
+            raise httpx.ConnectError("connection reset", request=request)
+        return httpx.Response(200, content=b"<html>not json</html>")
+
+    return respond
+
+
+@pytest.mark.parametrize("failure", ["connection", "not json"])
+async def test_a_poll_that_breaks_below_http_still_names_the_job(monkeypatch: pytest.MonkeyPatch, failure: str) -> None:
+    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
+    request = LiveDataRequest(source="chatgpt", inputs={"query": "hello"})
+    provider, _ = _provider(_broken_poll(failure))
+    with pytest.raises(LiveDataJobError) as caught:
+        provider.run(request)
+    assert caught.value.job_id == "7497734325668954113"
+    with pytest.raises(LiveDataJobError) as caught:
+        await provider.arun(request)
+    assert caught.value.job_id == "7497734325668954113"
 
 
 # -- keys ---------------------------------------------------------------------

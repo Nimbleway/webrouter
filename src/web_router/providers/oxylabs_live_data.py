@@ -32,6 +32,8 @@ from typing import Any, ClassVar
 from web_router.constants import PROVIDER_OXYLABS
 from web_router.constants_live_data_vendors import (
     ENV_OXYLABS_WEB_API_KEY,
+    MSG_OXYLABS_JOB_RESULT_FAILED,
+    MSG_OXYLABS_POLL_FAILED,
     OXYLABS_API_KEY_PREFIX,
     OXYLABS_JOB_POLL_SECONDS,
     OXYLABS_JOB_WAIT_SECONDS,
@@ -119,17 +121,23 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
         with self._named(request.source):
             payload = self._send("POST", scraper.path, json=self._build_payload(request))
         # Past the submit the source is known and the job billed: a 404 now is the job's, not the source's.
-        if not scraper.realtime:
-            payload = self._wait(self._job(request, payload), payload)
-        return to_response(self.name, request, payload)
+        if scraper.realtime:
+            return to_response(self.name, request, payload)
+        job = self._job(request, payload)
+        payload = self._wait(job, payload)
+        with job.naming(MSG_OXYLABS_JOB_RESULT_FAILED):
+            return to_response(self.name, request, payload)
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
         scraper = self._resolve(request.source, await self._aknown())
         with self._named(request.source):
             payload = await self._asend("POST", scraper.path, json=self._build_payload(request))
-        if not scraper.realtime:
-            payload = await self._await(self._job(request, payload), payload)
-        return to_response(self.name, request, payload)
+        if scraper.realtime:
+            return to_response(self.name, request, payload)
+        job = self._job(request, payload)
+        payload = await self._await(job, payload)
+        with job.naming(MSG_OXYLABS_JOB_RESULT_FAILED):
+            return to_response(self.name, request, payload)
 
     @staticmethod
     def _build_payload(request: LiveDataRequest) -> dict[str, Any]:
@@ -148,7 +156,7 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
             while not job.done(payload):
                 time.sleep(job.pause())
                 job.check()
-                with job.polling():
+                with job.naming(MSG_OXYLABS_POLL_FAILED):
                     payload = self._send("GET", job.path)
         return payload
 
@@ -157,7 +165,7 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
             while not job.done(payload):
                 await asyncio.sleep(job.pause())
                 job.check()
-                with job.polling():
+                with job.naming(MSG_OXYLABS_POLL_FAILED):
                     payload = await self._asend("GET", job.path)
         return payload
 

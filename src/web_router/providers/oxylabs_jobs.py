@@ -13,18 +13,17 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, NoReturn
 
 from web_router.constants_live_data_vendors import (
     MSG_OXYLABS_FAULTED,
-    MSG_OXYLABS_POLL_FAILED,
     MSG_OXYLABS_STILL_RUNNING,
     OXYLABS_ASYNC_PREFIX,
     OXYLABS_JOB_DEADLINE_MARGIN,
     OXYLABS_JOB_DONE,
     OXYLABS_JOB_FAULTED,
 )
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ProviderError, WebRouterError
 from web_router.exceptions_live_data import LiveDataJobError
 from web_router.providers._deadline import current_deadline
 from web_router.types_live_data import LiveDataRequest
@@ -88,15 +87,26 @@ class JobWait:
             raise LiveDataJobError(self.provider, message, job_id=self.job_id)
 
     @contextmanager
-    def polling(self) -> Iterator[None]:
-        """Raise a poll that failed as the job's error, naming it, rather than the request's.
+    def naming(self, message: str) -> Iterator[None]:
+        """Raise any failure inside as the job's error, saying ``message``, so the billed job's id is never lost.
 
-        A poll is clamped to :attr:`until`, which stops short of the call's
-        deadline, so even a poll that timed out is read as the job's failure,
-        not as the call running out of time.
+        Whatever fails -- a status, the connection, an undecodable answer, a
+        result with no fields -- the job was accepted, so the caller gets its
+        id. A router error other than a provider's (a deadline, say) passes
+        through. A poll is clamped to :attr:`until`, which stops short of the
+        call's deadline, so a poll that timed out reads as the job's failure.
         """
         try:
             yield
-        except ProviderError as exc:
-            message = MSG_OXYLABS_POLL_FAILED.format(job_id=self.job_id, source=self.request.source, error=exc)
-            raise LiveDataJobError(self.provider, message, job_id=self.job_id, original=exc.original) from exc
+        except LiveDataJobError:
+            raise
+        except WebRouterError as exc:
+            if not isinstance(exc, ProviderError):
+                raise
+            self._raise(message, exc, exc.original)
+        except Exception as exc:
+            self._raise(message, exc, exc)
+
+    def _raise(self, message: str, exc: Exception, original: BaseException | None) -> NoReturn:
+        text = message.format(job_id=self.job_id, source=self.request.source, error=exc)
+        raise LiveDataJobError(self.provider, text, job_id=self.job_id, original=original) from exc
