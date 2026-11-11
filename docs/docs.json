@@ -1,0 +1,114 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "WebRouter",
+  "description": "An open source standard that connects your agent to the internet.",
+  "colors": {
+    "primary": "#202c26",
+    "light": "#d1ddbf",
+    "dark": "#202c26"
+  },
+  "background": {
+    "color": {
+      "light": "#eeeadd",
+      "dark": "#14251e"
+    }
+  },
+  "fonts": {
+    "heading": {
+      "family": "Courier Prime",
+      "weight": 700
+    },
+    "body": {
+      "family": "Inter"
+    }
+  },
+  "appearance": {
+    "default": "system"
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/logo/favicon.png",
+  "banner": {
+    "content": "**Developer preview:** the API may change before 1.0. Share feedback on [Discord](https://discord.gg/MGztFWSjZh).",
+    "dismissible": true
+  },
+  "navbar": {
+    "links": [
+      {
+        "type": "discord",
+        "href": "https://discord.gg/MGztFWSjZh"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Nimbleway/webrouter"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": [
+          "index",
+          "quickstart",
+          "how-it-works",
+          "providers"
+        ]
+      },
+      {
+        "group": "Methods",
+        "pages": [
+          "search",
+          "extract",
+          "answer",
+          "research",
+          "browser"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "configuration",
+          "errors"
+        ]
+      }
+    ]
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "claude",
+      "chatgpt"
+    ]
+  },
+  "thumbnails": {
+    "preset": "classic",
+    "surface": "brand",
+    "fonts": {
+      "family": "Courier Prime"
+    }
+  },
+  "seo": {
+    "metatags": {
+      "og:site_name": "WebRouter",
+      "og:image": "/assets/og.png",
+      "twitter:card": "summary_large_image"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Nimbleway/webrouter",
+      "discord": "https://discord.gg/MGztFWSjZh"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/install",
+      "destination": "/quickstart"
+    }
+  ]
+}

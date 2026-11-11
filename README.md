@@ -2819,6 +2819,7 @@ Keys are read from the environment, or passed explicitly through
 | Exa | `EXA_API_KEY` | search, extract, answer |
 | You.com | `YOU_API_KEY` | search, research, answer |
 | Brave | `BRAVE_SEARCH_API_KEY` | search |
+| Brave | `BRAVE_ANSWER_API_KEY` (the Answers plan, separate from the search key) | answer |
 | Parallel | `PARALLEL_API_KEY` | search, research, answer |
 | Perplexity | `PERPLEXITY_API_KEY` | search, research, answer |
 | Linkup | `LINKUP_API_KEY` | search, extract, research, answer |
