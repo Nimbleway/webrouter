@@ -1,0 +1,345 @@
+{
+  "vendor": "riveter",
+  "name": "Riveter",
+  "category": "scraping",
+  "summary": "Riveter's AI web data API: scrape a page, quick web search, one-off research answers, and enrichment runs that fill new columns for rows of companies, people or URLs.",
+  "docs_url": "https://docs.riveterhq.com/",
+  "pricing_url": "https://www.riveterhq.com/pricing",
+  "base_url": "https://api.riveterhq.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "RIVETER_API_KEY"
+        ],
+        "description": "A Riveter API key (app.riveterhq.com/settings/api). Sent as Authorization: Bearer."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Everything is billed in credits. Most kickoff endpoints take estimate_cost (price without running) and max_credits (refuse above a ceiling).",
+    "scrape and quick_search answer synchronously. search_agent holds up to 50 s; enrich and other kickoffs return a run (run_...): poll runs.get (pending, enqueued, processing, success, stopped) every 10-20 s or long-poll runs.result with wait, or pass webhook_url.",
+    "Datasets, saved enrichments, extractions and monitors are not in this entry. Verb-style legacy paths (/run_new_enrichment, /run_status...) still answer but are deprecated."
+  ],
+  "sources": [
+    "https://www.riveterhq.com/llms.txt",
+    "https://www.riveterhq.com/openapi.json",
+    "https://docs.riveterhq.com/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "riveter.scrape",
+      "name": "Scrape a page",
+      "summary": "A web page's text content, synchronously.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The URL to scrape.",
+          "example": "https://example.com"
+        },
+        "proxy_country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter proxy country, e.g. us, gb, de."
+        },
+        "skip_cache": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Always fetch fresh content. Default false."
+        },
+        "estimate_cost": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Price the request without running or charging it. Default false."
+        },
+        "max_credits": {
+          "in": "body",
+          "type": "number",
+          "description": "Credit ceiling; a request whose estimate exceeds it is refused with 422 and costs nothing."
+        }
+      },
+      "notes": [
+        "A read over POST. The answer uses the legacy request_status format."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.riveterhq.com/#tag/tools/post/scrape",
+      "verified": {
+        "docs": "https://www.riveterhq.com/openapi.json"
+      }
+    },
+    {
+      "id": "riveter.search",
+      "name": "Quick web search",
+      "summary": "Web results with URLs, titles and snippets, synchronously, optionally within a date range.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/quick_search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The query; simpler is better.",
+          "example": "Riveter AI web data"
+        },
+        "date_start": {
+          "in": "body",
+          "type": "string",
+          "description": "Start date, YYYY-MM-DD."
+        },
+        "date_end": {
+          "in": "body",
+          "type": "string",
+          "description": "End date, YYYY-MM-DD; today when only date_start is set."
+        },
+        "run_key": {
+          "in": "body",
+          "type": "string",
+          "description": "Idempotency key; becomes the run id run_<key>."
+        },
+        "estimate_cost": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Price the request without running or charging it. Default false."
+        },
+        "max_credits": {
+          "in": "body",
+          "type": "number",
+          "description": "Credit ceiling; a request whose estimate exceeds it is refused with 422 and costs nothing."
+        }
+      },
+      "notes": [
+        "A read over POST. The answer is a run with the results already in output."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.riveterhq.com/#tag/tools/post/quick_search",
+      "verified": {
+        "docs": "https://www.riveterhq.com/openapi.json"
+      }
+    },
+    {
+      "id": "riveter.search_agent",
+      "name": "Ask a research question",
+      "summary": "One AI-researched answer to a scoped question (e.g. a company's NAICS code), optionally shaped by a JSON Schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search_agent",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The question or task.",
+          "example": "What is the NAICS code for Stripe?"
+        },
+        "output_schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema for the answer; output.result then follows it."
+        },
+        "wait": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seconds to hold for the answer (default and max 50); 0 returns at once to poll runs.result."
+        },
+        "run_key": {
+          "in": "body",
+          "type": "string",
+          "description": "Idempotency key; becomes the run id run_<key>."
+        },
+        "estimate_cost": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Price the request without running or charging it. Default false."
+        },
+        "max_credits": {
+          "in": "body",
+          "type": "number",
+          "description": "Credit ceiling; a request whose estimate exceeds it is refused with 422 and costs nothing."
+        }
+      },
+      "notes": [
+        "A read over POST. For many rows or complex research use enrich."
+      ],
+      "job": "web.answer",
+      "docs_url": "https://docs.riveterhq.com/#tag/tools/post/search_agent",
+      "verified": {
+        "docs": "https://www.riveterhq.com/openapi.json"
+      }
+    },
+    {
+      "id": "riveter.enrich",
+      "name": "Enrich rows",
+      "summary": "Start a run that fills new columns for rows sent inline (or a saved dataset) with AI web research.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/enrich",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "description": "Inline rows: column header to an array of strings, one per row; all arrays the same length.",
+          "example": {
+            "company": [
+              "Stripe",
+              "Ramp"
+            ]
+          }
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "The task the agent follows for every row; needs attributes."
+        },
+        "attributes": {
+          "in": "body",
+          "type": "array",
+          "description": "Output column names (max 20), typed from their names; needs prompt."
+        },
+        "output": {
+          "in": "body",
+          "type": "object",
+          "description": "Per-column configuration keyed by output column name, instead of prompt + attributes."
+        },
+        "enrichment_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Use a saved enrichment's configuration (enr_...)."
+        },
+        "dataset_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Fill a saved dataset's cells instead of inline rows (ds_...)."
+        },
+        "webhook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "URL Riveter POSTs the results to when the run finishes."
+        },
+        "run_key": {
+          "in": "body",
+          "type": "string",
+          "description": "Idempotency key; becomes the run id run_<key>."
+        },
+        "estimate_cost": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Price the request without running or charging it. Default false."
+        },
+        "max_credits": {
+          "in": "body",
+          "type": "number",
+          "description": "Credit ceiling; a request whose estimate exceeds it is refused with 422 and costs nothing."
+        }
+      },
+      "notes": [
+        "A write: it starts a billed run and, with dataset_id, writes cells into the dataset. Rows come from exactly one of input or dataset_id.",
+        "Returns a run; read it with runs.result."
+      ],
+      "job": "lists.enrich",
+      "docs_url": "https://docs.riveterhq.com/#tag/enrich/post/enrich",
+      "verified": {
+        "docs": "https://www.riveterhq.com/openapi.json"
+      }
+    },
+    {
+      "id": "riveter.runs.get",
+      "name": "Get run status",
+      "summary": "A run's status and progress.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/runs/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The run id (run_...)."
+        },
+        "wait": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds to long-poll, 0-50. Default 0."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.riveterhq.com/#tag/runs/get/runs/{id}",
+      "verified": {
+        "docs": "https://www.riveterhq.com/openapi.json"
+      }
+    },
+    {
+      "id": "riveter.runs.result",
+      "name": "Get run result",
+      "summary": "The run with its output; output is null until it finishes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/runs/{id}/result",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The run id (run_...)."
+        },
+        "wait": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds to long-poll, 0-50. Default 0."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.riveterhq.com/#tag/runs/get/runs/{id}/result",
+      "verified": {
+        "docs": "https://www.riveterhq.com/openapi.json"
+      }
+    },
+    {
+      "id": "riveter.runs.stop",
+      "name": "Stop a run",
+      "summary": "Stop a run early.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/runs/{id}/stop",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The run id (run_...)."
+        }
+      },
+      "job": "jobs.cancel",
+      "docs_url": "https://docs.riveterhq.com/#tag/runs/post/runs/{id}/stop",
+      "verified": {
+        "docs": "https://www.riveterhq.com/openapi.json"
+      }
+    },
+    {
+      "id": "riveter.account",
+      "name": "Get account",
+      "summary": "Plan, credit balance and the key's metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account",
+      "job": "account.usage",
+      "docs_url": "https://docs.riveterhq.com/#tag/account/get/account",
+      "verified": {
+        "docs": "https://www.riveterhq.com/openapi.json"
+      }
+    }
+  ]
+}
