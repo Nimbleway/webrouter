@@ -1,7 +1,7 @@
 {
   "vendor": "microsoft-graph",
   "name": "Microsoft Graph (Microsoft 365)",
-  "category": "other",
+  "category": "productivity",
   "summary": "Microsoft 365 / Entra ID tenant data through Microsoft Graph: users, groups and members, licence subscriptions and assignments, Microsoft 365 activity reports and sign-in logs.",
   "docs_url": "https://learn.microsoft.com/en-us/graph/overview",
   "base_url": "https://graph.microsoft.com/v1.0",

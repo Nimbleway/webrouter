@@ -1,7 +1,7 @@
 {
   "vendor": "dsld",
   "name": "NIH Dietary Supplement Label Database (DSLD)",
-  "category": "other",
+  "category": "health",
   "summary": "Full label contents of dietary supplements sold in the US: ingredients, amounts, claims, brands and market status, from the NIH Office of Dietary Supplements.",
   "docs_url": "https://api.ods.od.nih.gov/dsld/docs",
   "base_url": "https://api.ods.od.nih.gov/dsld",

@@ -1239,12 +1239,15 @@ it is a format change to discuss first, not a branch in `caller.py`.
    centre) is a setting with an exhaustive `choices` list -- the format
    refuses one without, because a free-form host could carry the credential
    anywhere.
-5. Credentials: the variable names the vendor's own docs use, or the one
+5. Category: the shelf in `VENDOR_CATEGORY_DESCRIPTIONS` (`constants_vendors.py`) whose
+   line describes what the vendor holds. There is no catch-all: a vendor that fits no shelf
+   needs a new one, with its description, which `VENDORS.md` prints under its heading.
+6. Credentials: the variable names the vendor's own docs use, or the one
    `.env.example` already uses for that vendor, else `<VENDOR>_API_KEY`. Two
    vendors never share a variable (a test checks).
-6. Notes are what a caller gets wrong without being told: units, paging,
+7. Notes are what a caller gets wrong without being told: units, paging,
    credits per call, async job flows.
-7. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
+8. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
    section) and `uv run pytest tests/vendors`, which loads every shipped
    file. Add a line to `CHANGELOG.md`.
 

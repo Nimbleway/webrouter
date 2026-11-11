@@ -1,7 +1,7 @@
 {
   "vendor": "who-gho",
   "name": "WHO Global Health Observatory",
-  "category": "other",
+  "category": "health",
   "summary": "World Health Organization health statistics by country or region, year and disaggregation such as sex, from the keyless GHO OData API.",
   "docs_url": "https://www.who.int/data/gho/info/gho-odata-api",
   "base_url": "https://ghoapi.azureedge.net/api",

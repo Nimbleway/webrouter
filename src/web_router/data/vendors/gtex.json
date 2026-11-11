@@ -1,7 +1,7 @@
 {
   "vendor": "gtex",
   "name": "GTEx Portal",
-  "category": "other",
+  "category": "science",
   "summary": "The Genotype-Tissue Expression project's API: gene expression across human tissues, eQTLs and eGenes, tissue and reference-gene metadata.",
   "docs_url": "https://gtexportal.org/api/v2/redoc",
   "base_url": "https://gtexportal.org",

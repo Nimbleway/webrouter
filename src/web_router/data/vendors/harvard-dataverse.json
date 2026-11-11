@@ -1,7 +1,7 @@
 {
   "vendor": "harvard-dataverse",
   "name": "Harvard Dataverse",
-  "category": "other",
+  "category": "science",
   "summary": "Harvard's public Dataverse repository of research datasets (including collections such as the MIT Election Data and Science Lab's returns): search, dataset and file metadata, collection contents and file downloads.",
   "docs_url": "https://guides.dataverse.org/en/latest/api/",
   "base_url": "https://dataverse.harvard.edu",

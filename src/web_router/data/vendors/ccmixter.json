@@ -1,7 +1,7 @@
 {
   "vendor": "ccmixter",
   "name": "ccMixter",
-  "category": "other",
+  "category": "media",
   "summary": "Creative Commons music, samples and a cappellas from the ccMixter community, through its Query API: search uploads by tags, user, license, remixes and dates.",
   "docs_url": "https://ccmixter.org/query-api",
   "base_url": "https://ccmixter.org",

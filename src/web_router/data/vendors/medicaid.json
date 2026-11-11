@@ -1,7 +1,7 @@
 {
   "vendor": "medicaid",
   "name": "Medicaid open data (data.medicaid.gov)",
-  "category": "other",
+  "category": "health",
   "summary": "CMS Medicaid datasets, including State Drug Utilization Data (SDUD) and NADAC drug acquisition costs: find a dataset, then filter, sort and page its rows.",
   "docs_url": "https://data.medicaid.gov/api/1",
   "base_url": "https://data.medicaid.gov",

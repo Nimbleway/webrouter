@@ -1,7 +1,7 @@
 {
   "vendor": "isrctn",
   "name": "ISRCTN",
-  "category": "other",
+  "category": "health",
   "summary": "Registry of clinical trials: search trials by condition, intervention, country, phase, status or dates, and fetch one trial's full record.",
   "docs_url": "https://www.isrctn.com/editorial/retrieveFile/81786542-9920-48a0-8fce-09f8428ab843/37855",
   "base_url": "https://www.isrctn.com",

@@ -1,7 +1,7 @@
 {
   "vendor": "nhsbsa",
   "name": "NHSBSA Open Data Portal",
-  "category": "other",
+  "category": "health",
   "summary": "NHS Business Services Authority open data on its CKAN portal, including Secondary Care Medicines Data (SCMD): hospital medicine usage by trust, month and product.",
   "docs_url": "https://opendata.nhsbsa.net/pages/api",
   "base_url": "https://opendata.nhsbsa.net",

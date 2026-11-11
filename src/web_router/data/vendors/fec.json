@@ -1,7 +1,7 @@
 {
   "vendor": "fec",
   "name": "FEC (OpenFEC)",
-  "category": "other",
+  "category": "government",
   "summary": "US Federal Election Commission campaign finance data: candidates, committees, filings, financial totals, itemized contributions, disbursements and independent expenditures.",
   "docs_url": "https://api.open.fec.gov/developers/",
   "base_url": "https://api.open.fec.gov/v1",

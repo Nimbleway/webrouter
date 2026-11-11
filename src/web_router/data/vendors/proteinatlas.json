@@ -1,7 +1,7 @@
 {
   "vendor": "proteinatlas",
   "name": "Human Protein Atlas",
-  "category": "other",
+  "category": "science",
   "summary": "Human protein and RNA expression across tissues, cells and subcellular locations, per gene or as a custom table for a gene search.",
   "docs_url": "https://www.proteinatlas.org/about/help/dataaccess",
   "base_url": "https://www.proteinatlas.org",

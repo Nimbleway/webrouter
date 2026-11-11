@@ -1,7 +1,7 @@
 {
   "vendor": "usdroughtmonitor",
   "name": "U.S. Drought Monitor",
-  "category": "other",
+  "category": "environment",
   "summary": "Weekly U.S. Drought Monitor statistics (area, population and DSCI by drought level D0-D4) for the nation, states, counties, watersheds and other areas.",
   "docs_url": "https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx",
   "base_url": "https://usdmdataservices.unl.edu/api",

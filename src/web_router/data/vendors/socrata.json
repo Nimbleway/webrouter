@@ -1,7 +1,7 @@
 {
   "vendor": "socrata",
   "name": "Socrata (Tyler Data & Insights)",
-  "category": "other",
+  "category": "government",
   "summary": "Discovery API over the tens of thousands of government datasets, maps and charts published on Socrata open-data portals: search, autocomplete, and counts by portal, tag and category.",
   "docs_url": "https://dev.socrata.com/docs/other/discovery",
   "base_url": "https://api.{region}.socrata.com/api/catalog",

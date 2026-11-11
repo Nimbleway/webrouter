@@ -1,7 +1,7 @@
 {
   "vendor": "orphadata",
   "name": "Orphadata (Orphanet)",
-  "category": "other",
+  "category": "health",
   "summary": "Rare diseases from Orphanet: ORPHAcodes with ICD-10/ICD-11/OMIM cross-references, epidemiology (prevalence), natural history, associated genes, HPO phenotypes and classifications.",
   "docs_url": "https://api.orphadata.com/",
   "base_url": "https://api.orphadata.com",

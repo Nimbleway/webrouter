@@ -1,7 +1,7 @@
 {
   "vendor": "sleeper",
   "name": "Sleeper",
-  "category": "other",
+  "category": "sports",
   "summary": "Fantasy football leagues, rosters, matchups, transactions, drafts, players and trending adds/drops from Sleeper's free read-only API.",
   "docs_url": "https://docs.sleeper.com/",
   "base_url": "https://api.sleeper.app/v1",

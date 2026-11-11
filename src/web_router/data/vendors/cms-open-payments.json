@@ -1,7 +1,7 @@
 {
   "vendor": "cms-open-payments",
   "name": "CMS Open Payments",
-  "category": "other",
+  "category": "health",
   "summary": "US Open Payments data from CMS: payments and transfers of value from drug and device makers to physicians and teaching hospitals queried through the site's DKAN catalog and datastore API.",
   "docs_url": "https://openpaymentsdata.cms.gov/about/api",
   "base_url": "https://openpaymentsdata.cms.gov",

@@ -1,7 +1,7 @@
 {
   "vendor": "morphosource",
   "name": "MorphoSource",
-  "category": "other",
+  "category": "science",
   "summary": "MorphoSource, a public repository of 3D and 2D scientific media of biological specimens and cultural heritage objects: search media and physical objects, read their metadata, and get download links.",
   "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/rm6bqdolcidct-morpho-source-rest-api",
   "base_url": "https://www.morphosource.org",

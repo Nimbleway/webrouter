@@ -1,7 +1,7 @@
 {
   "vendor": "redhat-security",
   "name": "Red Hat Security Data API",
-  "category": "developer",
+  "category": "security",
   "summary": "Red Hat Product Security data on CVEs (severity, CWE, CVSS v3/v4 scores, advisories, affected packages and package states), CSAF advisories and OVAL streams.",
   "docs_url": "https://access.redhat.com/hydra/rest/securitydata/api-docs",
   "base_url": "https://access.redhat.com/hydra/rest/securitydata",

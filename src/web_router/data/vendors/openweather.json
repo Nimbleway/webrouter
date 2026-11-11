@@ -1,7 +1,7 @@
 {
   "vendor": "openweather",
   "name": "OpenWeather",
-  "category": "other",
+  "category": "environment",
   "summary": "Current weather, 5-day/3-hour forecasts, One Call current/historical/daily summaries, air pollution and geocoding by coordinates.",
   "docs_url": "https://openweathermap.org/api",
   "pricing_url": "https://openweathermap.org/price",

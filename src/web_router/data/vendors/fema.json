@@ -1,7 +1,7 @@
 {
   "vendor": "fema",
   "name": "OpenFEMA",
-  "category": "other",
+  "category": "government",
   "summary": "FEMA open data: disaster declarations, assistance and mitigation funding, and National Flood Insurance Program claims and policies, queryable with OData-style filters.",
   "docs_url": "https://www.fema.gov/about/openfema/api",
   "base_url": "https://www.fema.gov/api/open",

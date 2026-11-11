@@ -1,7 +1,7 @@
 {
   "vendor": "cisa-kev",
   "name": "CISA Known Exploited Vulnerabilities (KEV) catalog",
-  "category": "developer",
+  "category": "security",
   "summary": "CISA's catalog of CVEs known to be exploited in the wild, with vendor, product, date added, required action, due date and ransomware use, as free JSON and CSV feeds.",
   "docs_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
   "base_url": "https://www.cisa.gov",

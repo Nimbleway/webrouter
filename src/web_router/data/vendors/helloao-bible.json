@@ -1,7 +1,7 @@
 {
   "vendor": "helloao-bible",
   "name": "Free Use Bible API",
-  "category": "other",
+  "category": "media",
   "summary": "Bible text in over 1,000 translations, plus commentaries and datasets (cross references, people, places, events, interlinear words, Strong's lexicon), as free static JSON.",
   "docs_url": "https://bible.helloao.org/docs/",
   "base_url": "https://bible.helloao.org/api",

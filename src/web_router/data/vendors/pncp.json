@@ -1,7 +1,7 @@
 {
   "vendor": "pncp",
   "name": "PNCP (Portal Nacional de Contratações Públicas)",
-  "category": "other",
+  "category": "government",
   "summary": "Brazil's national public procurement portal: tenders open for bids, published procurements, contracts and price-registration records (atas) from federal, state and municipal bodies.",
   "docs_url": "https://pncp.gov.br/api/consulta/swagger-ui/index.html",
   "base_url": "https://pncp.gov.br/api/consulta",

@@ -1,7 +1,7 @@
 {
   "vendor": "servosaver",
   "name": "Service Victoria Servo Saver",
-  "category": "other",
+  "category": "commerce",
   "summary": "Victoria (Australia) government Fair Fuel open data: every registered service station's fuel prices in cents per litre, plus station, brand and fuel-type reference lists.",
   "docs_url": "https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api",
   "base_url": "https://api.fuel.service.vic.gov.au/open-data/v1",

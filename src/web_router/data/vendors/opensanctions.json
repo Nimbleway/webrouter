@@ -1,7 +1,7 @@
 {
   "vendor": "opensanctions",
   "name": "OpenSanctions",
-  "category": "other",
+  "category": "government",
   "summary": "OpenSanctions' hosted API over its consolidated sanctions, politically exposed persons and watchlist database: multi-property screening matches, full-text entity search, full entity records with relationships, and raw statements.",
   "docs_url": "https://www.opensanctions.org/docs/api/",
   "base_url": "https://api.opensanctions.org",

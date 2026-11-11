@@ -1,7 +1,7 @@
 {
   "vendor": "polyhaven",
   "name": "Poly Haven",
-  "category": "other",
+  "category": "media",
   "summary": "CC0 HDRIs, textures and 3D models from Poly Haven: list and search assets, read an asset's metadata and its downloadable files by resolution and format.",
   "docs_url": "https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors",
   "base_url": "https://api.polyhaven.com",

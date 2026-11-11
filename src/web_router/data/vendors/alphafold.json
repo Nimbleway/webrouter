@@ -1,7 +1,7 @@
 {
   "vendor": "alphafold",
   "name": "AlphaFold Protein Structure Database",
-  "category": "other",
+  "category": "science",
   "summary": "Predicted protein structures from EMBL-EBI's AlphaFold DB: model file URLs (mmCIF, bCIF, PDB), confidence estimates and AlphaMissense annotations, keyed on UniProt accessions.",
   "docs_url": "https://alphafold.ebi.ac.uk/api-docs",
   "base_url": "https://alphafold.ebi.ac.uk/api",

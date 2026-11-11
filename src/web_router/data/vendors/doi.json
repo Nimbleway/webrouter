@@ -1,7 +1,7 @@
 {
   "vendor": "doi",
   "name": "DOI.org",
-  "category": "other",
+  "category": "science",
   "summary": "Resolve a DOI to its handle record: the landing-page URL and other registered values, from the DOI Foundation's proxy server.",
   "docs_url": "https://www.doi.org/the-identifier/resources/factsheets/doi-resolution-documentation",
   "base_url": "https://doi.org",

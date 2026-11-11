@@ -1,7 +1,7 @@
 {
   "vendor": "scrubby",
   "name": "Scrubby",
-  "category": "email-verification",
+  "category": "verification",
   "summary": "Email validation with instant single checks, queued bulk batches and slower deep verification.",
   "docs_url": "https://docs.scrubby.io/",
   "base_url": "https://api.scrubby.io",

@@ -1,7 +1,7 @@
 {
   "vendor": "votehub",
   "name": "VoteHub Polling API",
-  "category": "other",
+  "category": "government",
   "summary": "US political polling data aggregated from many pollsters: approval, favorability, generic-ballot and race polls with their source links.",
   "docs_url": "https://votehub.com/polls/api/",
   "base_url": "https://api.votehub.com",

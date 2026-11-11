@@ -1,7 +1,7 @@
 {
   "vendor": "oci-price-list",
   "name": "Oracle Cloud Infrastructure price list",
-  "category": "other",
+  "category": "developer",
   "summary": "Public list prices of Oracle Cloud Infrastructure products by part number: display name, billing metric, service category and pay-as-you-go price, with tiers where they apply.",
   "docs_url": "https://docs.oracle.com/en-us/iaas/Content/Billing/Tasks/signingup_topic-Estimating_Costs.htm",
   "base_url": "https://apexapps.oracle.com/pls/apex/cetools/api/v1",

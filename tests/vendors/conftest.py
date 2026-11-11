@@ -172,7 +172,7 @@ KEYLESS: dict[str, Any] = {
     **_COMMON,
     "vendor": "openco",
     "name": "Open Co",
-    "category": "other",
+    "category": "developer",
     "summary": "No credentials at all.",
     "base_url": "https://open.test",
     "endpoints": [_endpoint("openco.items.list", "GET", "/items")],

@@ -1,7 +1,7 @@
 {
   "vendor": "usaspending",
   "name": "USAspending",
-  "category": "other",
+  "category": "government",
   "summary": "US federal spending: contracts, grants, loans and other awards, who received them, and agency budgets, from the Treasury's free USAspending.gov API.",
   "docs_url": "https://api.usaspending.gov/docs/endpoints",
   "base_url": "https://api.usaspending.gov",

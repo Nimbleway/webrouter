@@ -1,7 +1,7 @@
 {
   "vendor": "health-canada-dpd",
   "name": "Health Canada Drug Product Database",
-  "category": "other",
+  "category": "health",
   "summary": "Keyless Health Canada data on drugs marketed in Canada: products by DIN or brand, ingredients, companies, forms, routes, schedules and status.",
   "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
   "base_url": "https://health-products.canada.ca/api/drug",

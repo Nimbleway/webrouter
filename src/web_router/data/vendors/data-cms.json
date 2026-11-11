@@ -1,7 +1,7 @@
 {
   "vendor": "data-cms",
   "name": "CMS Data (data.cms.gov)",
-  "category": "other",
+  "category": "health",
   "summary": "Medicare and Medicaid datasets published by the US Centers for Medicare & Medicaid Services: the open-data catalog, and rows of any API-enabled dataset with keyword search, filters, sorting and column selection.",
   "docs_url": "https://data.cms.gov/api-docs",
   "base_url": "https://data.cms.gov",

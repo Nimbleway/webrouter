@@ -1,7 +1,7 @@
 {
   "vendor": "ofac-sls",
   "name": "OFAC Sanctions List Service",
-  "category": "other",
+  "category": "government",
   "summary": "The US Treasury OFAC Sanctions List Service's published list files: the Specially Designated Nationals (SDN) list and the consolidated non-SDN list, in the standard XML and the advanced data-model XML.",
   "docs_url": "https://ofac.treasury.gov/sanctions-list-service",
   "base_url": "https://sanctionslistservice.ofac.treas.gov",

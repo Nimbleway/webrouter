@@ -1,7 +1,7 @@
 {
   "vendor": "rcc-acis",
   "name": "ACIS (NOAA Regional Climate Centers)",
-  "category": "other",
+  "category": "environment",
   "summary": "US station and gridded climate data from the NOAA Regional Climate Centers' Applied Climate Information System: station metadata, daily/monthly/annual station data, multi-station data, grids and area metadata.",
   "docs_url": "https://www.rcc-acis.org/docs_webservices.html",
   "base_url": "https://data.rcc-acis.org",

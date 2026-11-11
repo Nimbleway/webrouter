@@ -1,7 +1,7 @@
 {
   "vendor": "springer-nature",
   "name": "Springer Nature",
-  "category": "search",
+  "category": "science",
   "summary": "Metadata and abstracts for Springer Nature journal articles, book chapters and protocols, plus open-access full text in JATS, from the Springer Nature APIs.",
   "docs_url": "https://dev.springernature.com/docs/introduction",
   "pricing_url": "https://dev.springernature.com/subscription/",

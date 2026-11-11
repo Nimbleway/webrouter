@@ -1,7 +1,7 @@
 {
   "vendor": "reactome",
   "name": "Reactome",
-  "category": "other",
+  "category": "science",
   "summary": "Curated biological pathways and reactions: search the knowledgebase, map genes, proteins or chemicals to pathways, and read pathway participants and hierarchy.",
   "docs_url": "https://reactome.org/ContentService/",
   "base_url": "https://reactome.org/ContentService",

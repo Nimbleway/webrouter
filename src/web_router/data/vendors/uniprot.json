@@ -1,7 +1,7 @@
 {
   "vendor": "uniprot",
   "name": "UniProt",
-  "category": "other",
+  "category": "science",
   "summary": "The UniProt protein sequence and function knowledgebase (UniProtKB, UniRef, UniParc): query search, entry retrieval and identifier mapping.",
   "docs_url": "https://www.uniprot.org/help/api",
   "base_url": "https://rest.uniprot.org",

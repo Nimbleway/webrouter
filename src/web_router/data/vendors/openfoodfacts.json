@@ -1,7 +1,7 @@
 {
   "vendor": "openfoodfacts",
   "name": "Open Food Facts",
-  "category": "other",
+  "category": "health",
   "summary": "Keyless open database of packaged food products: ingredients, nutrition facts, Nutri-Score, NOVA, allergens and labels by barcode, plus filtered product search.",
   "docs_url": "https://openfoodfacts.github.io/openfoodfacts-server/api/",
   "base_url": "https://world.openfoodfacts.org",

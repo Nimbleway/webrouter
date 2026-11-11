@@ -1,7 +1,7 @@
 {
   "vendor": "ipinfo",
   "name": "IPinfo",
-  "category": "other",
+  "category": "maps",
   "summary": "IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans.",
   "docs_url": "https://ipinfo.io/developers/ipinfo-api",
   "pricing_url": "https://ipinfo.io/pricing",

@@ -1,7 +1,7 @@
 {
   "vendor": "rentcast",
   "name": "RentCast",
-  "category": "other",
+  "category": "commerce",
   "summary": "US property records, automated value and rent estimates with comparables, active sale and rental listings, and ZIP-level market statistics.",
   "docs_url": "https://developers.rentcast.io/reference/introduction",
   "pricing_url": "https://www.rentcast.io/api",

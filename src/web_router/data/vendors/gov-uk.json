@@ -1,7 +1,7 @@
 {
   "vendor": "gov-uk",
   "name": "GOV.UK",
-  "category": "search",
+  "category": "government",
   "summary": "The UK government's GOV.UK site as data: the Content API returns any www.gov.uk page as JSON, and the Search API searches, filters and aggregates all GOV.UK content.",
   "docs_url": "https://content-api.publishing.service.gov.uk/",
   "base_url": "https://www.gov.uk",

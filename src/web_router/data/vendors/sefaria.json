@@ -1,7 +1,7 @@
 {
   "vendor": "sefaria",
   "name": "Sefaria",
-  "category": "other",
+  "category": "media",
   "summary": "The Sefaria library of Jewish texts: Tanakh, Talmud, commentaries and more in Hebrew and translation, with links between texts, topics, lexicons, calendars and full-text search.",
   "docs_url": "https://developers.sefaria.org/docs/welcome",
   "base_url": "https://www.sefaria.org",

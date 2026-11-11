@@ -1,7 +1,7 @@
 {
   "vendor": "weatherapi",
   "name": "WeatherAPI.com",
-  "category": "other",
+  "category": "environment",
   "summary": "Worldwide current weather, forecasts up to 14 days, historical weather back to 2010, long-range future weather, alerts, marine and astronomy data, plus location search.",
   "docs_url": "https://www.weatherapi.com/docs/",
   "pricing_url": "https://www.weatherapi.com/pricing.aspx",

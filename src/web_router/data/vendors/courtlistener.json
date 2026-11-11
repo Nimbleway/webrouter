@@ -1,7 +1,7 @@
 {
   "vendor": "courtlistener",
   "name": "CourtListener",
-  "category": "other",
+  "category": "government",
   "summary": "Free Law Project's US legal database: case law opinions, PACER dockets and filings, judges and oral arguments, with full-text search and citation lookup.",
   "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/overview",
   "base_url": "https://www.courtlistener.com/api/rest/v4",

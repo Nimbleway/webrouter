@@ -1,7 +1,7 @@
 {
   "vendor": "steam",
   "name": "Steam Web API",
-  "category": "other",
+  "category": "commerce",
   "summary": "Every Steam app id, game news, live player counts, achievement stats and public player profiles.",
   "docs_url": "https://steamcommunity.com/dev",
   "base_url": "https://api.steampowered.com",

@@ -1,7 +1,7 @@
 {
   "vendor": "millionverifier",
   "name": "MillionVerifier",
-  "category": "email-verification",
+  "category": "verification",
   "summary": "Real-time email verification with a quality grade, result code, role and free-provider flags, and a credit balance check.",
   "docs_url": "https://developer.millionverifier.com/",
   "base_url": "https://api.millionverifier.com",

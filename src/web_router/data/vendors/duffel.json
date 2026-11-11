@@ -1,7 +1,7 @@
 {
   "vendor": "duffel",
   "name": "Duffel",
-  "category": "other",
+  "category": "commerce",
   "summary": "Flight search across airlines: offer requests return priced offers for a journey, plus offer details and airport and place lookup.",
   "docs_url": "https://duffel.com/docs/api/overview/welcome",
   "pricing_url": "https://duffel.com/pricing",

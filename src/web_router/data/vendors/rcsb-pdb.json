@@ -1,7 +1,7 @@
 {
   "vendor": "rcsb-pdb",
   "name": "RCSB Protein Data Bank",
-  "category": "other",
+  "category": "science",
   "summary": "3D macromolecular structures from the PDB: search entries by text or attributes, then fetch entry, entity, chain, assembly and ligand metadata.",
   "docs_url": "https://data.rcsb.org/",
   "base_url": "https://data.rcsb.org",

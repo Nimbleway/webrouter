@@ -1,7 +1,7 @@
 {
   "vendor": "osv",
   "name": "OSV.dev",
-  "category": "developer",
+  "category": "security",
   "summary": "Open source vulnerabilities by package and version, commit hash or ID (GHSA, PYSEC, RUSTSEC, Go, OSS-Fuzz and more) in the OSV format, from Google's free OSV.dev API.",
   "docs_url": "https://google.github.io/osv.dev/api/",
   "base_url": "https://api.osv.dev",

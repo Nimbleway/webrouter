@@ -1,7 +1,7 @@
 {
   "vendor": "europepmc",
   "name": "Europe PMC",
-  "category": "search",
+  "category": "science",
   "summary": "Search and look up life-science literature (PubMed abstracts, PMC full text, preprints, patents) with citations, references, database cross-links and open-access full text from Europe PMC's free REST API.",
   "docs_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs",
   "base_url": "https://www.ebi.ac.uk/europepmc/webservices/rest",

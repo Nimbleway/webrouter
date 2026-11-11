@@ -1,7 +1,7 @@
 {
   "vendor": "ted",
   "name": "TED (Tenders Electronic Daily)",
-  "category": "other",
+  "category": "government",
   "summary": "EU public procurement notices published in the Official Journal supplement (OJ S): tenders, awards and other notices from across the EU and EEA, via the TED Search API.",
   "docs_url": "https://docs.ted.europa.eu/api/latest/search.html",
   "base_url": "https://api.ted.europa.eu",

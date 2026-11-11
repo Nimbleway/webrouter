@@ -12,7 +12,7 @@ import pytest
 from pydantic import ValidationError
 
 from tests.vendors.conftest import ACME, OAUTH
-from web_router.constants_vendors import VENDOR_ENV_CATALOG_DIR
+from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_vendors import VendorNotFoundError
 from web_router.vendors.catalog import (
@@ -189,6 +189,12 @@ def test_every_shipped_write_says_so() -> None:
                 assert endpoint.kind == "write", endpoint.id
             if pattern.search(endpoint.path.rsplit("/", 1)[-1]) and endpoint.method != "GET":
                 assert endpoint.kind == "write" or endpoint.notes, f"{endpoint.id}: explain why this POST reads"
+
+
+def test_every_shelf_is_used_and_none_is_a_catch_all() -> None:
+    """A vendor that fits no shelf needs a new one, not an "other" bin, and no shelf sits empty."""
+    assert "other" not in VENDOR_CATEGORIES
+    assert {vendor.category for vendor in SHIPPED.all()} == set(VENDOR_CATEGORIES)
 
 
 def test_shipped_env_variables_belong_to_one_vendor() -> None:

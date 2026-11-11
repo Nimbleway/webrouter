@@ -1,7 +1,7 @@
 {
   "vendor": "govinfo",
   "name": "GovInfo",
-  "category": "other",
+  "category": "government",
   "summary": "The US Government Publishing Office's GovInfo API: official publications of all three branches (bills, Congressional Record, Federal Register, CFR, court opinions, public laws) with search, change lists, package and granule metadata and related documents.",
   "docs_url": "https://api.govinfo.gov/docs/",
   "base_url": "https://api.govinfo.gov",
