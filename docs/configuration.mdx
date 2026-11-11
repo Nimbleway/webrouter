@@ -5,6 +5,10 @@ mode: "wide"
 icon: "gear"
 ---
 
+WebRouter never logs or stores your keys, and sends each key only to its own provider. See
+[SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md) for how keys and
+requests are handled.
+
 Keys are read from the environment, or passed explicitly through
 `provider_config={Provider.NIMBLE: {"api_key": "..."}}`:
 

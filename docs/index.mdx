@@ -6,7 +6,12 @@ icon: "house"
 
 <p align="center"><img src="/assets/webrouter-mascot.png" alt="The WebRouter router mascot, an orange cable plugged into its search port" width="240" /></p>
 
-Connect your agent to every web tool through one interface: search, extract, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
+WebRouter connects your agent to the internet's primitives (search, extract, answer, research and browser sessions) through one interface, across many providers.
+
+- **No vendor lock-in.** The same call and result shape on every provider that serves a method; switching is one argument. Apache 2.0, and you hold your own keys.
+- **Routing and fallback.** `auto` tries the providers you hold keys for, best benchmarked first, and falls back to the next. An experimental [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task within a cost and time budget.
+- **Many providers.** Tavily, Exa, Brave, Firecrawl, Nimble and more: see [Providers](/providers).
+- **Security by default.** WebRouter never logs or stores your keys, and sends each key only to its own provider. An option a provider cannot honour raises instead of being dropped.
 
 ```bash
 pip install "webrouter[all]"

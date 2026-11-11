@@ -32,8 +32,6 @@ dropped**, so a call never runs under weaker constraints than you asked for.
 | `SearchRequest` / `ExtractRequest` | A normalized call, before any provider sees it. |
 | `SearchResponse` / `SearchResult` | A normalized answer, plus the provider's untouched payload in `raw`. |
 | `ExtractResponse` / `ExtractedDocument` | The same for a page fetch, plus `failures` for the URLs that did not come back. |
-| `LiveDataProvider` | The contract for a live data backend: `_list` its catalogue, `_get` one source, `_run` it. |
-| `LiveDataRequest` / `LiveDataResponse` | A normalized run -- a source's name and its own inputs -- and the `records` it extracted. `LiveDataSource` describes one, `LiveDataSourcePage` a page of the catalogue. |
 | `ResearchProvider` | The contract for an agentic backend: `_start` a run, `_fetch` where it got to. |
 | `ResearchRequest` / `ResearchResponse` | A normalized run, and its answer — prose, structure, and the `citations` behind either. |
 | `ResearchJob` | A run in progress. Polls with back-off, blocks with a timeout, and never fabricates an answer it does not have. |
