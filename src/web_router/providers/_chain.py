@@ -205,8 +205,8 @@ def _nothing_started(exc: WebRouterError) -> bool:
     - a :class:`ProviderError` whose ``original`` is an ``httpx.ConnectError``
       or ``httpx.ConnectTimeout``, a request that never reached the backend;
     - the same two, as the ``nimble-python`` SDK reports them: an
-      ``APIStatusError`` with a 4xx status, or an ``APIConnectionError`` that
-      is not its ``APITimeoutError``.
+      ``APIStatusError`` with a 4xx status, or an ``APIConnectionError`` raised
+      from one of those two ``httpx`` errors.
 
     Everything else raises: a read that timed out, a 5xx from a gateway in
     front of the backend, a 200 that could not be read. The backend may have
@@ -234,18 +234,21 @@ def _sdk_refused(original: BaseException | None) -> bool:
     """The same two shapes as the ``nimble-python`` SDK reports them, which are not httpx errors.
 
     Its ``APIStatusError`` carries the status; a 4xx is an answer that
-    refused. Its ``APIConnectionError`` is a request that never reached the
-    backend -- except its ``APITimeoutError`` subclass, which covers a read
-    that timed out after the request was accepted, and so proves nothing.
+    refused. Its ``APIConnectionError`` wraps every transport failure, a
+    connection dropped after the request went out among them, so only one
+    raised from a connect error proves the request never reached the backend.
     """
     try:
-        from nimble_python import APIConnectionError, APIStatusError, APITimeoutError
+        import httpx
+        from nimble_python import APIConnectionError, APIStatusError
     except ImportError:
         return False
     if isinstance(original, APIStatusError):
         # bool(): the SDK is typed, but a mypy run without it installed sees Any here.
         return bool(HTTPStatus.BAD_REQUEST <= original.status_code < HTTPStatus.INTERNAL_SERVER_ERROR)
-    return isinstance(original, APIConnectionError) and not isinstance(original, APITimeoutError)
+    return isinstance(original, APIConnectionError) and isinstance(
+        original.__cause__, (httpx.ConnectError, httpx.ConnectTimeout)
+    )
 
 
 def _exhausted(
