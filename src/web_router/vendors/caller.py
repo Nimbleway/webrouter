@@ -246,6 +246,8 @@ class VendorCaller:
         return self._sync
 
     def _aclient(self) -> httpx.AsyncClient:
+        """The async client, built once and kept: an async router stays on the event loop it first ran on, as
+        the providers' clients do."""
         if self._async is None:
             self._async = httpx.AsyncClient(
                 timeout=self._timeout, follow_redirects=False, transport=self._async_transport

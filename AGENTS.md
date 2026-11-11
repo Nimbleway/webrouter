@@ -67,6 +67,14 @@ later. It is research's shape on the same job core, with `submit_browse` for
 the job handle. Browser Use, Skyvern, Browserbase, and `auto`. Like research, it
 has no keyless tier, because every task bills.
 
+**Vendor data** (`call_vendor`, `vendor_request`, and `vendors`,
+`vendor`, `vendor_endpoint`, `find_vendor_endpoints` to find what to call) is
+not an eighth method of interchangeable backends. It reaches one vendor's own
+API with the user's credentials -- their Google Ads, their Datadog -- and
+returns the vendor's answer untouched. The vendors are data, not classes: one
+JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
+`web_router/vendors/`. See "Adding a vendor" below.
+
 A name does not imply every method. `brave` searches and cannot extract,
 `oxylabs` extracts and cannot search, `nimble` searches, extracts, runs
 live data and researches through four classes, and `browserbase` opens
@@ -110,6 +118,10 @@ src/web_router/
 ├── live_data_search.py live_data_sources(query=...): NativeSourceSearch for vendors that
 │                       search their own catalogue, a local match for the rest
 ├── live_data_compat.py the old Template* names, importable from web_router with a warning
+├── client_vendors.py   call_vendor(), vendor_request() and the catalog lookups, mixed into
+│                       both routers
+├── client_handles.py   the browser sessions a router hands out, tracked for close()
+
 ├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
@@ -268,6 +280,11 @@ src/web_router/
 ├── registry_answer.py  the answer backends' table, and the backend an
 │                       unnamed answer() uses
 ├── exceptions.py       WebRouterError and subclasses
+├── exceptions_vendors.py VendorNotFoundError and VendorWriteRefusedError, apart on the
+│                       terms exceptions_budget.py is
+├── vendors/            call_vendor's vendor-blind code: schema.py (the catalog file's
+│                       models), catalog.py, credentials.py, plan.py (inputs placed),
+│                       caller.py (credentials placed, sent, masked), types.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
 │   ├── methods.py      the library method behind each provider-picking tool: its
@@ -286,6 +303,8 @@ src/web_router/
 │   ├── routing_keys.py where such a router posts, a preset's host included, and its key,
 │   │                   read from the process environment before any .env file
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
+│   ├── vendor_tools.py vendors, vendor_endpoint and call_vendor
+│   ├── session_tools.py the routing and vendor tools, registered after the methods' own
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
 │   │                   the charge for live_data and browser_open
 │   ├── live_data_tools.py  the three live data tools; shaping_live_data.py shapes them
@@ -1196,6 +1215,38 @@ earlier belongs in the vendor catalogue for `call_vendor`, not here.
    live test that lists, describes and runs one source.
 5. A price row in `prices.json` (`make prices`), a contract (`make contracts
    PROVIDER=live_data/<name>`), the README support table and `CHANGELOG.md`.
+
+## Adding a vendor
+
+A vendor is a file, never code: `src/web_router/data/vendors/<vendor>.json`,
+validated by the strict models in `web_router/vendors/schema.py` (an unknown
+key is refused). If a vendor seems to need code -- a signed request, say --
+it is a format change to discuss first, not a branch in `caller.py`.
+
+1. Write it **from the vendor's own documentation**, never from another
+   project's catalog: notes and summaries are ours. List the pages in
+   `sources`, set `curated` to the date, and give each endpoint the
+   reference page it was written from as `docs_url` and `verified.docs`.
+   `verified.live` is a date, and only after a real call matched the entry.
+2. Accuracy beats coverage. An endpoint goes in only when its method, path
+   and inputs are known; an undocumented parameter is left out. The rules
+   that hold for providers hold here: never invent a value, never drop one.
+3. `kind: write` for anything that changes the user's data or account,
+   sends something to other people, or deletes; every DELETE, PUT and PATCH.
+   A read over POST says so in its notes. A write is what `allow_writes`
+   gates, so a write marked `read` is a safety bug.
+4. `base_url` is https. A part of the host that varies (region, data
+   centre) is a setting with an exhaustive `choices` list -- the format
+   refuses one without, because a free-form host could carry the credential
+   anywhere.
+5. Credentials: the variable names the vendor's own docs use, or the one
+   `.env.example` already uses for that vendor, else `<VENDOR>_API_KEY`. Two
+   vendors never share a variable (a test checks).
+6. Notes are what a caller gets wrong without being told: units, paging,
+   credits per call, async job flows.
+7. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
+   section) and `uv run pytest tests/vendors`, which loads every shipped
+   file. Add a line to `CHANGELOG.md`.
 
 ## Adding a research provider
 

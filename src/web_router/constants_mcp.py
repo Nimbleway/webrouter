@@ -190,3 +190,7 @@ MCP_MSG_BUDGET_LIMIT = "{tool}: `{name}` must be a positive number, got {value!r
 MCP_PRICE_LIVE_DATA = "live_data"
 MCP_PRICE_OPEN_BROWSER = "open_browser"
 """The price list's methods for the two billed tools no ``auto`` hooks, which the server charges itself."""
+
+MCP_MSG_ENV_MISSING = "There is no file at {path}, so nothing was loaded. Ask the user where their .env file is."
+
+MCP_MSG_ENV_UNREADABLE = "{path} could not be read as a .env file ({reason}), so nothing was loaded."

@@ -35,6 +35,7 @@ from web_router.constants_mcp import (
 )
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
+from web_router.constants_vendors import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -3915,6 +3916,7 @@ MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_WEB_RUN: MCP_WEB_RUN_PROPERTIES,
     MCP_TOOL_BUDGET_START: MCP_BUDGET_START_PROPERTIES,
     MCP_TOOL_BUDGET_STATUS: {},
+    **VENDOR_MCP_PROPERTIES,
 }
 """Each tool's input schema, minus the ``provider`` argument.
 
@@ -3951,6 +3953,7 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_WEB_RUN: ("prompt",),
     MCP_TOOL_BUDGET_START: ("max_cost_usd", "time_limit_s"),
     MCP_TOOL_BUDGET_STATUS: (),
+    **VENDOR_MCP_REQUIRED,
 }
 
 MCP_PROVIDER_DESCRIPTION = "The backend to use, of those configured here; omit it and the router picks one."
@@ -4081,6 +4084,7 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_WEB_RUN: MCP_DESC_WEB_RUN,
     MCP_TOOL_BUDGET_START: MCP_DESC_BUDGET_START,
     MCP_TOOL_BUDGET_STATUS: MCP_DESC_BUDGET_STATUS,
+    **VENDOR_MCP_DESCRIPTIONS,
 }
 
 MCP_MSG_NO_BACKEND = " NOTHING IS CONFIGURED FOR THIS METHOD on this machine, so every call will fail."
@@ -4093,10 +4097,6 @@ MCP_MSG_ENV_HINT = (
     ".env in {user_dir}, or call load_env with the path of one. Only the file's path is ever needed -- "
     "never paste a key into the conversation."
 )
-
-MCP_MSG_ENV_MISSING = "There is no file at {path}, so nothing was loaded. Ask the user where their .env file is."
-
-MCP_MSG_ENV_UNREADABLE = "{path} could not be read as a .env file ({reason}), so nothing was loaded."
 
 MCP_MSG_ENV_NO_CREDENTIALS = (
     "{path} sets none of the provider credentials this server reads, so nothing was loaded -- anything "
