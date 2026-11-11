@@ -1,0 +1,628 @@
+{
+  "vendor": "rentcast",
+  "name": "RentCast",
+  "category": "other",
+  "summary": "US property records, automated value and rent estimates with comparables, active sale and rental listings, and ZIP-level market statistics.",
+  "docs_url": "https://developers.rentcast.io/reference/introduction",
+  "pricing_url": "https://www.rentcast.io/api",
+  "base_url": "https://api.rentcast.io/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "RENTCAST_API_KEY"
+        ],
+        "description": "A RentCast API key (app.rentcast.io > API dashboard). Sent in the X-Api-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billing is per successful call (HTTP 200 with a body), not per record; errors are free. The Developer plan has 50 free calls a month, then overage is charged with no hard cap, so page with care.",
+    "Rate limit: 20 requests per second per key; over it answers 429 auth/rate-limit-exceeded.",
+    "Search endpoints return a JSON array, newest first; page with limit (max 500) and offset. Several values are pipe-separated (propertyType=Condo|Townhouse, bedrooms=2|3); ranges are inclusive min:max with * for an open end (price=150000:250000, yearBuilt=2000:*). daysOld and saleDateRange are always ranges: a single value is the maximum.",
+    "Property ids are the address with spaces as hyphens, case-sensitive, e.g. 5500-Grand-Lake-Dr,-San-Antonio,-TX-78244; take them from earlier responses."
+  ],
+  "sources": [
+    "https://developers.rentcast.io/reference/introduction",
+    "https://developers.rentcast.io/reference/billing-and-pricing",
+    "https://developers.rentcast.io/reference/rate-limits",
+    "https://developers.rentcast.io/reference/search-queries",
+    "https://developers.rentcast.io/reference/property-records",
+    "https://developers.rentcast.io/reference/value-estimate",
+    "https://developers.rentcast.io/reference/rent-estimate-long-term",
+    "https://developers.rentcast.io/reference/sale-listings",
+    "https://developers.rentcast.io/reference/rental-listings-long-term",
+    "https://developers.rentcast.io/reference/market-statistics"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "rentcast.properties.search",
+      "name": "Search property records",
+      "summary": "Public-record attributes, owner, tax and sale history for properties matching an address, area or filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/properties",
+      "params": {
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Full address 'Street, City, State, Zip': one property, or the centre of a radius search."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City name, case-sensitive."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code, case-sensitive.",
+          "example": "TX"
+        },
+        "zipCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit ZIP code."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Centre latitude of a circular search (with longitude and radius)."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Centre longitude of a circular search."
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Search radius in miles, max 100."
+        },
+        "propertyType": {
+          "in": "query",
+          "type": "string",
+          "description": "Property type; several values allowed (pipe-separated).",
+          "enum": [
+            "Single Family",
+            "Condo",
+            "Townhouse",
+            "Manufactured",
+            "Multi-Family",
+            "Apartment",
+            "Land"
+          ]
+        },
+        "bedrooms": {
+          "in": "query",
+          "type": "string",
+          "description": "Bedrooms; 0 is a studio. Ranges and multiple values allowed."
+        },
+        "bathrooms": {
+          "in": "query",
+          "type": "string",
+          "description": "Bathrooms; fractions for partial baths. Ranges and multiple values allowed."
+        },
+        "squareFootage": {
+          "in": "query",
+          "type": "string",
+          "description": "Living area in square feet. Ranges allowed."
+        },
+        "lotSize": {
+          "in": "query",
+          "type": "string",
+          "description": "Lot size in square feet. Ranges allowed."
+        },
+        "yearBuilt": {
+          "in": "query",
+          "type": "string",
+          "description": "Year built. Ranges allowed."
+        },
+        "saleDateRange": {
+          "in": "query",
+          "type": "string",
+          "description": "Days since the last sale, min 1. Ranges allowed."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per call, 1 to 500 (default 50 per the description)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first record, default 0."
+        },
+        "includeTotalCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the total match count in the X-Total-Count response header."
+        }
+      },
+      "job": "property.records.search",
+      "docs_url": "https://developers.rentcast.io/reference/property-records",
+      "verified": {
+        "docs": "https://developers.rentcast.io/reference/property-records"
+      }
+    },
+    {
+      "id": "rentcast.properties.get",
+      "name": "Get a property record by id",
+      "summary": "One property record.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/properties/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Property id from an earlier response.",
+          "example": "5500-Grand-Lake-Dr,-San-Antonio,-TX-78244"
+        }
+      },
+      "job": "property.records.get",
+      "docs_url": "https://developers.rentcast.io/reference/property-record-by-id",
+      "verified": {
+        "docs": "https://developers.rentcast.io/reference/property-record-by-id"
+      }
+    },
+    {
+      "id": "rentcast.value.estimate",
+      "name": "Estimate a property's value",
+      "summary": "Automated sale-value estimate with a range and the comparable sales used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/avm/value",
+      "params": {
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Full address 'Street, City, State, Zip' (or latitude/longitude).",
+          "example": "5500 Grand Lake Dr, San Antonio, TX, 78244"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude, instead of address."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude, instead of address."
+        },
+        "propertyType": {
+          "in": "query",
+          "type": "string",
+          "description": "Property type of the subject.",
+          "enum": [
+            "Single Family",
+            "Condo",
+            "Townhouse",
+            "Manufactured",
+            "Multi-Family",
+            "Apartment",
+            "Land"
+          ]
+        },
+        "bedrooms": {
+          "in": "query",
+          "type": "number",
+          "description": "Bedrooms; 0 is a studio."
+        },
+        "bathrooms": {
+          "in": "query",
+          "type": "number",
+          "description": "Bathrooms; fractions for partial baths."
+        },
+        "squareFootage": {
+          "in": "query",
+          "type": "number",
+          "description": "Living area in square feet."
+        },
+        "maxRadius": {
+          "in": "query",
+          "type": "number",
+          "description": "Max distance of comparables from the subject, in miles."
+        },
+        "daysOld": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max days since a comparable was last seen on the market, min 1."
+        },
+        "compCount": {
+          "in": "query",
+          "type": "integer",
+          "description": "Comparables to use, 5 to 25 (15 when omitted per the description)."
+        },
+        "lookupSubjectAttributes": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Look up the subject's attributes to pick better comps (default true)."
+        }
+      },
+      "notes": [
+        "Give address or latitude/longitude; the subject's attributes improve accuracy."
+      ],
+      "job": "property.valuation",
+      "docs_url": "https://developers.rentcast.io/reference/value-estimate",
+      "verified": {
+        "docs": "https://developers.rentcast.io/reference/value-estimate"
+      }
+    },
+    {
+      "id": "rentcast.rent.estimate",
+      "name": "Estimate a property's long-term rent",
+      "summary": "Automated monthly rent estimate with a range and the comparable rentals used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/avm/rent/long-term",
+      "params": {
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Full address 'Street, City, State, Zip' (or latitude/longitude).",
+          "example": "5500 Grand Lake Dr, San Antonio, TX, 78244"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude, instead of address."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude, instead of address."
+        },
+        "propertyType": {
+          "in": "query",
+          "type": "string",
+          "description": "Property type of the subject.",
+          "enum": [
+            "Single Family",
+            "Condo",
+            "Townhouse",
+            "Manufactured",
+            "Multi-Family",
+            "Apartment"
+          ]
+        },
+        "bedrooms": {
+          "in": "query",
+          "type": "number",
+          "description": "Bedrooms; 0 is a studio."
+        },
+        "bathrooms": {
+          "in": "query",
+          "type": "number",
+          "description": "Bathrooms; fractions for partial baths."
+        },
+        "squareFootage": {
+          "in": "query",
+          "type": "number",
+          "description": "Living area in square feet."
+        },
+        "maxRadius": {
+          "in": "query",
+          "type": "number",
+          "description": "Max distance of comparables from the subject, in miles."
+        },
+        "daysOld": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max days since a comparable was last seen on the market, min 1."
+        },
+        "compCount": {
+          "in": "query",
+          "type": "integer",
+          "description": "Comparables to use, 5 to 25 (15 when omitted per the description)."
+        },
+        "lookupSubjectAttributes": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Look up the subject's attributes to pick better comps (default true)."
+        }
+      },
+      "notes": [
+        "Give address or latitude/longitude. Land is not an accepted propertyType here."
+      ],
+      "job": "property.valuation",
+      "docs_url": "https://developers.rentcast.io/reference/rent-estimate-long-term",
+      "verified": {
+        "docs": "https://developers.rentcast.io/reference/rent-estimate-long-term"
+      }
+    },
+    {
+      "id": "rentcast.listings.sale",
+      "name": "Search sale listings",
+      "summary": "For-sale listings with price, agent and history, filtered by area and attributes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/listings/sale",
+      "params": {
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Full address 'Street, City, State, Zip': one property, or the centre of a radius search."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City name, case-sensitive."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code, case-sensitive.",
+          "example": "TX"
+        },
+        "zipCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit ZIP code."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Centre latitude of a circular search (with longitude and radius)."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Centre longitude of a circular search."
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Search radius in miles, max 100."
+        },
+        "propertyType": {
+          "in": "query",
+          "type": "string",
+          "description": "Property type; several values allowed (pipe-separated).",
+          "enum": [
+            "Single Family",
+            "Condo",
+            "Townhouse",
+            "Manufactured",
+            "Multi-Family",
+            "Apartment",
+            "Land"
+          ]
+        },
+        "bedrooms": {
+          "in": "query",
+          "type": "string",
+          "description": "Bedrooms; 0 is a studio. Ranges and multiple values allowed."
+        },
+        "bathrooms": {
+          "in": "query",
+          "type": "string",
+          "description": "Bathrooms; fractions for partial baths. Ranges and multiple values allowed."
+        },
+        "squareFootage": {
+          "in": "query",
+          "type": "string",
+          "description": "Living area in square feet. Ranges allowed."
+        },
+        "lotSize": {
+          "in": "query",
+          "type": "string",
+          "description": "Lot size in square feet. Ranges allowed."
+        },
+        "yearBuilt": {
+          "in": "query",
+          "type": "string",
+          "description": "Year built. Ranges allowed."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Listing status, default Active.",
+          "enum": [
+            "Active",
+            "Inactive"
+          ]
+        },
+        "price": {
+          "in": "query",
+          "type": "string",
+          "description": "Listed price. Ranges allowed."
+        },
+        "daysOld": {
+          "in": "query",
+          "type": "string",
+          "description": "Days since listed, min 1. Ranges allowed."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per call, 1 to 500 (default 50 per the description)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first record, default 0."
+        },
+        "includeTotalCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the total match count in the X-Total-Count response header."
+        }
+      },
+      "job": "property.listings.search",
+      "docs_url": "https://developers.rentcast.io/reference/sale-listings",
+      "verified": {
+        "docs": "https://developers.rentcast.io/reference/sale-listings"
+      }
+    },
+    {
+      "id": "rentcast.listings.rental",
+      "name": "Search long-term rental listings",
+      "summary": "Rental listings with monthly rent, filtered by area and attributes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/listings/rental/long-term",
+      "params": {
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Full address 'Street, City, State, Zip': one property, or the centre of a radius search."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City name, case-sensitive."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code, case-sensitive.",
+          "example": "TX"
+        },
+        "zipCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit ZIP code."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Centre latitude of a circular search (with longitude and radius)."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Centre longitude of a circular search."
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Search radius in miles, max 100."
+        },
+        "propertyType": {
+          "in": "query",
+          "type": "string",
+          "description": "Property type; several values allowed.",
+          "enum": [
+            "Single Family",
+            "Condo",
+            "Townhouse",
+            "Manufactured",
+            "Multi-Family",
+            "Apartment"
+          ]
+        },
+        "bedrooms": {
+          "in": "query",
+          "type": "string",
+          "description": "Bedrooms; 0 is a studio. Ranges and multiple values allowed."
+        },
+        "bathrooms": {
+          "in": "query",
+          "type": "string",
+          "description": "Bathrooms; fractions for partial baths. Ranges and multiple values allowed."
+        },
+        "squareFootage": {
+          "in": "query",
+          "type": "string",
+          "description": "Living area in square feet. Ranges allowed."
+        },
+        "lotSize": {
+          "in": "query",
+          "type": "string",
+          "description": "Lot size in square feet. Ranges allowed."
+        },
+        "yearBuilt": {
+          "in": "query",
+          "type": "string",
+          "description": "Year built. Ranges allowed."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Listing status, default Active.",
+          "enum": [
+            "Active",
+            "Inactive"
+          ]
+        },
+        "price": {
+          "in": "query",
+          "type": "string",
+          "description": "Listed monthly rent. Ranges allowed."
+        },
+        "daysOld": {
+          "in": "query",
+          "type": "string",
+          "description": "Days since listed, min 1. Ranges allowed."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per call, 1 to 500 (default 50 per the description)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first record, default 0."
+        },
+        "includeTotalCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the total match count in the X-Total-Count response header."
+        }
+      },
+      "job": "property.listings.search",
+      "docs_url": "https://developers.rentcast.io/reference/rental-listings-long-term",
+      "verified": {
+        "docs": "https://developers.rentcast.io/reference/rental-listings-long-term"
+      }
+    },
+    {
+      "id": "rentcast.markets.get",
+      "name": "Get market statistics for a ZIP code",
+      "summary": "Average/median sale and rent figures for a ZIP, by property type and bedrooms, with monthly history.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/markets",
+      "params": {
+        "zipCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Five-digit US ZIP code.",
+          "required": true,
+          "example": "29611"
+        },
+        "dataType": {
+          "in": "query",
+          "type": "string",
+          "description": "Which statistics, default All.",
+          "enum": [
+            "All",
+            "Sale",
+            "Rental"
+          ]
+        },
+        "historyRange": {
+          "in": "query",
+          "type": "integer",
+          "description": "Months of history to include (default 12 per the description)."
+        }
+      },
+      "job": "property.market",
+      "docs_url": "https://developers.rentcast.io/reference/market-statistics",
+      "verified": {
+        "docs": "https://developers.rentcast.io/reference/market-statistics"
+      }
+    }
+  ]
+}
