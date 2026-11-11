@@ -14,13 +14,11 @@ from web_router.constants import (
     LOCAL_BROWSER_PATH_OPTION,
     MCP_TOOL_LOAD_ENV,
     MCP_TOOL_RESEARCH,
-    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
-    MCP_TOOL_TEMPLATE,
-    MCP_TOOL_TEMPLATES,
     MSG_LOCAL_NO_BROWSER,
     PROVIDER_TAVILY,
 )
+from web_router.constants_live_data import MCP_TOOL_LIVE_DATA, MCP_TOOL_LIVE_DATA_SOURCE, MCP_TOOL_LIVE_DATA_SOURCES
 from web_router.constants_mcp import MCP_NO_ARGUMENTS, MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.mcp.messages import error_text
@@ -88,9 +86,13 @@ def test_the_no_browser_error_names_no_provider_config_over_mcp() -> None:
 
 @pytest.mark.parametrize(
     ("tool", "arguments"),
-    [(MCP_TOOL_TEMPLATES, {}), (MCP_TOOL_TEMPLATE, {"name": "t"}), (MCP_TOOL_RUN_TEMPLATE, {"template": "t"})],
+    [
+        (MCP_TOOL_LIVE_DATA_SOURCES, {}),
+        (MCP_TOOL_LIVE_DATA_SOURCE, {"name": "t"}),
+        (MCP_TOOL_LIVE_DATA, {"source": "t"}),
+    ],
 )
-async def test_a_template_tool_with_nothing_configured_says_what_would_add_one(
+async def test_a_live_data_tool_with_nothing_configured_says_what_would_add_one(
     no_keys: None, tool: str, arguments: dict[str, Any]
 ) -> None:
     """Keyless, the schema has no ``provider`` to offer, so the error must not ask for one."""

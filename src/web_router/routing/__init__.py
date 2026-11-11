@@ -23,12 +23,36 @@ calling a router, :mod:`.merge` turning its decision into an order,
 :mod:`.budget` holding a call to its budget, :mod:`.params` the options a
 budget sets, :mod:`.effort_table` the research effort table they read,
 :mod:`.pricing` what an attempt costs and takes, :mod:`.decide` the merged
-decision a call runs with, :mod:`.url_policy` the URLs a call may send, and
-:mod:`.attempts` the seam in ``auto``'s fallback loops.
+decision a call runs with, :mod:`.url_policy` the URLs a call may send,
+:mod:`.attempts` the seam in ``auto``'s fallback loops, :mod:`.registry`
+routers by name, :mod:`.wire` the JSON wire format, :mod:`.remote` the
+built-in router that speaks it over HTTP, :mod:`.decider_router` a router
+made of a decider, which the built-in ``llm`` and ``systemone`` routers are,
+and :mod:`.fallback` the built-in router that asks others in turn, answering a
+:class:`CompositeDecision`.
 """
 
+from web_router.routing.composite import CompositeDecision
 from web_router.routing.contract import Budget, Candidate, Plan, RouteDecision, RouteRequest, ToolName
+from web_router.routing.decider import AsyncDecider, Decider, DeciderQuestion, DeciderReply, SyncDecider
+from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.invoke import RouterLike
 from web_router.routing.url_policy import UrlPolicy
 
-__all__ = ["Budget", "Candidate", "Plan", "RouteDecision", "RouteRequest", "RouterLike", "ToolName", "UrlPolicy"]
+__all__ = [
+    "AsyncDecider",
+    "Budget",
+    "Candidate",
+    "CompositeDecision",
+    "Decider",
+    "DeciderQuestion",
+    "DeciderReply",
+    "DeciderRouter",
+    "Plan",
+    "RouteDecision",
+    "RouteRequest",
+    "RouterLike",
+    "SyncDecider",
+    "ToolName",
+    "UrlPolicy",
+]
