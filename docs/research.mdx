@@ -6,7 +6,7 @@ icon: "flask"
 ---
 
 `research()` behaves differently enough to be worth a section. A search answers in a second. A research run reasons over
-several turns — searching, reading, cross-checking — and answers in minutes.
+several turns (searching, reading, cross-checking) and answers in minutes.
 
 ```python
 response = router.research("how did nvidia's datacenter revenue mix shift in 2025")
@@ -53,7 +53,7 @@ router.research(
 
 ## Effort
 
-`effort` is research's equivalent of `search_depth` — four levels mapped onto
+`effort` is research's equivalent of `search_depth`: four levels mapped onto
 each backend's own vocabulary, which disagree more here than anywhere else in
 the package:
 
@@ -70,13 +70,13 @@ than inventing a distinction it does not have. Nimble's own `max` is not open ye
 `provider_options`, as is You.com's `frontier`.
 
 Parallel is the one backend that *requires* an effort, so leaving it unset sends
-`medium` rather than omitting the field — the same deliberate exception to
+`medium` rather than omitting the field, the same deliberate exception to
 "unset means unset" that `extract` makes for `format`, and for the same reason:
 the alternative is a value that depends on a vendor default nobody declared.
 
 ## Not waiting for it
 
-`research()` blocks, which is wrong anywhere a minutes-long wait is — a request
+`research()` blocks, which is wrong anywhere a minutes-long wait is: a request
 handler, a UI, an MCP server. `submit_research()` hands back the job instead:
 
 ```python
@@ -88,7 +88,7 @@ job.result(timeout=30)  # block for a while; raises ResearchTimeoutError if it i
 ```
 
 Running out of time **raises rather than returning an empty answer**, and leaves
-the run going rather than cancelling it — the exception carries the job id, so
+the run going rather than cancelling it; the exception carries the job id, so
 picking the same run back up costs nothing where starting it again would cost
 the whole run. `job.cancel()` stops one where the backend supports it, and
 returns `False` where it does not rather than pretending.
@@ -107,8 +107,8 @@ response.provider  # who actually answered -- never 'auto'
 response.raw  # every untouched payload the run took
 ```
 
-`Citation.field` says **which part of the answer a source backs** — a JSON path
-into `structured`, or a marker in `answer` — for the backends that attribute per
+`Citation.field` says **which part of the answer a source backs** (a JSON path
+into `structured`, or a marker in `answer`) for the backends that attribute per
 field. `None` means it cites the answer as a whole.
 
 `outcome` is `"partial"` only when the backend itself reported stopping early:

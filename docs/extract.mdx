@@ -18,7 +18,7 @@ for document in response.documents:
     print(document.url, document.format, len(document.content))
 ```
 
-One URL or many — `router.extract("https://example.com")` is the same call, and
+One URL or many: `router.extract("https://example.com")` is the same call, and
 the answer has the same shape. Backends that take a single URL per request are
 fanned out for you, concurrently on `AsyncWebRouter`, and the documents come back
 in the order you asked for them.
@@ -31,8 +31,8 @@ page should come back as, mapped onto each backend's own vocabulary.
 | Format | What you get | Nimble | Tavily | Firecrawl | Oxylabs | Bright Data | Jina | Linkup | Browserbase |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `markdown` | Structure kept, markup dropped | `formats: [markdown]` | `format: markdown` | `formats: [markdown]` | `markdown: true` | `data_format: markdown` | `X-Return-Format: markdown` | always returned | `format: markdown` |
-| `html` | The page's HTML as fetched | `formats: [html]` | — | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` | `format: raw` (the body as served) |
-| `text` | Visible text, no markup | — | `format: text` | — | — | — | `X-Return-Format: text` | — | — |
+| `html` | The page's HTML as fetched | `formats: [html]` |  | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` | `format: raw` (the body as served) |
+| `text` | Visible text, no markup |  | `format: text` |  |  |  | `X-Return-Format: text` |  |  |
 
 Exa is left out of the table because it has one row to give: its Contents API
 returns `text` and nothing else, asked for as `text: true`. WebIQ is left out
@@ -79,13 +79,13 @@ response.failures[0].error  # why it did not come back
 A call where **nothing** came back raises instead, so a bad credential can never
 look like a page with no text. This works the same way whether the backend
 reports its own per-URL failures (Tavily, Exa) or was fanned out one URL at a
-time (everything else) — that uniformity is enforced in `ExtractProvider`, not
+time (everything else). That uniformity is enforced in `ExtractProvider`, not
 asked of each provider.
 
 `response.raw` holds the untouched payloads, one per API call that answered: a
 single entry from a backend that took every URL at once, one per URL that came
 back from a backend that did not. A call that failed outright is in `failures`
-instead — there was no payload to keep.
+instead; there was no payload to keep.
 
 ## The fastest answer any backend can give: `max`
 

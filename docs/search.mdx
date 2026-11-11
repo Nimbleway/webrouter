@@ -20,9 +20,9 @@ response = router.search(
 ```
 
 Every option except `query` is optional. Which ones a given provider maps is in
-the [Providers](/providers#search) table; setting one it does not map raises rather than being
-ignored, and so does a value it cannot serve — a depth level it lacks, a country
-off its list — before anything is sent, so `auto` passes that backend over.
+the [search support table](https://github.com/Nimbleway/webrouter/blob/main/README.md#search); setting one it does not map raises rather than being
+ignored, and so does a value it cannot serve (a depth level it lacks, a country
+off its list) before anything is sent, so `auto` passes that backend over.
 
 That is the whole surface. It is deliberately small: these are the options that
 mean the same thing on every backend, so code written against them keeps working
@@ -55,7 +55,7 @@ the body in the field others use for the snippet; that is normalized away, so
 `content` is the field to read whatever the backend did.
 
 `result.description` is the provider's snippet **when it returns one as a
-separate field**. Not every backend does at every depth — Nimble at `fast`
+separate field**. Not every backend does at every depth: Nimble at `fast`
 returns the page body and no snippet, so `description` holds that body and is
 identical to `content`. Read `description` when you want the short form and
 have checked your backend supplies one; read `content` when you want text.
@@ -83,7 +83,7 @@ refuse `effort`.
 ## Recency
 
 `recency` keeps to sources the backend dates within the last day, week, month
-or year — by publication date where it has one. A backend that takes a start
+or year, by publication date where it has one. A backend that takes a start
 date gets today (UTC) minus 1, 7, 30 or 365 days.
 
 | Backend | Sent as |
@@ -98,20 +98,3 @@ date gets today (UTC) minus 1, 7, 30 or 365 days.
 | DeepSeek | `after:YYYY-MM-DD` in the query |
 
 WebIQ and Parallel MCP do not map it.
-
-## Values a backend refuses
-
-Each of these raises `UnsupportedParameterError` before anything is sent (a
-query too long for its operators raises `ProviderError`), and `auto` moves on:
-
-| Backend | Refused |
-| --- | --- |
-| You.com, You.com MCP | a `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once |
-| Brave | a `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
-| Tavily | a `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
-| Parallel | a `country` off its 37 codes; both domain lists at once; more than 200 domains |
-| Perplexity | both domain lists at once; more than 20 domains; a `locale` that is not a bare two-letter language (`en`, not `en-US`) |
-| WebIQ | a `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
-| Keenable | more than one `include_domains` entry |
-| DeepSeek | a query past 128 characters with its operators |
-| Brave, WebIQ, DeepSeek, You.com MCP | a domain filter that is not a host name (optionally with a path), since it goes into the query as `site:` (for You.com MCP, `include_domains` only; `exclude_domains` is a tool argument) |
