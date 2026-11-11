@@ -31,15 +31,16 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Collection, Mapping
-from contextlib import AsyncExitStack, ExitStack, suppress
+from contextlib import AsyncExitStack, ExitStack
 from types import TracebackType
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
 from web_router.client_config import config_for
+from web_router.client_handles import _HandleT, _HandleTracking
 from web_router.client_live_data import AsyncLiveData, SyncLiveData
 from web_router.client_plan import AsyncPlan, SyncPlan
 from web_router.client_requests import JsonSchema as JsonSchema
@@ -51,6 +52,7 @@ from web_router.client_requests import (
     build_research_request,
     build_search_request,
 )
+from web_router.client_vendors import AsyncVendors, SyncVendors, VendorCredentials, _VendorLookup
 from web_router.constants import (
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
@@ -99,10 +101,8 @@ from web_router.types import (
     provider_name,
 )
 
-_HandleT = TypeVar("_HandleT", BrowserHandle, AsyncBrowserHandle)
 
-
-class _BaseRouter(RouterSetup, Generic[_HandleT]):
+class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     """Provider resolution and caching shared by the sync and async routers.
 
     Generic only in the browser handle each one hands out, which is the one
@@ -119,6 +119,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        vendor_credentials: VendorCredentials = None,
     ) -> None:
         """
         Args:
@@ -132,7 +133,10 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 :mod:`web_router.routing.invoke`. A name such as ``"remote"`` builds a registered router from
                 ``router_config``, and closing this router closes it -- see :mod:`web_router.routing.registry`.
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
+            vendor_credentials: for :meth:`call_vendor`, read before the environment -- see
+                :mod:`web_router.client_vendors`.
         """
+        self._init_vendors(vendor_credentials)
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a
         # search-only backend still extracts through `provider=`, and the
@@ -249,27 +253,6 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 self._browse_instances[key] = create_browse_provider(key, **self._config_for(key))
             return self._browse_instances[key]
 
-    def _track(self, handle: _HandleT) -> _HandleT:
-        # Pruned on every open, so a long-lived router that opens thousands of
-        # sessions holds only the ones still open. In place and under the lock:
-        # rebuilding the list and reassigning it lost a handle to a concurrent
-        # open that appended between the two.
-        with self._handles_lock:
-            self._browser_handles[:] = [held for held in self._browser_handles if not held.released]
-            self._browser_handles.append(handle)
-        return handle
-
-    def _open_handles(self) -> list[_HandleT]:
-        # Left tracked: a handle leaves only once its release succeeds, so one
-        # that fails is still here for the next close() to retry.
-        with self._handles_lock:
-            self._browser_handles[:] = [held for held in self._browser_handles if not held.released]
-            return list(self._browser_handles)
-
-    def _untrack(self, handle: _HandleT) -> None:
-        with self._handles_lock, suppress(ValueError):
-            self._browser_handles.remove(handle)
-
     def _all_instances(self) -> list[_BaseProvider]:
         return [
             *self._instances.values(),
@@ -285,7 +268,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchmark, SyncPlan, SyncBudget):
+class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchmark, SyncPlan, SyncBudget, SyncVendors):
     """Synchronous router.
 
     Example:
@@ -307,6 +290,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        vendor_credentials: VendorCredentials = None,
     ) -> None:
         """
         Raises:
@@ -322,6 +306,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
             route_tools=route_tools,
             fail_on_router_error=fail_on_router_error,
             url_policy=url_policy,
+            vendor_credentials=vendor_credentials,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:
@@ -593,6 +578,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
             # so they close after the releases, which need their clients. A
             # release that fails does not stop the rest.
             stack.callback(self._close_router)
+            stack.callback(self._close_vendors)
             for instance in self._all_instances():
                 stack.callback(instance.close)
             for handle in self._open_handles():
@@ -615,7 +601,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
 
 
 class AsyncWebRouter(
-    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncLiveData, AsyncBenchmark, AsyncPlan, AsyncBudget
+    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncLiveData, AsyncBenchmark, AsyncPlan, AsyncBudget, AsyncVendors
 ):
     """Asynchronous router.
 
@@ -837,6 +823,8 @@ class AsyncWebRouter(
         """
         async with AsyncExitStack() as stack:
             stack.push_async_callback(self._aclose_router)
+            stack.push_async_callback(self._aclose_vendors)
+
             for instance in self._all_instances():
                 stack.push_async_callback(instance.aclose)
             for handle in self._open_handles():

@@ -36,6 +36,8 @@ WebRouter().live_data("walmart_pdp", {"product_id": "..."}, provider="nimble")  
 
 WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
 
+WebRouter().call_vendor("datadog.logs.search", {"filter": {"query": "status:error"}})  # your own vendor accounts
+
 WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
 
 with WebRouter("local").open_browser() as browser:  # a browser to drive, also keyless
@@ -1442,6 +1444,80 @@ an 800x513 page). A browser too old to have that command fails the open. Its
 `{"window-size": "800,600"}` sets the outer size if that is what you want --
 though not beside `viewport`, which refuses every switch that sizes the window.
 
+## Vendor data
+
+`call_vendor()` reaches a vendor's own API with your account's credentials —
+your Google Ads reports, your Datadog logs, a contact-data vendor you pay for.
+It is not a method with interchangeable backends: only Google Ads knows your
+Google Ads spend, so there is no `auto`, and nothing is normalized. The answer
+is the vendor's own JSON, in its own field names and units. What the router
+adds is everything around the call:
+
+- **A catalog** of vendors and their useful endpoints, one JSON file per vendor
+  in `src/web_router/data/vendors/`, each written from the vendor's docs and
+  listed in [VENDORS.md](VENDORS.md). Every endpoint says what it does, its
+  inputs and where each goes, whether it reads or writes, and the notes a
+  caller gets wrong without (money in micros, timestamps in seconds, how
+  paging works).
+- **Credentials placed the way the vendor wants them**: header keys, a query
+  key, HTTP Basic, or an OAuth refresh token the router exchanges for an
+  access token and caches until shortly before it expires.
+- **Three guarantees.** Credentials only go to the vendor's own host: a path
+  with a scheme or host is refused, redirects are not followed, and a host
+  that varies by region only takes the values the vendor's file lists. No
+  input is dropped or invented: one the endpoint does not declare raises
+  `UnsupportedParameterError`, a required one left out
+  `MissingParameterError`. Writes are opt-in: an endpoint marked `write`, or a
+  raw request that is not GET/HEAD/OPTIONS, raises `VendorWriteRefusedError`
+  unless the call passes `allow_writes=True`.
+
+```python
+from web_router import WebRouter
+
+router = WebRouter()
+
+router.vendors(configured=True)  # the vendors whose keys are set here
+router.find_vendor_endpoints("google ads spend by campaign")
+router.vendor_endpoint("google-ads.query")  # inputs, notes, credentials
+
+response = router.call_vendor(
+    "google-ads.query",
+    {
+        "customer_id": "1234567890",
+        "query": "SELECT campaign.name, metrics.cost_micros FROM campaign WHERE segments.date DURING LAST_30_DAYS",
+    },
+)
+response.data  # Google's JSON, untouched
+
+# A path the catalog does not name, still with the vendor's credentials:
+router.vendor_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
+
+# A write: refused unless you say so. Dry-run first where the vendor can.
+router.call_vendor(
+    "google-ads.campaign_budgets.mutate",
+    {"customer_id": "1234567890", "operations": [...], "validateOnly": True},
+    allow_writes=True,
+)
+```
+
+Credentials come from the environment (or `.env`), under the variable names
+each vendor's file lists — `make vendors` writes them all into
+`.env.example`. To pass them in code instead, give the router
+`vendor_credentials={"datadog": {"api_key": ..., "app_key": ...}}`, read
+before the environment; anything with a `get(vendor, name, env)` method can
+stand in for both, a vault, say. A vendor whose host depends on your region
+or account takes it as a setting: `DD_SITE=datadoghq.eu`.
+
+An HTTP error raises `ProviderError` with every credential masked out of the
+vendor's message, including URL-encoded copies of a key sent in the query.
+`AsyncWebRouter` has the same methods, awaited. The vendor methods need the
+`vendors` extra (httpx), which `all` and `mcp` include.
+
+To pin a vendor's file or add one without forking, point
+`WEB_ROUTER_VENDOR_CATALOG` at a directory of JSON files: one named for a
+shipped vendor replaces it whole. [AGENTS.md](AGENTS.md#adding-a-vendor) has
+the format's rules.
+
 ## Browse
 
 `browse()` hands a task to a vendor's browser agent, which drives one of the
@@ -2719,6 +2795,8 @@ except WebRouterError as exc:
 | `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost — the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
 | `ProviderError` | The backend itself failed — HTTP error, SDK exception, bad credentials | Depends on the backend; the original error is wrapped, not swallowed |
+| `VendorNotFoundError` | `call_vendor()` or `vendor_endpoint()` named a vendor or endpoint the catalog does not hold | The message lists what it does hold; `find_vendor_endpoints()` searches it |
+| `VendorWriteRefusedError` | A vendor call would change data and `allow_writes=True` was not passed; nothing was sent | Pass it once you mean it, after the vendor's dry-run option where it has one |
 | `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
 | `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
 | `DeadlineExceededError` | A search, extract, live data run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |

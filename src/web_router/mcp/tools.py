@@ -103,8 +103,8 @@ from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
-from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.routing_config import McpRouting
+from web_router.mcp.session_tools import SESSION_TOOLS
 from web_router.mcp.shaping import (
     HandleStore,
     Record,
@@ -191,7 +191,7 @@ class WebRouterTools:
             MCP_TOOL_BROWSE_STATUS: self._browse_status,
             MCP_TOOL_FETCH_RAW: self._fetch_raw,
             MCP_TOOL_LOAD_ENV: self._load_env,
-            **{name: functools.partial(handler, self) for name, handler in ROUTING_TOOLS.items()},
+            **{name: functools.partial(handler, self) for name, handler in SESSION_TOOLS.items()},
             MCP_TOOL_BROWSER_OPEN: self._browser_open,
             MCP_TOOL_BROWSER_GOTO: self._browser_goto,
             MCP_TOOL_BROWSER_SNAPSHOT: self._browser_snapshot,
@@ -399,7 +399,7 @@ class WebRouterTools:
         every job still being polled runs on its providers.
         """
         self._retired.append(self.router)
-        self.router = self._router_factory()
+        self.router = self._router_factory().keeping_vendor_credentials_of(self.router)
         self._tools_changed = True
 
     async def _browser_open(self, arguments: Mapping[str, Any]) -> dict[str, Any]:

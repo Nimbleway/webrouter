@@ -55,14 +55,13 @@ from web_router.constants import (
     MCP_ENV_STATUS_NOTHING_NEW,
     MCP_ENV_STATUS_UNREADABLE,
     MCP_ENV_STATUS_USED,
-    MCP_MSG_ENV_MISSING,
     MCP_MSG_ENV_NO_CREDENTIALS,
     MCP_MSG_ENV_REMEMBER_FAILED,
-    MCP_MSG_ENV_UNREADABLE,
     MCP_USER_CONFIG_DIR,
     MCP_USER_CONFIG_ROOT_BY_PLATFORM,
     MCP_USER_CONFIG_ROOT_DEFAULT,
 )
+from web_router.constants_mcp import MCP_MSG_ENV_MISSING, MCP_MSG_ENV_UNREADABLE
 from web_router.mcp.env_credentials import EnvLoad, apply_credentials, credential_variables
 
 

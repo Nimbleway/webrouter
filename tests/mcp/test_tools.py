@@ -58,8 +58,8 @@ from web_router.constants_live_data import (
     MCP_TOOL_LIVE_DATA_SOURCES,
 )
 from web_router.mcp.env import user_config_dir
-from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.server import call_tool, list_resources, list_tools, read_resource
+from web_router.mcp.session_tools import SESSION_TOOLS
 from web_router.mcp.tools import WebRouterTools
 from web_router.registry import (
     get_browser_provider_class,
@@ -95,7 +95,7 @@ def test_serves_every_tool_in_order(tools: WebRouterTools) -> None:
         MCP_TOOL_BROWSE_STATUS,
         MCP_TOOL_FETCH_RAW,
         MCP_TOOL_LOAD_ENV,
-        *ROUTING_TOOLS,
+        *SESSION_TOOLS,
         *MCP_BROWSER_TOOLS,
     ]
 
