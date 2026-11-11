@@ -16,6 +16,11 @@ declares its own ``timeout_s`` -- the examples do.
 ROUTER_TIMEOUT_ATTR = "timeout_s"
 """The attribute, on a router function or object, that declares its time limit in seconds."""
 
+ROUTER_ROUTE_TOOLS_ATTR = "route_tools"
+"""The attribute, on a router function or object, that declares the tools it is consulted on when the caller
+passes ``route_tools=None``: a collection of tool names. A caller's ``route_tools`` always wins; a router that
+declares none is consulted on all five."""
+
 ROUTER_THREAD_NAME = "web-router-router"
 """The name of the worker thread a sync router runs on, and of the loop thread an async one runs on from sync code."""
 
@@ -26,7 +31,25 @@ MSG_ROUTER_FORM = (
 MSG_ROUTER_CLASS = "router= got the class {name!r}; pass an instance of it."
 MSG_ROUTER_TIMEOUT_S = "A router's timeout_s must be a positive number of seconds; got {value!r}."
 MSG_ROUTE_TOOLS = "route_tools takes a collection of tool names from {known}; got {got!r}."
+MSG_ROUTER_ROUTE_TOOLS = "A router's route_tools attribute takes a collection of tool names from {known}; got {got!r}."
 MSG_ROUTER_FAILED = (
     "Router {router!r} failed ({code}); fail_on_router_error=True raises rather than use the static order."
 )
 MSG_ROUTER_OTHER_LOOP = "The router answered with a future bound to another event loop, which this call cannot await."
+
+ROUTER_URL_POLICY_ATTR = "min_url_policy"
+"""The attribute a router sets to hold the URLs it sets to a ``url_policy`` when the caller sets none: the
+``remote`` router sets ``public_only``, since its answers come over the network."""
+
+ROUTER_NAME_ATTR = "router_name"
+"""The attribute, on a router function or object, that names it in a decision record; its qualified name if unset."""
+
+MSG_ROUTER_NAME = "A router's name must be a non-empty string; got {name!r}."
+MSG_ROUTER_FACTORY = "register_router({name!r}, ...) takes a callable that builds a router; got {kind}."
+MSG_ROUTER_BUILT_NONE = "router={name!r}: its registered factory returned None, not a router."
+MSG_ROUTER_UNKNOWN = "router={name!r} names no registered router; register_router() adds one. Known: {known}."
+MSG_ROUTER_CONFIG_UNNAMED = "router_config= configures a router named by string, router='name'; pass it with one."
+MSG_ROUTER_CONFIG_UNKNOWN = "router={name!r} does not take the router_config key(s) {keys}; it takes: {takes}."
+MSG_ROUTER_CONFIG_MISSING = "router={name!r} needs the router_config key(s) {keys}."
+MSG_ROUTER_DISCARD_FAILED = "A router built by name and refused did not close ({kind}); it is dropped."
+MSG_TOOLS_SYNC_IN_LOOP = "call() on an AsyncWebRouter blocks its caller; from async code, await acall() instead."
