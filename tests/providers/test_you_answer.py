@@ -116,13 +116,23 @@ def test_the_filters_map_to_youcoms_own_fields(provider: YouAnswerProvider) -> N
     }
 
 
-@pytest.mark.parametrize("recency", ["day", "week", "month", "year"])
-def test_every_recency_is_youcoms_own_value(provider: YouAnswerProvider, recency: Recency) -> None:
+@pytest.mark.parametrize("recency", ["week", "month", "year"])
+def test_every_recency_it_serves_is_youcoms_own_value(provider: YouAnswerProvider, recency: Recency) -> None:
     api = stub_answer_api(provider, _answered())
 
     provider.answer(AnswerRequest(query=QUESTION, recency=recency))
 
     assert api.bodies[0]["freshness"] == recency
+
+
+def test_recency_day_is_refused_before_the_call(provider: YouAnswerProvider) -> None:
+    api = stub_answer_api(provider, _answered())
+
+    with pytest.raises(UnsupportedParameterError, match="several days old") as caught:
+        provider.answer(AnswerRequest(query=QUESTION, recency="day"))
+
+    assert caught.value.parameters == ["recency"]
+    assert api.calls == []
 
 
 def test_both_domain_lists_together_are_refused_before_the_call(provider: YouAnswerProvider) -> None:

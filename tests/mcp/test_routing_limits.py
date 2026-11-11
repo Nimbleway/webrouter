@@ -113,7 +113,7 @@ def test_a_browser_open_prices_only_the_members_that_can_serve_it(priced: Table)
 def test_a_charged_call_runs_on_the_shared_clock(priced: Table) -> None:
     priced.update(cheap=0.0)
     budget = ConnectionBudget(Budget(time_limit_s=30))
-    with budget.bound(), charged("run_template", ["cheap"], BrowserRequest(), ANY):
+    with budget.bound(), charged("live_data", ["cheap"], BrowserRequest(), ANY):
         deadline, chain = current_deadline(), chain_in_force(ANY)
         assert deadline is not None and chain is not None and deadline.at == chain.expires_at()
 
