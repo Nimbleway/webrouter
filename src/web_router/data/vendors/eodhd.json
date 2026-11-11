@@ -1,0 +1,245 @@
+{
+  "vendor": "eodhd",
+  "name": "EODHD",
+  "category": "finance",
+  "summary": "End-of-day and delayed prices, ticker search and fundamentals for stocks, ETFs, forex and crypto on global exchanges.",
+  "docs_url": "https://eodhd.com/financial-apis/",
+  "pricing_url": "https://eodhd.com/pricing",
+  "base_url": "https://eodhd.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EODHD_API_TOKEN",
+          "EODHD_API_KEY"
+        ],
+        "description": "an EODHD API token (eodhd.com/cp/settings); the token value demo works for six tickers"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Tickers are CODE.EXCHANGE (AAPL.US); for US stocks the .US suffix may be omitted on EOD requests.",
+    "Output is CSV unless you send fmt=json (fundamentals is JSON only).",
+    "Free plan: 20 calls a day with one year of data; each request costs API calls and failed requests can still be billed.",
+    "The demo token (api_token=demo) works on six tickers: AAPL.US, TSLA.US, BTC-USD.CC, VTI.US, AMZN.US, EURUSD.FOREX."
+  ],
+  "sources": [
+    "https://eodhd.com/financial-apis/api-for-historical-data-and-volumes",
+    "https://eodhd.com/financial-apis/live-realtime-stocks-api",
+    "https://eodhd.com/financial-apis/search-api-for-stocks-etfs-mutual-funds-and-indices",
+    "https://eodhd.com/financial-apis/stock-etfs-fundamental-data-feeds"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "eodhd.eod.prices",
+      "name": "Get end-of-day prices",
+      "summary": "Daily, weekly or monthly OHLC, adjusted close and volume for one instrument.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/eod/{symbol}",
+      "params": {
+        "symbol": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ticker as CODE.EXCHANGE, e.g. AAPL.US, VOD.LSE, EURUSD.FOREX, BTC-USD.CC.",
+          "example": "AAPL.US"
+        },
+        "fmt": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; the default is csv, so send json to get JSON.",
+          "example": "json",
+          "enum": [
+            "csv",
+            "json"
+          ]
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "Bar size: d daily (default), w weekly, m monthly.",
+          "enum": [
+            "d",
+            "w",
+            "m"
+          ]
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "a oldest first (default) or d newest first.",
+          "enum": [
+            "a",
+            "d"
+          ]
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Window start, YYYY-MM-DD inclusive; a different date format is silently reinterpreted."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "Window end, YYYY-MM-DD inclusive."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Return one value instead of the series: last_date, last_open, last_high, last_low, last_close or last_volume."
+        }
+      },
+      "notes": [
+        "One symbol per request; with no dates the whole history comes back.",
+        "An unrecognised fmt, period or order is silently replaced by its default instead of failing, so validate them.",
+        "A ticker not carried answers 404 and still costs one call."
+      ],
+      "job": "market.history",
+      "docs_url": "https://eodhd.com/financial-apis/api-for-historical-data-and-volumes",
+      "verified": {
+        "docs": "https://eodhd.com/financial-apis/api-for-historical-data-and-volumes"
+      }
+    },
+    {
+      "id": "eodhd.live.quote",
+      "name": "Get a delayed quote",
+      "summary": "Latest delayed price with session open, high, low, volume, previous close and change.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/real-time/{ticker}",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ticker as CODE.EXCHANGE, e.g. AAPL.US, VOD.LSE, EURUSD.FOREX, BTC-USD.CC.",
+          "example": "AAPL.US"
+        },
+        "fmt": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; the default is csv, so send json to get JSON.",
+          "example": "json",
+          "enum": [
+            "csv",
+            "json"
+          ]
+        },
+        "s": {
+          "in": "query",
+          "type": "string",
+          "description": "More tickers, comma-separated, for several quotes in one call (15 to 20 recommended)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Return one field only: code, timestamp, gmtoffset, open, high, low, close, volume, previousClose, change or change_p."
+        }
+      },
+      "notes": [
+        "Stocks are delayed 15 to 20 minutes, forex about 1 minute. open, high, low and volume describe the session so far; only close moves."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://eodhd.com/financial-apis/live-realtime-stocks-api",
+      "verified": {
+        "docs": "https://eodhd.com/financial-apis/live-realtime-stocks-api"
+      }
+    },
+    {
+      "id": "eodhd.search",
+      "name": "Search tickers",
+      "summary": "Find stocks, ETFs, funds, indices and crypto by ticker, company name or ISIN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/search/{query_string}",
+      "params": {
+        "query_string": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ticker, name or ISIN; URL-encode spaces.",
+          "example": "Apple Inc"
+        },
+        "fmt": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; the default is csv, so send json to get JSON.",
+          "example": "json",
+          "enum": [
+            "csv",
+            "json"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1 to 500; default 15."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset type filter.",
+          "enum": [
+            "all",
+            "stock",
+            "etf",
+            "fund",
+            "index",
+            "crypto"
+          ]
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, e.g. US, LSE, FOREX."
+        }
+      },
+      "notes": [
+        "The demo token does not work for search; use a real key."
+      ],
+      "docs_url": "https://eodhd.com/financial-apis/search-api-for-stocks-etfs-mutual-funds-and-indices",
+      "verified": {
+        "docs": "https://eodhd.com/financial-apis/search-api-for-stocks-etfs-mutual-funds-and-indices"
+      }
+    },
+    {
+      "id": "eodhd.fundamentals",
+      "name": "Get fundamentals",
+      "summary": "Company profile, financial statements, valuation and more for a stock, ETF, fund or index (v1.1).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1.1/fundamentals/{ticker}",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ticker as CODE.EXCHANGE, e.g. AAPL.US, VOD.LSE, EURUSD.FOREX, BTC-USD.CC.",
+          "example": "AAPL.US"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "A section or single field to return instead of the whole large payload."
+        }
+      },
+      "notes": [
+        "JSON only. The full payload for a stock is large; use filter to narrow it."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://eodhd.com/financial-apis/stock-etfs-fundamental-data-feeds",
+      "verified": {
+        "docs": "https://eodhd.com/financial-apis/stock-etfs-fundamental-data-feeds"
+      }
+    }
+  ]
+}
