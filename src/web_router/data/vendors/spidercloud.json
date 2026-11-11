@@ -1,0 +1,492 @@
+{
+  "vendor": "spidercloud",
+  "name": "Spider Cloud",
+  "category": "scraping",
+  "summary": "Spider's crawl, scrape, links, search and screenshot API for AI agents and RAG.",
+  "docs_url": "https://spider.cloud/docs/api",
+  "pricing_url": "https://spider.cloud/pricing",
+  "base_url": "https://api.spider.cloud",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SPIDER_API_KEY"
+        ],
+        "description": "a Spider API key (spider.cloud/api-keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <key>'. Without a key only /scrape answers; every other route returns 402.",
+    "Pricing is credits: $1 buys 10,000 credits; bandwidth and compute time are billed separately.",
+    "Spider also has /unlimited/* routes, /transform, /unblocker (deprecated) and /ai/* routes, not in this entry.",
+    "Large crawls can return many pages; set limit and prefer return_format markdown."
+  ],
+  "sources": [
+    "https://spider.cloud/llms.txt",
+    "https://spider.cloud/llms-full.txt",
+    "https://spider.cloud/openapi.yaml"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "spidercloud.scrape.page",
+      "name": "Scrape one page",
+      "summary": "Fetch a single page with no link traversal.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The page to fetch.",
+          "example": "https://example.com"
+        },
+        "return_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Output format: raw (default, unmodified HTML), markdown, commonmark, text, html2text, xml, bytes, screenshot or empty; an array returns several.",
+          "example": "markdown"
+        },
+        "request": {
+          "in": "body",
+          "type": "string",
+          "description": "How to fetch: http (fastest, no JS), browser (renders), or smart (default, tries http then browser).",
+          "enum": [
+            "smart",
+            "http",
+            "browser",
+            "chrome",
+            "headless"
+          ]
+        },
+        "stealth": {
+          "in": "body",
+          "type": "boolean",
+          "description": "For pages that refuse plain requests; costs more."
+        },
+        "cookies": {
+          "in": "body",
+          "type": "string",
+          "description": "Cookie header value for pages needing a session."
+        },
+        "root_selector": {
+          "in": "body",
+          "type": "string",
+          "description": "CSS selector of the subtree to extract."
+        },
+        "exclude_selector": {
+          "in": "body",
+          "type": "string",
+          "description": "CSS selector of content to drop."
+        },
+        "readability": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Strip boilerplate before converting."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO country code of the proxy exit, e.g. gb."
+        },
+        "request_timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Per-request timeout in seconds, 5-255."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add title, description and keywords to each page."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches a page and changes nothing in your account.",
+        "This is the only route that also works without a key (rate limited)."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://spider.cloud/docs/api#scrape",
+      "verified": {
+        "docs": "https://spider.cloud/docs/api#scrape"
+      }
+    },
+    {
+      "id": "spidercloud.crawl.site",
+      "name": "Crawl a site",
+      "summary": "Follow links from a start URL and return one object per page.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/crawl",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Start URL; several can be given separated by commas.",
+          "example": "https://example.com"
+        },
+        "return_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Output format: raw (default, unmodified HTML), markdown, commonmark, text, html2text, xml, bytes, screenshot or empty; an array returns several.",
+          "example": "markdown"
+        },
+        "request": {
+          "in": "body",
+          "type": "string",
+          "description": "How to fetch: http (fastest, no JS), browser (renders), or smart (default, tries http then browser).",
+          "enum": [
+            "smart",
+            "http",
+            "browser",
+            "chrome",
+            "headless"
+          ]
+        },
+        "stealth": {
+          "in": "body",
+          "type": "boolean",
+          "description": "For pages that refuse plain requests; costs more."
+        },
+        "cookies": {
+          "in": "body",
+          "type": "string",
+          "description": "Cookie header value for pages needing a session."
+        },
+        "root_selector": {
+          "in": "body",
+          "type": "string",
+          "description": "CSS selector of the subtree to extract."
+        },
+        "exclude_selector": {
+          "in": "body",
+          "type": "string",
+          "description": "CSS selector of content to drop."
+        },
+        "readability": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Strip boilerplate before converting."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO country code of the proxy exit, e.g. gb."
+        },
+        "request_timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Per-request timeout in seconds, 5-255."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add title, description and keywords to each page."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum pages per site; unset or 0 crawls every page found, bounded by your credits.",
+          "example": 10
+        },
+        "depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum crawl depth; default 25, 0 removes the limit."
+        },
+        "subdomains": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow links to subdomains."
+        },
+        "sitemap": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add sitemap pages to the crawl."
+        },
+        "whitelist": {
+          "in": "body",
+          "type": "array",
+          "description": "Only these paths, regex allowed."
+        },
+        "blacklist": {
+          "in": "body",
+          "type": "array",
+          "description": "Skip these paths, regex allowed."
+        },
+        "respect_robots": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow robots.txt; default true."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches pages and changes nothing in your account.",
+        "Always set limit: with no limit it crawls every page found, bounded only by your credits.",
+        "Billing is by credits (bandwidth plus compute time)."
+      ],
+      "job": "web.crawl",
+      "docs_url": "https://spider.cloud/docs/api#crawl",
+      "verified": {
+        "docs": "https://spider.cloud/docs/api#crawl"
+      }
+    },
+    {
+      "id": "spidercloud.links.collect",
+      "name": "Collect a site's links",
+      "summary": "Crawl like /crawl but return the URLs found on each page instead of the content.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/links",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Start URL.",
+          "example": "https://example.com"
+        },
+        "return_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Output format: raw (default, unmodified HTML), markdown, commonmark, text, html2text, xml, bytes, screenshot or empty; an array returns several.",
+          "example": "markdown"
+        },
+        "request": {
+          "in": "body",
+          "type": "string",
+          "description": "How to fetch: http (fastest, no JS), browser (renders), or smart (default, tries http then browser).",
+          "enum": [
+            "smart",
+            "http",
+            "browser",
+            "chrome",
+            "headless"
+          ]
+        },
+        "stealth": {
+          "in": "body",
+          "type": "boolean",
+          "description": "For pages that refuse plain requests; costs more."
+        },
+        "cookies": {
+          "in": "body",
+          "type": "string",
+          "description": "Cookie header value for pages needing a session."
+        },
+        "root_selector": {
+          "in": "body",
+          "type": "string",
+          "description": "CSS selector of the subtree to extract."
+        },
+        "exclude_selector": {
+          "in": "body",
+          "type": "string",
+          "description": "CSS selector of content to drop."
+        },
+        "readability": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Strip boilerplate before converting."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO country code of the proxy exit, e.g. gb."
+        },
+        "request_timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Per-request timeout in seconds, 5-255."
+        },
+        "metadata": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add title, description and keywords to each page."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum pages per site; unset or 0 crawls every page found, bounded by your credits.",
+          "example": 10
+        },
+        "depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum crawl depth; default 25, 0 removes the limit."
+        },
+        "subdomains": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow links to subdomains."
+        },
+        "sitemap": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add sitemap pages to the crawl."
+        },
+        "whitelist": {
+          "in": "body",
+          "type": "array",
+          "description": "Only these paths, regex allowed."
+        },
+        "blacklist": {
+          "in": "body",
+          "type": "array",
+          "description": "Skip these paths, regex allowed."
+        },
+        "respect_robots": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow robots.txt; default true."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches pages and changes nothing in your account."
+      ],
+      "job": "web.map",
+      "docs_url": "https://spider.cloud/docs/api#links",
+      "verified": {
+        "docs": "https://spider.cloud/docs/api#links"
+      }
+    },
+    {
+      "id": "spidercloud.search.query",
+      "name": "Search the web",
+      "summary": "Ranked results for a query; optionally fetch each result's page content.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "search": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The query (the field is named search, not query).",
+          "example": "rust web crawler"
+        },
+        "num": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most results to return."
+        },
+        "search_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most results to fetch or crawl; 0 for all."
+        },
+        "fetch_page_content": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Fetch each result's content; default false."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Result page number."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter country code, e.g. us."
+        },
+        "language": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter language code, e.g. en."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Origin of the search, e.g. United Kingdom."
+        },
+        "tbs": {
+          "in": "body",
+          "type": "string",
+          "description": "Time range: qdr:h, qdr:d, qdr:w, qdr:m or qdr:y."
+        },
+        "quick_search": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Favor speed over result count; default true."
+        },
+        "return_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Output format: raw (default, unmodified HTML), markdown, commonmark, text, html2text, xml, bytes, screenshot or empty; an array returns several.",
+          "example": "markdown"
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account.",
+        "The body is flat: search fields sit beside the usual crawl parameters."
+      ],
+      "job": "web.search",
+      "docs_url": "https://spider.cloud/docs/api#search",
+      "verified": {
+        "docs": "https://spider.cloud/docs/api#search"
+      }
+    },
+    {
+      "id": "spidercloud.screenshot.page",
+      "name": "Take a screenshot",
+      "summary": "Render a page in a browser and return the image as base64, or raw bytes with binary true.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/screenshot",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The page to capture.",
+          "example": "https://example.com"
+        },
+        "full_page": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Capture the full page."
+        },
+        "binary": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return raw image bytes instead of base64 in content."
+        }
+      },
+      "notes": [
+        "A read over POST: it renders a page and changes nothing in your account."
+      ],
+      "job": "web.screenshot",
+      "docs_url": "https://spider.cloud/docs/api#screenshot",
+      "verified": {
+        "docs": "https://spider.cloud/docs/api#screenshot"
+      }
+    },
+    {
+      "id": "spidercloud.account.credits",
+      "name": "Get the remaining credits",
+      "summary": "Credits left on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/credits",
+      "notes": [
+        "There is no GET /credits; the path is /data/credits."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://spider.cloud/docs/api#credits",
+      "verified": {
+        "docs": "https://spider.cloud/docs/api#credits"
+      }
+    }
+  ]
+}
