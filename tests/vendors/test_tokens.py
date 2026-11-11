@@ -192,3 +192,9 @@ def test_a_token_being_minted_does_not_hold_up_another_account() -> None:
     finally:
         held.release()
         client.close()
+
+
+def test_a_token_request_keeps_its_secrets_out_of_repr() -> None:
+    request = token_request("oauthco", _OAUTH, CREDENTIALS["oauthco"])
+    shown = repr(request)
+    assert all(secret not in shown for secret in CREDENTIALS["oauthco"].values())

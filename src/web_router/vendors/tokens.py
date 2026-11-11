@@ -12,7 +12,7 @@ import math
 import threading
 import time
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from web_router.constants_vendors import (
@@ -44,8 +44,9 @@ class TokenRequest:
 
     vendor: str
     url: str
-    form: dict[str, str]
-    auth: tuple[str | bytes, str | bytes] | None
+    # Out of repr: the form holds the refresh token and client secret, and auth the client's password.
+    form: dict[str, str] = field(repr=False)
+    auth: tuple[str | bytes, str | bytes] | None = field(repr=False)
 
     def auth_kwargs(self) -> dict[str, Any]:
         """``auth=`` for the token call, only when the client authenticates with HTTP Basic."""

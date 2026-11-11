@@ -6,7 +6,7 @@ sending. Every secret the call carried is masked out of what comes back.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -15,6 +15,7 @@ from web_router.constants_vendors import (
     MSG_VENDOR_HTTP_ERROR,
     VENDOR_CONTENT_TYPE_HEADER,
     VENDOR_DROPPED_RESPONSE_HEADERS,
+    VENDOR_EMPTY_BODY,
     VENDOR_ERROR_BODY_LIMIT,
     VENDOR_MASK,
     VENDOR_TEXT_CONTENT_MARKERS,
@@ -31,12 +32,13 @@ class Prepared:
 
     plan: _Plan
     url: str
-    query: list[tuple[str, str]]
-    headers: dict[str, str]
-    auth: tuple[str, str] | None
-    secrets: list[str]
+    # Out of repr: each of these can hold a credential.
+    query: list[tuple[str, str]] = field(repr=False)
+    headers: dict[str, str] = field(repr=False)
+    auth: tuple[str, str] | None = field(repr=False)
+    secrets: list[str] = field(repr=False)
     masked_query: set[str]
-    body: Any = None
+    body: Any = field(default=None, repr=False)
 
 
 def send_kwargs(prepared: Prepared) -> dict[str, Any]:
@@ -60,7 +62,7 @@ def response(prepared: Prepared, answer: httpx.Response) -> VendorResponse:
     if answer.status_code >= 400:
         body = mask(answer.text, prepared.secrets)[:VENDOR_ERROR_BODY_LIMIT]
         detail = MSG_VENDOR_HTTP_ERROR.format(
-            status=answer.status_code, method=plan.method, path=plan.path, body=body or "(empty body)"
+            status=answer.status_code, method=plan.method, path=plan.path, body=body or VENDOR_EMPTY_BODY
         )
         raise ProviderError(plan.vendor.vendor, detail)
     data: Any = None

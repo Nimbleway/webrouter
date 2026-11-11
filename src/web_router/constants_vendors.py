@@ -157,6 +157,8 @@ MSG_VENDOR_HOST_ESCAPE: Final = (
     "Refusing to send {vendor} credentials to {host!r}: the vendor's API is on {expected!r}."
 )
 MSG_VENDOR_SETTING_CHOICE: Final = "{vendor} setting {name} must be one of {choices}, not {value!r} (from {source})."
+VENDOR_EMPTY_BODY: Final = "(empty body)"
+"""What a failed call's message shows when the vendor answered with no body."""
 MSG_VENDOR_HTTP_ERROR: Final = "HTTP {status} from {method} {path}: {body}"
 MSG_VENDOR_TOKEN_ERROR: Final = "could not refresh the OAuth access token at {url}: HTTP {status}: {body}"
 MSG_VENDOR_TOKEN_NO_ACCESS: Final = "the token endpoint at {url} answered without an access_token"
