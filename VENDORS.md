@@ -17,7 +17,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-203 vendors, 1797 endpoints.
+206 vendors, 1833 endpoints.
 
 ### advertising
 
@@ -264,8 +264,11 @@ The tables below are generated from `src/web_router/data/vendors/` by
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Apify](https://docs.apify.com/api/v2) `apify` | Run Apify Actors (ready-made scrapers for Google, LinkedIn, Meta ads, TikTok, Lazada, Weibo and more), poll their runs and read the datasets they produce. | 11 read, 4 write | key in header | `APIFY_API_TOKEN` | docs 2026-11-08 |
 | [Bright Data](https://docs.brightdata.com/) `brightdata` | Pre-built site scrapers, Web Unlocker, SERP API and Marketplace datasets from Bright Data. | 9 read | key in header | `BRIGHTDATA_API_TOKEN` | docs 2026-11-08 |
 | [Browserbase](https://docs.browserbase.com/reference/api/overview.md) `browserbase` | Fetch pages, search the web and run hosted browser agents on Browserbase, and inspect its browser sessions. | 7 read, 2 write | key in header | `BROWSERBASE_API_KEY` | docs 2026-11-09 |
+| [Decodo](https://help.decodo.com/docs/web-data-api-introduction.md) `decodo` | Decodo's Web Data API: scrape a page or a supported site's template, Google results, crawl a site up to 10,000 pages, or map its URLs. | 8 read | key in header | `DECODO_API_KEY` | docs 2026-11-09 |
+| [Firecrawl](https://docs.firecrawl.dev/introduction) `firecrawl` | Scrape, map, crawl, search and extract the web, returning clean markdown and structured data. | 12 read, 1 write | key in header | `FIRECRAWL_API_KEY` | docs 2026-11-08 |
 | [Massive (Web Render)](https://docs.joinmassive.com/web-render/overview.md) `joinmassive` | Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations. | 4 read | key in header | `MASSIVE_TOKEN` | docs 2026-11-09 |
 | [Olostep](https://docs.olostep.com/) `olostep` | Scrape, crawl, map, search and answer over the web with Olostep's API. | 12 read | key in header | `OLOSTEP_API_KEY` | docs 2026-11-08 |
 | [Riveter](https://docs.riveterhq.com/) `riveter` | Riveter's AI web data API: scrape a page, quick web search, one-off research answers, and enrichment runs that fill new columns for rows of companies, people or URLs. | 6 read, 2 write | key in header | `RIVETER_API_KEY` | docs 2026-11-09 |

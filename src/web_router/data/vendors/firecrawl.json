@@ -1,0 +1,618 @@
+{
+  "vendor": "firecrawl",
+  "name": "Firecrawl",
+  "category": "scraping",
+  "summary": "Scrape, map, crawl, search and extract the web, returning clean markdown and structured data.",
+  "docs_url": "https://docs.firecrawl.dev/introduction",
+  "pricing_url": "https://www.firecrawl.dev/pricing",
+  "base_url": "https://api.firecrawl.dev/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FIRECRAWL_API_KEY"
+        ],
+        "description": "a Firecrawl API key, starting fc- (firecrawl.dev/app > API Keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <key>'. All paths are under /v2.",
+    "Crawl, batch scrape and extract are asynchronous: start returns an id, then poll the matching status endpoint; finished results are paged with a 'next' URL.",
+    "Timeouts are in milliseconds; scrape default 60000, max 300000.",
+    "Scrapes may be served from a cache up to 2 days old by default; set maxAge to 0 for fresh pages."
+  ],
+  "sources": [
+    "https://docs.firecrawl.dev/llms.txt",
+    "https://docs.firecrawl.dev/api-reference/v2-openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "firecrawl.scrape.url",
+      "name": "Scrape a URL",
+      "summary": "Fetch one page and return markdown, HTML, links or other formats.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The URL to scrape.",
+          "example": "https://example.com"
+        },
+        "formats": {
+          "in": "body",
+          "type": "array",
+          "description": "Output formats, e.g. [\"markdown\", \"html\", \"links\"] or objects like {\"type\": \"markdown\"}."
+        },
+        "onlyMainContent": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only the main content, without headers, navs and footers; default true."
+        },
+        "includeTags": {
+          "in": "body",
+          "type": "array",
+          "description": "HTML tags to include."
+        },
+        "excludeTags": {
+          "in": "body",
+          "type": "array",
+          "description": "HTML tags to exclude."
+        },
+        "maxAge": {
+          "in": "body",
+          "type": "integer",
+          "description": "Serve a cached copy younger than this many milliseconds; default 172800000 (2 days). 0 forces a fresh fetch."
+        },
+        "waitFor": {
+          "in": "body",
+          "type": "integer",
+          "description": "Extra delay in milliseconds before reading the page."
+        },
+        "mobile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Emulate a mobile device."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Timeout in milliseconds."
+        },
+        "proxy": {
+          "in": "body",
+          "type": "string",
+          "description": "Proxy type: basic, enhanced or auto.",
+          "enum": [
+            "basic",
+            "enhanced",
+            "auto"
+          ]
+        },
+        "headers": {
+          "in": "body",
+          "type": "object",
+          "description": "Headers to send to the page, e.g. cookies."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches a page and changes nothing in your account.",
+        "Credits are per page; enhanced proxies and extra formats can cost more."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/scrape",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/scrape"
+      }
+    },
+    {
+      "id": "firecrawl.map.urls",
+      "name": "Map a site's URLs",
+      "summary": "Quickly list the URLs of a site from its sitemap and links, optionally ranked by a search term.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/map",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Base URL to map.",
+          "example": "https://example.com"
+        },
+        "search": {
+          "in": "body",
+          "type": "string",
+          "description": "Order results by relevance to this term."
+        },
+        "sitemap": {
+          "in": "body",
+          "type": "string",
+          "description": "How to use the sitemap.",
+          "enum": [
+            "skip",
+            "include",
+            "only"
+          ]
+        },
+        "includeSubdomains": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include subdomains."
+        },
+        "ignoreQueryParameters": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Drop URLs with query parameters."
+        },
+        "ignoreCache": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Bypass the sitemap cache (kept up to 7 days)."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most links to return."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Timeout in milliseconds."
+        }
+      },
+      "notes": [
+        "A read over POST: it lists URLs and changes nothing in your account."
+      ],
+      "job": "web.map",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/map",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/map"
+      }
+    },
+    {
+      "id": "firecrawl.crawl.start",
+      "name": "Start a crawl",
+      "summary": "Crawl a site from a base URL and scrape every page found; returns a crawl id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/crawl",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Base URL to start from.",
+          "example": "https://example.com"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most pages to crawl; default 10000."
+        },
+        "includePaths": {
+          "in": "body",
+          "type": "array",
+          "description": "Pathname regexes to include."
+        },
+        "excludePaths": {
+          "in": "body",
+          "type": "array",
+          "description": "Pathname regexes to exclude."
+        },
+        "maxDiscoveryDepth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum link-discovery depth; the root and sitemap pages are depth 0."
+        },
+        "sitemap": {
+          "in": "body",
+          "type": "string",
+          "description": "Sitemap mode.",
+          "enum": [
+            "skip",
+            "include",
+            "only"
+          ]
+        },
+        "crawlEntireDomain": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow links to sibling and parent paths, not only children."
+        },
+        "allowExternalLinks": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow links to other sites, one hop."
+        },
+        "allowSubdomains": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Follow links to subdomains."
+        },
+        "ignoreQueryParameters": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Do not re-scrape the same path with different query strings."
+        },
+        "delay": {
+          "in": "body",
+          "type": "number",
+          "description": "Seconds between scrapes; forces concurrency 1."
+        },
+        "maxConcurrency": {
+          "in": "body",
+          "type": "integer",
+          "description": "Concurrent scrapes cap."
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language description from which crawl options are generated."
+        },
+        "scrapeOptions": {
+          "in": "body",
+          "type": "object",
+          "description": "Per-page scrape options (formats, onlyMainContent, waitFor, proxy...)."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data.",
+        "Async: returns a crawl id; poll crawl.status until status is completed. Results are paged: follow the 'next' URL in the response."
+      ],
+      "job": "web.crawl",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-post",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-post"
+      }
+    },
+    {
+      "id": "firecrawl.crawl.status",
+      "name": "Get a crawl's status and pages",
+      "summary": "Status of a crawl job and the pages scraped so far.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crawl/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crawl job id."
+        }
+      },
+      "notes": [
+        "Large results are paged; follow the 'next' URL for more."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-get",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-get"
+      }
+    },
+    {
+      "id": "firecrawl.crawl.errors",
+      "name": "List a crawl's errors",
+      "summary": "Pages a crawl failed to scrape and why.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crawl/{id}/errors",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crawl job id."
+        }
+      },
+      "job": "jobs.errors",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-get-errors",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-get-errors"
+      }
+    },
+    {
+      "id": "firecrawl.crawl.cancel",
+      "name": "Cancel a crawl",
+      "summary": "Stop a running crawl job.",
+      "kind": "write",
+      "method": "DELETE",
+      "path": "/crawl/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crawl job id."
+        }
+      },
+      "job": "jobs.cancel",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-delete",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-delete"
+      }
+    },
+    {
+      "id": "firecrawl.crawl.active",
+      "name": "List active crawls",
+      "summary": "Crawls currently running for your team.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crawl/active",
+      "job": "jobs.list",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-active",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-active"
+      }
+    },
+    {
+      "id": "firecrawl.batch.scrape.start",
+      "name": "Start a batch scrape",
+      "summary": "Scrape many URLs as one asynchronous job.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/batch/scrape",
+      "params": {
+        "urls": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "URLs to scrape.",
+          "example": [
+            "https://example.com/a",
+            "https://example.com/b"
+          ]
+        },
+        "formats": {
+          "in": "body",
+          "type": "array",
+          "description": "Output formats, e.g. [\"markdown\", \"html\", \"links\"] or objects like {\"type\": \"markdown\"}."
+        },
+        "onlyMainContent": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only the main content, without headers, navs and footers; default true."
+        },
+        "maxAge": {
+          "in": "body",
+          "type": "integer",
+          "description": "Serve a cached copy younger than this many milliseconds; default 172800000 (2 days). 0 forces a fresh fetch."
+        },
+        "waitFor": {
+          "in": "body",
+          "type": "integer",
+          "description": "Extra delay in milliseconds before reading the page."
+        },
+        "proxy": {
+          "in": "body",
+          "type": "string",
+          "description": "Proxy type: basic, enhanced or auto.",
+          "enum": [
+            "basic",
+            "enhanced",
+            "auto"
+          ]
+        },
+        "maxConcurrency": {
+          "in": "body",
+          "type": "integer",
+          "description": "Concurrent scrapes cap."
+        },
+        "ignoreInvalidURLs": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip invalid URLs instead of failing the whole request."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data.",
+        "Async: returns an id; poll batch.scrape.status."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape"
+      }
+    },
+    {
+      "id": "firecrawl.batch.scrape.status",
+      "name": "Get a batch scrape's status and pages",
+      "summary": "Status and pages of a batch scrape.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/batch/scrape/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Batch scrape job id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape-get",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape-get"
+      }
+    },
+    {
+      "id": "firecrawl.search.query",
+      "name": "Search the web and optionally scrape results",
+      "summary": "Web search with optional scraping of each result.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query.",
+          "example": "firecrawl pricing"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most results per source type."
+        },
+        "sources": {
+          "in": "body",
+          "type": "array",
+          "description": "Sources to search, default [\"web\"]."
+        },
+        "categories": {
+          "in": "body",
+          "type": "array",
+          "description": "Categories to filter by, e.g. research, pdf."
+        },
+        "includeDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Hostnames to restrict to; not with excludeDomains."
+        },
+        "excludeDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Hostnames to leave out; not with includeDomains."
+        },
+        "tbs": {
+          "in": "body",
+          "type": "string",
+          "description": "Time filter: qdr:h, qdr:d, qdr:w, qdr:m, qdr:y or a custom date range."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Location text, e.g. San Francisco,California,United States."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO country code, e.g. US."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Timeout in milliseconds."
+        },
+        "scrapeOptions": {
+          "in": "body",
+          "type": "object",
+          "description": "Per-page scrape options (formats, onlyMainContent, waitFor, proxy...)."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account.",
+        "Scraping results adds credits per scraped page on top of the search cost."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/search",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/search"
+      }
+    },
+    {
+      "id": "firecrawl.extract.start",
+      "name": "Start an LLM extraction over URLs",
+      "summary": "Extract structured data from pages, whole sites included, using a prompt and optional schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/extract",
+      "params": {
+        "urls": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "URLs to extract from; wildcards like https://example.com/* cover a whole site.",
+          "example": [
+            "https://example.com/*"
+          ]
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "What to extract."
+        },
+        "schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema of the output."
+        },
+        "enableWebSearch": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Use web search for extra data."
+        },
+        "includeSubdomains": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also scan subdomains."
+        },
+        "showSources": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the sources used."
+        },
+        "ignoreInvalidURLs": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip invalid URLs."
+        }
+      },
+      "notes": [
+        "A read over POST: it starts a job that only produces data.",
+        "Async: returns an id; poll extract.status."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/extract",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/extract"
+      }
+    },
+    {
+      "id": "firecrawl.extract.status",
+      "name": "Get an extraction's status and result",
+      "summary": "Status and data of an extract job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/extract/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Extract job id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/extract-get",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/extract-get"
+      }
+    },
+    {
+      "id": "firecrawl.team.credit_usage",
+      "name": "Get remaining credits",
+      "summary": "Credits left for your team.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/team/credit-usage",
+      "job": "account.usage",
+      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/credit-usage",
+      "verified": {
+        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/credit-usage"
+      }
+    }
+  ]
+}
