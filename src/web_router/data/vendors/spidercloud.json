@@ -196,7 +196,8 @@
         "limit": {
           "in": "body",
           "type": "integer",
-          "description": "Maximum pages per site; unset or 0 crawls every page found, bounded by your credits.",
+          "required": true,
+          "description": "Maximum pages per site; required, since unset or 0 crawls every page found, bounded only by your credits.",
           "example": 10
         },
         "depth": {
@@ -317,7 +318,8 @@
         "limit": {
           "in": "body",
           "type": "integer",
-          "description": "Maximum pages per site; unset or 0 crawls every page found, bounded by your credits.",
+          "required": true,
+          "description": "Maximum pages per site; required, since unset or 0 crawls every page found, bounded only by your credits.",
           "example": 10
         },
         "depth": {
