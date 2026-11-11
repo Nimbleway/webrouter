@@ -15,7 +15,7 @@ import pytest
 
 from tests.providers._live_data_http import Api, wire
 from web_router import WebRouter
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers.oxylabs_live_data import OxylabsLiveDataProvider
 from web_router.types_live_data import LiveDataRequest
@@ -364,6 +364,13 @@ def test_a_shared_extract_config_does_not_send_the_realtime_password(monkeypatch
     provider = wire(OxylabsLiveDataProvider(username="user", api_key="pw", web_api_key="explicit"), api)
     provider.live_data_sources()
     assert api.last.headers["Authorization"] == "Bearer explicit"
+
+
+def test_with_no_web_api_key_the_error_names_web_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A Realtime password in ``api_key`` is not a key here, so the error says where the Web API key goes."""
+    monkeypatch.delenv("OXYLABS_WEB_API_KEY", raising=False)
+    with pytest.raises(ConfigurationError, match=r"OXYLABS_WEB_API_KEY.*'web_api_key'"):
+        OxylabsLiveDataProvider(api_key="realtime-password")
 
 
 def test_one_oxylabs_config_entry_serves_extract_and_live_data(monkeypatch: pytest.MonkeyPatch) -> None:

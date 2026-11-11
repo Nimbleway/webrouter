@@ -63,6 +63,7 @@ from web_router.constants_live_data_vendors import (
 from web_router.exceptions import ProviderError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._http_live_data import HttpLiveDataProvider
+from web_router.providers._utils import resolve_setting
 from web_router.providers.oxylabs_options import input_schema
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
@@ -135,6 +136,8 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
     """A realtime run; a scraper with no realtime endpoint is sent to ``/v1/async/scrape/{source}`` instead."""
     env_api_key: ClassVar[str] = ENV_OXYLABS_WEB_API_KEY
     api_key_prefix: ClassVar[str] = OXYLABS_API_KEY_PREFIX
+    key_argument: ClassVar[str] = "web_api_key"
+    """The constructor argument that carries the key: ``api_key`` is extract's Realtime password."""
 
     poll_seconds: ClassVar[float] = OXYLABS_JOB_POLL_SECONDS
     wait_seconds: ClassVar[float] = OXYLABS_JOB_WAIT_SECONDS
@@ -151,7 +154,9 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
                 as a bearer token, so the Web API key has a name of its own.
         """
         del username
-        kwargs["api_key"] = web_api_key
+        kwargs["api_key"] = resolve_setting(
+            web_api_key, env_var=ENV_OXYLABS_WEB_API_KEY, provider=PROVIDER_OXYLABS, setting="web_api_key"
+        )
         super().__init__(**kwargs)
         self._catalogue: dict[str, Scraper] | None = None
 

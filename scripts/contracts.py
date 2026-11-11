@@ -282,7 +282,7 @@ def generate(method: str, name: str) -> dict[str, Any]:
     """The generated part of one contract."""
     spec = METHODS[method]
     cls = spec.get_class(name)
-    provider = cls(api_key=PROBE_KEY)
+    provider = cls(**{getattr(cls, "key_argument", "api_key"): PROBE_KEY})
     try:
         with pinned_today(PROBE_TODAY):
             options = _options(spec.model)
