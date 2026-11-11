@@ -13,14 +13,14 @@ from web_router.constants import (
     MCP_ARG_STEALTH,
     MCP_TOOL_BROWSER_OPEN,
     MCP_TOOL_PROPERTIES,
-    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
 )
+from web_router.constants_live_data import MCP_TOOL_LIVE_DATA
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.mcp.chains import CHAIN_OF
 from web_router.mcp.methods import METHODS
-from web_router.providers.base import BrowserProvider, SearchProvider, TemplateProvider, _BaseProvider
+from web_router.providers.base import BrowserProvider, LiveDataProvider, SearchProvider, _BaseProvider
 from web_router.types import ExtractFormat, SearchDepth, StealthLevel
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ def serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[typ
 
 NARROWED: dict[str, tuple[str, tuple[str, ...], type[_BaseProvider], str]] = {
     MCP_TOOL_BROWSER_OPEN: (MCP_ARG_STEALTH, get_args(StealthLevel), BrowserProvider, "stealth_levels"),
-    MCP_TOOL_RUN_TEMPLATE: (MCP_ARG_FORMAT, get_args(ExtractFormat), TemplateProvider, "supported_formats"),
+    MCP_TOOL_LIVE_DATA: (MCP_ARG_FORMAT, get_args(ExtractFormat), LiveDataProvider, "supported_formats"),
     MCP_TOOL_SEARCH: ("search_depth", get_args(SearchDepth), SearchProvider, "depth_levels"),
 }
 """Per tool, an option whose choices differ per backend: the option, its choices, and where a backend lists its own.

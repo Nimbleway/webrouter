@@ -71,7 +71,7 @@ def test_a_run_without_trust_is_cited_from_its_output_sources(provider: NimbleRe
     ]
 
 
-def test_output_sources_follow_the_trust_citations_once_each(provider: NimbleResearchProvider) -> None:
+def test_output_sources_with_a_url_follow_the_trust_citations_once_each(provider: NimbleResearchProvider) -> None:
     output = {
         "type": "json",
         "content": {"founded": "2019"},
@@ -80,6 +80,8 @@ def test_output_sources_follow_the_trust_citations_once_each(provider: NimbleRes
             {"url": "https://a.example/about", "title": "About"},
             {"url": "https://b.example/news", "title": "News"},
             {"url": "https://c.example/blog", "title": "Blog"},
+            {"title": "No URL"},
+            {"url": "", "title": "Empty URL"},
         ],
     }
     stub_client(
