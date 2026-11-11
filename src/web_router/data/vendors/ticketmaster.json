@@ -1,0 +1,434 @@
+{
+  "vendor": "ticketmaster",
+  "name": "Ticketmaster",
+  "category": "other",
+  "summary": "Events, attractions (artists, teams, shows) and venues on Ticketmaster, Universe, FrontGate and Ticketmaster Resale, from the Discovery API.",
+  "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/",
+  "base_url": "https://app.ticketmaster.com/discovery/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TICKETMASTER_API_KEY"
+        ],
+        "description": "A Ticketmaster developer API key (Consumer Key of an app at developer.ticketmaster.com). Sent as the apikey query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Default quota: 5000 calls per day and 5 requests per second.",
+    "Deep paging stops at the 1000th item: size * page must stay below 1000. page is 0-based, size defaults to 20.",
+    "Results are HAL: items sit under _embedded (events, attractions, venues, classifications) and paging under page and _links.",
+    "Discovery API only: ticket availability, prices and purchase are in Ticketmaster's partner-only Commerce and Partner APIs, not in this entry."
+  ],
+  "sources": [
+    "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ticketmaster.events.search",
+      "name": "Search events",
+      "summary": "Events filtered by keyword, place, date, attraction, venue or classification.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events.json",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "description": "Keyword to search on.",
+          "example": "taylor swift"
+        },
+        "attractionId": {
+          "in": "query",
+          "description": "Filter by attraction id."
+        },
+        "venueId": {
+          "in": "query",
+          "description": "Filter by venue id."
+        },
+        "postalCode": {
+          "in": "query",
+          "description": "Filter by postal code / zipcode."
+        },
+        "geoPoint": {
+          "in": "query",
+          "description": "Filter by geohash (replaces the deprecated latlong)."
+        },
+        "radius": {
+          "in": "query",
+          "description": "Radius of the search area around geoPoint or postalCode."
+        },
+        "unit": {
+          "in": "query",
+          "description": "Unit of the radius, default miles.",
+          "enum": [
+            "miles",
+            "km"
+          ]
+        },
+        "city": {
+          "in": "query",
+          "description": "Filter by city."
+        },
+        "stateCode": {
+          "in": "query",
+          "description": "Filter by state / province code."
+        },
+        "countryCode": {
+          "in": "query",
+          "description": "Filter by country code.",
+          "example": "US"
+        },
+        "dmaId": {
+          "in": "query",
+          "description": "Filter by DMA id."
+        },
+        "marketId": {
+          "in": "query",
+          "description": "Filter by market id."
+        },
+        "startDateTime": {
+          "in": "query",
+          "description": "Events starting after this date-time.",
+          "example": "2026-12-01T00:00:00Z"
+        },
+        "endDateTime": {
+          "in": "query",
+          "description": "Events starting before this date-time."
+        },
+        "classificationName": {
+          "in": "query",
+          "description": "Filter by classification name (e.g. music, sports); prefix '-' to exclude."
+        },
+        "classificationId": {
+          "in": "query",
+          "description": "Filter by classification id; prefix '-' to exclude."
+        },
+        "segmentId": {
+          "in": "query",
+          "description": "Filter by segment id."
+        },
+        "genreId": {
+          "in": "query",
+          "description": "Filter by genre id."
+        },
+        "source": {
+          "in": "query",
+          "description": "Primary or publishing source.",
+          "enum": [
+            "ticketmaster",
+            "universe",
+            "frontgate",
+            "tmr"
+          ]
+        },
+        "includeTBA": {
+          "in": "query",
+          "description": "Include events whose date is to be announced.",
+          "enum": [
+            "yes",
+            "no",
+            "only"
+          ]
+        },
+        "includeTBD": {
+          "in": "query",
+          "description": "Include events whose date is to be defined.",
+          "enum": [
+            "yes",
+            "no",
+            "only"
+          ]
+        },
+        "includeFamily": {
+          "in": "query",
+          "description": "Family-friendly classifications, default yes.",
+          "enum": [
+            "yes",
+            "no",
+            "only"
+          ]
+        },
+        "locale": {
+          "in": "query",
+          "description": "Locale code(s), comma-separated; default en."
+        },
+        "sort": {
+          "in": "query",
+          "description": "Sort order, default relevance,desc (e.g. date,asc, name,asc)."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 20."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 0-based."
+        }
+      },
+      "notes": [
+        "size * page must stay below 1000."
+      ],
+      "job": "events.list",
+      "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/#search-events-v2",
+      "verified": {
+        "docs": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
+      }
+    },
+    {
+      "id": "ticketmaster.events.get",
+      "name": "Get an event",
+      "summary": "One event with its venue, attractions, dates, price ranges and the Ticketmaster URL to buy tickets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events/{id}.json",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "Event id."
+        },
+        "locale": {
+          "in": "query",
+          "description": "Locale code(s), default *."
+        }
+      },
+      "job": "events.get",
+      "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/#event-details-v2",
+      "verified": {
+        "docs": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
+      }
+    },
+    {
+      "id": "ticketmaster.attractions.search",
+      "name": "Search attractions",
+      "summary": "Artists, teams, shows and other attractions by name or classification.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/attractions.json",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "description": "Keyword to search on."
+        },
+        "classificationName": {
+          "in": "query",
+          "description": "Filter by classification name."
+        },
+        "classificationId": {
+          "in": "query",
+          "description": "Filter by classification id."
+        },
+        "segmentId": {
+          "in": "query",
+          "description": "Filter by segment id."
+        },
+        "genreId": {
+          "in": "query",
+          "description": "Filter by genre id."
+        },
+        "source": {
+          "in": "query",
+          "description": "Primary or publishing source.",
+          "enum": [
+            "ticketmaster",
+            "universe",
+            "frontgate",
+            "tmr"
+          ]
+        },
+        "locale": {
+          "in": "query",
+          "description": "Locale code(s), default en."
+        },
+        "sort": {
+          "in": "query",
+          "description": "Sort order, default relevance,desc."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 20."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 0-based."
+        }
+      },
+      "job": "events.attractions.search",
+      "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/#search-attractions-v2",
+      "verified": {
+        "docs": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
+      }
+    },
+    {
+      "id": "ticketmaster.attractions.get",
+      "name": "Get an attraction",
+      "summary": "One attraction with its classifications, images and external links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/attractions/{id}.json",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "Attraction id."
+        },
+        "locale": {
+          "in": "query",
+          "description": "Locale code(s), default *."
+        }
+      },
+      "job": "events.attractions.get",
+      "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/#attraction-details-v2",
+      "verified": {
+        "docs": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
+      }
+    },
+    {
+      "id": "ticketmaster.venues.search",
+      "name": "Search venues",
+      "summary": "Venues by name, place or geohash.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/venues.json",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "description": "Keyword to search on.",
+          "example": "UCV"
+        },
+        "geoPoint": {
+          "in": "query",
+          "description": "Filter by geohash."
+        },
+        "radius": {
+          "in": "query",
+          "description": "Radius of the search area."
+        },
+        "unit": {
+          "in": "query",
+          "description": "Unit of the radius, default miles.",
+          "enum": [
+            "miles",
+            "km"
+          ]
+        },
+        "countryCode": {
+          "in": "query",
+          "description": "Filter by country code."
+        },
+        "stateCode": {
+          "in": "query",
+          "description": "Filter by state / province code."
+        },
+        "source": {
+          "in": "query",
+          "description": "Primary or publishing source.",
+          "enum": [
+            "ticketmaster",
+            "universe",
+            "frontgate",
+            "tmr"
+          ]
+        },
+        "locale": {
+          "in": "query",
+          "description": "Locale code(s), default en."
+        },
+        "sort": {
+          "in": "query",
+          "description": "name,asc, name,desc, relevance,asc, relevance,desc, distance,asc, distance,desc or random; default relevance,desc."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 20."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 0-based."
+        }
+      },
+      "job": "events.venues.search",
+      "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/#search-venues-v2",
+      "verified": {
+        "docs": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
+      }
+    },
+    {
+      "id": "ticketmaster.venues.get",
+      "name": "Get a venue",
+      "summary": "One venue with its address, location and box-office details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/venues/{id}.json",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "Venue id.",
+          "example": "KovZpZAFnIEA"
+        },
+        "locale": {
+          "in": "query",
+          "description": "Locale code(s), default *."
+        }
+      },
+      "job": "events.venues.get",
+      "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/#venue-details-v2",
+      "verified": {
+        "docs": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
+      }
+    },
+    {
+      "id": "ticketmaster.classifications.search",
+      "name": "List classifications",
+      "summary": "Segments, genres and sub-genres with their ids, for filtering events and attractions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/classifications.json",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "description": "Keyword to search on."
+        },
+        "locale": {
+          "in": "query",
+          "description": "Locale code(s), default en."
+        },
+        "sort": {
+          "in": "query",
+          "description": "Sort order, default name,asc."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 20."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 0-based."
+        }
+      },
+      "job": "events.categories",
+      "docs_url": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/#search-classifications-v2",
+      "verified": {
+        "docs": "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
+      }
+    }
+  ]
+}
