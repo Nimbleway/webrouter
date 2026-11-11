@@ -331,6 +331,9 @@ src/web_router/
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
     ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
     ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
+    ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
+    ├── oxylabs_jobs.py          waiting on a job-only scraper; every error after the submit names the job
+    ├── oxylabs_response.py      a scrape's answer as a live data response
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
     ├── tavily_extract.py  extract, and the SDK clients, key and timeout both classes share
     ├── exa.py          search + extract, via httpx (its research API is retired);
