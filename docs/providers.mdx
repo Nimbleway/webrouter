@@ -6,22 +6,64 @@ mode: "wide"
 icon: "plug"
 ---
 
-Each method has several providers; the tables below are the list. One call each. Switching
-between them is one argument.
+Pick a provider by name, or let `auto` pick for you. A provider serves only the methods marked for it; ask a method for another's provider and it says so, naming the ones it does serve.
 
 Your queries go to the provider you select, and each provider's terms govern your use of its
 results. WebRouter does not change them. Provider names and logos are trademarks of their owners,
 used here for identification only.
 
-A provider name serves the methods it serves and no others: `brave` searches
-and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
-extracts, runs live data and researches, and `browserbase` opens
-sessions, runs browse tasks and extracts.
-Ask a method for another's backend and it says so, naming the backends that
-method does serve.
+## Which provider serves which method
 
-## Search
+| Provider | Search | Extract | Answer | Research | Browser session | Browse |
+| --- | --- | --- | --- | --- | --- | --- |
+| AWS AgentCore | ✓ |  |  |  |  |  |
+| Anchor |  |  |  |  | ✓ |  |
+| Brave | ✓ |  | ✓ |  |  |  |
+| Bright Data |  | ✓ |  |  |  |  |
+| Browser Use |  |  |  |  |  | ✓ |
+| Browserbase |  | ✓ |  |  | ✓ | ✓ |
+| DeepSeek | ✓ | ✓ |  |  |  |  |
+| Exa | ✓ keyless | ✓ | ✓ |  |  |  |
+| Firecrawl |  | ✓ keyless |  |  |  |  |
+| Hyperbrowser |  |  |  |  | ✓ |  |
+| Jina Reader |  | keyless |  |  |  |  |
+| Keenable | ✓ keyless | ✓ keyless |  |  |  |  |
+| Kernel |  |  |  |  | ✓ |  |
+| Linkup | ✓ | ✓ | ✓ | ✓ |  |  |
+| Local Chromium |  |  |  |  | keyless |  |
+| Nimble | ✓ | ✓ |  | ✓ |  |  |
+| Oxylabs |  | ✓ |  |  |  |  |
+| Parallel | ✓ keyless |  | ✓ | ✓ |  |  |
+| Perplexity | ✓ |  | ✓ | ✓ |  |  |
+| Skyvern |  |  |  |  |  | ✓ |
+| Steel |  |  |  |  | ✓ |  |
+| Tavily | ✓ keyless | ✓ keyless |  |  |  |  |
+| WebIQ | ✓ | ✓ |  |  |  |  |
+| You.com | ✓ keyless |  | ✓ | ✓ |  |  |
 
+**✓** needs the provider's key ([Configuration](/configuration) names each variable). **keyless** also works with no key, rate-limited. `auto` is the default for every method and picks among the providers you can use.
+
+## Working with no credentials
+
+`auto` is the default for every method, so a router you never configured still
+searches, extracts and opens a browser — the Quickstart's first example is exactly that. It tries the backends
+you have a key for first — a credential in the environment says which one you
+want — and falls back to the anonymous tiers when there is none: Tavily keyless,
+then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
+Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
+session. Research, browse, `answer()` and live data have no
+anonymous tier, because every call bills; with no key they raise, naming the
+variables that would fix it. This is the one list of keyless backends; the MCP
+server and `.env.example` point here. `response.provider` names whichever one served it,
+never `"auto"`, so you can always tell. The anonymous tiers are rate-limited, which is
+why it is a chain: when one is throttled, the next answers.
+
+## Details by method
+
+What you pass to pick a provider, what backs it, and which options each one maps.
+
+<AccordionGroup>
+<Accordion title="Search">
 `[search]` installs all of these but AgentCore, which needs `[aws]`. The first column is what you pass to
 `WebRouter(...)` to pick one at runtime. Its lowercase name (`nimble` for `Provider.NIMBLE`) works
 as a plain string too, and is what `response.provider` and `configured_providers()` report back.
@@ -50,9 +92,8 @@ operator for it; [Search options](/search) says how each one does, and
 `contracts/search/<name>.json` holds the exact fields sent. Mapping another is a
 small PR and the most useful thing to contribute — see
 [CONTRIBUTING.md](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#promoting-a-provider-option).
-
-## Extract
-
+</Accordion>
+<Accordion title="Extract">
 `[extract]` installs all of these, and `configured_extract_providers()` reports
 which ones this environment can use.
 
@@ -87,7 +128,7 @@ to set.
 > real response; its integration tests skip themselves until a working key is
 > available.
 
-### Reading a page behind a login
+#### Reading a page behind a login
 
 `profile` is the extract side of the browser's `profile`: a saved identity on
 the backend — its cookies and storage — whose cookies are sent with each fetch.
@@ -108,9 +149,8 @@ backend without saved profiles raises `UnsupportedParameterError` rather than
 fetching anonymously, and `auto` and `max` pass such members over. The MCP
 server never offers it: a logged-in identity is set in code, not from a
 conversation.
-
-## Answer
-
+</Accordion>
+<Accordion title="Answer">
 `[answer]` installs these. One question, answered in one call: the backend
 searches and writes the answer itself. No keyless tier, since every backend
 bills the call; `auto` tries the ones you hold a key for, in the order `make chains` ranks them on the
@@ -167,9 +207,8 @@ two seconds, Parallel in about six), in the options they map (above), in
 whether the answer ties each source to a sentence, and in cost: Perplexity and
 Exa state theirs in the response; [`PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md)
 lists the rest.
-
-## Research
-
+</Accordion>
+<Accordion title="Research">
 `[research]` installs all of these. Unlike the other two methods there is no
 keyless tier: every agentic backend bills for the run, so `auto` here tries the
 backends you hold a key for and then stops, naming the variables that would fix
@@ -210,22 +249,8 @@ difference matters:
 | `you` | **Live.** On 2026-10-16 a background run at `effort="low"` (`lite`) was followed from `queued` through `running` to `completed` on `api.you.com` (the same path on the search host answers 403); an unknown `research_effort` was a 422 naming `lite`, `standard`, `deep`, `exhaustive` and `frontier`. Its payloads are the ones in the tests. You.com offers no cancel, so `cancel()` returns `False`. `max` maps to `exhaustive`: `frontier`, background-only and priced well above it, is reachable as `provider_options={"research_effort": "frontier"}`. Efforts above `low` are documentation-derived. |
 
 Each has an integration test that skips itself until a credential is there.
-
-## Working with no credentials
-
-`auto` is the default for every method, so a router you never configured still
-searches, extracts and opens a browser — the Quickstart's first example is exactly that. It tries the backends
-you have a key for first — a credential in the environment says which one you
-want — and falls back to the anonymous tiers when there is none: Tavily keyless,
-then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
-Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
-session. Research, browse, `answer()` and live data have no
-anonymous tier, because every call bills; with no key they raise, naming the
-variables that would fix it. This is the one list of keyless backends; the MCP
-server and `.env.example` point here. `response.provider` names whichever one served it,
-never `"auto"`, so you can always tell. The anonymous tiers are rate-limited, which is
-why it is a chain: when one is throttled, the next answers.
-
+</Accordion>
+<Accordion title="Keyless order and choosing it yourself">
 Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
@@ -289,7 +314,7 @@ its vendor's own default. `html` passes over Tavily and Exa, and `text` goes to
 Tavily, Exa or Jina Reader. A format is never relabelled: a member that cannot return it is
 not asked.
 
-### Choosing the order yourself
+#### Choosing the order yourself
 
 `chain` in `provider_config["auto"]` replaces the default order. Keyed by
 method, it sets that method's chain and leaves the others on their defaults:
@@ -338,3 +363,5 @@ never quietly demoted to an anonymous one:
 ```python
 WebRouter(Provider.TAVILY).search("...")  # ConfigurationError if TAVILY_API_KEY is unset
 ```
+</Accordion>
+</AccordionGroup>
