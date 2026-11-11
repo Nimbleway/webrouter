@@ -214,7 +214,7 @@
       },
       "notes": [
         "Starts a billed job: it only produces data and changes nothing else in your account.",
-        "A read over POST: it starts a job that only produces data.",
+        ".",
         "Async: may take 1-10 minutes; poll crawls.get, then list pages with crawls.pages."
       ],
       "job": "web.crawl",
@@ -458,7 +458,7 @@
       },
       "notes": [
         "Starts a billed job: it only produces data and changes nothing else in your account.",
-        "A read over POST: it starts a job that only produces data.",
+        ".",
         "Async: poll batches.get; per-item content is fetched with the retrieve endpoint."
       ],
       "job": "web.extract",

@@ -103,6 +103,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Spends credits only on results: 1 per work email found, 3 per personal email, 10 per mobile phone (custom plans may differ). Re-enriching the same input within 3 months costs 0.",
         "Asynchronous: poll fullenrich.contact.enrich_result with the enrichment_id.",
         "The example contact is FullEnrich's free test contact; it costs 0 credits only with exactly that data."
@@ -174,6 +175,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "1 credit per email whose owner is found.",
         "Asynchronous: poll fullenrich.contact.reverse_email_result with the returned id."
       ],

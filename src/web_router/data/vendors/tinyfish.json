@@ -122,7 +122,7 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Async: poll research.get."
       ],
       "job": "research.start",

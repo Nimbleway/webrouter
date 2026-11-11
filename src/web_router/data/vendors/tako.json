@@ -360,6 +360,7 @@
         "docs": "https://docs.tako.com/api-reference/openapi.yaml"
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Asynchronous: poll tako.agent.answer.get until status is completed or failed. Runs that use per-unit priced sources (web traffic, SEO) add a charge."
       ]
     },

@@ -79,7 +79,8 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data and uses credits. Fetch the outcome with scrubby.bulk.results."
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Uses credits. Fetch the outcome with scrubby.bulk.results."
       ],
       "job": "jobs.start",
       "docs_url": "https://docs.scrubby.io/",
@@ -131,7 +132,8 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data. Fetch the outcome with scrubby.deep.results."
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Fetch the outcome with scrubby.deep.results."
       ],
       "job": "jobs.start",
       "docs_url": "https://docs.scrubby.io/",

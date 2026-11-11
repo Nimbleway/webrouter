@@ -51,7 +51,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing."
+        "A read over POST: it changes nothing."
       ],
       "job": "account.usage",
       "docs_url": "https://api-doc.icypeas.com/reference/",
@@ -93,7 +93,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single).",
         "1 credit when an email is found."
       ],
@@ -124,7 +124,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single).",
         "0.1 credit per verification (per the docs overview)."
       ],
@@ -155,7 +155,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Asynchronous: returns a search _id at once; read the result a few seconds later with icypeas.results.read (mode single).",
         "1 credit when emails are found."
       ],
@@ -252,7 +252,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing."
+        "A read over POST: it changes nothing."
       ],
       "job": "jobs.status",
       "docs_url": "https://api-doc.icypeas.com/reference/",
@@ -304,7 +304,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing.",
+        "A read over POST: it changes nothing.",
         "No charge for reading."
       ],
       "job": "jobs.status",
@@ -329,7 +329,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing.",
+        "A read over POST: it changes nothing.",
         "Free."
       ],
       "job": "company.search",
@@ -359,7 +359,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing.",
+        "A read over POST: it changes nothing.",
         "Lead database results cost about 0.02 credit per result (docs overview)."
       ],
       "job": "company.search",
@@ -384,7 +384,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing.",
+        "A read over POST: it changes nothing.",
         "Free."
       ],
       "job": "people.search",
@@ -414,7 +414,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing.",
+        "A read over POST: it changes nothing.",
         "Lead database results cost about 0.02 credit per result (docs overview)."
       ],
       "job": "people.search",
@@ -455,7 +455,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing."
+        "A read over POST: it changes nothing."
       ],
       "job": "people.enrich",
       "docs_url": "https://api-doc.icypeas.com/reference/",
@@ -479,7 +479,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing."
+        "A read over POST: it changes nothing."
       ],
       "job": "company.enrich",
       "docs_url": "https://api-doc.icypeas.com/reference/",
@@ -503,7 +503,7 @@
         }
       },
       "notes": [
-        "A read over POST: starts a search, changes nothing."
+        "A read over POST: it changes nothing."
       ],
       "job": "people.enrich",
       "docs_url": "https://api-doc.icypeas.com/reference/",

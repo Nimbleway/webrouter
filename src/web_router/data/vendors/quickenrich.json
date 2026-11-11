@@ -410,7 +410,8 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data. GTM Unlimited plan only; 5 tasks may run at once. Returns data.task_id; poll quickenrich.bulk.status."
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "GTM Unlimited plan only; 5 tasks may run at once. Returns data.task_id; poll quickenrich.bulk.status."
       ],
       "job": "jobs.start",
       "docs_url": "https://app.quickenrich.io/docs",

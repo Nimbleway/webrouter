@@ -185,7 +185,7 @@
         }
       },
       "notes": [
-        "A read over POST: it only retrieves data.",
+        "A read over POST, billed per URL; with async true it starts a billed job instead of answering at once.",
         "Asynchronous when async is true: the response carries a job_id. Poll valyu.contents.job with it.",
         "0.2 credits per extracted URL, 0.6 with summary; failed URLs are free. Inspect each result: a 206 means some URLs failed."
       ],

@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from tests.vendors.data import OAUTH, shipped_dir
-from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
+from web_router.constants_vendors import VENDOR_CALLBACK_KEY, VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
 from web_router.vendors.catalog import builtin_catalog, get_catalog, load_vendor_file, reload_catalog
 
 SHIPPED = builtin_catalog()
@@ -46,6 +46,35 @@ def test_no_shipped_endpoint_is_a_write() -> None:
     """The shipped catalog reads only (AGENTS.md, "Adding a vendor"): writes go through vendor_request."""
     writes = [endpoint.id for vendor in SHIPPED.all() for endpoint in vendor.endpoints if endpoint.kind == "write"]
     assert writes == []
+
+
+def test_no_shipped_input_is_a_callback_url() -> None:
+    """A webhook, callback, pingback or postback input would send the answer to an address the caller picks."""
+    found = [
+        f"{endpoint.id}:{name}"
+        for vendor in SHIPPED.all()
+        for endpoint in vendor.endpoints
+        for name in endpoint.params
+        if VENDOR_CALLBACK_KEY.search(name)
+    ]
+    assert found == []
+
+
+def test_a_call_that_starts_a_job_says_first_that_it_is_billed() -> None:
+    """AGENTS.md: a metered read that starts a job says so in its first note, so a caller sees the cost first."""
+    starts = re.compile(
+        r"\bstarts? (a |an )?(research |asynchronous |bulk )?(job|search|task|crawl)\b|\basynchronous\b", re.I
+    )
+    late = [
+        endpoint.id
+        for vendor in SHIPPED.all()
+        if vendor.auth.credentials
+        for endpoint in vendor.endpoints
+        if endpoint.method != "GET"
+        and any(starts.search(note) for note in endpoint.notes)
+        and "billed job" not in endpoint.notes[0]
+    ]
+    assert late == []
 
 
 def test_a_shipped_post_that_sounds_like_a_write_says_why_it_reads() -> None:

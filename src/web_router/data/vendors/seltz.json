@@ -224,6 +224,7 @@
         "docs": "https://docs.seltz.ai/api-reference/openapi.json"
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "Asynchronous and billed by effort: poll seltz.agent.get with the returned id until status is completed, failed or cancelled."
       ]
     },

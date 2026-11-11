@@ -890,7 +890,8 @@
         }
       },
       "notes": [
-        "A read over POST: starts a job that only produces a file and uses credits per row. Poll getleadsio.contacts.export_status with export_id."
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Uses credits per row. Poll getleadsio.contacts.export_status with export_id."
       ],
       "job": "jobs.start",
       "docs_url": "https://www.getleads.io/docs/",
@@ -1441,7 +1442,8 @@
         }
       },
       "notes": [
-        "A read over POST: starts a job that only produces a file; 1 credit per company. Poll getleadsio.companies.export_status."
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "1 credit per company. Poll getleadsio.companies.export_status."
       ],
       "job": "jobs.start",
       "docs_url": "https://www.getleads.io/docs/",

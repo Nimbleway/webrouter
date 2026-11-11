@@ -246,7 +246,8 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data and uses credits. Rate limit: 5 requests a minute. Poll filtrat.bulk.get with the job id."
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Uses credits. Rate limit: 5 requests a minute. Poll filtrat.bulk.get with the job id."
       ],
       "job": "jobs.start",
       "docs_url": "https://filtrat.io/v1/docs",

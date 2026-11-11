@@ -164,7 +164,8 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a research job that only produces data. Async: answers with a task_id; poll GET /job-status/{task_id} (sixtyfour.jobs.status)."
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Async: answers with a task_id; poll GET /job-status/{task_id} (sixtyfour.jobs.status)."
       ],
       "job": "people.enrich",
       "docs_url": "https://docs.sixtyfour.ai/api-reference/endpoint/people-intelligence",
@@ -325,6 +326,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST: it starts a research job. Async: answers with a task_id; poll GET /job-status/{task_id} (sixtyfour.jobs.status)."
       ],
       "job": "company.enrich",

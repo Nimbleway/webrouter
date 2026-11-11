@@ -296,7 +296,8 @@
         }
       },
       "notes": [
-        "Starts a job that only produces data. Returns a status (QUEUED) and a job_id; poll contactout.people.contact_batch_v2_result.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Returns a status (QUEUED) and a job_id; poll contactout.people.contact_batch_v2_result.",
         "1 email credit per profile with an email found, 1 phone credit per profile with a phone found when include_phone is true."
       ],
       "job": "people.email.find",
@@ -799,6 +800,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST: nothing is changed. It starts a job; poll contactout.email.verify_batch_result.",
         "1 verifier credit per email whose result is valid, invalid or accept_all."
       ],

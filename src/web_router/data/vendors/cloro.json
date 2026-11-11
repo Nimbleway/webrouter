@@ -503,7 +503,8 @@
         }
       },
       "notes": [
-        "Starts a job that only produces data. Poll cloro.async.get_task with the returned id.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Poll cloro.async.get_task with the returned id.",
         "No +2 sync surcharge on async requests, so each is 2 credits cheaper than the sync call."
       ],
       "job": "jobs.status",

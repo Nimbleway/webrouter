@@ -580,7 +580,7 @@
       },
       "notes": [
         "Starts a billed job: it only produces data and changes nothing else in your account.",
-        "A read over POST: it starts a job that only produces a file. It reserves up to limit records at once and bills each row written. Poll leadocean.exports.get, then fetch leadocean.exports.download."
+        "It reserves up to limit records at once and bills each row written. Poll leadocean.exports.get, then fetch leadocean.exports.download."
       ],
       "job": "jobs.start",
       "docs_url": "https://api.leadocean.io/openapi.json",

@@ -95,6 +95,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST: starts an asynchronous search, changes nothing.",
         "Poll enrow.email.find_result with the returned id. Check qualification: found or not_found.",
         "Name plus company search: 1 credit when an email is found, none otherwise (0.25 for accounts with an abnormally low success rate). LinkedIn URL search: 1 credit up front, settling to 1 if found, 0.25 if not found, 0 if Enrow fails."
@@ -150,6 +151,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST: starts an asynchronous search, changes nothing.",
         "Poll enrow.email.verify_result. 0.25 credit per verification. qualification is valid or invalid."
       ],
@@ -223,6 +225,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST: starts an asynchronous search, changes nothing.",
         "Poll enrow.phone.find_result. 40 credits per search by default (50 on legacy plans), refunded when no phone is found."
       ],

@@ -65,6 +65,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST. 1 credit per successful, completed research; 402 when credits run out.",
         "At most 10 research requests running at once (429 beyond).",
         "Asynchronous: poll happenstance.research.get until status is COMPLETED, FAILED or FAILED_AMBIGUOUS."
@@ -128,6 +129,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST. 2 credits per search, charged when it completes; at most 10 searches running at once.",
         "Asynchronous: poll happenstance.search.get with the returned id."
       ],

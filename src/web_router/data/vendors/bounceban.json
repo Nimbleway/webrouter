@@ -201,7 +201,8 @@
         }
       },
       "notes": [
-        "A read over POST: it starts a job that only produces data, and bills 1 credit per email. Returns {id, credits_remaining}; poll bounceban.bulk.status with the id.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Bills 1 credit per email. Returns {id, credits_remaining}; poll bounceban.bulk.status with the id.",
         "The whole task is rejected with 403 if credits or the key's quota cannot cover it."
       ],
       "job": "jobs.start",

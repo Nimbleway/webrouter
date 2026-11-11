@@ -2078,7 +2078,8 @@
         }
       },
       "notes": [
-        "Starts a job that only produces data; poll marketmap.get with the returned map ID."
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Poll marketmap.get with the returned map ID."
       ],
       "job": "company.search",
       "docs_url": "https://docs.data.aviato.co/api-reference/marketmap/generate-map.md",

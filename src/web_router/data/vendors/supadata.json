@@ -348,6 +348,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST that spends credits. Asynchronous: returns a jobId; poll supadata.extract.result.",
         "Videos up to 3 hours and 2 GB, public only."
       ],

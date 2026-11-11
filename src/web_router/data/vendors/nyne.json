@@ -137,6 +137,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST, asynchronous: answers 202 with a request_id; poll nyne.person.enrich_result.",
         "6 credits (3 with lite_enrich), charged only when usable data comes back."
       ],
@@ -246,6 +247,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST, asynchronous. The POST prepares one page and returns page metadata, not rows; read the rows with nyne.person.search_result using the same request_id, offset and limit.",
         "1 credit per result returned, plus surcharges per result: +1 with custom_filters, +6 for email data, +6 for phone data. Do not re-POST as a status check: it can bill another page."
       ],
@@ -320,6 +322,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST, asynchronous: poll nyne.company.enrich_result. Charged once, only on a meaningful result; a 404 means no match and no charge."
       ],
       "job": "company.enrich",
@@ -386,6 +389,7 @@
         }
       },
       "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
         "A read over POST, asynchronous: poll nyne.company.search_result. 1 credit per company returned.",
         "Next page: POST the same query with offset = next_offset."
       ],

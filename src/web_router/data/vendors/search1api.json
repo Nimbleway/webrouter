@@ -597,7 +597,8 @@
         }
       },
       "notes": [
-        "Starts a job that only produces data. Beta. Poll search1api.web.deepcrawl_status with the returned task id.",
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Beta. Poll search1api.web.deepcrawl_status with the returned task id.",
         "Costs 20 credits per task regardless of page count."
       ],
       "job": "web.crawl",
