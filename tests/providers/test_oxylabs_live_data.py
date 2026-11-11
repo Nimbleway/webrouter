@@ -82,7 +82,7 @@ def _answer(run: Any) -> Any:
 
 def _provider(run: Any = lambda request: httpx.Response(500), **kwargs: Any) -> tuple[OxylabsLiveDataProvider, Api]:
     api = Api(_answer(run))
-    return wire(OxylabsLiveDataProvider(api_key="web-api-key", **kwargs), api), api  # type: ignore[return-value]
+    return wire(OxylabsLiveDataProvider(web_api_key="web-api-key", **kwargs), api), api  # type: ignore[return-value]
 
 
 def _sent(api: Api, method: str) -> list[httpx.Request]:
@@ -350,6 +350,13 @@ def test_a_shared_extract_config_does_not_send_the_realtime_password(monkeypatch
     monkeypatch.setenv("OXYLABS_WEB_API_KEY", "web-key")
     api = Api(_answer(lambda request: httpx.Response(500)))
     provider = wire(OxylabsLiveDataProvider(username="user", api_key="realtime-password"), api)
+    provider.live_data_sources()
+    assert api.last.headers["Authorization"] == "Bearer web-key"
+
+    # The username may come from OXYLABS_USERNAME rather than the entry: the api_key is still the password.
+    monkeypatch.setenv("OXYLABS_USERNAME", "user")
+    api = Api(_answer(lambda request: httpx.Response(500)))
+    provider = wire(OxylabsLiveDataProvider(api_key="realtime-password"), api)
     provider.live_data_sources()
     assert api.last.headers["Authorization"] == "Bearer web-key"
 

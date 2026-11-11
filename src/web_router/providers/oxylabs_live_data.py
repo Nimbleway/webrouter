@@ -142,17 +142,16 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
     def __init__(self, *, web_api_key: str | None = None, username: str | None = None, **kwargs: Any) -> None:
         """
         Args:
-            web_api_key: The Web API key. Falls back to ``api_key``, then ``OXYLABS_WEB_API_KEY``.
+            web_api_key: The Web API key. Falls back to ``OXYLABS_WEB_API_KEY``.
             username: Accepted and unused: it is the Realtime username Oxylabs'
-                extract reads, from the same ``provider_config["oxylabs"]``
-                entry. When it is there, that entry's ``api_key`` is the
-                Realtime password, which the Web API refuses, so it is not used.
-            **kwargs: As :class:`~web_router.providers._http_live_data.HttpLiveDataProvider`.
+                extract reads from the same ``provider_config["oxylabs"]`` entry.
+            **kwargs: As :class:`~web_router.providers._http_live_data.HttpLiveDataProvider`,
+                but ``api_key`` is never read: in the shared entry it is
+                extract's Realtime password, which must not reach the Web API
+                as a bearer token, so the Web API key has a name of its own.
         """
-        if web_api_key is not None:
-            kwargs["api_key"] = web_api_key
-        elif username is not None:
-            kwargs.pop("api_key", None)
+        del username
+        kwargs["api_key"] = web_api_key
         super().__init__(**kwargs)
         self._catalogue: dict[str, Scraper] | None = None
 

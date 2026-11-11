@@ -339,7 +339,7 @@ calls.
 | `Provider.NIMBLE` | `nimble` | [Nimble Extract Templates](https://docs.nimbleway.com/api-reference/extract/extract-templates) | `NIMBLE_API_KEY` | `markdown`, `html` |
 | `Provider.APIFY` | `apify` | [Apify Store Actors](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) | `APIFY_TOKEN` | — |
 | `Provider.BRIGHTDATA` | `brightdata` | [Bright Data scrapers](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) | `BRIGHTDATA_API_TOKEN` | — |
-| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web API dedicated scrapers](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) | `OXYLABS_WEB_API_KEY` (a Web API key, not the Realtime username and password extract uses) | — |
+| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web API dedicated scrapers](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) | `OXYLABS_WEB_API_KEY` (a Web API key, not the Realtime username and password extract uses; in `provider_config["oxylabs"]` it is `web_api_key`, as `api_key` there is extract's password) | — |
 
 Nimble was verified live on 2026-10-22: a listing, a description and a run on
 a public test page. Apify and Bright Data were verified live on 2026-11-10:
