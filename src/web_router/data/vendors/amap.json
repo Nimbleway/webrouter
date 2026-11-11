@@ -1,0 +1,507 @@
+{
+  "vendor": "amap",
+  "name": "Amap (Gaode) Web Service",
+  "category": "other",
+  "summary": "China maps from Amap/Gaode: geocoding and reverse geocoding, POI search by keyword, area or id, driving and transit routes, and city weather.",
+  "docs_url": "https://lbs.amap.com/api/webservice/summary",
+  "base_url": "https://restapi.amap.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AMAP_API_KEY"
+        ],
+        "description": "An Amap Web Service key (Web服务 type), created in the Amap developer console (lbs.amap.com). Sent as the key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Coordinates are 'longitude,latitude' (longitude FIRST), at most 6 decimals, in Amap's GCJ-02 system, not WGS-84.",
+    "Errors come back as HTTP 200 with status '0' and an info/infocode; status '1' means success.",
+    "A key with digital signatures (sig) switched on in the console needs a signed request, which this entry does not produce: use a key without signatures.",
+    "Docs and most response text are in Chinese; POI search 2.0 takes langCode=en for English results (an advanced service).",
+    "POI search pages stop at 200 records per parameter set, whatever page_num asks for."
+  ],
+  "sources": [
+    "https://lbs.amap.com/api/webservice/summary",
+    "https://lbs.amap.com/api/webservice/guide/api/georegeo",
+    "https://lbs.amap.com/api/webservice/guide/api-advanced/newpoisearch",
+    "https://lbs.amap.com/api/webservice/guide/api/newroute",
+    "https://lbs.amap.com/api/webservice/guide/api/weatherinfo"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "amap.geocode",
+      "name": "Geocode an address",
+      "summary": "Coordinates, adcode and administrative levels for a structured Chinese address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/geocode/geo",
+      "params": {
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Structured address, largest area first (province, city, district, street, number)."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City to search in: Chinese name, pinyin, citycode or adcode. Nationwide when unset."
+        }
+      },
+      "job": "geo.geocode",
+      "docs_url": "https://lbs.amap.com/api/webservice/guide/api/georegeo",
+      "verified": {
+        "docs": "https://lbs.amap.com/api/webservice/guide/api/georegeo"
+      }
+    },
+    {
+      "id": "amap.reverse_geocode",
+      "name": "Reverse-geocode a coordinate",
+      "summary": "The address at a point, and with extensions=all the nearby POIs, roads and intersections.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/geocode/regeo",
+      "params": {
+        "location": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "'longitude,latitude', at most 6 decimals."
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Search radius in metres, 0 to 3000, default 1000."
+        },
+        "extensions": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "base",
+            "all"
+          ],
+          "description": "base (default) returns the address only; all adds nearby POIs, roads and intersections."
+        },
+        "poitype": {
+          "in": "query",
+          "type": "string",
+          "description": "POI type codes separated by '|'; only with extensions=all."
+        },
+        "roadlevel": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "0 all roads, 1 main roads only; only with extensions=all."
+        },
+        "homeorcorp": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            2
+          ],
+          "description": "POI ordering with extensions=all: 0 unchanged, 1 home-related first, 2 work-related first."
+        }
+      },
+      "job": "geo.reverse_geocode",
+      "docs_url": "https://lbs.amap.com/api/webservice/guide/api/georegeo",
+      "verified": {
+        "docs": "https://lbs.amap.com/api/webservice/guide/api/georegeo"
+      }
+    },
+    {
+      "id": "amap.places.search",
+      "name": "Search places by keyword",
+      "summary": "POIs matching a keyword or POI type codes, optionally boosted to or limited to a region (POI search 2.0).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v5/place/text",
+      "params": {
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "One keyword or address, at most 80 characters. Required unless types is set."
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "POI type codes separated by '|'. Required unless keywords is set."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "citycode, adcode or city-level Chinese name to boost results in. Nationwide when unset."
+        },
+        "city_limit": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to return only results inside region. Default false."
+        },
+        "langCode": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "zh",
+            "en"
+          ],
+          "description": "Result language, default zh."
+        },
+        "show_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated optional response fields; only basic fields when unset."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 25, default 10."
+        },
+        "page_num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://lbs.amap.com/api/webservice/guide/api-advanced/newpoisearch",
+      "verified": {
+        "docs": "https://lbs.amap.com/api/webservice/guide/api-advanced/newpoisearch"
+      }
+    },
+    {
+      "id": "amap.places.around",
+      "name": "Search places around a point",
+      "summary": "POIs within a radius of a coordinate, by keyword or type, sorted by distance or weight.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v5/place/around",
+      "params": {
+        "location": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Centre as 'longitude,latitude', at most 6 decimals."
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "One keyword, at most 80 characters."
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "POI type codes separated by '|'. With neither keywords nor types, defaults to dining, lifestyle services and business residences."
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Metres, 0 to 50000, default 5000."
+        },
+        "sortrule": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "distance",
+            "weight"
+          ],
+          "description": "Default distance; distance has no effect when only keywords is given."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Administrative name, citycode or adcode to boost results in."
+        },
+        "city_limit": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to return only results inside region."
+        },
+        "langCode": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "zh",
+            "en"
+          ]
+        },
+        "show_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated optional response fields."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 25, default 10."
+        },
+        "page_num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://lbs.amap.com/api/webservice/guide/api-advanced/newpoisearch",
+      "verified": {
+        "docs": "https://lbs.amap.com/api/webservice/guide/api-advanced/newpoisearch"
+      }
+    },
+    {
+      "id": "amap.places.detail",
+      "name": "Get places by id",
+      "summary": "Full records for up to 10 POI ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v5/place/detail",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "POI ids separated by '|', at most 10."
+        },
+        "show_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated optional response fields."
+        },
+        "langCode": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "zh",
+            "en"
+          ]
+        }
+      },
+      "job": "places.detail",
+      "docs_url": "https://lbs.amap.com/api/webservice/guide/api-advanced/newpoisearch",
+      "verified": {
+        "docs": "https://lbs.amap.com/api/webservice/guide/api-advanced/newpoisearch"
+      }
+    },
+    {
+      "id": "amap.directions.driving",
+      "name": "Plan a driving route",
+      "summary": "Driving routes between two coordinates, with optional waypoints, avoid areas and strategy (route planning 2.0).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v5/direction/driving",
+      "params": {
+        "origin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start as 'longitude,latitude'."
+        },
+        "destination": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End as 'longitude,latitude'."
+        },
+        "origin_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Origin POI id, for accuracy."
+        },
+        "destination_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Destination POI id, for accuracy."
+        },
+        "destination_type": {
+          "in": "query",
+          "type": "string",
+          "description": "POI category of the destination."
+        },
+        "strategy": {
+          "in": "query",
+          "type": "integer",
+          "description": "Route strategy code 0 to 45; default 32 (Amap's default)."
+        },
+        "waypoints": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 16 ordered via-points separated by ';'."
+        },
+        "avoidpolygons": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 32 areas separated by '|', each at most 16 vertices and 81 km²."
+        },
+        "plate": {
+          "in": "query",
+          "type": "string",
+          "description": "Licence plate, to respect traffic restrictions."
+        },
+        "cartype": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            2
+          ],
+          "description": "0 petrol (default), 1 electric, 2 plug-in hybrid."
+        },
+        "ferry": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "0 use ferries (default), 1 avoid them."
+        },
+        "show_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional response fields; basic fields only when unset."
+        }
+      },
+      "job": "routes.directions",
+      "docs_url": "https://lbs.amap.com/api/webservice/guide/api/newroute",
+      "verified": {
+        "docs": "https://lbs.amap.com/api/webservice/guide/api/newroute"
+      }
+    },
+    {
+      "id": "amap.directions.transit",
+      "name": "Plan a public-transit route",
+      "summary": "Bus and subway itineraries between two coordinates within or across cities.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v5/direction/transit/integrated",
+      "params": {
+        "origin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start as 'longitude,latitude'."
+        },
+        "destination": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End as 'longitude,latitude'."
+        },
+        "city1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Origin citycode."
+        },
+        "city2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Destination citycode; the same as city1 for a same-city trip."
+        },
+        "originpoi": {
+          "in": "query",
+          "type": "string",
+          "description": "Origin POI id; send with destinationpoi."
+        },
+        "destinationpoi": {
+          "in": "query",
+          "type": "string",
+          "description": "Destination POI id; send with originpoi."
+        },
+        "ad1": {
+          "in": "query",
+          "type": "string",
+          "description": "Origin district adcode."
+        },
+        "ad2": {
+          "in": "query",
+          "type": "string",
+          "description": "Destination district adcode."
+        },
+        "strategy": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 (recommended, default) to 8 (shortest time); includes cheapest and fewest transfers."
+        },
+        "AlternativeRoute": {
+          "in": "query",
+          "type": "integer",
+          "description": "Routes to return, 1 to 10, default 5."
+        },
+        "nightflag": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 to consider night buses. Default 0."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Travel date, e.g. 2013-10-28."
+        },
+        "time": {
+          "in": "query",
+          "type": "string",
+          "description": "Travel time, e.g. 9-54."
+        },
+        "show_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional response fields."
+        }
+      },
+      "job": "routes.directions",
+      "docs_url": "https://lbs.amap.com/api/webservice/guide/api/newroute",
+      "verified": {
+        "docs": "https://lbs.amap.com/api/webservice/guide/api/newroute"
+      }
+    },
+    {
+      "id": "amap.weather",
+      "name": "Get a city's weather",
+      "summary": "Live conditions, or the forecast with extensions=all, for a Chinese city by adcode.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/weather/weatherInfo",
+      "params": {
+        "city": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The city's adcode (from geocode)."
+        },
+        "extensions": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "base",
+            "all"
+          ],
+          "description": "base returns live conditions, all the forecast."
+        }
+      },
+      "job": "weather.current",
+      "docs_url": "https://lbs.amap.com/api/webservice/guide/api/weatherinfo",
+      "verified": {
+        "docs": "https://lbs.amap.com/api/webservice/guide/api/weatherinfo"
+      }
+    }
+  ]
+}

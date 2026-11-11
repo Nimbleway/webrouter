@@ -1,0 +1,499 @@
+{
+  "vendor": "nasapower",
+  "name": "NASA POWER",
+  "category": "other",
+  "summary": "Keyless NASA satellite and reanalysis weather, solar radiation and climate data for any point or region: hourly, daily, monthly and long-term climatology since 1981.",
+  "docs_url": "https://power.larc.nasa.gov/docs/services/api/",
+  "base_url": "https://power.larc.nasa.gov/api",
+  "notes": [
+    "No key. Too many requests return 429; repeatedly requesting the same grid cell can get a client blocked, so fetch one cell once with all the parameters needed.",
+    "Data is on a 0.5 x 0.5 degree grid (solar parameters coarser), so nearby points return the same values.",
+    "Parameter names (T2M, T2M_MAX, PRECTOTCORR, WS10M, RH2M, ALLSKY_SFC_SW_DWN, ...) are in the POWER Parameter Dictionary; which ones exist and their units depend on community and temporal level.",
+    "A point request takes up to 20 parameters (15 hourly); a regional request exactly one.",
+    "Missing values come back as the fill value -999."
+  ],
+  "sources": [
+    "https://power.larc.nasa.gov/docs/services/api/",
+    "https://power.larc.nasa.gov/docs/services/api/temporal/daily/",
+    "https://power.larc.nasa.gov/docs/services/api/temporal/hourly/",
+    "https://power.larc.nasa.gov/docs/services/api/temporal/monthly/",
+    "https://power.larc.nasa.gov/docs/services/api/temporal/climatology/",
+    "https://power.larc.nasa.gov/docs/methodology/communities/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nasapower.daily.point",
+      "name": "Get daily data for a point",
+      "summary": "Daily time series of weather and solar parameters at one latitude/longitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/temporal/daily/point",
+      "params": {
+        "parameters": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated POWER parameter names, up to 20 (e.g. T2M,T2M_MAX,PRECTOTCORR,ALLSKY_SFC_SW_DWN).",
+          "example": "T2M,ALLSKY_SFC_SW_DWN"
+        },
+        "community": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "User community: RE (renewable energy), SB (sustainable infrastructure), AG (agroclimatology), HY (hydrology). Units and available parameters differ by community.",
+          "enum": [
+            "RE",
+            "SB",
+            "AG",
+            "HY"
+          ],
+          "example": "RE"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Decimal latitude.",
+          "example": 40.71
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Decimal longitude.",
+          "example": -74.0
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYYMMDD; daily data runs from 1981-01-01 to near real time.",
+          "example": "20240101"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYYMMDD; daily data runs from 1981-01-01 to near real time.",
+          "example": "20240131"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "enum": [
+            "JSON",
+            "CSV",
+            "ASCII",
+            "NETCDF",
+            "ICASA"
+          ]
+        },
+        "site-elevation": {
+          "in": "query",
+          "type": "number",
+          "description": "Site elevation in meters; adjusts the returned pressure."
+        },
+        "wind-elevation": {
+          "in": "query",
+          "type": "number",
+          "description": "Meters, 10 to 300, for wind speed at that height; needs wind-surface."
+        },
+        "wind-surface": {
+          "in": "query",
+          "type": "string",
+          "description": "A surface alias for the wind-elevation adjustment (e.g. SeaIce)."
+        },
+        "time-standard": {
+          "in": "query",
+          "type": "string",
+          "description": "UTC or LST (local solar time, the default).",
+          "enum": [
+            "UTC",
+            "LST"
+          ]
+        }
+      },
+      "job": "weather.history",
+      "docs_url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/",
+      "verified": {
+        "docs": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/"
+      }
+    },
+    {
+      "id": "nasapower.daily.regional",
+      "name": "Get daily data for a region",
+      "summary": "Daily values of one parameter over a latitude/longitude bounding box.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/temporal/daily/regional",
+      "params": {
+        "parameters": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Exactly one POWER parameter name.",
+          "example": "T2M"
+        },
+        "community": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "User community: RE (renewable energy), SB (sustainable infrastructure), AG (agroclimatology), HY (hydrology). Units and available parameters differ by community.",
+          "enum": [
+            "RE",
+            "SB",
+            "AG",
+            "HY"
+          ],
+          "example": "RE"
+        },
+        "latitude-min": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Southern edge."
+        },
+        "latitude-max": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Northern edge."
+        },
+        "longitude-min": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Western edge."
+        },
+        "longitude-max": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Eastern edge."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYYMMDD."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYYMMDD."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "enum": [
+            "JSON",
+            "CSV",
+            "ASCII",
+            "NETCDF"
+          ]
+        },
+        "time-standard": {
+          "in": "query",
+          "type": "string",
+          "description": "UTC or LST (the default).",
+          "enum": [
+            "UTC",
+            "LST"
+          ]
+        }
+      },
+      "job": "weather.history",
+      "docs_url": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/",
+      "verified": {
+        "docs": "https://power.larc.nasa.gov/docs/services/api/temporal/daily/"
+      }
+    },
+    {
+      "id": "nasapower.hourly.point",
+      "name": "Get hourly data for a point",
+      "summary": "Hourly time series at one point since 2001, including EPW weather files for building models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/temporal/hourly/point",
+      "params": {
+        "parameters": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated POWER parameter names, up to 15 (e.g. T2M,T2M_MAX,PRECTOTCORR,ALLSKY_SFC_SW_DWN).",
+          "example": "T2M,ALLSKY_SFC_SW_DWN"
+        },
+        "community": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "User community: RE (renewable energy), SB (sustainable infrastructure), AG (agroclimatology), HY (hydrology). Units and available parameters differ by community.",
+          "enum": [
+            "RE",
+            "SB",
+            "AG",
+            "HY"
+          ],
+          "example": "RE"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Decimal latitude.",
+          "example": 40.71
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Decimal longitude.",
+          "example": -74.0
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYYMMDD; hourly data runs from 2001-01-01 to near real time.",
+          "example": "20240101"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYYMMDD; hourly data runs from 2001-01-01 to near real time.",
+          "example": "20240107"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "enum": [
+            "JSON",
+            "CSV",
+            "ASCII",
+            "NETCDF",
+            "EPW",
+            "EPW_CSV",
+            "SAM",
+            "SRW"
+          ]
+        },
+        "site-elevation": {
+          "in": "query",
+          "type": "number",
+          "description": "Site elevation in meters; adjusts the returned pressure."
+        },
+        "wind-elevation": {
+          "in": "query",
+          "type": "number",
+          "description": "Meters, 10 to 300, for wind speed at that height; needs wind-surface."
+        },
+        "wind-surface": {
+          "in": "query",
+          "type": "string",
+          "description": "A surface alias for the wind-elevation adjustment (e.g. SeaIce)."
+        },
+        "time-standard": {
+          "in": "query",
+          "type": "string",
+          "description": "UTC or LST (the default).",
+          "enum": [
+            "UTC",
+            "LST"
+          ]
+        }
+      },
+      "job": "weather.history",
+      "docs_url": "https://power.larc.nasa.gov/docs/services/api/temporal/hourly/",
+      "verified": {
+        "docs": "https://power.larc.nasa.gov/docs/services/api/temporal/hourly/"
+      }
+    },
+    {
+      "id": "nasapower.monthly.point",
+      "name": "Get monthly and annual data for a point",
+      "summary": "Monthly and annual averages for a range of years.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/temporal/monthly/point",
+      "params": {
+        "parameters": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated POWER parameter names, up to 20 (e.g. T2M,T2M_MAX,PRECTOTCORR,ALLSKY_SFC_SW_DWN).",
+          "example": "T2M,ALLSKY_SFC_SW_DWN"
+        },
+        "community": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "User community: RE (renewable energy), SB (sustainable infrastructure), AG (agroclimatology), HY (hydrology). Units and available parameters differ by community.",
+          "enum": [
+            "RE",
+            "SB",
+            "AG",
+            "HY"
+          ],
+          "example": "RE"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Decimal latitude.",
+          "example": 40.71
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Decimal longitude.",
+          "example": -74.0
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Four-digit year.",
+          "example": "2016"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Four-digit year.",
+          "example": "2020"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "enum": [
+            "JSON",
+            "CSV",
+            "ASCII",
+            "NETCDF"
+          ]
+        },
+        "site-elevation": {
+          "in": "query",
+          "type": "number",
+          "description": "Site elevation in meters; adjusts the returned pressure."
+        },
+        "wind-elevation": {
+          "in": "query",
+          "type": "number",
+          "description": "Meters, 10 to 300, for wind speed at that height; needs wind-surface."
+        },
+        "wind-surface": {
+          "in": "query",
+          "type": "string",
+          "description": "A surface alias for the wind-elevation adjustment (e.g. SeaIce)."
+        }
+      },
+      "job": "weather.history",
+      "docs_url": "https://power.larc.nasa.gov/docs/services/api/temporal/monthly/",
+      "verified": {
+        "docs": "https://power.larc.nasa.gov/docs/services/api/temporal/monthly/"
+      }
+    },
+    {
+      "id": "nasapower.climatology.point",
+      "name": "Get climatology for a point",
+      "summary": "Long-term monthly and annual averages (e.g. average solar radiation per month) at one point.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/temporal/climatology/point",
+      "params": {
+        "parameters": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated POWER parameter names, up to 20 (e.g. T2M,T2M_MAX,PRECTOTCORR,ALLSKY_SFC_SW_DWN).",
+          "example": "T2M,ALLSKY_SFC_SW_DWN"
+        },
+        "community": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "User community: RE (renewable energy), SB (sustainable infrastructure), AG (agroclimatology), HY (hydrology). Units and available parameters differ by community.",
+          "enum": [
+            "RE",
+            "SB",
+            "AG",
+            "HY"
+          ],
+          "example": "RE"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Decimal latitude.",
+          "example": 40.71
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Decimal longitude.",
+          "example": -74.0
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-digit year, for a custom climatology period; omit for the default period.",
+          "example": "2001"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "Four-digit year, for a custom climatology period; omit for the default period.",
+          "example": "2020"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "enum": [
+            "JSON",
+            "CSV",
+            "ASCII",
+            "NETCDF"
+          ]
+        },
+        "site-elevation": {
+          "in": "query",
+          "type": "number",
+          "description": "Site elevation in meters; adjusts the returned pressure."
+        },
+        "wind-elevation": {
+          "in": "query",
+          "type": "number",
+          "description": "Meters, 10 to 300, for wind speed at that height; needs wind-surface."
+        },
+        "wind-surface": {
+          "in": "query",
+          "type": "string",
+          "description": "A surface alias for the wind-elevation adjustment (e.g. SeaIce)."
+        }
+      },
+      "job": "weather.climatology",
+      "docs_url": "https://power.larc.nasa.gov/docs/services/api/temporal/climatology/",
+      "verified": {
+        "docs": "https://power.larc.nasa.gov/docs/services/api/temporal/climatology/"
+      }
+    }
+  ]
+}

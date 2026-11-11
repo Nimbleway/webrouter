@@ -1,0 +1,494 @@
+{
+  "vendor": "mapbox",
+  "name": "Mapbox",
+  "category": "other",
+  "summary": "Geocoding, place and POI search, driving/walking/cycling directions, travel-time matrices and isochrones.",
+  "docs_url": "https://docs.mapbox.com/api/overview/",
+  "pricing_url": "https://www.mapbox.com/pricing",
+  "base_url": "https://api.mapbox.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "MAPBOX_ACCESS_TOKEN"
+        ],
+        "description": "A Mapbox access token (account.mapbox.com > Tokens; a default public pk. token works for these APIs), sent as the access_token query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Coordinates are longitude,latitude (in that order), and several points are joined with semicolons.",
+    "Geocoding results are temporary by default and may not be cached or stored; storing them needs permanent=true, billed separately and requiring a card or enterprise contract.",
+    "Rate limits per minute: geocoding 1000, isochrone 300, matrix 60 (30 with driving-traffic); 429 when exceeded.",
+    "Mapbox terms require route, isochrone and some search results to be shown on a Mapbox map when displayed."
+  ],
+  "sources": [
+    "https://docs.mapbox.com/api/overview/",
+    "https://docs.mapbox.com/api/search/geocoding/",
+    "https://docs.mapbox.com/api/search/search-box/",
+    "https://docs.mapbox.com/api/navigation/directions/",
+    "https://docs.mapbox.com/api/navigation/matrix/",
+    "https://docs.mapbox.com/api/navigation/isochrone/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "mapbox.geocode.forward",
+      "name": "Geocode an address or place",
+      "summary": "Coordinates and structured address for free text (addresses, places, postcodes).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/geocode/v6/forward",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text.",
+          "example": "1600 Pennsylvania Ave NW, Washington DC"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 5, max 10."
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated feature types, e.g. address,place,postcode,region,country."
+        },
+        "autocomplete": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Default true; false for exact matches only."
+        },
+        "permanent": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Default false. true allows storing results and is billed as permanent geocoding."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minLon,minLat,maxLon,maxLat; cannot cross the 180th meridian."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO 3166 alpha-2 codes."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tags, comma-separated."
+        },
+        "proximity": {
+          "in": "query",
+          "type": "string",
+          "description": "longitude,latitude or ip, to bias results toward a place."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://docs.mapbox.com/api/search/geocoding/",
+      "verified": {
+        "docs": "https://docs.mapbox.com/api/search/geocoding/"
+      }
+    },
+    {
+      "id": "mapbox.geocode.reverse",
+      "name": "Reverse geocode coordinates",
+      "summary": "Address and place names at a longitude/latitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/geocode/v6/reverse",
+      "params": {
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -73.989
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 40.733
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 1, max 5; above 1 needs exactly one types value."
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated feature types."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO 3166 alpha-2 codes."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tags, comma-separated."
+        },
+        "permanent": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Default false."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://docs.mapbox.com/api/search/geocoding/",
+      "verified": {
+        "docs": "https://docs.mapbox.com/api/search/geocoding/"
+      }
+    },
+    {
+      "id": "mapbox.search.forward",
+      "name": "Search places and POIs",
+      "summary": "Businesses, POIs, addresses and places matching text, with coordinates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/searchbox/v1/forward",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text, up to 256 characters.",
+          "example": "coffee near Union Square"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, up to 10."
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated result types, e.g. poi,address,place."
+        },
+        "poi_category": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated canonical category ids to restrict POIs."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minLon,minLat,maxLon,maxLat; cannot cross the 180th meridian."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO 3166 alpha-2 codes."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tags, comma-separated."
+        },
+        "proximity": {
+          "in": "query",
+          "type": "string",
+          "description": "longitude,latitude or ip, to bias results toward a place."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://docs.mapbox.com/api/search/search-box/",
+      "verified": {
+        "docs": "https://docs.mapbox.com/api/search/search-box/"
+      }
+    },
+    {
+      "id": "mapbox.search.category",
+      "name": "Find POIs in a category",
+      "summary": "Points of interest of one category near a point or in a box.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/searchbox/v1/category/{canonical_category_id}",
+      "params": {
+        "canonical_category_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A canonical category id from mapbox.search.categories.",
+          "example": "restaurant"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, up to 25."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minLon,minLat,maxLon,maxLat; cannot cross the 180th meridian."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO 3166 alpha-2 codes."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tags, comma-separated."
+        },
+        "proximity": {
+          "in": "query",
+          "type": "string",
+          "description": "longitude,latitude or ip, to bias results toward a place."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://docs.mapbox.com/api/search/search-box/",
+      "verified": {
+        "docs": "https://docs.mapbox.com/api/search/search-box/"
+      }
+    },
+    {
+      "id": "mapbox.search.categories",
+      "name": "List POI categories",
+      "summary": "Canonical category ids and names usable with category search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/searchbox/v1/list/category",
+      "params": {
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Default English."
+        }
+      },
+      "job": "places.categories",
+      "docs_url": "https://docs.mapbox.com/api/search/search-box/",
+      "verified": {
+        "docs": "https://docs.mapbox.com/api/search/search-box/"
+      }
+    },
+    {
+      "id": "mapbox.directions.get",
+      "name": "Get directions",
+      "summary": "Routes between 2 to 25 points with distance (m), duration (s), geometry and optional turn-by-turn steps.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/directions/v5/mapbox/{profile}/{coordinates}",
+      "params": {
+        "profile": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Routing profile (the part after mapbox/).",
+          "enum": [
+            "driving-traffic",
+            "driving",
+            "walking",
+            "cycling"
+          ],
+          "example": "driving"
+        },
+        "coordinates": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "2 to 25 longitude,latitude pairs joined by semicolons, visited in order.",
+          "example": "-122.42,37.78;-122.45,37.91"
+        },
+        "alternatives": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Up to two alternative routes; default false."
+        },
+        "geometries": {
+          "in": "query",
+          "type": "string",
+          "description": "Default polyline.",
+          "enum": [
+            "geojson",
+            "polyline",
+            "polyline6"
+          ]
+        },
+        "overview": {
+          "in": "query",
+          "type": "string",
+          "description": "Route geometry detail; default simplified.",
+          "enum": [
+            "full",
+            "simplified",
+            "false"
+          ]
+        },
+        "steps": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Turn-by-turn steps; default false."
+        },
+        "annotations": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: distance, duration, speed, congestion, maxspeed, ...; needs overview=full."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Instruction language, default en; needs steps=true."
+        },
+        "exclude": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated road types to avoid: motorway, toll, ferry, unpaved, tunnel, country_border, state_border."
+        }
+      },
+      "job": "routes.directions",
+      "docs_url": "https://docs.mapbox.com/api/navigation/directions/",
+      "verified": {
+        "docs": "https://docs.mapbox.com/api/navigation/directions/"
+      }
+    },
+    {
+      "id": "mapbox.matrix.get",
+      "name": "Get a travel-time matrix",
+      "summary": "Durations (s) and/or distances (m) between every source and destination.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/directions-matrix/v1/mapbox/{profile}/{coordinates}",
+      "params": {
+        "profile": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Routing profile (the part after mapbox/).",
+          "enum": [
+            "driving-traffic",
+            "driving",
+            "walking",
+            "cycling"
+          ],
+          "example": "driving"
+        },
+        "coordinates": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "2 to 25 longitude,latitude pairs joined by semicolons (10 for driving-traffic).",
+          "example": "-122.42,37.78;-122.45,37.91"
+        },
+        "annotations": {
+          "in": "query",
+          "type": "string",
+          "description": "duration (default), distance, or duration,distance."
+        },
+        "sources": {
+          "in": "query",
+          "type": "string",
+          "description": "0-based coordinate indices joined by semicolons, or all (default)."
+        },
+        "destinations": {
+          "in": "query",
+          "type": "string",
+          "description": "0-based coordinate indices joined by semicolons, or all (default)."
+        },
+        "approaches": {
+          "in": "query",
+          "type": "string",
+          "description": "unrestricted or curb per coordinate, semicolon-separated."
+        },
+        "fallback_speed": {
+          "in": "query",
+          "type": "number",
+          "description": "km/h; fills unroutable pairs with a straight-line estimate."
+        }
+      },
+      "job": "routes.matrix",
+      "docs_url": "https://docs.mapbox.com/api/navigation/matrix/",
+      "verified": {
+        "docs": "https://docs.mapbox.com/api/navigation/matrix/"
+      }
+    },
+    {
+      "id": "mapbox.isochrone.get",
+      "name": "Get reachable areas (isochrones)",
+      "summary": "Areas reachable from a point within given minutes or meters, as GeoJSON.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/isochrone/v1/mapbox/{profile}/{coordinates}",
+      "params": {
+        "profile": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Routing profile (the part after mapbox/).",
+          "enum": [
+            "driving-traffic",
+            "driving",
+            "walking",
+            "cycling"
+          ],
+          "example": "driving"
+        },
+        "coordinates": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "One longitude,latitude pair.",
+          "example": "-118.22258,33.99038"
+        },
+        "contours_minutes": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 4 increasing integers, max 60. Use this or contours_meters.",
+          "example": "5,10,15"
+        },
+        "contours_meters": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 4 increasing integers, max 100000."
+        },
+        "polygons": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for polygons, default false (lines)."
+        },
+        "denoise": {
+          "in": "query",
+          "type": "number",
+          "description": "0.0 to 1.0, default 1.0."
+        },
+        "generalize": {
+          "in": "query",
+          "type": "number",
+          "description": "Simplification tolerance in meters."
+        },
+        "exclude": {
+          "in": "query",
+          "type": "string",
+          "description": "Driving only: motorway, toll, ferry, unpaved, cash_only_tolls."
+        },
+        "depart_at": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 departure time, for traffic."
+        }
+      },
+      "job": "routes.isochrone",
+      "docs_url": "https://docs.mapbox.com/api/navigation/isochrone/",
+      "verified": {
+        "docs": "https://docs.mapbox.com/api/navigation/isochrone/"
+      }
+    }
+  ]
+}
