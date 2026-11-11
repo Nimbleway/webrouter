@@ -68,6 +68,16 @@ def test_a_lost_job_is_not_reported_as_an_unknown_source(monkeypatch: pytest.Mon
     assert not isinstance(caught.value, LiveDataSourceNotFoundError)
 
 
+def test_an_async_only_scraper_with_no_request_id_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With no job id there is nothing to poll: the run raises at once and sends no GET."""
+    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
+    monkeypatch.setattr(OxylabsLiveDataProvider, "wait_seconds", 0.2)
+    provider, api = _provider(lambda r: httpx.Response(202, json={"status": "pending"}))
+    with pytest.raises(ProviderError, match="faulted"):
+        provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
+    assert [r for r in _sent(api, "GET") if r.url.path != "/v1/scrapers"] == []
+
+
 def test_a_failed_poll_names_the_job_the_caller_can_read_later(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
     provider, _ = _provider(lambda r: httpx.Response(202, json=PENDING) if r.method == "POST" else httpx.Response(500))
