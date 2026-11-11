@@ -136,7 +136,9 @@ and you do not need it. `langchain` installs `langchain-core` for the
 install. `browser` is named after what it lets a browser
 handle do — drive the page — rather than after `open_browser`, which needs no
 Playwright: a vendor session opens over httpx, which `[all]` installs, and
-`local` needs only the standard library and a Chrome or Chromium.
+`local` needs only the standard library and a Chrome or Chromium. `remote`
+installs httpx for the built-in [`remote` router](#a-router-service-routerremote),
+for an install that carries no method extra; `[all]` includes it.
 
 ## Quickstart
 
@@ -1968,6 +1970,8 @@ response = wr.run(plan, budget=Budget(max_cost_usd=0.05))
 A router takes a `RouteRequest` and returns a `RouteDecision`: a function,
 method, `functools.partial` or coroutine function, or an object with
 `route(req)` or `aroute(req)`; an object that is only callable is refused.
+A string names a registered router, such as the built-in `remote`: see
+[A router service](#a-router-service-routerremote).
 A router is shown a `RouteRequest` and nothing else: the `prompt`, the `urls`
 found in it, the `budget`, the method you pinned (`pinned_tool`), its own
 time to answer (`deadline_s`) and the `candidates`, each a `Candidate` named
@@ -2006,6 +2010,27 @@ changing the method. `route_tools=` limits that to some methods;
 ```python
 wr = WebRouter(router=route, route_tools=("search", "research"))
 ```
+
+A router may declare its own default, as it declares `timeout_s`: a
+`route_tools` attribute on the function or object, read when the caller
+passes none. The caller's `route_tools` always wins, and a router that
+declares none is asked on all five. A slow router can leave out the tools it
+would slow down more than its order is worth:
+
+```python
+class SlowRouter:
+    timeout_s = 3.0
+    route_tools = ("research", "browse")  # minutes-long jobs; a search runs in auto's order
+
+    async def aroute(self, req): ...
+```
+
+Which tools a router of each kind should declare is measured by
+[`router_latency.py`](benchmarks/providers/README.md#router-latency-which-tools-a-router-should-order),
+whose last run and the examples' declarations are there: a tool asks the
+router only when the router's p50 is below a quarter of the tool's p50, the
+p50 of the first backend in its `auto` chain. Latency moves with the model,
+the network and the hour: rerun the script for your own router.
 
 ### `plan()` and `run()`
 
@@ -2119,7 +2144,11 @@ web_router import DecisionRecord`) on every routed or budgeted call, and
   candidate moved past and why;
 - `params`, `params_source` and `params_reason`, the options set and who set
   them;
-- `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`.
+- `estimated_cost_usd`, `cost_is_estimate`, `unmeasured`, `prompt_sha256`;
+- `members`, with a composite router such as `fallback`: each router it
+  asked, as `name`, `outcome` (`ok`, `router_timeout`, `router_error`,
+  `router_invalid` or `router_empty`), `ms`, and `counted`, whether its
+  decision is the one used.
 
 It holds no prompt text and no key values. `prompt_sha256` is an unsalted
 SHA-256 of what the router reads: the query or task, for an extract its whole
@@ -2137,15 +2166,294 @@ from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
 
 The library ships one keyless router, `web_router.routing.rules.rules`: a
-prompt with a URL is extracted, anything else searched. Four example routers,
-tested offline: [rules](examples/router_rules.py), a
-[scikit-learn classifier](examples/router_classifier.py), an
-[OpenAI-compatible model](examples/router_llm.py) and
-[Jev](examples/router_jev.py), TypeSafe's model. The last two are model
-routers: each sends the prompt to that model's server, which bills for it. The
+prompt with a URL is extracted, anything else searched, and two model routers,
+`router="llm"` and `router="systemone"`: see
+[Decision APIs](#decision-apis-deciderrouter-routerllm-and-routersystemone).
+Six example routers, tested offline: [rules](examples/router_rules.py), a
+[scikit-learn classifier](examples/router_classifier.py), a
+[decider of your own](examples/router_decider.py), the built-in
+[`llm` router on a preset](examples/router_llm.py),
+[Jev](examples/router_jev.py), TypeSafe's model, written out by hand, and
+[OpenAI's Decisions API](examples/router_openai_decisions.py) as a decider.
+The last three are model routers: each sends the prompt to that model's
+server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
+
+### A router service: `router="remote"`
+
+A router can run as a service of its own, in any language, and be shared by
+every process that routes. The built-in `remote` router asks one over HTTP:
+
+```python
+wr = WebRouter(
+    router="remote",
+    router_config={
+        "url": "https://router.example.com/route",
+        "timeout_s": 1.0,  # the default; cut to the call's budget and deadline
+        "route_tools": None,  # its own route_tools: the tools it orders when you pass none; all five if None
+    },
+)  # api_key=, else WEB_ROUTER_REMOTE_ROUTER_API_KEY
+```
+
+Each routed call posts its `RouteRequest` as JSON and reads a `RouteDecision`
+back, both carrying `"schema": 1`, the wire format's major version, with the
+contract types' own field names. The JSON Schema files ship in the package,
+generated from those types: `web_router/data/schemas/router/v1/request.json`
+and `response.json`; `web_router.routing.wire` reads and writes both sides. A
+service ignores request fields it does not know, and the router ignores
+decision fields it does not know. A request, and a decision (every decision
+field may be left out or `null`):
+
+```json
+{
+  "schema": 1,
+  "prompt": "read https://example.com/pricing",
+  "candidates": [
+    {
+      "tool": "extract",
+      "provider": "jina",
+      "est_cost_usd": 0.0,
+      "est_latency_s": 2.1,
+      "id": "extract:jina"
+    },
+    {
+      "tool": "search",
+      "provider": "tavily",
+      "est_cost_usd": 0.008,
+      "est_latency_s": 1.2,
+      "id": "search:tavily"
+    }
+  ],
+  "deadline_s": 1.0,
+  "urls": [
+    "https://example.com/pricing"
+  ],
+  "budget": {
+    "max_cost_usd": 0.05,
+    "time_limit_s": 30.0,
+    "strict": false
+  },
+  "pinned_tool": null
+}
+```
+
+```json
+{
+  "schema": 1,
+  "tools": [
+    "extract"
+  ],
+  "providers": {
+    "extract": [
+      "jina"
+    ]
+  },
+  "exclude": {
+    "search:tavily": "the prompt names a URL"
+  },
+  "params": null,
+  "confidence": 0.9,
+  "reason": "the prompt names a URL"
+}
+```
+
+- **What the service is sent.** What any router is shown: the prompt and the
+  URLs in it, whole, query strings included, the budget and the candidates.
+  Candidate ids (`search:tavily`) name the backends you have configured; that
+  is by design. No key value is ever sent: the one credential is the service's
+  own bearer key, `api_key` in `router_config` or
+  `WEB_ROUTER_REMOTE_ROUTER_API_KEY` (read once, when the router is built,
+  and refused unless it is visible ASCII), never logged.
+- **Transport.** httpx (`pip install "webrouter[remote]"`, or any method
+  extra), imported only when the router is built. The router is async only,
+  so a call past its time is cancelled rather than left running, from sync and
+  async code alike. Its one connection pool belongs to the event loop that
+  first used it -- for `WebRouter`, web-router's private loop, where all its
+  calls run -- so warm calls reuse their connection; a call from another loop
+  gets a client of its own, closed when the call ends. Closing the router
+  closes the pool on its own loop, waiting at most 2 s without blocking an
+  async caller's loop, and leaves the router closed: a later call is a
+  `router_error` and opens nothing. A pool that will not close, or whose loop
+  ended first, is dropped with a `ResourceWarning`: `aclose()` an
+  `AsyncWebRouter` before its loop ends. One request, never retried; no
+  redirect is followed, and no proxy or other setting is read from the
+  environment. The URL must be `https`, or `http` to `localhost`, 127.0.0.0/8
+  or `::1` (not `*.localhost`, not `0.0.0.0`); a URL with credentials, a query
+  or a fragment, or one a browser could read two ways, is refused when the
+  router is built, and the error does not echo it.
+- **Failures.** A timeout is `router_timeout`; a transport error, a status
+  other than 200 or a decision naming a `schema` other than 1 is
+  `router_error`; an answer that is not an `application/json` decision of at
+  most 64 KiB, with at most 64 entries in any one list or mapping of the
+  decision or of a method's `params` (one level down) -- a missing `schema`
+  included -- is `router_invalid`. Either
+  way the static order runs, the record's `reason` says which, and
+  `fail_on_router_error=True` raises `RouterError` instead. The service's
+  `reason` and `exclude` reasons are cut to 300 characters, a name it sets
+  (candidate id, provider, option) longer than 128 characters is dropped, and
+  an echo of its own bearer key is redacted.
+- **The URLs it may set.** The URLs a service sets for extract or browse are
+  held to `url_policy="public_only"` even when you set no `url_policy`: a
+  service cannot name a loopback, private or metadata address by hostname. A
+  refused URL is set aside in the record's `ignored`. Your own `url_policy`
+  applies when you set one. `public_only` checks the hostname as written and
+  does not resolve it, so a service could name a host whose DNS points at a
+  private address; that matters only for a backend that fetches from your
+  machine, such as a provider you register or host yourself. Every built-in
+  backend hands the URL to its vendor, which fetches it from its own network.
+- **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
+  never the URL's path, and never the key.
+
+[`examples/router_remote_server.py`](examples/router_remote_server.py) is a
+reference service in the standard library: the wire format around the
+built-in rules router, to run beside your code or port. It binds 127.0.0.1
+(any other host needs the key), answers only a `Host` naming it, checks the bearer key in constant time and
+caps a request at 1 MB.
+
+`remote` is a registered name. `register_router(name, factory)` adds your own
+(`unregister_router(name)` removes it, bringing back a built-in of that name;
+`available_routers()` lists every name),
+and `WebRouter(router=name, router_config={...})` builds one by calling
+`factory(**router_config)`; a key the factory does not take, or one it needs
+and is not given, raises `ConfigurationError` naming the key, never its
+value. A router that `WebRouter` builds by name is its to
+close: `close()` calls the router's `close()` (else its `aclose()`), and
+`aclose()` its `aclose()` (else `close()`). A router passed in is yours to close, as a provider is. A
+router names itself in the record with a `router_name` attribute; without
+one, its qualified name is used, and with a `min_url_policy` attribute
+(`"public_only"`) holds the URLs it sets to that policy when you set none.
+
+### Decision APIs: `DeciderRouter`, `router="llm"` and `router="systemone"`
+
+A classifier, a model or a decision API answers one question: which of these
+options fits this prompt. A *decider* answers just that, and `DeciderRouter`
+does the rest. It asks the decider a `DeciderQuestion` -- the `prompt`, the
+`instructions`, and `options`, each candidate id with its method, backend,
+estimated cost and p90 latency (extract only when the prompt names a URL) --
+and reads back a `DeciderReply`: `ranked`, option ids best first, with
+optional `scores` and `confidence`, each from 0 to 1. Options it leaves out
+keep the static order. A reply naming an id not offered, an id twice, or a
+number that is not a finite 0..1 is set aside whole (`router_invalid`). The
+ranking becomes `tools` and `providers`; a `DeciderRouter` never sets options,
+exclusions or URLs, and its reason holds the decider's `name`, the first id
+and its score when the decider gives one, never the decider's own words. A
+decider has `decide(question)` or `async adecide(question)`, and may declare
+`name`, `timeout_s` and `route_tools`, which the router declares in turn:
+
+```python
+from web_router import DeciderQuestion, DeciderReply, DeciderRouter, WebRouter, register_router
+
+
+class SearchFirst:
+    name, timeout_s = "search-first", 0.05
+
+    def decide(self, question: DeciderQuestion) -> DeciderReply:
+        return DeciderReply(ranked=[cid for cid in question.options if cid.startswith("search:")])
+
+
+register_router("search-first", lambda **config: DeciderRouter(SearchFirst(**config)))
+wr = WebRouter(router="search-first")
+```
+
+Two deciders are built in, each a registered name. Nothing is on by default:
+each sends the prompt off your machine only when you name it. Both post with
+httpx, so install the `remote` extra (`pip install "webrouter[remote]"`, or
+`all`) to use them.
+
+- **`router="llm"`**: a chat model on any OpenAI-compatible chat-completions
+  API, posted with httpx (no SDK, so no `OPENAI_BASE_URL` or other variable is
+  read). The model is asked for a ranking, a score per ranked id (as a list of
+  `{"id", "p"}`, which a strict schema can hold) and a confidence. `model` is required: the router names no default model, so pass the
+  model's name as its server spells it. `router_config` also takes either a
+  `preset` or a `base_url`, and `api_key_env`, `api_key`, `timeout_s` (3 s) and `route_tools`
+  (research and browse unless set). Presets: `openai` and `anthropic` (a strict
+  JSON schema whose enum is the offered ids), `openrouter` (the same, where the
+  model supports it), `deepseek` and `groq` (JSON mode). A `base_url` of your
+  own asks for JSON in the prompt only, and needs `api_key_env` unless it is
+  on this machine. `response_format` (`json_schema`, `json_object` or
+  `prompt`) overrides either choice. Either way the reply is checked as above.
+
+  ```python
+  WebRouter(router="llm", router_config={"preset": "openai", "model": "<model>"})
+  ```
+
+- **`router="systemone"`**: a System One decision API, asked one `choice`
+  question per call; its probability per option is the score, and ranks them.
+  Preset: `typesafe` (TypeSafe's Jev, model `jev-1.14.0`,
+  `TYPESAFE_API_KEY`), pinned so a new
+  release changes nothing until you pass `model`; another server takes `base_url`, `path`, `model` and `api_key_env`. `timeout_s` is
+  1 s, and `route_tools` every tool but search, unless set.
+
+  ```python
+  WebRouter(router="systemone", router_config={"preset": "typesafe"})
+  ```
+
+Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
+`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), read once
+when the router is built, and is sent only to that vendor's host: naming one
+for another `base_url` raises `ConfigurationError`, as does a key that is
+missing. Each call sends the server the prompt -- for an extract, its URLs
+whole, query strings included -- the budget, and the candidate ids, which name
+your configured backends, with their estimated cost and p90 latency; never a
+provider key. The transport is the `remote` router's: `https` only (plain
+`http` only to this machine), no credentials, query or fragment in the URL,
+one request, no retries, no redirects, no proxy read from the environment, and
+answers of `application/json` under 256 KiB. A failure leaves the static
+order, and the record says only `router_timeout`, `router_error` or
+`router_invalid`; with `fail_on_router_error=True`, the `RouterError` it
+raises carries the error class or HTTP status and the scheme and host on its
+`__cause__`, never the URL's path or the key. The record names each
+`llm(<host>)` or `systemone(<host>)`: the host, not the model. Both need
+httpx, which the `remote` extra installs. Each call bills on that server: the
+router's own call is billed by its vendor and is not counted in a `Budget`'s
+cost or the record's `estimated_cost_usd`.
+
+### Chaining routers: `router="fallback"`
+
+The built-in `fallback` router asks a list of routers in order, until one
+decides something:
+
+```python
+WebRouter(
+    router="fallback",
+    router_config={
+        "routers": [
+            {"name": "remote", "url": "https://router.example.com/route"},  # a registered name and its config
+            my_classifier,  # or any router function or object
+        ]
+    },
+)
+```
+
+A member is a registered name, a mapping of a `"name"` and that router's
+config, or a router function or object, sync or async. Each keeps its own
+`timeout_s` (50 ms when it declares none) and is given the smaller of that and
+the time left. A member that times out, raises, answers something other than a
+decision, or answers a decision that decides nothing is passed over, and the
+next is asked. When none decides anything, the call runs on the static order,
+recorded as `router_empty`, or `router_timeout` when the time ran out before
+one did (the members asked are recorded either way); with
+`fail_on_router_error=True` it raises `RouterError` with that code instead. It
+stops asking 20 ms before its deadline, so its answer is always read in time.
+Its own limit is the sum of its members' plus those 20 ms, unless
+`router_config["timeout_s"]` sets it to more than those 20 ms, and a member that declares `route_tools`
+is asked only on those tools.
+
+**It sends the prompt to every member it asks**, a member that times out after
+receiving it included: put a member you would rather not send prompts to
+last. The record names it `fallback(<member>, ...)` and lists each member
+asked in `members`. A member passed in is named by its `router_name`, else
+`custom`, never its import path; one built by name by its `router_name` (for
+`remote`, `remote(<scheme>://<host>)`), else its registered name. Members it
+built by name are closed when it is; those passed in stay yours.
+
+A router of your own that asks others can answer the same way: return a
+`CompositeDecision` (`from web_router import CompositeDecision`), a
+`RouteDecision` with `members`, a tuple of `DecisionMember`, which the record
+copies. The wire format does not carry it, so a router service cannot set it.
 
 ## Routing and extending
 
@@ -2457,6 +2765,7 @@ Keys are read from the environment, or passed explicitly through
 | `auto` | *none — keyless* | search, extract, open_browser |
 | OpenAI *(the default `evaluate()` judge, not a backend)* | `OPENAI_API_KEY` | evaluate |
 | Anthropic *(`AnthropicJudge` for `evaluate()`, not a backend)* | `ANTHROPIC_API_KEY` | evaluate |
+| Your router service *(`router="remote"`, not a backend)* | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` *(optional; `router_config["api_key"]` wins)* | routing |
 
 A key set once serves every method of a provider that has several. See
 [`.env.example`](.env.example). The library reads the environment only; the

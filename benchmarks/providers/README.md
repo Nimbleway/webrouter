@@ -562,6 +562,165 @@ fewer than 20 questions is listed as *too few questions*, not ranked: today
 `research:perplexity:medium` (19).
 A set that mixes methods other than these paths is refused by name.
 
+### Tool confusion and comparing routers
+
+Every set's report also has, held out, each router's **cost-weighted tool
+confusion matrix** and **where routers disagree**
+(`route_eval_matrix.py` and `route_eval_compare.py`, rendered by
+`route_eval_report_matrix.py`).
+
+- **The matrix** counts each held-out question by the tool the router's
+  choice ran (rows; `unserved` when nothing served it) against the best tool
+  (columns): the tool of the oracle's path, the one that got the question
+  right, cheapest then fastest, or *none right* when no path did. Each cell
+  reads *questions (right), overspend, time over*: what the router's choices
+  cost and took beyond the oracle's on those questions, as the replay charged
+  them. A cheaper or faster choice adds nothing there; it pays in accuracy,
+  which has its own column. A dear `research` moves a cell by dollars, a dear
+  `search` by cents, so the dear mistakes stand out. An extra with either side
+  unknown is left out of the sum and counted unknown, as cost is everywhere.
+- **Off the oracle, two counts.** A question's *right tools* are every tool
+  with a path that got it right; a choice is on target when its tool is one of
+  them. *Wrong tool, wrong answer* counts the questions some tool got right and
+  the router's tool did not: the accuracy lost to tool choice. *Right, not the
+  cheapest tool* counts the questions it got right on another tool than the
+  best: pure cost regret, charged against the cheapest right path. A wrong
+  answer from a right tool on another backend is neither; it is outside the
+  tool matrix. Above the matrices, one row per router gives both counts, the
+  cost regret, the overspend on every question and per question, the accuracy
+  lost to the oracle from every cause, and the time over per question. The
+  signed extras, which net a cheaper wrong choice against a dearer one, are in
+  `--json` only. On a one-method set every path is one tool, so the matrix is
+  one row: the router's overspend over the oracle.
+- **The oracle is an upper bound.** It is built from one frozen sample per
+  path, so a path that got a question right once by chance makes its tool a
+  right one, and the oracle's accuracy and the counts above lean optimistic.
+- **The comparison** sets each router beside `static` and beside every router
+  named with `--against` (scored too), each pair once, on the same held-out
+  questions: how often the served path differs (another backend of the same
+  tool counts) and how often the tool does, which of the two alone was right
+  there with the exact McNemar p-value of those two counts, each one's accuracy
+  with its Wilson 95% interval, and each one's mean cost over the questions
+  where both costs are known (the rest counted once, for the pair). On 30
+  held-out questions a gap of 15 points can still be noise; the p-value
+  and the intervals say so. Each pair's disagreements follow by tool pair.
+  `--against oracle` is refused: the matrix above already sets every router
+  against the oracle.
+- **Every question, too.** A router with no `fit` method learns nothing from
+  the training split -- `static`, `always:` and a file router without one,
+  such as the rules router -- so it is also scored on every question
+  (`every_question` in `--json`) and each pair of them compared there, where
+  the held-out split would only cost questions. A router with `fit` is scored
+  held out only. `--json` keeps every router's held-out choices (`choices`),
+  an unfit router's choices on every question, and each pair's disagreeing
+  questions.
+
+One command reproduces the numbers. It reads only the committed frozen rows, so
+it calls nothing and costs $0; `frozen.py join` (once) puts the question text
+back from the public sets, for a router that reads the prompt, such as the
+rules router in `examples/router_rules.py`:
+
+```bash
+uv run --all-extras python benchmarks/providers/frozen.py join
+uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60 \
+    --router path/to/your_router.py:route --against examples/router_rules.py:route \
+    --joined benchmarks/providers/results/frozen-joined
+```
+
+That scores your router, the rules router, `static` and `oracle`, and compares
+your router with the rules router and with the static order, and the rules
+router with the static order. Your router loads as any route-eval router does:
+`module:attr` or `path/file.py:attr`.
+
+## Router latency: which tools a router should order
+
+A router attached with `router=` is asked for the backend order of every call
+to a tool in `route_tools`, and each ask adds the router's time to the call.
+`router_latency.py` times routers and weighs each against each tool. It runs
+outside CI.
+
+```bash
+uv run --all-extras --with scikit-learn python benchmarks/providers/router_latency.py --router rules --router sklearn
+uv run --all-extras python benchmarks/providers/router_latency.py --router llm --router jev \
+    --llm-model <model> --llm-price <in>,<out> --jev-price <usd> --dry-run
+uv run --all-extras python benchmarks/providers/router_latency.py \
+    --router remote:http://127.0.0.1:8765/route --remote-rtt-ms 40
+```
+
+**The rule.** A tool asks the router for its backend order only when the
+router's p50 is below 25% of the tool's p50 (`--share`). **A tool's p50** is
+the p50 of the first backend in its default `auto` chain, with a key for every
+backend (`--chain here`: the keys this machine holds), from the price list's
+measured latency. Only search and answer are measured; for extract, research
+and browse the verdict is a judgement call, and the script never makes a
+number up. The latency belongs to the router, not the tool, so the result is a
+row per router: a router declares the tools it fits as its own `route_tools`
+(see the README's Smart routing), and a caller's `route_tools` always wins.
+
+**How it times.** A router is one of `rules` (the built-in rules router),
+`llm` (the built-in `router="llm"`, on the preset `LLM_ROUTER_PRESET` names,
+`openai` unless set), `sklearn` and `jev` (the examples in `examples/`), `remote:<url>` (a
+router service in the wire format, schema 1; `--remote-rtt-ms` adds the same
+service behind a simulated round trip, three of them on a new connection), or
+your own `module:attr`. Each is called through the library's own router call,
+so a sample is the `router_ms` a decision record holds. The prompts are
+route-eval's public questions, `tools-effort-60` and `simpleqa-300-v2`, put
+back by `frozen.py join`; each request is the one route-eval shows a router,
+one candidate per backend the set has rows for. Every router in one run is
+timed in the same session, interleaved in a seeded random order: a first
+call, reported apart, then `--warmup` calls dropped, then `-n` timed calls
+(200 by default). A call that reaches the router's deadline (its `timeout_s`,
+or `--deadline-s` when that is shorter; the added wall time always keeps
+`timeout_s`) is censored: it counts toward the timeout rate and ranks above
+every answer, never as a value; an error ranks the same way, so a router
+that mostly fails has no p50 to weigh. `--cold` calls each build the router
+anew, and `--e2e` stubbed searches through `auto`, routed and with
+`route_tools=()`, give the wall time routing adds, candidates and the thread
+hop included. `--dry-run` prints each router's calls, the variables it needs
+and an estimated cost, and calls nothing. Each run writes a JSON file and its
+table to `results/router-latency/`.
+
+**Results.** 2026-11-09 14:44 UTC, one async run (`--async`) from one host:
+an Apple M4 Pro (12 CPUs), macOS 26.6.2, Python 3.12.13, web-router 0.10.0,
+scikit-learn 1.9.1, openai 3.45.0, httpx 0.28.1. Each router was called 200
+times after a first call and 5 warm-up calls, interleaved in a seeded random
+order, on `tools-effort-60` and `simpleqa-300-v2`. The LLM router is
+`examples/router_llm.py` as it was then, on the openai SDK, on OpenAI's `gpt-4.1-mini`; Jev is
+`examples/router_jev.py` on `jev-1.14.0`; the sklearn router is the example's
+toy-trained pipeline; remote is the built-in `remote` router asking
+`examples/router_remote_server.py` on loopback, then the same behind a
+simulated 40 ms round trip. The run cost about $0.10.
+
+| Tool | First backend in `auto` | p50 s | p90 s |
+|---|---|--:|--:|
+| search | perplexity | 0.316 | 1.719 |
+| answer | perplexity | 1.874 | 2.128 |
+| extract, research, browse | nimble, nimble, browser-use | not measured | not measured |
+
+| Router | p50 ms | p90 ms | Timeouts | First call ms | Added wall time p50 ms | search | answer |
+|---|--:|--:|--:|--:|--:|---|---|
+| rules | 0.375 | 0.553 | 0% | 0.23 | 0.98 | consult (0.12%) | consult (0.02%) |
+| sklearn | 2.07 | 2.61 | 0% | 1.9 | 2.5 | consult (0.65%) | consult (0.11%) |
+| llm (`gpt-4.1-mini`) | 1223 | 1714 | 0% | 2084 | 1389 | skip (387%) | skip (65%) |
+| jev (`jev-1.14.0`) | 242 | 271 | 0.5% | 278 | 237 | skip (76%) | consult (13%) |
+| remote, loopback | 3.17 | 4.1 | 0% | 56 | 3.75 | consult (1.0%) | consult (0.17%) |
+| remote, 40 ms RTT (simulated) | 47 | 48 | 0% | 135 | 47 | consult (15%) | consult (2.5%) |
+
+The 25% share held: no router sits near it. The nearest are a 40 ms link on
+search (15%) and the LLM router on answer (65%), so any share from 16% to 64%
+gives these same verdicts.
+
+What the examples declare from it: search and answer as measured, extract,
+research and browse by judgement, since they take seconds to minutes. The
+rules and sklearn routers pass every measured tool and declare no
+`route_tools`. The LLM router declares `("research", "browse")` (it never picks
+extract with no URL in the prompt), and Jev `("answer", "extract", "research",
+"browse")`. A remote service declares its own through `router_config`; at the
+latencies above, loopback and a 40 ms link both fit search and answer. A
+`plan()` always asks the router. Router latency moves with the model, the hour
+and the network, so rerun it for yours. Experimental until 1.0, like the
+router contract.
+
 ## Keeping results
 
 Each run of either scan writes `rows.jsonl`, `summary.json` and `report.md` to

@@ -1,7 +1,6 @@
 """web-router: one interface over many web search, extraction, answer, research and browser APIs.
 
-Point the router at a provider and call it; swapping backends is a one-word
-change rather than a rewrite.
+Point the router at a provider and call it; swapping backends is a one-word change rather than a rewrite.
 
     >>> from web_router import WebRouter
     >>> router = WebRouter("nimble")
@@ -116,8 +115,20 @@ from web_router.registry_answer import (
     register_answer_provider,
     unregister_answer_provider,
 )
-from web_router.routing import Budget, Candidate, Plan, RouteDecision, RouteRequest, RouterLike, ToolName
+from web_router.routing import (
+    Budget,
+    Candidate,
+    CompositeDecision,
+    Plan,
+    RouteDecision,
+    RouteRequest,
+    RouterLike,
+    ToolName,
+)
+from web_router.routing.decider import Decider, DeciderQuestion, DeciderReply
+from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.pool_status import BudgetStatus
+from web_router.routing.registry import available_routers, register_router, unregister_router
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -154,7 +165,7 @@ from web_router.types import (
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
-from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
+from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionMember, DecisionRecord
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
@@ -204,10 +215,16 @@ __all__ = [
     "BudgetStatus",
     "Candidate",
     "Citation",
+    "CompositeDecision",
     "ConfigurationError",
     "DeadlineExceededError",
+    "Decider",
+    "DeciderQuestion",
+    "DeciderReply",
+    "DeciderRouter",
     "DecisionAttempt",
     "DecisionHop",
+    "DecisionMember",
     "DecisionRecord",
     "ElementNotFoundError",
     "ExtractBenchmarkReport",
@@ -275,6 +292,7 @@ __all__ = [
     "available_live_data_providers",
     "available_providers",
     "available_research_providers",
+    "available_routers",
     "configured_answer_providers",
     "configured_browse_providers",
     "configured_browser_providers",
@@ -289,6 +307,7 @@ __all__ = [
     "register_live_data_provider",
     "register_provider",
     "register_research_provider",
+    "register_router",
     "unregister_answer_provider",
     "unregister_browse_provider",
     "unregister_browser_provider",
@@ -296,6 +315,7 @@ __all__ = [
     "unregister_live_data_provider",
     "unregister_provider",
     "unregister_research_provider",
+    "unregister_router",
 ]
 
 
