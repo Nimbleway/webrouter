@@ -1,0 +1,286 @@
+{
+  "vendor": "hlrlookup",
+  "name": "HLR Lookup",
+  "category": "other",
+  "summary": "Live HLR and mobile number portability lookups: whether a phone number is live, its type, and its original and current network.",
+  "docs_url": "https://www.hlrlookup.com/knowledge",
+  "pricing_url": "https://www.hlrlookup.com/pricing",
+  "base_url": "https://api.hlrlookup.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HLRLOOKUP_API_KEY"
+        ],
+        "description": "your hlrlookup.com API key (account > API settings)"
+      },
+      "api_secret": {
+        "env": [
+          "HLRLOOKUP_API_SECRET"
+        ],
+        "description": "the API secret paired with that key"
+      }
+    },
+    "inject": [
+      {
+        "in": "body",
+        "name": "api_key",
+        "value": "{api_key}"
+      },
+      {
+        "in": "body",
+        "name": "api_secret",
+        "value": "{api_secret}"
+      }
+    ]
+  },
+  "notes": [
+    "hlrlookup.com, not the different provider hlr-lookups.com.",
+    "Every call is a POST with a JSON body; the credentials travel in that body (this entry adds them).",
+    "Send one number as telephone_number, or up to 80 in requests; more than 80 is a BAD_REQUEST.",
+    "429 Too many requests means the API is busy; back off and retry.",
+    "Non-200 responses and per-result errors such as INSUFFICIENT_CREDIT, BAD_FORMAT and NO_COVERAGE are not charged."
+  ],
+  "sources": [
+    "https://www.hlrlookup.com/hlr-api-v2.openapi.json",
+    "https://www.hlrlookup.com/developers",
+    "https://www.hlrlookup.com/knowledge",
+    "https://www.hlrlookup.com/knowledge/charging"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "hlrlookup.hlr.lookup",
+      "name": "Live HLR lookup of a phone number",
+      "summary": "Number type, live status (LIVE, DEAD, ABSENT_SUBSCRIBER...), original and current network, porting, for one number or up to 80.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/apiv2/hlr",
+      "params": {
+        "telephone_number": {
+          "in": "body",
+          "description": "One number: international E.164 digits without '+', or national format with input_format set. Use this or requests.",
+          "example": "447790606023"
+        },
+        "requests": {
+          "in": "body",
+          "type": "array",
+          "description": "Batch of up to 80 items, each {telephone_number, and any of the options below}. Use this or telephone_number.",
+          "example": [
+            {
+              "telephone_number": "447790606023"
+            },
+            {
+              "telephone_number": "16175551212",
+              "usa_status": "YES"
+            }
+          ]
+        },
+        "input_format": {
+          "in": "body",
+          "description": "'' (default) for international input, or the ISO3 country code when the number is national.",
+          "example": "GBR"
+        },
+        "output_format": {
+          "in": "body",
+          "description": "Format of formatted_telephone_number: '', E164, PLUS_E164, NATIONAL, or an ISO3 country code.",
+          "example": "PLUS_E164"
+        },
+        "cache_days_global": {
+          "in": "body",
+          "type": "integer",
+          "description": "Accept a shared cached result up to this many days old, 0 to 30."
+        },
+        "cache_days_private": {
+          "in": "body",
+          "type": "integer",
+          "description": "Accept an account-private cached result up to this many days old, 0 to 30."
+        },
+        "get_ported_date": {
+          "in": "body",
+          "description": "Return ported_date when available; default NO.",
+          "enum": [
+            "YES",
+            "NO"
+          ]
+        },
+        "get_landline_status": {
+          "in": "body",
+          "description": "Return landline_status when available; default NO.",
+          "enum": [
+            "YES",
+            "NO"
+          ]
+        },
+        "usa_status": {
+          "in": "body",
+          "description": "For US numbers, return live status instead of NOT_AVAILABLE_NETWORK_ONLY; costs an extra credit per lookup.",
+          "enum": [
+            "YES",
+            "NO"
+          ]
+        },
+        "get_imsi_hash": {
+          "in": "body",
+          "description": "Return an IMSI hash under current_network_details when available.",
+          "enum": [
+            "YES",
+            "NO"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST that spends credits (credits_spent per result). Cached network data (cache_days_*) can lower the charge; ported dates, usa_status and landline status add to it.",
+        "The response is always {results: [...]}; each item has error 'NONE' or its own error, e.g. TOO_MANY_REQUESTS for one throttled item in a batch.",
+        "Whether a new result is stored in hlrlookup's cache follows the account's own cache setting; the save_to_cache option is left out because it can write to the cache shared by every hlrlookup user."
+      ],
+      "job": "phone.verify",
+      "docs_url": "https://www.hlrlookup.com/hlr-api-v2.openapi.json",
+      "verified": {
+        "docs": "https://www.hlrlookup.com/hlr-api-v2.openapi.json"
+      }
+    },
+    {
+      "id": "hlrlookup.mnp.lookup",
+      "name": "Number portability lookup",
+      "summary": "Original and current network and whether the number is ported, without the live HLR status.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/apiv2/mnp",
+      "params": {
+        "telephone_number": {
+          "in": "body",
+          "description": "One number: international E.164 digits without '+', or national format with input_format set. Use this or requests.",
+          "example": "447790606023"
+        },
+        "requests": {
+          "in": "body",
+          "type": "array",
+          "description": "Batch of up to 80 items, each {telephone_number, and any of the options below}. Use this or telephone_number.",
+          "example": [
+            {
+              "telephone_number": "447790606023"
+            },
+            {
+              "telephone_number": "16175551212",
+              "usa_status": "YES"
+            }
+          ]
+        },
+        "input_format": {
+          "in": "body",
+          "description": "'' (default) for international input, or the ISO3 country code when the number is national.",
+          "example": "GBR"
+        },
+        "output_format": {
+          "in": "body",
+          "description": "Format of formatted_telephone_number: '', E164, PLUS_E164, NATIONAL, or an ISO3 country code.",
+          "example": "PLUS_E164"
+        },
+        "cache_days_global": {
+          "in": "body",
+          "type": "integer",
+          "description": "Accept a shared cached result up to this many days old, 0 to 30."
+        },
+        "cache_days_private": {
+          "in": "body",
+          "type": "integer",
+          "description": "Accept an account-private cached result up to this many days old, 0 to 30."
+        },
+        "get_ported_date": {
+          "in": "body",
+          "description": "Return ported_date when available; default NO.",
+          "enum": [
+            "YES",
+            "NO"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST that spends credits: half the price of an HLR lookup; a ported date is charged on top. For +1 (NANP) numbers telephone_number_type is left out of results.",
+        "usa_status and landline status do not work on this endpoint.",
+        "Whether a new result is stored in hlrlookup's cache follows the account's own cache setting; the save_to_cache option is left out because it can write to the cache shared by every hlrlookup user."
+      ],
+      "job": "phone.carrier",
+      "docs_url": "https://www.hlrlookup.com/hlr-api-v2.openapi.json",
+      "verified": {
+        "docs": "https://www.hlrlookup.com/hlr-api-v2.openapi.json"
+      }
+    },
+    {
+      "id": "hlrlookup.validate",
+      "name": "Validate and format a number",
+      "summary": "Number type, issuing network and formatted number from numbering plans only; no network query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/apiv2/validate",
+      "params": {
+        "telephone_number": {
+          "in": "body",
+          "description": "One number: international E.164 digits without '+', or national format with input_format set. Use this or requests.",
+          "example": "447790606023"
+        },
+        "requests": {
+          "in": "body",
+          "type": "array",
+          "description": "Batch of up to 80 items, each {telephone_number, and any of the options below}. Use this or telephone_number.",
+          "example": [
+            {
+              "telephone_number": "447790606023"
+            },
+            {
+              "telephone_number": "16175551212",
+              "usa_status": "YES"
+            }
+          ]
+        },
+        "input_format": {
+          "in": "body",
+          "description": "'' (default) for international input, or the ISO3 country code when the number is national.",
+          "example": "GBR"
+        },
+        "output_format": {
+          "in": "body",
+          "description": "Format of formatted_telephone_number: '', E164, PLUS_E164, NATIONAL, or an ISO3 country code.",
+          "example": "PLUS_E164"
+        },
+        "cache_days_global": {
+          "in": "body",
+          "type": "integer",
+          "description": "Accept a shared cached result up to this many days old, 0 to 30."
+        },
+        "cache_days_private": {
+          "in": "body",
+          "type": "integer",
+          "description": "Accept an account-private cached result up to this many days old, 0 to 30."
+        }
+      },
+      "notes": [
+        "A read over POST. Returns no live_status, current network or porting.",
+        "Whether a new result is stored in hlrlookup's cache follows the account's own cache setting; the save_to_cache option is left out because it can write to the cache shared by every hlrlookup user."
+      ],
+      "job": "phone.validate",
+      "docs_url": "https://www.hlrlookup.com/hlr-api-v2.openapi.json",
+      "verified": {
+        "docs": "https://www.hlrlookup.com/hlr-api-v2.openapi.json"
+      }
+    },
+    {
+      "id": "hlrlookup.balance.get",
+      "name": "Get credit balance",
+      "summary": "The account's remaining credits.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/apiv2/balance",
+      "params": {},
+      "notes": [
+        "A read over POST; the body carries only the credentials."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://www.hlrlookup.com/hlr-api-v2.openapi.json",
+      "verified": {
+        "docs": "https://www.hlrlookup.com/hlr-api-v2.openapi.json"
+      }
+    }
+  ]
+}

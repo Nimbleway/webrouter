@@ -1,0 +1,318 @@
+{
+  "vendor": "bcpmdata",
+  "name": "BCPM Data",
+  "category": "other",
+  "summary": "Chinese pharmaceutical data (BCPMData Open Platform): global drug R&D pipelines, China and US clinical trials, and China drug approval numbers with insurance and essential-drug status.",
+  "docs_url": "https://open.bcpmdata.com/guide/1.html",
+  "base_url": "https://srv-openapi.bcpmdata.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BCPMDATA_API_KEY"
+        ],
+        "description": "A BCPMData Open Platform API key (open.bcpmdata.com, after registering). Sent as the raw value of the Authorization header, with no Bearer prefix."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every data call is a POST with a JSON body, including lookups.",
+    "HTTP status is always 200: check the body's code. 10200 success, 10400 bad parameters, 10403 bad or expired key, 10429 too fast, 10500 service error. Results are in data (list and total for list calls).",
+    "Default limits per data interface: 1 call per second and 100 calls per calendar day, changeable by contract. Pricing is by quote.",
+    "Detail calls take an id (keyid, registration_number or approval_number) found with the matching list call first.",
+    "Field values and many filter values are in Chinese (e.g. highest_status_cn '批准上市' for approved)."
+  ],
+  "sources": [
+    "https://open.bcpmdata.com/guide/1.html",
+    "https://open.bcpmdata.com/api/9.html",
+    "https://open.bcpmdata.com/api/10.html",
+    "https://open.bcpmdata.com/api/12.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "bcpmdata.drug_dev.list",
+      "name": "Search global drug R&D",
+      "summary": "Drugs in development worldwide by name, target, company, indication or highest stage reached.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/global_drug_dev/list",
+      "params": {
+        "search": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters: drug_name, target (e.g. GNRHR), company, indication, highest_status_cn (global stage, e.g. 批准上市 approved, Ⅲ期临床 phase III, 临床前 preclinical), highest_status_china_cn (stage in China)."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Page number, from 1; 10 records per page by default."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.drugs.search",
+      "docs_url": "https://open.bcpmdata.com/api/9.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/9.html"
+      }
+    },
+    {
+      "id": "bcpmdata.drug_dev.baseinfo",
+      "name": "Get a drug's R&D profile",
+      "summary": "Base record of one drug in the global R&D database.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/global_drug_dev/baseinfo",
+      "params": {
+        "keyid": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Record id from drug_dev.list."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.drugs.get",
+      "docs_url": "https://open.bcpmdata.com/api/9.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/9.html"
+      }
+    },
+    {
+      "id": "bcpmdata.drug_dev.indication_status",
+      "name": "Get a drug's status by indication",
+      "summary": "Current R&D stage of a drug for each indication.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/global_drug_dev/indication/current/status",
+      "params": {
+        "keyid": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Record id from drug_dev.list."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Page number."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.drugs.get",
+      "docs_url": "https://open.bcpmdata.com/api/9.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/9.html"
+      }
+    },
+    {
+      "id": "bcpmdata.drug_dev.sales",
+      "name": "Get a drug's global sales",
+      "summary": "Reported global sales of a drug.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/global_drug_dev/sales/info",
+      "params": {
+        "keyid": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Record id from drug_dev.list."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Page number."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.drugs.get",
+      "docs_url": "https://open.bcpmdata.com/api/9.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/9.html"
+      }
+    },
+    {
+      "id": "bcpmdata.cn_trials.list",
+      "name": "Search China clinical trials",
+      "summary": "Chinese clinical trial registrations by drug, indication, sponsor, institution, phase or design.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/cn_clinical_trial/list",
+      "params": {
+        "search": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters: drug_name, indication, sponsor, clinical_institution, trial_phase (phase I-IV, BE trial, exploratory and others), design_type (parallel, crossover, single-arm, factorial). Phase and design take the Chinese values listed on the docs page."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Page number, from 1; 10 records per page by default."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.trials.search",
+      "docs_url": "https://open.bcpmdata.com/api/10.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/10.html"
+      }
+    },
+    {
+      "id": "bcpmdata.cn_trials.baseinfo",
+      "name": "Get a China clinical trial",
+      "summary": "Base record of one Chinese trial registration.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/cn_clinical_trial/baseinfo",
+      "params": {
+        "registration_number": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Trial registration number from cn_trials.list."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.trials.get",
+      "docs_url": "https://open.bcpmdata.com/api/10.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/10.html"
+      }
+    },
+    {
+      "id": "bcpmdata.us_trials.list",
+      "name": "Search US clinical trials",
+      "summary": "US clinical trials by registration number, phase, status, country, drug, indication, target, sponsor or date ranges.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/en_clinical_usa/list",
+      "params": {
+        "search": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters: registration_number, phase_json, recruitment_status_json, country_territory_json, publications_results, endpoint_types_json, study_type_json, primary_purpose_json, drug_name_json, indication_json, target_json, intervention_info, manufacturer_json (sponsor), company_json (collaborator); date ranges start_date, end_date, primary_completion_date, first_enrollment_date, first_posted, last_change_date as {min, max}."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "The docs give no date format for the {min, max} ranges."
+      ],
+      "job": "pharma.trials.search",
+      "docs_url": "https://open.bcpmdata.com/api/10.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/10.html"
+      }
+    },
+    {
+      "id": "bcpmdata.cn_approvals.list",
+      "name": "Search China drug approvals",
+      "summary": "Chinese drug approval numbers (批文) by number, drug name, manufacturer or licence holder.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/cn_drug_approval/list",
+      "params": {
+        "search": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters: approval_number (国药准字 number), drug_name, company (manufacturer), license_holder."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Page number, from 1; 10 records per page by default."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.approvals.search",
+      "docs_url": "https://open.bcpmdata.com/api/12.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/12.html"
+      }
+    },
+    {
+      "id": "bcpmdata.cn_approvals.baseinfo",
+      "name": "Get a China drug approval",
+      "summary": "Base record of one approval number.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/cn_drug_approval/baseinfo",
+      "params": {
+        "approval_number": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Approval number from cn_approvals.list."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.approvals.get",
+      "docs_url": "https://open.bcpmdata.com/api/12.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/12.html"
+      }
+    },
+    {
+      "id": "bcpmdata.cn_approvals.insurance_status",
+      "name": "Get a drug's national insurance status",
+      "summary": "Whether an approved drug is on China's national medical insurance list.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/pharma/general/v1/cn_drug_approval/medical_insurance_status",
+      "params": {
+        "approval_number": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Approval number."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "pharma.approvals.get",
+      "docs_url": "https://open.bcpmdata.com/api/12.html",
+      "verified": {
+        "docs": "https://open.bcpmdata.com/api/12.html"
+      }
+    }
+  ]
+}
