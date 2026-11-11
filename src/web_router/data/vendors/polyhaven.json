@@ -1,0 +1,221 @@
+{
+  "vendor": "polyhaven",
+  "name": "Poly Haven",
+  "category": "other",
+  "summary": "CC0 HDRIs, textures and 3D models from Poly Haven: list and search assets, read an asset's metadata and its downloadable files by resolution and format.",
+  "docs_url": "https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors",
+  "base_url": "https://api.polyhaven.com",
+  "settings": {
+    "user_agent": {
+      "env": [
+        "POLYHAVEN_USER_AGENT"
+      ],
+      "description": "A unique User-Agent naming your software, which Poly Haven's terms require on every call so it can group your app's requests."
+    }
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Free and keyless, including commercial use. The terms require a unique User-Agent (or Referer) naming your software on every call: set POLYHAVEN_USER_AGENT.",
+    "Surfacing Poly Haven content through the live API requires a visible credit to Poly Haven in your product; the downloaded CC0 assets themselves need no attribution.",
+    "Asset types are hdris, textures and models. Use search for relevance, then assets or info for metadata, then files for download URLs."
+  ],
+  "sources": [
+    "https://github.com/Poly-Haven/Public-API",
+    "https://api.polyhaven.com/api-docs/swagger.json",
+    "https://github.com/Poly-Haven/Public-API/blob/master/ToS.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "polyhaven.assets.list",
+      "name": "List assets",
+      "summary": "Every asset with its metadata, keyed by asset id, optionally filtered by type, category, collection or vault.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/assets",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "hdris",
+            "textures",
+            "models",
+            "all"
+          ],
+          "description": "Asset type."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "A category path from the taxonomy, canonical ('Brick & Block/Clay Brick') or slug ('brick-block/clay-brick'); a parent includes its children."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "(Legacy) Comma-separated categories; an asset must match all of them."
+        },
+        "collection": {
+          "in": "query",
+          "type": "string",
+          "description": "Only assets in this collection."
+        },
+        "vault": {
+          "in": "query",
+          "type": "string",
+          "description": "Only assets in this vault."
+        }
+      },
+      "notes": [
+        "The docs list no paging parameters: the matching set comes back in one response."
+      ],
+      "job": "media.stock.search",
+      "docs_url": "https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors",
+      "verified": {
+        "docs": "https://api.polyhaven.com/api-docs/swagger.json"
+      }
+    },
+    {
+      "id": "polyhaven.assets.search",
+      "name": "Search assets",
+      "summary": "Hybrid semantic and keyword search over asset metadata, in any language; returns the full ranked list of matching asset slugs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The query; send it trimmed and lower-cased.",
+          "example": "brick wall"
+        },
+        "t": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "hdris",
+            "textures",
+            "models",
+            "all"
+          ],
+          "description": "Asset type."
+        },
+        "min": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum similarity score; 0.35 by default, 0 returns every asset ranked."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Return at most this many results; total still reports the full count."
+        },
+        "future": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include early-access assets not yet published."
+        }
+      },
+      "notes": [
+        "Returns slugs only: look up each slug's metadata with assets.list or assets.get."
+      ],
+      "job": "media.stock.search",
+      "docs_url": "https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors",
+      "verified": {
+        "docs": "https://api.polyhaven.com/api-docs/swagger.json"
+      }
+    },
+    {
+      "id": "polyhaven.assets.get",
+      "name": "Get an asset",
+      "summary": "Metadata of one asset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/info/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The asset's unique id (slug)."
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors",
+      "verified": {
+        "docs": "https://api.polyhaven.com/api-docs/swagger.json"
+      }
+    },
+    {
+      "id": "polyhaven.assets.files",
+      "name": "List an asset's files",
+      "summary": "A tree of the asset's downloadable files, organized by resolution and file format.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/files/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The asset's unique id (slug)."
+        }
+      },
+      "job": "media.formats.list",
+      "docs_url": "https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors",
+      "verified": {
+        "docs": "https://api.polyhaven.com/api-docs/swagger.json"
+      }
+    },
+    {
+      "id": "polyhaven.taxonomy.get",
+      "name": "Get the category taxonomy",
+      "summary": "The category tree and attribute schema for one asset type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/taxonomy/{type}",
+      "params": {
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "hdris",
+            "textures",
+            "models"
+          ],
+          "description": "Asset type."
+        }
+      },
+      "job": "media.stock.filters",
+      "docs_url": "https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors",
+      "verified": {
+        "docs": "https://api.polyhaven.com/api-docs/swagger.json"
+      }
+    },
+    {
+      "id": "polyhaven.authors.get",
+      "name": "Get an author",
+      "summary": "An author's name, links and, when available, email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/author/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The author's unique id."
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors",
+      "verified": {
+        "docs": "https://api.polyhaven.com/api-docs/swagger.json"
+      }
+    }
+  ]
+}

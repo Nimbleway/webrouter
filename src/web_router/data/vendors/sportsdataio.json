@@ -1,0 +1,203 @@
+{
+  "vendor": "sportsdataio",
+  "name": "SportsDataIO (FantasyData)",
+  "category": "other",
+  "summary": "NFL schedules, live scores, standings, players, season stats and fantasy projections with ADP from SportsDataIO, the API behind FantasyData.",
+  "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+  "base_url": "https://api.sportsdata.io/v3/nfl",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SPORTSDATAIO_API_KEY"
+        ],
+        "description": "SportsDataIO subscription key; sent in the Ocp-Apim-Subscription-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Ocp-Apim-Subscription-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call needs a paid subscription for the feed: the free trial only covers the UEFA Champions League, not the NFL.",
+    "Paths here are the JSON variants; each feed lists a recommended call interval (live scores every 5 seconds, projections 5 minutes, players 1 hour).",
+    "season is the start year plus optional type: 2025 or 2025REG for regular season, 2025PRE, 2025POST."
+  ],
+  "sources": [
+    "https://sportsdata.io/developers/api-documentation/nfl"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sportsdataio.week.current",
+      "name": "Get the current week",
+      "summary": "The current NFL week number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/scores/json/CurrentWeek",
+      "params": {},
+      "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+      "verified": {
+        "docs": "https://sportsdata.io/developers/api-documentation/nfl"
+      }
+    },
+    {
+      "id": "sportsdataio.standings",
+      "name": "Get standings",
+      "summary": "Regular season standings for all teams in a season.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/scores/json/Standings/{season}",
+      "params": {
+        "season": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Season year with optional type (REG default, PRE, POST).",
+          "example": "2015REG"
+        }
+      },
+      "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+      "verified": {
+        "docs": "https://sportsdata.io/developers/api-documentation/nfl"
+      }
+    },
+    {
+      "id": "sportsdataio.schedules",
+      "name": "Get a season's schedule",
+      "summary": "Every game of a season with teams, date, week, stadium, weather, betting lines and broadcast.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/scores/json/Schedules/{season}",
+      "params": {
+        "season": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Season year with optional type: 2018, 2018PRE, 2018POST, 2018STAR.",
+          "example": "2018"
+        }
+      },
+      "job": "events.list",
+      "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+      "verified": {
+        "docs": "https://sportsdata.io/developers/api-documentation/nfl"
+      }
+    },
+    {
+      "id": "sportsdataio.scores.week",
+      "name": "Get a week's games and scores",
+      "summary": "Full scores and gameday info for a week, live and final.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/scores/json/ScoresByWeek/{season}/{week}",
+      "params": {
+        "season": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Season year with optional type (REG default, PRE, POST).",
+          "example": "2015REG"
+        },
+        "week": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Week: preseason 0-4, regular season 1-17, postseason 1-4.",
+          "example": 1
+        }
+      },
+      "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+      "verified": {
+        "docs": "https://sportsdata.io/developers/api-documentation/nfl"
+      }
+    },
+    {
+      "id": "sportsdataio.players.list",
+      "name": "List all players",
+      "summary": "All players on teams with biography, team, jersey number, position and injuries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/scores/json/Players",
+      "params": {},
+      "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+      "verified": {
+        "docs": "https://sportsdata.io/developers/api-documentation/nfl"
+      }
+    },
+    {
+      "id": "sportsdataio.stats.player_season",
+      "name": "Get player season stats",
+      "summary": "Season-long stats for all players in a season.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stats/json/PlayerSeasonStats/{season}",
+      "params": {
+        "season": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Season year with optional type (REG default, PRE, POST).",
+          "example": "2015REG"
+        }
+      },
+      "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+      "verified": {
+        "docs": "https://sportsdata.io/developers/api-documentation/nfl"
+      }
+    },
+    {
+      "id": "sportsdataio.projections.player_week",
+      "name": "Get weekly player projections",
+      "summary": "Projected player game stats for a week, with DFS salaries and injuries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/projections/json/PlayerGameProjectionStatsByWeek/{season}/{week}",
+      "params": {
+        "season": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Season year with optional type (REG default, PRE, POST).",
+          "example": "2015REG"
+        },
+        "week": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Week: preseason 0-4, regular season 1-17, postseason 1-4.",
+          "example": 1
+        }
+      },
+      "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+      "verified": {
+        "docs": "https://sportsdata.io/developers/api-documentation/nfl"
+      }
+    },
+    {
+      "id": "sportsdataio.projections.player_season",
+      "name": "Get season projections with ADP",
+      "summary": "Season-long fantasy projections for players, including average draft position.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/projections/json/PlayerSeasonProjectionStats/{season}",
+      "params": {
+        "season": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Season year with optional type (REG default, PRE, POST).",
+          "example": "2015REG"
+        }
+      },
+      "docs_url": "https://sportsdata.io/developers/api-documentation/nfl",
+      "verified": {
+        "docs": "https://sportsdata.io/developers/api-documentation/nfl"
+      }
+    }
+  ]
+}
