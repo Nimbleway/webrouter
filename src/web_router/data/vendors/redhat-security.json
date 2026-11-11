@@ -1,0 +1,116 @@
+{
+  "vendor": "redhat-security",
+  "name": "Red Hat Security Data API",
+  "category": "developer",
+  "summary": "Red Hat Product Security data on CVEs (severity, CWE, CVSS v3/v4 scores, advisories, affected packages and package states), CSAF advisories and OVAL streams.",
+  "docs_url": "https://access.redhat.com/hydra/rest/securitydata/api-docs",
+  "base_url": "https://access.redhat.com/hydra/rest/securitydata",
+  "notes": [
+    "Keyless.",
+    "Written from the service's own OpenAPI document; it lists no filters or paging for the list endpoint, so none are given here."
+  ],
+  "sources": [
+    "https://access.redhat.com/hydra/rest/securitydata/api-docs"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "redhat-security.cve.get",
+      "name": "Get a CVE",
+      "summary": "Red Hat's data on one CVE: severity, public date, CWE, CVSS v3/v4 scores and vectors, advisories, Bugzilla entry, affected packages and package states.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cve/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CVE ID.",
+          "example": "CVE-2021-44228"
+        }
+      },
+      "job": "security.vulns.get",
+      "docs_url": "https://access.redhat.com/hydra/rest/securitydata/api-docs",
+      "verified": {
+        "docs": "https://access.redhat.com/hydra/rest/securitydata/api-docs"
+      }
+    },
+    {
+      "id": "redhat-security.csaf.get",
+      "name": "Get a CSAF advisory",
+      "summary": "One Red Hat security advisory (RHSA) as a CSAF document.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/csaf/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Advisory ID.",
+          "example": "RHSA-2022:6155"
+        }
+      },
+      "job": "security.advisories.get",
+      "docs_url": "https://access.redhat.com/hydra/rest/securitydata/api-docs",
+      "verified": {
+        "docs": "https://access.redhat.com/hydra/rest/securitydata/api-docs"
+      }
+    },
+    {
+      "id": "redhat-security.list",
+      "name": "List CVEs, CSAF advisories or OVAL data",
+      "summary": "The collection for one resource type: CVEs, CSAF advisories or OVAL data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{resource}/",
+      "params": {
+        "resource": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Resource type.",
+          "example": "cve",
+          "enum": [
+            "cve",
+            "csaf",
+            "oval"
+          ]
+        }
+      },
+      "job": "security.vulns.list",
+      "docs_url": "https://access.redhat.com/hydra/rest/securitydata/api-docs",
+      "verified": {
+        "docs": "https://access.redhat.com/hydra/rest/securitydata/api-docs"
+      }
+    },
+    {
+      "id": "redhat-security.oval.streams",
+      "name": "List OVAL streams",
+      "summary": "OVAL v2 stream details for advisories, by label and date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/oval/ovalstreams.json",
+      "params": {
+        "label": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Label of the OVAL stream."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Only streams after this date."
+        }
+      },
+      "job": "security.advisories.list",
+      "docs_url": "https://access.redhat.com/hydra/rest/securitydata/api-docs",
+      "verified": {
+        "docs": "https://access.redhat.com/hydra/rest/securitydata/api-docs"
+      }
+    }
+  ]
+}
