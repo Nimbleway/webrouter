@@ -1838,9 +1838,16 @@ DeepMind's [SimpleQA Verified](https://huggingface.co/datasets/google/simpleqa-v
 (111 and 254 questions, pinned), built so that search turns up conflicting or unhelpful
 pages; it needs `pyarrow`, which the `evals` extra installs, and it withholds results from
 its own pages and copies before judging, so a backend is not scored on finding the answer
-key (each row's `withheld` counts them). `Dataset.for_set(name)` loads any of
+key (each row's `withheld` counts them).
+`Dataset.public_benchmarks("due-diligence" | "lead-enrichment")` reads one of two
+unlabeled sets Nimble publishes in [Public-benchmarks](https://github.com/Nimbleway/Public-benchmarks),
+pinned to one commit: 1,000 questions each that an investment analyst asks about a company
+or fund, and that a sales or RevOps team asks about an account. They carry no answers, so
+`evaluate()` refuses them before any search: judge `benchmark()`'s rows with your own grader.
+A `Question`'s `answer` is `None` in such a set, and `answer_column=None` reads your own CSV
+the same way. `Dataset.for_set(name)` loads any of
 these by the name the benchmarks use (`simpleqa`, `simpleqa-verified`, `frames`,
-`sealqa-0`, `sealqa-hard`), or `csv` with a `path`. Your own questions
+`sealqa-0`, `sealqa-hard`, `due-diligence`, `lead-enrichment`), or `csv` with a `path`. Your own questions
 come from a CSV with a header, and any `Judge` subclass can stand in for the
 built-in one — another vendor, a local model:
 

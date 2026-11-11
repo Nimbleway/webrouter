@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 from web_router.constants import BENCHMARK_TIMEOUT, EVALS_CONCURRENCY, MSG_EVALS_EMPTY_DATASET, MSG_EVALS_JUDGE_FAILED
+from web_router.constants_evals import MSG_EVALS_UNANSWERED
 from web_router.evals.datasets import Dataset, Question
 from web_router.evals.judge import Judge, OpenAIJudge
 from web_router.evals.types import EvaluationReport, EvaluationRow, FailedAt, Grade, ProviderScore
@@ -102,6 +103,16 @@ async def aevaluate(
 def _check(dataset: Dataset) -> None:
     if not dataset.questions:
         raise ValueError(MSG_EVALS_EMPTY_DATASET.format(name=dataset.name))
+    # Before the first search is paid for: a question with no gold has nothing to be graded against.
+    unanswered = [question.question for question in dataset.questions if question.answer is None]
+    if unanswered:
+        raise ValueError(MSG_EVALS_UNANSWERED.format(count=len(unanswered), name=dataset.name, first=unanswered[0]))
+
+
+def _gold(question: Question) -> str:
+    # _check refused every dataset holding a question with no gold, so none reaches the grader.
+    assert question.answer is not None
+    return question.answer
 
 
 def _ready(judge: Judge) -> None:
@@ -119,7 +130,7 @@ def _judged(judge: Judge, dataset: Dataset, question: Question, run: BenchmarkRu
     except Exception as exc:
         return _row(question, run, withheld, error=_judge_error(judge, "synthesis", exc), failed_at="synthesis")
     try:
-        grade = judge.grade(question.question, question.answer, answer)
+        grade = judge.grade(question.question, _gold(question), answer)
     except Exception as exc:
         return _row(
             question, run, withheld, answer=answer, error=_judge_error(judge, "grading", exc), failed_at="grading"
@@ -136,7 +147,7 @@ async def _ajudged(judge: Judge, dataset: Dataset, question: Question, run: Benc
     except Exception as exc:
         return _row(question, run, withheld, error=_judge_error(judge, "synthesis", exc), failed_at="synthesis")
     try:
-        grade = await judge.agrade(question.question, question.answer, answer)
+        grade = await judge.agrade(question.question, _gold(question), answer)
     except Exception as exc:
         return _row(
             question, run, withheld, answer=answer, error=_judge_error(judge, "grading", exc), failed_at="grading"
@@ -164,7 +175,7 @@ def _row(
     return EvaluationRow(
         provider=run.provider,
         question=question.question,
-        target=question.answer,
+        target=_gold(question),
         latency=run.latency,
         withheld=withheld,
         answer=answer,

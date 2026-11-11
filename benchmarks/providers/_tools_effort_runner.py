@@ -40,8 +40,8 @@ from web_router.constants import (
     EVALS_RESULT_FORMAT,
     EVALS_SYNTHESIS_PROMPT,
     EVALS_SYNTHESIS_USER,
-    SEALQA_WITHHELD_MARKERS,
 )
+from web_router.constants_evals import SEALQA_WITHHELD_MARKERS
 from web_router.evals import Dataset, OpenAIJudge
 from web_router.evals.judge import grader_prompt, parse_grade
 from web_router.integrations._render import cut_to_budget

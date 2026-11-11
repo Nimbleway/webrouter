@@ -32,6 +32,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Changed
 
 - The MCP server now imports an operator's `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` router before any `.env` file is loaded, so code that runs when that module is imported sees only the server's own process environment, not a project's `.env` keys. Read anything the router needs from a `.env` file when it is called, not at import. See [docs/mcp.md](docs/mcp.md#routing-and-budgets-web_run-budget_start-budget_status).
+- Two unlabeled question sets Nimble publishes in [Public-benchmarks](https://github.com/Nimbleway/Public-benchmarks): `due-diligence`, 1,000 questions an investment analyst asks while researching a company or fund, and `lead-enrichment`, 1,000 questions a sales or RevOps team asks about an account. `Dataset.public_benchmarks(name)` reads one at a pinned commit, or from a local copy with `path=`, and `Dataset.for_set` takes both names. Each question's `metadata` carries its `category`, `use_case`, `persona` and `endpoint_fit`.
+- Unlabeled questions: `Question.answer` is optional (`None`, never blank), and `Dataset.from_rows`, `from_csv` and `for_set` read a set with no answers when `answer_column=None`. A named answer column still needs an answer on every row. `evaluate()` grades against gold, so it refuses a dataset holding a question with no answer, before the first search is paid for; judge `benchmark()`'s rows with your own grader instead.
+
+### Changed
+
+- The question sets' sources, names and columns (`SIMPLEQA_URL`, `FRAMES_URL`, `SEALQA_WITHHELD_MARKERS`, `EVALS_QUESTION_SETS`, `EVALS_CSV_SET` and the rest) moved from `web_router.constants` to `web_router.constants_evals`. `SIMPLEQA_SEED` and `EVALS_CONCURRENCY` stay where they were.
 
 ### Fixed
 

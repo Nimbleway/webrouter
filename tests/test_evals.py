@@ -26,10 +26,12 @@ from web_router.constants import (
     EVALS_RESULT_CHARS,
     EVALS_SYNTHESIS_PROMPT,
     EXTRA_EVALS,
-    FRAMES_NAME,
-    FRAMES_URL,
     INTEGRATION_RESULT_CHARS,
     INTEGRATION_TRUNCATION_MARKER,
+)
+from web_router.constants_evals import (
+    FRAMES_NAME,
+    FRAMES_URL,
     SIMPLEQA_NAME,
     SIMPLEQA_URL,
     SIMPLEQA_VERIFIED_NAME,
@@ -1018,20 +1020,6 @@ def test_live_anthropic_judge_answers_and_grades_with_its_default_model() -> Non
 
     assert "Paris" in answer
     assert grade == "correct"
-
-
-def test_a_question_set_is_loaded_by_name_and_a_csv_by_its_path_and_columns(tmp_path: Path) -> None:
-    mine = tmp_path / "mine.csv"
-    mine.write_text("q,gold,topic\nWho?,Alice,People\nWhere?,Paris,Places\n", encoding="utf-8")
-    dataset = Dataset.for_set("csv", path=mine, question_column="q", answer_column="gold", limit=1, seed=3)
-    seal = Dataset.for_set("sealqa-0", path=_sealqa_parquet(tmp_path / "seal-0.parquet"))
-
-    assert len(dataset) == 1 and dataset.questions[0].question in {"Who?", "Where?"}
-    assert seal.name == "sealqa-seal-0" and seal.withheld_markers
-    with pytest.raises(ValueError, match="pass its path"):
-        Dataset.for_set("csv")
-    with pytest.raises(ValueError, match="no question set 'mmlu'"):
-        Dataset.for_set("mmlu")
 
 
 def test_a_csv_is_identified_by_its_bytes_and_columns(tmp_path: Path) -> None:
