@@ -18,7 +18,7 @@
   <a href="https://docs.webrouter.net/quickstart">Quickstart</a> ·
   <a href="https://docs.webrouter.net/providers">Providers</a> ·
   <a href="https://github.com/Nimbleway/webrouter/tree/main/examples">Examples</a> ·
-  <a href="https://discord.gg/MGztFWSjZh">Discord</a>
+  <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
 WebRouter connects agents to search, extract, live data, answer, research and
@@ -38,7 +38,7 @@ browsers through one typed interface, across many providers.
 
 <p align="center"><em>Useful? Star the repo so more agent developers can find it.</em> ⭐</p>
 
-> **Beta:** the API may change before 1.0.
+> **Developer preview:** the API may change before 1.0. Share feedback on [Discord](https://discord.gg/MGztFWSjZh).
 
 ## Quickstart
 
