@@ -1,0 +1,39 @@
+---
+title: "Errors"
+description: "Every WebRouter exception derives from WebRouterError: catch them all with one except, or handle each kind a call can raise."
+---
+
+Every exception the router raises derives from `WebRouterError` and imports
+from `web_router`, so one `except` covers the lot:
+
+```python
+from web_router import Provider, WebRouter, WebRouterError
+
+try:
+    WebRouter(Provider.TAVILY).search("...")
+except WebRouterError as exc:
+    print(exc)
+```
+
+| Exception | Raised when | Typical fix |
+| --- | --- | --- |
+| `ConfigurationError` | No API key for a provider you named | Set the variable it names, or pass `provider_config` |
+| `ProviderNotInstalledError` | The extra carrying the provider's SDK is not installed | `make setup` in the clone installs every extra; the message names the one missing |
+| `ProviderNotFoundError` | Unknown provider name, or one that does not serve the method you called | The message lists every name that method does serve |
+| `UnsupportedParameterError` | The provider does not map an option you set | Use `provider_options`, or add the mapping |
+| `UnsupportedFormatError` | The extract or live data backend cannot return the `format` you asked for | Ask for one it can — the message lists them — or name another backend |
+| `LiveDataSourceNotFoundError` | A live data run or describe named a source the vendor does not have | A `ProviderError`; list the vendor's sources with `live_data_sources()` — names are the vendor's own |
+| `MissingParameterError` | The browse backend cannot start without an option you left unset — `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
+| `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost — the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
+| `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
+| `ProviderError` | The backend itself failed — HTTP error, SDK exception, bad credentials | Depends on the backend; the original error is wrapped, not swallowed |
+| `VendorNotFoundError` | `call_vendor()` or `vendor_endpoint()` named a vendor or endpoint the catalog does not hold | The message lists what it does hold; `find_vendor_endpoints()` searches it |
+| `VendorWriteRefusedError` | A vendor call would change data and `allow_writes=True` was not passed; nothing was sent | Pass it once you mean it, after the vendor's dry-run option where it has one |
+| `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](/browser-sessions#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
+| `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](/smart-routing#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
+| `DeadlineExceededError` | A search, extract, live data run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
+| `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
+
+These are **siblings, not a hierarchy**: `ProviderNotInstalledError` is not a
+subclass of `ConfigurationError`, so `except ConfigurationError` will not catch
+a missing extra. Catch `WebRouterError` unless you mean one specific case.

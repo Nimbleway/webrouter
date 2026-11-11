@@ -1,0 +1,373 @@
+---
+title: "Provider support"
+description: "Which providers serve each WebRouter method, the key each one needs, and which methods work with no credentials at all."
+sidebarTitle: "Providers"
+---
+
+Twelve search backends, seven extract backends, a template catalogue, five
+answer backends, three agentic research backends (plus Exa's, retired upstream), five
+browser-session backends and three browser agents. One call each. Switching
+between them is one argument.
+
+A provider name serves the methods it serves and no others: `brave` searches
+and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
+extracts, runs live data and researches, and `browserbase` opens
+sessions, runs browse tasks and extracts.
+Ask a method for another's backend and it says so, naming the backends that
+method does serve.
+
+## Search
+
+`[search]` installs all of these but AgentCore, which needs `[aws]`. The first column is what you pass to
+`WebRouter(...)` to pick one at runtime. The string beside it is the same value,
+and what `response.provider` and `configured_providers()` report back.
+
+| Pass | Name | Provider | Backed by | Options mapped |
+| --- | --- | --- | --- | --- |
+| `Provider.NIMBLE` | `nimble` | [Nimble](https://nimbleway.com) | `nimble-python` | all but `effort` |
+| `Provider.TAVILY` | `tavily` | [Tavily](https://tavily.com) | `tavily-python` | all but `effort` |
+| `Provider.YOU` | `you` | [You.com](https://you.com/platform) | direct HTTP | all but `effort` |
+| `Provider.BRAVE` | `brave` | [Brave](https://brave.com/search/api/) | direct HTTP | all but `effort`; `search_depth` at `lite` only |
+| `Provider.EXA` | `exa` | [Exa](https://exa.ai) | direct HTTP | all but `locale` |
+| `Provider.PARALLEL` | `parallel` | [Parallel](https://parallel.ai) | direct HTTP (`/v1/search`, `mode=fast` unless `effort` sets it) | all but `locale`; `search_depth` at `lite` and `fast` |
+| `Provider.PERPLEXITY` | `perplexity` | [Perplexity](https://docs.perplexity.ai) | direct HTTP | all of them; `search_depth` at `lite` and `fast` |
+| `Provider.LINKUP` | `linkup` | [Linkup](https://www.linkup.so) | direct HTTP | `max_results`, `include_domains`, `exclude_domains`, `recency`, `effort` |
+| `Provider.WEBIQ` | `webiq` | [WebIQ](https://api.microsoft.ai) (Microsoft AI Web Search) | direct HTTP | all but `recency` and `effort` |
+| `Provider.KEENABLE` | `keenable` | [Keenable](https://docs.keenable.ai) | direct HTTP; keyless with `allow_keyless=True` (rate-limited per IP) | `max_results`, `search_depth` (`lite`, `fast`), `include_domains` (one), `recency`, `effort` |
+| `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Search](https://api-docs.deepseek.com/guides/search) | direct HTTP | `max_results` (at most 50), `search_depth` (`lite`, `deep`), `include_domains`, `exclude_domains`, `locale`, `recency`, the last four sent inside the query, which must fit 128 characters |
+| `Provider.AGENTCORE` | `agentcore` | [AWS AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html), through your own AgentCore Gateway ([setup](/agentcore-setup)) | MCP over HTTP, SigV4 via `botocore` (`[aws]`) | `max_results` (at most 25), `include_domains`, `exclude_domains`, `recency` (connector 1.2.0 or later). An end date is AgentCore's own `provider_options={"filters": {"publishedDateFilter": {"to": ...}}}`. Queries up to 200 characters. AWS's terms: show each result's citation, and do not store results in bulk |
+| `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | all but `effort` |
+| `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp), its `web_search_advanced_exa` tool | direct HTTP, **no key** | all but `locale` |
+| `Provider.PARALLEL_MCP` | `parallel-mcp` | [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/quickstart) | direct HTTP, **no key** | `max_results` (applied to the response: the tool ignores a count) |
+| `Provider.AUTO` *(default)* | `auto` | — | every backend you hold a key for, in the order the frozen benchmark results rank them, then the keyless ones — so a key held only for research serves searches too, and those calls bill; see [Working with no credentials](#working-with-no-credentials) | every option some member maps, each request routed to a member that maps what it sets |
+
+A backend maps an option only where its API has a documented field or query
+operator for it; [Search options](/search#search-options) says how each one does, and
+`contracts/search/<name>.json` holds the exact fields sent. Mapping another is a
+small PR and the most useful thing to contribute — see
+[CONTRIBUTING.md](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#promoting-a-provider-option).
+
+## Extract
+
+`[extract]` installs all of these, and `configured_extract_providers()` reports
+which ones this environment can use.
+
+| Pass | Name | Provider | Credentials | Formats |
+| --- | --- | --- | --- | --- |
+| `Provider.NIMBLE` | `nimble` | [Nimble Extract](https://docs.nimbleway.com/api-reference/extract/extract) | `NIMBLE_API_KEY` | `markdown`, `html` |
+| `Provider.TAVILY` | `tavily` | [Tavily Extract](https://tavily.com) | `TAVILY_API_KEY` *(keyless only through `auto`)* | `markdown`, `text` |
+| `Provider.EXA` | `exa` | [Exa Contents](https://exa.ai) | `EXA_API_KEY` | `text` |
+| `Provider.LINKUP` | `linkup` | [Linkup Fetch](https://docs.linkup.so) | `LINKUP_API_KEY` | `markdown`, `html` |
+| `Provider.FIRECRAWL` | `firecrawl` | [Firecrawl Scrape](https://firecrawl.dev) | `FIRECRAWL_API_KEY`, or keyless with `allow_keyless=True` (capped per IP per day) | `markdown`, `html` |
+| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web Scraper](https://oxylabs.io) | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | `markdown`, `html` |
+| `Provider.BRIGHTDATA` | `brightdata` | [Bright Data Web Unlocker](https://brightdata.com) | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | `markdown`, `html` |
+| `Provider.WEBIQ` | `webiq` | [WebIQ Browse](https://api.microsoft.ai) (Microsoft AI) — pages in WebIQ's own index | `WEBIQ_API_KEY` | `markdown`, `text` |
+| `Provider.KEENABLE` | `keenable` | [Keenable Fetch](https://docs.keenable.ai/api-reference/fetch) | `KEENABLE_API_KEY`, or keyless with `allow_keyless=True` (rate-limited per IP) | `markdown` |
+| `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Fetch](https://api-docs.deepseek.com/guides/search) | `DEEPSEEK_API_KEY` | `markdown` |
+| `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
+| `Provider.BROWSERBASE` | `browserbase` | [Browserbase Fetch](https://docs.browserbase.com/features/fetch) — a plain fetch, never a rendered page; the one backend that maps `profile` | `BROWSERBASE_API_KEY` | `markdown`, `html` |
+| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable, DeepSeek and Browserbase | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it; `profile` routed to one that maps it |
+| `Provider.MAX` | `max` | — | the same members as `auto`, **all at once**; the first document back wins, and every fetch started is paid for -- see [The fastest answer any backend can give](/extract#the-fastest-answer-any-backend-can-give-max) | as `auto` |
+
+Two need more than a key. Oxylabs authenticates with the username and password
+created under Web Scraper API in its dashboard — not the ones you sign in with —
+and Bright Data needs the zone that routes the request beside its token. Neither
+has a default worth guessing, so a missing one is an error naming the variable
+to set.
+
+> Nimble, Tavily, Jina, Linkup, Firecrawl, Oxylabs, Bright Data and Browserbase
+> were verified live — Oxylabs and Bright Data on 2026-11-03, Browserbase (both
+> formats, and `profile` through the whole flow) by hand on 2026-10-29 and by
+> the automated live tests on 2026-11-08. **Exa's extract
+> mapping is taken from documentation** and has not been confirmed against a
+> real response; its integration tests skip themselves until a working key is
+> available.
+
+### Reading a page behind a login
+
+`profile` is the extract side of the browser's `profile`: a saved identity on
+the backend — its cookies and storage — whose cookies are sent with each fetch.
+Log in once in a browser session that persists to it, release the session, and
+the fetches that name the same id read the page as that user:
+
+```python
+with router.open_browser(provider="browserbase", profile=context_id, persist_profile=True) as browser:
+    browser.goto("https://example.com/login")
+    ...  # type the credentials, submit
+
+response = router.extract("https://example.com/account/orders", provider="browserbase", profile=context_id)
+```
+
+The fetch never writes cookies back, so an expired login means another
+session. Browserbase is the one backend that maps it, through its Contexts; a
+backend without saved profiles raises `UnsupportedParameterError` rather than
+fetching anonymously, and `auto` and `max` pass such members over. The MCP
+server never offers it: a logged-in identity is set in code, not from a
+conversation.
+
+## Live data
+
+A live data source is a vendor's ready-made scraper for one site -- Nimble's
+Extract Templates, Apify's Actors, Bright Data's scrapers, Oxylabs'
+dedicated sources. Given its own inputs it fetches the site **for this call**
+and answers with structured records. That is the rule a backend joins under:
+it fetches on request. Data a vendor collected earlier and serves from storage
+is that vendor's own API, reached through `call_vendor()`. There is no keyless
+tier and no `auto`: a run fetches and parses on the backend's account, and a
+source's name belongs to one vendor, so `provider` is required on all three
+calls.
+
+| Pass | Name | Provider | Credentials | Page formats beside the records |
+| --- | --- | --- | --- | --- |
+| `Provider.NIMBLE` | `nimble` | [Nimble Extract Templates](https://docs.nimbleway.com/api-reference/extract/extract-templates) | `NIMBLE_API_KEY` | `markdown`, `html` |
+| `Provider.APIFY` | `apify` | [Apify Store Actors](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) | `APIFY_TOKEN` | — |
+| `Provider.BRIGHTDATA` | `brightdata` | [Bright Data scrapers](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) | `BRIGHTDATA_API_TOKEN` | — |
+| `Provider.OXYLABS` | `oxylabs` | [Oxylabs dedicated sources](https://developers.oxylabs.io/scraping-solutions/web-scraper-api/features/result-processing-and-storage/dedicated-parsers) | `OXYLABS_USERNAME`, `OXYLABS_PASSWORD` | — |
+
+Nimble was verified live on 2026-10-22: a listing, a description and a run on
+a public test page. Apify, Bright Data and Oxylabs were verified live on
+2026-11-10: a run on each (Apify's Google Maps Actor, Bright Data's
+`amazon_products`, Oxylabs' `amazon_product` and `google_search`), and Apify's
+and Bright Data's catalogue, search and description. Their integration tests skip themselves until keys are
+available. Listing and describing bill nothing
+on any of them; what a run bills is each vendor's own rate, recorded dated and
+sourced in [`benchmarks/providers/PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md)
+from the price list `web_router.prices` reads (see
+[Estimated prices](/routing-and-extending#estimated-prices-experimental)). See [Live data](https://github.com/Nimbleway/webrouter/blob/main/README.md#live-data-1).
+
+## Answer
+
+`[answer]` installs these. One question, answered in one call: the backend
+searches and writes the answer itself. No keyless tier, since every backend
+bills the call; `auto` tries the ones you hold a key for, in the order `make chains` ranks them on the
+answer benchmark. See
+[Asking for an answer](/answer#asking-for-an-answer) for what an unnamed call does.
+
+| Pass | Name | Provider | Credentials | Options mapped | Citations tied to claims |
+| --- | --- | --- | --- | --- | --- |
+| `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API, `fast` effort](https://docs.perplexity.ai/docs/agent-api/quickstart) | `PERPLEXITY_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` | yes: `[N]` markers, in `citation.field` |
+| `Provider.YOU` | `you` | [You.com Answer API](https://you.com/docs/guides/answer.md) | `YOU_API_KEY` | `include_domains` or `exclude_domains` (not both), `country`, `recency` (`week` or wider: for `day` it cited pages days old) | yes: `[[1, 2]]` markers, in `citation.field` |
+| `Provider.PARALLEL` | `parallel` | [Parallel Chat API (beta), `lite`](https://docs.parallel.ai/api-reference/chat-api-beta/chat-completions) | `PARALLEL_API_KEY` | none: the Chat API takes no source filter | no: its `basis` backs the answer as a whole |
+| `Provider.EXA` | `exa` | [Exa Answer API](https://docs.exa.ai/reference/answer) | `EXA_API_KEY` | none: no source filter, and `userLocation` showed no clear effect | yes: `[N]` markers, in `citation.field` |
+| `Provider.LINKUP` | `linkup` | [Linkup Search, `sourcedAnswer`](https://docs.linkup.so/pages/documentation/api-reference/endpoint/post-search) | `LINKUP_API_KEY` | `include_domains`, `exclude_domains`, `recency` | yes: `[N]` markers, in `citation.field` |
+| `Provider.BRAVE` | `brave` | [Brave Answers API](https://brave.com/search/api/) | `BRAVE_ANSWER_API_KEY` (the Answers plan; not the search key) | none: no source filter, and `language` showed no effect | yes: each citation's span in the answer, in `citation.extra` |
+
+All verified live on 2026-11-01, every mapped option seen to apply. The
+medians and stated costs below are from the answer scan of 300 SimpleQA
+questions on 2026-11-01, graded by `openai:gpt-4o`.
+
+- `perplexity` answers in about two seconds (median 1.9 s over 300 questions) and cites inline as `[2]`; a
+  citation whose marker appears in the answer carries it in `field`, and the
+  response states its own cost under `raw[0]["usage"]["cost"]` (about $0.0012
+  an answer over 300 questions). `country` is its `user_location`: an emergency-number question
+  answered 999 for `GB` and 911 for `US`.
+- `you` answers in about two seconds (median 1.7 s over 300 questions). Its `citations` are only the sources the
+  answer cites, marked `[[1, 2]]`; each carries in `field` the whole marker
+  group that first names it (`[[1, 2]]`, where other backends give one `[N]`), and its title comes from the pages You.com considered. It takes one
+  domain list, not both: asking for both raises before the call. `language` was
+  accepted but showed no effect, so `locale` is not mapped.
+- `parallel` answers in about six seconds (median 6.3 s over 300 questions) with the `lite` model, the fastest
+  whose `basis` ties its sources to the answer (`speed` returned none). Each
+  citation carries the basis's `confidence` in `extra`; its reasoning stays in
+  `raw`. Its Chat API is in beta and takes no source filter, so every option
+  is refused.
+- `exa` answers in about 1.3 seconds (median over 300 questions) and cites inline as `[1]`, numbering its
+  citations from 1; it states its cost under `raw[0]["costDollars"]` ($0.005 an
+  answer). Its Answer API has no source filter, so every option is refused.
+- `linkup` answers in about a second (median 0.9 s over 300 questions) and lists every page it read; it is
+  asked for inline citations, so the answer marks the ones it rests on as `[N]`, numbering them from 1, and a
+  page read but never cited has no `field`. `recency` is its `fromDate`, and Linkup filters on the date it holds
+  for a page, which is not always the publication date.
+- `brave` answers in two to three seconds and was verified live on 2026-11-03, outside the scan. It returns its
+  sources only on a streamed call, so the router streams it and reads the whole stream before answering. The
+  answer is the text with Brave's `<citation>` and `<usage>` tags taken out; each tag is a citation, in order,
+  with its `number` and its `start_index` / `end_index` into the answer in `extra`, and Brave writes no marker
+  into the text, so `field` is unset. Its `<usage>` tag, in `raw`, states the call's cost: $0.054 for one
+  question, almost all of it input tokens, about ten times the others. Every option is refused.
+
+**Choosing one.** On 300 SimpleQA questions graded by one judge, all five land
+at 94-95% and their intervals overlap, so accuracy does not separate them --
+the [answer scan](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#comparing-answer-backends)
+reruns it. They differ in speed (Linkup, Exa, You.com and Perplexity in one to
+two seconds, Parallel in about six), in the options they map (above), in
+whether the answer ties each source to a sentence, and in cost: Perplexity and
+Exa state theirs in the response; [`PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md)
+lists the rest.
+
+## Research
+
+`[research]` installs all of these. Unlike the other two methods there is no
+keyless tier: every agentic backend bills for the run, so `auto` here tries the
+backends you hold a key for and then stops, naming the variables that would fix
+it.
+
+| Pass | Name | Provider | Credentials | Options mapped | Structured output |
+| --- | --- | --- | --- | --- | --- |
+| `Provider.NIMBLE` | `nimble` | [Nimble Web Search Agent](https://nimbleway.com) | `NIMBLE_API_KEY` | all of them | yes, and enrichment |
+| `Provider.PARALLEL` | `parallel` | [Parallel Task API](https://parallel.ai) | `PARALLEL_API_KEY` | `effort`, `output_schema` | yes |
+| `Provider.PERPLEXITY` | `perplexity` | [Perplexity Agent API](https://docs.perplexity.ai) | `PERPLEXITY_API_KEY` | `effort` | not mapped yet |
+| `Provider.LINKUP` | `linkup` | [Linkup Research](https://docs.linkup.so) | `LINKUP_API_KEY` | `effort`, `output_schema` | yes |
+| `Provider.YOU` | `you` | [You.com Research API](https://you.com/docs/guides/research) | `YOU_API_KEY` | `effort` | not mapped yet |
+| `Provider.AUTO` *(default)* | `auto` | — | Nimble, Parallel, Perplexity, Linkup or You.com, whichever you hold, in that order | `effort`, `output_schema` | yes |
+
+Nimble is the only backend WebRouter maps the whole surface for: source
+guidance (`include_domains` / `exclude_domains`) and enrichment inputs
+(`records`) are mapped for it alone so far. Parallel's Task API has a
+[source policy](https://docs.parallel.ai/resources/source-policy) that is not
+mapped yet. Ask another backend for either and it says so rather than running
+without it.
+
+Perplexity's and You.com's structured output is not mapped until a live run has
+checked it, so neither declares `output_schema` — asking it for one raises
+`UnsupportedParameterError` rather than handing back prose under the name of a
+schema, which is the failure mode that quietly rots an agentic pipeline.
+
+**Exa's Research API has been retired upstream** — every path answers `410 RESEARCH_RETIRED` — so WebRouter no longer ships an Exa research provider. Exa search and extract are unaffected.
+
+How far each of the others has been verified, since it differs and the
+difference matters:
+
+| Provider | Verified how |
+| --- | --- |
+| `parallel` | **Live.** Real runs against the Task API, and every recorded payload in its tests is a real response. |
+| `nimble` | **Against the `nimble-python` SDK's generated types**, produced from its OpenAPI spec — stronger than prose docs, weaker than a live call. Its `max` sends `x-high`, which Nimble's docs put at 15 to 30 minutes, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
+| `perplexity` | **Live.** On 2026-09-30 the chat endpoint's deep research model answered 403 ("Sonar is now the Agent API"), so research moved to `/v1/responses`: a background run was followed from `queued` through `in_progress` to `completed`, presets `low`, `medium` and `xhigh` were accepted, and a cancel left a run `cancelled`. Its payloads are the ones in the tests. |
+| `linkup` | **Live.** Runs at `effort="low"` (`reasoningDepth` S, $0.25 each) were followed from start to answer, one of them with an `output_schema`, whose result was the schema's object alone; their payloads are the ones in the tests. Efforts above `low` are documentation-derived. Linkup's docs put `max` (XL) at 10 to 20 minutes and `high` (L) at 5 to 10, longer than `research()`'s default 600-second wait: pass a larger `timeout`, or use `submit_research()` and poll, rather than leave a paid run going after the wait gives up. |
+| `you` | **Live.** On 2026-10-16 a background run at `effort="low"` (`lite`) was followed from `queued` through `running` to `completed` on `api.you.com` (the same path on the search host answers 403); an unknown `research_effort` was a 422 naming `lite`, `standard`, `deep`, `exhaustive` and `frontier`. Its payloads are the ones in the tests. You.com offers no cancel, so `cancel()` returns `False`. `max` maps to `exhaustive`: `frontier`, background-only and priced well above it, is reachable as `provider_options={"research_effort": "frontier"}`. Efforts above `low` are documentation-derived. |
+
+Each has an integration test that skips itself until a credential is there.
+
+## Browser sessions and browse
+
+`open_browser()` has five backends and `auto`, and `browse()` three and
+`auto`. Their tables sit with the methods they serve, because each comes with
+more to say than a row: see [Session backends](/browser-sessions#session-backends) and
+[Browse backends](/browse#browse-backends).
+
+## Working with no credentials
+
+`auto` is the default for every method, so a router you never configured still
+searches, extracts and opens a browser — the Quickstart's first example is exactly that. It tries the backends
+you have a key for first — a credential in the environment says which one you
+want — and falls back to the anonymous tiers when there is none: Tavily keyless,
+then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
+Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
+session. Research, browse, `answer()` and live data have no
+anonymous tier, because every call bills; with no key they raise, naming the
+variables that would fix it. This is the one list of keyless backends; the MCP
+server and `.env.example` point here. `response.provider` names whichever one served it,
+never `"auto"`, so you can always tell. The anonymous tiers are rate-limited, which is
+why it is a chain: when one is throttled, the next answers.
+
+Every backend you hold a key for is a candidate, in a fixed order:
+
+| Method | Keyed members, in order | Then keyless | Then members added since, with a key |
+| --- | --- | --- | --- |
+| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore |
+| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
+| `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
+
+Search's keyed order is generated, not hand-written: `make chains` ranks the
+backends by accuracy on committed benchmark results; only backends too close in
+accuracy to tell apart are ordered by cost, then speed.
+[`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#the-default-auto-orders-make-chains)
+explains the method, and how close the top backends are. Every
+key you hold comes before the free tier — so a key you hold only for research,
+Perplexity's say, serves your plain searches too. Keenable, DeepSeek and AgentCore have
+no rows in those results, so they come after the keyless tier until a scan places them: with a gateway set up, a plain
+`WebRouter().search()` is still served by a keyless member first, so name `Provider.AGENTCORE` to reach it. For extract, the backends that
+joined later come after the keyless tier, so holding one more key never moves a
+call that was already being served. Research has no free tier, so Linkup and then
+You.com simply follow the others there. None of extract's, research's or browse's orders is
+ranked: extract's is measured on pages returned, not graded, and research's and browse's are
+unmeasured and hand-ordered.
+To choose your own order, pass a `chain`.
+
+**`auto` routes each request to a member that can serve it.** It accepts every
+option some member maps, and before trying a member it reads that member's
+class, which costs no credential and sends nothing. A member that does not map
+an option you set, or refuses the value (a `search_depth` level it lacks, a
+country off its list), is passed over for that call: ask for
+`search_depth="deep"` with keys for only Perplexity and Brave, neither of which
+returns whole pages, and the search goes to the keyless tier, where Exa MCP does.
+The keyless tier between them maps every search option. When no member is left
+it raises, naming what each one lacked, rather than running the query without
+the option:
+
+```python
+router = WebRouter(provider_config={"auto": {"chain": {"search": ["perplexity", "brave"]}}})
+router.search("...", search_depth="deep")
+# UnsupportedParameterError: Provider 'auto' does not support search_depth='deep'. No backend
+# in its chain maps it, so nothing was searched: perplexity (will not serve
+# search_depth='deep'), brave (will not serve search_depth='deep'). ...
+```
+
+Among the members that can serve the call, a failure — a missing key, a refused
+request, a rate limit — moves on to the next, as it always has. So does an
+empty answer: a search with no results and no answer, or an extract whose every
+document is blank. When every member answers empty, you get the first empty
+answer, not an error. A call that ends empty has tried every member that can
+serve it, one after another, and each one you hold a key for bills for it. To
+stop at the first answer, empty or not:
+
+```python
+router = WebRouter(provider_config={"auto": {"fallback_on_empty": False}})
+```
+
+That switch is the library's only; the MCP server always falls through.
+
+For `extract` the same goes for the format, which every backend, `auto`
+included, **pins** to `markdown` when you name none, rather than each applying
+its vendor's own default. `html` passes over Tavily and Exa, and `text` goes to
+Tavily, Exa or Jina Reader. A format is never relabelled: a member that cannot return it is
+not asked.
+
+### Choosing the order yourself
+
+`chain` in `provider_config["auto"]` replaces the default order. Keyed by
+method, it sets that method's chain and leaves the others on their defaults:
+
+```python
+router = WebRouter(
+    provider_config={
+        "auto": {
+            "chain": {
+                "search": ["perplexity", "nimble", "brave", "you-mcp"],
+                "extract": ["exa", ("tavily", {"allow_keyless": True}), "jina"],
+            }
+        }
+    }
+)
+```
+
+Each member is a name, or `(name, kwargs)` for one that needs its own settings.
+A member is built with its own `provider_config` entry, the chain's kwargs laid
+over it, so a key passed in code reaches it through `auto` exactly as it does by
+name. One backend first and another when it fails is a chain of two:
+
+```python
+router = WebRouter(
+    provider_config={
+        "nimble": {"api_key": nimble_key},
+        "firecrawl": {"api_key": firecrawl_key},
+        "auto": {"chain": {"extract": ["nimble", "firecrawl"]}},
+    }
+)
+router.extract(url)  # Nimble; Firecrawl when Nimble fails. response.provider says which.
+```
+
+The chain replaces the default whole, keyless tail included, and a member still
+needs its key. `provider_config["auto"]` reaches the `auto` of every method, so
+a chain given as a plain list is every method's chain — key it by `"search"`,
+`"extract"`, `"research"`, `"browser"` or `"browse"` unless every name in it
+serves each method you call through `auto`. The
+[provider scan](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md) prints a suggested search
+order in this form, from its own judged accuracy.
+
+This applies **only when you name no provider at all**. Ask for a provider and a
+missing key is still an error naming the variable to set — a named backend is
+never quietly demoted to an anonymous one:
+
+```python
+WebRouter(Provider.TAVILY).search("...")  # ConfigurationError if TAVILY_API_KEY is unset
+```

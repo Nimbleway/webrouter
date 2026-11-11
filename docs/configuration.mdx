@@ -1,0 +1,56 @@
+---
+title: "Configuration"
+description: "Set provider keys from the environment or pass them through provider_config, and see which methods each provider's key serves."
+---
+
+Keys are read from the environment, or passed explicitly through
+`provider_config={Provider.NIMBLE: {"api_key": "..."}}`:
+
+| Provider | Variable | Serves |
+| --- | --- | --- |
+| Nimble | `NIMBLE_API_KEY` | search, extract, research |
+| Tavily | `TAVILY_API_KEY` | search, extract |
+| Exa | `EXA_API_KEY` | search, extract, answer |
+| You.com | `YOU_API_KEY` | search, research, answer |
+| Brave | `BRAVE_SEARCH_API_KEY` | search |
+| Parallel | `PARALLEL_API_KEY` | search, research, answer |
+| Perplexity | `PERPLEXITY_API_KEY` | search, research, answer |
+| Linkup | `LINKUP_API_KEY` | search, extract, research, answer |
+| WebIQ | `WEBIQ_API_KEY` | search, extract |
+| Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
+| DeepSeek | `DEEPSEEK_API_KEY` | search, extract |
+| AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](/agentcore-setup))* | search |
+| Firecrawl | `FIRECRAWL_API_KEY` | extract |
+| Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
+| Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
+| Jina Reader | `JINA_API_KEY` *(optional — raises the rate limit)* | extract |
+| Steel | `STEEL_API_KEY` | open_browser |
+| Browserbase | `BROWSERBASE_API_KEY` | open_browser, browse |
+| Hyperbrowser | `HYPERBROWSER_API_KEY` | open_browser |
+| Anchor | `ANCHOR_API_KEY` | open_browser |
+| Kernel | `KERNEL_API_KEY` | open_browser |
+| Browser Use | `BROWSER_USE_API_KEY` | browse |
+| Skyvern | `SKYVERN_API_KEY` | browse |
+| `local` | *none — keyless* (`CHROME_PATH` optional, the browser to launch) | open_browser |
+| `you-mcp` | *none — keyless* | search |
+| `exa-mcp` | *none — keyless* | search |
+| `parallel-mcp` | *none — keyless* | search |
+| `auto` | *none — keyless* | search, extract, open_browser |
+| OpenAI *(the default `evaluate()` judge, not a backend)* | `OPENAI_API_KEY` | evaluate |
+| Anthropic *(`AnthropicJudge` for `evaluate()`, not a backend)* | `ANTHROPIC_API_KEY` | evaluate |
+| Your router service *(`router="remote"`, not a backend)* | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` *(optional; `router_config["api_key"]` wins)* | routing |
+
+A key set once serves every method of a provider that has several. See
+[`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example). The library reads the environment only; the
+MCP server is the one place a `.env` is read for you — see
+[docs/mcp.md](/mcp#then-add-whichever-keys-you-have).
+`configured_providers()` and
+`configured_extract_providers()` — and `configured_research_providers()`,
+`configured_browser_providers()` and `configured_browse_providers()` — report
+which of these the current environment actually satisfies — a backend needing two variables only when it has both.
+
+WebRouter does not log or store keys, and a provider's `__repr__` omits them so
+a stray log of a provider does not leak one. Provider clients also never follow redirects —
+`httpx` would replay the auth header to the redirect target, including one on
+another host — so a provider sending a credential rejects
+`follow_redirects=True`. See [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md#credentials).

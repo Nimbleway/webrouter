@@ -1,0 +1,66 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "WebRouter",
+  "description": "An open source standard that connects your agent to the internet.",
+  "colors": {
+    "primary": "#202c26",
+    "light": "#d1ddbf",
+    "dark": "#202c26"
+  },
+  "background": {
+    "color": {
+      "light": "#eeeadd",
+      "dark": "#14251e"
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://github.com/Nimbleway/webrouter"
+  },
+  "favicon": "/logo/favicon.svg",
+  "navbar": {
+    "links": [
+      { "label": "Discord", "href": "https://discord.gg/MGztFWSjZh" }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Nimbleway/webrouter"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": ["index", "install", "quickstart", "how-it-works", "providers"]
+      },
+      {
+        "group": "Methods",
+        "pages": ["search", "extract", "live-data", "answer", "research", "browser-sessions", "browse", "vendor-data"]
+      },
+      {
+        "group": "Agents and MCP",
+        "pages": ["mcp-server", "mcp", "frameworks", "langchain", "claude-agents", "openai-agents", "wrapping-search", "agent-prompt"]
+      },
+      {
+        "group": "Routing",
+        "pages": ["smart-routing", "routing-and-extending"]
+      },
+      {
+        "group": "Benchmarks",
+        "pages": ["agent-benchmark", "benchmarking", "evaluating"]
+      },
+      {
+        "group": "Reference",
+        "pages": ["configuration", "errors", "agentcore-setup", "community"]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Nimbleway/webrouter",
+      "discord": "https://discord.gg/MGztFWSjZh"
+    }
+  }
+}

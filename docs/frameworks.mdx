@@ -1,0 +1,26 @@
+---
+title: "Integrating a framework"
+description: "How to put WebRouter's methods in front of an agent framework, with the checklist every integration follows."
+sidebarTitle: "Frameworks"
+---
+
+Which backend serves a call stays the caller's choice. The shipped integrations
+are the [MCP server](/mcp-server#the-mcp-server), [LangChain](/langchain#langchain),
+[Claude](/claude-agents#claude-agents), and [OpenAI](/openai-agents#openai-agents).
+
+`auto` uses every key held; see the [`Provider.AUTO`](/providers#search) row in the search table.
+
+## Framework checklist
+
+When integrating WebRouter:
+
+- [ ] Accept a `search_provider` or `extract_provider` parameter
+- [ ] Default to `"auto"` (WebRouter's default provider)
+- [ ] Pass it to `WebRouter(search_provider)` or `AsyncWebRouter(...)`
+- [ ] Use `router.search()` or `router.extract()` in your implementation
+- [ ] Let `WebRouterError` propagate or wrap it in your own exception
+- [ ] Document credential environment variables (`NIMBLE_API_KEY`, etc.)
+- [ ] Document the `auto` behavior above
+
+Error types are in [Errors](/errors#errors). Adding a backend, or keeping one private,
+is [Adding a provider](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#adding-a-provider).

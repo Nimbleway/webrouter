@@ -1,0 +1,74 @@
+---
+title: "WebRouter: an open source standard to connect your agent to the internet"
+description: "WebRouter gives your agent one interface to search, extract, live data, answer, research and browser sessions, across many providers."
+sidebarTitle: "Introduction"
+---
+
+<img src="/assets/webrouter-mascot.png" alt="The WebRouter router mascot, an orange cable plugged into its search port" width="360" />
+
+Connect your agent to every web tool through one interface: search, extract, live data, answer, research and browser sessions, across many providers. A [router](/smart-routing) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
+
+```bash
+pip install "webrouter[all]"
+```
+
+```python
+from web_router import Provider, WebRouter
+
+WebRouter().search("what is retrieval augmented generation")  # no key needed
+WebRouter(Provider.NIMBLE).search("...")  # or name one
+WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
+
+WebRouter().extract("https://example.com")  # page contents, also keyless
+
+WebRouter().live_data("walmart_pdp", {"product_id": "..."}, provider="nimble")  # a site's fields, fetched now
+
+WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
+
+WebRouter().call_vendor("datadog.logs.search", {"filter": {"query": "status:error"}})  # your own vendor accounts
+
+WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
+
+with WebRouter("local").open_browser() as browser:  # a browser to drive, also keyless
+    browser.goto("https://example.com")
+
+WebRouter(Provider.BROWSER_USE).browse("...")  # a hosted browser agent does the task
+```
+
+<Note>**Beta:** the API may change before 1.0.</Note>
+
+Every provider has its own SDK, its own parameter names and its own response
+shape. "How many results" is `max_results` on Tavily, `count` on Brave and
+You.com, `numResults` on Exa. The page text is `content` on Tavily, `text` on
+Exa, `snippet` on Perplexity, and nested under `contents` on You.com. Swapping
+backends means rewriting the call, the options and the parsing.
+
+WebRouter normalizes all three:
+
+```python
+response = router.search(query, max_results=5, search_depth="fast")
+
+[result.content for result in response.results]  # same field, every backend
+```
+
+Nothing is hidden to get there. Unmapped provider fields stay in
+`SearchResult.extra` / `ExtractedDocument.extra`, the untouched payloads stay in
+`raw`, and an option a backend cannot honour **raises instead of being quietly
+dropped**, so a call never runs under weaker constraints than you asked for.
+
+<Columns cols={2}>
+  <Card title="Install" icon="download" href="/install">
+    From PyPI or a clone, with the extras for the methods you call.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Your first search and extract, with no key.
+  </Card>
+  <Card title="Providers" icon="plug" href="/providers">
+    Which provider serves which method, and the key each needs.
+  </Card>
+  <Card title="MCP server" icon="server" href="/mcp-server">
+    Give any agent WebRouter's methods as tools.
+  </Card>
+</Columns>
+
+Questions? Ask in the [WebRouter Discord](https://discord.gg/MGztFWSjZh). See [Community](/community) for where everything else goes.

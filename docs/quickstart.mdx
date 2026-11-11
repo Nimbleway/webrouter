@@ -1,0 +1,81 @@
+---
+title: "Quickstart"
+description: "Make your first WebRouter calls: search and extract with no key, then name a provider and read the same normalized fields."
+---
+
+No key needed to try it — the default provider uses the backends that offer an
+anonymous tier:
+
+```python
+from web_router import WebRouter
+
+response = WebRouter().search("what is retrieval augmented generation", max_results=5)
+
+for result in response.results:
+    print(result.title, result.url)
+
+print(response.provider)  # which backend actually answered
+```
+
+Name a provider once you have a key for one. `Provider` is an enum of the
+built-in backends, and it is the form worth writing: your editor completes it,
+and a typo is caught where you type it rather than at the first call.
+
+```python
+from web_router import Provider, WebRouter
+
+router = WebRouter(Provider.NIMBLE)  # reads NIMBLE_API_KEY from the environment
+response = router.search("who founded nimbleway", max_results=5, country="US")
+
+router.search("...", provider=Provider.BRAVE)  # per-call override
+```
+
+`country` is a good illustration of the contract: Nimble maps it, and a backend
+that does not raises `UnsupportedParameterError` rather than quietly running the
+search unfiltered.
+
+**Plain strings work anywhere a `Provider` does** — `WebRouter("nimble")` is the
+same call. The enum covers the built-ins, so the string form is what names a
+backend you added with `register_provider`, or one that arrives from a config
+file, an environment variable or a CLI flag. Prefer the enum when you are
+writing the name yourself; reach for a string when something else supplies it.
+
+Searching and then reading the pages you found is the two methods together:
+
+```python
+response = router.search("latest nvidia earnings", max_results=5)
+pages = router.extract(response.urls[:3], format="markdown")
+
+for document in pages.documents:
+    print(document.url, len(document.content))
+```
+
+Async works the same way:
+
+```python
+import asyncio
+from web_router import AsyncWebRouter, Provider
+
+
+async def main():
+    async with AsyncWebRouter(Provider.NIMBLE) as router:
+        response = await router.search("latest nvidia earnings", max_results=3)
+        pages = await router.extract(response.urls, format="markdown")
+        print(pages.urls)
+
+
+asyncio.run(main())
+```
+
+## Runnable examples
+
+[`examples/`](https://github.com/Nimbleway/webrouter/blob/main/examples/README.md) has a script per topic — routing, every error
+and its fix, depth measured across backends, adding your own provider — and
+**most need no credentials**, routing through the keyless backends —
+[`browser_session.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/browser_session.py) drives a local Chromium
+with none. [`main.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/main.py) is a guided tour of search and extract
+in one file:
+
+```bash
+uv run --env-file .env python examples/main.py
+```

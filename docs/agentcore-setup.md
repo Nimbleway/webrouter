@@ -1,4 +1,8 @@
-# AWS AgentCore Web Search: setup
+---
+title: "AWS AgentCore Web Search: setup"
+description: "Create an AgentCore Gateway in your own AWS account once, then search through AWS AgentCore Web Search like any other backend."
+sidebarTitle: "AgentCore setup"
+---
 
 `agentcore` searches through an AgentCore Gateway in your own AWS account, so you
 create one gateway once, and from then on the call is the same as for any other

@@ -1,0 +1,116 @@
+---
+title: "Researching a question"
+description: "Run an agentic research job that reasons over several turns, with structured output, effort levels and job handles."
+sidebarTitle: "Research"
+---
+
+`research()` behaves differently enough to be worth a section. A search answers in a second. A research run reasons over
+several turns — searching, reading, cross-checking — and answers in minutes.
+
+```python
+response = router.research("how did nvidia's datacenter revenue mix shift in 2025")
+
+print(response.answer)
+for citation in response.citations:
+    print(citation.url, citation.field or "")
+```
+
+The line between this and `search` is not "does it reason". It is **whether the
+work fits inside one request/response**. A written answer that comes back in
+one call is `answer()`. A run that
+takes minutes, can be polled, can be cancelled and bills by the unit of effort is
+a job, and it needs a different shape.
+
+## Asking for structure instead of prose
+
+Pass a schema and the answer comes back as an object. Either JSON Schema or the
+pydantic model to take one from:
+
+```python
+class Company(BaseModel):
+    name: str
+    what_they_sell: str
+    headquarters: str | None = None
+
+
+response = router.research("what does nimbleway sell", output_schema=Company)
+response.structured  # {'name': 'Nimble', ...}
+```
+
+Add `records` on top of a schema and the run becomes an **enrichment**: the same
+schema, filled in once per row you already hold: `structured` comes back as one
+row per record. Nimble, the backend that maps it, refuses one at `effort="low"`;
+its default effort runs one, as the example below does (checked live).
+
+```python
+router.research(
+    "fill in what each company sells and where it is headquartered",
+    output_schema=Company,
+    records=[{"name": "Nimble"}, {"name": "Tavily"}],
+)
+```
+
+## Effort
+
+`effort` is research's equivalent of `search_depth` — four levels mapped onto
+each backend's own vocabulary, which disagree more here than anywhere else in
+the package:
+
+| Effort | Nimble | Parallel | Perplexity | Linkup | You.com |
+| --- | --- | --- | --- | --- | --- |
+| `low` | `low` | `lite` | `low` | `S` | `lite` |
+| `medium` | `medium` | `core` | `medium` | `M` | `standard` |
+| `high` | `high` | `pro` | `high` | `L` | `deep` |
+| `max` | `x-high` | `ultra` | `xhigh` | `XL` | `exhaustive` |
+
+A backend with fewer tiers maps more than one level onto the same setting rather
+than inventing a distinction it does not have. Nimble's own `max` is not open yet, so `max` sends its deepest tier,
+`x-high`. Parallel's `base` has no normalized level of its own and is reachable through
+`provider_options`, as is You.com's `frontier`.
+
+Parallel is the one backend that *requires* an effort, so leaving it unset sends
+`medium` rather than omitting the field — the same deliberate exception to
+"unset means unset" that `extract` makes for `format`, and for the same reason:
+the alternative is a value that depends on a vendor default nobody declared.
+
+## Not waiting for it
+
+`research()` blocks, which is wrong anywhere a minutes-long wait is — a request
+handler, a UI, an MCP server. `submit_research()` hands back the job instead:
+
+```python
+job = router.submit_research("...", effort="high")
+
+job.job_id  # the backend's own id for the run
+job.status()  # where it is now, without blocking
+job.result(timeout=30)  # block for a while; raises ResearchTimeoutError if it is not done
+```
+
+Running out of time **raises rather than returning an empty answer**, and leaves
+the run going rather than cancelling it — the exception carries the job id, so
+picking the same run back up costs nothing where starting it again would cost
+the whole run. `job.cancel()` stops one where the backend supports it, and
+returns `False` where it does not rather than pretending.
+
+The async router is the same call with `await`, which is what makes several
+research runs at once reasonable there and not on the sync one.
+
+## What comes back
+
+```python
+response.answer  # prose, when the run produced prose
+response.structured  # the object, when a schema was asked for
+response.citations  # what the answer rests on
+response.outcome  # 'complete', or 'partial' when the backend said it stopped early
+response.provider  # who actually answered -- never 'auto'
+response.raw  # every untouched payload the run took
+```
+
+`Citation.field` says **which part of the answer a source backs** — a JSON path
+into `structured`, or a marker in `answer` — for the backends that attribute per
+field. `None` means it cites the answer as a whole.
+
+`outcome` is `"partial"` only when the backend itself reported stopping early:
+an exhausted budget, a truncated generation. A run that simply found little is
+`"complete"`, because it finished the work it was asked to do. Nothing here is
+inferred.

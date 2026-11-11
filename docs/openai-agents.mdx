@@ -1,0 +1,35 @@
+---
+title: "OpenAI agents"
+description: "Give an OpenAI model WebRouter's tools as function tool definitions, from web_router.integrations.openai."
+---
+
+`web_router.integrations.openai` gives an OpenAI model the same two tools, as
+function tool definitions:
+
+```python
+from openai import OpenAI
+from web_router import WebRouter
+from web_router.integrations.openai import WebRouterTools
+
+client = OpenAI()
+tools = WebRouterTools(WebRouter(), provider="nimble", max_results=5)
+request = {"model": "gpt-4.1", "instructions": tools.guide(), "tools": tools.definitions()}
+
+response = client.responses.create(input="Who won the 2026 Tour de France?", **request)
+while calls := [item for item in response.output if item.type == "function_call"]:
+    outputs = [tools.call(c.name, c.arguments).function_call_output(c.call_id) for c in calls]
+    response = client.responses.create(input=outputs, previous_response_id=response.id, **request)
+print(response.output_text)
+```
+
+It is the Claude module with an OpenAI envelope: the same constructor, tools,
+rendering, errors and routing guide, and no SDK or extra. `definitions()` is
+the Responses API shape and `chat_definitions()` the Chat Completions one;
+answer a call with `function_call_output(call_id)` or
+`tool_message(tool_call_id)`. `call` / `acall` take the arguments as the JSON
+string OpenAI hands over, or already decoded, and arguments that are not valid
+JSON come back as an error result the model can fix. The definitions are
+strict, so OpenAI holds the model's arguments to the schema. OpenAI has no
+error flag on a tool's output, so an error's text says on its own that the
+call failed or did not run. The tools keep their `web_router_` names, so they
+never collide with OpenAI's built-in `web_search` either.

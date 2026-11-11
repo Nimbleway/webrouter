@@ -1,0 +1,56 @@
+---
+title: "Install"
+description: "Install WebRouter from PyPI or a clone, pick extras by method, and add only the provider keys you hold."
+---
+
+Install the package from PyPI, with the extras you need:
+
+```bash
+pip install "webrouter[all]"         # any virtualenv
+uv add "webrouter[all]"              # a uv project
+pip install "webrouter[mcp,browser]" # the MCP server with its browser tools
+```
+
+Then put the keys you hold in your environment or a `.env` file; none is
+required. [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names each variable.
+
+**From source**, for contributors or to track `main`: the one prerequisite is
+[uv](https://docs.astral.sh/uv/getting-started/installation/), which fetches
+the right Python itself.
+
+```bash
+git clone https://github.com/Nimbleway/webrouter.git
+cd webrouter
+make setup              # every extra: the library, the MCP server, the browser tools and a local Chromium
+cp .env.example .env    # then fill in only the keys you hold; none is required
+```
+
+Using a coding agent? Tell it *"clone https://github.com/Nimbleway/webrouter
+and set it up"*. [CLAUDE.md](https://github.com/Nimbleway/webrouter/blob/main/CLAUDE.md) walks it through the rest. To use the
+clone from another project, install it in editable mode
+(`uv add --editable "/path/to/webrouter[all]"` or
+`pip install -e "/path/to/webrouter[all]"`), so `git pull && make setup` in the
+clone is the whole update.
+
+You can install fewer extras by naming them in place of `all`:
+
+`search`, `extract`, `research`, `browser`, `mcp`, `evals` and `langchain`.
+Extras are named after the **methods you call**, not the backends behind them:
+`search` brings in every provider that can serve one, so choosing between them
+stays a runtime decision — `WebRouter(Provider.BRAVE)` — instead of something you have
+to get right at install time.
+
+Three extras are not methods. `mcp` names a transport — it installs the
+[MCP server](/mcp-server#the-mcp-server), which exposes the methods above rather than
+adding one of its own. It does not include `browser`: the server's `browser_*`
+tools need Playwright, so they appear only with `webrouter[mcp,browser]`.
+`evals` installs the OpenAI and Anthropic SDKs behind the built-in judges that
+[`evaluate()`](/evaluating#evaluating-accuracy) grades answers with; bring your own judge
+and you do not need it. `langchain` installs `langchain-core` for the
+[LangChain tools](/langchain#langchain) — the agent loop and the model stay your own
+install. `browser` is named after what it lets a browser
+handle do — drive the page — rather than after `open_browser`, which needs no
+Playwright: a vendor session opens over httpx, which `[all]` installs, and
+`local` needs only the standard library and a Chrome or Chromium. `remote`
+installs httpx for the built-in [`remote` router](/smart-routing#a-router-service-routerremote),
+for an install that carries no method extra; `[all]` includes it.

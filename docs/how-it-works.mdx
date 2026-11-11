@@ -1,0 +1,53 @@
+---
+title: "How it works"
+description: "How WebRouter turns one call into a provider request, normalizes the response, and raises instead of dropping an option."
+---
+
+| Piece | Role |
+| --- | --- |
+| `WebRouter` / `AsyncWebRouter` | The facade you call. Holds provider config and routes each call. |
+| `SearchProvider` / `ExtractProvider` | The contract a backend implements, one per method: `_search`/`_asearch`, `_extract`/`_aextract`. |
+| `SearchRequest` / `ExtractRequest` | A normalized call, before any provider sees it. |
+| `SearchResponse` / `SearchResult` | A normalized answer, plus the provider's untouched payload in `raw`. |
+| `ExtractResponse` / `ExtractedDocument` | The same for a page fetch, plus `failures` for the URLs that did not come back. |
+| `LiveDataProvider` | The contract for a live data backend: `_list` its catalogue, `_get` one source, `_run` it. |
+| `LiveDataRequest` / `LiveDataResponse` | A normalized run -- a source's name and its own inputs -- and the `records` it extracted. `LiveDataSource` describes one, `LiveDataSourcePage` a page of the catalogue. |
+| `ResearchProvider` | The contract for an agentic backend: `_start` a run, `_fetch` where it got to. |
+| `ResearchRequest` / `ResearchResponse` | A normalized run, and its answer — prose, structure, and the `citations` behind either. |
+| `ResearchJob` | A run in progress. Polls with back-off, blocks with a timeout, and never fabricates an answer it does not have. |
+| `BrowseProvider` / `BrowseJob` | The same job shape for a hosted browser agent: `BrowseRequest` in, `BrowseResponse` — answer, structure, `steps` — out. Research and browse share one job core. |
+| `BrowserProvider` | The contract for a browser session backend: `_open` a session, `_release` it. |
+| `BrowserHandle` / `AsyncBrowserHandle` | An open session and its `cdp_url`, with the page actions, released when the `with` block ends however it ends. |
+
+Four rules keep the abstraction honest:
+
+**Unset stays unset.** Fields you leave alone are not sent, so each backend
+applies its own defaults rather than inheriting ours. (Three deliberate
+exceptions: an extract sends a format even when you named none, `markdown`
+wherever the backend can return it — so the same call answers alike whichever
+backend serves it, and `document.format` is true because it was asked for, not
+because a vendor default has not moved. A
+browser session opened with no `timeout` gets ten minutes rather than the
+vendor's own limit, because it is billed until something ends it. And `local`
+is headless unless you say otherwise, because there is no vendor default to
+keep and a window would open on your screen.)
+
+**Nothing is silently dropped.** If a provider does not map an option you set —
+or cannot return the `format` you asked for — it says so instead of quietly
+doing something weaker:
+
+```python
+WebRouter(Provider.LINKUP).search("...", country="US")
+# UnsupportedParameterError: Provider 'linkup' does not map 'country'. Pass it
+# through provider_options if the underlying API supports it, or add the
+# mapping -- see CONTRIBUTING.md.
+```
+
+**Nothing is thrown away.** Unmapped provider fields land in `SearchResult.extra`
+or `ExtractedDocument.extra`, and the complete payloads in `raw`, so
+normalization is never lossy.
+
+**Nothing fails quietly.** An extract over several URLs reports the ones that
+did not come back in `failures` and returns the rest; a call that produced no
+document at all raises. An empty answer is never something you have to go
+looking for.

@@ -1,0 +1,240 @@
+---
+title: "Routing and extending"
+description: "Route between providers, read estimated prices, check which providers you can use, and add a provider of your own."
+---
+
+## Routing between providers
+
+```python
+router = WebRouter(
+    Provider.NIMBLE,
+    provider_config={
+        Provider.NIMBLE: {"api_key": "..."},
+        Provider.TAVILY: {"api_key": "...", "timeout": 30},
+    },
+)
+
+response = router.search("query", provider=Provider.TAVILY)  # per-call override
+```
+
+`provider_config` is the one place credentials and client settings are passed
+explicitly; everything else comes from the environment. It reaches a backend
+`auto` calls as well as one you name, and a backend given an `api_key` there
+joins `auto`'s default chain as one whose key is in the environment does. Providers are
+constructed lazily and cached, so configuring a backend you never call costs
+nothing.
+
+Switching backend on every call? Build the provider once and pass it, so its
+settings travel with it instead of being restated:
+
+```python
+from web_router.providers.tavily import TavilyProvider
+
+tavily = TavilyProvider(api_key="...", timeout=30)
+
+for query in queries:
+    router.search(query, provider=tavily)
+```
+
+A provider you construct is yours: the router uses it, never caches it, and
+`router.close()` leaves it open for you to close.
+
+Already hold an authenticated Nimble client — one per end user, say, with
+your own headers and a connection pool shared across your app? Pass it as
+`async_client` to any of the three Nimble classes, directly or through
+`provider_config`, and the provider calls through it instead of building one
+from a key:
+
+```python
+from nimble_python import AsyncNimble
+
+client = AsyncNimble(api_key=user_key, default_headers={...})
+
+async with AsyncWebRouter(provider_config={Provider.NIMBLE: {"async_client": client}}) as router:
+    await router.search("query")  # auto counts Nimble as configured, no NIMBLE_API_KEY needed
+```
+
+The client stays yours: the provider reads no key, builds no sync client — a
+sync call raises `ConfigurationError`, and so does a synchronous `WebRouter`
+handed one in `provider_config`, rather than letting `auto` pass over Nimble
+unannounced — and never closes it. Its credential is the one used: an
+`api_key` passed beside it raises `ConfigurationError` instead of replacing it.
+Other options passed beside it, such as `timeout`, apply to a copy that shares
+its connection pool, and research keeps the client's own timeouts, clamping
+only the read limit to the run's budget.
+
+## Estimated prices (experimental)
+
+`web_router.prices` is the price list the library ships: the published list
+price of every (provider, method, mode) WebRouter calls, each with the vendor
+page it comes from and the date it was checked. It is experimental and may
+change before 1.0. The figures are estimates -- pay-as-you-go list prices, not
+your plan's or a negotiated rate, and a call can bill more than its row (content
+add-ons, tokens) -- and the router never puts one in a response.
+
+```python
+from web_router import prices
+
+prices.estimate("tavily", "search")  # 0.008: one request at the default depth
+prices.estimate("tavily", "search", "fast")  # 0.016: search_depth="fast"
+prices.estimate("linkup", "research", "max")  # 2.5: one run at effort="max"
+prices.estimate("perplexity", "research")  # None: billed by tokens
+row = prices.price("exa", "search")  # the whole row: unit, note, source_url, checked
+```
+
+`estimate()` is the cost of one request, page, run or browser-minute, and
+`None` when the vendor publishes no price (`unit="unknown"`), bills by tokens
+(`unit="token_billed"`), or the list has no row for that mode -- never another
+mode's price. A mode is WebRouter's own `search_depth` or `effort` value, or a
+vendor mode sent through `provider_options` written with a leading `:`
+(`":ultra-fast"`); leave it unset for a call that sets none.
+[`PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md) shows the same list as tables,
+with the notes behind each figure.
+
+A search or answer row also carries measured latency, from the committed
+benchmark results in `benchmarks/providers/frozen/`: the median and
+90th-percentile seconds of the calls that succeeded, how many there were
+(`latency_n`), the runs pooled (`latency_runs`) and the newest one's date
+(`latency_measured`).
+
+```python
+prices.estimate_latency("exa", "answer")  # (1.317, 1.618): p50 and p90 seconds
+prices.estimate_latency("tavily", "extract")  # None: not measured
+```
+
+It is `None` for every method and mode no benchmark measured -- extract,
+research, browse and the modes the scans did not run -- never a guess. A
+benchmark latency drifts from run to run, which is why each row pools every
+run that covers it, leaving out reruns of the same questions so none counts
+twice. `make latency` rewrites the fields from the frozen
+results, and a test fails while they disagree.
+
+## Which providers can I actually use?
+
+```python
+from web_router import available_providers, configured_providers
+
+available_providers()  # every name the router knows
+configured_providers()  # the ones you have a credential for, plus the keyless ones
+```
+
+Both return plain strings, not `Provider` members: they report what is
+registered at runtime, which includes backends you added yourself and so cannot
+be an enum. Feed a result straight back to `search(provider=...)`.
+
+`configured_providers()` reads environment variables only — a key passed through
+`provider_config` will not show up there (a router's `auto` still counts it), and a key that is present may still be
+rejected by the service. It answers "worth trying", not "guaranteed to work".
+
+## Reaching a provider's own options
+
+Every search API has capabilities beyond the shared surface. Those pass through
+untranslated:
+
+```python
+router.search("nvidia earnings", provider_options={"topic": "news"})
+```
+
+`provider_options` is an escape hatch, not a destination. Options used through
+it are provider-specific by definition, so the portability guarantee above does
+not apply to them.
+
+**If you work on a search API, this is the part to change.** Promoting one of
+your options into the shared surface — so it works the same way across every
+backend — is a small, well-defined PR, and the fastest way to make WebRouter
+represent your API properly. See
+[CONTRIBUTING.md](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#promoting-a-provider-option).
+
+## Adding a provider
+
+Most of these APIs have no Python SDK worth the dependency, so the short path is
+`HttpSearchProvider` — it owns the client, auth headers, HTTP error handling and
+cleanup, and leaves you two methods:
+
+```python
+from web_router import register_provider
+from web_router.providers import HttpSearchProvider, build_payload
+from web_router.types import SearchRequest, SearchResponse, SearchResult
+
+
+class AcmeProvider(HttpSearchProvider):
+    name = "acme"
+    supported_parameters = frozenset({"max_results"})
+    base_url = "https://api.acme.com"
+    search_path = "/v1/search"
+    env_api_key = "ACME_API_KEY"
+
+    def _build_payload(self, request: SearchRequest) -> dict:
+        return build_payload(request, {"max_results": "limit"}, query=request.query)
+
+    def _to_response(self, request: SearchRequest, payload: dict) -> SearchResponse:
+        return SearchResponse(
+            provider=self.name,
+            query=request.query,
+            results=[SearchResult(url=hit["url"], title=hit["title"]) for hit in payload["hits"]],
+            raw=payload,  # nothing is thrown away
+        )
+
+
+register_provider("acme", AcmeProvider)  # custom names are strings: the enum is closed
+```
+
+Wrapping a real SDK instead? Subclass `SearchProvider` and implement `_search`
+and `_asearch`, as `nimble.py` and `tavily.py` do.
+
+Either way you write translation only. The base class rejects options you did
+not declare and wraps whatever your backend raises in `ProviderError` — which is
+why you implement `_search` and callers use `search`. `build_payload` handles the
+other two: it drops the options you left unset and always passes
+`provider_options` through last.
+
+An extract backend is the same shape against `HttpExtractProvider`, with
+`extract_path` in place of `search_path` and a `format` table instead of a depth
+one:
+
+```python
+from web_router import register_extract_provider
+from web_router.providers import HttpExtractProvider, build_payload
+from web_router.types import ExtractedDocument, ExtractRequest, ExtractResponse
+
+ACME_FORMATS = {"markdown": "md", "html": "raw"}
+
+
+class AcmeExtractProvider(HttpExtractProvider):
+    name = "acme"
+    supported_parameters = frozenset({"format"})
+    supported_formats = frozenset(ACME_FORMATS)  # the table is the single description
+    default_format = "html"
+    base_url = "https://api.acme.com"
+    extract_path = "/v1/fetch"
+    env_api_key = "ACME_API_KEY"
+
+    def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict:
+        return build_payload(request, url=urls[0], as_=ACME_FORMATS[self.format_of(request)])
+
+    def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict) -> ExtractResponse:
+        return ExtractResponse(
+            provider=self.name,
+            documents=[
+                ExtractedDocument(
+                    # This call's own URL, not `request.urls[0]` -- the base
+                    # class calls you once per URL, so the request holds them all.
+                    url=urls[0],
+                    content=payload["body"],
+                    format=self.format_of(request),
+                )
+            ],
+            raw=[payload],
+        )
+
+
+register_extract_provider("acme", AcmeExtractProvider)
+```
+
+`batches_urls` is left alone above, so the base class calls this once per URL and
+assembles one response. Set it to `True` only if a single call really takes the
+whole list, as Tavily's and Exa's do.
+
+`perplexity.py` and `firecrawl.py` are the shortest complete examples, and
+[CONTRIBUTING.md](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#adding-a-provider) has the full checklist —
+keyless endpoints, redirects, and reusing an existing provider's normalization.

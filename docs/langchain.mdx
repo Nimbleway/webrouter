@@ -1,0 +1,38 @@
+---
+title: "LangChain"
+description: "Use WebRouter's methods as LangChain tools, with your own agent loop and model."
+---
+
+`web_router.integrations.langchain` puts search and extract in front of a
+LangChain agent as two tools, `web_search` and `web_extract`:
+
+```python
+from langchain.agents import create_agent
+from web_router import WebRouter
+from web_router.integrations.langchain import web_router_tools
+
+tools = web_router_tools(WebRouter(), provider="nimble", max_results=5)
+agent = create_agent("openai:gpt-4.1", tools=tools)
+```
+
+Or build them one at a time — `WebRouterSearch(router=..., provider=...,
+max_results=..., search_depth=...)` and `WebRouterExtract(...)` — and pass
+`async_router=AsyncWebRouter()` to serve `agent.ainvoke` without a worker thread.
+`WebRouterAnswer(router=..., provider="linkup")` adds `web_answer`, a backend's
+written answer to one question with its sources. It is not among
+`web_router_tools()`: every answer backend needs a key and bills each call.
+
+**The model supplies the query or the URLs; you supply everything else.** The
+provider, `max_results`, `search_depth` and the domain filters are fixed when
+the tool is built and sent unchanged on every call, so an agent behaves the
+same whichever backend serves it and switching backends is one argument. An
+option the provider does not map raises on the first call, to you — not to the
+model, which could not fix it.
+
+**The model reads a compact rendering; you keep the whole response.** Each
+tool answers in LangChain's `content_and_artifact` form: the model sees JSON in
+one layout for every backend, each result's text cut to `result_chars` (a
+page to `document_chars`), and the tool message's `artifact` carries the
+untouched `SearchResponse` or `ExtractResponse`. A backend failure reaches the
+model as a one-line error it can react to; `web_extract` names the URLs it
+could not read rather than failing the call.

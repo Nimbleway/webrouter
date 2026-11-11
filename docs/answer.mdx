@@ -1,0 +1,74 @@
+---
+title: "Asking for an answer"
+description: "Ask one question and get a written answer with the sources it rests on, from any answer provider, in a single call."
+sidebarTitle: "Answer"
+---
+
+`answer()` asks one question and returns the backend's own written answer with
+the sources it rests on, in one call. It sits between `search()`, which returns
+the pages, and `research()`, a job of minutes.
+
+Three steps to a first answer:
+
+1. Install with the `answer` extra: `pip install "webrouter[answer]"`
+   (`make setup` in a clone installs every extra).
+2. Set one answer backend's key in your environment or `.env`, for example
+   `PERPLEXITY_API_KEY` -- the [answer table](/providers#answer) lists each one's variable.
+3. Ask:
+
+```python
+from web_router import WebRouter
+
+with WebRouter() as router:
+    response = router.answer("who won the 2022 world cup final")  # the one backend you hold a key for
+
+print(response.answer)
+for citation in response.citations:
+    print(citation.field or "-", citation.url)
+```
+
+```text
+Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra time.[2]
+- https://football.fandom.com/wiki/2022_FIFA_World_Cup_Final
+[2] https://www.world-cup-schedule.com/blog/who-won-2022-world-cup-argentina-france-final
+...
+```
+
+With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
+Which one: they score alike on accuracy (see [Choosing one](/providers#answer)), so pick
+on what you need -- Linkup had the lowest median latency in that scan (0.9 s); Perplexity, You.com
+and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
+Linkup tie each source to a sentence. [`examples/answer.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/answer.py)
+runs the whole flow, errors included.
+
+Nothing here writes, joins or edits the answer: it is the backend's, as it came.
+An empty one comes back as `""` rather than an error, with its sources and
+`raw`, so "the backend had nothing" reads differently from a failure. Where a
+backend marks which source backs which sentence, the marker is in
+`citation.field`; where it does not (Parallel), every citation backs the answer
+as a whole. `outcome` is `partial` only when the backend says it stopped early.
+
+The options are `include_domains`, `exclude_domains`, `country`, `locale` and
+`recency` (`"day"`, `"week"`, `"month"` or `"year"`). Windows count whole days;
+where the router sets the start date itself (Linkup), it counts back from
+today's date in UTC. A backend that does not
+map one raises `UnsupportedParameterError` before anything is sent -- the
+[answer table](/providers#answer) says which backend maps what.
+
+With `provider` unset, the router's default answers when it is an answer
+backend. On the usual default, `auto`, that is every answer backend you hold a
+key for (in the environment or in `provider_config`), in the order `make chains`
+ranks them on 300 benchmark questions -- accuracy first, and where accuracy is too close to tell
+apart, the cheaper at list price: Perplexity, You.com, Linkup, Parallel, Exa, then Brave, which
+the scan has not measured. A backend that does not
+map an option you set is passed over without being called; one that fails, or
+answers with nothing, is passed over for the next, and each one tried bills.
+`provider_config={"auto": {"chain": {"answer": [...]}}}` sets the order. With no
+key, the call raises `NoAnswerProviderError` (a `ProviderNotFoundError`) naming
+the variables to set. On a router whose default is not an answer backend
+(`WebRouter("nimble")`), the one answer backend you hold a key for serves the
+call; with several, name one, or pass `provider="auto"`.
+
+"Answer" means two other things nearby. `SearchResponse.answer` is an answer a
+search backend volunteered beside its results, unasked (You.com's knowledge
+panel); `answer()` is one you asked for, with its sources.

@@ -1,0 +1,116 @@
+---
+title: "Search options"
+description: "Search the web through any provider with one call: result count, search depth, effort, recency and refused values."
+sidebarTitle: "Search"
+---
+
+```python
+response = router.search(
+    "nvidia q3 earnings",
+    max_results=10,
+    search_depth="fast",  # "lite" | "fast" | "deep"
+    include_domains=["reuters.com", "bloomberg.com"],
+    exclude_domains=["example.com"],
+    country="US",
+    locale="en",
+    recency="week",  # "day" | "week" | "month" | "year"
+    effort="low",  # "low" | "medium" | "high" | "max"
+)
+```
+
+Every option except `query` is optional. Which ones a given provider maps is in
+the support table above; setting one it does not map raises rather than being
+ignored, and so does a value it cannot serve — a depth level it lacks, a country
+off its list — before anything is sent, so `auto` passes that backend over.
+
+That is the whole surface. It is deliberately small: these are the options that
+mean the same thing on every backend, so code written against them keeps working
+when you switch providers. `search_depth` is how much text comes back per
+result; `effort` is how hard the backend looks. The exact field each backend
+sends is in its `contracts/search/<name>.json`.
+
+## Search depth
+
+Three levels, each defined by size, mapped onto each backend's own knobs. A
+backend whose longest body is short of a page refuses `deep` rather than serving
+less under its name.
+
+| Depth | What you get | Nimble | Tavily | You.com, You.com MCP | Exa, Exa MCP | WebIQ | Parallel | Perplexity | Keenable | Brave | DeepSeek |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `lite` | A snippet, up to about 500 characters | `lite` | `basic`, cut to 500 | no extraction, cut to 500 | highlights ≤ 500, cut to 500 | passage ≤ 500 | excerpts ≤ 500, cut to 500 | 100 tokens a page | snippet ≤ 500 | its snippets, cut to 500 | its default |
+| `fast` | A truncated body, a few thousand characters | `standard` | `advanced` | `highlights` | text ≤ 3,000 | passage ≤ 3,000 | excerpts ≤ 3,000 | 1,024 tokens a page | snippet ≤ 3,000 | refused | refused |
+| `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
+
+Linkup, AgentCore and Parallel MCP do not map it. Where a vendor's size setting
+does not bind (Tavily's `basic` returns up to three chunks of about 500
+characters, You.com's snippets can run past 500, Exa's highlights cap,
+Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
+summary, and Brave has no size setting at all), WebRouter cuts `lite` to a snippet of about 500
+characters itself; the vendor's full text stays in `raw`.
+Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
+
+`result.content` always holds the fullest text available. Some backends return
+the body in the field others use for the snippet; that is normalized away, so
+`content` is the field to read whatever the backend did.
+
+`result.description` is the provider's snippet **when it returns one as a
+separate field**. Not every backend does at every depth — Nimble at `fast`
+returns the page body and no snippet, so `description` holds that body and is
+identical to `content`. Read `description` when you want the short form and
+have checked your backend supplies one; read `content` when you want text.
+
+## Effort
+
+`effort` is anchored on each backend's own tiers: `medium` is what it does
+unset, `low` its fastest tier, `max` its most thorough, and `high` between them
+or the same as `max`. A backend with fewer tiers serves several levels with one
+setting rather than raising. **Higher effort costs more and takes longer, by a
+vendor-specific amount; leave it unset unless needed.**
+
+| Effort | Exa | Exa MCP | Linkup | Parallel | Perplexity | Keenable |
+| --- | --- | --- | --- | --- | --- | --- |
+| `low` | `lite` | `lite` | `flash` | `turbo` | `fast` | `realtime` |
+| `medium` | its default | its default | `fast` | `fast` | its default | its default |
+| `high` | `deep-lite` | its default | `standard` | `advanced` | its default | `pro` |
+| `max` | `deep` | its default | `deep` | `advanced` | its default | `pro` |
+
+Linkup bills `deep` at ten times its other depths, and Parallel `advanced` at
+five times `fast`. Parallel refuses `low` beside a domain filter with a path,
+which its turbo mode cannot take. The other backends have no search tier and
+refuse `effort`.
+
+## Recency
+
+`recency` keeps to sources the backend dates within the last day, week, month
+or year — by publication date where it has one. A backend that takes a start
+date gets today (UTC) minus 1, 7, 30 or 365 days.
+
+| Backend | Sent as |
+| --- | --- |
+| Nimble | `time_range` |
+| Tavily | `time_range` with `filter_by_published_date`, so pages it cannot date are dropped |
+| You.com, You.com MCP | `freshness` |
+| Brave | `freshness`, by the date Brave holds for a page (published or last modified) |
+| Perplexity | `search_recency_filter` |
+| Exa, Exa MCP, Linkup, Parallel, AgentCore | a start date (`startPublishedDate`, `fromDate`, `after_date`, `publishedDateFilter.from`) |
+| Keenable | `published_after` (`1d`, `7d`, `1mo`, `1y`) |
+| DeepSeek | `after:YYYY-MM-DD` in the query |
+
+WebIQ and Parallel MCP do not map it.
+
+## Values a backend refuses
+
+Each of these raises `UnsupportedParameterError` before anything is sent (a
+query too long for its operators raises `ProviderError`), and `auto` moves on:
+
+| Backend | Refused |
+| --- | --- |
+| You.com, You.com MCP | a `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once |
+| Brave | a `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
+| Tavily | a `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
+| Parallel | a `country` off its 37 codes; both domain lists at once; more than 200 domains |
+| Perplexity | both domain lists at once; more than 20 domains; a `locale` that is not a bare two-letter language (`en`, not `en-US`) |
+| WebIQ | a `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
+| Keenable | more than one `include_domains` entry |
+| DeepSeek | a query past 128 characters with its operators |
+| Brave, WebIQ, DeepSeek, You.com MCP | a domain filter that is not a host name (optionally with a path), since it goes into the query as `site:` (for You.com MCP, `include_domains` only; `exclude_domains` is a tool argument) |

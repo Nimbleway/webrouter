@@ -1,0 +1,140 @@
+---
+title: "Extracting page contents"
+description: "Fetch page contents for URLs you already have, in markdown or html, with partial failures reported per URL."
+sidebarTitle: "Extract"
+---
+
+`extract()` is the other half: give it URLs you already have and it returns the
+pages, through whichever backend you point it at.
+
+```python
+response = router.extract(
+    ["https://example.com", "https://www.iana.org/domains/reserved"],
+    format="markdown",  # "markdown" | "html" | "text"
+)
+
+for document in response.documents:
+    print(document.url, document.format, len(document.content))
+```
+
+One URL or many — `router.extract("https://example.com")` is the same call, and
+the answer has the same shape. Backends that take a single URL per request are
+fanned out for you, concurrently on `AsyncWebRouter`, and the documents come back
+in the order you asked for them.
+
+## Formats
+
+`format` is the extract equivalent of `search_depth`: three names for what the
+page should come back as, mapped onto each backend's own vocabulary.
+
+| Format | What you get | Nimble | Tavily | Firecrawl | Oxylabs | Bright Data | Jina | Linkup | Browserbase |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `markdown` | Structure kept, markup dropped | `formats: [markdown]` | `format: markdown` | `formats: [markdown]` | `markdown: true` | `data_format: markdown` | `X-Return-Format: markdown` | always returned | `format: markdown` |
+| `html` | The page's HTML as fetched | `formats: [html]` | — | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` | `format: raw` (the body as served) |
+| `text` | Visible text, no markup | — | `format: text` | — | — | — | `X-Return-Format: text` | — | — |
+
+Exa is left out of the table because it has one row to give: its Contents API
+returns `text` and nothing else, asked for as `text: true`. WebIQ is left out
+too: Browse takes `contentFormat: markdown` or `text`, and its `html` is a
+simplified markup rather than the page as fetched, so `html` is refused. It
+reads WebIQ's own index, so a page WebIQ has not crawled comes back as a
+failure. Keenable is left out as well: its Fetch API has no format field and
+returns markdown alone, so `html` and `text` are refused. WebRouter asks it for
+up to 500,000 characters, since it otherwise cuts a page at 50,000. DeepSeek is
+left out too: its Fetch API returns markdown alone.
+
+A backend that cannot produce the format you asked for **raises rather than
+returning a different one under the same name**, because code that pipes
+`document.content` into a markdown parser has no way to notice HTML:
+
+```python
+WebRouter(Provider.TAVILY).extract("https://example.com", format="html")
+# UnsupportedFormatError: Provider 'tavily' cannot return 'html' content; it
+# returns 'markdown', 'text'. Ask for one of those, name a provider that returns
+# 'html', or add the mapping -- see CONTRIBUTING.md.
+```
+
+`document.format` always says which representation `document.content` holds.
+Leave `format` unset and you get `markdown` from every backend that can return
+it, Nimble, Oxylabs and Bright Data included, whose own APIs default to HTML:
+an agent reading the page pays for every character. Exa, which returns only
+text, returns `text` and says so. Ask for `html` by name to get the markup. `auto` takes all three formats and sends each call only to a
+member that returns the one asked for.
+
+## Partial failure
+
+Extracting several URLs can partly succeed, and it says so rather than pretending
+otherwise. What came back is in `documents`; every URL that did not is in
+`failures` with the reason:
+
+```python
+response = router.extract(["https://example.com", "https://nope.invalid"])
+
+response.urls  # ['https://example.com/']
+response.failures[0].url  # 'https://nope.invalid'
+response.failures[0].error  # why it did not come back
+```
+
+A call where **nothing** came back raises instead, so a bad credential can never
+look like a page with no text. This works the same way whether the backend
+reports its own per-URL failures (Tavily, Exa) or was fanned out one URL at a
+time (everything else) — that uniformity is enforced in `ExtractProvider`, not
+asked of each provider.
+
+`response.raw` holds the untouched payloads, one per API call that answered: a
+single entry from a backend that took every URL at once, one per URL that came
+back from a backend that did not. A call that failed outright is in `failures`
+instead — there was no payload to keep.
+
+## The fastest answer any backend can give: `max`
+
+`auto` tries its backends one after another and stops at the first that works.
+`max` sends the same request to **every backend at once** and returns the first
+document that comes back:
+
+```python
+response = WebRouter(Provider.MAX).extract(url, format="markdown")
+response.provider  # whoever answered first -- never 'max'
+```
+
+It is for the caller who wants the fastest working extract and is willing to
+pay for it: every fetch `max` starts is billed by its backend, so a call costs
+up to one extract **per configured backend per URL**. Most backends take one
+URL per request, and a loser keeps fetching the URLs it has not reached after
+the winner has returned, so ten URLs through three backends can bill thirty
+fetches where `auto` bills ten. That is why it is never the default and has to
+be named. The members are exactly the ones `auto` would try, in the
+same order, chosen the same way: a `chain` set under `"auto"` in
+`provider_config` narrows `max` too, so a paid backend taken out of one is out
+of both, and `max` races a different list only when its own `"max"` entry
+names one. `format` routes the same way, to the members that can return it.
+
+Only a document wins. A backend that refused the fetch, could not be built or
+answered with nothing is that backend's loss, not the call's, and when every
+backend loses the error names each one's reason. What a slower backend would
+have returned is never judged: the first document is the answer, which is the
+"never invent data" rule applied to a race. With several URLs it is the first
+*complete* answer: a backend that fetched part of the list and failed the rest
+is held while another can still answer, and returned, `failures` and all, only
+when none can do better. On the sync router the losers finish on their own
+threads and `close()` waits for them before shutting their clients; on the
+async router they are cancelled.
+
+**`hedge` keeps the cost down.** With a hedge, the first member runs alone for
+that many seconds and the rest start only if it has not answered by then:
+
+```python
+router = WebRouter(Provider.MAX, provider_config={"max": {"hedge": 0.8}})
+```
+
+A page the first backend returns within the hedge costs one fetch; only the
+slow ones pay for the race. A first member that fails, or answers in part,
+before the hedge runs out starts the rest at once. Unset, every member starts
+together. The hedge covers the first member's whole call, however many URLs it
+carries: it caps the cost of a one-URL request, not of a list, since a first
+member slower than the hedge on a list of URLs starts every other member on
+the whole list.
+
+`max` is left out of `benchmark()`'s default set as `auto` is: a row for it
+would repeat one of the others under a name that says nothing about who
+answered.
