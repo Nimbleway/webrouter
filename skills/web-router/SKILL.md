@@ -25,12 +25,13 @@ Work up this ladder and stop at the first rung that serves the task:
 2. **`extract`** — read pages you already have URLs for, about a second.
    Prefer `search` + `extract` over anything below: two cheap calls that you
    compose beat one expensive call you wait on.
-   **`run_template`** sits beside it: when `templates` lists a vendor's saved
-   extraction for the site and item at hand, one run returns the page's
-   fields as a record, about a second, one billed fetch. All three template
-   tools need `provider` named. Read `template` first — its `input_schema`
-   says exactly what `inputs` to pass, a URL for some templates and an id or
-   a search term for others.
+   **`live_data`** sits beside it: when `live_data_sources` lists a vendor's
+   ready-made scraper for the site and item at hand (pass `query` to search
+   the catalogue), one run fetches the site now and returns its fields as
+   records, one billed run. All three live data tools need `provider` named.
+   Read `live_data_source` first — its `input_schema` says exactly what
+   `inputs` to pass, a URL for some sources and an id or a search term for
+   others.
 3. **`research`** — an agentic run that searches, reads and cross-checks over
    many turns. **Minutes, and it bills.** Use only when the question genuinely
    needs synthesis across many sources that iterative `search`/`extract`

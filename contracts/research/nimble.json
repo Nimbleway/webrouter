@@ -47,7 +47,7 @@
         "body.effort": "high"
       },
       "max": {
-        "body.effort": "max"
+        "body.effort": "x-high"
       }
     },
     "include_domains": {
