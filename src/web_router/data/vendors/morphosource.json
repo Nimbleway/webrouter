@@ -1,0 +1,370 @@
+{
+  "vendor": "morphosource",
+  "name": "MorphoSource",
+  "category": "other",
+  "summary": "MorphoSource, a public repository of 3D and 2D scientific media of biological specimens and cultural heritage objects: search media and physical objects, read their metadata, and get download links.",
+  "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/rm6bqdolcidct-morpho-source-rest-api",
+  "base_url": "https://www.morphosource.org",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MORPHOSOURCE_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional API key of a MorphoSource account, sent as the raw Authorization header; needed for downloads, private records you can access and project-manager statistics."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Searching and reading published records is keyless; a key adds private records the account may view.",
+    "Search results are paged: page from 1, per_page 10 by default, at most 1000.",
+    "Filters are facets named f.<field> (f.taxonomy_name, f.media_type ...), with the same values as the website's search pages.",
+    "Media and physical object ids are 9-digit strings, e.g. 000200043; keep the leading zeros."
+  ],
+  "sources": [
+    "https://github.com/MorphoSource/morphosource-api",
+    "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml",
+    "https://morphosource.stoplight.io/docs/morphosource-api/rm6bqdolcidct-morpho-source-rest-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "morphosource.media.search",
+      "name": "Search media",
+      "summary": "Media records by free text and facets: media type, modality, taxonomy, organization, license, publication status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/media",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-text query; optional.",
+          "example": "Puma concolor skull"
+        },
+        "media_type": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.media_type",
+          "description": "Media type facet.",
+          "example": "CT Image Series"
+        },
+        "modality": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.modality",
+          "description": "Modality facet.",
+          "example": "MicroNanoXRayComputedTomography"
+        },
+        "object_type": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.object_type",
+          "description": "Object type facet.",
+          "example": "Biological Specimen"
+        },
+        "taxonomy_name": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.taxonomy_name",
+          "description": "Taxon name facet.",
+          "example": "Puma concolor"
+        },
+        "taxonomy_gbif": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.taxonomy_gbif",
+          "description": "GBIF taxonomy facet.",
+          "example": "Felidae"
+        },
+        "organization": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.organization",
+          "description": "Organization facet."
+        },
+        "publication_status": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.publication_status",
+          "description": "Publication status facet.",
+          "example": "Open Download"
+        },
+        "license": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.license",
+          "description": "Creative Commons license URL.",
+          "example": "https://creativecommons.org/licenses/by-nc/4.0/"
+        },
+        "tag": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.tag",
+          "description": "Tag facet."
+        },
+        "project": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.project",
+          "description": "Project containing the media."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 10 by default, at most 1000."
+        }
+      },
+      "job": "science.specimens.search",
+      "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/2d534286cca2e-search-media-records",
+      "verified": {
+        "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
+      }
+    },
+    {
+      "id": "morphosource.media.get",
+      "name": "Get a media record",
+      "summary": "Metadata of one media record.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/media/{media_id}",
+      "params": {
+        "media_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit media id.",
+          "example": "000200043"
+        }
+      },
+      "notes": [
+        "A private record without a key (or one the key cannot view) answers 404."
+      ],
+      "job": "science.specimens.get",
+      "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/b474e3d7c2ccc-get-individual-media-record",
+      "verified": {
+        "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
+      }
+    },
+    {
+      "id": "morphosource.media.file_metadata",
+      "name": "Get a media file's metadata",
+      "summary": "Metadata of the file attached to a media record; an empty response when there is no file.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/media/{media_id}/file-metadata",
+      "params": {
+        "media_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit media id."
+        }
+      },
+      "job": "science.specimens.get",
+      "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/c7dcuud1iq44q-get-individual-media-file-metadata",
+      "verified": {
+        "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
+      }
+    },
+    {
+      "id": "morphosource.objects.search",
+      "name": "Search physical objects",
+      "summary": "Biological specimens and cultural heritage objects by free text and facets: object type, taxonomy, organization, creator, media type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/physical-objects",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-text query; optional."
+        },
+        "object_type": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.object_type",
+          "description": "Object type facet.",
+          "example": "Biological Specimen"
+        },
+        "taxonomy_name": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.taxonomy_name",
+          "description": "Taxon name facet."
+        },
+        "taxonomy_gbif": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.taxonomy_gbif",
+          "description": "GBIF taxonomy facet."
+        },
+        "organization": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.organization",
+          "description": "Organization facet."
+        },
+        "creator": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.creator",
+          "description": "Collector or creator facet."
+        },
+        "media_type": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.media_type",
+          "description": "Type of the object's media."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 10 by default, at most 1000."
+        }
+      },
+      "job": "science.specimens.search",
+      "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/2da44118dab34-search-physical-object-records",
+      "verified": {
+        "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
+      }
+    },
+    {
+      "id": "morphosource.objects.get",
+      "name": "Get a physical object",
+      "summary": "Metadata of one biological specimen or cultural heritage object.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/physical-objects/{physical_object_id}",
+      "params": {
+        "physical_object_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit physical object id.",
+          "example": "000200025"
+        }
+      },
+      "job": "science.specimens.get",
+      "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/aea3fb04ec708-get-individual-physical-object-record",
+      "verified": {
+        "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
+      }
+    },
+    {
+      "id": "morphosource.projects.search",
+      "name": "Search projects and teams",
+      "summary": "Projects and teams by free text, type and linked organization.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/projects",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-text query; optional."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.type",
+          "description": "Project or Team."
+        },
+        "organization": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "f.organization",
+          "description": "Linked organization."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 10 by default, at most 1000."
+        }
+      },
+      "job": "science.specimens.search",
+      "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/01a98fbf58a8b-search-project-or-team-records",
+      "verified": {
+        "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
+      }
+    },
+    {
+      "id": "morphosource.media.download",
+      "name": "Request a media download link",
+      "summary": "Records a download request with your use statement and agreement to the media's terms, and returns a direct download URL for your account.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/api/download/{media_id}",
+      "params": {
+        "media_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit media id."
+        },
+        "use_statement": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Free-text description of the intended use, at least 50 characters."
+        },
+        "use_categories": {
+          "in": "body",
+          "type": "array",
+          "description": "One or more of: Completing Class Assignment(s) (Grades K-6); Completing Class Assignment(s) (Grades 7-12); Completing Class Assignment(s) (University or Post-Secondary); Completing Class Assignment(s) (Post-Graduate); Educator Resource (Grades K-6); Educator Resource (Grades 7-12); Educator Resource (University or Post-Secondary); Educator Resource (Post-Graduate); Research; Art; Personal Interest; 3D Printing; Commercial Use.",
+          "example": [
+            "Research"
+          ]
+        },
+        "use_category_other": {
+          "in": "body",
+          "type": "string",
+          "description": "A custom use category, instead of use_categories."
+        },
+        "agreements_accepted": {
+          "in": "body",
+          "type": "boolean",
+          "required": true,
+          "description": "true to agree to every use and reuse term of MorphoSource and of the data contributor."
+        }
+      },
+      "notes": [
+        "A write: it registers a download on your account and accepts the media's terms on your behalf. Read the media's license and restrictions first.",
+        "Needs the API key, and one of use_categories or use_category_other.",
+        "Fetching the returned URL also needs the key in the Authorization header; the URL is tied to your account."
+      ],
+      "credentials": [
+        "api_key"
+      ],
+      "job": "science.specimens.download",
+      "docs_url": "https://morphosource.stoplight.io/docs/morphosource-api/stzmm22vruz2k-download-media-file",
+      "verified": {
+        "docs": "https://github.com/MorphoSource/morphosource-api/blob/master/MorphoSource-REST-API.yaml"
+      }
+    }
+  ]
+}
