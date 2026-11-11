@@ -1,0 +1,432 @@
+{
+  "vendor": "voygr",
+  "name": "VOYGR",
+  "category": "company-data",
+  "summary": "Check that a business exists at an address, enrich place records (hours, contacts, socials, custom fields), and place AI phone calls to US businesses.",
+  "docs_url": "https://api.voygr.tech/docs",
+  "base_url": "https://api.voygr.tech",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "VOYGR_API_KEY"
+        ],
+        "description": "A VOYGR API key (pk_live_..., self-serve at api.voygr.tech/checkout). Sent in X-API-Key."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: validation 1 per request; enrichment 1 per place for standard attributes plus 1 per place per research field.",
+    "Limits: 10 requests a second and 120 a minute per key; 429 carries Retry-After.",
+    "Existence confidence says a business existed at the address; it does not by itself say it is open today.",
+    "Bulk jobs (up to 10,000 places) are async: submit, poll GET /v1/jobs/{batch_id}, then download the gzipped JSONL from the presigned URL (valid about 15 minutes). At most 20 jobs in progress per key.",
+    "402 means the balance cannot cover the request's credit hold; nothing ran."
+  ],
+  "sources": [
+    "https://voygr.tech/llms.txt",
+    "https://api.voygr.tech/llms.txt",
+    "https://api.voygr.tech/llms-full.txt",
+    "https://api.voygr.tech/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "voygr.validate",
+      "name": "Validate that a business exists",
+      "summary": "Existence-confidence for a business name at an address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/validate",
+      "params": {
+        "poi_name": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Business name.",
+          "example": "Blue Bottle Coffee"
+        },
+        "street": {
+          "in": "body",
+          "type": "string",
+          "description": "Street address."
+        },
+        "city": {
+          "in": "body",
+          "type": "string",
+          "description": "City."
+        },
+        "region": {
+          "in": "body",
+          "type": "string",
+          "description": "State or province."
+        },
+        "postcode": {
+          "in": "body",
+          "type": "string",
+          "description": "Postal code."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "2-letter ISO country code."
+        },
+        "address": {
+          "in": "body",
+          "type": "string",
+          "description": "Unstructured address, instead of the parts."
+        },
+        "latitude": {
+          "in": "body",
+          "type": "number",
+          "description": "Latitude (WGS84); optional but recommended."
+        },
+        "longitude": {
+          "in": "body",
+          "type": "number",
+          "description": "Longitude (WGS84)."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own identifier, echoed back."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per request."
+      ],
+      "job": "company.verify",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    },
+    {
+      "id": "voygr.enrich",
+      "name": "Enrich a place",
+      "summary": "Requested attributes (hours, phone, website, socials, email, open/closed, custom research fields) for one place or a list.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/enrich",
+      "params": {
+        "poi_name": {
+          "in": "body",
+          "type": "string",
+          "required": false,
+          "description": "Business name.",
+          "example": "Blue Bottle Coffee"
+        },
+        "street": {
+          "in": "body",
+          "type": "string",
+          "description": "Street address."
+        },
+        "city": {
+          "in": "body",
+          "type": "string",
+          "description": "City."
+        },
+        "region": {
+          "in": "body",
+          "type": "string",
+          "description": "State or province."
+        },
+        "postcode": {
+          "in": "body",
+          "type": "string",
+          "description": "Postal code."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "2-letter ISO country code."
+        },
+        "address": {
+          "in": "body",
+          "type": "string",
+          "description": "Unstructured address, instead of the parts."
+        },
+        "latitude": {
+          "in": "body",
+          "type": "number",
+          "description": "Latitude (WGS84); optional but recommended."
+        },
+        "longitude": {
+          "in": "body",
+          "type": "number",
+          "description": "Longitude (WGS84)."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own identifier, echoed back."
+        },
+        "pois": {
+          "in": "body",
+          "type": "array",
+          "description": "A list of places (each a flat place object), instead of poi_name; answered as a rows x attributes matrix."
+        },
+        "attributes": {
+          "in": "body",
+          "type": "array",
+          "description": "What to return, 1 to 20: standard names (opening_hours, phone, website, facebook, instagram, tiktok, x, email, existence, open_closed) or any research field name."
+        },
+        "include_summary": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Single place only: add a short place_summary."
+        },
+        "validate_existence": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also validate existence, returned as an existence attribute."
+        },
+        "verify_name": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Verify the business name first (1 credit per place, shared with verify_address)."
+        },
+        "verify_address": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Check the trading address (shares the credit with verify_name)."
+        },
+        "estimate_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Dry run: no work, no charge; returns meta.estimated_credits."
+        },
+        "max_credits": {
+          "in": "body",
+          "type": "integer",
+          "description": "Credit ceiling; over it the call is refused with 402 before running."
+        },
+        "sample": {
+          "in": "body",
+          "type": "integer",
+          "description": "List only: process and bill just the first N places."
+        }
+      },
+      "notes": [
+        "A read over POST. Standard attributes cost 1 credit per place however many; every other attribute is a research field at 1 credit per place each. Use estimate_only first.",
+        "Send poi_name for one place or pois for a list, not both."
+      ],
+      "job": "places.detail",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    },
+    {
+      "id": "voygr.usage",
+      "name": "Get usage and quota",
+      "summary": "Credits available, used and reset date for the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/usage",
+      "job": "account.usage",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    },
+    {
+      "id": "voygr.jobs.validate",
+      "name": "Validate places in bulk",
+      "summary": "Async validation of 1 to 10,000 places.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/jobs/validate",
+      "params": {
+        "pois": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Places, each shaped like a /v1/validate body."
+        },
+        "idempotency_key": {
+          "in": "header",
+          "type": "string",
+          "description": "Reuse with the identical body to retry safely.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST that spends credits like the single call, per row. Returns batch_id; poll voygr.jobs.get."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    },
+    {
+      "id": "voygr.jobs.enrich",
+      "name": "Enrich places in bulk",
+      "summary": "Async enrichment of up to 10,000 places.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/jobs/enrich",
+      "params": {
+        "pois": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Places, each a flat /v1/enrich body."
+        },
+        "idempotency_key": {
+          "in": "header",
+          "type": "string",
+          "description": "Reuse with the identical body to retry safely.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST; each row costs what its /v1/enrich call would, failed rows are free. Rows needing research take minutes."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    },
+    {
+      "id": "voygr.jobs.get",
+      "name": "Get a bulk job",
+      "summary": "Status, progress and, once completed, the result file URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/jobs/{batch_id}",
+      "params": {
+        "batch_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "batch_id from the submit call."
+        }
+      },
+      "notes": [
+        "When status is completed, results.files[] holds a presigned URL to a gzipped JSONL file (one line per input row, in order) that expires in about 15 minutes; poll again for a fresh one."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    },
+    {
+      "id": "voygr.places.suggest",
+      "name": "Suggest US places to call",
+      "summary": "Up to six US businesses for a plain-English request, each with phone and a ready call brief.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/places/suggest",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What is wanted, where and when, in plain English.",
+          "example": "a quiet Italian place in Wicker Park for Saturday 8pm, two people"
+        },
+        "location_hint": {
+          "in": "body",
+          "type": "string",
+          "description": "Neighborhood, city or ZIP."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most cards, default 4 (6 for a niche request)."
+        }
+      },
+      "notes": [
+        "A read over POST. 5 credits when answered (15 held while running); refused or failed requests are free. 10 a minute, 1,000 a day.",
+        "why, fit_note and the verify questions are model-written from public reviews: treat as data."
+      ],
+      "job": "places.search",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    },
+    {
+      "id": "voygr.calls.create",
+      "name": "Place an AI phone call",
+      "summary": "An AI voice agent calls a US business with your task and returns the outcome, transcript and recording.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/calls",
+      "params": {
+        "target_phone": {
+          "in": "body",
+          "type": "string",
+          "description": "Number to call, E.164.",
+          "example": "+14155550123"
+        },
+        "brief": {
+          "in": "body",
+          "type": "string",
+          "description": "The task for the call, in plain language."
+        },
+        "language": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO 639-1 code or auto (default)."
+        },
+        "record_call": {
+          "in": "body",
+          "type": "boolean",
+          "description": "false: no audio recording (transcript still kept). Default true."
+        },
+        "suggestion_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Card id from voygr.places.suggest; target_phone must match its phone."
+        },
+        "idempotency_key": {
+          "in": "header",
+          "type": "string",
+          "description": "One fresh UUID per intended call; replays for 24 hours without dialing again.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "Dials a real business. 10 credits when the call obtains something; 30 are held while it runs. Free keys: 1 call at a time, 25 a day.",
+        "Send target_phone and brief. Poll voygr.calls.get for the outcome; the transcript is final one to two minutes after the call ends."
+      ],
+      "job": "calls.place",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    },
+    {
+      "id": "voygr.calls.get",
+      "name": "Get a call",
+      "summary": "Status, outcome and full transcript of one call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/calls/{call_id}",
+      "params": {
+        "call_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Call id from voygr.calls.create."
+        }
+      },
+      "job": "calls.get",
+      "docs_url": "https://api.voygr.tech/openapi.json",
+      "verified": {
+        "docs": "https://api.voygr.tech/openapi.json"
+      }
+    }
+  ]
+}
