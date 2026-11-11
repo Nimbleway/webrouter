@@ -1,0 +1,419 @@
+{
+  "vendor": "foreplay",
+  "name": "Foreplay",
+  "category": "advertising",
+  "summary": "Search a library of Meta, TikTok and other platform ads and brands: creatives, transcripts, brand lookups by name or domain, and running-ad analytics.",
+  "docs_url": "https://public.api.foreplay.co/docs",
+  "pricing_url": "https://www.foreplay.co/pricing",
+  "base_url": "https://public.api.foreplay.co",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FOREPLAY_API_KEY"
+        ],
+        "description": "A Foreplay API key (app.foreplay.co > API overview)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: 1 per ad returned on ad endpoints (a page of 250 ads costs 250), 1 per call on brand endpoints whatever the count; empty and error responses are free; usage is free. X-Credits-Remaining is on every response.",
+    "Ad lists page by cursor: pass metadata.cursor from the previous response.",
+    "Each ad carries foreplay_url, the link to view it in Foreplay.",
+    "Swipe file, boards and Spyder (your own saved and tracked brands) are not in this entry."
+  ],
+  "sources": [
+    "https://public.api.foreplay.co/docs",
+    "https://public.api.foreplay.co/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "foreplay.ads.search",
+      "name": "Search ads",
+      "summary": "Search the whole ad index by text and filters; each ad has media URLs, transcript, brand and targeting.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/discovery/ads",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Text to match in ad name or description; empty searches with filters only.",
+          "example": "protein powder"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Inclusive start, UTC: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (a bare date means 00:00:00)."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Inclusive end, UTC; use YYYY-MM-DD 23:59:59 to cover a whole day."
+        },
+        "live": {
+          "in": "query",
+          "type": "string",
+          "description": "true for running ads, false for stopped; omit for both.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "display_format": {
+          "in": "query",
+          "type": "array",
+          "description": "Formats: video, carousel, image, dco, dpa, multi_images, multi_videos, multi_medias, event, text, page_like."
+        },
+        "publisher_platform": {
+          "in": "query",
+          "type": "array",
+          "description": "Platforms: facebook, instagram, audience_network, messenger, tiktok, youtube, linkedin, threads, whatsapp."
+        },
+        "niches": {
+          "in": "query",
+          "type": "array",
+          "description": "Niches, e.g. beauty, fashion, food/drink, health/wellness."
+        },
+        "market_target": {
+          "in": "query",
+          "type": "array",
+          "description": "b2b or b2c."
+        },
+        "languages": {
+          "in": "query",
+          "type": "array",
+          "description": "Languages, as names or codes (en, french)."
+        },
+        "video_duration_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum video length, seconds."
+        },
+        "video_duration_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum video length, seconds."
+        },
+        "running_duration_min_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum days the ad has run."
+        },
+        "running_duration_max_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum days the ad has run."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, default newest.",
+          "enum": [
+            "newest",
+            "oldest",
+            "longest_running",
+            "most_relevant"
+          ]
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "metadata.cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Ads per page, 1 to 250, default 10."
+        }
+      },
+      "notes": [
+        "1 credit per ad returned."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://public.api.foreplay.co/docs",
+      "verified": {
+        "docs": "https://public.api.foreplay.co/docs"
+      }
+    },
+    {
+      "id": "foreplay.ads.get",
+      "name": "Get an ad",
+      "summary": "One ad by its Foreplay id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/ad/{ad_id}",
+      "params": {
+        "ad_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Foreplay ad id."
+        }
+      },
+      "notes": [
+        "1 credit per successful lookup."
+      ],
+      "job": "ads.library.get",
+      "docs_url": "https://public.api.foreplay.co/docs",
+      "verified": {
+        "docs": "https://public.api.foreplay.co/docs"
+      }
+    },
+    {
+      "id": "foreplay.brands.search",
+      "name": "Search brands by name",
+      "summary": "Brands matching a name, with total and active ad counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/discovery/brands",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Brand name to search.",
+          "example": "Nike"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Brands per call, 1 to 100, default 10."
+        },
+        "include_empty": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include brands with no indexed ads (hidden by default)."
+        },
+        "min_ads": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only brands with at least this many ads."
+        },
+        "max_ads": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only brands with at most this many ads."
+        }
+      },
+      "notes": [
+        "1 credit per call. Ad-count filters apply after ranking, so fewer than limit may come back."
+      ],
+      "job": "ads.advertisers.search",
+      "docs_url": "https://public.api.foreplay.co/docs",
+      "verified": {
+        "docs": "https://public.api.foreplay.co/docs"
+      }
+    },
+    {
+      "id": "foreplay.brands.by_domain",
+      "name": "Find brands by domain",
+      "summary": "Brands that advertise from a website domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/brand/getBrandsByDomain",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain or full URL.",
+          "example": "example.com"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Brands per call, 1 to 10, default 10."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default most_ranked.",
+          "enum": [
+            "most_ranked",
+            "least_ranked"
+          ]
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "ads.advertisers.search",
+      "docs_url": "https://public.api.foreplay.co/docs",
+      "verified": {
+        "docs": "https://public.api.foreplay.co/docs"
+      }
+    },
+    {
+      "id": "foreplay.brands.ads",
+      "name": "Get ads by brand",
+      "summary": "Ads of one or more brands, with the same filters as search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/brand/getAdsByBrandId",
+      "params": {
+        "brand_ids": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "One or more Foreplay brand ids (from foreplay.brands.search)."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Inclusive start, UTC: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS (a bare date means 00:00:00)."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Inclusive end, UTC; use YYYY-MM-DD 23:59:59 to cover a whole day."
+        },
+        "live": {
+          "in": "query",
+          "type": "string",
+          "description": "true for running ads, false for stopped; omit for both.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "display_format": {
+          "in": "query",
+          "type": "array",
+          "description": "Formats: video, carousel, image, dco, dpa, multi_images, multi_videos, multi_medias, event, text, page_like."
+        },
+        "publisher_platform": {
+          "in": "query",
+          "type": "array",
+          "description": "Platforms: facebook, instagram, audience_network, messenger, tiktok, youtube, linkedin, threads, whatsapp."
+        },
+        "niches": {
+          "in": "query",
+          "type": "array",
+          "description": "Niches, e.g. beauty, fashion, food/drink, health/wellness."
+        },
+        "market_target": {
+          "in": "query",
+          "type": "array",
+          "description": "b2b or b2c."
+        },
+        "languages": {
+          "in": "query",
+          "type": "array",
+          "description": "Languages, as names or codes (en, french)."
+        },
+        "video_duration_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum video length, seconds."
+        },
+        "video_duration_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum video length, seconds."
+        },
+        "running_duration_min_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum days the ad has run."
+        },
+        "running_duration_max_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum days the ad has run."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, default newest.",
+          "enum": [
+            "newest",
+            "oldest",
+            "longest_running",
+            "most_relevant"
+          ]
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "metadata.cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Ads per page, 1 to 250, default 10."
+        },
+        "collect": {
+          "in": "query",
+          "type": "boolean",
+          "description": "When nothing is cached, fetch live from Meta and wait about 30 seconds."
+        }
+      },
+      "notes": [
+        "1 credit per ad returned. collect=true is a best-effort fallback and may still return nothing."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://public.api.foreplay.co/docs",
+      "verified": {
+        "docs": "https://public.api.foreplay.co/docs"
+      }
+    },
+    {
+      "id": "foreplay.brands.analytics",
+      "name": "Get brand analytics",
+      "summary": "Daily rows of a brand's running-ad distribution and creative velocity.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/brand/analytics",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Brand id (20-25 mixed-case characters) or numeric Facebook page id."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Inclusive start, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Inclusive end, YYYY-MM-DD."
+        }
+      },
+      "notes": [
+        "1 credit per call. Today's row is computed live from the latest collected data."
+      ],
+      "docs_url": "https://public.api.foreplay.co/docs",
+      "verified": {
+        "docs": "https://public.api.foreplay.co/docs"
+      }
+    },
+    {
+      "id": "foreplay.usage",
+      "name": "Get credit usage",
+      "summary": "Remaining and total credits and the billing-cycle window.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/usage",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://public.api.foreplay.co/docs",
+      "verified": {
+        "docs": "https://public.api.foreplay.co/docs"
+      }
+    }
+  ]
+}
