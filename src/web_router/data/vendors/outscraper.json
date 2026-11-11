@@ -1,0 +1,450 @@
+{
+  "vendor": "outscraper",
+  "name": "Outscraper",
+  "category": "scraping",
+  "summary": "Google Maps places and reviews, Google Search, website contacts, company firmographics and Amazon products from Outscraper's scraping API.",
+  "docs_url": "https://app.outscraper.com/api-docs",
+  "pricing_url": "https://outscraper.com/pricing/",
+  "base_url": "https://api.outscraper.cloud",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OUTSCRAPER_API_KEY"
+        ],
+        "description": "An Outscraper API key (app.outscraper.com > API key). Sent in the X-API-KEY header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Calls are asynchronous by default: they return {id} and the results come from requests.get, usually within 1-3 minutes. Pass async=false to wait for the results in the same call (best with small limits).",
+    "Results stay available for 4 hours after a request completes; then its status reads Pending again.",
+    "Most endpoints batch: repeat query (query=a&query=b, up to 1000) and results come back as one list per query.",
+    "Usage is counted per item returned (place, review...); a search that finds nothing still uses one item. Average throughput is about 20 queries a second.",
+    "Tasks (UI jobs), the business catalog and the other ~90 site scrapers (Yelp, Trustpilot, Indeed, Zillow...) are not in this entry; DELETE /requests/{id} terminates a request."
+  ],
+  "sources": [
+    "https://app.outscraper.com/api-docs",
+    "https://app.outscraper.cloud/api-docs-data.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "outscraper.maps.search",
+      "name": "Search Google Maps places",
+      "summary": "Places from Google Maps for a query such as 'bars, NY, USA', with optional contact enrichment.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/google-maps-search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What you would type in Google Maps, ideally with a location; or a google_id, place_id or CID. Repeat for a batch.",
+          "example": "Real estate agency, Rome, Italy"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Places per query, at most 500 (Google's own cap). 10 gives the fastest answer.",
+          "example": 10
+        },
+        "skipPlaces": {
+          "in": "query",
+          "type": "integer",
+          "description": "Skip the first N places, a multiple of 20, for paging."
+        },
+        "coordinates": {
+          "in": "query",
+          "type": "string",
+          "description": "'latitude,longitude' to apply the query at."
+        },
+        "dropDuplicates": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Merge results of several queries into one deduplicated list. Default false."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en (default), de, fr."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code, e.g. US."
+        },
+        "enrichment": {
+          "in": "query",
+          "type": "array",
+          "description": "Extra paid enrichments, e.g. leads_n_contacts (emails, social links, phones from the website)."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return, e.g. query,name; all by default."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true (default) only submits the request and returns an id for requests.get; false keeps the connection open until results are ready.",
+          "example": false
+        }
+      },
+      "notes": [
+        "Put the location in the query: Outscraper's servers may sit in another country."
+      ],
+      "job": "places.search",
+      "docs_url": "https://app.outscraper.com/api-docs",
+      "verified": {
+        "docs": "https://app.outscraper.cloud/api-docs-data.json"
+      }
+    },
+    {
+      "id": "outscraper.maps.reviews",
+      "name": "Get Google Maps reviews",
+      "summary": "Reviews of the places a query or a place id finds, with the places' details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/google-maps-reviews",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A search (places from it) or one place by name, google_id, place_id or CID.",
+          "example": "The NoMad Restaurant, NY, USA"
+        },
+        "reviewsLimit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Reviews per place; 0 is unlimited. Default 100; 10 gives the fastest answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Places to take from the query. Default 1."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Default most_relevant.",
+          "enum": [
+            "most_relevant",
+            "newest",
+            "highest_rating",
+            "lowest_rating"
+          ]
+        },
+        "reviewsQuery": {
+          "in": "query",
+          "type": "string",
+          "description": "Only reviews matching this text, e.g. 'amazing | great'."
+        },
+        "cutoff": {
+          "in": "query",
+          "type": "integer",
+          "description": "Oldest review timestamp to return; forces sort newest."
+        },
+        "lastPaginationId": {
+          "in": "query",
+          "type": "string",
+          "description": "review_pagination_id of the last review received, to page on."
+        },
+        "ignoreEmpty": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip reviews without text."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en (default), de, fr."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code, e.g. US."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return, e.g. query,name; all by default."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true (default) only submits the request and returns an id for requests.get; false keeps the connection open until results are ready.",
+          "example": false
+        }
+      },
+      "job": "places.reviews",
+      "docs_url": "https://app.outscraper.com/api-docs",
+      "verified": {
+        "docs": "https://app.outscraper.cloud/api-docs-data.json"
+      }
+    },
+    {
+      "id": "outscraper.google.search",
+      "name": "Search Google",
+      "summary": "Google results pages for one or many queries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/google-search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The query; repeat for a batch of up to 1000.",
+          "example": "bitcoin"
+        },
+        "pagesPerQuery": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result pages per query. Default 1."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, for paging."
+        },
+        "uule": {
+          "in": "query",
+          "type": "string",
+          "description": "Google UULE location code."
+        },
+        "tbs": {
+          "in": "query",
+          "type": "string",
+          "description": "Date range: past hour, day, week, month or year.",
+          "enum": [
+            "h",
+            "d",
+            "w",
+            "m",
+            "y"
+          ]
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en (default), de, fr."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code, e.g. US."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return, e.g. query,name; all by default."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true (default) only submits the request and returns an id for requests.get; false keeps the connection open until results are ready.",
+          "example": false
+        }
+      },
+      "job": "serp.google",
+      "docs_url": "https://app.outscraper.com/api-docs",
+      "verified": {
+        "docs": "https://app.outscraper.cloud/api-docs-data.json"
+      }
+    },
+    {
+      "id": "outscraper.contacts",
+      "name": "Find emails and contacts for a domain",
+      "summary": "Email addresses, social links and phones found on a company's website.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/emails-and-contacts",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Domains or links, e.g. outscraper.com; up to 1000.",
+          "example": [
+            "outscraper.com"
+          ]
+        },
+        "preferredContacts": {
+          "in": "query",
+          "type": "array",
+          "description": "Contact categories to prefer, e.g. technical, influencers."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return, e.g. query,name; all by default."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true (default) only submits the request and returns an id for requests.get; false keeps the connection open until results are ready.",
+          "example": false
+        }
+      },
+      "job": "company.contacts",
+      "docs_url": "https://app.outscraper.com/api-docs",
+      "verified": {
+        "docs": "https://app.outscraper.cloud/api-docs-data.json"
+      }
+    },
+    {
+      "id": "outscraper.company.insights",
+      "name": "Get company insights",
+      "summary": "Firmographics for a domain: revenue, size, founding year, public status and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company-insights",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Domains or websites; up to 1000.",
+          "example": [
+            "dominopark.com"
+          ]
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return, e.g. query,name; all by default."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true (default) only submits the request and returns an id for requests.get; false keeps the connection open until results are ready.",
+          "example": false
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://app.outscraper.com/api-docs",
+      "verified": {
+        "docs": "https://app.outscraper.cloud/api-docs-data.json"
+      }
+    },
+    {
+      "id": "outscraper.amazon.products",
+      "name": "Get Amazon products",
+      "summary": "Amazon product details from product, search or summary page URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/amazon-products",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Amazon product, search or summary page URLs; up to 1000."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Products per summary page query. Default 24."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon site. Default amazon.com.",
+          "enum": [
+            "amazon.com",
+            "amazon.co.uk",
+            "amazon.ca",
+            "amazon.de",
+            "amazon.es",
+            "amazon.fr",
+            "amazon.it",
+            "amazon.in",
+            "amazon.nl",
+            "amazon.se",
+            "amazon.sa",
+            "amazon.com.mx",
+            "amazon.com.br",
+            "amazon.com.au",
+            "amazon.co.jp",
+            "amazon.pl",
+            "amazon.ae"
+          ]
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Delivery postal code. Default 11201."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return, e.g. query,name; all by default."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true (default) only submits the request and returns an id for requests.get; false keeps the connection open until results are ready.",
+          "example": false
+        }
+      },
+      "job": "products.get",
+      "docs_url": "https://app.outscraper.com/api-docs",
+      "verified": {
+        "docs": "https://app.outscraper.cloud/api-docs-data.json"
+      }
+    },
+    {
+      "id": "outscraper.requests.get",
+      "name": "Get async request results",
+      "summary": "Status (Pending, Success, Failure) and data of a request submitted with async=true.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/requests/{requestId}",
+      "params": {
+        "requestId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id the submitting call returned."
+        },
+        "flat": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Combine all queries' results into one array. Default false."
+        }
+      },
+      "notes": [
+        "Available for 4 hours after completion."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://app.outscraper.com/api-docs",
+      "verified": {
+        "docs": "https://app.outscraper.cloud/api-docs-data.json"
+      }
+    },
+    {
+      "id": "outscraper.balance",
+      "name": "Get balance",
+      "summary": "The account's balance information.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profile/balance",
+      "job": "account.usage",
+      "docs_url": "https://app.outscraper.com/api-docs",
+      "verified": {
+        "docs": "https://app.outscraper.cloud/api-docs-data.json"
+      }
+    }
+  ]
+}
