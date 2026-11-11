@@ -908,11 +908,11 @@ for source in page.sources:
 page = router.live_data_sources(provider="nimble", query="walmart product")  # find one by keyword
 page.search  # "native" where the vendor searched (Apify), "local" where it was matched here
 
-source = router.live_data_source("apify~google-maps-scraper", provider="apify")
+source = router.live_data_source("compass~crawler-google-places", provider="apify")
 source.input_schema  # JSON Schema of what a run passes as `inputs`
 
 result = router.live_data(
-    "apify~google-maps-scraper",
+    "compass~crawler-google-places",
     {"searchStringsArray": ["coffee in Tel Aviv"], "maxCrawledPlacesPerSearch": 10},
     provider="apify",
 )
