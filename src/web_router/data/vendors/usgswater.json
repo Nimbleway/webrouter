@@ -1,0 +1,388 @@
+{
+  "vendor": "usgswater",
+  "name": "USGS Water Data",
+  "category": "other",
+  "summary": "US stream gauge readings (discharge, gage height, water temperature and more): latest and historical instantaneous values, daily statistics and monitoring-location metadata from the USGS Water Data OGC APIs.",
+  "docs_url": "https://api.waterdata.usgs.gov/docs/",
+  "base_url": "https://api.waterdata.usgs.gov/ogcapi/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "USGS_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional free api.data.gov key from api.waterdata.usgs.gov/signup/, for higher rate limits than the anonymous allowance. Sent in the X-Api-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Keyless works, at a lower rate limit; a free key raises it.",
+    "Answers are GeoJSON FeatureCollections: values sit in features[].properties; follow the links entry with rel=next to page. Default page size is only 10 - set limit.",
+    "Always filter by monitoring_location_id, bbox or state; USGS asks automated clients not to sweep the items endpoints unfiltered.",
+    "Values are strings in the unit given by unit_of_measure; approval_status tells provisional from approved data."
+  ],
+  "sources": [
+    "https://api.waterdata.usgs.gov/docs/",
+    "https://api.waterdata.usgs.gov/docs/ogcapi/",
+    "https://api.waterdata.usgs.gov/docs/agents/",
+    "https://api.waterdata.usgs.gov/ogcapi/v1/openapi?f=json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "usgswater.latest",
+      "name": "Get the latest gauge readings",
+      "summary": "Most recent instantaneous value per time series: current flow, gage height and so on.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/latest-continuous/items",
+      "params": {
+        "monitoring_location_id": {
+          "in": "query",
+          "description": "Agency code and site number, e.g. USGS-01646500; comma-separated for several.",
+          "example": "USGS-01646500"
+        },
+        "parameter_code": {
+          "in": "query",
+          "description": "5-digit parameter code(s), comma-separated, e.g. 00060 for discharge; look codes up with usgswater.parameter_codes.",
+          "example": "00060"
+        },
+        "time": {
+          "in": "query",
+          "description": "RFC 3339 date-time, interval (start/end, open with ..) or ISO 8601 duration such as P7D or PT36H."
+        },
+        "bbox": {
+          "in": "query",
+          "description": "minLon,minLat,maxLon,maxLat."
+        },
+        "state_name": {
+          "in": "query",
+          "description": "State name, e.g. Colorado."
+        },
+        "county_code": {
+          "in": "query",
+          "description": "County code."
+        },
+        "site_type_code": {
+          "in": "query",
+          "description": "Site type code, e.g. ST for stream."
+        },
+        "properties": {
+          "in": "query",
+          "description": "Comma-separated properties to return."
+        },
+        "skipGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop each feature's geometry, default false."
+        },
+        "sortby": {
+          "in": "query",
+          "description": "Comma-separated properties, +asc or -desc, e.g. -time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 50000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, default 0."
+        },
+        "f": {
+          "in": "query",
+          "description": "Format, default json (GeoJSON).",
+          "enum": [
+            "json",
+            "jsonld",
+            "csv",
+            "html"
+          ]
+        }
+      },
+      "job": "water.latest",
+      "docs_url": "https://api.waterdata.usgs.gov/docs/ogcapi/",
+      "verified": {
+        "docs": "https://api.waterdata.usgs.gov/ogcapi/v1/openapi?f=json"
+      }
+    },
+    {
+      "id": "usgswater.continuous",
+      "name": "Get instantaneous readings over time",
+      "summary": "Sensor readings (typically every 15 minutes) for a period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/continuous/items",
+      "params": {
+        "monitoring_location_id": {
+          "in": "query",
+          "description": "Agency code and site number, e.g. USGS-01646500; comma-separated for several.",
+          "example": "USGS-01646500"
+        },
+        "parameter_code": {
+          "in": "query",
+          "description": "5-digit parameter code(s), comma-separated, e.g. 00060 for discharge; look codes up with usgswater.parameter_codes.",
+          "example": "00060"
+        },
+        "time": {
+          "in": "query",
+          "description": "RFC 3339 date-time, interval (start/end, open with ..) or ISO 8601 duration such as P7D or PT36H."
+        },
+        "bbox": {
+          "in": "query",
+          "description": "minLon,minLat,maxLon,maxLat."
+        },
+        "state_name": {
+          "in": "query",
+          "description": "State name, e.g. Colorado."
+        },
+        "county_code": {
+          "in": "query",
+          "description": "County code."
+        },
+        "site_type_code": {
+          "in": "query",
+          "description": "Site type code, e.g. ST for stream."
+        },
+        "properties": {
+          "in": "query",
+          "description": "Comma-separated properties to return."
+        },
+        "skipGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop each feature's geometry, default false."
+        },
+        "sortby": {
+          "in": "query",
+          "description": "Comma-separated properties, +asc or -desc, e.g. -time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 50000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, default 0."
+        },
+        "f": {
+          "in": "query",
+          "description": "Format, default json (GeoJSON).",
+          "enum": [
+            "json",
+            "jsonld",
+            "csv",
+            "html"
+          ]
+        }
+      },
+      "notes": [
+        "Large: use a short time window and a high limit, then page."
+      ],
+      "job": "water.history",
+      "docs_url": "https://api.waterdata.usgs.gov/docs/ogcapi/",
+      "verified": {
+        "docs": "https://api.waterdata.usgs.gov/ogcapi/v1/openapi?f=json"
+      }
+    },
+    {
+      "id": "usgswater.daily",
+      "name": "Get daily values",
+      "summary": "Daily statistics (mean, min, max) per time series.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/daily/items",
+      "params": {
+        "monitoring_location_id": {
+          "in": "query",
+          "description": "Agency code and site number, e.g. USGS-01646500; comma-separated for several.",
+          "example": "USGS-01646500"
+        },
+        "parameter_code": {
+          "in": "query",
+          "description": "5-digit parameter code(s), comma-separated, e.g. 00060 for discharge; look codes up with usgswater.parameter_codes.",
+          "example": "00060"
+        },
+        "statistic_id": {
+          "in": "query",
+          "description": "Statistic code(s): 00001 max, 00002 min, 00003 mean.",
+          "example": "00003"
+        },
+        "time": {
+          "in": "query",
+          "description": "RFC 3339 date-time, interval (start/end, open with ..) or ISO 8601 duration such as P7D or PT36H."
+        },
+        "bbox": {
+          "in": "query",
+          "description": "minLon,minLat,maxLon,maxLat."
+        },
+        "state_name": {
+          "in": "query",
+          "description": "State name, e.g. Colorado."
+        },
+        "county_code": {
+          "in": "query",
+          "description": "County code."
+        },
+        "site_type_code": {
+          "in": "query",
+          "description": "Site type code, e.g. ST for stream."
+        },
+        "properties": {
+          "in": "query",
+          "description": "Comma-separated properties to return."
+        },
+        "skipGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop each feature's geometry, default false."
+        },
+        "sortby": {
+          "in": "query",
+          "description": "Comma-separated properties, +asc or -desc, e.g. -time."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 50000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, default 0."
+        },
+        "f": {
+          "in": "query",
+          "description": "Format, default json (GeoJSON).",
+          "enum": [
+            "json",
+            "jsonld",
+            "csv",
+            "html"
+          ]
+        }
+      },
+      "job": "water.history",
+      "docs_url": "https://api.waterdata.usgs.gov/docs/ogcapi/",
+      "verified": {
+        "docs": "https://api.waterdata.usgs.gov/ogcapi/v1/openapi?f=json"
+      }
+    },
+    {
+      "id": "usgswater.locations.search",
+      "name": "Search monitoring locations",
+      "summary": "Gauges and wells with their name, coordinates, state, county, drainage area and site type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/monitoring-locations/items",
+      "params": {
+        "id": {
+          "in": "query",
+          "description": "Monitoring location id(s), e.g. USGS-01646500."
+        },
+        "q": {
+          "in": "query",
+          "description": "Full-text search over name, number, state, county and site type; case-insensitive prefix match, at least 2 characters.",
+          "example": "potomac"
+        },
+        "state_name": {
+          "in": "query",
+          "description": "State name, e.g. Colorado."
+        },
+        "county_code": {
+          "in": "query",
+          "description": "County code."
+        },
+        "site_type_code": {
+          "in": "query",
+          "description": "Site type code, e.g. ST for stream."
+        },
+        "bbox": {
+          "in": "query",
+          "description": "minLon,minLat,maxLon,maxLat."
+        },
+        "properties": {
+          "in": "query",
+          "description": "Comma-separated properties to return."
+        },
+        "skipGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop each feature's geometry, default false."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 50000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, default 0."
+        },
+        "f": {
+          "in": "query",
+          "description": "Format, default json (GeoJSON).",
+          "enum": [
+            "json",
+            "jsonld",
+            "csv",
+            "html"
+          ]
+        }
+      },
+      "job": "water.locations",
+      "docs_url": "https://api.waterdata.usgs.gov/docs/ogcapi/",
+      "verified": {
+        "docs": "https://api.waterdata.usgs.gov/ogcapi/v1/openapi?f=json"
+      }
+    },
+    {
+      "id": "usgswater.parameter_codes",
+      "name": "List parameter codes",
+      "summary": "The 5-digit parameter codes, what each measures and its unit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/parameter-codes/items",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 50000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, default 0."
+        },
+        "f": {
+          "in": "query",
+          "description": "Format, default json (GeoJSON).",
+          "enum": [
+            "json",
+            "jsonld",
+            "csv",
+            "html"
+          ]
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://api.waterdata.usgs.gov/docs/ogcapi/",
+      "verified": {
+        "docs": "https://api.waterdata.usgs.gov/ogcapi/v1/openapi?f=json"
+      }
+    }
+  ]
+}

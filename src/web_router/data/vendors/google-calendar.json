@@ -1,0 +1,368 @@
+{
+  "vendor": "google-calendar",
+  "name": "Google Calendar",
+  "category": "other",
+  "summary": "Read a Google user's calendars, events and free/busy times, and create events, through the Google Calendar API v3.",
+  "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference",
+  "base_url": "https://www.googleapis.com/calendar/v3",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "GOOGLE_CALENDAR_CLIENT_ID"
+        ],
+        "description": "the OAuth client id of a Google Cloud OAuth app with the Google Calendar API enabled (Google Cloud console > APIs & Services > Credentials)"
+      },
+      "client_secret": {
+        "env": [
+          "GOOGLE_CALENDAR_CLIENT_SECRET"
+        ],
+        "description": "that OAuth app's client secret"
+      },
+      "refresh_token": {
+        "env": [
+          "GOOGLE_CALENDAR_REFRESH_TOKEN"
+        ],
+        "description": "a refresh token minted with that OAuth app for a Calendar scope: https://www.googleapis.com/auth/calendar.readonly to read, https://www.googleapis.com/auth/calendar.events to also create events"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: reads the calendars of the Google user who granted the refresh token. 'primary' names that user's main calendar.",
+    "Times are RFC3339 with an offset (2026-11-09T09:00:00-05:00 or ...Z). All-day events use start.date/end.date instead of dateTime, and end is exclusive.",
+    "Lists page with pageToken/nextPageToken; a nextSyncToken on the last page lets a later call fetch only changes."
+  ],
+  "sources": [
+    "https://developers.google.com/workspace/calendar/api/v3/reference/calendarList/list",
+    "https://developers.google.com/workspace/calendar/api/v3/reference/events/list",
+    "https://developers.google.com/workspace/calendar/api/v3/reference/events/get",
+    "https://developers.google.com/workspace/calendar/api/v3/reference/events/insert",
+    "https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "google-calendar.calendars.list",
+      "name": "List the user's calendars",
+      "summary": "Calendars on the user's calendar list, with id, summary, time zone and access role.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/me/calendarList",
+      "params": {
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size; default 100, maximum 250."
+        },
+        "minAccessRole": {
+          "in": "query",
+          "description": "Only calendars where the user has at least this role.",
+          "enum": [
+            "freeBusyReader",
+            "reader",
+            "writer",
+            "writerWithoutPrivateAccess",
+            "owner"
+          ]
+        },
+        "pageToken": {
+          "in": "query",
+          "description": "nextPageToken from the previous page."
+        },
+        "showDeleted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include deleted entries; default false."
+        },
+        "showHidden": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include hidden entries; default false."
+        }
+      },
+      "job": "calendar.calendars.list",
+      "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference/calendarList/list",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/calendar/api/v3/reference/calendarList/list"
+      }
+    },
+    {
+      "id": "google-calendar.events.list",
+      "name": "List events",
+      "summary": "Events on a calendar in a time window, optionally expanded into single occurrences and searched by text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/calendars/{calendarId}/events",
+      "params": {
+        "calendarId": {
+          "in": "path",
+          "required": true,
+          "description": "Calendar id; 'primary' is the signed-in user's main calendar. Others from calendars.list.",
+          "example": "primary"
+        },
+        "timeMin": {
+          "in": "query",
+          "description": "Exclusive lower bound on event END time, RFC3339 with offset.",
+          "example": "2026-11-09T00:00:00Z"
+        },
+        "timeMax": {
+          "in": "query",
+          "description": "Exclusive upper bound on event START time, RFC3339 with offset.",
+          "example": "2026-11-16T00:00:00Z"
+        },
+        "q": {
+          "in": "query",
+          "description": "Free text over summary, description, location, attendee and organizer names and emails."
+        },
+        "singleEvents": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Expand recurring events into their instances; default false."
+        },
+        "orderBy": {
+          "in": "query",
+          "description": "startTime needs singleEvents=true; both ascending.",
+          "enum": [
+            "startTime",
+            "updated"
+          ]
+        },
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events per page; default 250, maximum 2500."
+        },
+        "pageToken": {
+          "in": "query",
+          "description": "nextPageToken from the previous page."
+        },
+        "showDeleted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include cancelled events; default false."
+        },
+        "timeZone": {
+          "in": "query",
+          "description": "IANA time zone for the response; default the calendar's."
+        },
+        "updatedMin": {
+          "in": "query",
+          "description": "Only events modified after this RFC3339 time (deleted ones always included)."
+        },
+        "eventTypes": {
+          "in": "query",
+          "description": "Only this event type.",
+          "enum": [
+            "birthday",
+            "default",
+            "focusTime",
+            "fromGmail",
+            "outOfOffice",
+            "workingLocation"
+          ]
+        },
+        "iCalUID": {
+          "in": "query",
+          "description": "Find an event by its iCalendar id."
+        },
+        "maxAttendees": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cap on attendees returned per event."
+        },
+        "syncToken": {
+          "in": "query",
+          "description": "nextSyncToken from a previous full list, to get only changes; not combinable with time, q, orderBy or updatedMin filters. 410 means start over."
+        }
+      },
+      "notes": [
+        "Pages can hold fewer than maxResults events; keep following nextPageToken until it is absent.",
+        "Without singleEvents=true a recurring event comes back once, as its rule, not as each occurrence."
+      ],
+      "job": "calendar.events.list",
+      "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference/events/list",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/calendar/api/v3/reference/events/list"
+      }
+    },
+    {
+      "id": "google-calendar.events.get",
+      "name": "Get an event",
+      "summary": "One event by id: time, attendees and their responses, location, conference link and description.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/calendars/{calendarId}/events/{eventId}",
+      "params": {
+        "calendarId": {
+          "in": "path",
+          "required": true,
+          "description": "Calendar id; 'primary' is the signed-in user's main calendar. Others from calendars.list.",
+          "example": "primary"
+        },
+        "eventId": {
+          "in": "path",
+          "required": true,
+          "description": "The event id."
+        },
+        "maxAttendees": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cap on attendees returned."
+        },
+        "timeZone": {
+          "in": "query",
+          "description": "IANA time zone for the response."
+        }
+      },
+      "job": "calendar.events.get",
+      "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference/events/get",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/calendar/api/v3/reference/events/get"
+      }
+    },
+    {
+      "id": "google-calendar.freebusy.query",
+      "name": "Query free/busy",
+      "summary": "Busy intervals for up to 50 calendars or groups over a time range.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/freeBusy",
+      "params": {
+        "timeMin": {
+          "in": "body",
+          "required": true,
+          "description": "Start of the interval, RFC3339."
+        },
+        "timeMax": {
+          "in": "body",
+          "required": true,
+          "description": "End of the interval, RFC3339."
+        },
+        "items": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "[{id: calendar or group id}, ...].",
+          "example": [
+            {
+              "id": "primary"
+            }
+          ]
+        },
+        "timeZone": {
+          "in": "body",
+          "description": "Time zone of the response; default UTC."
+        },
+        "groupExpansionMax": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most calendar ids to expand per group, at most 100."
+        },
+        "calendarExpansionMax": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most calendars to return, at most 50."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "calendar.freebusy",
+      "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query"
+      }
+    },
+    {
+      "id": "google-calendar.events.create",
+      "name": "Create an event",
+      "summary": "Adds an event to a calendar, optionally inviting guests.",
+      "kind": "write",
+      "method": "POST",
+      "path": "/calendars/{calendarId}/events",
+      "params": {
+        "calendarId": {
+          "in": "path",
+          "required": true,
+          "description": "Calendar id; 'primary' is the signed-in user's main calendar. Others from calendars.list.",
+          "example": "primary"
+        },
+        "start": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{dateTime: RFC3339, timeZone} or {date: 'yyyy-mm-dd'} for all-day. timeZone is required for recurring events.",
+          "example": {
+            "dateTime": "2026-11-10T10:00:00-05:00"
+          }
+        },
+        "end": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Exclusive end, same shape as start.",
+          "example": {
+            "dateTime": "2026-11-10T10:30:00-05:00"
+          }
+        },
+        "summary": {
+          "in": "body",
+          "description": "Event title."
+        },
+        "description": {
+          "in": "body",
+          "description": "Event description; may contain HTML."
+        },
+        "location": {
+          "in": "body",
+          "description": "Free-text location."
+        },
+        "attendees": {
+          "in": "body",
+          "type": "array",
+          "description": "[{email}, ...] guests to invite."
+        },
+        "sendUpdates": {
+          "in": "query",
+          "description": "Who is emailed about the new event.",
+          "enum": [
+            "all",
+            "externalOnly",
+            "none"
+          ]
+        },
+        "conferenceDataVersion": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to allow conferenceData, e.g. creating a Google Meet link; default 0.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "With attendees and sendUpdates=all, invitations go out to other people."
+      ],
+      "job": "calendar.events.create",
+      "docs_url": "https://developers.google.com/workspace/calendar/api/v3/reference/events/insert",
+      "verified": {
+        "docs": "https://developers.google.com/workspace/calendar/api/v3/reference/events/insert"
+      }
+    }
+  ]
+}
