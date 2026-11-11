@@ -47,3 +47,15 @@ def test_a_webhook_inside_an_object_input_is_refused() -> None:
 
 def test_the_object_input_still_takes_its_documented_keys() -> None:
     assert _enrow({"country_code": "US"}).body["settings"] == {"country_code": "US"}  # type: ignore[attr-defined]
+
+
+def test_a_list_for_an_input_declared_one_string_goes_as_one_json_value() -> None:
+    catalog = builtin_catalog()
+    endpoint = catalog.endpoint("meta-ads.campaigns.list")
+    required = {
+        name: spec.example for name, spec in endpoint.params.items() if spec.required or spec.location == "path"
+    }
+    plan = plan_endpoint(catalog.vendor("meta-ads"), endpoint, {**required, "effective_status": ["ACTIVE", "PAUSED"]})
+    assert [pair for pair in plan.query if pair[0] == "effective_status"] == [  # type: ignore[attr-defined]
+        ("effective_status", '["ACTIVE","PAUSED"]')
+    ]

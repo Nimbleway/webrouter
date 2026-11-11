@@ -102,12 +102,9 @@
         },
         "effective_status": {
           "in": "query",
-          "type": "array",
-          "description": "Filter by status: ACTIVE, PAUSED, ARCHIVED, DELETED.",
-          "example": [
-            "ACTIVE",
-            "PAUSED"
-          ]
+          "type": "string",
+          "description": "JSON array of statuses: ACTIVE, PAUSED, ARCHIVED, DELETED, e.g. [\"ACTIVE\",\"PAUSED\"].",
+          "example": "[\"ACTIVE\",\"PAUSED\"]"
         },
         "date_preset": {
           "in": "query",
@@ -181,16 +178,14 @@
         },
         "breakdowns": {
           "in": "query",
-          "type": "array",
-          "description": "Split rows by age, gender, country, region, publisher_platform...; only some combinations are allowed.",
-          "example": [
-            "country"
-          ]
+          "type": "string",
+          "description": "JSON array of breakdowns: age, gender, country, region, publisher_platform...; only some combinations are allowed. E.g. [\"country\"].",
+          "example": "[\"country\"]"
         },
         "filtering": {
           "in": "query",
-          "type": "array",
-          "description": "[{field, operator, value}] filters; operators include EQUAL, IN, GREATER_THAN, CONTAIN."
+          "type": "string",
+          "description": "JSON array of {field, operator, value} filters; operators include EQUAL, IN, GREATER_THAN, CONTAIN. E.g. [{\"field\":\"campaign.effective_status\",\"operator\":\"IN\",\"value\":[\"ACTIVE\"]}]."
         },
         "limit": {
           "in": "query",
