@@ -227,8 +227,11 @@ src/web_router/
 ├── exceptions_vendors.py VendorNotFoundError and VendorWriteRefusedError, apart on the
 │                       terms exceptions_budget.py is
 ├── vendors/            call_vendor's vendor-blind code: schema.py (the catalog file's
-│                       models), catalog.py, credentials.py, plan.py (inputs placed),
-│                       caller.py (credentials placed, sent, masked), types.py
+│                       models, with schema_base.py, schema_auth.py and
+│                       schema_endpoint.py), catalog.py, credentials.py, tokens.py
+│                       (OAuth tokens), masking.py, plan.py (inputs placed),
+│                       values.py (credentials resolved), caller.py (sent),
+│                       response.py (the answer, masked), types.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
 │   ├── methods.py      the library method behind each provider-picking tool: its
