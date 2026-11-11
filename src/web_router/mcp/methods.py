@@ -19,18 +19,20 @@ from web_router.constants import (
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
     MCP_METHOD_BROWSER,
-    MCP_METHOD_TEMPLATE,
     MCP_TOOL_ANSWER,
     MCP_TOOL_BROWSE,
     MCP_TOOL_BROWSER_OPEN,
     MCP_TOOL_EXTRACT,
     MCP_TOOL_RESEARCH,
-    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
-    MCP_TOOL_TEMPLATE,
-    MCP_TOOL_TEMPLATES,
     RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
+)
+from web_router.constants_live_data import (
+    LIVE_DATA_ENV_BY_PROVIDER,
+    MCP_METHOD_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA_SOURCE,
+    MCP_TOOL_LIVE_DATA_SOURCES,
 )
 from web_router.mcp.env_credentials import ENV_ONLY, env_names
 from web_router.providers.base import _BaseProvider
@@ -38,15 +40,15 @@ from web_router.registry import (
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
+    configured_live_data_providers,
     configured_providers,
     configured_research_providers,
-    configured_template_providers,
     get_browse_provider_class,
     get_browser_provider_class,
     get_extract_provider_class,
+    get_live_data_provider_class,
     get_provider_class,
     get_research_provider_class,
-    get_template_provider_class,
 )
 from web_router.registry_answer import configured_answer_providers, get_answer_provider_class
 from web_router.types import (
@@ -55,9 +57,9 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
-    TEMPLATE_PARAMETERS,
 )
 from web_router.types_answer import ANSWER_PARAMETERS
+from web_router.types_live_data import LIVE_DATA_PARAMETERS
 
 
 @dataclass(frozen=True)
@@ -65,7 +67,7 @@ class Method:
     """What a provider-picking tool needs to know about the library method behind it."""
 
     key: str
-    """How the capabilities resource names the method: the tool's own name, but ``template`` and ``open_browser``."""
+    """How the capabilities resource names the method: the tool's own name, but ``live_data`` and ``open_browser``."""
     configured: Callable[[], list[str]]
     """Which backends this install can actually serve it with."""
     cls: Callable[[str], type[_BaseProvider]]
@@ -76,8 +78,8 @@ class Method:
     """The arguments a backend may or may not map, as opposed to the ones every backend takes."""
 
 
-_TEMPLATE_METHOD = Method(
-    MCP_METHOD_TEMPLATE, configured_template_providers, get_template_provider_class, TEMPLATE_ENV_BY_PROVIDER
+_LIVE_DATA_METHOD = Method(
+    MCP_METHOD_LIVE_DATA, configured_live_data_providers, get_live_data_provider_class, LIVE_DATA_ENV_BY_PROVIDER
 )
 
 METHODS: dict[str, Method] = {
@@ -92,9 +94,9 @@ METHODS: dict[str, Method] = {
         EXTRACT_PARAMETERS,
     ),
     # Listing and describing take no option a backend may decline; a run takes the template's.
-    MCP_TOOL_TEMPLATES: _TEMPLATE_METHOD,
-    MCP_TOOL_TEMPLATE: _TEMPLATE_METHOD,
-    MCP_TOOL_RUN_TEMPLATE: replace(_TEMPLATE_METHOD, options=TEMPLATE_PARAMETERS),
+    MCP_TOOL_LIVE_DATA_SOURCES: _LIVE_DATA_METHOD,
+    MCP_TOOL_LIVE_DATA_SOURCE: _LIVE_DATA_METHOD,
+    MCP_TOOL_LIVE_DATA: replace(_LIVE_DATA_METHOD, options=LIVE_DATA_PARAMETERS),
     MCP_TOOL_ANSWER: Method(
         MCP_TOOL_ANSWER,
         configured_answer_providers,

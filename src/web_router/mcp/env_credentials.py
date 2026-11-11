@@ -20,8 +20,8 @@ from web_router.constants import (
     ENV_JINA_API_KEY,
     EXTRACT_ENV_BY_PROVIDER,
     RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.constants_mcp import MCP_MSG_ENV_ONLY
 from web_router.exceptions import ConfigurationError
 from web_router.vendors.catalog import get_catalog
@@ -30,7 +30,7 @@ from web_router.vendors.schema import Vendor
 ALL_ENV_TABLES: tuple[Mapping[str, str | tuple[str, ...] | None], ...] = (
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
+    LIVE_DATA_ENV_BY_PROVIDER,
     ANSWER_ENV_BY_PROVIDER,
     RESEARCH_ENV_BY_PROVIDER,
     BROWSER_ENV_BY_PROVIDER,

@@ -17,7 +17,7 @@
   <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Join%20our%20Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
 </p>
 
-Connect your agent to every web tool through one interface: search, extract, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
+Connect your agent to every web tool through one interface: search, extract, live data, answer, research and browser sessions, across many providers. A [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task, trading off cost, latency and coverage for your domain and the providers you have keys for.
 
 ```bash
 pip install "webrouter[all]"
@@ -32,9 +32,11 @@ WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
 
 WebRouter().extract("https://example.com")  # page contents, also keyless
 
-WebRouter().run_template("walmart_pdp", {"product_id": "..."}, provider="nimble")  # one page, one record
+WebRouter().live_data("walmart_pdp", {"product_id": "..."}, provider="nimble")  # a site's fields, fetched now
 
 WebRouter(Provider.LINKUP).answer("...")  # a written answer with its sources, in one call
+
+WebRouter().call_vendor("datadog.logs.search", {"filter": {"query": "status:error"}})  # your own vendor accounts
 
 WebRouter(Provider.NIMBLE).research("...")  # an agentic run: minutes, not milliseconds
 
@@ -78,8 +80,8 @@ Nothing is hidden to get there. Unmapped provider fields stay in
 `raw`, and an option a backend cannot honour **raises instead of being quietly
 dropped** — so a call never runs under weaker constraints than you asked for.
 
-> **Status: early preview.** `search`, `extract`, `run_template` (with
-> `templates` and `template` beside it), `research`, `open_browser`
+> **Status: early preview.** `search`, `extract`, `live_data` (with
+> `live_data_sources` and `live_data_source` beside it), `research`, `open_browser`
 > and `browse` are implemented; `benchmark()` and `benchmark_extract()`
 > compare search and extract backends on your own queries and URLs, and
 > `evaluate()` scores search accuracy with an LLM judge —
@@ -228,7 +230,7 @@ between them is one argument.
 
 A provider name serves the methods it serves and no others: `brave` searches
 and cannot extract, `oxylabs` extracts and cannot search, `nimble` searches,
-extracts, runs templates and researches, and `browserbase` opens
+extracts, runs live data and researches, and `browserbase` opens
 sessions, runs browse tasks and extracts.
 Ask a method for another's backend and it says so, naming the backends that
 method does serve.
@@ -322,29 +324,35 @@ fetching anonymously, and `auto` and `max` pass such members over. The MCP
 server never offers it: a logged-in identity is set in code, not from a
 conversation.
 
-### Templates
+### Live data
 
-A template is a vendor's saved, site-specific extraction: Nimble's Extract
-Templates, Oxylabs' dedicated sources, Bright Data's scrapers, Apify's
-actors. `[extract]` installs the Nimble adapter -- a template run is its
-Extract API's. There is no keyless tier and no `auto`: a run fetches and
-parses on the backend's account, and a template's name belongs to one
-vendor, so `provider` is required on all three calls.
+A live data source is a vendor's ready-made scraper for one site -- Nimble's
+Extract Templates, Apify's Actors, Bright Data's scrapers, the Oxylabs Web
+API's dedicated scrapers. Given its own inputs it fetches the site **for this call**
+and answers with structured records. That is the rule a backend joins under:
+it fetches on request. Data a vendor collected earlier and serves from storage
+is that vendor's own API, reached through `call_vendor()`. There is no keyless
+tier and no `auto`: a run fetches and parses on the backend's account, and a
+source's name belongs to one vendor, so `provider` is required on all three
+calls.
 
-| Pass | Name | Provider | Credentials | Page formats beside the record |
+| Pass | Name | Provider | Credentials | Page formats beside the records |
 | --- | --- | --- | --- | --- |
 | `Provider.NIMBLE` | `nimble` | [Nimble Extract Templates](https://docs.nimbleway.com/api-reference/extract/extract-templates) | `NIMBLE_API_KEY` | `markdown`, `html` |
+| `Provider.APIFY` | `apify` | [Apify Store Actors](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) | `APIFY_TOKEN` | — |
+| `Provider.BRIGHTDATA` | `brightdata` | [Bright Data scrapers](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) | `BRIGHTDATA_API_TOKEN` | — |
+| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web API dedicated scrapers](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) | `OXYLABS_WEB_API_KEY` (a Web API key, not the Realtime username and password extract uses; in `provider_config["oxylabs"]` it is `web_api_key`, as `api_key` there is extract's password) | — |
 
-Nimble is the only backend with a template catalogue so far. Verified live on
-2026-10-22: a listing, a description and a run on a public test page, the
-response shapes of which the tests are modelled on. See
-[Running a template](#running-a-template). Listing and describing bill
-nothing; a run bills one template run on Nimble's account, at one flat rate
-for every template, whatever the site -- the rate is on
-[Nimble's pricing page](https://www.nimbleway.com/pricing), and
-[`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md) records
-it dated and sourced, from the price list `web_router.prices` reads (see
-[Estimated prices](#estimated-prices-experimental)).
+Nimble was verified live on 2026-10-22: a listing, a description and a run on
+a public test page. Apify and Bright Data were verified live on 2026-11-10:
+each one's catalogue, a search, a description and a run (Apify's Google Maps
+Actor, Bright Data's `amazon_products`). **The Oxylabs Web API is written from
+its documentation** and has not yet been called live. Their integration tests
+skip themselves until keys are available. Listing and describing bill nothing
+on any of them; what a run bills is each vendor's own rate, recorded dated and
+sourced in [`benchmarks/providers/PRICING.md`](benchmarks/providers/PRICING.md)
+from the price list `web_router.prices` reads (see
+[Estimated prices](#estimated-prices-experimental)). See [Live data](#live-data-1).
 
 ### Answer
 
@@ -463,7 +471,7 @@ you have a key for first — a credential in the environment says which one you
 want — and falls back to the anonymous tiers when there is none: Tavily keyless,
 then You.com's, Exa's and Parallel's open MCP servers, then Keenable's keyless tier for a search; Tavily keyless,
 Jina Reader, Firecrawl's keyless tier, then Keenable's for an extract; `local` for a browser
-session. Research, browse, `answer()` and templates have no
+session. Research, browse, `answer()` and live data have no
 anonymous tier, because every call bills; with no key they raise, naming the
 variables that would fix it. This is the one list of keyless backends; the MCP
 server and `.env.example` point here. `response.provider` names whichever one served it,
@@ -592,8 +600,8 @@ WebRouter(Provider.TAVILY).search("...")  # ConfigurationError if TAVILY_API_KEY
 | `SearchRequest` / `ExtractRequest` | A normalized call, before any provider sees it. |
 | `SearchResponse` / `SearchResult` | A normalized answer, plus the provider's untouched payload in `raw`. |
 | `ExtractResponse` / `ExtractedDocument` | The same for a page fetch, plus `failures` for the URLs that did not come back. |
-| `TemplateProvider` | The contract for an Extract Template backend: `_list` its catalogue, `_get` one template, `_run` it. |
-| `TemplateRequest` / `TemplateResponse` | A normalized run -- a template's name and its own inputs -- and the record it parsed, in `data`. `Template` describes one, `TemplatePage` a page of the catalogue. |
+| `LiveDataProvider` | The contract for a live data backend: `_list` its catalogue, `_get` one source, `_run` it. |
+| `LiveDataRequest` / `LiveDataResponse` | A normalized run -- a source's name and its own inputs -- and the `records` it extracted. `LiveDataSource` describes one, `LiveDataSourcePage` a page of the catalogue. |
 | `ResearchProvider` | The contract for an agentic backend: `_start` a run, `_fetch` where it got to. |
 | `ResearchRequest` / `ResearchResponse` | A normalized run, and its answer — prose, structure, and the `citations` behind either. |
 | `ResearchJob` | A run in progress. Polls with back-off, blocks with a timeout, and never fabricates an answer it does not have. |
@@ -884,65 +892,99 @@ the whole list.
 would repeat one of the others under a name that says nothing about who
 answered.
 
-## Running a template
+## Live data
 
-A template is a vendor's saved, site-specific extraction -- a retailer's
-product page, a job board's listing, a search results page -- that turns one
-page into a **record with fixed fields** rather than page text to read through.
-Three calls cover a vendor's catalogue of them: list it, describe one, run one.
-All three name the vendor, because a template's name, inputs and fields are
-the vendor's own; the same page has a different name on each.
-
-```python
-page = router.templates(provider="nimble", limit=20)  # one page of the catalogue
-for template in page.templates:
-    print(template.name, template.domain, template.entity_type)
-
-template = router.template("walmart_pdp", provider="nimble")
-template.input_schema  # JSON Schema of what a run passes as `inputs`
-template.output_schema  # JSON Schema of the record that comes back
-
-response = router.run_template("walmart_pdp", {"product_id": "123456789"}, provider="nimble")
-response.data  # {'title': ..., 'price': ..., ...}, shaped by output_schema
-```
-
-**A template's inputs are its own, not ours.** `inputs` is whatever its
-`input_schema` names: a URL for some templates, an id, a slug or a search term
-for others, and nothing at all for a template whose page is fixed. That is why
-this is a method of its own rather than an option on `extract`, which is keyed
-by URL. Read the schema -- or `template.samples`, the runs the backend
-recorded, each an input and the record it returned -- before running a
-template you have not run before; the backend refuses inputs that do not
-match, and an unknown name raises `TemplateNotFoundError`. A listing carries
-the same: Nimble's catalogue rows hold the published version whole, so
-`page.templates[i].input_schema` and `.samples` are filled without a second
-call.
-
-`format` asks for the page beside the record, as `markdown` or `html`:
+A live data source is a vendor's ready-made scraper for one site -- a
+retailer's product page, a maps search, a job board's listing -- that turns
+the site into **records with fixed fields**, fetched for this call, rather
+than page text to read through. Three calls cover a vendor's catalogue: list
+it, describe one, run one. All three name the vendor, because a source's name,
+inputs and fields are the vendor's own; the same site has a different name on
+each.
 
 ```python
-response = router.run_template("walmart_pdp", {"product_id": "123456789"}, provider="nimble", format="markdown")
-response.document.content  # the page the record was parsed from
+page = router.live_data_sources(provider="apify", limit=20)  # one page of the catalogue
+for source in page.sources:
+    print(source.name, source.domain, source.description)
+
+page = router.live_data_sources(provider="nimble", query="walmart product")  # find one by keyword
+page.search  # "native" where the vendor searched (Apify), "local" where it was matched here
+
+source = router.live_data_source("compass~crawler-google-places", provider="apify")
+source.input_schema  # JSON Schema of what a run passes as `inputs`
+
+result = router.live_data(
+    "compass~crawler-google-places",
+    {"searchStringsArray": ["coffee in Tel Aviv"], "maxCrawledPlacesPerSearch": 10},
+    provider="apify",
+)
+result.records  # one dict per place, shaped by the Actor's output
+result.data  # the first record, for sources that answer with one
+result.fetched_at  # when the vendor says it fetched the page; None when it does not say
 ```
 
-Unset, no page comes back -- the record is the answer and the page is an
-extra, so unlike `extract` there is no default format to pin. A run the
-backend could not complete, whether it could not fetch the page, the site
-answered with an error page, or the template failed to parse it, **raises**
-`ProviderError` with the backend's reason rather than coming back with an
-empty record.
+Every backend takes the same call -- a source's name and its inputs -- so
+switching vendor changes only those two:
 
-**One call is one page and one set of inputs**, answered in real time with
-one record: a listing template returns its items inside that record, with
-pagination beside it. A vendor whose templates run as jobs over many inputs
-and answer with a dataset -- Bright Data's scrapers, Apify's actors -- would
-join through its synchronous endpoint, under that endpoint's own time cap;
-batch inputs are out of scope here.
+```python
+router.live_data("amazon_products", {"url": "https://www.amazon.com/dp/B0CHX1W1XY"}, provider="brightdata")
+router.live_data("amazon_products_by_keyword", {"keyword": "earbuds"}, provider="brightdata")
+router.live_data("amazon/product", {"query": "B0CHX1W1XY", "domain": "com"}, provider="oxylabs")
+```
 
-`TemplatePage.total` and `offset` say where in the catalogue a page sits, when
-the backend reports them; `limit` and `offset` left unset leave the paging to
-the backend. Every call tags its answer with `provider` and keeps the untouched
-payload in `raw`.
+| Backend | A source is named | Catalogue | Inputs | Notes |
+| --- | --- | --- | --- | --- |
+| `nimble` | the template's name, `walmart_pdp` | Nimble's templates, paged by Nimble | the template's own (`product_id`, `url`…) | one record per run; `format` returns the page beside it |
+| `apify` | `username~name` (or `username/name`) | the Apify Store, paged by Apify | the Actor's input, sent as the body untouched | every dataset item is a record; waits up to 300 s; `provider_options` go to the run's query (`memory`, `maxItems`, `maxTotalChargeUsd`) |
+| `brightdata` | the dataset id, `gd_l7q7dkf244hwjntr0`, or the scraper's name -- Bright Data's as written (`Amazon products`) or as listed (`amazon_products`); each discovery method is its own source, `amazon_products_by_keyword`. Names follow Bright Data's catalogue and gain the site if another scraper takes the same name; the `gd_` id never changes | every scraper and method, paged here (Bright Data answers with all of them; read once per provider) | one input object, e.g. `{"url": ...}` or `{"keyword": ...}` | waits about a minute, then raises naming the snapshot to fetch later; a run's failed inputs land in its `extra["errors"]`; a listed or described source's `extra["dataset_id"]` names the scraper behind it |
+| `oxylabs` | the scraper's path after `/v1/scrape/`, `amazon/product` (the full path works too) | the Web API's own list, `GET /v1/scrapers`, paged here (read once per provider) | the scraper's own, typed in its description from Oxylabs' `OPTIONS` (`query` or `url`, plus `domain`, `locale`…) | asks for `output: ["json"]`, the scraper's fields; a scraper Oxylabs runs only as a job (`chatgpt`, `gemini`…) is polled for up to five minutes, or until just before the call's deadline; any error after the submit is a `LiveDataJobError` whose `job_id` names the job to read later; `metadata.timestamp` stays in `extra`, as it is not documented as the fetch time |
+
+**Searching a catalogue.** `query` finds sources by keyword -- a site, a
+brand, the kind of page -- searched the way each vendor allows:
+
+| Backend | How `query` is searched | Order |
+| --- | --- | --- |
+| `apify` | natively: the Store's own `search`, over an Actor's title, name, description, owner and readme | the Store's relevance |
+| `nimble` | locally: Nimble's template list takes no keywords, so the catalogue is read page by page and matched here | name and site matches first, then catalogue order |
+| `brightdata` | locally: Bright Data's dataset list takes no parameters | as above |
+| `oxylabs` | locally: the Web API lists its scrapers but takes no keywords | as above |
+
+A local search matches every word, ignoring case, on a source's name, site,
+kind of page and description, reads at most 5,000 sources, and pages its
+matches with `limit` and `offset`. `page.total` counts the matches, and is
+`None` if the catalogue was read only in part. `page.query` and `page.search`
+(`"native"` or `"local"`) say what was asked and how. A custom backend whose
+vendor searches its own catalogue derives from `NativeSourceSearch` as well
+and implements `_search`/`_asearch`.
+
+**A source's inputs are its own, not ours.** `inputs` is whatever its
+`input_schema` names: a URL for some sources, an id, a slug or a search term
+for others. That is why this is a method of its own rather than an option on
+`extract`, which is keyed by URL. Read the schema -- or `source.samples`, the
+runs the backend recorded -- before running a source you have not run
+before; the backend refuses inputs that do not match, and an unknown name
+raises `LiveDataSourceNotFoundError`. A schema is `None` where the backend
+publishes none and names fields without types where that is all it publishes
+(Bright Data): nothing is guessed. Oxylabs' input schema is built from the
+scraper's own `OPTIONS` answer, its untouched lines kept in `source.raw`.
+
+**Freshness is reported, not assumed.** Every backend here fetches on request.
+`fetched_at` is set only from the vendor's own timestamp, and stays `None`
+where the vendor documents none rather than being filled with the time the
+answer arrived.
+
+A run the backend could not complete -- a page it could not fetch, a site
+that answered with an error page, a parse that failed -- **raises**
+`ProviderError` with the backend's reason. `format` asks for the page beside
+the records, on the backends that return one (Nimble); unset, no page comes
+back. `LiveDataSourcePage.total` and `offset` say where in the catalogue a
+page sits, when known. Every call tags its answer with `provider` and keeps
+the untouched payload in `raw`.
+
+**Renamed from templates.** `templates()`, `template()` and `run_template()`,
+and the `Template*` types, are deprecated aliases of `live_data_sources()`,
+`live_data_source()`, `live_data()` and the `LiveData*` types: they still
+work, with a `DeprecationWarning`, until a later release removes them.
 
 ## Asking for an answer
 
@@ -1403,6 +1445,80 @@ an 800x513 page). A browser too old to have that command fails the open. Its
 `{"window-size": "800,600"}` sets the outer size if that is what you want --
 though not beside `viewport`, which refuses every switch that sizes the window.
 
+## Vendor data
+
+`call_vendor()` reaches a vendor's own API with your account's credentials —
+your Google Ads reports, your Datadog logs, a contact-data vendor you pay for.
+It is not a method with interchangeable backends: only Google Ads knows your
+Google Ads spend, so there is no `auto`, and nothing is normalized. The answer
+is the vendor's own JSON, in its own field names and units. What the router
+adds is everything around the call:
+
+- **A catalog** of vendors and their useful endpoints, one JSON file per vendor
+  in `src/web_router/data/vendors/`, each written from the vendor's docs and
+  listed in [VENDORS.md](VENDORS.md). Every endpoint says what it does, its
+  inputs and where each goes, whether it reads or writes, and the notes a
+  caller gets wrong without (money in micros, timestamps in seconds, how
+  paging works).
+- **Credentials placed the way the vendor wants them**: header keys, a query
+  key, HTTP Basic, or an OAuth refresh token the router exchanges for an
+  access token and caches until shortly before it expires.
+- **Three guarantees.** Credentials only go to the vendor's own host: a path
+  with a scheme or host is refused, redirects are not followed, and a host
+  that varies by region only takes the values the vendor's file lists. No
+  input is dropped or invented: one the endpoint does not declare raises
+  `UnsupportedParameterError`, a required one left out
+  `MissingParameterError`. Writes are opt-in: an endpoint marked `write`, or a
+  raw request that is not GET/HEAD/OPTIONS, raises `VendorWriteRefusedError`
+  unless the call passes `allow_writes=True`.
+
+```python
+from web_router import WebRouter
+
+router = WebRouter()
+
+router.vendors(configured=True)  # the vendors whose keys are set here
+router.find_vendor_endpoints("google ads spend by campaign")
+router.vendor_endpoint("google-ads.query")  # inputs, notes, credentials
+
+response = router.call_vendor(
+    "google-ads.query",
+    {
+        "customer_id": "1234567890",
+        "query": "SELECT campaign.name, metrics.cost_micros FROM campaign WHERE segments.date DURING LAST_30_DAYS",
+    },
+)
+response.data  # Google's JSON, untouched
+
+# A path the catalog does not name, still with the vendor's credentials:
+router.vendor_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
+
+# A write: refused unless you say so. Dry-run first where the vendor can.
+router.call_vendor(
+    "google-ads.campaign_budgets.mutate",
+    {"customer_id": "1234567890", "operations": [...], "validateOnly": True},
+    allow_writes=True,
+)
+```
+
+Credentials come from the environment (or `.env`), under the variable names
+each vendor's file lists — `make vendors` writes them all into
+`.env.example`. To pass them in code instead, give the router
+`vendor_credentials={"datadog": {"api_key": ..., "app_key": ...}}`, read
+before the environment; anything with a `get(vendor, name, env)` method can
+stand in for both, a vault, say. A vendor whose host depends on your region
+or account takes it as a setting: `DD_SITE=datadoghq.eu`.
+
+An HTTP error raises `ProviderError` with every credential masked out of the
+vendor's message, including URL-encoded copies of a key sent in the query.
+`AsyncWebRouter` has the same methods, awaited. The vendor methods need the
+`vendors` extra (httpx), which `all` and `mcp` include.
+
+To pin a vendor's file or add one without forking, point
+`WEB_ROUTER_VENDOR_CATALOG` at a directory of JSON files: one named for a
+shipped vendor replaces it whole. [AGENTS.md](AGENTS.md#adding-a-vendor) has
+the format's rules.
+
 ## Browse
 
 `browse()` hands a task to a vendor's browser agent, which drives one of the
@@ -1501,7 +1617,7 @@ the transcript is a separate endpoint this provider does not read.
 ## The MCP server
 
 The package ships a **self-hosted stdio MCP server**, so an agent can call these
-methods as tools: `search`, `extract`, the templates, `answer`, `research`,
+methods as tools: `search`, `extract`, the live data tools, `answer`, `research`,
 `browse`, the `browser_*` tools for driving a browser itself, and `web_run`,
 `budget_start` and `budget_status` for [smart routing](#smart-routing-experimental).
 It runs in your own process and sends each key only to the backend it belongs to.
@@ -2062,7 +2178,7 @@ with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
 ```
 
 Every `search`, `extract`, `answer`, `research`, `browse`, `plan`, `run`,
-`submit_research` and `submit_browse` inside the block spends from it; `run_template` and `open_browser` do not,
+`submit_research` and `submit_browse` inside the block spends from it; `live_data` and `open_browser` do not,
 nor do the calls of another router. Each call is capped at what is left, in
 dollars and seconds, and that is what a router is shown. A call spends from
 every scope of its router in force when it starts, wherever the scope was
@@ -2676,15 +2792,17 @@ except WebRouterError as exc:
 | `ProviderNotInstalledError` | The extra carrying the provider's SDK is not installed | `make setup` in the clone installs every extra; the message names the one missing |
 | `ProviderNotFoundError` | Unknown provider name, or one that does not serve the method you called | The message lists every name that method does serve |
 | `UnsupportedParameterError` | The provider does not map an option you set | Use `provider_options`, or add the mapping |
-| `UnsupportedFormatError` | The extract or template backend cannot return the `format` you asked for | Ask for one it can — the message lists them — or name another backend |
-| `TemplateNotFoundError` | A template run or describe named a template the vendor does not have | A `ProviderError`; list the vendor's templates with `templates()` — names are the vendor's own |
+| `UnsupportedFormatError` | The extract or live data backend cannot return the `format` you asked for | Ask for one it can — the message lists them — or name another backend |
+| `LiveDataSourceNotFoundError` | A live data run or describe named a source the vendor does not have | A `ProviderError`; list the vendor's sources with `live_data_sources()` — names are the vendor's own |
 | `MissingParameterError` | The browse backend cannot start without an option you left unset — `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
 | `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost — the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers` — the other rows are unaffected |
 | `ProviderError` | The backend itself failed — HTTP error, SDK exception, bad credentials | Depends on the backend; the original error is wrapped, not swallowed |
+| `VendorNotFoundError` | `call_vendor()` or `vendor_endpoint()` named a vendor or endpoint the catalog does not hold | The message lists what it does hold; `find_vendor_endpoints()` searches it |
+| `VendorWriteRefusedError` | A vendor call would change data and `allow_writes=True` was not passed; nothing was sent | Pass it once you mean it, after the vendor's dry-run option where it has one |
 | `BrowserActionError` | A page action on a browser handle failed; subclasses say how — see [Driving the page](#driving-the-page) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
 | `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
-| `DeadlineExceededError` | A search, extract, template run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
+| `DeadlineExceededError` | A search, extract, live data run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
 | `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
 
 These are **siblings, not a hierarchy**: `ProviderNotInstalledError` is not a
@@ -2703,6 +2821,7 @@ Keys are read from the environment, or passed explicitly through
 | Exa | `EXA_API_KEY` | search, extract, answer |
 | You.com | `YOU_API_KEY` | search, research, answer |
 | Brave | `BRAVE_SEARCH_API_KEY` | search |
+| Brave | `BRAVE_ANSWER_API_KEY` (the Answers plan, separate from the search key) | answer |
 | Parallel | `PARALLEL_API_KEY` | search, research, answer |
 | Perplexity | `PERPLEXITY_API_KEY` | search, research, answer |
 | Linkup | `LINKUP_API_KEY` | search, extract, research, answer |
@@ -2712,6 +2831,7 @@ Keys are read from the environment, or passed explicitly through
 | AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](docs/agentcore-setup.md))* | search |
 | Firecrawl | `FIRECRAWL_API_KEY` | extract |
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
+| Oxylabs Web API | `OXYLABS_WEB_API_KEY` | live data |
 | Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
 | Jina Reader | `JINA_API_KEY` *(optional — raises the rate limit)* | extract |
 | Steel | `STEEL_API_KEY` | open_browser |

@@ -22,6 +22,7 @@ from __future__ import annotations
 import functools
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AsyncExitStack
+from functools import partial
 from typing import Any
 
 from mcp_types import Tool
@@ -82,12 +83,10 @@ from web_router.constants import (
     MCP_TOOL_REQUIRED,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
-    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
-    MCP_TOOL_TEMPLATE,
-    MCP_TOOL_TEMPLATES,
     MCP_TOOL_WAITS,
 )
+from web_router.constants_live_data import MCP_TOOL_LIVE_DATA, MCP_TOOL_LIVE_DATA_SOURCE, MCP_TOOL_LIVE_DATA_SOURCES
 from web_router.constants_mcp import (
     MCP_MSG_NOTHING_CONFIGURED,
     MCP_MSG_UNKNOWN_ARGUMENTS,
@@ -98,11 +97,12 @@ from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
 from web_router.mcp import methods, schema
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
-from web_router.mcp.budget import ConnectionBudget, browser_charged, template_charged, wait_left
+from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources
+from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
-from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.routing_config import McpRouting
+from web_router.mcp.session_tools import SESSION_TOOLS
 from web_router.mcp.shaping import (
     HandleStore,
     Record,
@@ -118,8 +118,7 @@ from web_router.mcp.shaping import (
     shape_research,
     shape_search,
 )
-from web_router.mcp.shaping_templates import shape_template, shape_template_run, shape_templates
-from web_router.mcp.urls import screen, url_values
+from web_router.mcp.urls import screen
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
     ExtractResponse,
@@ -180,9 +179,9 @@ class WebRouterTools:
         self._handlers: dict[str, _Handler] = {
             MCP_TOOL_SEARCH: self._search,
             MCP_TOOL_EXTRACT: self._extract,
-            MCP_TOOL_TEMPLATES: self._templates,
-            MCP_TOOL_TEMPLATE: self._template,
-            MCP_TOOL_RUN_TEMPLATE: self._run_template,
+            MCP_TOOL_LIVE_DATA_SOURCES: partial(live_data_sources_tool, self),
+            MCP_TOOL_LIVE_DATA_SOURCE: partial(live_data_source_tool, self),
+            MCP_TOOL_LIVE_DATA: partial(live_data_tool, self),
             MCP_TOOL_ANSWER: self._answer,
             MCP_TOOL_RESEARCH: self._research,
             MCP_TOOL_RESEARCH_STATUS: self._research_status,
@@ -190,7 +189,7 @@ class WebRouterTools:
             MCP_TOOL_BROWSE_STATUS: self._browse_status,
             MCP_TOOL_FETCH_RAW: self._fetch_raw,
             MCP_TOOL_LOAD_ENV: self._load_env,
-            **{name: functools.partial(handler, self) for name, handler in ROUTING_TOOLS.items()},
+            **{name: functools.partial(handler, self) for name, handler in SESSION_TOOLS.items()},
             MCP_TOOL_BROWSER_OPEN: self._browser_open,
             MCP_TOOL_BROWSER_GOTO: self._browser_goto,
             MCP_TOOL_BROWSER_SNAPSHOT: self._browser_snapshot,
@@ -298,24 +297,6 @@ class WebRouterTools:
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
         return shape_extract(response, record.handle, budget=max_response_chars())
 
-    async def _templates(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        page = await self.router.templates(**self.arguments(MCP_TOOL_TEMPLATES, arguments))
-        record = self.store.add(MCP_TOOL_TEMPLATES, raw=page.raw)
-        return shape_templates(page, record.handle, budget=max_response_chars())
-
-    async def _template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        template = await self.router.template(**self.arguments(MCP_TOOL_TEMPLATE, arguments))
-        record = self.store.add(MCP_TOOL_TEMPLATE, raw=template.raw)
-        return shape_template(template, record.handle, budget=max_response_chars())
-
-    async def _run_template(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        kwargs = self.arguments(MCP_TOOL_RUN_TEMPLATE, arguments)
-        screen(MCP_TOOL_RUN_TEMPLATE, url_values(kwargs.get("inputs")))
-        with template_charged(self.router, kwargs):
-            response = await self.router.run_template(**kwargs)
-        record = self.store.add(MCP_TOOL_RUN_TEMPLATE, raw=response.raw)
-        return shape_template_run(response, record.handle, budget=max_response_chars())
-
     async def _answer(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         response = await self.router.answer(**self.arguments(MCP_TOOL_ANSWER, arguments))
         record = self.store.add(MCP_TOOL_ANSWER, raw=response.raw)
@@ -416,7 +397,7 @@ class WebRouterTools:
         every job still being polled runs on its providers.
         """
         self._retired.append(self.router)
-        self.router = self._router_factory()
+        self.router = self._router_factory().keeping_vendor_credentials_of(self.router)
         self._tools_changed = True
 
     async def _browser_open(self, arguments: Mapping[str, Any]) -> dict[str, Any]:

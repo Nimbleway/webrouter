@@ -97,7 +97,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_keys: None
 def tools(
     fake_provider: Any,
     fake_extract_provider: Any,
-    fake_template_provider: Any,
+    fake_live_data_provider: Any,
     fake_research_provider: Any,
     fake_answer_provider: Any,
     fake_browse_provider: Any,

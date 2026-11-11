@@ -1,0 +1,67 @@
+---
+title: "Introduction"
+description: "An open source standard that connects your agent to the internet."
+icon: "house"
+---
+
+<p align="center"><img src="/assets/webrouter-mascot.png" alt="The WebRouter router mascot, an orange cable plugged into its search port" width="240" /></p>
+
+WebRouter connects your agent to the internet's primitives (search, extract, answer, research and browser sessions) through one interface, across many providers.
+
+- **No vendor lock-in.** The same call and result shape on every provider that serves a method; switching is one argument. Apache 2.0, and you hold your own keys.
+- **Routing and fallback.** `auto` tries the providers you hold keys for, best benchmarked first, and falls back to the next. An experimental [router](https://github.com/Nimbleway/webrouter/blob/main/README.md#smart-routing-experimental) can pick the tool and provider for each task within a cost and time budget.
+- **Many providers.** Tavily, Exa, Brave, Firecrawl, Nimble and more: see [Providers](/providers).
+- **Security by default.** WebRouter never logs or stores your keys, and sends each key only to its own provider. An option a provider cannot honour raises instead of being dropped.
+
+```bash
+pip install "webrouter[all]"
+```
+
+```python quickstart.py
+from web_router import Provider, WebRouter
+
+WebRouter().search("what is retrieval augmented generation")  # no key needed
+WebRouter(Provider.TAVILY).search("...")  # same call, same result shape
+WebRouter().extract("https://example.com")  # page contents, also keyless
+```
+
+## Get started
+
+<Columns cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install, then your first search and extract, with no key.
+  </Card>
+  <Card title="How it works" icon="diagram-project" href="/how-it-works">
+    One call shape, normalized results, nothing dropped.
+  </Card>
+  <Card title="Providers" icon="plug" href="/providers">
+    Which provider serves which method, and its key.
+  </Card>
+</Columns>
+
+## Methods
+
+<Columns cols={3}>
+  <Card title="Search" icon="magnifying-glass" href="/search">
+    Web results from any search provider.
+  </Card>
+  <Card title="Extract" icon="file-lines" href="/extract">
+    Page contents for URLs you already have.
+  </Card>
+  <Card title="Answer" icon="message" href="/answer">
+    A written answer with its sources.
+  </Card>
+  <Card title="Research" icon="flask" href="/research">
+    An agentic run that reasons over several turns.
+  </Card>
+  <Card title="Browser" icon="globe" href="/browser">
+    Drive a browser session, or hand a task to an agent.
+  </Card>
+</Columns>
+
+## Get help
+
+- [Discord](https://discord.gg/MGztFWSjZh): questions in #help, chatting with other builders and the maintainers, and showing what you built in #showcase.
+- [GitHub Issues](https://github.com/Nimbleway/webrouter/issues): bugs and gaps in a provider's support.
+- [GitHub Discussions](https://github.com/Nimbleway/webrouter/discussions): proposals and design ideas.
+- [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md): vulnerabilities. Never in a public channel.
