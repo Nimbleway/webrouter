@@ -1,0 +1,49 @@
+{
+  "vendor": "ashby",
+  "name": "Ashby Job Board",
+  "category": "company-data",
+  "summary": "A company's public Ashby job board: listed roles with descriptions, location, workplace type and optional compensation.",
+  "docs_url": "https://developers.ashbyhq.com/docs/public-job-posting-api",
+  "base_url": "https://api.ashbyhq.com/posting-api",
+  "notes": [
+    "The public posting API needs no key; the docs list no authentication for it. Ashby's authenticated ATS API is not in this entry.",
+    "One call per company: the board name is the slug in jobs.ashbyhq.com/<name>."
+  ],
+  "sources": [
+    "https://developers.ashbyhq.com/docs/public-job-posting-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ashby.jobs.list",
+      "name": "List a company's job postings",
+      "summary": "Every posting on the board: title, department, team, location(s), workplaceType, employmentType, descriptions, jobUrl and applyUrl.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/job-board/{job_board_name}",
+      "params": {
+        "job_board_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The organization's Ashby jobs page name: Ashby for jobs.ashbyhq.com/Ashby.",
+          "example": "Ashby"
+        },
+        "includeCompensation": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds compensation tiers and summary components (type, interval, currency, min and max)."
+        }
+      },
+      "notes": [
+        "isListed false means the job is meant to be reachable only by direct link.",
+        "Compensation is omitted unless includeCompensation=true; the docs' field table puts it under jobs[] while the example shows it at the top level, so check both."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://developers.ashbyhq.com/docs/public-job-posting-api",
+      "verified": {
+        "docs": "https://developers.ashbyhq.com/docs/public-job-posting-api"
+      }
+    }
+  ]
+}
