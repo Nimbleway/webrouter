@@ -44,7 +44,7 @@ as a plain string too, and is what `response.provider` and `configured_providers
 | `Provider.AUTO` *(default)* | — | every backend you hold a key for, in the order the frozen benchmark results rank them, then the keyless ones — so a key held only for research serves searches too, and those calls bill; see [Working with no credentials](#working-with-no-credentials) | every option some member maps, each request routed to a member that maps what it sets |
 
 A backend maps an option only where its API has a documented field or query
-operator for it; [Search options](/search#search-options) says how each one does, and
+operator for it; [Search options](/search) says how each one does, and
 `contracts/search/<name>.json` holds the exact fields sent. Mapping another is a
 small PR and the most useful thing to contribute — see
 [CONTRIBUTING.md](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#promoting-a-provider-option).
@@ -113,7 +113,7 @@ conversation.
 searches and writes the answer itself. No keyless tier, since every backend
 bills the call; `auto` tries the ones you hold a key for, in the order `make chains` ranks them on the
 answer benchmark. See
-[Asking for an answer](/answer#asking-for-an-answer) for what an unnamed call does.
+[Asking for an answer](/answer) for what an unnamed call does.
 
 | Pass | Provider | Credentials | Options mapped | Citations tied to claims |
 | --- | --- | --- | --- | --- |
