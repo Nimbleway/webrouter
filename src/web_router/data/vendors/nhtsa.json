@@ -1,0 +1,246 @@
+{
+  "vendor": "nhtsa",
+  "name": "NHTSA vPIC",
+  "category": "government",
+  "summary": "The US National Highway Traffic Safety Administration's vPIC vehicle API: decode a VIN into make, model, year, body, engine and plant details, decode WMIs, and list makes and models.",
+  "docs_url": "https://vpic.nhtsa.dot.gov/api/",
+  "base_url": "https://vpic.nhtsa.dot.gov/api",
+  "notes": [
+    "Free and keyless. Traffic is throttled by an automated rate control; heavy users can download the standalone vPIC database instead.",
+    "Every call returns XML unless format=json (or csv) is passed; each endpoint here takes format.",
+    "Answers wrap rows in Results, with Count and Message."
+  ],
+  "sources": [
+    "https://vpic.nhtsa.dot.gov/api/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nhtsa.vin.decode",
+      "name": "Decode a VIN",
+      "summary": "One flat record of every decoded attribute of a VIN: make, model, model year, body class, engine, plant, safety equipment and error codes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/vehicles/DecodeVinValues/{vin}",
+      "params": {
+        "vin": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "VIN; partial VINs are allowed, with * for unknown characters.",
+          "example": "5UXWX7C5*BA"
+        },
+        "modelyear": {
+          "in": "query",
+          "type": "integer",
+          "description": "Model year; recommended, it selects the right decoding range.",
+          "example": 2011
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; xml by default.",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ],
+          "example": "json"
+        }
+      },
+      "notes": [
+        "DecodeVin (key-value rows with variable and value ids) and the Extended variants with extra NCSA variables exist on the same pattern."
+      ],
+      "job": "vehicle.vin.decode",
+      "docs_url": "https://vpic.nhtsa.dot.gov/api/",
+      "verified": {
+        "docs": "https://vpic.nhtsa.dot.gov/api/"
+      }
+    },
+    {
+      "id": "nhtsa.wmi.decode",
+      "name": "Decode a WMI",
+      "summary": "The manufacturer, vehicle type and country behind a World Manufacturer Identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/vehicles/DecodeWMI/{wmi}",
+      "params": {
+        "wmi": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "3 characters (VIN positions 1-3) or 6 (positions 1-3 and 12-14).",
+          "example": "1FD"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; xml by default.",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ],
+          "example": "json"
+        }
+      },
+      "job": "vehicle.vin.decode",
+      "docs_url": "https://vpic.nhtsa.dot.gov/api/",
+      "verified": {
+        "docs": "https://vpic.nhtsa.dot.gov/api/"
+      }
+    },
+    {
+      "id": "nhtsa.makes.list",
+      "name": "List all makes",
+      "summary": "Every make in the vPIC dataset, with its id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/vehicles/GetAllMakes",
+      "params": {
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; xml by default.",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ],
+          "example": "json"
+        }
+      },
+      "docs_url": "https://vpic.nhtsa.dot.gov/api/",
+      "verified": {
+        "docs": "https://vpic.nhtsa.dot.gov/api/"
+      }
+    },
+    {
+      "id": "nhtsa.models.for_make",
+      "name": "List models of a make",
+      "summary": "Models whose make name is like the given name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/vehicles/GetModelsForMake/{make}",
+      "params": {
+        "make": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Full or partial make name; * returns models of all makes (slow).",
+          "example": "honda"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; xml by default.",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ],
+          "example": "json"
+        }
+      },
+      "docs_url": "https://vpic.nhtsa.dot.gov/api/",
+      "verified": {
+        "docs": "https://vpic.nhtsa.dot.gov/api/"
+      }
+    },
+    {
+      "id": "nhtsa.models.for_make_year",
+      "name": "List models of a make in a model year",
+      "summary": "Models of a make for one model year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/vehicles/GetModelsForMakeYear/make/{make}/modelyear/{modelyear}",
+      "params": {
+        "make": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Make name.",
+          "example": "honda"
+        },
+        "modelyear": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Model year.",
+          "example": 2015
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; xml by default.",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ],
+          "example": "json"
+        }
+      },
+      "notes": [
+        "Variants add /vehicletype/{type} after the year, or replace the year with it."
+      ],
+      "docs_url": "https://vpic.nhtsa.dot.gov/api/",
+      "verified": {
+        "docs": "https://vpic.nhtsa.dot.gov/api/"
+      }
+    },
+    {
+      "id": "nhtsa.canada.specs",
+      "name": "Get Canadian vehicle specifications",
+      "summary": "Original vehicle dimensions from Transport Canada's Canadian Vehicle Specifications, by year and make.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/vehicles/GetCanadianVehicleSpecifications/",
+      "params": {
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Model year, 1971 or later.",
+          "example": 2011
+        },
+        "make": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Make, e.g. Honda.",
+          "example": "Acura"
+        },
+        "model": {
+          "in": "query",
+          "type": "string",
+          "description": "Model, optionally with body type or engine."
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "description": "Metric (default) or US.",
+          "enum": [
+            "Metric",
+            "US"
+          ]
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; xml by default.",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ],
+          "example": "json"
+        }
+      },
+      "docs_url": "https://vpic.nhtsa.dot.gov/api/",
+      "verified": {
+        "docs": "https://vpic.nhtsa.dot.gov/api/"
+      }
+    }
+  ]
+}

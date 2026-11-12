@@ -1,0 +1,420 @@
+{
+  "vendor": "rcc-acis",
+  "name": "ACIS (NOAA Regional Climate Centers)",
+  "category": "environment",
+  "summary": "US station and gridded climate data from the NOAA Regional Climate Centers' Applied Climate Information System: station metadata, daily/monthly/annual station data, multi-station data, grids and area metadata.",
+  "docs_url": "https://www.rcc-acis.org/docs_webservices.html",
+  "base_url": "https://data.rcc-acis.org",
+  "notes": [
+    "Keyless. Simple calls are GET query strings; anything richer (elems objects with reduce, interval, smry, add) goes as one JSON object in the params parameter.",
+    "Units are US customary: temperature in °F, precipitation, snow and depth in inches, elevation in feet.",
+    "Missing values come back as \"M\", trace precipitation/snow as \"T\", accumulated values with an \"A\" suffix. Errors come as an \"error\" key, not an HTTP error.",
+    "Ambiguous station ids need their id type appended after a space (e.g. 'BUFthr 9'). Observation times are Local Standard Time."
+  ],
+  "sources": [
+    "https://www.rcc-acis.org/docs_webservices.html",
+    "https://www.rcc-acis.org/ACISWSdoc.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "rcc-acis.stations.search",
+      "name": "Find stations",
+      "summary": "Metadata of stations in an area, optionally only those reporting given elements in a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/StnMeta",
+      "params": {
+        "sids": {
+          "in": "query",
+          "type": "string",
+          "description": "Station ids instead of an area (cannot combine with area keys).",
+          "example": "KBWI 5,185718 2"
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state codes, comma-separated.",
+          "example": "CT,RI"
+        },
+        "county": {
+          "in": "query",
+          "type": "string",
+          "description": "5-digit county FIPS codes.",
+          "example": "36001"
+        },
+        "climdiv": {
+          "in": "query",
+          "type": "string",
+          "description": "Climate division, e.g. NY09."
+        },
+        "cwa": {
+          "in": "query",
+          "type": "string",
+          "description": "NWS County Warning Area, e.g. BOX."
+        },
+        "basin": {
+          "in": "query",
+          "type": "string",
+          "description": "8-digit USGS HUC basin id."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "West,South,East,North in decimal degrees.",
+          "example": "-90.7,40.5,-88.9,41.5"
+        },
+        "elems": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated element codes, e.g. maxt,mint,pcpn,snow,snwd,avgt,hdd,cdd,gdd, or monthly shortcuts like mly_max_maxt.",
+          "example": "maxt,mint,pcpn"
+        },
+        "sdate": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date yyyy-mm-dd (or yyyy, yyyy-mm); por for period of record. Needs edate.",
+          "example": "2009-01-01"
+        },
+        "edate": {
+          "in": "query",
+          "type": "string",
+          "description": "End date yyyy-mm-dd (or yyyy, yyyy-mm); por for period of record. Needs sdate.",
+          "example": "2009-01-10"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "A single date (yyyy-mm-dd, yyyy-mm or yyyy), in place of sdate/edate."
+        },
+        "meta": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated metadata codes: name, state, sids, ll, elev, uid, county, climdiv, valid_daterange.",
+          "example": "name,state,ll"
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "params_json": {
+          "in": "query",
+          "type": "string",
+          "description": "The whole request as one JSON object, for options a flat query cannot express (elems objects with reduce, interval, duration, smry). Replaces the other inputs.",
+          "wire_name": "params"
+        }
+      },
+      "job": "weather.stations",
+      "docs_url": "https://www.rcc-acis.org/docs_webservices.html",
+      "verified": {
+        "docs": "https://www.rcc-acis.org/docs_webservices.html"
+      }
+    },
+    {
+      "id": "rcc-acis.station.data",
+      "name": "Get one station's data",
+      "summary": "Daily (or monthly/annual summarized) climate data for one station over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/StnData",
+      "params": {
+        "sid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Station id (any id type).",
+          "example": "304174"
+        },
+        "sdate": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date yyyy-mm-dd (or yyyy, yyyy-mm); por for period of record. Needs edate.",
+          "example": "2009-01-01"
+        },
+        "edate": {
+          "in": "query",
+          "type": "string",
+          "description": "End date yyyy-mm-dd (or yyyy, yyyy-mm); por for period of record. Needs sdate.",
+          "example": "2009-01-10"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "A single date (yyyy-mm-dd, yyyy-mm or yyyy), in place of sdate/edate."
+        },
+        "elems": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated element codes, e.g. maxt,mint,pcpn,snow,snwd,avgt,hdd,cdd,gdd, or monthly shortcuts like mly_max_maxt.",
+          "example": "maxt,mint,pcpn"
+        },
+        "meta": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated metadata codes: name, state, sids, ll, elev, uid, county, climdiv, valid_daterange.",
+          "example": "name,state,ll"
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "params_json": {
+          "in": "query",
+          "type": "string",
+          "description": "The whole request as one JSON object, for options a flat query cannot express (elems objects with reduce, interval, duration, smry). Replaces the other inputs.",
+          "wire_name": "params"
+        }
+      },
+      "job": "weather.history",
+      "docs_url": "https://www.rcc-acis.org/docs_webservices.html",
+      "verified": {
+        "docs": "https://www.rcc-acis.org/docs_webservices.html"
+      }
+    },
+    {
+      "id": "rcc-acis.stations.data",
+      "name": "Get data for many stations",
+      "summary": "Climate data for every station in an area (or a list of stations).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/MultiStnData",
+      "params": {
+        "sids": {
+          "in": "query",
+          "type": "string",
+          "description": "Station ids, comma-separated, instead of an area."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state codes, comma-separated.",
+          "example": "CT,RI"
+        },
+        "county": {
+          "in": "query",
+          "type": "string",
+          "description": "5-digit county FIPS codes.",
+          "example": "36001"
+        },
+        "climdiv": {
+          "in": "query",
+          "type": "string",
+          "description": "Climate division, e.g. NY09."
+        },
+        "cwa": {
+          "in": "query",
+          "type": "string",
+          "description": "NWS County Warning Area, e.g. BOX."
+        },
+        "basin": {
+          "in": "query",
+          "type": "string",
+          "description": "8-digit USGS HUC basin id."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "West,South,East,North in decimal degrees.",
+          "example": "-90.7,40.5,-88.9,41.5"
+        },
+        "sdate": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date yyyy-mm-dd (or yyyy, yyyy-mm); por for period of record. Needs edate.",
+          "example": "2009-01-01"
+        },
+        "edate": {
+          "in": "query",
+          "type": "string",
+          "description": "End date yyyy-mm-dd (or yyyy, yyyy-mm); por for period of record. Needs sdate.",
+          "example": "2009-01-10"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "A single date (yyyy-mm-dd, yyyy-mm or yyyy), in place of sdate/edate."
+        },
+        "elems": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated element codes, e.g. maxt,mint,pcpn,snow,snwd,avgt,hdd,cdd,gdd, or monthly shortcuts like mly_max_maxt.",
+          "example": "maxt,mint,pcpn"
+        },
+        "meta": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated metadata codes: name, state, sids, ll, elev, uid, county, climdiv, valid_daterange.",
+          "example": "name,state,ll"
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "params_json": {
+          "in": "query",
+          "type": "string",
+          "description": "The whole request as one JSON object, for options a flat query cannot express (elems objects with reduce, interval, duration, smry). Replaces the other inputs.",
+          "wire_name": "params"
+        }
+      },
+      "notes": [
+        "CSV is not available for date ranges; use json or a single date."
+      ],
+      "job": "weather.history",
+      "docs_url": "https://www.rcc-acis.org/docs_webservices.html",
+      "verified": {
+        "docs": "https://www.rcc-acis.org/docs_webservices.html"
+      }
+    },
+    {
+      "id": "rcc-acis.grid.data",
+      "name": "Get gridded data",
+      "summary": "Values from a gridded dataset (NRCC, PRISM, ...) at a point, over states or a bounding box.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GridData",
+      "params": {
+        "grid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Grid code: 1 NRCC Interpolated, 2 Multi-Sensor Precip, 3 NRCC Hi-Res, 21 PRISM.",
+          "example": "21"
+        },
+        "loc": {
+          "in": "query",
+          "type": "string",
+          "description": "Longitude,latitude of a point; the nearest grid point is returned.",
+          "example": "-73.8,42.7"
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state codes, comma-separated.",
+          "example": "CT,RI"
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "West,South,East,North in decimal degrees.",
+          "example": "-90.7,40.5,-88.9,41.5"
+        },
+        "sdate": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date yyyy-mm-dd (or yyyy, yyyy-mm); por for period of record. Needs edate.",
+          "example": "2009-01-01"
+        },
+        "edate": {
+          "in": "query",
+          "type": "string",
+          "description": "End date yyyy-mm-dd (or yyyy, yyyy-mm); por for period of record. Needs sdate.",
+          "example": "2009-01-10"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "A single date (yyyy-mm-dd, yyyy-mm or yyyy), in place of sdate/edate."
+        },
+        "elems": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated element codes, e.g. maxt,mint,pcpn,snow,snwd,avgt,hdd,cdd,gdd, or monthly shortcuts like mly_max_maxt.",
+          "example": "maxt,mint,pcpn"
+        },
+        "meta": {
+          "in": "query",
+          "type": "string",
+          "description": "ll and/or elev of each grid point."
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or image (a PNG).",
+          "enum": [
+            "json",
+            "image"
+          ]
+        },
+        "params_json": {
+          "in": "query",
+          "type": "string",
+          "description": "The whole request as one JSON object, for options a flat query cannot express (elems objects with reduce, interval, duration, smry). Replaces the other inputs.",
+          "wire_name": "params"
+        }
+      },
+      "job": "weather.history",
+      "docs_url": "https://www.rcc-acis.org/docs_webservices.html",
+      "verified": {
+        "docs": "https://www.rcc-acis.org/docs_webservices.html"
+      }
+    },
+    {
+      "id": "rcc-acis.areas.get",
+      "name": "Get area metadata",
+      "summary": "Ids, names, bounding boxes or GeoJSON of states, counties, climate divisions, CWAs or basins.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/General/{area}",
+      "params": {
+        "area": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Area type.",
+          "example": "county",
+          "enum": [
+            "state",
+            "county",
+            "climdiv",
+            "cwa",
+            "basin"
+          ]
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state codes, comma-separated.",
+          "example": "CT,RI"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Area id (postal code, FIPS, division, CWA or HUC)."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "West,South,East,North in decimal degrees.",
+          "example": "-90.7,40.5,-88.9,41.5"
+        },
+        "meta": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: id, name, bbox, geojson, state.",
+          "example": "id,name,state"
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://www.rcc-acis.org/docs_webservices.html",
+      "verified": {
+        "docs": "https://www.rcc-acis.org/docs_webservices.html"
+      }
+    }
+  ]
+}

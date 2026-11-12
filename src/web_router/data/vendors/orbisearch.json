@@ -1,0 +1,128 @@
+{
+  "vendor": "orbisearch",
+  "name": "OrbiSearch",
+  "category": "verification",
+  "summary": "Email verification that resolves catch-all domains, single or in bulk.",
+  "docs_url": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md",
+  "pricing_url": "https://orbisearch.com/pricing",
+  "base_url": "https://api.orbisearch.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ORBISEARCH_API_KEY"
+        ],
+        "description": "An OrbiSearch API key (dashboard > API keys). Sent in X-API-Key."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "0.2 credit per verification (1 credit = 5 verifications); the same email again within 24 hours is free.",
+    "status is safe, risky (unresolved catch-all), invalid or unknown; substatus gives the reason.",
+    "Submitting a bulk job (POST /v1/bulk) takes a bare JSON array of emails, which this format cannot send; the status and result calls are here for jobs submitted elsewhere.",
+    "403 means not enough credits. Suggested pace for single calls: 15 to 17 a second."
+  ],
+  "sources": [
+    "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md",
+    "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/response-codes.md",
+    "https://github.com/OrbiSearch/orbisearch-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "orbisearch.verify",
+      "name": "Verify an email address",
+      "summary": "Deliverability status, substatus, provider and disposable/role/free flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/verify",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email to verify.",
+          "example": "john@company.com"
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds to wait, 3 to 90, default 70."
+        }
+      },
+      "job": "email.verify",
+      "docs_url": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md",
+      "verified": {
+        "docs": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md"
+      }
+    },
+    {
+      "id": "orbisearch.credits.get",
+      "name": "Get credit balance",
+      "summary": "Remaining credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credits",
+      "job": "account.usage",
+      "docs_url": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md",
+      "verified": {
+        "docs": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md"
+      }
+    },
+    {
+      "id": "orbisearch.bulk.status",
+      "name": "Get a bulk job's status",
+      "summary": "Progress of a bulk verification job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/bulk/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Bulk job id (UUID)."
+        }
+      },
+      "notes": [
+        "status is pending, in_progress, partial_complete_retrying, complete or failed. Poll every 5 to 10 s; greylisted emails are retried, so wait for retry_status complete."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md",
+      "verified": {
+        "docs": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md"
+      }
+    },
+    {
+      "id": "orbisearch.bulk.results",
+      "name": "Get a bulk job's results",
+      "summary": "Per-email results of a bulk verification job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/bulk/{job_id}/results",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Bulk job id (UUID)."
+        }
+      },
+      "notes": [
+        "pending_retries lists emails still being retried."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md",
+      "verified": {
+        "docs": "https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md"
+      }
+    }
+  ]
+}

@@ -1,0 +1,375 @@
+{
+  "vendor": "octen",
+  "name": "Octen",
+  "category": "search",
+  "summary": "Real-time web, news and broad search plus URL content extraction from Octen.",
+  "docs_url": "https://docs.octen.ai/",
+  "pricing_url": "https://docs.octen.ai/overview/pricing.md",
+  "base_url": "https://api.octen.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OCTEN_API_KEY"
+        ],
+        "description": "an Octen API key (octen.ai/platform/api-keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <key>'; the x-api-key header also works. The API needs a payment method on the account.",
+    "Rate limits are QPS per plan.",
+    "Octen also offers image and video search, answer, agent, deep research, embeddings and generation endpoints, not in this entry."
+  ],
+  "sources": [
+    "https://docs.octen.ai/llms.txt",
+    "https://docs.octen.ai/api-reference/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "octen.search.web",
+      "name": "Search the web",
+      "summary": "Live web search with ranked results, highlights and optional full content.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query; supports site: operators.",
+          "example": "semiconductor export controls"
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number of results to return."
+        },
+        "include_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains to include; the site: operator adds to this list."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains to exclude; the -site: operator adds to this list."
+        },
+        "include_text": {
+          "in": "body",
+          "type": "array",
+          "description": "Strings that must appear in the result text."
+        },
+        "exclude_text": {
+          "in": "body",
+          "type": "array",
+          "description": "Strings that must not appear in the result text."
+        },
+        "time_basis": {
+          "in": "body",
+          "type": "string",
+          "description": "Which time field time filters use.",
+          "enum": [
+            "auto",
+            "published",
+            "crawled"
+          ]
+        },
+        "time_range": {
+          "in": "body",
+          "type": "string",
+          "description": "Relative time window back from now; exclusive with start_time/end_time.",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year",
+            "d",
+            "w",
+            "m",
+            "y"
+          ]
+        },
+        "start_time": {
+          "in": "body",
+          "type": "string",
+          "description": "Start time, ISO 8601.",
+          "example": "2025-01-01T00:00:00Z"
+        },
+        "end_time": {
+          "in": "body",
+          "type": "string",
+          "description": "End time, ISO 8601."
+        },
+        "language": {
+          "in": "body",
+          "type": "array",
+          "description": "ISO 639-1 language codes to restrict to.",
+          "example": [
+            "en"
+          ]
+        },
+        "highlight": {
+          "in": "body",
+          "type": "object",
+          "description": "Highlight extraction options, e.g. {\"enable\": true, \"max_tokens\": 300}."
+        },
+        "full_content": {
+          "in": "body",
+          "type": "object",
+          "description": "Full-content options for each result page."
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Format of highlight output.",
+          "enum": [
+            "markdown",
+            "text"
+          ]
+        },
+        "safesearch": {
+          "in": "body",
+          "type": "string",
+          "description": "Adult-content filter.",
+          "enum": [
+            "off",
+            "strict"
+          ]
+        },
+        "include_images": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include images in each result."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.octen.ai/api-reference/search.md",
+      "verified": {
+        "docs": "https://docs.octen.ai/api-reference/search.md"
+      }
+    },
+    {
+      "id": "octen.search.news",
+      "name": "Search news",
+      "summary": "Live news search; related articles can be grouped into subjects.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/news-search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query.",
+          "example": "semiconductor export controls"
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number of results to return."
+        },
+        "include_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains to include; the site: operator adds to this list."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains to exclude; the -site: operator adds to this list."
+        },
+        "time_basis": {
+          "in": "body",
+          "type": "string",
+          "description": "Which time field time filters use.",
+          "enum": [
+            "auto",
+            "published",
+            "crawled"
+          ]
+        },
+        "time_range": {
+          "in": "body",
+          "type": "string",
+          "description": "Relative time window back from now; exclusive with start_time/end_time.",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year",
+            "d",
+            "w",
+            "m",
+            "y"
+          ]
+        },
+        "start_time": {
+          "in": "body",
+          "type": "string",
+          "description": "Start time, ISO 8601.",
+          "example": "2025-01-01T00:00:00Z"
+        },
+        "end_time": {
+          "in": "body",
+          "type": "string",
+          "description": "End time, ISO 8601."
+        },
+        "language": {
+          "in": "body",
+          "type": "array",
+          "description": "ISO 639-1 language codes to restrict to.",
+          "example": [
+            "en"
+          ]
+        },
+        "highlight": {
+          "in": "body",
+          "type": "object",
+          "description": "Highlight extraction options, e.g. {\"enable\": true, \"max_tokens\": 300}."
+        },
+        "full_content": {
+          "in": "body",
+          "type": "object",
+          "description": "Full-content options for each result page."
+        },
+        "subjects": {
+          "in": "body",
+          "type": "object",
+          "description": "Subject grouping options, e.g. {\"enable\": true, \"count\": 3}."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.octen.ai/api-reference/news-search.md",
+      "verified": {
+        "docs": "https://docs.octen.ai/api-reference/news-search.md"
+      }
+    },
+    {
+      "id": "octen.search.broad",
+      "name": "Search with automatic sub-queries",
+      "summary": "Splits a question into sub-queries, searches them concurrently and groups results by sub-query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/broad-search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The original query.",
+          "example": "state of open-source LLM inference engines"
+        },
+        "max_queries": {
+          "in": "body",
+          "type": "integer",
+          "description": "Upper bound on sub-queries generated."
+        },
+        "search_options": {
+          "in": "body",
+          "type": "object",
+          "description": "Options applied to each sub-query, with the same parameters as Web Search."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs searches and changes nothing in your account."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.octen.ai/api-reference/broad-search.md",
+      "verified": {
+        "docs": "https://docs.octen.ai/api-reference/broad-search.md"
+      }
+    },
+    {
+      "id": "octen.extract.urls",
+      "name": "Extract clean content from URLs",
+      "summary": "Clean markdown or text for up to 20 URLs, optionally focused by a query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/extract",
+      "params": {
+        "urls": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "URLs to extract, at most 20; failed URLs are not billed.",
+          "example": [
+            "https://octen.ai/"
+          ]
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "standard is fastest, advanced succeeds more on hard pages, auto picks per URL.",
+          "enum": [
+            "standard",
+            "advanced",
+            "auto"
+          ]
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Intent keywords; returns query-relevant highlights instead of the whole page."
+        },
+        "max_age_seconds": {
+          "in": "body",
+          "type": "integer",
+          "description": "Re-fetch cached content older than this many seconds."
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Content format.",
+          "enum": [
+            "markdown",
+            "text"
+          ]
+        },
+        "timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Per-URL timeout in seconds."
+        },
+        "include_images": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return image URLs."
+        },
+        "include_videos": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return video URLs."
+        },
+        "include_audio": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return audio URLs."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches pages and changes nothing in your account."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.octen.ai/api-reference/extract.md",
+      "verified": {
+        "docs": "https://docs.octen.ai/api-reference/extract.md"
+      }
+    }
+  ]
+}

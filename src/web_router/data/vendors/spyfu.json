@@ -1,0 +1,829 @@
+{
+  "vendor": "spyfu",
+  "name": "SpyFu",
+  "category": "seo",
+  "summary": "SpyFu competitive research API: domain stats, organic and paid keywords, competitors, top pages and keyword data.",
+  "docs_url": "https://developer.spyfu.com/",
+  "pricing_url": "https://developer.spyfu.com/docs/api-pricing",
+  "base_url": "https://api.spyfu.com/apis",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SPYFU_API_KEY"
+        ],
+        "description": "your SpyFu API Secret Key (Account Settings > API Usage at spyfu.com/account/api)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Each API group has its own path prefix under /apis: domain_stats_api, serp_api, keyword_api, competitors_api.",
+    "Billing is pay-as-you-go per row returned, priced per 1,000 rows by endpoint (stated in each note). Pro + AI plans include a $40 monthly credit and Team/Agency plans $100.",
+    "pageSize defaults to 5 rows, so set it explicitly; page with startingRow.",
+    "Rate limits are per endpoint, per second, and a 429 comes with Retry-After: 1. Some endpoints allow only 10 requests a second.",
+    "SpyFu also accepts HTTP Basic with the API ID and Secret Key, or an HMAC signature; this entry uses the api_key query parameter."
+  ],
+  "sources": [
+    "https://developer.spyfu.com/llms.txt",
+    "https://developer.spyfu.com/docs/api-pricing",
+    "https://developer.spyfu.com/docs/rate-limits",
+    "https://developer.spyfu.com/reference/domainstatsapi_getlatestdomainstats_get",
+    "https://developer.spyfu.com/reference/organicserpapi_getmostvaluablekeywords_get",
+    "https://developer.spyfu.com/reference/paidserpapi_getmostsuccessful_get",
+    "https://developer.spyfu.com/reference/competitorsapi_gettopseocompetitors_get",
+    "https://developer.spyfu.com/reference/relatedkeywordsv2api_getrelatedkeywords_get",
+    "https://developer.spyfu.com/reference/relatedkeywordsv2api_getkeywordsbybulksearch_get",
+    "https://developer.spyfu.com/reference/toppagesapi_getmosttraffictoppages_get",
+    "https://developer.spyfu.com/reference/organicserpapi_getserpanalysiskeywords_get"
+  ],
+  "endpoints": [
+    {
+      "id": "spyfu.domain.stats_latest",
+      "name": "Latest domain stats",
+      "summary": "Latest SEO and PPC metrics for a domain: keywords, clicks, traffic value, ad spend and ranks.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain_stats_api/v2/getLatestDomainStats",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to get statistics for.",
+          "example": "example.com"
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country market (the matching Google domain is queried); default US.",
+          "example": "US",
+          "enum": [
+            "AR",
+            "AT",
+            "AU",
+            "BE",
+            "BR",
+            "CA",
+            "CH",
+            "DE",
+            "DK",
+            "ES",
+            "FR",
+            "IE",
+            "IN",
+            "IT",
+            "JP",
+            "MX",
+            "NL",
+            "NO",
+            "NZ",
+            "PL",
+            "PT",
+            "SE",
+            "SG",
+            "TR",
+            "UA",
+            "UK",
+            "US",
+            "ZA"
+          ]
+        },
+        "pastNMonths": {
+          "in": "query",
+          "type": "integer",
+          "description": "Return the latest N months of stats instead of one row."
+        }
+      },
+      "notes": [
+        "Billed per row returned at $0.50 per 1,000 rows."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://developer.spyfu.com/reference/domainstatsapi_getlatestdomainstats_get",
+      "verified": {
+        "docs": "https://developer.spyfu.com/reference/domainstatsapi_getlatestdomainstats_get.md"
+      }
+    },
+    {
+      "id": "spyfu.seo.most_valuable_keywords",
+      "name": "Most valuable organic keywords",
+      "summary": "Keywords that bring a domain, subdomain, path or URL the most organic clicks.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/serp_api/v2/seo/getMostValuableKeywords",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain, URL, subdomain or path to analyze.",
+          "example": "example.com/blog"
+        },
+        "compareDomain": {
+          "in": "query",
+          "type": "string",
+          "description": "A domain to compare against."
+        },
+        "includeTerms": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated terms that must appear in the keyword."
+        },
+        "includeAnyTerm": {
+          "in": "query",
+          "type": "boolean",
+          "description": "With includeTerms: true matches any term, false (default) requires all."
+        },
+        "excludeTerms": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated terms to leave out."
+        },
+        "searchVolume_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum monthly search volume.",
+          "wire_name": "searchVolume.min"
+        },
+        "searchVolume_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum monthly search volume.",
+          "wire_name": "searchVolume.max"
+        },
+        "rank_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Best rank position to include (1 is top).",
+          "wire_name": "rank.min"
+        },
+        "rank_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Worst rank position to include.",
+          "wire_name": "rank.max"
+        },
+        "keywordDifficulty_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum keyword difficulty, 0-100.",
+          "wire_name": "keywordDifficulty.max"
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum rows returned. Default 5.",
+          "example": 5
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country market (the matching Google domain is queried); default US.",
+          "example": "US",
+          "enum": [
+            "AR",
+            "AT",
+            "AU",
+            "BE",
+            "BR",
+            "CA",
+            "CH",
+            "DE",
+            "DK",
+            "ES",
+            "FR",
+            "IE",
+            "IN",
+            "IT",
+            "JP",
+            "MX",
+            "NL",
+            "NO",
+            "NZ",
+            "PL",
+            "PT",
+            "SE",
+            "SG",
+            "TR",
+            "UA",
+            "UK",
+            "US",
+            "ZA"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Column to sort by; default SearchVolume. Others include KeywordDifficulty, Rank, RankChange, SeoClicks and SeoClicksChange."
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction; default Descending.",
+          "enum": [
+            "Ascending",
+            "Descending"
+          ]
+        },
+        "startingRow": {
+          "in": "query",
+          "type": "integer",
+          "description": "Row number to start from, for paging. Default 1.",
+          "example": 1
+        },
+        "adultFilter": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Exclude adult keywords. Default true."
+        }
+      },
+      "notes": [
+        "Billed per row returned at $0.50 per 1,000 rows. The endpoint takes many more min/max filters; only the main ones are listed.",
+        "Default pageSize is 5, so raise it."
+      ],
+      "job": "domain.keywords",
+      "docs_url": "https://developer.spyfu.com/reference/organicserpapi_getmostvaluablekeywords_get",
+      "verified": {
+        "docs": "https://developer.spyfu.com/reference/organicserpapi_getmostvaluablekeywords_get.md"
+      }
+    },
+    {
+      "id": "spyfu.ppc.most_successful_keywords",
+      "name": "Most successful paid keywords",
+      "summary": "Paid search keywords a domain has advertised on with the strongest results over the past year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/keyword_api/v2/ppc/getMostSuccessful",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain or URL to analyze.",
+          "example": "example.com"
+        },
+        "includeTerms": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated terms that must appear in the keyword."
+        },
+        "includeAnyTerm": {
+          "in": "query",
+          "type": "boolean",
+          "description": "With includeTerms: true matches any term, false (default) requires all."
+        },
+        "excludeTerms": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated terms to leave out."
+        },
+        "excludeDomain": {
+          "in": "query",
+          "type": "string",
+          "description": "A domain to exclude from the keyword results."
+        },
+        "isQuestion": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only question keywords."
+        },
+        "isTransactionalIntent": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only keywords with transactional intent."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum rows returned. Default 5.",
+          "example": 5
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country market (the matching Google domain is queried); default US.",
+          "example": "US",
+          "enum": [
+            "AR",
+            "AT",
+            "AU",
+            "BE",
+            "BR",
+            "CA",
+            "CH",
+            "DE",
+            "DK",
+            "ES",
+            "FR",
+            "IE",
+            "IN",
+            "IT",
+            "JP",
+            "MX",
+            "NL",
+            "NO",
+            "NZ",
+            "PL",
+            "PT",
+            "SE",
+            "SG",
+            "TR",
+            "UA",
+            "UK",
+            "US",
+            "ZA"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Column to sort by; default SearchVolume. Others include LiveSearchVolume, RankingDifficulty and TotalMonthlyClicks."
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction; default Descending.",
+          "enum": [
+            "Ascending",
+            "Descending"
+          ]
+        },
+        "startingRow": {
+          "in": "query",
+          "type": "integer",
+          "description": "Row number to start from, for paging. Default 1.",
+          "example": 1
+        },
+        "adultFilter": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Exclude adult keywords. Default true."
+        }
+      },
+      "notes": [
+        "Billed per row returned at $2.00 per 1,000 rows."
+      ],
+      "job": "domain.keywords.paid",
+      "docs_url": "https://developer.spyfu.com/reference/paidserpapi_getmostsuccessful_get",
+      "verified": {
+        "docs": "https://developer.spyfu.com/reference/paidserpapi_getmostsuccessful_get.md"
+      }
+    },
+    {
+      "id": "spyfu.seo.top_competitors",
+      "name": "Top organic competitors",
+      "summary": "Domains competing for the same organic keywords as a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/competitors_api/v2/seo/getTopCompetitors",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to find organic competitors for.",
+          "example": "example.com"
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country market (the matching Google domain is queried); default US.",
+          "example": "US",
+          "enum": [
+            "AR",
+            "AT",
+            "AU",
+            "BE",
+            "BR",
+            "CA",
+            "CH",
+            "DE",
+            "DK",
+            "ES",
+            "FR",
+            "IE",
+            "IN",
+            "IT",
+            "JP",
+            "MX",
+            "NL",
+            "NO",
+            "NZ",
+            "PL",
+            "PT",
+            "SE",
+            "SG",
+            "TR",
+            "UA",
+            "UK",
+            "US",
+            "ZA"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Column to sort by; default Rank.",
+          "enum": [
+            "Domain",
+            "CommonTerms",
+            "Rank"
+          ]
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction; default Descending.",
+          "enum": [
+            "Ascending",
+            "Descending"
+          ]
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum rows returned. Default 5.",
+          "example": 5
+        },
+        "startingRow": {
+          "in": "query",
+          "type": "integer",
+          "description": "Row number to start from, for paging. Default 1.",
+          "example": 1
+        }
+      },
+      "notes": [
+        "Billed per row returned at $0.20 per 1,000 rows."
+      ],
+      "job": "domain.competitors",
+      "docs_url": "https://developer.spyfu.com/reference/competitorsapi_gettopseocompetitors_get",
+      "verified": {
+        "docs": "https://developer.spyfu.com/reference/competitorsapi_gettopseocompetitors_get.md"
+      }
+    },
+    {
+      "id": "spyfu.keywords.related",
+      "name": "Related keywords",
+      "summary": "Keywords thematically related to a seed keyword, with volume, difficulty and click data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/keyword_api/v2/related/getRelatedKeywords",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Seed keyword.",
+          "example": "seo tools"
+        },
+        "includeTerms": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated terms that must appear in the keyword."
+        },
+        "includeAnyTerm": {
+          "in": "query",
+          "type": "boolean",
+          "description": "With includeTerms: true matches any term, false (default) requires all."
+        },
+        "excludeTerms": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated terms to leave out."
+        },
+        "isQuestion": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only question keywords."
+        },
+        "isTransactionalIntent": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only transactional-intent keywords."
+        },
+        "serpFirstResult": {
+          "in": "query",
+          "type": "string",
+          "description": "Only keywords where this domain ranks first organically."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum rows returned. Default 5.",
+          "example": 5
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country market (the matching Google domain is queried); default US.",
+          "example": "US",
+          "enum": [
+            "AR",
+            "AT",
+            "AU",
+            "BE",
+            "BR",
+            "CA",
+            "CH",
+            "DE",
+            "DK",
+            "ES",
+            "FR",
+            "IE",
+            "IN",
+            "IT",
+            "JP",
+            "MX",
+            "NL",
+            "NO",
+            "NZ",
+            "PL",
+            "PT",
+            "SE",
+            "SG",
+            "TR",
+            "UA",
+            "UK",
+            "US",
+            "ZA"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Column to sort by; includes SearchVolume, LiveSearchVolume, RankingDifficulty and TotalMonthlyClicks."
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction; default Descending.",
+          "enum": [
+            "Ascending",
+            "Descending"
+          ]
+        },
+        "startingRow": {
+          "in": "query",
+          "type": "integer",
+          "description": "Row number to start from, for paging. Default 1.",
+          "example": 1
+        },
+        "adultFilter": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Exclude adult keywords. Default true."
+        }
+      },
+      "notes": [
+        "Billed per row returned at $2.50 per 1,000 rows."
+      ],
+      "job": "keywords.ideas",
+      "docs_url": "https://developer.spyfu.com/reference/relatedkeywordsv2api_getrelatedkeywords_get",
+      "verified": {
+        "docs": "https://developer.spyfu.com/reference/relatedkeywordsv2api_getrelatedkeywords_get.md"
+      }
+    },
+    {
+      "id": "spyfu.keywords.info",
+      "name": "Keyword information in bulk",
+      "summary": "Search volume, difficulty, cost and click metrics for a list of exact keywords.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/keyword_api/v2/related/getKeywordInformation",
+      "params": {
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated exact keywords.",
+          "example": "seo,seo tools"
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country market (the matching Google domain is queried); default US.",
+          "example": "US",
+          "enum": [
+            "AR",
+            "AT",
+            "AU",
+            "BE",
+            "BR",
+            "CA",
+            "CH",
+            "DE",
+            "DK",
+            "ES",
+            "FR",
+            "IE",
+            "IN",
+            "IT",
+            "JP",
+            "MX",
+            "NL",
+            "NO",
+            "NZ",
+            "PL",
+            "PT",
+            "SE",
+            "SG",
+            "TR",
+            "UA",
+            "UK",
+            "US",
+            "ZA"
+          ]
+        },
+        "isQuestion": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Filter on question keywords."
+        },
+        "isTransactionalIntent": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Filter on transactional intent."
+        },
+        "adultFilter": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Exclude adult keywords. Default true."
+        }
+      },
+      "notes": [
+        "Billed per row returned at $0.20 per 1,000 rows. A POST version exists for larger lists."
+      ],
+      "job": "keywords.volume",
+      "docs_url": "https://developer.spyfu.com/reference/relatedkeywordsv2api_getkeywordsbybulksearch_get",
+      "verified": {
+        "docs": "https://developer.spyfu.com/reference/relatedkeywordsv2api_getkeywordsbybulksearch_get.md"
+      }
+    },
+    {
+      "id": "spyfu.seo.top_pages",
+      "name": "Highest-traffic pages",
+      "summary": "A domain's pages with the most estimated organic traffic.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/serp_api/v2/seo/getMostTrafficTopPages",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain, URL, subdomain or path to analyze.",
+          "example": "example.com"
+        },
+        "keywordFilter": {
+          "in": "query",
+          "type": "string",
+          "description": "Only pages ranking for keywords containing this term."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum rows returned. Default 5.",
+          "example": 5
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country market (the matching Google domain is queried); default US.",
+          "example": "US",
+          "enum": [
+            "AR",
+            "AT",
+            "AU",
+            "BE",
+            "BR",
+            "CA",
+            "CH",
+            "DE",
+            "DK",
+            "ES",
+            "FR",
+            "IE",
+            "IN",
+            "IT",
+            "JP",
+            "MX",
+            "NL",
+            "NO",
+            "NZ",
+            "PL",
+            "PT",
+            "SE",
+            "SG",
+            "TR",
+            "UA",
+            "UK",
+            "US",
+            "ZA"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Column to sort by; default SeoClicks."
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction; default Descending.",
+          "enum": [
+            "Ascending",
+            "Descending"
+          ]
+        },
+        "startingRow": {
+          "in": "query",
+          "type": "integer",
+          "description": "Row number to start from, for paging. Default 1.",
+          "example": 1
+        }
+      },
+      "notes": [
+        "Billed per row returned at $5.00 per 1,000 rows."
+      ],
+      "job": "domain.pages",
+      "docs_url": "https://developer.spyfu.com/reference/toppagesapi_getmosttraffictoppages_get",
+      "verified": {
+        "docs": "https://developer.spyfu.com/reference/toppagesapi_getmosttraffictoppages_get.md"
+      }
+    },
+    {
+      "id": "spyfu.seo.serp_analysis",
+      "name": "SERP analysis for a keyword",
+      "summary": "Domains ranking in positions 1-100 for a keyword, updated monthly.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/serp_api/v2/seo/getSerpAnalysisKeywords",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The keyword to analyze.",
+          "example": "seo tools"
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Ranking results to return; default and maximum 105.",
+          "example": 105
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country market (the matching Google domain is queried); default US.",
+          "example": "US",
+          "enum": [
+            "AR",
+            "AT",
+            "AU",
+            "BE",
+            "BR",
+            "CA",
+            "CH",
+            "DE",
+            "DK",
+            "ES",
+            "FR",
+            "IE",
+            "IN",
+            "IT",
+            "JP",
+            "MX",
+            "NL",
+            "NO",
+            "NZ",
+            "PL",
+            "PT",
+            "SE",
+            "SG",
+            "TR",
+            "UA",
+            "UK",
+            "US",
+            "ZA"
+          ]
+        }
+      },
+      "notes": [
+        "Billed per row returned at $0.50 per 1,000 rows."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://developer.spyfu.com/reference/organicserpapi_getserpanalysiskeywords_get",
+      "verified": {
+        "docs": "https://developer.spyfu.com/reference/organicserpapi_getserpanalysiskeywords_get.md"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

@@ -1,0 +1,363 @@
+{
+  "vendor": "vaquill",
+  "name": "Vaquill",
+  "category": "government",
+  "summary": "US statutes, regulations, constitutions and court rules (federal and every state): search, citation resolution, section metadata, full text and cross-state comparison.",
+  "docs_url": "https://www.vaquill.ai/docs/api-guide/overview",
+  "pricing_url": "https://www.vaquill.ai/legal-api",
+  "base_url": "https://api.vaquill.ai/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "VAQUILL_API_KEY"
+        ],
+        "description": "A Vaquill API key (vq_key_...). Sent as 'Authorization: Bearer <key>'; the X-API-Key header also works."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billed in credits (1 credit = $0.01); every answer carries creditsConsumed with the real charge, which can be below list price. GET /api-credits/pricing returns live prices for free. 422 validation errors, not-found and failed calls are not charged.",
+    "Rate limits by plan: Pro 60/min, 1,000/hour, 2,000/day; Business 150/min, 2,500/hour, 10,000/day. 429 answers carry Retry-After.",
+    "An optional Idempotency-Key header (16-255 ASCII characters) replays the first 2xx answer for 24 hours without a second charge.",
+    "Statutes only: case law is not served by the API. Text links back to the official government source; check actStatus before relying on a section."
+  ],
+  "sources": [
+    "https://www.vaquill.ai/docs/api-guide/overview",
+    "https://www.vaquill.ai/docs/api-reference/statutes/search-us-statutes.md",
+    "https://www.vaquill.ai/docs/api-reference/us-statutes/resolve-a-citation-to-its-section.md",
+    "https://www.vaquill.ai/docs/api-reference/us-statutes/get-statute-section-metadata.md",
+    "https://www.vaquill.ai/docs/api-reference/us-statutes/get-statute-full-text.md",
+    "https://www.vaquill.ai/docs/api-reference/us-statutes/browse-the-statutory-hierarchy.md",
+    "https://www.vaquill.ai/docs/api-reference/us-statutes/compare-this-provision-against-other-states.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "vaquill.statutes.search",
+      "name": "Search statutes and regulations",
+      "summary": "Ranked statute, regulation, constitution and court-rule sections for a query or citation, filterable by jurisdiction and code.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/us/statutes/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "required": true,
+          "description": "2-500 characters; a citation such as '42 U.S.C. § 1983' ranks its section first.",
+          "example": "security deposit return deadline"
+        },
+        "corpusType": {
+          "in": "body",
+          "description": "Corpus token or list: USC, CFR, STATE, CONSTITUTION, STATE_CONSTITUTION, FEDERAL_RULES, STATE_RULES, REGULATION, EXECUTIVE_ACTION, FEDERAL_REGISTER, SESSION_LAW and others."
+        },
+        "state": {
+          "in": "body",
+          "description": "2-letter state code, federal, or a list.",
+          "example": "tx"
+        },
+        "code": {
+          "in": "body",
+          "description": "State code (e.g. tx_pe) or federal rule set (frcp, fre)."
+        },
+        "titleNumber": {
+          "in": "body",
+          "type": "integer",
+          "description": "USC or CFR title."
+        },
+        "chapter": {
+          "in": "body",
+          "description": "Chapter; pairs with titleNumber (USC) or code (state)."
+        },
+        "yearFrom": {
+          "in": "body",
+          "type": "integer",
+          "description": "Earliest most-recent-amendment year."
+        },
+        "yearTo": {
+          "in": "body",
+          "type": "integer",
+          "description": "Latest most-recent-amendment year."
+        },
+        "excludeRepealed": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Drop sections known to be repealed, default false."
+        },
+        "changedSince": {
+          "in": "body",
+          "description": "Sections changed on or after this date, YYYY-MM-DD."
+        },
+        "matchType": {
+          "in": "body",
+          "description": "any (hybrid semantic+keyword, default), all, phrase or boolean (AND, OR, NOT, /s, /p, /N).",
+          "enum": [
+            "any",
+            "all",
+            "phrase",
+            "boolean"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1-50, default 10."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Default 0; max 70 with matchType any, 10,000 otherwise."
+        },
+        "includeBody": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add each row's full text; 6 extra credits per row with text."
+        },
+        "includePinpoint": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Name the matched subsection; free."
+        },
+        "excerptChars": {
+          "in": "body",
+          "type": "integer",
+          "description": "Excerpt length, 100-600, default 500."
+        }
+      },
+      "notes": [
+        "A read over POST. 4 credits per call, plus 6 per row when includeBody is true. Refunded when nothing matches a filtered search; charged when noGoodMatch is true (rows are then only the nearest sections).",
+        "Unknown body fields are refused (422)."
+      ],
+      "job": "statutes.search",
+      "docs_url": "https://www.vaquill.ai/docs/api-reference/statutes/search-us-statutes.md",
+      "verified": {
+        "docs": "https://www.vaquill.ai/docs/api-reference/statutes/search-us-statutes.md"
+      }
+    },
+    {
+      "id": "vaquill.statutes.resolve",
+      "name": "Resolve a citation",
+      "summary": "The section a Bluebook citation points to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/us/statutes/resolve",
+      "params": {
+        "cite": {
+          "in": "query",
+          "required": true,
+          "description": "Citation, 2-200 characters.",
+          "example": "42 U.S.C. 1983"
+        },
+        "state": {
+          "in": "query",
+          "description": "Two-letter state code or federal."
+        },
+        "corpusType": {
+          "in": "query",
+          "description": "Restrict to one corpus.",
+          "enum": [
+            "STATE",
+            "REGULATION",
+            "STATE_RULES",
+            "CONSTITUTION",
+            "STATE_CONSTITUTION",
+            "FEDERAL_BILL"
+          ]
+        }
+      },
+      "notes": [
+        "2 credits, charged whether or not it resolves (refunded on malformed or ambiguous-jurisdiction misses)."
+      ],
+      "job": "statutes.resolve",
+      "docs_url": "https://www.vaquill.ai/docs/api-reference/us-statutes/resolve-a-citation-to-its-section.md",
+      "verified": {
+        "docs": "https://www.vaquill.ai/docs/api-reference/us-statutes/resolve-a-citation-to-its-section.md"
+      }
+    },
+    {
+      "id": "vaquill.statutes.section",
+      "name": "Get a section's metadata",
+      "summary": "Citation, heading, status, history, effective dates and related documents of a section, without its text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/us/statutes/section/{act_id}",
+      "params": {
+        "act_id": {
+          "in": "path",
+          "required": true,
+          "description": "Section id from a search, resolve or divisions result, e.g. USC_T42_C21_S1983. A citation also works but adds the 2-credit resolve price.",
+          "example": "USC_T42_C21_S1983"
+        },
+        "full": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return every list entry and the full history text, default false (lists capped at 50)."
+        }
+      },
+      "notes": [
+        "2 credits; 404 not charged."
+      ],
+      "job": "statutes.get",
+      "docs_url": "https://www.vaquill.ai/docs/api-reference/us-statutes/get-statute-section-metadata.md",
+      "verified": {
+        "docs": "https://www.vaquill.ai/docs/api-reference/us-statutes/get-statute-section-metadata.md"
+      }
+    },
+    {
+      "id": "vaquill.statutes.text",
+      "name": "Get a section's full text",
+      "summary": "The text of a section as HTML, plain text or markdown, optionally one subsection or as of a past date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/us/statutes/section/{act_id}/body",
+      "params": {
+        "act_id": {
+          "in": "path",
+          "required": true,
+          "description": "Section id from a search, resolve or divisions result, e.g. USC_T42_C21_S1983. A citation also works but adds the 2-credit resolve price.",
+          "example": "USC_T42_C21_S1983"
+        },
+        "format": {
+          "in": "query",
+          "description": "Default both (html + plain).",
+          "enum": [
+            "all",
+            "both",
+            "html",
+            "markdown",
+            "plain",
+            "content",
+            "operative"
+          ]
+        },
+        "structured": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add a subsections tree, default false."
+        },
+        "pinpoint": {
+          "in": "query",
+          "description": "One subsection, e.g. (c)(1); not with asOf."
+        },
+        "asOf": {
+          "in": "query",
+          "description": "YYYY-MM-DD: the text as it stood then, plain only; not with pinpoint or structured."
+        }
+      },
+      "notes": [
+        "6 credits whatever the format; refunded when no text comes back."
+      ],
+      "job": "statutes.text",
+      "docs_url": "https://www.vaquill.ai/docs/api-reference/us-statutes/get-statute-full-text.md",
+      "verified": {
+        "docs": "https://www.vaquill.ai/docs/api-reference/us-statutes/get-statute-full-text.md"
+      }
+    },
+    {
+      "id": "vaquill.statutes.divisions",
+      "name": "Browse the statutory hierarchy",
+      "summary": "Titles, chapters, parts and sections of a code, one level at a time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/us/statutes/divisions",
+      "params": {
+        "corpusType": {
+          "in": "query",
+          "required": true,
+          "description": "Corpus to browse.",
+          "enum": [
+            "USC",
+            "CFR",
+            "STATE",
+            "REGULATION",
+            "STATE_RULES",
+            "CONSTITUTION",
+            "STATE_CONSTITUTION",
+            "FEDERAL_RULES"
+          ]
+        },
+        "state": {
+          "in": "query",
+          "description": "2-letter state; required for STATE, REGULATION, STATE_RULES and STATE_CONSTITUTION."
+        },
+        "titleNumber": {
+          "in": "query",
+          "description": "USC/CFR title (integer, or 5a / 18a)."
+        },
+        "code": {
+          "in": "query",
+          "description": "State code (tx_pe), federal rule set (frcp) or state court rule set."
+        },
+        "chapter": {
+          "in": "query",
+          "description": "Chapter."
+        },
+        "part": {
+          "in": "query",
+          "description": "Part."
+        },
+        "title": {
+          "in": "query",
+          "description": "State codes and regulations only; needs code."
+        },
+        "article": {
+          "in": "query",
+          "description": "Constitution or state code article."
+        },
+        "excludeRepealed": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop repealed sections, default false."
+        },
+        "cursor": {
+          "in": "query",
+          "description": "nextCursor from the previous page; keep the same filters."
+        }
+      },
+      "notes": [
+        "1 credit; not charged when no rows come back."
+      ],
+      "job": "statutes.browse",
+      "docs_url": "https://www.vaquill.ai/docs/api-reference/us-statutes/browse-the-statutory-hierarchy.md",
+      "verified": {
+        "docs": "https://www.vaquill.ai/docs/api-reference/us-statutes/browse-the-statutory-hierarchy.md"
+      }
+    },
+    {
+      "id": "vaquill.statutes.cross_state",
+      "name": "Compare a provision across states",
+      "summary": "The closest matching provision in other states for a state statute section.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/us/statutes/section/{act_id}/cross-state",
+      "params": {
+        "act_id": {
+          "in": "path",
+          "required": true,
+          "description": "Section id from a search, resolve or divisions result, e.g. USC_T42_C21_S1983. A citation also works but adds the 2-credit resolve price.",
+          "example": "USC_T42_C21_S1983"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "States to return, 1-25, default 5."
+        }
+      },
+      "notes": [
+        "6 credits; not charged for sections outside the state statute corpus or when nothing matches."
+      ],
+      "job": "statutes.compare",
+      "docs_url": "https://www.vaquill.ai/docs/api-reference/us-statutes/compare-this-provision-against-other-states.md",
+      "verified": {
+        "docs": "https://www.vaquill.ai/docs/api-reference/us-statutes/compare-this-provision-against-other-states.md"
+      }
+    }
+  ]
+}

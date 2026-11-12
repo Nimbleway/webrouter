@@ -1,0 +1,391 @@
+{
+  "vendor": "soundcloud",
+  "name": "SoundCloud",
+  "category": "social",
+  "summary": "SoundCloud's public API: search tracks, playlists and users, resolve soundcloud.com URLs, and read tracks, users, their uploads, followers and related artists.",
+  "docs_url": "https://developers.soundcloud.com/docs/api/guide",
+  "base_url": "https://api.soundcloud.com",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "SOUNDCLOUD_CLIENT_ID"
+        ],
+        "description": "the client id of your app (soundcloud.com > Your Apps)"
+      },
+      "client_secret": {
+        "env": [
+          "SOUNDCLOUD_CLIENT_SECRET"
+        ],
+        "description": "that app's client secret"
+      }
+    },
+    "oauth2": {
+      "grant": "client_credentials",
+      "token_url": "https://secure.soundcloud.com/oauth/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "client_auth": "basic"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "OAuth {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Client-credentials tokens reach public data only; /me endpoints need a user's authorization-code token, which this entry does not mint.",
+    "Token minting is rate limited (50 tokens per 12 hours per app, 30 per hour per IP), so the cached token matters.",
+    "Pass linked_partitioning=true and follow next_href to page; collections default to 50 items, max 200. offset is deprecated.",
+    "The Authorization scheme is 'OAuth', not 'Bearer'."
+  ],
+  "sources": [
+    "https://developers.soundcloud.com/docs/api/guide",
+    "https://developers.soundcloud.com/docs/api/explorer/open-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "soundcloud.resolve",
+      "name": "Resolve a SoundCloud URL",
+      "summary": "Turn a soundcloud.com track, playlist or user permalink into its API resource.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/resolve",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "soundcloud.com or on.soundcloud.com URL."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.tracks.search",
+      "name": "Search tracks",
+      "summary": "Tracks matching text, genres, tags, BPM, duration or creation date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tracks",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text.",
+          "example": "lofi"
+        },
+        "genres": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated genres."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tags."
+        },
+        "bpm_from": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum BPM.",
+          "wire_name": "bpm[from]"
+        },
+        "bpm_to": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum BPM.",
+          "wire_name": "bpm[to]"
+        },
+        "access": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated access levels to include: playable, preview, blocked.",
+          "example": "playable"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 50, max 200.",
+          "example": 50
+        },
+        "linked_partitioning": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to page: the response then carries collection and next_href.",
+          "example": true
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.users.search",
+      "name": "Search users",
+      "summary": "Users (artists, labels) matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 50, max 200.",
+          "example": 50
+        },
+        "linked_partitioning": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to page: the response then carries collection and next_href.",
+          "example": true
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.playlists.search",
+      "name": "Search playlists",
+      "summary": "Playlists and albums matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/playlists",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text."
+        },
+        "show_tracks": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false to leave out the track list (default true)."
+        },
+        "access": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated access levels to include: playable, preview, blocked.",
+          "example": "playable"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 50, max 200.",
+          "example": 50
+        },
+        "linked_partitioning": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to page: the response then carries collection and next_href.",
+          "example": true
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.tracks.get",
+      "name": "Get a track",
+      "summary": "A track's metadata: title, user, duration, genre, play, like and repost counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tracks/{track_urn}",
+      "params": {
+        "track_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SoundCloud track URN or id, e.g. from resolve."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.users.get",
+      "name": "Get a user",
+      "summary": "A user's profile: name, city, followers and track counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{user_urn}",
+      "params": {
+        "user_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SoundCloud user URN or id, e.g. from resolve."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.users.tracks",
+      "name": "List a user's tracks",
+      "summary": "Tracks a user uploaded, newest first by default.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{user_urn}/tracks",
+      "params": {
+        "user_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SoundCloud user URN or id, e.g. from resolve."
+        },
+        "access": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated access levels to include: playable, preview, blocked.",
+          "example": "playable"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 50, max 200.",
+          "example": 50
+        },
+        "linked_partitioning": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to page: the response then carries collection and next_href.",
+          "example": true
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Upload date order: desc (default) or asc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.users.followers",
+      "name": "List a user's followers",
+      "summary": "Users following a user.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{user_urn}/followers",
+      "params": {
+        "user_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SoundCloud user URN or id, e.g. from resolve."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 50, max 200.",
+          "example": 50
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.tracks.comments",
+      "name": "List a track's comments",
+      "summary": "Comments posted on a track.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tracks/{track_urn}/comments",
+      "params": {
+        "track_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SoundCloud track URN or id, e.g. from resolve."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 50, max 200.",
+          "example": 50
+        },
+        "linked_partitioning": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to page: the response then carries collection and next_href.",
+          "example": true
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    },
+    {
+      "id": "soundcloud.users.related",
+      "name": "List related artists",
+      "summary": "Artists SoundCloud recommends as related to a user.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{user_urn}/related",
+      "params": {
+        "user_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SoundCloud user URN or id, e.g. from resolve."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 50, max 200.",
+          "example": 50
+        },
+        "linked_partitioning": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to page: the response then carries collection and next_href.",
+          "example": true
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.soundcloud.com/docs/api/explorer/open-api",
+      "verified": {
+        "docs": "https://developers.soundcloud.com/docs/api/explorer/open-api"
+      }
+    }
+  ]
+}

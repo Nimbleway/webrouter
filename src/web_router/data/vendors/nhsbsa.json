@@ -1,0 +1,176 @@
+{
+  "vendor": "nhsbsa",
+  "name": "NHSBSA Open Data Portal",
+  "category": "health",
+  "summary": "NHS Business Services Authority open data on its CKAN portal, including Secondary Care Medicines Data (SCMD): hospital medicine usage by trust, month and product.",
+  "docs_url": "https://opendata.nhsbsa.net/pages/api",
+  "base_url": "https://opendata.nhsbsa.net",
+  "notes": [
+    "Keyless. Every answer is a JSON envelope {success, result}; read result.",
+    "Two-step flow: package_show lists a dataset's resources (SCMD is one resource per month, named like SCMD_PROVISIONAL_202608); query a resource's rows with datastore_search or datastore_search_sql using its id or name.",
+    "SCMD datasets: secondary-care-medicines-data-indicative-price (provisional, with indicative cost) and others found with datasets.search.",
+    "datastore_search returns 100 rows by default and at most 32,000; page with offset."
+  ],
+  "sources": [
+    "https://opendata.nhsbsa.net/pages/api",
+    "https://opendata.nhsbsa.net/api/3/action/help_show?name=package_search",
+    "https://opendata.nhsbsa.net/api/3/action/help_show?name=datastore_search",
+    "https://opendata.nhsbsa.net/api/3/action/help_show?name=datastore_search_sql"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nhsbsa.datasets.search",
+      "name": "Search datasets",
+      "summary": "Datasets matching a Solr query, with their resources.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/3/action/package_search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Solr query; default *:*.",
+          "example": "secondary care medicines"
+        },
+        "fq": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter query."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field and order; default 'score desc, metadata_modified desc'."
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Datasets to return; default 10, at most 1000."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset into the results."
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://opendata.nhsbsa.net/api/3/action/help_show?name=package_search",
+      "verified": {
+        "docs": "https://opendata.nhsbsa.net/api/3/action/help_show?name=package_search"
+      }
+    },
+    {
+      "id": "nhsbsa.datasets.get",
+      "name": "Get a dataset and its resources",
+      "summary": "One dataset's description, licence and resources (monthly files), with ids and names.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/3/action/package_show",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Dataset id or name.",
+          "example": "secondary-care-medicines-data-indicative-price"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://opendata.nhsbsa.net/pages/api",
+      "verified": {
+        "docs": "https://opendata.nhsbsa.net/pages/api"
+      }
+    },
+    {
+      "id": "nhsbsa.rows.search",
+      "name": "Search a resource's rows",
+      "summary": "Rows of one data resource, filtered, full-text searched, sorted and paged, with field types.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/3/action/datastore_search",
+      "params": {
+        "resource_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Resource id or name.",
+          "example": "SCMD_PROVISIONAL_202608"
+        },
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON object of exact field matches, e.g. {\"ODS_CODE\": \"RRV\"}."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text query over all fields."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field names with order, e.g. 'YEAR_MONTH desc'."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return; default 100, at most 32000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip."
+        },
+        "include_total": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the total match count; default true."
+        }
+      },
+      "job": "datasets.query",
+      "docs_url": "https://opendata.nhsbsa.net/api/3/action/help_show?name=datastore_search",
+      "verified": {
+        "docs": "https://opendata.nhsbsa.net/api/3/action/help_show?name=datastore_search"
+      }
+    },
+    {
+      "id": "nhsbsa.rows.sql",
+      "name": "Query a resource with SQL",
+      "summary": "Rows from one SELECT statement over a data resource.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/3/action/datastore_search_sql",
+      "params": {
+        "resource_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Resource id or name the SQL reads.",
+          "example": "SCMD_PROVISIONAL_202608"
+        },
+        "sql": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One SELECT statement; the table name goes in backticks.",
+          "example": "SELECT * FROM `SCMD_PROVISIONAL_202608` LIMIT 10"
+        }
+      },
+      "notes": [
+        "This portal refuses a table name that is not backtick-quoted, and refuses the call without resource_id.",
+        "Results stop at 32,000 rows; records_truncated is true when they did."
+      ],
+      "job": "datasets.query",
+      "docs_url": "https://opendata.nhsbsa.net/api/3/action/help_show?name=datastore_search_sql",
+      "verified": {
+        "docs": "https://opendata.nhsbsa.net/api/3/action/help_show?name=datastore_search_sql"
+      }
+    }
+  ]
+}

@@ -1,0 +1,407 @@
+{
+  "vendor": "scrapegraphai",
+  "name": "ScrapeGraphAI",
+  "category": "scraping",
+  "summary": "AI-powered scrape, extract, search and crawl with natural-language prompts (ScrapeGraphAI v2 API).",
+  "docs_url": "https://docs.scrapegraphai.com/api-reference/introduction",
+  "pricing_url": "https://scrapegraphai.com/pricing",
+  "base_url": "https://v2-api.scrapegraphai.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SGAI_API_KEY"
+        ],
+        "description": "a ScrapeGraphAI API key, starting sgai- (scrapegraphai.com/dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "SGAI-APIKEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is the SGAI-APIKEY header. All paths are under /api. This is the v2 API; the v1 host and its smartscraper/searchscraper/markdownify/smartcrawler endpoints are deprecated.",
+    "An optional SGAI-Session-Id header groups related requests for the history list.",
+    "Crawls are asynchronous: start, poll status, then page through crawl.pages.",
+    "Monitors (scheduled change detection) are not in this entry."
+  ],
+  "sources": [
+    "https://docs.scrapegraphai.com/llms.txt",
+    "https://docs.scrapegraphai.com/api-reference/introduction.md",
+    "https://docs.scrapegraphai.com/api-reference/endpoint/scrape.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "scrapegraphai.scrape.url",
+      "name": "Scrape a URL",
+      "summary": "Fetch a page in one or more formats: markdown, HTML, links, images, summary, JSON extraction, branding or screenshot.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Public URL to fetch; private addresses are rejected.",
+          "example": "https://example.com"
+        },
+        "formats": {
+          "in": "body",
+          "type": "array",
+          "description": "Output formats, each {\"type\": ...}: markdown, html, links, images, summary, json (with prompt and schema), branding or screenshot.",
+          "example": [
+            {
+              "type": "markdown"
+            }
+          ],
+          "required": true
+        },
+        "contentType": {
+          "in": "body",
+          "type": "string",
+          "description": "Override the detected content type."
+        },
+        "allowedTypes": {
+          "in": "body",
+          "type": "array",
+          "description": "MIME allowlist; omit to allow all supported types."
+        },
+        "processors": {
+          "in": "body",
+          "type": "array",
+          "description": "e.g. [{\"type\": \"pdf\", \"maxPages\": 10}]; PDFs are capped at 25 pages by default and cost 1 credit per page."
+        },
+        "fetchConfig": {
+          "in": "body",
+          "type": "object",
+          "description": "Fetch options: mode (auto, fast, js), stealth, headers, cookies, scrolls, wait, timeout (ms), country."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches a page and changes nothing in your account.",
+        "Credits are per format; stealth adds 5."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.scrapegraphai.com/api-reference/endpoint/scrape.md",
+      "verified": {
+        "docs": "https://docs.scrapegraphai.com/api-reference/endpoint/scrape.md"
+      }
+    },
+    {
+      "id": "scrapegraphai.extract.ai",
+      "name": "Extract structured data with a prompt",
+      "summary": "Natural-language structured extraction from a URL, HTML or markdown.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/extract",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What to extract.",
+          "example": "What is the title of this page?"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Page to extract from; send exactly one of url, html or markdown."
+        },
+        "html": {
+          "in": "body",
+          "type": "string",
+          "description": "Raw HTML, up to 2 MB."
+        },
+        "markdown": {
+          "in": "body",
+          "type": "string",
+          "description": "Markdown, up to 2 MB."
+        },
+        "schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema the output must match."
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "HTML pre-processing mode.",
+          "enum": [
+            "normal",
+            "reader",
+            "prune"
+          ]
+        },
+        "fetchConfig": {
+          "in": "body",
+          "type": "object",
+          "description": "Fetch options: mode (auto, fast, js), stealth, headers, cookies, scrolls, wait, timeout (ms), country."
+        }
+      },
+      "notes": [
+        "A read over POST: it extracts data and changes nothing in your account.",
+        "Costs 5 credits, plus 5 with stealth."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.scrapegraphai.com/api-reference/endpoint/extract.md",
+      "verified": {
+        "docs": "https://docs.scrapegraphai.com/api-reference/endpoint/extract.md"
+      }
+    },
+    {
+      "id": "scrapegraphai.search.web",
+      "name": "Search and fetch the top results",
+      "summary": "Web search with page content returned inline and optional AI extraction across results.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query.",
+          "example": "scrapegraphai pricing"
+        },
+        "numResults": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return and fetch, 1-20; default 3."
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "Run AI extraction across the results; adds a json field to the response."
+        },
+        "schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema for the extraction; requires prompt."
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Inline content format.",
+          "enum": [
+            "markdown",
+            "html"
+          ]
+        },
+        "timeRange": {
+          "in": "body",
+          "type": "string",
+          "description": "Recency filter.",
+          "enum": [
+            "past_hour",
+            "past_24_hours",
+            "past_week",
+            "past_month",
+            "past_year"
+          ]
+        },
+        "locationGeoCode": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO country code, e.g. us."
+        },
+        "fetchConfig": {
+          "in": "body",
+          "type": "object",
+          "description": "Fetch options: mode (auto, fast, js), stealth, headers, cookies, scrolls, wait, timeout (ms), country."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account.",
+        "Costs 2 credits per result, or 5 with a prompt."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.scrapegraphai.com/api-reference/endpoint/search.md",
+      "verified": {
+        "docs": "https://docs.scrapegraphai.com/api-reference/endpoint/search.md"
+      }
+    },
+    {
+      "id": "scrapegraphai.crawl.start",
+      "name": "Start a crawl",
+      "summary": "Start an asynchronous multi-page crawl and get a job id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/crawl",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Starting URL.",
+          "example": "https://scrapegraphai.com/"
+        },
+        "formats": {
+          "in": "body",
+          "type": "array",
+          "description": "Output formats, each {\"type\": ...}: markdown, html, links, images, summary, json (with prompt and schema), branding or screenshot.",
+          "example": [
+            {
+              "type": "markdown"
+            }
+          ]
+        },
+        "maxPages": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most pages to crawl."
+        },
+        "maxDepth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Link levels to follow."
+        },
+        "maxLinksPerPage": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on links expanded per page."
+        },
+        "includePatterns": {
+          "in": "body",
+          "type": "array",
+          "description": "Glob URL patterns to include, e.g. [\"/blog/*\"]."
+        },
+        "excludePatterns": {
+          "in": "body",
+          "type": "array",
+          "description": "Glob URL patterns to exclude."
+        },
+        "fetchConfig": {
+          "in": "body",
+          "type": "object",
+          "description": "Fetch options: mode (auto, fast, js), stealth, headers, cookies, scrolls, wait, timeout (ms), country."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Async: poll crawl.status, then read content with crawl.pages. Costs 2 credits to start plus per-page scrape cost."
+      ],
+      "job": "web.crawl",
+      "docs_url": "https://docs.scrapegraphai.com/api-reference/endpoint/crawl/start.md",
+      "verified": {
+        "docs": "https://docs.scrapegraphai.com/api-reference/endpoint/crawl/start.md"
+      }
+    },
+    {
+      "id": "scrapegraphai.crawl.status",
+      "name": "Get a crawl's status",
+      "summary": "Progress and lightweight page metadata of a crawl job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/crawl/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crawl job id returned by crawl.start."
+        }
+      },
+      "notes": [
+        "Status is running, completed, failed or stopped."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.scrapegraphai.com/api-reference/endpoint/crawl/get-status.md",
+      "verified": {
+        "docs": "https://docs.scrapegraphai.com/api-reference/endpoint/crawl/get-status.md"
+      }
+    },
+    {
+      "id": "scrapegraphai.crawl.pages",
+      "name": "Get a crawl's pages",
+      "summary": "Cursor-paginated pages of a crawl with their scrape results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/crawl/{id}/pages",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crawl job id returned by crawl.start."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages per response, 1-100; default 50."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index to start at; use pagination.nextCursor from the last response."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.scrapegraphai.com/api-reference/endpoint/crawl/pages.md",
+      "verified": {
+        "docs": "https://docs.scrapegraphai.com/api-reference/endpoint/crawl/pages.md"
+      }
+    },
+    {
+      "id": "scrapegraphai.history.list",
+      "name": "List past requests",
+      "summary": "Recent API calls on your account, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/history",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 1-indexed; default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Entries per page; default 20."
+        },
+        "service": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by service.",
+          "enum": [
+            "scrape",
+            "extract",
+            "search",
+            "monitor",
+            "crawl",
+            "schema"
+          ]
+        },
+        "sessionId": {
+          "in": "query",
+          "type": "string",
+          "description": "Case-insensitive partial match on session id."
+        }
+      },
+      "job": "account.history",
+      "docs_url": "https://docs.scrapegraphai.com/api-reference/endpoint/history.md",
+      "verified": {
+        "docs": "https://docs.scrapegraphai.com/api-reference/endpoint/history.md"
+      }
+    },
+    {
+      "id": "scrapegraphai.credits.get",
+      "name": "Get credits, plan and job quotas",
+      "summary": "Remaining credits, plan name and crawl/monitor quotas; free and a quick key check.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/credits",
+      "job": "account.usage",
+      "docs_url": "https://docs.scrapegraphai.com/api-reference/endpoint/credits.md",
+      "verified": {
+        "docs": "https://docs.scrapegraphai.com/api-reference/endpoint/credits.md"
+      }
+    }
+  ]
+}

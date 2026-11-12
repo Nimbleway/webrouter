@@ -13,8 +13,9 @@ from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import quote
 
-from web_router.constants_vendors import MSG_VENDOR_BAD_PATH
+from web_router.constants_vendors import MSG_VENDOR_BAD_PATH, MSG_VENDOR_CALLBACK_REFUSED, VENDOR_CALLBACK_KEY
 from web_router.exceptions import ConfigurationError, MissingParameterError, UnsupportedParameterError
+from web_router.vendors.catalog import get_catalog
 from web_router.vendors.schema import Vendor, VendorEndpoint, VendorParam
 
 
@@ -49,8 +50,34 @@ def _query_pairs(name: str, value: Any) -> list[tuple[str, str]]:
     return [(name, _text(value))]
 
 
-def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str, Any]) -> _Plan:
-    """Place each input where the endpoint declares it, refusing undeclared and missing ones."""
+def _callback_keys(value: Any, path: str = "") -> list[str]:
+    """Where an object input names a webhook or callback URL, at any depth: the catalog leaves those out."""
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, inner in value.items():
+            where = f"{path}.{key}" if path else str(key)
+            if VENDOR_CALLBACK_KEY.search(str(key)):
+                found.append(where)
+            found += _callback_keys(inner, where)
+    elif isinstance(value, list):
+        for inner in value:
+            found += _callback_keys(inner, path)
+    return found
+
+
+def _off_constant(endpoint: VendorEndpoint, params: Mapping[str, Any]) -> dict[str, tuple[Any, Any]]:
+    """Each input given another value than the only one its ``enum`` allows (a constant such as Majestic's
+    ``cmd``), as (given, allowed). Compared as sent, so a JSON ``true`` matches a constant ``"true"``."""
+    off: dict[str, tuple[Any, Any]] = {}
+    for name, spec in endpoint.params.items():
+        given = params.get(name)
+        if spec.enum and len(spec.enum) == 1 and given is not None and _text(given) != _text(spec.enum[0]):
+            off[name] = (given, spec.enum[0])
+    return off
+
+
+def _refuse_bad_inputs(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str, Any]) -> None:
+    """Undeclared, missing, callback-carrying and off-constant inputs, each refused before anything is sent."""
     unknown = set(params) - set(endpoint.params)
     if unknown:
         detail = f"{endpoint.id} takes: {', '.join(sorted(endpoint.params)) or 'no parameters'}."
@@ -63,6 +90,19 @@ def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str,
     }
     if missing:
         raise MissingParameterError(vendor.vendor, missing, detail=f"{endpoint.id} requires them.")
+    callbacks = [where for name, value in params.items() for where in _callback_keys(value, name)]
+    if callbacks:
+        raise UnsupportedParameterError(vendor.vendor, callbacks, detail=MSG_VENDOR_CALLBACK_REFUSED)
+    off = _off_constant(endpoint, params)
+    if off:
+        fixed = ", ".join(f"{name}={allowed!r}" for name, (_, allowed) in sorted(off.items()))
+        given = {name: value for name, (value, _) in off.items()}
+        raise UnsupportedParameterError(vendor.vendor, off, values=given, detail=f"{endpoint.id} takes only {fixed}.")
+
+
+def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str, Any]) -> _Plan:
+    """Place each input where the endpoint declares it, refusing undeclared and missing ones."""
+    _refuse_bad_inputs(vendor, endpoint, params)
     plan = _Plan(vendor=vendor, endpoint=endpoint.id, method=endpoint.method, path=endpoint.path)
     plan.body_type = endpoint.body_type
     plan.host = endpoint.host
@@ -76,6 +116,8 @@ def plan_endpoint(vendor: Vendor, endpoint: VendorEndpoint, params: Mapping[str,
         wire = spec.wire_name or name
         if spec.location == "path":
             path_values[wire] = quote(_text(value), safe="")
+        elif spec.location == "query" and spec.style == "json":
+            plan.query.append((wire, _text(value)))
         elif spec.location == "query":
             plan.query += _query_pairs(wire, value)
         elif spec.location == "header":
@@ -112,3 +154,23 @@ def plan_raw(
     plan.body = body
     plan.headers = dict(headers or {})
     return plan
+
+
+def endpoint_plan(endpoint: str, params: Mapping[str, Any] | None) -> _Plan:
+    """The request ``call_vendor`` sends, built once for both routers: ``endpoint`` looked up in the catalog."""
+    found = get_catalog().endpoint(endpoint)
+    return plan_endpoint(get_catalog().vendor(found.vendor), found, dict(params or {}))
+
+
+def raw_plan(
+    vendor: str,
+    method: str,
+    path: str,
+    *,
+    query: Mapping[str, Any] | Sequence[tuple[str, Any]] | None,
+    body: Any,
+    headers: Mapping[str, str] | None,
+    host: str | None,
+) -> _Plan:
+    """The request ``vendor_request`` sends, built once for both routers: ``vendor`` looked up in the catalog."""
+    return plan_raw(get_catalog().vendor(vendor), method, path, query=query, body=body, headers=headers, host=host)

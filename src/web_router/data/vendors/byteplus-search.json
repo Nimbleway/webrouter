@@ -1,0 +1,158 @@
+{
+  "vendor": "byteplus-search",
+  "name": "BytePlus Searchinfinity",
+  "category": "search",
+  "summary": "Web and image search and static page fetch from BytePlus (ByteDance) Searchinfinity: Flux and Omnira search engines plus a Fetch API.",
+  "docs_url": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_available_APIs",
+  "pricing_url": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_pricing",
+  "base_url": "https://torchlight.byteintlapi.com/search_api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BYTEPLUS_SEARCH_API_KEY"
+        ],
+        "description": "a Searchinfinity API key (Searchinfinity console > API Key). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Request and response fields are PascalCase (Query, Count, Result.WebResults...).",
+    "Postpaid credits at $0.006 each: Flux search 1 credit ($0.006) per request, Omnira search half a credit ($0.003), Fetch a sixth ($0.001).",
+    "Errors come back in ResponseMetadata.Error with numeric codes: 700901 invalid key, 700429 QPS exceeded, 10403 service not enabled or free quota exhausted, 10400 bad parameter.",
+    "All three calls are reads over POST."
+  ],
+  "sources": [
+    "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_API_Reference",
+    "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity-Search-API-Reference-Omnira",
+    "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_Fetch",
+    "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_pricing"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "byteplus-search.web_search",
+      "name": "Search the web (Flux)",
+      "summary": "Ranked web results with snippet, ~300-500 character summary and publish time.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/web_search",
+      "params": {
+        "Query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search query, at most 400 characters or 50 words; one query only."
+        },
+        "Count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return, default 10, max 20."
+        },
+        "Filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters: Sites and BlockHosts (up to five full domains joined by |), Language (EN default, ZH-HANS, ZH-HANT)."
+        },
+        "TimeRange": {
+          "in": "body",
+          "type": "string",
+          "description": "OneDay, OneWeek, OneMonth, OneYear, or YYYY-MM-DD..YYYY-MM-DD (inclusive). Blank means no limit."
+        }
+      },
+      "notes": [
+        "Read over POST. 1 credit ($0.006) per request; 30-second timeout."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_API_Reference",
+      "verified": {
+        "docs": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_API_Reference"
+      }
+    },
+    {
+      "id": "byteplus-search.omnira_search",
+      "name": "Search the web or images (Omnira)",
+      "summary": "Web documents with snippets and images, or image results with their source context.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/omnira_search",
+      "params": {
+        "Query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search query. For web search it accepts site:domain and recency:N (days, 1-30) operators, e.g. 'financial news recency:1'."
+        },
+        "SearchType": {
+          "in": "body",
+          "type": "string",
+          "description": "web (default) or image.",
+          "enum": [
+            "web",
+            "image"
+          ]
+        },
+        "DocCount": {
+          "in": "body",
+          "type": "integer",
+          "description": "Documents or images to return, max 20 (default 10 for web, 5 for image)."
+        },
+        "MaxSnippetLength": {
+          "in": "body",
+          "type": "integer",
+          "description": "Web only: max snippet length, default 300, max 3000."
+        },
+        "MaxImageCountPerDoc": {
+          "in": "body",
+          "type": "integer",
+          "description": "Web only: images per document, default 1, max 10."
+        },
+        "ImageFilter": {
+          "in": "body",
+          "type": "object",
+          "description": "Image only: ShortEdgePixelMin, ShortEdgePixelMax, AspectRatioMin, AspectRatioMax (height/width)."
+        }
+      },
+      "notes": [
+        "Read over POST. Half a credit ($0.003) per request."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity-Search-API-Reference-Omnira",
+      "verified": {
+        "docs": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity-Search-API-Reference-Omnira"
+      }
+    },
+    {
+      "id": "byteplus-search.fetch",
+      "name": "Fetch a page's text",
+      "summary": "Title, publish time and up to 50,000 characters of body text of one URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/fetch",
+      "params": {
+        "Url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "One http(s) URL; arrays are not accepted."
+        }
+      },
+      "notes": [
+        "Read over POST. A sixth of a credit ($0.001) per request; 60-second timeout.",
+        "Static HTML only (no JavaScript). The target page's own status is Result.Data.StatusCode, separate from API errors. Fetches obey robots rules."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_Fetch",
+      "verified": {
+        "docs": "https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_Fetch"
+      }
+    }
+  ]
+}

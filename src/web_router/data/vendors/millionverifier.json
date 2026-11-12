@@ -1,0 +1,79 @@
+{
+  "vendor": "millionverifier",
+  "name": "MillionVerifier",
+  "category": "verification",
+  "summary": "Real-time email verification with a quality grade, result code, role and free-provider flags, and a credit balance check.",
+  "docs_url": "https://developer.millionverifier.com/",
+  "base_url": "https://api.millionverifier.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MILLIONVERIFIER_API_KEY"
+        ],
+        "description": "a MillionVerifier API key (API page of your MillionVerifier dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The key goes in the api query parameter. The docs publish a test key, API_KEY_FOR_TEST, that returns random results.",
+    "The bulk file API (upload, fileinfo, filelist, download, stop, delete) is on another host, bulkapi.millionverifier.com, and takes the key as 'key'; it is not in this entry.",
+    "Failures such as a bad key or missing email still come back with HTTP 200 and a message in the error field."
+  ],
+  "sources": [
+    "https://developer.millionverifier.com/"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "millionverifier.email.verify",
+      "name": "Verify one email",
+      "summary": "Result (ok, catch_all, unknown, error, disposable, invalid), quality (good, bad, risky), subresult, role and free flags, and remaining credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The address to verify; encode special characters.",
+          "example": "someone@example.com"
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds to wait for the recipient server, 2 to 60 (default 20)."
+        }
+      },
+      "notes": [
+        "The response includes credits, the balance left after the call."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://developer.millionverifier.com/#operation/single-verification",
+      "verified": {
+        "docs": "https://developer.millionverifier.com/#operation/single-verification"
+      }
+    },
+    {
+      "id": "millionverifier.account.credits",
+      "name": "Get remaining credits",
+      "summary": "Remaining verification credits, plus renewing credits and the plan number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/credits",
+      "job": "account.usage",
+      "docs_url": "https://developer.millionverifier.com/#operation/api-credits",
+      "verified": {
+        "docs": "https://developer.millionverifier.com/#operation/api-credits"
+      }
+    }
+  ]
+}

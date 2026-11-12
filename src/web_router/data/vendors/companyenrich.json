@@ -1,0 +1,829 @@
+{
+  "vendor": "companyenrich",
+  "name": "CompanyEnrich",
+  "category": "company-data",
+  "summary": "Company and people search, enrichment, workforce insights, lookalikes and work-email lookup from CompanyEnrich.",
+  "docs_url": "https://docs.companyenrich.com",
+  "pricing_url": "https://companyenrich.com/pricing",
+  "base_url": "https://api.companyenrich.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "COMPANYENRICH_API_KEY"
+        ],
+        "description": "a CompanyEnrich API token from the dashboard (https://companyenrich.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-based; every response carries x-credit-balance, x-credit-cost and x-credit-remaining headers. account.me shows the balance.",
+    "Search endpoints page with an opaque cursor returned in the response; pass it back with the same filters. Count and preview endpoints are free.",
+    "Search and enrichment return a company or person ID usable with the get-by-ID endpoints."
+  ],
+  "sources": [
+    "https://docs.companyenrich.com/llms.txt",
+    "https://docs.companyenrich.com/docs/credits.md",
+    "https://docs.companyenrich.com/docs/rate-limit.md",
+    "https://docs.companyenrich.com/reference/post_v2-companies-search.md",
+    "https://docs.companyenrich.com/reference/post_v2-people-search.md",
+    "https://docs.companyenrich.com/reference/post_v2-companies-enrich.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "companyenrich.company.get",
+      "name": "Get a company by ID",
+      "summary": "1 credit plus paid expansions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/{companyId}",
+      "params": {
+        "companyId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CompanyEnrich company ID."
+        },
+        "expand": {
+          "in": "query",
+          "type": "array",
+          "description": "Paid expansions: financial, keywords, naicsCodes, technologies (1 credit each per company) or workforce (5 credits)."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-companies-companyid.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-companies-companyid.md"
+      }
+    },
+    {
+      "id": "companyenrich.company.enrich",
+      "name": "Enrich a company by domain",
+      "summary": "1 credit per successful enrichment plus paid expansions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/enrich",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company domain."
+        },
+        "expand": {
+          "in": "query",
+          "type": "array",
+          "description": "Paid expansions: financial, keywords, naicsCodes, technologies (1 credit each per company) or workforce (5 credits)."
+        },
+        "waitForEnrichment": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Wait for on-demand enrichment of companies not stored yet (default true)."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-companies-enrich.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-companies-enrich.md"
+      }
+    },
+    {
+      "id": "companyenrich.company.enrich_by_properties",
+      "name": "Enrich a company by name or profile URL",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/enrich",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        },
+        "linkedinUrl": {
+          "in": "body",
+          "type": "string",
+          "description": "Company LinkedIn URL."
+        },
+        "linkedinId": {
+          "in": "body",
+          "type": "string",
+          "description": "Company LinkedIn ID."
+        },
+        "twitterUrl": {
+          "in": "body",
+          "type": "string",
+          "description": "Company Twitter/X URL."
+        },
+        "facebookUrl": {
+          "in": "body",
+          "type": "string",
+          "description": "Company Facebook URL."
+        },
+        "instagramUrl": {
+          "in": "body",
+          "type": "string",
+          "description": "Company Instagram URL."
+        },
+        "youtubeUrl": {
+          "in": "body",
+          "type": "string",
+          "description": "Company YouTube URL."
+        },
+        "expand": {
+          "in": "body",
+          "type": "array",
+          "description": "Paid expansions: financial, keywords, naicsCodes, technologies (1 credit each per company) or workforce (5 credits)."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-companies-enrich.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-companies-enrich.md"
+      }
+    },
+    {
+      "id": "companyenrich.company.enrich_batch",
+      "name": "Enrich up to 50 companies by domain",
+      "summary": "1 credit per unique company returned plus paid expansions.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/enrich/batch",
+      "params": {
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "1 to 50 domains; duplicates enriched once."
+        },
+        "expand": {
+          "in": "body",
+          "type": "array",
+          "description": "Paid expansions: financial, keywords, naicsCodes, technologies (1 credit each per company) or workforce (5 credits)."
+        },
+        "waitForEnrichment": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Wait for on-demand enrichment; when false, unstored companies come back pending."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-companies-enrich-batch.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-companies-enrich-batch.md"
+      }
+    },
+    {
+      "id": "companyenrich.company.autocomplete",
+      "name": "Autocomplete companies by domain",
+      "summary": "Up to 10 companies; free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/autocomplete",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain prefix or URL, max 100 characters."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-companies-autocomplete.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-companies-autocomplete.md"
+      }
+    },
+    {
+      "id": "companyenrich.company.workforce",
+      "name": "Get company workforce insights",
+      "summary": "Employee count, range, department headcounts and 12 months of history.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/workforce",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "CompanyEnrich company ID. Give exactly one of id or domain."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain. Give exactly one of id or domain."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "nextCursor from a previous response, for earlier history; omit for the latest 12 months."
+        }
+      },
+      "notes": [
+        "5 credits per page, including each earlier year of history."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-companies-workforce.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-companies-workforce.md"
+      }
+    },
+    {
+      "id": "companyenrich.company.search",
+      "name": "Search companies",
+      "summary": "Filters, a natural-language query or lookalike seeds.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/search",
+      "params": {
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum items to return."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response; omit for the first page."
+        },
+        "expand": {
+          "in": "body",
+          "type": "array",
+          "description": "Paid expansions: financial, keywords, naicsCodes, technologies (1 credit each per company) or workforce (5 credits)."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters: query, domain, keywords, technologies, region, country, state, city, type, employees, revenue, workforceGrowth, naicsCodes, categories, foundedYear, fundingRounds and more.",
+          "example": {
+            "country": [
+              "US"
+            ],
+            "technologies": [
+              "Salesforce"
+            ]
+          }
+        },
+        "semantic": {
+          "in": "body",
+          "type": "object",
+          "description": "{query, weight, autoFilter}: a natural-language description of the companies.",
+          "example": {
+            "query": "Solar startups that raised a Series B"
+          }
+        },
+        "lookalike": {
+          "in": "body",
+          "type": "object",
+          "description": "{domains, weight, minScore}: seed company domains to find lookalikes of.",
+          "example": {
+            "domains": [
+              "stripe.com"
+            ]
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data.",
+        "Credits per returned company: standard 1, semantic 2, lookalike 5, plus expansions."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-companies-search.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-companies-search.md"
+      }
+    },
+    {
+      "id": "companyenrich.company.search_count",
+      "name": "Count matching companies",
+      "summary": "Free; send {} to count without filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/search/count",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters: query, domain, keywords, technologies, region, country, state, city, type, employees, revenue, workforceGrowth, naicsCodes, categories, foundedYear, fundingRounds and more.",
+          "example": {
+            "country": [
+              "US"
+            ],
+            "technologies": [
+              "Salesforce"
+            ]
+          }
+        },
+        "semantic": {
+          "in": "body",
+          "type": "object",
+          "description": "{query, weight, autoFilter}: a natural-language description of the companies.",
+          "example": {
+            "query": "Solar startups that raised a Series B"
+          }
+        },
+        "lookalike": {
+          "in": "body",
+          "type": "object",
+          "description": "{domains, weight, minScore}: seed company domains to find lookalikes of.",
+          "example": {
+            "domains": [
+              "stripe.com"
+            ]
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-companies-search-count.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-companies-search-count.md"
+      }
+    },
+    {
+      "id": "companyenrich.company.search_preview",
+      "name": "Preview matching companies",
+      "summary": "Up to 25 summaries; free but needs a plan with company previews.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/search/preview",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters: query, domain, keywords, technologies, region, country, state, city, type, employees, revenue, workforceGrowth, naicsCodes, categories, foundedYear, fundingRounds and more.",
+          "example": {
+            "country": [
+              "US"
+            ],
+            "technologies": [
+              "Salesforce"
+            ]
+          }
+        },
+        "semantic": {
+          "in": "body",
+          "type": "object",
+          "description": "{query, weight, autoFilter}: a natural-language description of the companies.",
+          "example": {
+            "query": "Solar startups that raised a Series B"
+          }
+        },
+        "lookalike": {
+          "in": "body",
+          "type": "object",
+          "description": "{domains, weight, minScore}: seed company domains to find lookalikes of.",
+          "example": {
+            "domains": [
+              "stripe.com"
+            ]
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-companies-search-preview.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-companies-search-preview.md"
+      }
+    },
+    {
+      "id": "companyenrich.people.search",
+      "name": "Search people",
+      "summary": "Person filters with an optional company query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/search",
+      "params": {
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum items to return."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response; omit for the first page."
+        },
+        "expand": {
+          "in": "body",
+          "type": "array",
+          "description": "Paid expansion: education (1 credit per person)."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Person filters: query, companyId, domain, companyLinkedinHandle, seniority, department, country, position, currentCompanyStartDate, education, pastExperience."
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company query for people whose current company matches: {filter, semantic, lookalike}, same shapes as company search."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data.",
+        "2 credits per returned person, plus the education expansion."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-people-search.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-people-search.md"
+      }
+    },
+    {
+      "id": "companyenrich.people.search_count",
+      "name": "Count matching people",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/search/count",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Person filters: query, companyId, domain, companyLinkedinHandle, seniority, department, country, position, currentCompanyStartDate, education, pastExperience."
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company query for people whose current company matches: {filter, semantic, lookalike}, same shapes as company search."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-people-search-count.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-people-search-count.md"
+      }
+    },
+    {
+      "id": "companyenrich.people.search_preview",
+      "name": "Preview matching people",
+      "summary": "Up to 10 summaries; free but needs a plan with people previews.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/search/preview",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Person filters: query, companyId, domain, companyLinkedinHandle, seniority, department, country, position, currentCompanyStartDate, education, pastExperience."
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company query for people whose current company matches: {filter, semantic, lookalike}, same shapes as company search."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-people-search-preview.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-people-search-preview.md"
+      }
+    },
+    {
+      "id": "companyenrich.people.get",
+      "name": "Get a person by ID",
+      "summary": "2 credits plus the education expansion.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/people/{personId}",
+      "params": {
+        "personId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "CompanyEnrich person ID."
+        },
+        "expand": {
+          "in": "query",
+          "type": "array",
+          "description": "Paid expansion: education (1 credit per person)."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-people-personid.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-people-personid.md"
+      }
+    },
+    {
+      "id": "companyenrich.people.enrich",
+      "name": "Enrich a person by email",
+      "summary": "Resolves the company from the email domain and matches the person.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/enrich",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email address of the person."
+        },
+        "expand": {
+          "in": "body",
+          "type": "array",
+          "description": "Paid expansion: education (1 credit per person)."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data.",
+        "5 credits when a person is returned."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-people-enrich.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-people-enrich.md"
+      }
+    },
+    {
+      "id": "companyenrich.people.find_email",
+      "name": "Find a person's work email (beta)",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/people/{personId}/email",
+      "params": {
+        "personId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "CompanyEnrich person ID."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain to resolve the email on; defaults to current companies in seniority order."
+        }
+      },
+      "notes": [
+        "Beta. 10 credits when a work email is found that your account has not accessed before; repeats and misses are free."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-people-personid-email.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-people-personid-email.md"
+      }
+    },
+    {
+      "id": "companyenrich.geo.regions",
+      "name": "Get regions",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/geo/regions",
+      "job": "reference.geo",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-geo-regions.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-geo-regions.md"
+      }
+    },
+    {
+      "id": "companyenrich.geo.country",
+      "name": "Get a country by code",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/geo/countries/{countryCode}",
+      "params": {
+        "countryCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Two-letter country code.",
+          "example": "US"
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-geo-countries-countrycode.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-geo-countries-countrycode.md"
+      }
+    },
+    {
+      "id": "companyenrich.geo.countries",
+      "name": "Search countries",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/geo/countries",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Case-insensitive name substring."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum items to return."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response; omit for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "reference.geo",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-geo-countries.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-geo-countries.md"
+      }
+    },
+    {
+      "id": "companyenrich.geo.states",
+      "name": "Search states",
+      "summary": "Free. Cursors expire 30 minutes after the first page.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/geo/states",
+      "params": {
+        "countryCodes": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 250 two-letter country codes."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Case-insensitive name substring."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum items to return."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response; omit for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "reference.geo",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-geo-states.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-geo-states.md"
+      }
+    },
+    {
+      "id": "companyenrich.geo.cities",
+      "name": "Search cities",
+      "summary": "Free. Cursors expire 30 minutes after the first page.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/geo/cities",
+      "params": {
+        "stateIds": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 100 state IDs."
+        },
+        "countryCodes": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 250 two-letter country codes."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Case-insensitive name substring."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum items to return."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response; omit for the first page."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "reference.geo",
+      "docs_url": "https://docs.companyenrich.com/reference/post_v2-geo-cities.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/post_v2-geo-cities.md"
+      }
+    },
+    {
+      "id": "companyenrich.industries.list",
+      "name": "List industries",
+      "summary": "Industries with NAICS code prefixes for filter.naicsCodes; free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/industries",
+      "job": "reference.industries",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-industries.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-industries.md"
+      }
+    },
+    {
+      "id": "companyenrich.keywords.autocomplete",
+      "name": "Autocomplete keywords",
+      "summary": "Up to 10 suggestions; free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/keywords/autocomplete",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keyword prefix, max 100 characters."
+        }
+      },
+      "job": "reference.keywords",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-keywords-autocomplete.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-keywords-autocomplete.md"
+      }
+    },
+    {
+      "id": "companyenrich.technologies.autocomplete",
+      "name": "Autocomplete technologies",
+      "summary": "Up to 10 suggestions; free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/technologies/autocomplete",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Technology prefix, max 100 characters."
+        }
+      },
+      "job": "company.technologies",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-technologies-autocomplete.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-technologies-autocomplete.md"
+      }
+    },
+    {
+      "id": "companyenrich.positions.autocomplete",
+      "name": "Autocomplete job titles",
+      "summary": "Up to 10 suggestions; free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/positions/autocomplete",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Job title prefix, max 100 characters."
+        }
+      },
+      "job": "reference.positions",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-positions-autocomplete.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-positions-autocomplete.md"
+      }
+    },
+    {
+      "id": "companyenrich.account.me",
+      "name": "Get current account and credit balance",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/me",
+      "job": "account.usage",
+      "docs_url": "https://docs.companyenrich.com/reference/get_v2-me.md",
+      "verified": {
+        "docs": "https://docs.companyenrich.com/reference/get_v2-me.md"
+      }
+    }
+  ]
+}

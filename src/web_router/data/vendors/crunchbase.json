@@ -1,0 +1,316 @@
+{
+  "vendor": "crunchbase",
+  "name": "Crunchbase",
+  "category": "company-data",
+  "summary": "Company, funding, investor and people data from the Crunchbase REST API (v4): entity lookup, search and autocomplete.",
+  "docs_url": "https://data.crunchbase.com/docs/using-the-api",
+  "base_url": "https://api.crunchbase.com/v4/data",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CRUNCHBASE_API_KEY"
+        ],
+        "description": "your Crunchbase API key (Crunchbase API integrations page > Show Key); API access comes through the Crunchbase sales team"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-cb-user-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Read-only API. Limits per key: 200 requests per minute and 3 requests in flight at once; 429 may carry Retry-After.",
+    "Your key only returns the fields and collections of your licensed package.",
+    "Search pages with after_id (the last result uuid); entity cards hold at most 100 items, then page with organization.card."
+  ],
+  "sources": [
+    "https://data.crunchbase.com/docs/api-essentials.md",
+    "https://data.crunchbase.com/docs/entity-lookup.md",
+    "https://data.crunchbase.com/docs/search-api-basics.md",
+    "https://data.crunchbase.com/docs/autocomplete.md",
+    "https://data.crunchbase.com/docs/paginate-card-results.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "crunchbase.organization.get",
+      "name": "Look up an organization",
+      "summary": "An organization with chosen fields and relationship cards.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entities/organizations/{entity_id}",
+      "params": {
+        "entity_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization UUID or permalink (the last part of its crunchbase.com URL).",
+          "example": "crunchbase"
+        },
+        "field_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return in properties.",
+          "example": "identifier,short_description"
+        },
+        "card_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated relationship cards to include (each returns at most 100 items).",
+          "example": "founders"
+        }
+      },
+      "notes": [
+        "Every field and card is optional in the response; fields you are not licensed for are not returned."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://data.crunchbase.com/docs/entity-lookup.md",
+      "verified": {
+        "docs": "https://data.crunchbase.com/docs/entity-lookup.md"
+      }
+    },
+    {
+      "id": "crunchbase.person.get",
+      "name": "Look up a person",
+      "summary": "A person with chosen fields and cards.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entities/people/{entity_id}",
+      "params": {
+        "entity_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Person UUID or permalink (the last part of its crunchbase.com URL).",
+          "example": "crunchbase"
+        },
+        "field_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return in properties.",
+          "example": "identifier,short_description"
+        },
+        "card_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated relationship cards to include (each returns at most 100 items).",
+          "example": "founders"
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://data.crunchbase.com/docs/entity-lookup.md",
+      "verified": {
+        "docs": "https://data.crunchbase.com/docs/entity-lookup.md"
+      }
+    },
+    {
+      "id": "crunchbase.organization.card",
+      "name": "Page through one card of an organization",
+      "summary": "More than the 100 items an entity lookup embeds.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entities/organizations/{entity_id}/cards/{card_id}",
+      "params": {
+        "entity_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization UUID or permalink (the last part of its crunchbase.com URL).",
+          "example": "crunchbase"
+        },
+        "card_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Card name such as founders.",
+          "example": "founders"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "after_id": {
+          "in": "query",
+          "type": "string",
+          "description": "UUID of the last item of the previous page."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://data.crunchbase.com/docs/paginate-card-results.md",
+      "verified": {
+        "docs": "https://data.crunchbase.com/docs/paginate-card-results.md"
+      }
+    },
+    {
+      "id": "crunchbase.organization.search",
+      "name": "Search organizations",
+      "summary": "Organizations matching filter predicates.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/searches/organizations",
+      "params": {
+        "field_ids": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Fields to return per entity.",
+          "example": [
+            "identifier",
+            "short_description"
+          ]
+        },
+        "query": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Filter predicates combined with AND: {type: \"predicate\", field_id, operator_id, values}.",
+          "example": [
+            {
+              "type": "predicate",
+              "field_id": "categories",
+              "operator_id": "includes",
+              "values": [
+                "5c4e6926-5ff7-b188-0892-c8eb036c5ace"
+              ]
+            }
+          ]
+        },
+        "order": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort instructions: {field_id, sort: asc|desc, nulls: first|last}.",
+          "example": [
+            {
+              "field_id": "rank_org",
+              "sort": "asc"
+            }
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size, 1 to 1000 (default 100); set it explicitly."
+        },
+        "after_id": {
+          "in": "body",
+          "type": "string",
+          "description": "UUID of the last result of the previous page, for forward paging."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. Filters are ANDed; for OR make separate searches. Results are under entities[].properties.",
+        "Fields and operators depend on your licensed package; see the search fields and operators page."
+      ],
+      "job": "company.search",
+      "docs_url": "https://data.crunchbase.com/docs/search-api-basics.md",
+      "verified": {
+        "docs": "https://data.crunchbase.com/docs/search-api-basics.md"
+      }
+    },
+    {
+      "id": "crunchbase.person.search",
+      "name": "Search people",
+      "summary": "People matching filter predicates.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/searches/people",
+      "params": {
+        "field_ids": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Fields to return per entity.",
+          "example": [
+            "identifier",
+            "short_description"
+          ]
+        },
+        "query": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Filter predicates combined with AND: {type: \"predicate\", field_id, operator_id, values}.",
+          "example": [
+            {
+              "type": "predicate",
+              "field_id": "categories",
+              "operator_id": "includes",
+              "values": [
+                "5c4e6926-5ff7-b188-0892-c8eb036c5ace"
+              ]
+            }
+          ]
+        },
+        "order": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort instructions: {field_id, sort: asc|desc, nulls: first|last}.",
+          "example": [
+            {
+              "field_id": "rank_org",
+              "sort": "asc"
+            }
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size, 1 to 1000 (default 100); set it explicitly."
+        },
+        "after_id": {
+          "in": "body",
+          "type": "string",
+          "description": "UUID of the last result of the previous page, for forward paging."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. Same body as organization.search."
+      ],
+      "job": "people.search",
+      "docs_url": "https://data.crunchbase.com/docs/search-api-basics.md",
+      "verified": {
+        "docs": "https://data.crunchbase.com/docs/search-api-basics.md"
+      }
+    },
+    {
+      "id": "crunchbase.autocomplete",
+      "name": "Find entities by partial name",
+      "summary": "Find the UUID or permalink to use in lookups and search predicates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/autocompletes",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Partial name to match.",
+          "example": "airbnb"
+        },
+        "collection_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated collections, e.g. organization.companies, categories, location.cities, principal.investors."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, max 25."
+        }
+      },
+      "notes": [
+        "Meant for a person picking a match, not for exact entity matching."
+      ],
+      "job": "company.search",
+      "docs_url": "https://data.crunchbase.com/docs/autocomplete.md",
+      "verified": {
+        "docs": "https://data.crunchbase.com/docs/autocomplete.md"
+      }
+    }
+  ]
+}

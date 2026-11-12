@@ -1,0 +1,414 @@
+{
+  "vendor": "listennotes",
+  "name": "Listen Notes",
+  "category": "media",
+  "summary": "Podcast search engine API: full-text search of podcasts and episodes, podcast and episode metadata with transcripts, best-of lists, recommendations and genres.",
+  "docs_url": "https://www.listennotes.com/api/docs/",
+  "pricing_url": "https://www.listennotes.com/api/pricing/",
+  "base_url": "https://listen-api.listennotes.com/api/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LISTENNOTES_API_KEY"
+        ],
+        "description": "a Listen API key (listennotes.com/api/dashboard). Sent in the X-ListenAPI-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-ListenAPI-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The FREE plan has a monthly request quota (X-ListenAPI-FreeQuota header) and answers 429 once it is used up; it also caps search at the first 30 results (offset < 30) and returns low-resolution images.",
+    "Timestamps (published_after, published_before, pub_date_ms) are Unix milliseconds; audio lengths are minutes.",
+    "Flags such as safe_mode and sort_by_date are 0 or 1, not booleans.",
+    "A mock server at https://listen-api-test.listennotes.com/api/v2 answers with fake data and no key.",
+    "Playlists, podcast submission, RSS refresh and deletion requests are in the API but not in this entry."
+  ],
+  "sources": [
+    "https://www.listennotes.com/api/docs/",
+    "https://listen-api.listennotes.com/api/v2/openapi.json",
+    "https://www.listennotes.com/api/docs/openapi.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "listennotes.search",
+      "name": "Search podcasts and episodes",
+      "summary": "Full-text search of episodes, podcasts or curated lists, with genre, language, region, date and length filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search term; double quotes for a verbatim match.",
+          "example": "star wars"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "What to search, default episode.",
+          "enum": [
+            "episode",
+            "podcast",
+            "curated"
+          ]
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pagination offset; use next_offset from the response."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 10, default 10."
+        },
+        "sort_by_date": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 sorts by date, 0 (default) by relevance.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "len_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum audio length in minutes (episode or podcast)."
+        },
+        "len_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum audio length in minutes (episode or podcast)."
+        },
+        "genre_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated genre IDs from listennotes.genres."
+        },
+        "published_before": {
+          "in": "query",
+          "type": "integer",
+          "description": "Published before this Unix time in milliseconds."
+        },
+        "published_after": {
+          "in": "query",
+          "type": "integer",
+          "description": "Published after this Unix time in milliseconds."
+        },
+        "only_in": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to search: title, description, author, audio. Default all."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language name, e.g. English (list from GET /languages)."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region code, e.g. us (list from GET /regions)."
+        },
+        "ocid": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 5 comma-separated podcast IDs to search within (episodes)."
+        },
+        "safe_mode": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 excludes explicit content.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "unique_podcasts": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 keeps one episode per podcast.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "FREE plan: only offset < 30 is served."
+      ],
+      "job": "podcasts.search",
+      "docs_url": "https://www.listennotes.com/api/docs/",
+      "verified": {
+        "docs": "https://www.listennotes.com/api/docs/"
+      }
+    },
+    {
+      "id": "listennotes.typeahead",
+      "name": "Autosuggest search terms",
+      "summary": "Suggested search terms, and optionally genres and up to 5 podcasts, for partial input.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/typeahead",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Partial search term."
+        },
+        "show_podcasts": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 also suggests podcasts (slower).",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "show_genres": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 also suggests genres.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "safe_mode": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 excludes explicit podcasts (with show_podcasts=1).",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "web.suggest",
+      "docs_url": "https://www.listennotes.com/api/docs/",
+      "verified": {
+        "docs": "https://www.listennotes.com/api/docs/"
+      }
+    },
+    {
+      "id": "listennotes.podcast.get",
+      "name": "Get a podcast and its episodes",
+      "summary": "Podcast metadata and 10 episodes at a time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/podcasts/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Podcast ID."
+        },
+        "next_episode_pub_date": {
+          "in": "query",
+          "type": "integer",
+          "description": "For paging episodes: next_episode_pub_date from the previous response."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Episode order, default recent_first.",
+          "enum": [
+            "recent_first",
+            "oldest_first"
+          ]
+        }
+      },
+      "job": "podcasts.get",
+      "docs_url": "https://www.listennotes.com/api/docs/",
+      "verified": {
+        "docs": "https://www.listennotes.com/api/docs/"
+      }
+    },
+    {
+      "id": "listennotes.episode.get",
+      "name": "Get an episode",
+      "summary": "Episode metadata, audio URL and optionally its transcript.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/episodes/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Episode ID.",
+          "example": "6b6d65930c5a4f71b254465871fed370"
+        },
+        "show_transcript": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 includes the transcript (when available).",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "podcasts.episode",
+      "docs_url": "https://www.listennotes.com/api/docs/",
+      "verified": {
+        "docs": "https://www.listennotes.com/api/docs/"
+      }
+    },
+    {
+      "id": "listennotes.best_podcasts",
+      "name": "List best podcasts by genre",
+      "summary": "Curated top podcasts overall or in a genre, region or language.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/best_podcasts",
+      "params": {
+        "genre_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Genre ID; omitted means overall best."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region where the podcasts are popular, default us."
+        },
+        "publisher_region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region the podcasts are produced in."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language name, e.g. English."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order; listen_score sorts by popularity.",
+          "enum": [
+            "recent_added_first",
+            "oldest_added_first",
+            "recent_published_first",
+            "oldest_published_first",
+            "listen_score"
+          ]
+        },
+        "safe_mode": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 excludes explicit podcasts.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "podcasts.search",
+      "docs_url": "https://www.listennotes.com/api/docs/",
+      "verified": {
+        "docs": "https://www.listennotes.com/api/docs/"
+      }
+    },
+    {
+      "id": "listennotes.podcast.recommendations",
+      "name": "Get similar podcasts",
+      "summary": "Podcasts recommended for a podcast.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/podcasts/{id}/recommendations",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Podcast ID."
+        },
+        "safe_mode": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 excludes explicit podcasts.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "podcasts.search",
+      "docs_url": "https://www.listennotes.com/api/docs/",
+      "verified": {
+        "docs": "https://www.listennotes.com/api/docs/"
+      }
+    },
+    {
+      "id": "listennotes.podcasts.by_domain",
+      "name": "Find podcasts by publisher domain",
+      "summary": "Podcasts published under a domain such as nytimes.com.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/podcasts/domains/{domain_name}",
+      "params": {
+        "domain_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Publisher domain.",
+          "example": "npr.org"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        }
+      },
+      "job": "podcasts.search",
+      "docs_url": "https://www.listennotes.com/api/docs/",
+      "verified": {
+        "docs": "https://www.listennotes.com/api/docs/"
+      }
+    },
+    {
+      "id": "listennotes.genres",
+      "name": "List podcast genres",
+      "summary": "Genre IDs and names for filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/genres",
+      "params": {
+        "top_level_only": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 lists only top-level genres.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "reference.categories",
+      "docs_url": "https://www.listennotes.com/api/docs/",
+      "verified": {
+        "docs": "https://www.listennotes.com/api/docs/"
+      }
+    }
+  ]
+}

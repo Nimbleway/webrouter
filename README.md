@@ -579,10 +579,13 @@ response.data  # Google's JSON, untouched
 # A path the catalog does not name, still with the vendor's credentials:
 router.vendor_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
 
-# A write: refused unless you say so. Dry-run first where the vendor can.
-router.call_vendor(
-    "google-ads.campaign_budgets.mutate",
-    {"customer_id": "1234567890", "operations": [...], "validateOnly": True},
+# The catalog names only endpoints that read. A write goes through vendor_request,
+# refused unless you say so. Dry-run first where the vendor can.
+router.vendor_request(
+    "google-ads",
+    "POST",
+    "/customers/1234567890/campaignBudgets:mutate",
+    body={"operations": [...], "validateOnly": True},
     allow_writes=True,
 )
 ```
@@ -602,8 +605,9 @@ vendor's message, including URL-encoded copies of a key sent in the query.
 
 To pin a vendor's file or add one without forking, point
 `WEB_ROUTER_VENDOR_CATALOG` at a directory of JSON files: one named for a
-shipped vendor replaces it whole. [AGENTS.md](AGENTS.md#adding-a-vendor) has
-the format's rules.
+shipped vendor replaces it whole. A vendor of your own takes one of the
+shipped shelves as its `category`, or `custom` when none fits.
+[AGENTS.md](AGENTS.md#adding-a-vendor) has the format's rules.
 
 ## The MCP server
 

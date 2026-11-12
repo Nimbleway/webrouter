@@ -1,0 +1,378 @@
+{
+  "vendor": "edges",
+  "name": "Edges",
+  "category": "social",
+  "summary": "LinkedIn and Sales Navigator data over REST: extract people, companies and posts, run searches, and find profile or company URLs.",
+  "docs_url": "https://docs.edges.run/v1/api/introduction",
+  "pricing_url": "https://docs.edges.run/v1/api/credit-costs",
+  "base_url": "https://api.edges.run/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EDGES_API_KEY"
+        ],
+        "description": "An Edges API key (app.edges.run > Settings > Developers). Each user has their own key. Sent in the X-API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "Accept": "application/json"
+  },
+  "notes": [
+    "Every action takes a JSON body {input: {...}, parameters: {...}, identity_mode, identity_ids}. input holds the action's own fields (e.g. linkedin_profile_url).",
+    "An action runs on a LinkedIn account: your own connected identity (identity_ids, the default direct mode) or Edges' managed pool (identity_mode managed, extra credits). Without either the call fails.",
+    "Credits are charged per result returned (credit_ratio x results; most actions are 1). A run that returns nothing is free. GET /workspaces shows the balance.",
+    "These are the live endpoints, for one input and few results. Each action also has /run/async and /run/schedule variants that paginate for you and deliver by callback; not in this entry.",
+    "Write actions (connection requests, messages, InMail, visits, reactions), identities and integrations are not in this entry."
+  ],
+  "sources": [
+    "https://docs.edges.run/llms.txt",
+    "https://docs.edges.run/v1/api/introduction",
+    "https://docs.edges.run/v1/api/credit-costs",
+    "https://docs.edges.run/v1/runs/pagination",
+    "https://docs.edges.run/v1/identities/modes"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "edges.workspace.get",
+      "name": "Get workspace and credits",
+      "summary": "The workspace's plan, credits left, used and max, and billing period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/workspaces",
+      "job": "account.usage",
+      "docs_url": "https://docs.edges.run/v1/api/workspace/get",
+      "verified": {
+        "docs": "https://docs.edges.run/v1/api/workspace/get"
+      }
+    },
+    {
+      "id": "edges.people.extract",
+      "name": "Extract a LinkedIn profile",
+      "summary": "A person's profile: name, headline, location, job, and optionally experiences, education, skills and highlights.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/actions/linkedin-extract-people/run/live",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{linkedin_profile_url}: a linkedin.com/in/, /pub/, /sales/people/ or /sales/lead/ URL.",
+          "example": {
+            "linkedin_profile_url": "https://www.linkedin.com/in/jane-doe-example"
+          }
+        },
+        "parameters": {
+          "in": "body",
+          "type": "object",
+          "description": "Booleans, all default false: sections (education, languages, volunteering, summary, current company), experiences (partial list), skills (partial list), highlights (followers, connections, connection degree)."
+        },
+        "identity_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "direct (default) runs on identity_ids; auto on any identity in the workspace; managed on Edges' pool of accounts, at an extra credit cost.",
+          "enum": [
+            "direct",
+            "auto",
+            "managed"
+          ]
+        },
+        "identity_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Identity UUIDs (user_uid, not account_uid) whose connected LinkedIn account runs the action; needed with direct mode."
+        }
+      },
+      "notes": [
+        "A read over POST, run live; charged per result returned."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.edges.run/v1/api/actions/linkedin-extract-people",
+      "verified": {
+        "docs": "https://docs.edges.run/v1/api/actions/linkedin-extract-people"
+      }
+    },
+    {
+      "id": "edges.company.extract",
+      "name": "Extract a LinkedIn company",
+      "summary": "A company page: name, description, industry, employee count and more.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/actions/linkedin-extract-company/run/live",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{linkedin_company_url}: the company's LinkedIn page URL.",
+          "example": {
+            "linkedin_company_url": "https://www.linkedin.com/company/microsoft/"
+          }
+        },
+        "identity_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "direct (default) runs on identity_ids; auto on any identity in the workspace; managed on Edges' pool of accounts, at an extra credit cost.",
+          "enum": [
+            "direct",
+            "auto",
+            "managed"
+          ]
+        },
+        "identity_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Identity UUIDs (user_uid, not account_uid) whose connected LinkedIn account runs the action; needed with direct mode."
+        }
+      },
+      "notes": [
+        "A read over POST, run live; charged per result returned."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.edges.run/v1/api/actions/linkedin-extract-company",
+      "verified": {
+        "docs": "https://docs.edges.run/v1/api/actions/linkedin-extract-company"
+      }
+    },
+    {
+      "id": "edges.post.extract",
+      "name": "Extract a LinkedIn post",
+      "summary": "A post's content, author, engagement counts and media.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/actions/linkedin-extract-post/run/live",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{linkedin_post_url}: the post's URL."
+        },
+        "identity_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "direct (default) runs on identity_ids; auto on any identity in the workspace; managed on Edges' pool of accounts, at an extra credit cost.",
+          "enum": [
+            "direct",
+            "auto",
+            "managed"
+          ]
+        },
+        "identity_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Identity UUIDs (user_uid, not account_uid) whose connected LinkedIn account runs the action; needed with direct mode."
+        }
+      },
+      "notes": [
+        "A read over POST, run live; charged per result returned."
+      ],
+      "job": "social.posts",
+      "docs_url": "https://docs.edges.run/v1/api/actions/linkedin-extract-post",
+      "verified": {
+        "docs": "https://docs.edges.run/v1/api/actions/linkedin-extract-post"
+      }
+    },
+    {
+      "id": "edges.people.search",
+      "name": "Search LinkedIn people",
+      "summary": "People matching a LinkedIn people search URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/actions/linkedin-search-people/run/live",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{linkedin_people_search_url}: a URL starting https://www.linkedin.com/search/results/people/?...",
+          "example": {
+            "linkedin_people_search_url": "https://www.linkedin.com/search/results/people/?keywords=data%20engineer"
+          }
+        },
+        "parameters": {
+          "in": "body",
+          "type": "object",
+          "description": "{only_extract_unique_profile: boolean}."
+        },
+        "identity_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "direct (default) runs on identity_ids; auto on any identity in the workspace; managed on Edges' pool of accounts, at an extra credit cost.",
+          "enum": [
+            "direct",
+            "auto",
+            "managed"
+          ]
+        },
+        "identity_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Identity UUIDs (user_uid, not account_uid) whose connected LinkedIn account runs the action; needed with direct mode."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The X-Pagination-Next header of the previous response. Cursors expire after 24 hours."
+        }
+      },
+      "notes": [
+        "Paged: keep following the X-Pagination-Next response header with cursor until it is absent; a short page does not mean the end.",
+        "A read over POST, run live; charged per result returned."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.edges.run/v1/api/actions/linkedin-search-people",
+      "verified": {
+        "docs": "https://docs.edges.run/v1/api/actions/linkedin-search-people"
+      }
+    },
+    {
+      "id": "edges.company.employees",
+      "name": "Search a company's employees",
+      "summary": "Employees of one company, optionally filtered.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/actions/linkedin-search-company-employees/run/live",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{linkedin_company_url} or {linkedin_company_id}.",
+          "example": {
+            "linkedin_company_url": "https://www.linkedin.com/company/microsoft/"
+          }
+        },
+        "parameters": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional string filters: title, network (1st, 2nd or 3rd), geo_urn, industry, keywords, past_company, school_filter, contact_interest, profile_language."
+        },
+        "identity_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "direct (default) runs on identity_ids; auto on any identity in the workspace; managed on Edges' pool of accounts, at an extra credit cost.",
+          "enum": [
+            "direct",
+            "auto",
+            "managed"
+          ]
+        },
+        "identity_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Identity UUIDs (user_uid, not account_uid) whose connected LinkedIn account runs the action; needed with direct mode."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The X-Pagination-Next header of the previous response. Cursors expire after 24 hours."
+        }
+      },
+      "notes": [
+        "Paged: keep following the X-Pagination-Next response header with cursor until it is absent; a short page does not mean the end.",
+        "A read over POST, run live; charged per result returned."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.edges.run/v1/api/actions/linkedin-search-company-employees",
+      "verified": {
+        "docs": "https://docs.edges.run/v1/api/actions/linkedin-search-company-employees"
+      }
+    },
+    {
+      "id": "edges.people.find_url",
+      "name": "Find a LinkedIn profile URL",
+      "summary": "Use AI to find a person's LinkedIn profile URL from their name and context.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/actions/linkedin-find-profile-url/run/live",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{full_name} (required), with optional company_name, domain and job_title.",
+          "example": {
+            "full_name": "Satya Nadella",
+            "company_name": "Microsoft"
+          }
+        },
+        "identity_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "direct (default) runs on identity_ids; auto on any identity in the workspace; managed on Edges' pool of accounts, at an extra credit cost.",
+          "enum": [
+            "direct",
+            "auto",
+            "managed"
+          ]
+        },
+        "identity_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Identity UUIDs (user_uid, not account_uid) whose connected LinkedIn account runs the action; needed with direct mode."
+        }
+      },
+      "notes": [
+        "A read over POST, run live; charged per result returned."
+      ],
+      "job": "people.linkedin.find",
+      "docs_url": "https://docs.edges.run/v1/api/actions/linkedin-find-profile-url",
+      "verified": {
+        "docs": "https://docs.edges.run/v1/api/actions/linkedin-find-profile-url"
+      }
+    },
+    {
+      "id": "edges.company.find_url",
+      "name": "Find a LinkedIn company URL",
+      "summary": "Use AI to find a company's LinkedIn page URL from its name or domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/actions/linkedin-find-company-url/run/live",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{domain} or {company_name}, with optional address.",
+          "example": {
+            "domain": "microsoft.com"
+          }
+        },
+        "identity_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "direct (default) runs on identity_ids; auto on any identity in the workspace; managed on Edges' pool of accounts, at an extra credit cost.",
+          "enum": [
+            "direct",
+            "auto",
+            "managed"
+          ]
+        },
+        "identity_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Identity UUIDs (user_uid, not account_uid) whose connected LinkedIn account runs the action; needed with direct mode."
+        }
+      },
+      "notes": [
+        "A read over POST, run live; charged per result returned."
+      ],
+      "job": "company.linkedin.find",
+      "docs_url": "https://docs.edges.run/v1/api/actions/linkedin-find-company-url",
+      "verified": {
+        "docs": "https://docs.edges.run/v1/api/actions/linkedin-find-company-url"
+      }
+    }
+  ]
+}

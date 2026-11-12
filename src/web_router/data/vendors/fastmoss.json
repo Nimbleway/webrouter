@@ -1,0 +1,373 @@
+{
+  "vendor": "fastmoss",
+  "name": "FastMoss",
+  "category": "social",
+  "summary": "TikTok Shop data: products, shops, creators, videos and rankings, with sales and revenue estimates by region.",
+  "docs_url": "https://developer.fastmoss.com/api/docs/guide/quickStart.html",
+  "base_url": "https://openapi.fastmoss.com",
+  "auth": {
+    "credentials": {
+      "client_secret": {
+        "env": [
+          "FASTMOSS_API_KEY"
+        ],
+        "description": "The FastMoss client_secret from the developer Console, sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {client_secret}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is a POST with a JSON body, including the reads.",
+    "Answers are {code, msg, data}; check code, not just the HTTP status. 30003 means the access-frequency limit was hit, 30002 a data limit.",
+    "Most list calls take filter, orderby, page (default 1) and pagesize (default 10, max 100), with page x pagesize capped (5000 for searches, 500 for rankings). Range filters are {min, max} objects; time ranges are Unix seconds.",
+    "Money fields are in the region's own currency, so revenue and price filters need a region (or seller_id)."
+  ],
+  "sources": [
+    "https://developer.fastmoss.com/api/docs/guide/quickStart.html",
+    "https://developer.fastmoss.com/api/docs/guide/thingsToNote.html",
+    "https://developer.fastmoss.com/api/docs/product/v1/search.html",
+    "https://developer.fastmoss.com/api/docs/creator/v1/search.html",
+    "https://developer.fastmoss.com/api/docs/shop/v1/search.html",
+    "https://developer.fastmoss.com/api/docs/video/v1/search.html",
+    "https://developer.fastmoss.com/api/docs/product/v1/salesTrend.html",
+    "https://developer.fastmoss.com/api/docs/product/v1/review.html",
+    "https://developer.fastmoss.com/api/docs/product/v1/topSelling.html",
+    "https://developer.fastmoss.com/api/docs/product/v1/productCategory.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fastmoss.products.search",
+      "name": "Search TikTok Shop products",
+      "summary": "Products by keyword and filters, with units sold, revenue, commission and creator counts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/product/v1/search",
+      "params": {
+        "keywords": {
+          "in": "body",
+          "type": "string",
+          "description": "Search words, fuzzy matched."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters: region, l1/l2/l3_category_id, seller_id, product_id, price_range, commission_rate_range, creator_count_range, units_sold_range, total_gmv_range, day7_units_sold_range, day7_gmv_range, launch_time_range, is_cross_border, is_fully_managed, is_new_listed, is_free_shipping, is_local_warehouse, is_top_selling, off_shelves (0 on sale, 1 off), promotion_channel (1 video, 2 live, 3 both).",
+          "example": {
+            "region": "US"
+          }
+        },
+        "orderby": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort, each {field, order}; field one of day7_units_sold, day7_gmv, commission_rate, total_units_sold, total_gmv, creator_count (descending).",
+          "example": [
+            {
+              "field": "day7_gmv",
+              "order": "desc"
+            }
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "pagesize": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 to 100, default 10; page x pagesize at most 5000."
+        }
+      },
+      "notes": [
+        "A read over POST. price_range, total_gmv_range and day7_gmv_range need region or seller_id."
+      ],
+      "job": "ecommerce.products.search",
+      "docs_url": "https://developer.fastmoss.com/api/docs/product/v1/search.html",
+      "verified": {
+        "docs": "https://developer.fastmoss.com/api/docs/product/v1/search.html"
+      }
+    },
+    {
+      "id": "fastmoss.products.sales_trend",
+      "name": "Get a product's daily sales trend",
+      "summary": "Daily sales for one product over the last N days.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/product/v1/salesTrend",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{product_id: string, days: 1 to 28}; both required."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "ecommerce.products.history",
+      "docs_url": "https://developer.fastmoss.com/api/docs/product/v1/salesTrend.html",
+      "verified": {
+        "docs": "https://developer.fastmoss.com/api/docs/product/v1/salesTrend.html"
+      }
+    },
+    {
+      "id": "fastmoss.products.reviews",
+      "name": "List a product's reviews",
+      "summary": "Buyer reviews for one product.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/product/v1/reviewList",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{product_id}; required inside filter."
+        },
+        "orderby": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort, each {field, order}; field rating or review_id."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "pagesize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, default 10."
+        }
+      },
+      "notes": [
+        "A read over POST. data.total gives the record count for paging."
+      ],
+      "job": "ecommerce.products.reviews",
+      "docs_url": "https://developer.fastmoss.com/api/docs/product/v1/review.html",
+      "verified": {
+        "docs": "https://developer.fastmoss.com/api/docs/product/v1/review.html"
+      }
+    },
+    {
+      "id": "fastmoss.products.top_selling",
+      "name": "Rank top-selling products",
+      "summary": "Top-selling TikTok Shop products for a day, week or month.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/product/v1/rank/topSelling",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "region, category_id, and date_info {type: day|week|month, value: e.g. 2026-02-01, 2026-18 or 2026-02} (date_info required).",
+          "example": {
+            "region": "US",
+            "date_info": {
+              "type": "month",
+              "value": "2026-02"
+            }
+          }
+        },
+        "orderby": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort, each {field, order}; field one of units_sold, gmv, total_units_sold, total_gmv, growth_rate."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "pagesize": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 to 100, default 10; page x pagesize at most 500."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "ecommerce.products.rank",
+      "docs_url": "https://developer.fastmoss.com/api/docs/product/v1/topSelling.html",
+      "verified": {
+        "docs": "https://developer.fastmoss.com/api/docs/product/v1/topSelling.html"
+      }
+    },
+    {
+      "id": "fastmoss.products.categories",
+      "name": "List product categories",
+      "summary": "Product category tree with the ids the filters take.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/product/v1/categoryInfo",
+      "params": {
+        "lang": {
+          "in": "body",
+          "type": "string",
+          "description": "EN_US (default) or ZH_CN.",
+          "enum": [
+            "EN_US",
+            "ZH_CN"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "ecommerce.categories",
+      "docs_url": "https://developer.fastmoss.com/api/docs/product/v1/productCategory.html",
+      "verified": {
+        "docs": "https://developer.fastmoss.com/api/docs/product/v1/productCategory.html"
+      }
+    },
+    {
+      "id": "fastmoss.creators.search",
+      "name": "Search TikTok creators",
+      "summary": "Creators by keyword and filters, with followers, video stats and e-commerce sales.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/creator/v1/search",
+      "params": {
+        "keywords": {
+          "in": "body",
+          "type": "string",
+          "description": "Search words, fuzzy matched, at most 140 characters."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters: region, category_id, verify_type (1 normal, 2 blue V), creator_type (1 personal, 2 shop), follower_gender_type (0 mostly female, 1 mostly male), follower_age_type (1 18-24, 2 25-34, 3 35+), follower_range {min, max}, is_mcn_creator, is_ecommerce_creator."
+        },
+        "orderby": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort, each {field, order}; field one of follower_count, day28_follower_count, video_count, video_avg_play_count, video_avg_digg_count, day28_units_sold."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "pagesize": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 to 100, default 10; page x pagesize at most 5000."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "social.search",
+      "docs_url": "https://developer.fastmoss.com/api/docs/creator/v1/search.html",
+      "verified": {
+        "docs": "https://developer.fastmoss.com/api/docs/creator/v1/search.html"
+      }
+    },
+    {
+      "id": "fastmoss.shops.search",
+      "name": "Search TikTok shops",
+      "summary": "Shops by keyword and filters, with sales and revenue.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/shop/v1/search",
+      "params": {
+        "keywords": {
+          "in": "body",
+          "type": "string",
+          "description": "Search words, fuzzy matched."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters: seller_name, seller_id, creator_uid, creator_unique_id (@handle), brand_name, rating_range, creator_range, is_sshop, is_local, category_id, region."
+        },
+        "orderby": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort, each {field, order}; field one of day7_units_sold, day7_gmv, total_units_sold, total_gmv."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "pagesize": {
+          "in": "body",
+          "type": "integer",
+          "description": "10 to 100, default 10; page x pagesize at most 5000."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "ecommerce.shops.search",
+      "docs_url": "https://developer.fastmoss.com/api/docs/shop/v1/search.html",
+      "verified": {
+        "docs": "https://developer.fastmoss.com/api/docs/shop/v1/search.html"
+      }
+    },
+    {
+      "id": "fastmoss.videos.search",
+      "name": "Search TikTok videos",
+      "summary": "Videos by keyword and filters, with plays, likes, engagement and units sold.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/video/v1/search",
+      "params": {
+        "keywords": {
+          "in": "body",
+          "type": "string",
+          "description": "Search words, fuzzy matched, at most 120 characters."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "create_time_range {min, max} in Unix seconds (required per the docs), plus region, is_ecommerce, creator_category_id, product_category_id, follower_count_range, play_count_range, digg_count_range, interact_rate_range (percent)."
+        },
+        "orderby": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort, each {field, order}; field one of follower_count, create_time, play_count, digg_count, units_sold, interact_rate."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "pagesize": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 to 100, default 10; page x pagesize at most 5000."
+        },
+        "lang": {
+          "in": "body",
+          "type": "string",
+          "description": "EN_US (default) or ZH_CN.",
+          "enum": [
+            "EN_US",
+            "ZH_CN"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "social.posts",
+      "docs_url": "https://developer.fastmoss.com/api/docs/video/v1/search.html",
+      "verified": {
+        "docs": "https://developer.fastmoss.com/api/docs/video/v1/search.html"
+      }
+    }
+  ]
+}

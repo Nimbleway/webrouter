@@ -1,0 +1,193 @@
+{
+  "vendor": "rpvs",
+  "name": "RPVS (Slovak Register of Public Sector Partners)",
+  "category": "company-data",
+  "summary": "Slovakia's Register of Public Sector Partners: companies and persons receiving public money, their beneficial owners, public officials and the authorized persons who verify them, from the Ministry of Justice's open OData API.",
+  "docs_url": "https://rpvs.gov.sk/opendatav2/swagger/index.html",
+  "base_url": "https://rpvs.gov.sk",
+  "notes": [
+    "Keyless, run by the Slovak Ministry of Justice. An OData API: query options are $filter, $skip and $expand, and lists come back as {\"@odata.context\", \"value\": [...]}.",
+    "Property names in filters are PascalCase as in responses (Ico, ObchodneMeno, CisloVlozky, Priezvisko); strings take single quotes.",
+    "Each list also has a /$count form that returns the number of matching records. Field names and values are in Slovak."
+  ],
+  "sources": [
+    "https://rpvs.gov.sk/opendatav2/swagger/index.html",
+    "https://rpvs.gov.sk/opendatav2/swagger/v2/swagger.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "rpvs.partners.search",
+      "name": "Search public sector partners",
+      "summary": "Registered partner entries (company or person) with name, IČO, legal form, address and validity, filtered by IČO, name or insert number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendatav2/PartneriVerejnehoSektora",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData filter on PascalCase properties, e.g. Ico eq '31322832', CisloVlozky eq 10, contains(ObchodneMeno,'SLOVNAFT').",
+          "example": "Ico eq '31322832'"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$skip",
+          "description": "Records to skip, for paging."
+        },
+        "expand": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$expand",
+          "description": "Nested entities to include, e.g. Partner.",
+          "example": "Partner"
+        }
+      },
+      "notes": [
+        "Each change of a partner's details is a separate entry with PlatnostOd/PlatnostDo; PlatnostDo null is the current one. Expand Partner to get the register Id (CisloVlozky) for partners.get."
+      ],
+      "job": "company.search",
+      "docs_url": "https://rpvs.gov.sk/opendatav2/swagger/index.html",
+      "verified": {
+        "docs": "https://rpvs.gov.sk/opendatav2/swagger/v2/swagger.json"
+      }
+    },
+    {
+      "id": "rpvs.partners.get",
+      "name": "Get a partner with its owners",
+      "summary": "One registered partner with all linked records: its entries, beneficial owners (KUV), authorized persons, public officials, deletions and fines.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendatav2/Partneri/{key}",
+      "params": {
+        "key": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Partner Id, as Partner.Id in partners.search results with $expand=Partner."
+        },
+        "expand": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$expand",
+          "description": "Nested entities to include, e.g. PartneriVerejnehoSektora,KonecniUzivateliaVyhod,OpravneneOsoby."
+        }
+      },
+      "notes": [
+        "Without $expand only Id and CisloVlozky come back; expand the linked records you need."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://rpvs.gov.sk/opendatav2/swagger/index.html",
+      "verified": {
+        "docs": "https://rpvs.gov.sk/opendatav2/swagger/v2/swagger.json"
+      }
+    },
+    {
+      "id": "rpvs.owners.list",
+      "name": "List beneficial owners",
+      "summary": "Beneficial owners (konečný užívateľ výhod) recorded in the register, with name, date of birth, nationality, public-official flag and validity.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendatav2/KonecniUzivateliaVyhod",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData filter on PascalCase properties, e.g. Ico eq '31322832', CisloVlozky eq 10, contains(ObchodneMeno,'SLOVNAFT')."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$skip",
+          "description": "Records to skip, for paging."
+        },
+        "expand": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$expand",
+          "description": "Nested entities to include, e.g. Partner.",
+          "example": "Partner"
+        }
+      },
+      "notes": [
+        "Filter by the partner, e.g. $filter=Partner/CisloVlozky eq 10, or by name; expand Partner to see whose owner each record is."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://rpvs.gov.sk/opendatav2/swagger/index.html",
+      "verified": {
+        "docs": "https://rpvs.gov.sk/opendatav2/swagger/v2/swagger.json"
+      }
+    },
+    {
+      "id": "rpvs.officials.list",
+      "name": "List public officials linked to partners",
+      "summary": "Public officials (verejní funkcionári) recorded against partners in the register.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendatav2/VerejniFunkcionari",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData filter on PascalCase properties, e.g. Ico eq '31322832', CisloVlozky eq 10, contains(ObchodneMeno,'SLOVNAFT')."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$skip",
+          "description": "Records to skip, for paging."
+        },
+        "expand": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$expand",
+          "description": "Nested entities to include, e.g. Partner."
+        }
+      },
+      "notes": [],
+      "job": "company.ownership",
+      "docs_url": "https://rpvs.gov.sk/opendatav2/swagger/index.html",
+      "verified": {
+        "docs": "https://rpvs.gov.sk/opendatav2/swagger/v2/swagger.json"
+      }
+    },
+    {
+      "id": "rpvs.authorized_persons.list",
+      "name": "List authorized persons",
+      "summary": "Authorized persons (oprávnené osoby) recorded in the register against partners.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendatav2/OpravneneOsoby",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData filter on PascalCase properties, e.g. Ico eq '31322832', CisloVlozky eq 10, contains(ObchodneMeno,'SLOVNAFT')."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$skip",
+          "description": "Records to skip, for paging."
+        },
+        "expand": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$expand",
+          "description": "Nested entities to include, e.g. Partner."
+        }
+      },
+      "notes": [],
+      "job": "company.ownership",
+      "docs_url": "https://rpvs.gov.sk/opendatav2/swagger/index.html",
+      "verified": {
+        "docs": "https://rpvs.gov.sk/opendatav2/swagger/v2/swagger.json"
+      }
+    }
+  ]
+}

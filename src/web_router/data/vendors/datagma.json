@@ -1,0 +1,325 @@
+{
+  "vendor": "datagma",
+  "name": "Datagma",
+  "category": "enrichment",
+  "summary": "Find work emails and phones, enrich people and companies, and detect job changes.",
+  "docs_url": "https://datagmaapi.readme.io/reference/getting-started-with-your-api",
+  "pricing_url": "https://datagma.com/pricing",
+  "base_url": "https://gateway.datagma.net",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DATAGMA_API_KEY"
+        ],
+        "description": "A Datagma API key (app.datagma.com/user-api). Sent as the apiId query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apiId",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is a GET with the key in the apiId query parameter.",
+    "Answers include a creditBurn field with the credits the call used; the docs state few per-call costs."
+  ],
+  "sources": [
+    "https://datagmaapi.readme.io/llms.txt",
+    "https://datagmaapi.readme.io/reference/ingressservice_getcredit.md",
+    "https://datagmaapi.readme.io/reference/ingressservice_findemailv8.md",
+    "https://datagmaapi.readme.io/reference/ingressservice_fullapiv2.md",
+    "https://datagmaapi.readme.io/reference/ingressservice_search.md",
+    "https://datagmaapi.readme.io/reference/ingressservice_findpeople.md",
+    "https://datagmaapi.readme.io/reference/ingressservice_stellaupdatev2.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "datagma.account.credits",
+      "name": "Get credit balance",
+      "summary": "Remaining credits and plan.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/ingress/v1/mine",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Account email."
+        }
+      },
+      "notes": [
+        "The spec marks email and apiId optional and describes the answer loosely; responses carry the current credit and plan."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://datagmaapi.readme.io/reference/ingressservice_getcredit",
+      "verified": {
+        "docs": "https://datagmaapi.readme.io/reference/ingressservice_getcredit"
+      }
+    },
+    {
+      "id": "datagma.email.find",
+      "name": "Find a work email",
+      "summary": "Verified work email for a person at a company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/ingress/v8/findEmail",
+      "params": {
+        "firstName": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "lastName": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "fullName": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name, instead of first and last."
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain or company name.",
+          "example": "datagma.com"
+        },
+        "linkedInSlug": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL; the domain is extracted from it when no domain is given."
+        }
+      },
+      "notes": [
+        "The docs page states no credit cost; the answer reports creditBurn, the credits spent."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://datagmaapi.readme.io/reference/ingressservice_findemailv8",
+      "verified": {
+        "docs": "https://datagmaapi.readme.io/reference/ingressservice_findemailv8"
+      }
+    },
+    {
+      "id": "datagma.enrich.full",
+      "name": "Enrich a person or company",
+      "summary": "Profile from an email, LinkedIn URL or company name/website/SIREN, with optional extras.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/ingress/v2/full",
+      "params": {
+        "data": {
+          "in": "query",
+          "type": "string",
+          "description": "An email, LinkedIn profile URL, or company name, website or SIREN."
+        },
+        "companyKeyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Disambiguates companies sharing a name (address fragment, founder, industry)."
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit the match to a country."
+        },
+        "firstName": {
+          "in": "query",
+          "type": "string",
+          "description": "Used instead of data, with lastName."
+        },
+        "lastName": {
+          "in": "query",
+          "type": "string",
+          "description": "Used with firstName."
+        },
+        "fullName": {
+          "in": "query",
+          "type": "string",
+          "description": "Used instead of first and last name."
+        },
+        "companyPremium": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the person's LinkedIn company information. Default false."
+        },
+        "companyFull": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add financial information about the company. Default false."
+        },
+        "companyFrench": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the SIREN directory entry for French companies. Default false."
+        },
+        "personFull": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Full person profile with education and past experience."
+        },
+        "phoneFull": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return cell phone numbers; use only when you lack a social profile or email."
+        },
+        "deepTraffic": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add website traffic data."
+        }
+      },
+      "notes": [
+        "A successful person response costs 2 credits. Costs of company-only lookups and the optional flags are not stated; the answer reports creditBurn."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://datagmaapi.readme.io/reference/ingressservice_fullapiv2",
+      "verified": {
+        "docs": "https://datagmaapi.readme.io/reference/ingressservice_fullapiv2"
+      }
+    },
+    {
+      "id": "datagma.phone.search",
+      "name": "Find phone numbers from an email or social URL",
+      "summary": "Phone numbers for a person given an email or username/social URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/ingress/v1/search",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "An email address."
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "A username or social profile URL; Sales Navigator URLs are not accepted."
+        },
+        "minimumMatch": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum match threshold; the docs recommend 1."
+        },
+        "whatsapp_check": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Check whether the mobile number is on WhatsApp."
+        }
+      },
+      "notes": [
+        "The per-call cost is not stated; the answer reports creditBurn."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://datagmaapi.readme.io/reference/ingressservice_search",
+      "verified": {
+        "docs": "https://datagmaapi.readme.io/reference/ingressservice_search"
+      }
+    },
+    {
+      "id": "datagma.people.find",
+      "name": "Find people at a company by job title",
+      "summary": "Up to 10 people matching a title at a company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/ingress/v1/find_people",
+      "params": {
+        "currentJobTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Titles; separate several with OR.",
+          "example": "head of OR chief OR CEO"
+        },
+        "linkedinId": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn id; the most accurate company identifier.",
+          "example": "1441"
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain.",
+          "example": "algolia.com"
+        },
+        "currentCompanies": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name; the least accurate identifier."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowercase country name.",
+          "example": "france"
+        },
+        "fuzzy": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Approximate matching. Default false."
+        },
+        "debug": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Disable the job-title relevance filter."
+        }
+      },
+      "notes": [
+        "10 credits for a search that returns results, 1 credit for one that returns nothing."
+      ],
+      "job": "people.search",
+      "docs_url": "https://datagmaapi.readme.io/reference/ingressservice_findpeople",
+      "verified": {
+        "docs": "https://datagmaapi.readme.io/reference/ingressservice_findpeople"
+      }
+    },
+    {
+      "id": "datagma.people.job_change",
+      "name": "Detect whether a person changed jobs",
+      "summary": "Checks whether a person still works at their last known company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/ingress/v4/update",
+      "params": {
+        "firstName": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "lastName": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "fullName": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name."
+        },
+        "companyName": {
+          "in": "query",
+          "type": "string",
+          "description": "Last known company."
+        },
+        "jobTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Last known title, to pick among people with the same name."
+        }
+      },
+      "notes": [
+        "The per-call cost is not stated; the answer reports creditBurn."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://datagmaapi.readme.io/reference/ingressservice_stellaupdatev2",
+      "verified": {
+        "docs": "https://datagmaapi.readme.io/reference/ingressservice_stellaupdatev2"
+      }
+    }
+  ]
+}

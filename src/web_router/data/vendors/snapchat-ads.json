@@ -1,0 +1,326 @@
+{
+  "vendor": "snapchat-ads",
+  "name": "Snapchat Ads",
+  "category": "advertising",
+  "summary": "Your Snapchat ad accounts: organizations, ad accounts, campaigns and ads, plus delivery stats for any of them.",
+  "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/authentication",
+  "base_url": "https://adsapi.snapchat.com/v1",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "SNAPCHAT_CLIENT_ID"
+        ],
+        "description": "the client id of your Snap OAuth app (Snap Business Manager > Business details > OAuth Apps)"
+      },
+      "client_secret": {
+        "env": [
+          "SNAPCHAT_CLIENT_SECRET"
+        ],
+        "description": "that OAuth app's client secret"
+      },
+      "refresh_token": {
+        "env": [
+          "SNAPCHAT_REFRESH_TOKEN"
+        ],
+        "description": "a refresh token for that app with the snapchat-marketing-api scope"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://accounts.snapchat.com/login/oauth2/access_token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: organizations and ad accounts the authorizing Snapchat user can access.",
+    "Spend and other money metrics in stats are in micro-currency: 1,000,000 = 1 unit of the account currency.",
+    "Stats are fresh to about 15 minutes and final 48 hours after the day ends, in the ad account's timezone.",
+    "Lists page by following paging.next_link in the answer.",
+    "Reads only; creating or changing ads is not included."
+  ],
+  "sources": [
+    "https://developers.snap.com/api/marketing-api/Ads-API/authentication",
+    "https://developers.snap.com/api/marketing-api/Ads-API/organizations",
+    "https://developers.snap.com/api/marketing-api/Ads-API/ad-accounts",
+    "https://developers.snap.com/api/marketing-api/Ads-API/campaigns",
+    "https://developers.snap.com/api/marketing-api/Ads-API/ads",
+    "https://developers.snap.com/api/marketing-api/Ads-API/measurement"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "snapchat-ads.organizations.list",
+      "name": "List organizations",
+      "summary": "Organizations the user belongs to, optionally with their ad accounts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/me/organizations",
+      "params": {
+        "with_ad_accounts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds each organization's ad accounts, with the user's role."
+        }
+      },
+      "job": "ads.accounts.list",
+      "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/organizations",
+      "verified": {
+        "docs": "https://developers.snap.com/api/marketing-api/Ads-API/organizations"
+      }
+    },
+    {
+      "id": "snapchat-ads.ad_accounts.list",
+      "name": "List an organization's ad accounts",
+      "summary": "Ad accounts under one organization.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id}/adaccounts",
+      "params": {
+        "organization_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization id, from organizations.list."
+        }
+      },
+      "job": "ads.accounts.list",
+      "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/ad-accounts",
+      "verified": {
+        "docs": "https://developers.snap.com/api/marketing-api/Ads-API/ad-accounts"
+      }
+    },
+    {
+      "id": "snapchat-ads.ad_accounts.get",
+      "name": "Get an ad account",
+      "summary": "One ad account's details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/adaccounts/{ad_account_id}",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Snap ad account id (a UUID)."
+        }
+      },
+      "job": "ads.accounts.get",
+      "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/ad-accounts",
+      "verified": {
+        "docs": "https://developers.snap.com/api/marketing-api/Ads-API/ad-accounts"
+      }
+    },
+    {
+      "id": "snapchat-ads.campaigns.list",
+      "name": "List an ad account's campaigns",
+      "summary": "All campaigns of an ad account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/adaccounts/{ad_account_id}/campaigns",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Snap ad account id (a UUID)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 50 to 1000."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "updated_at-desc or created_at-desc. Cannot combine with read_deleted_entities."
+        },
+        "read_deleted_entities": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds the deleted attribute on deleted campaigns."
+        }
+      },
+      "job": "ads.campaigns.list",
+      "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/campaigns",
+      "verified": {
+        "docs": "https://developers.snap.com/api/marketing-api/Ads-API/campaigns"
+      }
+    },
+    {
+      "id": "snapchat-ads.ads.list",
+      "name": "List an ad account's ads",
+      "summary": "All ads of an ad account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/adaccounts/{ad_account_id}/ads",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Snap ad account id (a UUID)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 50 to 1000."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "updated_at-desc or created_at-desc. Cannot combine with read_deleted_entities."
+        },
+        "read_deleted_entities": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the deleted attribute on deleted ads; default true."
+        }
+      },
+      "job": "ads.ads.list",
+      "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/ads",
+      "verified": {
+        "docs": "https://developers.snap.com/api/marketing-api/Ads-API/ads"
+      }
+    },
+    {
+      "id": "snapchat-ads.stats.campaign",
+      "name": "Get campaign stats",
+      "summary": "Delivery metrics of one campaign over time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/campaigns/{campaign_id}/stats",
+      "params": {
+        "campaign_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Campaign id."
+        },
+        "granularity": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TOTAL, DAY, HOUR or LIFETIME.",
+          "enum": [
+            "TOTAL",
+            "DAY",
+            "HOUR",
+            "LIFETIME"
+          ]
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated metrics, e.g. impressions,swipes,spend. Default impressions and spend.",
+          "example": "impressions,swipes,spend"
+        },
+        "start_time": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601; required for DAY and HOUR (HOUR times on the hour).",
+          "example": "2026-10-01T00:00:00.000-07:00"
+        },
+        "end_time": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601; required for DAY and HOUR."
+        },
+        "breakdown": {
+          "in": "query",
+          "type": "string",
+          "description": "ad or adsquad: split a campaign's stats."
+        },
+        "omit_empty": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out entities with no data."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Entities per page, at most 200."
+        }
+      },
+      "notes": [
+        "Oversized answers are refused with error E9001: shorten the range, use coarser granularity or fewer fields.",
+        "HOUR queries are limited to 7 days and cannot carry insight breakdowns."
+      ],
+      "job": "ads.report.query",
+      "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/measurement",
+      "verified": {
+        "docs": "https://developers.snap.com/api/marketing-api/Ads-API/measurement"
+      }
+    },
+    {
+      "id": "snapchat-ads.stats.ad_account",
+      "name": "Get ad account stats",
+      "summary": "Delivery metrics of a whole ad account, optionally split by campaign.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/adaccounts/{ad_account_id}/stats",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Snap ad account id (a UUID)."
+        },
+        "granularity": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TOTAL, DAY, HOUR or LIFETIME.",
+          "enum": [
+            "TOTAL",
+            "DAY",
+            "HOUR",
+            "LIFETIME"
+          ]
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated metrics. Default impressions and spend."
+        },
+        "start_time": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601; required for DAY and HOUR."
+        },
+        "end_time": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601; required for DAY and HOUR."
+        },
+        "breakdown": {
+          "in": "query",
+          "type": "string",
+          "description": "campaign: split the account's stats by campaign."
+        },
+        "omit_empty": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out entities with no data."
+        }
+      },
+      "notes": [
+        "Same limits as campaign stats."
+      ],
+      "job": "ads.report.query",
+      "docs_url": "https://developers.snap.com/api/marketing-api/Ads-API/measurement",
+      "verified": {
+        "docs": "https://developers.snap.com/api/marketing-api/Ads-API/measurement"
+      }
+    }
+  ]
+}
