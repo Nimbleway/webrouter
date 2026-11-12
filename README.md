@@ -119,12 +119,14 @@ options it maps and how it was verified. Adding one is two methods: see
 
 ## Routing and fallback
 
-Name no provider and `auto` serves the call: every provider you hold a key for,
-in the order committed [benchmark results](benchmarks/providers/README.md) rank
-them, then the free tiers. A member that fails, is rate-limited or answers
-empty passes the call to the next. A member that cannot honour an option you
-set is skipped for that call, and if none can, the call raises rather than
-running without it.
+For search, extract, answer, research and the browser methods, name no
+provider and `auto` serves the call: every provider you hold a key for, in the
+order committed [benchmark results](benchmarks/providers/README.md) rank them,
+then the free tiers. A member that fails, is rate-limited or answers empty
+passes the call to the next. A member that cannot honour an option you set is
+skipped for that call, and if none can, the call raises rather than running
+without it. Live data and vendor calls always name their provider, since a
+source or an account belongs to one vendor.
 
 ```python
 from web_router import Provider, WebRouter
