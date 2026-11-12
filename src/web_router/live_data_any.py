@@ -31,6 +31,7 @@ from web_router.constants_live_data_any import LIVE_DATA_EVERY_BACKEND, MSG_LIVE
 from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
 from web_router.live_data_backends import usable_backends_or_raise
 from web_router.live_data_catalogue import check_page
+from web_router.live_data_rank import read_query, score
 from web_router.live_data_search import asearch_live_data_sources, search_live_data_sources
 from web_router.providers.base import LiveDataProvider
 from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
@@ -141,7 +142,11 @@ def _merged(
     limit: int | None,
     offset: int | None,
 ) -> LiveDataSourcePage:
-    """The backends' pages as one: their sources taken in turn, so each backend's best match comes first.
+    """The backends' pages as one: their sources taken in turn, and for a query ranked on one scale.
+
+    Taking turns means no backend crowds out the others in a listing; a
+    query's matches are then ordered by :func:`~web_router.live_data_rank.score`,
+    which every vendor's sources are scored on alike, with the turns as the tie-break.
 
     A backend that raised what a backend may raise is named in ``failures``;
     anything else is a bug and propagates. When none answered, the page
@@ -159,6 +164,11 @@ def _merged(
         raise ProviderError(LIVE_DATA_EVERY_BACKEND, MSG_LIVE_DATA_EVERY_BACKEND_FAILED.format(failures=failures))
     start = offset or 0
     taken = list(_in_turn(page.sources for page in pages.values()))
+    if query:
+        # One scale for every vendor, so a strong match on one beats a weak first match on another;
+        # sorted is stable, so taking turns still breaks the ties.
+        asked = read_query(query)
+        taken.sort(key=lambda source: -score(source, asked))
     modes = {page.search for page in pages.values()}
     totals = [page.total for page in pages.values()]
     return LiveDataSourcePage(

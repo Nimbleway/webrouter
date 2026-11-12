@@ -94,7 +94,7 @@ class LiveDataSourcePage(BaseModel):
         default=None,
         description=(
             "How `query` was matched: by the vendor's own search ('native', in its relevance order), or here "
-            "over the whole catalogue on name, site and description ('local'). None for a listing, and for a "
+            "over the whole catalogue on site, kind of page and description ('local'). None for a listing, and for a "
             "page from several backends that did not all search the same way."
         ),
     )
