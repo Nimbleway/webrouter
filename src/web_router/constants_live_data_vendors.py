@@ -15,8 +15,18 @@ BRIGHTDATA_SCRAPE_PATH: Final = "/datasets/v3/scrape"
 """A synchronous scrape: ``dataset_id`` in the query, ``{"input": [...]}`` in the body, records back.
 
 Waits about a minute; a scrape that runs longer answers 202 with a
-``snapshot_id`` to fetch later from ``/datasets/v3/snapshot/{id}``.
+``snapshot_id``, whose progress is read from ``/datasets/v3/progress/{id}`` and
+whose records, once it is ready, from ``/datasets/v3/snapshot/{id}``.
 """
+
+BRIGHTDATA_PROGRESS_PATH: Final = "/datasets/v3/progress"
+BRIGHTDATA_SNAPSHOT_PATH: Final = "/datasets/v3/snapshot"
+BRIGHTDATA_SNAPSHOT_READY: Final = "ready"
+BRIGHTDATA_SNAPSHOT_FAILED: Final = "failed"
+
+BRIGHTDATA_SNAPSHOT_POLL_SECONDS: Final = 5.0
+BRIGHTDATA_SNAPSHOT_WAIT_SECONDS: Final = 300.0
+"""How often, and how long, a scrape that outlasted the synchronous window is waited for, within the call's deadline."""
 
 BRIGHTDATA_SCRAPERS_PATH: Final = "/datasets/v3/scrapers"
 """Every ready-made scraper, as one unpaged array; ``?dataset_id=`` narrows it to one."""
@@ -30,8 +40,21 @@ BRIGHTDATA_ID_PREFIX: Final = "gd_"
 """The collection method a scraper is described by when it has one: inputs keyed by the page's URL."""
 
 MSG_BRIGHTDATA_PENDING: Final = (
-    "Bright Data is still scraping {source!r} past its synchronous window; nothing is lost. Fetch the records "
-    "later from snapshot {snapshot_id!r}: GET /datasets/v3/snapshot/{snapshot_id}?format=json"
+    "Bright Data is still scraping {source!r} after {seconds:.0f} s; nothing is lost. Fetch the records "
+    "later from snapshot {job_id!r}: GET /datasets/v3/snapshot/{job_id}?format=json"
+)
+
+MSG_BRIGHTDATA_NOT_READY: Final = "Bright Data has no records for {source!r} yet: the scrape is still running"
+
+MSG_BRIGHTDATA_NO_SNAPSHOT: Final = (
+    "Bright Data kept scraping {source!r} past its synchronous window but returned no snapshot id to read it by"
+)
+
+MSG_BRIGHTDATA_SNAPSHOT_FAILED: Final = "Bright Data's snapshot {job_id} for {source!r} failed"
+
+MSG_BRIGHTDATA_POLL_FAILED: Final = (
+    "Bright Data's snapshot {job_id} for {source!r} was started, but reading it failed: {error}. "
+    "It may still finish: GET /datasets/v3/progress/{job_id}"
 )
 
 MSG_BRIGHTDATA_ALL_FAILED: Final = "every input failed on {source!r}: {errors}"

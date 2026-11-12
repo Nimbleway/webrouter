@@ -23,8 +23,12 @@ What the API does not say, this does not invent. A scraper's input and output
 are listed as field names without types, so a description's schemas name
 those fields and nothing more. Records carry no documented time of
 collection, so ``fetched_at`` stays ``None``. A scrape that outlasts the
-synchronous window (about a minute) raises with the snapshot id Bright Data
-returns, so the records can be fetched later -- it is not waited for here.
+synchronous window (about a minute) answers with a snapshot id; the run then
+polls the snapshot's progress and reads its records once it is ready, for up
+to five minutes or until the call's deadline
+(:mod:`~web_router.providers.brightdata_snapshots`). Past that it raises a
+:class:`~web_router.exceptions_live_data.LiveDataJobError` naming the snapshot,
+so the records can be fetched later rather than scraped and paid for again.
 An input that failed comes back as a record with ``error`` and ``error_code``;
 those are kept in ``extra["errors"]``, never counted as records, and a run
 where every input failed raises.
@@ -35,6 +39,8 @@ where every input failed raises.
 
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import Any, ClassVar
 
 from web_router.constants import (
@@ -47,14 +53,21 @@ from web_router.constants_live_data_vendors import (
     BRIGHTDATA_DEFAULT_METHOD,
     BRIGHTDATA_DISCOVER_TYPE,
     BRIGHTDATA_ID_PREFIX,
+    BRIGHTDATA_PENDING_STATUS,
     BRIGHTDATA_SCRAPE_PATH,
     BRIGHTDATA_SCRAPERS_PATH,
+    BRIGHTDATA_SNAPSHOT_POLL_SECONDS,
+    BRIGHTDATA_SNAPSHOT_WAIT_SECONDS,
+    MSG_BRIGHTDATA_POLL_FAILED,
     MSG_BRIGHTDATA_RENAMED_HINT,
 )
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
+from web_router.providers._deadline import job_deadline
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers.brightdata_names import Scraper, plain_name, scrapers, slug
 from web_router.providers.brightdata_shapes import described, listed, to_response
+from web_router.providers.brightdata_snapshots import SnapshotWait, snapshot_id
+from web_router.providers.oxylabs_jobs import wait_until
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
@@ -77,6 +90,9 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
     base_url: ClassVar[str] = BRIGHTDATA_BASE_URL
     env_api_key: ClassVar[str] = ENV_BRIGHTDATA_API_KEY
     api_key_prefix: ClassVar[str] = BRIGHTDATA_API_KEY_PREFIX
+
+    poll_seconds: ClassVar[float] = BRIGHTDATA_SNAPSHOT_POLL_SECONDS
+    wait_seconds: ClassVar[float] = BRIGHTDATA_SNAPSHOT_WAIT_SECONDS
 
     def __init__(self, *, zone: str | None = None, **kwargs: Any) -> None:
         """
@@ -130,14 +146,47 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
         scraper = self._resolve(request.source, known)
         with self._named(request.source):
             response = self._client.post(self.run_path, **self._scrape(request, scraper), **self._clamped())
-            return self._to_response(request, response)
+            if response.status_code != BRIGHTDATA_PENDING_STATUS:
+                return self._to_response(request, response)
+        # Past the synchronous window the scrape goes on, billed: wait for its snapshot rather than drop it.
+        snapshot = self._snapshot(request, response)
+        with job_deadline(snapshot.until):
+            while not self._ready(snapshot):
+                time.sleep(snapshot.pause())
+                snapshot.check()
+            with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
+                return self._to_response(request, self._client.get(snapshot.records_path, **self._read()))
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
         known = None if request.source.startswith(BRIGHTDATA_ID_PREFIX) else await self._aknown()
         scraper = self._resolve(request.source, known)
         with self._named(request.source):
             response = await self._async_client.post(self.run_path, **self._scrape(request, scraper), **self._clamped())
-            return self._to_response(request, response)
+            if response.status_code != BRIGHTDATA_PENDING_STATUS:
+                return self._to_response(request, response)
+        snapshot = self._snapshot(request, response)
+        with job_deadline(snapshot.until):
+            while not await self._aready(snapshot):
+                await asyncio.sleep(snapshot.pause())
+                snapshot.check()
+            with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
+                return self._to_response(request, await self._async_client.get(snapshot.records_path, **self._read()))
+
+    def _snapshot(self, request: LiveDataRequest, response: Any) -> SnapshotWait:
+        found = snapshot_id(self.name, request, self._decoded(response))
+        return SnapshotWait(self.name, request, found, wait_until(self.wait_seconds), self.poll_seconds)
+
+    def _ready(self, snapshot: SnapshotWait) -> bool:
+        with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
+            return snapshot.done(self._send("GET", snapshot.path))
+
+    async def _aready(self, snapshot: SnapshotWait) -> bool:
+        with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
+            return snapshot.done(await self._asend("GET", snapshot.path))
+
+    def _read(self) -> dict[str, Any]:
+        """A snapshot's records, as a scrape answers them: JSON, failed inputs included."""
+        return {"params": {"format": "json", "include_errors": "true"}, **self._clamped()}
 
     @staticmethod
     def _scrape(request: LiveDataRequest, scraper: Scraper) -> dict[str, Any]:
