@@ -145,6 +145,15 @@ def test_a_records_read_that_fails_still_names_the_snapshot() -> None:
 
 
 @pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+async def test_a_ready_snapshot_whose_inputs_all_failed_raises_as_a_synchronous_run(asynchronous: bool) -> None:
+    provider, _ = _waiting(_slow_scrape("ready", records=[{"error": "bad url", "error_code": "dead_page"}]))
+    request = LiveDataRequest(source=DATASET, inputs={"url": URL})
+    with pytest.raises(ProviderError, match=r"every input failed.*dead_page") as raised:
+        await provider.arun(request) if asynchronous else provider.run(request)
+    assert "may still finish" not in str(raised.value)
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
 async def test_a_call_deadline_ends_the_wait_with_the_snapshots_id(asynchronous: bool) -> None:
     """The scrape is billed: a wait cut short by the caller's deadline still says which snapshot to read later."""
     provider, api = _waiting(_slow_scrape("running"), wait=300.0)
