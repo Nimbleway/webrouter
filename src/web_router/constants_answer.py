@@ -26,6 +26,7 @@ __all__ = [
     "MCP_ARG_ALL_SOURCES",
     "MCP_ARG_SNIPPETS",
     "MCP_DESC_ANSWER",
+    "MCP_MSG_ANSWER_BAD_FLAGS",
     "MSG_ANSWER_FAILED",
     "MSG_ANSWER_NONE_CONFIGURED",
     "MSG_ANSWER_NO_DEFAULT",
@@ -56,6 +57,8 @@ MSG_ANSWER_NONE_CONFIGURED = (
 
 MCP_ARG_ALL_SOURCES = "all_sources"
 MCP_ARG_SNIPPETS = "snippets"
+
+MCP_MSG_ANSWER_BAD_FLAGS = "answer takes `all_sources` and `snippets` as booleans, true or false."
 
 MCP_ANSWER_SHAPING_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_ALL_SOURCES: {

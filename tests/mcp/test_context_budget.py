@@ -156,3 +156,9 @@ def test_an_empty_structured_answer_is_kept() -> None:
     response = ResearchResponse(provider="fake", query="q", structured=[], answer=None)
 
     assert shape_research(response, "research-0001", budget=4000)["structured"] == []
+
+
+async def test_answer_refuses_a_flag_that_is_not_a_boolean(tools: WebRouterTools) -> None:
+    result = await call_tool(tools, MCP_TOOL_ANSWER, {"query": "q", "snippets": "false"})
+
+    assert result.is_error and "booleans" in result.content[0].text
