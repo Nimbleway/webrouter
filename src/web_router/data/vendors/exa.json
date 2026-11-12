@@ -1,0 +1,133 @@
+{
+  "vendor": "exa",
+  "name": "Exa",
+  "category": "search",
+  "summary": "Existing Websets and their items from Exa.",
+  "docs_url": "https://exa.ai/docs/reference/getting-started",
+  "pricing_url": "https://exa.ai/pricing",
+  "base_url": "https://api.exa.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EXA_API_KEY"
+        ],
+        "description": "an Exa API key (dashboard.exa.ai > API Keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is the x-api-key header; 'Authorization: Bearer <key>' also works.",
+    "Websets endpoints live under /v0/; a Webset is built asynchronously, so poll it until idle before reading its items.",
+    "Exa search, contents, answers and Agent runs go through web-router's search, extract, answer and research, not this entry."
+  ],
+  "sources": [
+    "https://exa.ai/docs/llms.txt",
+    "https://exa.ai/docs/exa-spec.yaml",
+    "https://exa.ai/docs/reference/search.md",
+    "https://exa.ai/docs/reference/agent-api/create-a-run.md",
+    "https://exa.ai/docs/websets/api/websets/create-a-webset.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "exa.websets.get",
+      "name": "Get a Webset",
+      "summary": "A Webset by id or externalId, with its status, searches and enrichments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/websets/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Webset id or externalId."
+        },
+        "expand": {
+          "in": "query",
+          "type": "array",
+          "description": "Pass items to include the first 100 items."
+        }
+      },
+      "job": "lists.get",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/get-a-webset.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/get-a-webset.md"
+      }
+    },
+    {
+      "id": "exa.websets.list",
+      "name": "List Websets",
+      "summary": "Your Websets, with cursor pagination.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/websets",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Websets per page."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by id, external id or title."
+        }
+      },
+      "job": "lists.list",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/list-all-websets.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/list-all-websets.md"
+      }
+    },
+    {
+      "id": "exa.websets.items.list",
+      "name": "List a Webset's items",
+      "summary": "The items a Webset has found, with cursor pagination.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/websets/{webset}/items",
+      "params": {
+        "webset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Webset id or externalId."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "sourceId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items from this source id."
+        }
+      },
+      "job": "lists.items",
+      "docs_url": "https://exa.ai/docs/websets/api/websets/items/list-all-items-for-a-webset.md",
+      "verified": {
+        "docs": "https://exa.ai/docs/websets/api/websets/items/list-all-items-for-a-webset.md"
+      }
+    }
+  ]
+}

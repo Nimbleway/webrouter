@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-363 vendors, 2675 endpoints.
+372 vendors, 2710 endpoints.
 
 ### advertising
 
@@ -262,25 +262,31 @@ Web, news and archive search.
 |---|---|---|---|---|---|
 | [Andi AI Search](https://docs.andiai.com/api-reference/introduction) `andi` | Web search API for agents with adjustable effort, optional full page content, a page fetch/extract endpoint and curated topic news feeds. | 4 read | key in header | `ANDI_API_KEY` | docs 2026-11-09 |
 | [Atly](https://agentic-api.atly.com/v2/docs) `atly` | Review-based place discovery: where to go for an intent (work-friendly, gluten-free, first date) near a location, with reasons. | 5 read | key in header | `ATLY_API_KEY` | docs 2026-11-08 |
+| [Brave Search](https://api-dashboard.search.brave.com/documentation) `bravesearch` | News, video and image search, LLM-ready page context, suggestions and spellcheck from Brave's independent index. | 6 read | key in header | `BRAVE_SEARCH_API_KEY` | docs 2026-11-08 |
 | [BytePlus Searchinfinity](https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_available_APIs) `byteplus-search` | Web and image search and static page fetch from BytePlus (ByteDance) Searchinfinity: Flux and Omnira search engines plus a Fetch API. | 3 read | key in header | `BYTEPLUS_SEARCH_API_KEY` | docs 2026-11-09 |
 | [Dappier](https://docs.dappier.com/quickstart) `dappier` | Real-time answers from Dappier AI models (live web search, news, stocks) and semantic article recommendations from licensed publisher data models. | 2 read | key in header | `DAPPIER_API_KEY` | docs 2026-11-09 |
+| [Exa](https://exa.ai/docs/reference/getting-started) `exa` | Existing Websets and their items from Exa. | 3 read | key in header | `EXA_API_KEY` | docs 2026-11-08 |
 | [GDELT Project](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) `gdelt` | Free search over worldwide online news monitored by GDELT: article lists and coverage-volume, tone, language and source-country timelines. | 3 read | none | none | docs 2026-11-09 |
 | [Hacker News Search (Algolia)](https://hn.algolia.com/api) `hn-algolia` | Full-text search over Hacker News stories, comments, polls and users, plus whole items with their comment trees, from the free HN Search API built on Algolia. | 4 read | none | none | docs 2026-11-09 |
 | [Internet Archive](https://archive.org/developers/) `internet-archive` | Search and item metadata for the Internet Archive's collections (texts, audio, video, software), plus Wayback Machine snapshot lookup and capture history, from its keyless public APIs. | 6 read | none | none | docs 2026-11-09 |
 | [Apple iTunes Search API](https://performance-partners.apple.com/search-api) `itunes-search` | Search and look up App Store apps, iTunes music, movies, podcasts, audiobooks, TV and Apple Books titles: names, IDs, prices, genres, artwork, previews and store links, keyless. | 2 read | none | none | docs 2026-11-09 |
+| [Linkup](https://docs.linkup.so/pages/documentation/get-started/introduction) `linkup` | The Linkup account's credit balance. | 1 read | key in header | `LINKUP_API_KEY` | docs 2026-11-08 |
 | [Litescrape](https://litescrape.com/docs) `litescrape` | Low-cost SERP and web-data API: Google, Bing, DuckDuckGo, maps, app stores, review sites and page fetch. | 37 read | key in header | `LITESCRAPE_API_KEY` | docs 2026-11-08 |
 | [Library of Congress loc.gov API](https://www.loc.gov/apis/json-and-yaml/) `loc-gov` | Search and metadata for the Library of Congress's digitized collections (audio recordings, photos, maps, manuscripts, newspapers, books, films...) from the keyless loc.gov JSON API. | 6 read | none | none | docs 2026-11-09 |
 | [NewsAPI.org](https://newsapi.org/docs) `newsapi` | Search news articles from worldwide sources and blogs, top headlines by country, category or source, and the list of sources. | 3 read | key in header | `NEWSAPI_API_KEY` | docs 2026-11-09 |
 | [NewsData.io](https://newsdata.io/documentation) `newsdata` | Worldwide news API: latest and archived articles with country, category, language, domain and sentiment filters, plus crypto and market news, sources and article counts. | 6 read | key in header | `NEWSDATA_API_KEY` | docs 2026-11-09 |
 | [Octen](https://docs.octen.ai/) `octen` | Real-time web, news and broad search plus URL content extraction from Octen. | 4 read | key in header | `OCTEN_API_KEY` | docs 2026-11-08 |
 | [Opoint](https://api-docs.opoint.com/guides/search) `opoint` | Global news monitoring: boolean search over Opoint's news archive, stored-search feeds and SafeFeed firehoses. | 6 read | key in header | `OPOINT_API_KEY` | docs 2026-11-09 |
+| [Parallel](https://docs.parallel.ai/getting-started/overview) `parallel` | People and company discovery from Parallel Web Systems: entity search and FindAll runs. | 3 read | key in header | `PARALLEL_API_KEY` | docs 2026-11-08 |
 | [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
 | [Search1API](https://s1.dev/docs) `search1api` | Web, news and Maps search, page reading, screenshots, extraction and site crawling through one API. | 12 read | key in header | `SEARCH1API_KEY` | docs 2026-11-08 |
 | [Seltz](https://docs.seltz.ai/) `seltz` | Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports. | 7 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
 | [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
+| [Tavily](https://docs.tavily.com/documentation/api-reference) `tavily` | Tavily's site crawl and map APIs, and the account's credit usage. | 3 read | key in header | `TAVILY_API_KEY` | docs 2026-11-08 |
 | [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 9 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
 | [Wikipedia](https://www.mediawiki.org/wiki/API:Main_page) `wikipedia` | Keyless Wikipedia search, plain-text article extracts, page source and HTML, revision history, language links and file info through the MediaWiki APIs. | 9 read | none | none | docs 2026-11-09 |
+| [You.com](https://you.com/docs/welcome) `you` | You.com's Finance Research API and the account balance. | 2 read | key in header | `YOU_API_KEY` | docs 2026-11-08 |
 
 ### scraping
 
@@ -289,8 +295,11 @@ Fetching, rendering and extracting web pages; hosted browsers.
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
 | [Apify](https://docs.apify.com/api/v2) `apify` | Apify Actors (ready-made scrapers for Google, LinkedIn, Meta ads, TikTok, Lazada, Weibo and more): search the Store and read Actors, their runs and the datasets they produce. | 11 read | key in header | `APIFY_API_TOKEN` | docs 2026-11-08 |
+| [Bright Data](https://docs.brightdata.com/) `brightdata` | Bright Data Marketplace datasets: the list, each dataset's fields, and filtered snapshots. | 5 read | key in header | `BRIGHTDATA_API_TOKEN` | docs 2026-11-08 |
+| [Browser Use](https://docs.browser-use.com/cloud/api-reference.md) `browseruse` | The Browser Use Cloud account and its credit balance. | 1 read | key in header | `BROWSER_USE_API_KEY` | docs 2026-11-09 |
 | [Crawl4AI Cloud](https://api.crawl4ai.com/docs) `crawl4ai` | Crawl4AI's hosted API: scrape pages to markdown, extract JSON, search the web, Google results as data, direct answers and ready-made site recipes. | 7 read | key in header | `CRAWL4AI_KEY` | docs 2026-11-09 |
 | [Decodo](https://help.decodo.com/docs/web-data-api-introduction.md) `decodo` | Decodo's Web Data API: scrape a page or a supported site's template, Google results, crawl a site up to 10,000 pages, or map its URLs. | 8 read | key in header | `DECODO_API_KEY` | docs 2026-11-09 |
+| [Firecrawl](https://docs.firecrawl.dev/introduction) `firecrawl` | Firecrawl's map, crawl, batch scrape, search and structured extract jobs, and the team's credit usage. | 11 read | key in header | `FIRECRAWL_API_KEY` | docs 2026-11-08 |
 | [Massive (Web Render)](https://docs.joinmassive.com/web-render/overview.md) `joinmassive` | Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations. | 4 read | key in header | `MASSIVE_TOKEN` | docs 2026-11-09 |
 | [Notte](https://docs.notte.cc/api-reference/authentication.md) `notte` | Notte's API: scrape pages to markdown or structured JSON, and search the web. | 3 read | key in header | `NOTTE_API_KEY` | docs 2026-11-09 |
 | [Olostep](https://docs.olostep.com/) `olostep` | Scrape, crawl, map, search and answer over the web with Olostep's API. | 12 read | key in header | `OLOSTEP_API_KEY` | docs 2026-11-08 |

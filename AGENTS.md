@@ -1226,6 +1226,12 @@ validated by the strict models in `web_router/vendors/schema.py` (an unknown
 key is refused). If a vendor seems to need code -- a signed request, say --
 it is a format change to discuss first, not a branch in `caller.py`.
 
+An endpoint goes in the catalog only when no WebRouter method covers it. A
+vendor that is also a backend (Tavily, Firecrawl, Exa...) keeps only what
+`search`, `extract`, `answer`, `research`, `live_data` and `browse` cannot do,
+and an endpoint leaves the catalog in the same pull request that adds the
+method covering it.
+
 1. Write it **from the vendor's own documentation**, never from another
    project's catalog: notes and summaries are ours. List the pages in
    `sources`, set `curated` to the date, and give each endpoint the
