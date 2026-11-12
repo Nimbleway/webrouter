@@ -1,0 +1,141 @@
+{
+  "provider": "parallel-litellm",
+  "method": "search",
+  "class": "web_router.providers.litellm.ParallelLiteLLMProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "",
+    "paths": {
+      "search_path": "/v1/search/parallel"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "LITELLM_PROXY_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.mode": "fast",
+    "body.objective": "probe query",
+    "body.query": "probe query",
+    "body.search_queries": [
+      "probe query"
+    ]
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.advanced_settings.max_results": 3,
+        "body.max_results": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "body.advanced_settings.excerpt_settings.max_chars_per_result": 500
+      },
+      "fast": {
+        "body.advanced_settings.excerpt_settings.max_chars_per_result": 3000
+      },
+      "deep": {
+        "refused": "UnsupportedParameterError"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.advanced_settings.source_policy.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.advanced_settings.source_policy.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.advanced_settings.location": "us"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.advanced_settings.source_policy.after_date": "2026-01-14"
+      },
+      "week": {
+        "body.advanced_settings.source_policy.after_date": "2026-01-08"
+      },
+      "month": {
+        "body.advanced_settings.source_policy.after_date": "2025-12-16"
+      },
+      "year": {
+        "body.advanced_settings.source_policy.after_date": "2025-01-15"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.mode": "turbo"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.mode": "advanced"
+      },
+      "max": {
+        "body.mode": "advanced"
+      }
+    }
+  },
+  "not_mapped": [
+    "locale"
+  ],
+  "source": [
+    "https://docs.litellm.ai/docs/search",
+    "https://docs.parallel.ai/api-reference/search-api/search",
+    "https://docs.parallel.ai/search/search-migration-guide",
+    "https://docs.parallel.ai/search/modes",
+    "https://docs.parallel.ai/search/advanced-search-settings"
+  ],
+  "verified": {
+    "max_results": "live: tests/providers/test_litellm.py::test_live_search_returns_results",
+    "search_depth": "live: tests/providers/test_litellm.py::test_live_lite_comes_back_short",
+    "include_domains": "live: tests/providers/test_litellm.py::test_live_a_domain_filter_is_honoured",
+    "exclude_domains": "docs: parallel's own mapping, verified in contracts/search/parallel.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
+    "country": "docs: parallel's own mapping, verified in contracts/search/parallel.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
+    "recency": "docs: parallel's own mapping, verified in contracts/search/parallel.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
+    "effort": "live: tests/providers/test_litellm.py::test_live_every_effort_is_accepted (2026-11-12: Exa type=deep-lite and Parallel mode=advanced also changed the results)"
+  },
+  "vendor_options": {
+    "max_chars_total": {
+      "status": "passthrough",
+      "note": "Top level: an upper bound on excerpt characters across all results."
+    },
+    "fetch_policy": {
+      "status": "passthrough",
+      "note": "Under advanced_settings: max_age_seconds (600 or more), timeout_seconds, disable_cache_fallback. Cached content unless set."
+    },
+    "client_model": {
+      "status": "passthrough",
+      "note": "The model consuming the results; Parallel tailors default settings to it."
+    },
+    "session_id": {
+      "status": "passthrough",
+      "note": "Groups related search and extract calls, up to 1,000 characters; the response echoes it, or one the server made."
+    },
+    "excerpts": {
+      "status": "not_supported",
+      "note": "Beta only; /v1/search rejects undeclared fields. Its successors are max_chars_total and advanced_settings.excerpt_settings."
+    },
+    "max_chars_per_result": {
+      "status": "not_supported",
+      "note": "Beta only, deprecated there; on /v1 it sits under advanced_settings.excerpt_settings."
+    },
+    "processor": {
+      "status": "not_supported",
+      "note": "Beta only, deprecated there in favour of mode."
+    }
+  }
+}

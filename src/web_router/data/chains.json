@@ -28,12 +28,18 @@
     "appended": [
       "keenable",
       "deepseek",
-      "agentcore"
+      "agentcore",
+      "exa-litellm",
+      "tavily-litellm",
+      "parallel-litellm"
     ],
     "unmeasured": [
       "keenable",
       "deepseek",
-      "agentcore"
+      "agentcore",
+      "exa-litellm",
+      "tavily-litellm",
+      "parallel-litellm"
     ],
     "too_few_questions": [],
     "no_row_served": [],

@@ -16,8 +16,6 @@ from typing import Any, ClassVar
 import httpx
 
 from web_router.constants import (
-    BRAVE_API_KEY_HEADER,
-    BRAVE_BASE_URL,
     ENV_BRAVE_ANSWER_API_KEY,
     MCP_SSE_DATA_PREFIX,
     PROVIDER_BRAVE,
@@ -27,6 +25,8 @@ from web_router.constants_brave import (
     BRAVE_ANSWER_MODEL,
     BRAVE_ANSWER_PATH,
     BRAVE_ANSWER_TAGS,
+    BRAVE_API_KEY_HEADER,
+    BRAVE_BASE_URL,
     BRAVE_FINISH_LENGTH,
     BRAVE_SSE_DONE,
     MSG_BRAVE_ANSWER_STREAM_CUT,

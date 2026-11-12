@@ -34,7 +34,6 @@ from web_router.constants import (
     PROVIDER_AUTO,
     PROVIDER_BRAVE,
     PROVIDER_BRIGHTDATA,
-    PROVIDER_BROWSER_USE,
     PROVIDER_BROWSERBASE,
     PROVIDER_DEEPSEEK,
     PROVIDER_EXA,
@@ -52,7 +51,6 @@ from web_router.constants import (
     PROVIDER_PARALLEL,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
-    PROVIDER_SKYVERN,
     PROVIDER_STEEL,
     PROVIDER_TAVILY,
     PROVIDER_WEBIQ,
@@ -60,6 +58,8 @@ from web_router.constants import (
     PROVIDER_YOU_MCP,
     RESEARCH_ENV_BY_PROVIDER,
 )
+from web_router.constants_browse import BUILTIN_BROWSE_PROVIDERS
+from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
 from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.types import Provider, provider_name
@@ -97,6 +97,9 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_YOU_MCP: ("web_router.providers.you_mcp", "YouMcpProvider", EXTRA_SEARCH),
     PROVIDER_EXA_MCP: ("web_router.providers.exa_mcp", "ExaMcpProvider", EXTRA_SEARCH),
     PROVIDER_PARALLEL_MCP: ("web_router.providers.parallel_mcp", "ParallelMcpProvider", EXTRA_SEARCH),
+    PROVIDER_EXA_LITELLM: ("web_router.providers.litellm", "ExaLiteLLMProvider", EXTRA_SEARCH),
+    PROVIDER_TAVILY_LITELLM: ("web_router.providers.litellm", "TavilyLiteLLMProvider", EXTRA_SEARCH),
+    PROVIDER_PARALLEL_LITELLM: ("web_router.providers.litellm", "ParallelLiteLLMProvider", EXTRA_SEARCH),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoProvider", AUTO_EXTRA),
 }
 
@@ -143,13 +146,7 @@ _BUILTIN_BROWSER_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_AUTO: ("web_router.providers.auto_browser", "AutoBrowserProvider", AUTO_EXTRA),
 }
 
-# Task backends are plain httpx, which `all` installs, as for the browser table.
-_BUILTIN_BROWSE_PROVIDERS: dict[str, tuple[str, str, str]] = {
-    PROVIDER_BROWSER_USE: ("web_router.providers.browser_use", "BrowserUseBrowseProvider", EXTRA_ALL),
-    PROVIDER_BROWSERBASE: ("web_router.providers.browserbase", "BrowserbaseBrowseProvider", EXTRA_ALL),
-    PROVIDER_SKYVERN: ("web_router.providers.skyvern", "SkyvernBrowseProvider", EXTRA_ALL),
-    PROVIDER_AUTO: ("web_router.providers.auto", "AutoBrowseProvider", AUTO_EXTRA),
-}
+_BUILTIN_BROWSE_PROVIDERS = BUILTIN_BROWSE_PROVIDERS
 
 _CUSTOM_PROVIDERS: dict[str, type[SearchProvider]] = {}
 _CUSTOM_EXTRACT_PROVIDERS: dict[str, type[ExtractProvider]] = {}

@@ -1,0 +1,172 @@
+{
+  "provider": "exa-litellm",
+  "method": "search",
+  "class": "web_router.providers.litellm.ExaLiteLLMProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "",
+    "paths": {
+      "search_path": "/v1/search/exa"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "LITELLM_PROXY_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.contents.text": true,
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_results": 3,
+        "body.numResults": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "body.contents.highlights.maxCharacters": 500,
+        "body.contents.text": "<removed>"
+      },
+      "fast": {
+        "body.contents.text": "<removed>",
+        "body.contents.text.maxCharacters": 3000
+      },
+      "deep": {
+        "unchanged": "no wire change"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.includeDomains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.excludeDomains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.userLocation": "US"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.startPublishedDate": "2026-01-14T00:00:00.000Z"
+      },
+      "week": {
+        "body.startPublishedDate": "2026-01-08T00:00:00.000Z"
+      },
+      "month": {
+        "body.startPublishedDate": "2025-12-16T00:00:00.000Z"
+      },
+      "year": {
+        "body.startPublishedDate": "2025-01-15T00:00:00.000Z"
+      }
+    },
+    "effort": {
+      "low": {
+        "body.type": "lite"
+      },
+      "medium": {
+        "unchanged": "no wire change"
+      },
+      "high": {
+        "body.type": "deep-lite"
+      },
+      "max": {
+        "body.type": "deep"
+      }
+    }
+  },
+  "not_mapped": [
+    "locale"
+  ],
+  "source": [
+    "https://docs.litellm.ai/docs/search",
+    "https://exa.ai/docs/reference/search"
+  ],
+  "verified": {
+    "max_results": "live: tests/providers/test_litellm.py::test_live_search_returns_results",
+    "search_depth": "live: tests/providers/test_litellm.py::test_live_lite_comes_back_short",
+    "include_domains": "live: tests/providers/test_litellm.py::test_live_a_domain_filter_is_honoured",
+    "exclude_domains": "docs: exa's own mapping, verified in contracts/search/exa.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
+    "country": "docs: exa's own mapping, verified in contracts/search/exa.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
+    "recency": "docs: exa's own mapping, verified in contracts/search/exa.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
+    "effort": "live: tests/providers/test_litellm.py::test_live_every_effort_is_accepted (2026-11-12: Exa type=deep-lite and Parallel mode=advanced also changed the results)"
+  },
+  "vendor_options": {
+    "additionalQueries": {
+      "status": "passthrough",
+      "note": "1-10 extra queries; deep types only."
+    },
+    "category": {
+      "status": "passthrough",
+      "note": "company | publication | news | personal site | financial report | people."
+    },
+    "endPublishedDate": {
+      "status": "passthrough",
+      "note": "ISO 8601; recency sets only the start."
+    },
+    "moderation": {
+      "status": "passthrough",
+      "note": "Boolean."
+    },
+    "compliance": {
+      "status": "passthrough",
+      "note": "hipaa."
+    },
+    "outputSchema": {
+      "status": "passthrough",
+      "note": "Synthesized output; it stays in raw."
+    },
+    "objective": {
+      "status": "passthrough",
+      "note": "Up to 4096 characters describing what to rank first."
+    },
+    "userIdentifier": {
+      "status": "passthrough",
+      "note": "1-64 characters."
+    },
+    "systemPrompt": {
+      "status": "passthrough",
+      "note": "Extra guidance for the output."
+    },
+    "stream": {
+      "status": "not_supported",
+      "note": "Streams server-sent events with outputSchema; the provider reads one JSON body."
+    },
+    "startCrawlDate": {
+      "status": "passthrough",
+      "note": "Deprecated; ignored by Exa."
+    },
+    "endCrawlDate": {
+      "status": "passthrough",
+      "note": "Deprecated; ignored by Exa."
+    },
+    "includeText": {
+      "status": "passthrough",
+      "note": "Deprecated."
+    },
+    "excludeText": {
+      "status": "passthrough",
+      "note": "Deprecated."
+    },
+    "context": {
+      "status": "passthrough",
+      "note": "Deprecated in favour of contents.highlights or contents.text."
+    },
+    "contents sub-options": {
+      "status": "passthrough",
+      "note": "contents.summary, contents.subpages, contents.livecrawl and contents.maxAgeHours, and text or highlights settings past the sizes search_depth sets; a provider_options contents object replaces the mapped one whole."
+    }
+  }
+}
