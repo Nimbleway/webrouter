@@ -188,7 +188,7 @@ async def test_an_async_nimble_template_run_is_cancelled_at_the_deadline(monkeyp
 def test_tavily_takes_the_time_left_as_its_per_call_timeout(clock: _Clock) -> None:
     provider = TavilyProvider(api_key="test-key")
     hanging = _Hanging(clock)
-    provider._client = SimpleNamespace(search=hanging)  # type: ignore[assignment]
+    provider._clients._sync = SimpleNamespace(search=hanging)  # type: ignore[assignment]
 
     with call_deadline(DEADLINE), pytest.raises(DeadlineExceededError, match="3s deadline"):
         provider.search(SearchRequest(query="q"))

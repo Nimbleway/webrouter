@@ -87,6 +87,25 @@ single entry from a backend that took every URL at once, one per URL that came
 back from a backend that did not. A call that failed outright is in `failures`
 instead; there was no payload to keep.
 
+### Under a timeout
+
+`timeout=` caps how many seconds the call waits. Each vendor call still running
+when it runs out is cut off, its URLs land in `failures` with `kind` `timeout`,
+and the pages that came back in time are returned:
+
+```python
+response = router.extract(urls, provider="jina", timeout=10)
+
+response.documents  # every page read within 10 seconds
+[f.url for f in response.failures if f.kind == "timeout"]  # the ones still loading
+```
+
+When nothing came back in time the call raises `DeadlineExceededError`; when a
+single vendor call failed for a reason of its own, such as a 401, that error is
+raised as it came. `timeout=10` is the same as `budget=Budget(time_limit_s=10)`,
+and beside a `budget` the tighter time cap holds; see
+[Running in production](/production#timeouts).
+
 ### Error pages, challenges and login walls
 
 A page that came back is not always the page asked for. On every backend, the

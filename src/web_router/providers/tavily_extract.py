@@ -14,8 +14,6 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from tavily import AsyncTavilyClient, TavilyClient
-
 from web_router.constants import (
     ENV_TAVILY_API_KEY,
     MSG_TAVILY_TOO_LITTLE_TIME,
@@ -28,8 +26,9 @@ from web_router.constants import (
 )
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._deadline import call_budget, current_deadline
-from web_router.providers._utils import build_payload, compact, resolve_api_key
+from web_router.providers._utils import build_payload, resolve_api_key
 from web_router.providers.base import ExtractProvider
+from web_router.providers.tavily_clients import TavilyClients, TavilyClientsMixin
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
@@ -50,20 +49,6 @@ def tavily_key(api_key: str | None, *, allow_keyless: bool, provider: str) -> st
         return resolve_api_key(api_key, env_var=ENV_TAVILY_API_KEY, provider=provider)
     except ConfigurationError:
         return None
-
-
-def sdk_clients(
-    key: str | None, api_base_url: str | None, kwargs: dict[str, Any]
-) -> tuple[TavilyClient, AsyncTavilyClient]:
-    """The sync and async SDK clients, each handed the one transport argument it takes."""
-    shared = compact({"api_base_url": api_base_url, **kwargs})
-    session, client = shared.pop("session", None), shared.pop("client", None)
-    # api_key=None is what puts the SDK in keyless mode; it is not the same
-    # as omitting the argument, so pass it through either way.
-    return (
-        TavilyClient(api_key=key, **shared, **compact({"session": session})),
-        AsyncTavilyClient(api_key=key, **shared, **compact({"client": client})),
-    )
 
 
 def clamped_timeout(payload: dict[str, Any], sdk_default: float, minimum: float = 0.0) -> dict[str, Any]:
@@ -87,7 +72,7 @@ def clamped_timeout(payload: dict[str, Any], sdk_default: float, minimum: float 
     return payload
 
 
-class TavilyExtractProvider(ExtractProvider):
+class TavilyExtractProvider(TavilyClientsMixin, ExtractProvider):
     """Fetches page contents through the Tavily Extract API."""
 
     name: ClassVar[str] = PROVIDER_TAVILY
@@ -122,7 +107,7 @@ class TavilyExtractProvider(ExtractProvider):
         super().__init__(api_key=key, api_base_url=api_base_url, **kwargs)
 
         self._timeout = timeout
-        self._client, self._async_client = sdk_clients(key, api_base_url, kwargs)
+        self._clients = TavilyClients(key, api_base_url, kwargs)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         payload = self._client.extract(**self._build_payload(request, urls))
@@ -131,12 +116,6 @@ class TavilyExtractProvider(ExtractProvider):
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         payload = await self._async_client.extract(**self._build_payload(request, urls))
         return self._to_response(request, urls, payload)
-
-    def close(self) -> None:
-        self._client.close()
-
-    async def aclose(self) -> None:
-        await self._async_client.close()
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``extract()`` keyword arguments."""

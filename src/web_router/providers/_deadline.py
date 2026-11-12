@@ -22,6 +22,8 @@ from web_router.constants import (
     MIN_JOB_BUDGET,
 )
 from web_router.exceptions import DeadlineExceededError, ProviderError, WebRouterError
+from web_router.providers._in_flight import InFlight, tracking
+from web_router.providers._runtime import aslot, slot
 
 if TYPE_CHECKING:
     from web_router.types import ExtractRequest, ExtractResponse
@@ -240,13 +242,14 @@ class _DeadlineMixin:
         timeout.
         """
         deadline = current_deadline()
-        if deadline is None:
-            return self._wrapped(call, message, **fields)
-        self._refuse_late(deadline)
-        try:
-            return self._wrapped(call, message, **fields)
-        except Exception as exc:
-            self._reraise_late(deadline, exc)
+        with slot(self.name, deadline):
+            if deadline is None:
+                return self._wrapped(call, message, **fields)
+            self._refuse_late(deadline)
+            try:
+                return self._wrapped(call, message, **fields)
+            except Exception as exc:
+                self._reraise_late(deadline, exc)
 
     async def _abounded(self, call: Callable[[], Awaitable[_ResultT]], message: str, **fields: Any) -> _ResultT:
         """Async counterpart of :meth:`_bounded`, which also cancels the call at the deadline.
@@ -255,13 +258,15 @@ class _DeadlineMixin:
         starts never creates a coroutine nobody awaits.
         """
         deadline = current_deadline()
-        if deadline is None:
-            return await self._awrapped(call(), message, **fields)
-        self._refuse_late(deadline)
-        try:
-            return await _within(deadline, self._awrapped(call(), message, **fields))
-        except Exception as exc:
-            self._reraise_late(deadline, exc)
+        async with aslot(self.name, deadline):
+            if deadline is None:
+                return await self._awrapped(call(), message, **fields)
+            self._refuse_late(deadline)
+            with tracking() as flight:
+                try:
+                    return await _within(deadline, self._awrapped(call(), message, **fields))
+                except Exception as exc:
+                    self._reraise_late(deadline, exc, flight)
 
     def _refuse_past_deadline(self) -> None:
         """Raise :class:`DeadlineExceededError` when a deadline in force has already passed.
@@ -292,25 +297,29 @@ class _DeadlineMixin:
         if deadline.left() <= 0:
             raise DeadlineExceededError(self.name, deadline.seconds)
 
-    def _at_deadline(self, deadline: Deadline, exc: Exception) -> DeadlineExceededError | None:
+    def _at_deadline(
+        self, deadline: Deadline, exc: Exception, flight: InFlight | None = None
+    ) -> DeadlineExceededError | None:
         """What a failed call under ``deadline`` raises instead of ``exc``, or ``None`` to raise ``exc`` itself.
 
         The one place a deadline is told from a failure: :func:`_within`
         cutting the call off, or a request timing out at the deadline, is
         :class:`DeadlineExceededError`, its ``__cause__`` the timeout; a
-        router error of another kind, the deadline's own included, stands.
+        router error of another kind, the deadline's own included, stands. A
+        call cut off names what ``flight`` saw it try, the member in flight last.
         """
         if isinstance(exc, _DeadlineReached):
-            late = DeadlineExceededError(self.name, deadline.seconds)
+            tried = None if flight is None else flight.tried(deadline.seconds)
+            late = DeadlineExceededError(self.name, deadline.seconds, tried=tried)
             late.__cause__ = exc.__cause__
             return late
         if isinstance(exc, WebRouterError) and not isinstance(exc, ProviderError):
             return None
         return self._late(deadline, exc)
 
-    def _reraise_late(self, deadline: Deadline, exc: Exception) -> NoReturn:
+    def _reraise_late(self, deadline: Deadline, exc: Exception, flight: InFlight | None = None) -> NoReturn:
         """Raise what a call that failed with ``exc`` under ``deadline`` amounts to: the deadline's error or ``exc``."""
-        late = self._at_deadline(deadline, exc)
+        late = self._at_deadline(deadline, exc, flight)
         if late is None:
             raise exc
         raise late from late.__cause__
@@ -345,13 +354,14 @@ class _DeadlineMixin:
 
     def _extract_within(self, deadline: Deadline | None, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         """One call of an extract's ``extract``: refused past ``deadline``, and a timeout at it is the deadline's."""
-        if deadline is None:
-            return self._extract(request, urls)
-        self._refuse_late(deadline)
-        try:
-            return self._extract(request, urls)
-        except Exception as exc:
-            self._reraise_late(deadline, exc)
+        with slot(self.name, deadline):
+            if deadline is None:
+                return self._extract(request, urls)
+            self._refuse_late(deadline)
+            try:
+                return self._extract(request, urls)
+            except Exception as exc:
+                self._reraise_late(deadline, exc)
 
     async def _aextract_within(
         self, deadline: Deadline | None, request: ExtractRequest, urls: list[str]
@@ -362,10 +372,12 @@ class _DeadlineMixin:
         the deadline has passed for all of them, and a backend that refused
         early would read as one the deadline cut off.
         """
-        if deadline is None:
-            return await self._aextract(request, urls)
-        self._refuse_late(deadline)
-        try:
-            return await _within(deadline, self._aextract(request, urls))
-        except Exception as exc:
-            self._reraise_late(deadline, exc)
+        async with aslot(self.name, deadline):
+            if deadline is None:
+                return await self._aextract(request, urls)
+            self._refuse_late(deadline)
+            with tracking() as flight:
+                try:
+                    return await _within(deadline, self._aextract(request, urls))
+                except Exception as exc:
+                    self._reraise_late(deadline, exc, flight)

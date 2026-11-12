@@ -22,7 +22,7 @@ from web_router.registry import available_providers, configured_providers, get_p
 from web_router.types import ALWAYS_SENT, NORMALIZED_PARAMETERS, SearchDepth, SearchRequest, SearchResponse
 from web_router.types_options import SearchOptions
 
-ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider", "budget"}
+ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider", "timeout", "budget"}
 
 DEPTHS: tuple[SearchDepth, ...] = get_args(SearchDepth)
 

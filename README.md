@@ -33,10 +33,9 @@ never changes.
 ```python
 from web_router import WebRouter
 
-router = WebRouter()  # no API key needed to start
-
-results = router.search("what is retrieval augmented generation", max_results=5)
-pages = router.extract(results.urls[:3])  # markdown, whichever backend serves it
+with WebRouter() as router:  # no API key needed to start
+    results = router.search("what is retrieval augmented generation", max_results=5, timeout=10)
+    pages = router.extract(results.urls[:3], timeout=30)  # markdown, whichever backend serves it
 
 print(results.provider, [doc.url for doc in pages.documents])
 ```
@@ -139,7 +138,9 @@ router.extract(url)  # Nimble, then Firecrawl if Nimble fails
 ```
 
 A named provider is never quietly swapped for another: a missing key raises an
-error naming the variable to set. [The auto order](https://docs.webrouter.net/providers#the-auto-order)
+error naming the variable to set. In a service, share one router per process,
+set `timeout=` on each call and turn on the `web_router` logger: see
+[Running in production](https://docs.webrouter.net/production). [The auto order](https://docs.webrouter.net/providers#the-auto-order)
 lists each method's order and how it is generated.
 
 ## Budgets and cost control

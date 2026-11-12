@@ -38,13 +38,20 @@ holding it ends:
     >>> with router.open_browser() as browser:
     ...     browser.goto("https://example.com")
     ...     tree = browser.snapshot().tree
+
+Every module logs under the ``web_router`` logger, which carries only a
+``NullHandler``: configure logging (``logging.basicConfig(level=logging.INFO)``)
+to see each ``auto`` hop, cooldown and refused key.
 """
+
+import logging as _logging
 
 from web_router import live_data_compat as _live_data_compat
 from web_router._version import __version__
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.client_scope import AsyncBudgetScope, BudgetScope
 from web_router.constants import DEFAULT_PROVIDER
+from web_router.constants_production import LOGGER_NAME as _LOGGER_NAME
 from web_router.exceptions import (
     BenchmarkTimeoutError,
     BrowserActionError,
@@ -339,3 +346,6 @@ def __getattr__(name: str) -> object:
     from web_router.live_data_compat import resolve
 
     return resolve(name)
+
+
+_logging.getLogger(_LOGGER_NAME).addHandler(_logging.NullHandler())

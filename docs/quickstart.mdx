@@ -28,13 +28,16 @@ This page takes you from install to a working search and extract in four steps. 
     ```python quickstart.py wrap
     from web_router import WebRouter
 
-    response = WebRouter().search("what is retrieval augmented generation", max_results=5)
+    with WebRouter() as router:
+        response = router.search("what is retrieval augmented generation", max_results=5, timeout=10)
 
     for result in response.results:
         print(result.title, result.url)
 
     print(response.provider)  # which backend actually answered
     ```
+
+    `with` closes the router's connections when the block ends, and `timeout` caps how many seconds the call waits.
 
     <Accordion title="Example output">
     ```text
@@ -50,11 +53,14 @@ This page takes you from install to a working search and extract in four steps. 
   </Step>
   <Step title="Read the pages you found">
     ```python
-    pages = WebRouter().extract(response.urls[:3], format="markdown")
+    with WebRouter() as router:
+        pages = router.extract(response.urls[:3], format="markdown", timeout=30)
 
     for document in pages.documents:
         print(document.url, len(document.content))
     ```
+
+    Under a `timeout`, the pages that came back in time are in `pages.documents` and the rest in `pages.failures`.
   </Step>
   <Step title="Name a provider">
     Once you have a key for one, name it. `Provider` is an enum of the built-in backends, so your editor completes it and a typo is caught where you type it.
@@ -62,10 +68,9 @@ This page takes you from install to a working search and extract in four steps. 
     ```python
     from web_router import Provider, WebRouter
 
-    router = WebRouter(Provider.NIMBLE)  # reads NIMBLE_API_KEY from the environment
-    response = router.search("who founded nimbleway", max_results=5, country="US")
-
-    router.search("...", provider=Provider.BRAVE)  # per-call override
+    with WebRouter(Provider.NIMBLE) as router:  # reads NIMBLE_API_KEY from the environment
+        response = router.search("who founded nimbleway", max_results=5, country="US")
+        router.search("...", provider=Provider.BRAVE)  # per-call override
     ```
 
     A backend that does not map an option you set, such as `country`, raises `UnsupportedParameterError` rather than quietly running the search unfiltered. See [Providers](/providers) for which keys unlock which backends.
@@ -88,6 +93,8 @@ async def main():
 asyncio.run(main())
 ```
 </Accordion>
+
+Serving requests? [Running in production](/production) covers timeouts, one shared router, closing it, threads, logging and warm-up.
 
 ## Install options
 
