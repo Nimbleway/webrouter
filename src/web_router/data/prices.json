@@ -749,6 +749,24 @@
       "latency_measured": null
     },
     {
+      "provider": "valyu",
+      "method": "search",
+      "mode": null,
+      "price_usd": 6.25,
+      "unit": "per_1k",
+      "note": "searches of 10 web results: 0.1 credit per result, at $10 per 1,600 credits pay-as-you-go; dataset results cost more",
+      "source_url": "https://docs.valyu.ai/pricing",
+      "checked": "2026-11-12",
+      "setup": "`valyu`",
+      "setting": "default (`search_type=web`)",
+      "does": "Titles, URLs, a relevance score and the page body per result",
+      "latency_p50_s": null,
+      "latency_p90_s": null,
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
+    },
+    {
       "provider": "agentcore",
       "method": "search",
       "mode": null,

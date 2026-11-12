@@ -55,6 +55,7 @@ from web_router.constants import (
     PROVIDER_SKYVERN,
     PROVIDER_STEEL,
     PROVIDER_TAVILY,
+    PROVIDER_VALYU,
     PROVIDER_WEBIQ,
     PROVIDER_YOU,
     PROVIDER_YOU_MCP,
@@ -77,10 +78,8 @@ if TYPE_CHECKING:
 
 _ProviderT = TypeVar("_ProviderT", bound="_BaseProvider")
 
-# name -> (module path, class name, pip extra that supplies its SDK)
-#
-# Extras are per method, so every backend in a table points at the same one.
-# The column stays because it is what ProviderNotInstalledError quotes back.
+# name -> (module path, class name, pip extra that supplies its SDK). Extras are per method, so every backend in
+# a table points at the same one; the column stays because it is what ProviderNotInstalledError quotes back.
 _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_NIMBLE: ("web_router.providers.nimble", "NimbleProvider", EXTRA_SEARCH),
     PROVIDER_TAVILY: ("web_router.providers.tavily", "TavilyProvider", EXTRA_SEARCH),
@@ -93,6 +92,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQProvider", EXTRA_SEARCH),
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableProvider", EXTRA_SEARCH),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekProvider", EXTRA_SEARCH),
+    PROVIDER_VALYU: ("web_router.providers.valyu", "ValyuProvider", EXTRA_SEARCH),
     PROVIDER_AGENTCORE: ("web_router.providers.agentcore", "AgentCoreProvider", EXTRA_AWS),
     PROVIDER_YOU_MCP: ("web_router.providers.you_mcp", "YouMcpProvider", EXTRA_SEARCH),
     PROVIDER_EXA_MCP: ("web_router.providers.exa_mcp", "ExaMcpProvider", EXTRA_SEARCH),
