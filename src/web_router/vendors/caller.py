@@ -16,6 +16,7 @@ guarantees hold for every vendor:
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Mapping
 
 import httpx
@@ -59,6 +60,8 @@ class VendorCaller:
         self._tokens = TokenCache()
         self._sync: httpx.Client | None = None
         self._async: httpx.AsyncClient | None = None
+        # Threads sharing one router must not each build, and leak, a client.
+        self._client_lock = threading.Lock()
 
     @property
     def catalog(self) -> VendorCatalog:
@@ -122,17 +125,19 @@ class VendorCaller:
     # -- sending -----------------------------------------------------------
 
     def _client(self) -> httpx.Client:
-        if self._sync is None:
-            self._sync = httpx.Client(timeout=self._timeout, follow_redirects=False, transport=self._transport)
+        with self._client_lock:
+            if self._sync is None:
+                self._sync = httpx.Client(timeout=self._timeout, follow_redirects=False, transport=self._transport)
         return self._sync
 
     def _aclient(self) -> httpx.AsyncClient:
         """The async client, built once and kept: an async router stays on the event loop it first ran on, as
         the providers' clients do."""
-        if self._async is None:
-            self._async = httpx.AsyncClient(
-                timeout=self._timeout, follow_redirects=False, transport=self._async_transport
-            )
+        with self._client_lock:
+            if self._async is None:
+                self._async = httpx.AsyncClient(
+                    timeout=self._timeout, follow_redirects=False, transport=self._async_transport
+                )
         return self._async
 
     def _begin(self, plan: _Plan, *, allow_writes: bool) -> tuple[dict[str, str], TokenRequest | None]:

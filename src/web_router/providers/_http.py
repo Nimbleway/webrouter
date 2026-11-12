@@ -20,9 +20,8 @@ To add a search backend::
         def _to_response(self, request, payload): ...
 
 An extract backend is the same shape, against :class:`HttpExtractProvider`,
-with ``extract_path`` in place of ``search_path`` and a list of URLs passed
-alongside the request. An answer backend is the search shape again, against
-:class:`HttpAnswerProvider`, with ``answer_path``.
+with ``extract_path`` and a list of URLs beside the request; an answer backend,
+against :class:`HttpAnswerProvider`, with ``answer_path``.
 
 A browse backend, against :class:`HttpBrowseProvider`, implements the job's
 ``_start`` and ``_fetch`` over the request helpers it is given, as a research
@@ -40,6 +39,7 @@ from __future__ import annotations
 
 import abc
 import contextlib
+import threading
 from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any, ClassVar, Generic, Literal, TypeVar
@@ -135,8 +135,7 @@ class _HttpProvider(_BaseProvider):
         url = base_url or self.base_url
         super().__init__(api_key=key, base_url=url, timeout=timeout, **kwargs)
 
-        # Merge rather than replace: a caller passing headers= must not silently
-        # drop the auth header and get an unexplained 401.
+        # Merged, not replaced: a caller's headers= must not drop the auth header.
         headers = {"Accept": "application/json"}
         if key is not None:
             headers.update(self._auth_headers(key))
@@ -155,11 +154,12 @@ class _HttpProvider(_BaseProvider):
             "follow_redirects": follow_redirects,
             **compact(kwargs),
         }
-        # Built on first use, and only the one actually used: constructing both
-        # eagerly left a sync caller holding an open async connection pool that
-        # close() had no way to shut down.
+        # Built on first use, and only the one used: building both eagerly left a
+        # sync caller holding an async pool close() could not shut. The lock stops
+        # threads sharing one router from each building, and leaking, a client.
         self._sync: httpx.Client | None = None
         self._async: httpx.AsyncClient | None = None
+        self._client_lock = threading.Lock()
 
     def _clamped(self) -> dict[str, Any]:
         """A one-call request's timeout under a deadline; see :func:`~web_router.providers._deadline.clamped`."""
@@ -181,14 +181,16 @@ class _HttpProvider(_BaseProvider):
 
     @property
     def _client(self) -> httpx.Client:
-        if self._sync is None:
-            self._sync = httpx.Client(**self._client_kwargs)
+        with self._client_lock:
+            if self._sync is None:
+                self._sync = httpx.Client(**self._client_kwargs)
         return self._sync
 
     @property
     def _async_client(self) -> httpx.AsyncClient:
-        if self._async is None:
-            self._async = httpx.AsyncClient(**self._client_kwargs)
+        with self._client_lock:
+            if self._async is None:
+                self._async = httpx.AsyncClient(**self._client_kwargs)
         return self._async
 
     def _payload(self, response: httpx.Response) -> dict[str, Any]:
@@ -210,15 +212,12 @@ class _HttpProvider(_BaseProvider):
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            detail = MSG_HTTP_ERROR.format(
-                status=exc.response.status_code,
-                body=exc.response.text[:HTTP_ERROR_BODY_LIMIT],
-            )
+            body = exc.response.text[:HTTP_ERROR_BODY_LIMIT]
+            detail = MSG_HTTP_ERROR.format(status=exc.response.status_code, body=body)
             raise ProviderError(self.name, detail, original=exc) from exc
 
     def close(self) -> None:
-        # Via the attribute, not the property: closing must never be the thing
-        # that constructs a client.
+        # Via the attribute, not the property: closing must never construct a client.
         if self._sync is not None:
             self._sync.close()
 
