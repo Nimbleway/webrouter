@@ -56,6 +56,8 @@ SEARCH = [
     "what is a research report",
     "reporters near me",
     "compare",
+    "Search for market research jobs in Berlin",
+    "What does market research mean?",
     "Give me a weather report for Paris",
     "give me a traffic report",
     "create a bug report template",
