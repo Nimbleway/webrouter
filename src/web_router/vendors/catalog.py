@@ -134,17 +134,29 @@ def _score(query_words: set[str], endpoint: VendorEndpoint, vendor: Vendor) -> i
 
 
 def load_vendor_file(path: Path | str, text: str | None = None) -> Vendor:
-    """Parse and validate one vendor file, naming the file in any error."""
+    """Parse and validate one vendor file, naming the file in any error.
+
+    A validation error names each bad field and why, never its value: a misplaced value may be a pasted key.
+    """
     path = Path(path)
     try:
         payload = json.loads(text if text is not None else path.read_text(encoding="utf-8"))
         vendor = Vendor.model_validate(payload)
-    except (ValueError, ValidationError) as exc:
+    except ValidationError as exc:
+        raise ConfigurationError(MSG_VENDOR_CATALOG_INVALID.format(file=path.name, error=_fields(exc))) from None
+    except (OSError, ValueError) as exc:
         raise ConfigurationError(MSG_VENDOR_CATALOG_INVALID.format(file=path.name, error=exc)) from exc
     if vendor.vendor != path.stem:
         error = MSG_VENDOR_CATALOG_ID_MISMATCH.format(declared=vendor.vendor, stem=path.stem)
         raise ConfigurationError(MSG_VENDOR_CATALOG_INVALID.format(file=path.name, error=error))
     return vendor
+
+
+def _fields(exc: ValidationError) -> str:
+    return "; ".join(
+        f"{'.'.join(map(str, error['loc']))}: {error['msg']}"
+        for error in exc.errors(include_input=False, include_url=False)
+    )
 
 
 def _builtin() -> dict[str, Vendor]:
