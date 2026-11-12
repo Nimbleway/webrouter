@@ -264,7 +264,7 @@ value on the class, before anything is sent, so `auto` passes it over keyless
 and a router's default drops it:
 
 - **`search_depth` levels**: set `depth_levels` to the levels it serves. Each
-  level is a size (README's [Search depth](README.md#search-depth)); one whose
+  level is a size (the [Search guide](https://docs.webrouter.net/search#search-depth)); one whose
   longest body is short of a page lists no `deep`.
 - **Any other value** (a country off its list, both domain lists at once):
   override the classmethod `refused_options` to return each refused option and

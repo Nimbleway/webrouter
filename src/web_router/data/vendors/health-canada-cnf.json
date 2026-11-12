@@ -1,0 +1,257 @@
+{
+  "vendor": "health-canada-cnf",
+  "name": "Canadian Nutrient File (Health Canada)",
+  "category": "health",
+  "summary": "Health Canada's reference food composition database: foods commonly eaten in Canada, their nutrient amounts per 100 g, serving-size conversion factors and food groups.",
+  "docs_url": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html",
+  "base_url": "https://food-nutrition.canada.ca/api/canadian-nutrient-file",
+  "notes": [
+    "Keyless. There is no text search: list all foods once (food without id) and match descriptions locally, then query by food code.",
+    "Nutrient values are per 100 g edible portion; multiply by a serving size's conversion_factor_value for a portion.",
+    "Every call takes lang (en/fr) and type (json/xml); JSON and English are the defaults."
+  ],
+  "sources": [
+    "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "health-canada-cnf.foods.get",
+      "name": "Get or list foods",
+      "summary": "Food code and description of one food, or of every food when id is omitted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/food/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Food code; omit to list all foods.",
+          "required": false,
+          "example": "2314"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Response language; default en.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; default json.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "food.search",
+      "docs_url": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-cnf.nutrients.amounts",
+      "name": "Get a food's nutrient amounts",
+      "summary": "Every nutrient value of one food per 100 g, with unit, standard error and source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nutrientamount/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Food code.",
+          "required": true,
+          "example": "2314"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Response language; default en.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; default json.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "food.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-cnf.servings.get",
+      "name": "Get a food's serving sizes",
+      "summary": "Household measures of one food and the factor converting per-100 g values to each.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/servingsize/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Food code.",
+          "required": true,
+          "example": "2314"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Response language; default en.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; default json.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "food.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-cnf.nutrients.names",
+      "name": "Get or list nutrient names",
+      "summary": "Nutrient ids, names, symbols and units; all of them when id is omitted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nutrientname/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Nutrient name id; omit to list all.",
+          "required": false
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Response language; default en.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; default json.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "reference.nutrients",
+      "docs_url": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-cnf.groups.list",
+      "name": "Get or list food groups",
+      "summary": "Food group ids, codes and descriptions; all of them when id is omitted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/foodgroup/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Food group id; omit to list all.",
+          "required": false
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Response language; default en.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; default json.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "reference.food_groups",
+      "docs_url": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-cnf.refuse.get",
+      "name": "Get a food's refuse amount",
+      "summary": "Percent inedible portion of one food.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/refuseamount/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Food code.",
+          "required": true,
+          "example": "2314"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Response language; default en.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format; default json.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "food.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/cnf-documentation-en.html"
+      }
+    }
+  ]
+}

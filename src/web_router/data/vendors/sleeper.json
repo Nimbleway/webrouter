@@ -1,0 +1,288 @@
+{
+  "vendor": "sleeper",
+  "name": "Sleeper",
+  "category": "sports",
+  "summary": "Fantasy football leagues, rosters, matchups, transactions, drafts, players and trending adds/drops from Sleeper's free read-only API.",
+  "docs_url": "https://docs.sleeper.com/",
+  "base_url": "https://api.sleeper.app/v1",
+  "notes": [
+    "Keyless and read-only; free for non-commercial use (commercial use needs a licence from Sleeper).",
+    "Stay under 1000 calls a minute or the IP may be blocked.",
+    "The full player map (players.list) is about 5MB: fetch it at most once a day and keep it; other calls return player ids to look up in it."
+  ],
+  "sources": [
+    "https://docs.sleeper.com/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sleeper.users.get",
+      "name": "Get a user",
+      "summary": "A user's id, username, display name and avatar, by username or user id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user/{user}",
+      "params": {
+        "user": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Username or user id."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.users.leagues",
+      "name": "List a user's leagues",
+      "summary": "All leagues of a user for a sport and season.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user/{user_id}/leagues/{sport}/{season}",
+      "params": {
+        "user_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Numeric user id (from sleeper.users.get)."
+        },
+        "sport": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Sport; only nfl is documented for leagues and drafts.",
+          "example": "nfl"
+        },
+        "season": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Season year.",
+          "example": "2018"
+        }
+      },
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.leagues.get",
+      "name": "Get a league",
+      "summary": "A league's settings, scoring, roster positions and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/league/{league_id}",
+      "params": {
+        "league_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "League id."
+        }
+      },
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.leagues.rosters",
+      "name": "List a league's rosters",
+      "summary": "Every roster in a league with its players, starters, owner and record.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/league/{league_id}/rosters",
+      "params": {
+        "league_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "League id."
+        }
+      },
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.leagues.users",
+      "name": "List a league's users",
+      "summary": "Users in a league with their team names.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/league/{league_id}/users",
+      "params": {
+        "league_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "League id."
+        }
+      },
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.leagues.matchups",
+      "name": "Get a week's matchups",
+      "summary": "Matchups of a league for one week, with points per roster and starter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/league/{league_id}/matchups/{week}",
+      "params": {
+        "league_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "League id."
+        },
+        "week": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Week number.",
+          "example": 1
+        }
+      },
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.leagues.transactions",
+      "name": "List a week's transactions",
+      "summary": "Free-agent moves, waivers and trades of a league in one week.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/league/{league_id}/transactions/{round}",
+      "params": {
+        "league_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "League id."
+        },
+        "round": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The week to pull transactions from.",
+          "example": 1
+        }
+      },
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.state",
+      "name": "Get the current season state",
+      "summary": "Current week, season, season type and related dates for a sport.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/state/{sport}",
+      "params": {
+        "sport": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Sport: nfl, nba, lcs, etc.",
+          "example": "nfl"
+        }
+      },
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.players.list",
+      "name": "Get all players",
+      "summary": "Map of every player by player id, optionally filtered by position or active status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/players/{sport}",
+      "params": {
+        "sport": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Sport.",
+          "example": "nfl"
+        },
+        "position": {
+          "in": "query",
+          "type": "string",
+          "description": "Only players whose fantasy positions include this one.",
+          "example": "QB"
+        },
+        "active": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for active players only; any other value is ignored."
+        }
+      },
+      "notes": [
+        "About 5MB unfiltered; call at most once a day."
+      ],
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    },
+    {
+      "id": "sleeper.players.trending",
+      "name": "Get trending players",
+      "summary": "Players most added or dropped across Sleeper leagues recently.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/players/{sport}/trending/{type}",
+      "params": {
+        "sport": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Sport.",
+          "example": "nfl"
+        },
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "add or drop.",
+          "enum": [
+            "add",
+            "drop"
+          ]
+        },
+        "lookback_hours": {
+          "in": "query",
+          "type": "integer",
+          "description": "Hours to look back (default 24)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of results (default 25)."
+        }
+      },
+      "notes": [
+        "Sleeper asks for attribution when you display trending data."
+      ],
+      "docs_url": "https://docs.sleeper.com/",
+      "verified": {
+        "docs": "https://docs.sleeper.com/"
+      }
+    }
+  ]
+}

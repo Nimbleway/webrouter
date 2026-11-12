@@ -1,0 +1,168 @@
+{
+  "vendor": "nasdaq-data-link",
+  "name": "Nasdaq Data Link",
+  "category": "finance",
+  "summary": "Financial, economic and alternative datasets from Nasdaq Data Link through its Tables API: filter rows and columns of any table you can access, and read table metadata.",
+  "docs_url": "https://data.nasdaq.com/tablesapi",
+  "base_url": "https://data.nasdaq.com/api/v3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "NASDAQ_DATA_LINK_API_KEY"
+        ],
+        "required": false,
+        "description": "a Nasdaq Data Link API key (data.nasdaq.com account profile); calls work without one at much lower limits"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Tables are named PUBLISHER/TABLE (e.g. ETFG/FUND, MER/F1); premium tables need a subscription on the key's account.",
+    "Row filters are table-specific: only columns marked filterable in the table's documentation (or listed by tables.metadata) work, with operators .gt, .lt, .gte, .lte appended to the column name; several values are comma-separated.",
+    "At most 10,000 rows per call. Page with qopts.cursor_id, taken from next_cursor_id in the previous JSON response, until it is null. Rows are unsorted; sort locally.",
+    "Rate limits: anonymous 20 calls per 10 minutes and 50 a day (shared by all anonymous users); free keys 300 per 10 seconds, 2,000 per 10 minutes, 50,000 a day, one call at a time; premium subscribers 5,000 per 10 minutes and 720,000 a day."
+  ],
+  "sources": [
+    "https://data.nasdaq.com/tablesapi",
+    "https://data.nasdaq.com/accesstools"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nasdaq-data-link.tables.get",
+      "name": "Get rows of a table",
+      "summary": "Rows of one table, filtered by its filterable columns, with chosen columns.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datatables/{publisher}/{table}.{format}",
+      "params": {
+        "publisher": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Publisher code, the part of the table code before the slash.",
+          "example": "ETFG"
+        },
+        "table": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Table code, the part after the slash.",
+          "example": "FUND"
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ]
+        },
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Row filter on a ticker column, for tables that have one; comma-separate several.",
+          "example": "SPY,IWM"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Row filter on a date column, for tables that have one."
+        },
+        "date_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Rows with date on or after this.",
+          "wire_name": "date.gte"
+        },
+        "date_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Rows with date on or before this.",
+          "wire_name": "date.lte"
+        },
+        "qopts_columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return.",
+          "example": "ticker,date,shares_outstanding",
+          "wire_name": "qopts.columns"
+        },
+        "qopts_per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page, at most 10000.",
+          "wire_name": "qopts.per_page"
+        },
+        "qopts_cursor_id": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor_id from the previous page.",
+          "wire_name": "qopts.cursor_id"
+        }
+      },
+      "notes": [
+        "Only ticker and date filters are named here; a table's other filterable columns go through a raw call to the same path.",
+        "qopts.export=true (bulk zip export, subscribers only, 60 an hour) is left out: it starts an asynchronous file job rather than returning rows."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://data.nasdaq.com/tablesapi",
+      "verified": {
+        "docs": "https://data.nasdaq.com/tablesapi"
+      }
+    },
+    {
+      "id": "nasdaq-data-link.tables.metadata",
+      "name": "Get table metadata",
+      "summary": "A table's columns, filterable fields, primary keys and refresh status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datatables/{publisher}/{table}/metadata.{format}",
+      "params": {
+        "publisher": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Publisher code, the part of the table code before the slash.",
+          "example": "ETFG"
+        },
+        "table": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Table code, the part after the slash.",
+          "example": "FUND"
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ]
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://data.nasdaq.com/tablesapi",
+      "verified": {
+        "docs": "https://data.nasdaq.com/tablesapi"
+      }
+    }
+  ]
+}

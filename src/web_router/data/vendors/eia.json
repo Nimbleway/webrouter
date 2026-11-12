@@ -1,0 +1,424 @@
+{
+  "vendor": "eia",
+  "name": "US Energy Information Administration",
+  "category": "finance",
+  "summary": "US energy statistics (electricity, petroleum, natural gas, coal, prices, production, consumption) from the EIA Open Data API v2.",
+  "docs_url": "https://www.eia.gov/opendata/documentation.php",
+  "base_url": "https://api.eia.gov/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EIA_API_KEY"
+        ],
+        "description": "a free EIA Open Data API key (register at eia.gov/opendata). Sent as the api_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The API is a tree of routes: call a route without /data for its metadata (child routes, or frequencies, facets and data columns), then add /data to get rows.",
+    "Data rows only carry value columns that are asked for with data[]; ask for them explicitly.",
+    "JSON answers hold at most 5,000 rows; page with offset and length. response.total gives the full match count.",
+    "Bulk scraping must be throttled; a key that sends too many requests per second or hour is suspended temporarily.",
+    "Route segments go in separate path parameters (category, dataset); a value containing '/' would be escaped."
+  ],
+  "sources": [
+    "https://www.eia.gov/opendata/documentation.php"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "eia.routes.list",
+      "name": "List top-level datasets",
+      "summary": "The API's top-level routes (electricity, petroleum, natural-gas, ...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {},
+      "job": "economy.datasets.list",
+      "docs_url": "https://www.eia.gov/opendata/documentation.php",
+      "verified": {
+        "docs": "https://www.eia.gov/opendata/documentation.php"
+      }
+    },
+    {
+      "id": "eia.route.get",
+      "name": "Get a route",
+      "summary": "A route's description and child routes, or, for a dataset route, its frequencies, facets and data columns.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{category}",
+      "params": {
+        "category": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Top-level route.",
+          "example": "electricity"
+        }
+      },
+      "job": "economy.datasets.get",
+      "docs_url": "https://www.eia.gov/opendata/documentation.php",
+      "verified": {
+        "docs": "https://www.eia.gov/opendata/documentation.php"
+      }
+    },
+    {
+      "id": "eia.dataset.get",
+      "name": "Get a second-level route",
+      "summary": "Metadata of a route two levels deep: child routes, or frequencies, facets and data columns.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{category}/{dataset}",
+      "params": {
+        "category": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Top-level route.",
+          "example": "electricity"
+        },
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Route under it.",
+          "example": "retail-sales"
+        }
+      },
+      "job": "economy.datasets.get",
+      "docs_url": "https://www.eia.gov/opendata/documentation.php",
+      "verified": {
+        "docs": "https://www.eia.gov/opendata/documentation.php"
+      }
+    },
+    {
+      "id": "eia.facet.values",
+      "name": "List a facet's values",
+      "summary": "The codes a facet accepts in a dataset two levels deep (e.g. sectorid: RES, COM).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{category}/{dataset}/facet/{facet_id}",
+      "params": {
+        "category": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Top-level route.",
+          "example": "electricity"
+        },
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset route.",
+          "example": "retail-sales"
+        },
+        "facet_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Facet id from the dataset's metadata.",
+          "example": "sectorid"
+        }
+      },
+      "job": "economy.datasets.get",
+      "docs_url": "https://www.eia.gov/opendata/documentation.php",
+      "verified": {
+        "docs": "https://www.eia.gov/opendata/documentation.php"
+      }
+    },
+    {
+      "id": "eia.data.get",
+      "name": "Query a dataset two levels deep",
+      "summary": "Rows of a dataset at /{category}/{dataset}, e.g. electricity/retail-sales.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{category}/{dataset}/data",
+      "params": {
+        "category": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Top-level route.",
+          "example": "electricity"
+        },
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset route under it.",
+          "example": "retail-sales"
+        },
+        "data": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "data[]",
+          "description": "Value columns to return (the dataset's metadata lists them). Without it, rows carry no values.",
+          "example": [
+            "price"
+          ]
+        },
+        "frequency": {
+          "in": "query",
+          "type": "string",
+          "description": "Periodicity the dataset offers, e.g. monthly, quarterly, annual.",
+          "example": "monthly"
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "First period, in the frequency's format (YYYY-MM for monthly).",
+          "example": "2020-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "Last period.",
+          "example": "2024-12"
+        },
+        "sort_column": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "sort[0][column]",
+          "description": "Column to sort by.",
+          "example": "period"
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "sort[0][direction]",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip."
+        },
+        "length": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return; at most 5,000 in JSON."
+        }
+      },
+      "notes": [
+        "Facet filters (facets[<id>][]=<code>) have dynamic names; this entry cannot take them. Use eia.electricity.retail_sales, or a raw call with the facet in the query."
+      ],
+      "job": "economy.series.get",
+      "docs_url": "https://www.eia.gov/opendata/documentation.php",
+      "verified": {
+        "docs": "https://www.eia.gov/opendata/documentation.php"
+      }
+    },
+    {
+      "id": "eia.data.get3",
+      "name": "Query a dataset three levels deep",
+      "summary": "Rows of a dataset at /{category}/{subcategory}/{dataset}; walk eia.route.get to find such routes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{category}/{subcategory}/{dataset}/data",
+      "params": {
+        "category": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Top-level route."
+        },
+        "subcategory": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Second-level route."
+        },
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset route under it."
+        },
+        "data": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "data[]",
+          "description": "Value columns to return (the dataset's metadata lists them). Without it, rows carry no values.",
+          "example": [
+            "price"
+          ]
+        },
+        "frequency": {
+          "in": "query",
+          "type": "string",
+          "description": "Periodicity the dataset offers, e.g. monthly, quarterly, annual.",
+          "example": "monthly"
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "First period, in the frequency's format (YYYY-MM for monthly).",
+          "example": "2020-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "Last period.",
+          "example": "2024-12"
+        },
+        "sort_column": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "sort[0][column]",
+          "description": "Column to sort by.",
+          "example": "period"
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "sort[0][direction]",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip."
+        },
+        "length": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return; at most 5,000 in JSON."
+        }
+      },
+      "notes": [
+        "Facet filters need a raw call, as for eia.data.get."
+      ],
+      "job": "economy.series.get",
+      "docs_url": "https://www.eia.gov/opendata/documentation.php",
+      "verified": {
+        "docs": "https://www.eia.gov/opendata/documentation.php"
+      }
+    },
+    {
+      "id": "eia.electricity.retail_sales",
+      "name": "Query electricity retail sales",
+      "summary": "Electricity sales to ultimate customers by state and sector: customers, average price, revenue and MWh sold.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/electricity/retail-sales/data",
+      "params": {
+        "data": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "data[]",
+          "description": "Value columns to return (the dataset's metadata lists them). Without it, rows carry no values.",
+          "example": [
+            "price"
+          ]
+        },
+        "frequency": {
+          "in": "query",
+          "type": "string",
+          "description": "Periodicity the dataset offers, e.g. monthly, quarterly, annual.",
+          "example": "monthly"
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "First period, in the frequency's format (YYYY-MM for monthly).",
+          "example": "2020-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "Last period.",
+          "example": "2024-12"
+        },
+        "sort_column": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "sort[0][column]",
+          "description": "Column to sort by.",
+          "example": "period"
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "sort[0][direction]",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip."
+        },
+        "length": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return; at most 5,000 in JSON."
+        },
+        "stateid": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "facets[stateid][]",
+          "description": "State codes to keep.",
+          "example": [
+            "CO"
+          ]
+        },
+        "sectorid": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "facets[sectorid][]",
+          "description": "Sector codes to keep (RES residential, COM commercial, ...).",
+          "example": [
+            "RES"
+          ]
+        }
+      },
+      "notes": [
+        "Example: data [price], stateid [CO], sectorid [RES], frequency monthly gives Colorado's residential price per month."
+      ],
+      "job": "economy.series.get",
+      "docs_url": "https://www.eia.gov/opendata/documentation.php",
+      "verified": {
+        "docs": "https://www.eia.gov/opendata/documentation.php"
+      }
+    },
+    {
+      "id": "eia.series.get",
+      "name": "Get a legacy APIv1 series",
+      "summary": "Data for an APIv1 series id, translated to its v2 dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/seriesid/{series_id}",
+      "params": {
+        "series_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "APIv1 series id.",
+          "example": "ELEC.SALES.CO-RES.A"
+        }
+      },
+      "job": "economy.series.get",
+      "docs_url": "https://www.eia.gov/opendata/documentation.php",
+      "verified": {
+        "docs": "https://www.eia.gov/opendata/documentation.php"
+      }
+    }
+  ]
+}

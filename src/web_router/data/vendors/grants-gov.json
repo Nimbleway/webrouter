@@ -1,0 +1,112 @@
+{
+  "vendor": "grants-gov",
+  "name": "Grants.gov",
+  "category": "government",
+  "summary": "US federal grant opportunities from Grants.gov: keyword and filter search over forecasted, posted, closed and archived opportunities, and the full detail of one opportunity.",
+  "docs_url": "https://www.grants.gov/api/api-guide",
+  "base_url": "https://api.grants.gov",
+  "notes": [
+    "search2 and fetchOpportunity are keyless; other Grants.gov REST APIs need a key issued through the Help Desk and are not listed here.",
+    "Both calls are reads over POST with a JSON body, and wrap the answer as {errorcode, msg, token, data}; errorcode 0 means success.",
+    "Multi-value filters are one string joined with '|' (e.g. oppStatuses 'forecasted|posted')."
+  ],
+  "sources": [
+    "https://www.grants.gov/api/api-guide",
+    "https://www.grants.gov/api/common/search2",
+    "https://www.grants.gov/api/common/fetchopportunity"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "grants-gov.search",
+      "name": "Search grant opportunities",
+      "summary": "Opportunities matching a keyword and filters, with id, number, title, agency, open and close dates, status and assistance listing numbers, plus facet counts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/api/search2",
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "description": "Free-text keyword.",
+          "example": "health"
+        },
+        "rows": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number of results to return.",
+          "example": 10
+        },
+        "oppNum": {
+          "in": "body",
+          "type": "string",
+          "description": "Funding opportunity number."
+        },
+        "oppStatuses": {
+          "in": "body",
+          "type": "string",
+          "description": "Statuses joined with '|': forecasted, posted, closed, archived.",
+          "example": "forecasted|posted"
+        },
+        "agencies": {
+          "in": "body",
+          "type": "string",
+          "description": "Agency code(s), e.g. HHS.",
+          "example": "HHS"
+        },
+        "eligibilities": {
+          "in": "body",
+          "type": "string",
+          "description": "Eligibility code(s), e.g. 01 for county governments.",
+          "example": "01"
+        },
+        "fundingCategories": {
+          "in": "body",
+          "type": "string",
+          "description": "Funding category code(s), e.g. HL (health), AR (arts).",
+          "example": "HL"
+        },
+        "aln": {
+          "in": "body",
+          "type": "string",
+          "description": "Assistance Listing Number (formerly CFDA).",
+          "example": "93.866"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "The response's facet lists (oppStatusOptions, eligibilities, fundingCategories, fundingInstruments, agencies) give the codes valid for the filters, with counts."
+      ],
+      "job": "grants.search",
+      "docs_url": "https://www.grants.gov/api/common/search2",
+      "verified": {
+        "docs": "https://www.grants.gov/api/common/search2"
+      }
+    },
+    {
+      "id": "grants-gov.opportunity.get",
+      "name": "Get a grant opportunity",
+      "summary": "Full detail of one opportunity: synopsis, agency contact, award ceiling and floor, dates, eligibility and category.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/api/fetchOpportunity",
+      "params": {
+        "opportunityId": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Opportunity id (the 'id' from a search hit, not the opportunity number).",
+          "example": 289999
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "grants.get",
+      "docs_url": "https://www.grants.gov/api/common/fetchopportunity",
+      "verified": {
+        "docs": "https://www.grants.gov/api/common/fetchopportunity"
+      }
+    }
+  ]
+}

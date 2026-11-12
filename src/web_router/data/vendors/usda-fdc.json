@@ -1,0 +1,237 @@
+{
+  "vendor": "usda-fdc",
+  "name": "USDA FoodData Central",
+  "category": "health",
+  "summary": "USDA nutrient composition data for foods: Foundation, SR Legacy, FNDDS survey foods and Branded Foods, searchable and by FDC ID.",
+  "docs_url": "https://fdc.nal.usda.gov/api-guide/",
+  "base_url": "https://api.nal.usda.gov/fdc",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "USDA_FDC_API_KEY"
+        ],
+        "description": "A free data.gov API key (fdc.nal.usda.gov > Get an API Key). Sent as the api_key query parameter. DEMO_KEY works for trying it out, at 30 requests an hour and 50 a day per IP."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit: 1,000 requests per hour per IP by default; exceeding it blocks the key for an hour (429). X-RateLimit-Limit and X-RateLimit-Remaining headers show usage.",
+    "Data is public domain (CC0); USDA asks for citation of FoodData Central."
+  ],
+  "sources": [
+    "https://fdc.nal.usda.gov/api-guide/",
+    "https://fdc.nal.usda.gov/api-spec/fdc_api.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "usda-fdc.foods.search",
+      "name": "Search foods",
+      "summary": "Foods matching keywords, with their nutrients, optionally limited to data types or a brand owner.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/foods/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Search terms; FDC search operators allowed.",
+          "required": true,
+          "example": "Cheddar cheese"
+        },
+        "dataType": {
+          "in": "body",
+          "type": "array",
+          "description": "Data types to include: Branded, Foundation, Survey (FNDDS), SR Legacy.",
+          "example": [
+            "Foundation",
+            "SR Legacy"
+          ]
+        },
+        "brandOwner": {
+          "in": "body",
+          "type": "string",
+          "description": "Brand owner filter; Branded Foods only."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1-200; default 50."
+        },
+        "pageNumber": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number; offset is pageNumber * pageSize."
+        },
+        "sortBy": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "dataType.keyword",
+            "lowercaseDescription.keyword",
+            "fdcId",
+            "publishedDate"
+          ]
+        },
+        "sortOrder": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort direction; only with sortBy.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST (a GET form with query parameters also exists); dataType must be an array."
+      ],
+      "job": "food.search",
+      "docs_url": "https://fdc.nal.usda.gov/api-spec/fdc_api.html",
+      "verified": {
+        "docs": "https://fdc.nal.usda.gov/api-spec/fdc_api.html"
+      }
+    },
+    {
+      "id": "usda-fdc.food.get",
+      "name": "Get a food",
+      "summary": "Full or abridged details and nutrients of one food by FDC ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/food/{fdcId}",
+      "params": {
+        "fdcId": {
+          "in": "path",
+          "type": "string",
+          "description": "FDC ID of the food.",
+          "required": true,
+          "example": "534358"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "abridged or full (default).",
+          "enum": [
+            "abridged",
+            "full"
+          ]
+        },
+        "nutrients": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 25 nutrient numbers, comma-separated, to return only those.",
+          "example": "203,204,205"
+        }
+      },
+      "job": "food.details",
+      "docs_url": "https://fdc.nal.usda.gov/api-spec/fdc_api.html",
+      "verified": {
+        "docs": "https://fdc.nal.usda.gov/api-spec/fdc_api.html"
+      }
+    },
+    {
+      "id": "usda-fdc.foods.get",
+      "name": "Get several foods",
+      "summary": "Details of up to 20 foods by FDC ID in one call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/foods",
+      "params": {
+        "fdcIds": {
+          "in": "query",
+          "type": "string",
+          "description": "FDC IDs, comma-separated (up to 20).",
+          "required": true,
+          "example": "534358,373052"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "abridged or full (default).",
+          "enum": [
+            "abridged",
+            "full"
+          ]
+        },
+        "nutrients": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 25 nutrient numbers, comma-separated."
+        }
+      },
+      "notes": [
+        "Unknown IDs are dropped silently; no matches is an empty list."
+      ],
+      "job": "food.details",
+      "docs_url": "https://fdc.nal.usda.gov/api-spec/fdc_api.html",
+      "verified": {
+        "docs": "https://fdc.nal.usda.gov/api-spec/fdc_api.html"
+      }
+    },
+    {
+      "id": "usda-fdc.foods.list",
+      "name": "List foods",
+      "summary": "A paged list of foods in abridged format, by data type.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/foods/list",
+      "params": {
+        "dataType": {
+          "in": "body",
+          "type": "array",
+          "description": "Data types to include: Branded, Foundation, Survey (FNDDS), SR Legacy.",
+          "example": [
+            "Foundation"
+          ]
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1-200; default 50."
+        },
+        "pageNumber": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number; offset is pageNumber * pageSize."
+        },
+        "sortBy": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "dataType.keyword",
+            "lowercaseDescription.keyword",
+            "fdcId",
+            "publishedDate"
+          ]
+        },
+        "sortOrder": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort direction; only with sortBy.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "food.search",
+      "docs_url": "https://fdc.nal.usda.gov/api-spec/fdc_api.html",
+      "verified": {
+        "docs": "https://fdc.nal.usda.gov/api-spec/fdc_api.html"
+      }
+    }
+  ]
+}

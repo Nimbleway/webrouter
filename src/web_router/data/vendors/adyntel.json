@@ -1,0 +1,406 @@
+{
+  "vendor": "adyntel",
+  "name": "Adyntel",
+  "category": "advertising",
+  "summary": "Competitor ad intelligence: the ads a company runs on Meta, Google, LinkedIn and TikTok, keyword search across ad libraries, and a domain's paid and organic keywords.",
+  "docs_url": "https://docs.adyntel.com/",
+  "base_url": "https://api.adyntel.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ADYNTEL_API_KEY"
+        ],
+        "description": "your Adyntel API key (adyntel.com profile > Integrations)"
+      },
+      "email": {
+        "env": [
+          "ADYNTEL_EMAIL"
+        ],
+        "description": "the email of your Adyntel account; sent with every call"
+      }
+    },
+    "inject": [
+      {
+        "in": "body",
+        "name": "api_key",
+        "value": "{api_key}"
+      },
+      {
+        "in": "body",
+        "name": "email",
+        "value": "{email}"
+      }
+    ]
+  },
+  "notes": [
+    "Every endpoint is a POST, and the API key and account email go in the JSON body beside the call's own fields, as Adyntel's examples show; the router adds both.",
+    "Credits: roughly one per page (about 30 ads); a 204 (no ads found) is not charged. 401 means bad credentials, 402 not enough credits.",
+    "Pagination (all but meta.keyword_search): send the previous answer's continuation_token back with the same other fields. The last page returns a null token.",
+    "all_ads and webhook_url are left out of this catalog: they push results to another URL and can burn many credits."
+  ],
+  "sources": [
+    "https://docs.adyntel.com/authorization.md",
+    "https://docs.adyntel.com/openapi-docs/existing-endpoints.md",
+    "https://docs.adyntel.com/ad-libraries/meta.md",
+    "https://docs.adyntel.com/ad-libraries/google.md",
+    "https://docs.adyntel.com/ad-libraries/linkedin.md",
+    "https://docs.adyntel.com/ad-libraries/tiktok.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "adyntel.meta.ads",
+      "name": "List a company's Meta ads",
+      "summary": "Ads a company runs on Facebook and Instagram.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/facebook",
+      "params": {
+        "facebook_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Facebook page URL starting https://. Give this or company_domain."
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "company.com, without https:// or www.. Give this or facebook_url.",
+          "example": "nike.com"
+        },
+        "continuation_token": {
+          "in": "body",
+          "type": "string",
+          "description": "Token for the next page."
+        },
+        "media_type": {
+          "in": "body",
+          "type": "string",
+          "description": "image, meme, image_and_meme or video."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "One ISO country code, or ALL. (Arrays need the webhook mode left out here.)"
+        },
+        "language": {
+          "in": "body",
+          "type": "string",
+          "description": "Language name or ISO 639-1 code."
+        },
+        "active_status": {
+          "in": "body",
+          "type": "string",
+          "description": "inactive or all; default active only."
+        },
+        "ad_type": {
+          "in": "body",
+          "type": "string",
+          "description": "political, properties, employment or financial. political works for the US only."
+        },
+        "check_ugc": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Adds is_ugc_video to video ads; needs media_type video."
+        }
+      },
+      "notes": [
+        "A read over POST. About 30 ads per page, one credit per page."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/meta.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/ad-libraries/meta.md"
+      }
+    },
+    {
+      "id": "adyntel.google.ads",
+      "name": "List a company's Google ads",
+      "summary": "Search, image and video ads a company runs on Google.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/google",
+      "params": {
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "company.com, without https:// or www..",
+          "example": "nike.com"
+        },
+        "media_type": {
+          "in": "body",
+          "type": "string",
+          "description": "text, image, video or all (default)."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "One ISO 3166-1 alpha-2 code, or anywhere. Resend it with every continuation_token."
+        },
+        "continuation_token": {
+          "in": "body",
+          "type": "string",
+          "description": "Token for the next page."
+        }
+      },
+      "notes": [
+        "A read over POST. One credit per page."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/google.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/ad-libraries/google.md"
+      }
+    },
+    {
+      "id": "adyntel.linkedin.ads",
+      "name": "List a company's LinkedIn ads",
+      "summary": "Ads a company runs on LinkedIn.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/linkedin",
+      "params": {
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "company.com. Give this or linkedin_page_id."
+        },
+        "linkedin_page_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "LinkedIn Page id. Give this or company_domain."
+        },
+        "date_filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Preset string (last30d, month, year, lastyear) or {startdate, enddate}; ranges stay within 364 days."
+        },
+        "continuation_token": {
+          "in": "body",
+          "type": "string",
+          "description": "Token for the next page."
+        },
+        "impression_data": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Adds EU transparency data per ad (+1 credit). Cannot combine with date_filter."
+        },
+        "extract_text": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Adds text read from the creative (+1 credit)."
+        }
+      },
+      "notes": [
+        "A read over POST. One credit per page; impression_data and extract_text each add one."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/linkedin.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/ad-libraries/linkedin.md"
+      }
+    },
+    {
+      "id": "adyntel.linkedin.keyword_search",
+      "name": "Search LinkedIn ads by keyword",
+      "summary": "LinkedIn Ad Library ads matching a keyword.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/linkedin-keyword-search",
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keyword."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "2-letter country code."
+        },
+        "dateOption": {
+          "in": "body",
+          "type": "string",
+          "description": "current-month, current-year, custom-date-range, last-30-days or last-year."
+        },
+        "startDate": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD, with custom-date-range."
+        },
+        "endDate": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD, with custom-date-range."
+        },
+        "continuation_token": {
+          "in": "body",
+          "type": "string",
+          "description": "Token for the next page."
+        }
+      },
+      "notes": [
+        "A read over POST. Stop when is_last_page is true."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/linkedin-keyword-search.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/ad-libraries/linkedin-keyword-search.md"
+      }
+    },
+    {
+      "id": "adyntel.meta.keyword_search",
+      "name": "Search Meta ads by keyword",
+      "summary": "Meta ads matching a keyword.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/facebook_ad_search",
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Keyword."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Limit to one country, e.g. US."
+        }
+      },
+      "notes": [
+        "A read over POST. The answer has continuation_token and is_result_complete, but this endpoint documents no way to send the token back for more."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/meta-ad-search.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/ad-libraries/meta-ad-search.md"
+      }
+    },
+    {
+      "id": "adyntel.tiktok.ads",
+      "name": "List a brand's TikTok ads",
+      "summary": "TikTok ads run by a brand, optionally with influencers posting sponsored content for it.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/tiktok",
+      "params": {
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The brand's own domain; tiktok.com is rejected.",
+          "example": "nike.com"
+        },
+        "influencer_ads": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return influencers posting sponsored content (+1 credit)."
+        },
+        "continuation_tokens": {
+          "in": "body",
+          "type": "object",
+          "description": "The continuation_tokens object from the previous answer."
+        }
+      },
+      "notes": [
+        "A read over POST. 204 with an empty body means the company runs no TikTok ads."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/tiktok.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/ad-libraries/tiktok.md"
+      }
+    },
+    {
+      "id": "adyntel.tiktok.keyword_search",
+      "name": "Search TikTok ads by keyword",
+      "summary": "TikTok ads matching a keyword.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/tiktok_search",
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search query."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "One country (mostly European codes) or ALL. US cannot be used as a filter."
+        }
+      },
+      "notes": [
+        "A read over POST. The answer has has_more, search_id and total; the docs do not say how to fetch more."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/tiktok-search.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/ad-libraries/tiktok-search.md"
+      }
+    },
+    {
+      "id": "adyntel.tiktok.ad_details",
+      "name": "Get one TikTok ad",
+      "summary": "Full details of a TikTok ad by id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/tiktok_ad_details",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "TikTok ad id from a TikTok search answer."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "ads.library.get",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/tiktok-ad-details.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/ad-libraries/tiktok-ad-details.md"
+      }
+    },
+    {
+      "id": "adyntel.domain.keywords",
+      "name": "Get a domain's paid and organic keywords",
+      "summary": "Summary of a domain's paid and organic keywords, with estimated budget and CPC.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/domain-keywords",
+      "params": {
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Domain without www or http.",
+          "example": "nike.com"
+        },
+        "language": {
+          "in": "body",
+          "type": "string",
+          "description": "Language of keyword results; default English."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number of results; default 1."
+        }
+      },
+      "notes": [
+        "A read over POST. limit defaults to 1: raise it."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://docs.adyntel.com/ad-libraries/paid-vs-organic-keywords.md",
+      "verified": {
+        "docs": "https://docs.adyntel.com/openapi-docs/existing-endpoints.md"
+      }
+    }
+  ]
+}

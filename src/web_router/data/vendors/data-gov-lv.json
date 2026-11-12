@@ -1,0 +1,219 @@
+{
+  "vendor": "data-gov-lv",
+  "name": "Latvian Open Data Portal (data.gov.lv)",
+  "category": "government",
+  "summary": "Latvia's national open data portal, including the Register of Enterprises' company register, officers, members, beneficial owners, insolvencies and annual-report financials, queryable row by row.",
+  "docs_url": "https://docs.ckan.org/en/latest/api/",
+  "base_url": "https://data.gov.lv",
+  "notes": [
+    "Keyless for public data. The portal runs CKAN: every action is /api/3/action/{name}, and help_show?name={action} on the portal returns that action's documentation.",
+    "Responses are {help, success, result}; on failure success is false and error replaces result, sometimes with HTTP 200, so check success.",
+    "The API lives under /dati on the host (https://data.gov.lv/dati/api/3/action/...). Metadata and field names are in Latvian.",
+    "The Register of Enterprises (organization ur) publishes its registers as DataStore resources: the company register (dataset uz, resource 25e80bf3-f107-4ab4-89ef-251b5b9374e9, filter on regcode, the 11-digit registration number), officers (dataset officers), LLC members (members), beneficial owners (patiesie-labuma-guveji), insolvency proceedings (maksatnespejas-procesi), historical names and annual-report financial data (gada-parskatu-finansu-dati). Get each one's current resource id with datasets.get."
+  ],
+  "sources": [
+    "https://docs.ckan.org/en/latest/api/",
+    "https://data.gov.lv/dati/api/3/action/help_show?name=package_search",
+    "https://data.gov.lv/dati/api/3/action/help_show?name=package_show",
+    "https://data.gov.lv/dati/api/3/action/help_show?name=resource_show",
+    "https://data.gov.lv/dati/api/3/action/help_show?name=datastore_search",
+    "https://data.gov.lv/dati/api/3/action/help_show?name=organization_list"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "data-gov-lv.datasets.search",
+      "name": "Search datasets",
+      "summary": "Datasets matching a Solr query and filters, with their resources and, optionally, facets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dati/api/3/action/package_search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Solr query; *:* (all) by default.",
+          "example": "budget"
+        },
+        "fq": {
+          "in": "query",
+          "type": "string",
+          "description": "Solr filter query, e.g. organization:<name> or res_format:CSV."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field and order; 'score desc, metadata_modified desc' by default.",
+          "example": "metadata_modified desc"
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Datasets to return; 10 by default, at most 1000 unless the site sets otherwise."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset of the first dataset returned."
+        },
+        "facet_field": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "facet.field",
+          "description": "JSON list of fields to facet on, e.g. [\"organization\",\"res_format\"]."
+        }
+      },
+      "notes": [
+        "result.count is the total; page with start and rows."
+      ],
+      "job": "datasets.search",
+      "docs_url": "https://data.gov.lv/dati/api/3/action/help_show?name=package_search",
+      "verified": {
+        "docs": "https://data.gov.lv/dati/api/3/action/help_show?name=package_search"
+      }
+    },
+    {
+      "id": "data-gov-lv.datasets.get",
+      "name": "Get a dataset",
+      "summary": "Metadata of one dataset and its resources (files and API links), including when each was last modified.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dati/api/3/action/package_show",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Dataset id or name (slug)."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://data.gov.lv/dati/api/3/action/help_show?name=package_show",
+      "verified": {
+        "docs": "https://data.gov.lv/dati/api/3/action/help_show?name=package_show"
+      }
+    },
+    {
+      "id": "data-gov-lv.resources.get",
+      "name": "Get a resource",
+      "summary": "Metadata of one resource: URL, format, size, last-modified time and whether its rows are queryable in the DataStore.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dati/api/3/action/resource_show",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Resource id."
+        }
+      },
+      "notes": [
+        "datastore_active true means rows.search works on it; otherwise download the url."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://data.gov.lv/dati/api/3/action/help_show?name=resource_show",
+      "verified": {
+        "docs": "https://data.gov.lv/dati/api/3/action/help_show?name=resource_show"
+      }
+    },
+    {
+      "id": "data-gov-lv.rows.search",
+      "name": "Query rows of a tabular resource",
+      "summary": "Rows of a DataStore-loaded resource, filtered by exact field values or full-text search, with field names and types.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/dati/api/3/action/datastore_search",
+      "params": {
+        "resource_id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Resource id (from datasets.get).",
+          "example": "25e80bf3-f107-4ab4-89ef-251b5b9374e9"
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Exact-match conditions as {field: value}.",
+          "example": {
+            "regcode": 40003032949
+          }
+        },
+        "q": {
+          "in": "body",
+          "type": "string",
+          "description": "Full-text query across all fields (or an object of {field: text})."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields to return; all by default."
+        },
+        "sort": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields with order, e.g. 'name asc'."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Rows to return; 100 by default, at most 32000 unless the site sets otherwise."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Rows to skip."
+        },
+        "include_total": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the total matching count; true by default."
+        }
+      },
+      "notes": [
+        "A read over POST (CKAN accepts every action as a JSON POST). Only resources with datastore_active true can be queried."
+      ],
+      "job": "datasets.query",
+      "docs_url": "https://data.gov.lv/dati/api/3/action/help_show?name=datastore_search",
+      "verified": {
+        "docs": "https://data.gov.lv/dati/api/3/action/help_show?name=datastore_search"
+      }
+    },
+    {
+      "id": "data-gov-lv.organizations.list",
+      "name": "List publishing organizations",
+      "summary": "The organizations that publish datasets on the portal, as names or with details and dataset counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dati/api/3/action/organization_list",
+      "params": {
+        "all_fields": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return organization objects (with package_count) instead of names."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "name, package_count or title, with asc or desc; 'title asc' by default."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Organizations to return; 1000 by default for names, 25 with all_fields."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset, when limit is given."
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://data.gov.lv/dati/api/3/action/help_show?name=organization_list",
+      "verified": {
+        "docs": "https://data.gov.lv/dati/api/3/action/help_show?name=organization_list"
+      }
+    }
+  ]
+}

@@ -1,0 +1,318 @@
+{
+  "vendor": "keywordseverywhere",
+  "name": "Keywords Everywhere",
+  "category": "seo",
+  "summary": "Keyword search volume, CPC and competition, related and People Also Search For keywords, domain and URL keywords, traffic and backlinks.",
+  "docs_url": "https://api.keywordseverywhere.com/docs/#/",
+  "base_url": "https://api.keywordseverywhere.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "KEYWORDSEVERYWHERE_API_KEY"
+        ],
+        "description": "A Keywords Everywhere API key (keywordseverywhere.com/first-install-addon.html). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every data call spends prepaid credits, priced per result returned (or per domain sent); check keywordseverywhere.credits first. Since June 2025 every method is on every plan, including Bronze.",
+    "Bodies may be JSON (arrays as kw, domains) or form-encoded (kw[], domains[]); this entry sends JSON."
+  ],
+  "sources": [
+    "https://api.keywordseverywhere.com/docs/",
+    "https://keywordseverywhere.com/api-documentation.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "keywordseverywhere.credits",
+      "name": "Get credit balance",
+      "summary": "The account's remaining credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/credits",
+      "job": "account.usage",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/miscellaneous/get_credits",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/miscellaneous/get_credits"
+      }
+    },
+    {
+      "id": "keywordseverywhere.countries",
+      "name": "List supported countries",
+      "summary": "Country codes and names accepted by the country parameter; empty code means global.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/countries",
+      "job": "search.locations",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/miscellaneous/get_countries",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/miscellaneous/get_countries"
+      }
+    },
+    {
+      "id": "keywordseverywhere.keyword_data",
+      "name": "Get keyword volume, CPC and competition",
+      "summary": "Search volume, CPC and competition for up to 100 keywords.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_keyword_data",
+      "job": "keywords.volume",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_keyword_data",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_keyword_data"
+      },
+      "params": {
+        "kw": {
+          "in": "body",
+          "type": "array",
+          "description": "Keywords, UTF-8, up to 100 per call.",
+          "required": true,
+          "example": [
+            "keyword planner"
+          ]
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Country code; omitted means global data.",
+          "example": "us"
+        },
+        "currency": {
+          "in": "body",
+          "type": "string",
+          "description": "Currency code, e.g. usd, gbp.",
+          "example": "usd"
+        },
+        "dataSource": {
+          "in": "body",
+          "type": "string",
+          "description": "gkp: Google Keyword Planner only; cli: Keyword Planner plus clickstream.",
+          "example": "gkp",
+          "enum": [
+            "gkp",
+            "cli"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST; JSON body.",
+        "1 credit per keyword returned. The response also carries the credits left."
+      ]
+    },
+    {
+      "id": "keywordseverywhere.related_keywords",
+      "name": "Get related keywords",
+      "summary": "Keywords related to a seed keyword.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_related_keywords",
+      "job": "keywords.ideas",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_related_keywords",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_related_keywords"
+      },
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "description": "Seed keyword, UTF-8.",
+          "required": true,
+          "example": "climate change"
+        },
+        "num": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return, 1 to 10,000.",
+          "example": 100
+        }
+      },
+      "notes": [
+        "A read over POST; JSON body.",
+        "2 credits per keyword returned."
+      ]
+    },
+    {
+      "id": "keywordseverywhere.pasf_keywords",
+      "name": "Get People Also Search For keywords",
+      "summary": "Keywords Google users also search for, from a seed keyword.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_pasf_keywords",
+      "job": "keywords.ideas",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_pasf_keywords",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_pasf_keywords"
+      },
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "description": "Seed keyword, UTF-8.",
+          "required": true,
+          "example": "climate change"
+        },
+        "num": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return.",
+          "example": 5
+        }
+      },
+      "notes": [
+        "A read over POST; JSON body.",
+        "2 credits per keyword returned."
+      ]
+    },
+    {
+      "id": "keywordseverywhere.domain_keywords",
+      "name": "Get keywords a domain ranks for",
+      "summary": "Keywords a domain ranks for, with metrics.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_domain_keywords",
+      "job": "domain.keywords.organic",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_domain_keywords",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_domain_keywords"
+      },
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "The domain.",
+          "required": true,
+          "example": "example.com"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Country code of a supported country (see keywordseverywhere.countries).",
+          "example": "us"
+        },
+        "num": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results to return, 1 to 10,000.",
+          "example": 100
+        }
+      },
+      "notes": [
+        "A read over POST; JSON body.",
+        "2 credits per keyword returned."
+      ]
+    },
+    {
+      "id": "keywordseverywhere.url_keywords",
+      "name": "Get keywords a URL ranks for",
+      "summary": "Keywords a single page ranks for.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_url_keywords",
+      "job": "domain.keywords.organic",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_url_keywords",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/keyword_data/get_url_keywords"
+      },
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "The page URL.",
+          "required": true,
+          "example": "https://example.com/"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Country code of a supported country (see keywordseverywhere.countries).",
+          "example": "us"
+        },
+        "num": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum keywords to return, 1 to 10,000.",
+          "example": 100
+        }
+      },
+      "notes": [
+        "A read over POST; JSON body.",
+        "2 credits per keyword returned."
+      ]
+    },
+    {
+      "id": "keywordseverywhere.domain_traffic",
+      "name": "Get domain traffic metrics",
+      "summary": "Estimated organic traffic metrics for a list of domains.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_domain_traffic_metrics",
+      "job": "domain.overview",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/traffic_metrics/get_domain_traffic_metrics",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/traffic_metrics/get_domain_traffic_metrics"
+      },
+      "params": {
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains to get metrics for.",
+          "required": true,
+          "example": [
+            "example.com"
+          ]
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Country code of a supported country (see keywordseverywhere.countries).",
+          "example": "us"
+        }
+      },
+      "notes": [
+        "A read over POST; JSON body.",
+        "2 credits per domain sent."
+      ]
+    },
+    {
+      "id": "keywordseverywhere.domain_backlinks",
+      "name": "Get top backlinks of a domain",
+      "summary": "The top backlinks pointing to one domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/get_domain_backlinks",
+      "job": "backlinks.list",
+      "docs_url": "https://api.keywordseverywhere.com/docs/#/backlink_data/get_domain_backlinks",
+      "verified": {
+        "docs": "https://api.keywordseverywhere.com/docs/#/backlink_data/get_domain_backlinks"
+      },
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "The domain.",
+          "required": true,
+          "example": "example.com"
+        },
+        "num": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum backlinks to return, 1 to 10,000.",
+          "example": 100
+        }
+      },
+      "notes": [
+        "A read over POST; JSON body.",
+        "1 credit per backlink returned."
+      ]
+    }
+  ]
+}

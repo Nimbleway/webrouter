@@ -1,0 +1,471 @@
+{
+  "vendor": "pinterest-ads",
+  "name": "Pinterest Ads",
+  "category": "advertising",
+  "summary": "Your Pinterest ad accounts: list accounts, campaigns, ad groups and ads, and pull analytics for accounts and campaigns.",
+  "docs_url": "https://developers.pinterest.com/docs/api/v5/",
+  "base_url": "https://api.pinterest.com/v5",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "PINTEREST_APP_ID"
+        ],
+        "description": "the app id of your Pinterest app (developers.pinterest.com > My apps)"
+      },
+      "client_secret": {
+        "env": [
+          "PINTEREST_APP_SECRET"
+        ],
+        "description": "that app's secret key"
+      },
+      "refresh_token": {
+        "env": [
+          "PINTEREST_REFRESH_TOKEN"
+        ],
+        "description": "a refresh token for that app with the ads:read scope, from the OAuth authorization-code flow"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://api.pinterest.com/v5/oauth/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}",
+      "client_auth": "basic"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: ad accounts the authorizing Pinterest user can access. Needs an approved app with ads access.",
+    "Lists page with bookmark: pass the answer's bookmark back as bookmark until it is null.",
+    "Analytics date ranges are capped at 90 days and cannot start more than 90 days back.",
+    "Reads here; creating or updating ads is not included."
+  ],
+  "sources": [
+    "https://developers.pinterest.com/docs/api/v5/",
+    "https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.yaml"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "pinterest-ads.accounts.list",
+      "name": "List ad accounts",
+      "summary": "Ad accounts the user owns, plus shared ones if asked.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ad_accounts",
+      "params": {
+        "include_shared_accounts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also list ad accounts shared with the user."
+        },
+        "bookmark": {
+          "in": "query",
+          "type": "string",
+          "description": "bookmark from the previous answer, to fetch the next page."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "job": "ads.accounts.list",
+      "docs_url": "https://developers.pinterest.com/docs/api/v5/ad_accounts-list/",
+      "verified": {
+        "docs": "https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.yaml"
+      }
+    },
+    {
+      "id": "pinterest-ads.campaigns.list",
+      "name": "List campaigns",
+      "summary": "Campaigns of an ad account, filterable by id and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ad_accounts/{ad_account_id}/campaigns",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pinterest ad account id, digits.",
+          "example": "549755885175"
+        },
+        "campaign_ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these campaign ids."
+        },
+        "entity_statuses": {
+          "in": "query",
+          "type": "array",
+          "description": "Entity status filter, e.g. ACTIVE, PAUSED, ARCHIVED."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASCENDING or DESCENDING by id."
+        },
+        "bookmark": {
+          "in": "query",
+          "type": "string",
+          "description": "bookmark from the previous answer, to fetch the next page."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "job": "ads.campaigns.list",
+      "docs_url": "https://developers.pinterest.com/docs/api/v5/campaigns-list/",
+      "verified": {
+        "docs": "https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.yaml"
+      }
+    },
+    {
+      "id": "pinterest-ads.ad_groups.list",
+      "name": "List ad groups",
+      "summary": "Ad groups of an ad account, filterable by campaign.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ad_accounts/{ad_account_id}/ad_groups",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pinterest ad account id, digits.",
+          "example": "549755885175"
+        },
+        "campaign_ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only ad groups in these campaigns."
+        },
+        "ad_group_ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these ad groups."
+        },
+        "entity_statuses": {
+          "in": "query",
+          "type": "array",
+          "description": "Entity status filter, e.g. ACTIVE, PAUSED, ARCHIVED."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASCENDING or DESCENDING by id."
+        },
+        "translate_interests_to_names": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return interests as names instead of topic ids."
+        },
+        "bookmark": {
+          "in": "query",
+          "type": "string",
+          "description": "bookmark from the previous answer, to fetch the next page."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "job": "ads.adgroups.list",
+      "docs_url": "https://developers.pinterest.com/docs/api/v5/ad_groups-list/",
+      "verified": {
+        "docs": "https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.yaml"
+      }
+    },
+    {
+      "id": "pinterest-ads.ads.list",
+      "name": "List ads",
+      "summary": "Ads of an ad account, filterable by campaign, ad group and id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ad_accounts/{ad_account_id}/ads",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pinterest ad account id, digits.",
+          "example": "549755885175"
+        },
+        "campaign_ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only ads in these campaigns."
+        },
+        "ad_group_ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only ads in these ad groups."
+        },
+        "ad_ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these ads."
+        },
+        "entity_statuses": {
+          "in": "query",
+          "type": "array",
+          "description": "Entity status filter, e.g. ACTIVE, PAUSED, ARCHIVED."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASCENDING or DESCENDING by id."
+        },
+        "bookmark": {
+          "in": "query",
+          "type": "string",
+          "description": "bookmark from the previous answer, to fetch the next page."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "job": "ads.ads.list",
+      "docs_url": "https://developers.pinterest.com/docs/api/v5/ads-list/",
+      "verified": {
+        "docs": "https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.yaml"
+      }
+    },
+    {
+      "id": "pinterest-ads.analytics.account",
+      "name": "Get ad account analytics",
+      "summary": "Metrics for the whole ad account over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ad_accounts/{ad_account_id}/analytics",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pinterest ad account id, digits.",
+          "example": "549755885175"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD (UTC), at most 90 days back.",
+          "example": "2026-10-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD (UTC), at most 90 days after start_date.",
+          "example": "2026-10-31"
+        },
+        "columns": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Metric columns, comma-separated: SPEND_IN_DOLLAR, IMPRESSION_1, CLICKTHROUGH_1, TOTAL_CONVERSIONS, ...",
+          "example": "SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1"
+        },
+        "granularity": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TOTAL aggregates over the range; DAY, HOUR, WEEK, MONTH split it.",
+          "enum": [
+            "TOTAL",
+            "DAY",
+            "HOUR",
+            "WEEK",
+            "MONTH"
+          ]
+        },
+        "click_window_days": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
+          "description": "Conversion attribution window in days for a pin click."
+        },
+        "engagement_window_days": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
+          "description": "Conversion attribution window in days for an engagement action."
+        },
+        "view_window_days": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
+          "description": "Conversion attribution window in days for a view action."
+        },
+        "conversion_report_time": {
+          "in": "query",
+          "type": "string",
+          "description": "Whether conversions are reported by the ad action date or the conversion date."
+        },
+        "reporting_timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Timezone for the report (beta)."
+        }
+      },
+      "notes": [
+        "Spend columns named *_IN_DOLLAR are whole dollars; *_IN_MICRO_DOLLAR are millionths."
+      ],
+      "job": "ads.report.query",
+      "docs_url": "https://developers.pinterest.com/docs/api/v5/ad_account_analytics/",
+      "verified": {
+        "docs": "https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.yaml"
+      }
+    },
+    {
+      "id": "pinterest-ads.analytics.campaigns",
+      "name": "Get campaign analytics",
+      "summary": "Metrics for chosen campaigns over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ad_accounts/{ad_account_id}/campaigns/analytics",
+      "params": {
+        "ad_account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pinterest ad account id, digits.",
+          "example": "549755885175"
+        },
+        "campaign_ids": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Campaign ids to report on."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD (UTC), at most 90 days back."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD (UTC), at most 90 days after start_date."
+        },
+        "columns": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Metric columns, comma-separated: SPEND_IN_DOLLAR, IMPRESSION_1, CLICKTHROUGH_1, TOTAL_CONVERSIONS, ...",
+          "example": "SPEND_IN_DOLLAR,IMPRESSION_1,CLICKTHROUGH_1"
+        },
+        "granularity": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TOTAL aggregates over the range; DAY, HOUR, WEEK, MONTH split it.",
+          "enum": [
+            "TOTAL",
+            "DAY",
+            "HOUR",
+            "WEEK",
+            "MONTH"
+          ]
+        },
+        "click_window_days": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
+          "description": "Conversion attribution window in days for a pin click."
+        },
+        "engagement_window_days": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
+          "description": "Conversion attribution window in days for an engagement action."
+        },
+        "view_window_days": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1,
+            7,
+            14,
+            30,
+            60
+          ],
+          "description": "Conversion attribution window in days for a view action."
+        },
+        "conversion_report_time": {
+          "in": "query",
+          "type": "string",
+          "description": "Whether conversions are reported by the ad action date or the conversion date."
+        },
+        "aggregate_report_rows": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Aggregate rows across all requested campaigns (beta)."
+        },
+        "reporting_timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Timezone for the report (beta)."
+        }
+      },
+      "job": "ads.report.query",
+      "docs_url": "https://developers.pinterest.com/docs/api/v5/campaign_analytics/",
+      "verified": {
+        "docs": "https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.yaml"
+      }
+    }
+  ]
+}

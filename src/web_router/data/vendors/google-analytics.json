@@ -1,0 +1,269 @@
+{
+  "vendor": "google-analytics",
+  "name": "Google Analytics 4 (Data API)",
+  "category": "analytics",
+  "summary": "Reports from your Google Analytics 4 properties: users, sessions, events and conversions by any dimension, plus realtime and the dimension/metric catalog.",
+  "docs_url": "https://developers.google.com/analytics/devguides/reporting/data/v1",
+  "base_url": "https://analyticsdata.googleapis.com/v1beta",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "GOOGLE_ANALYTICS_CLIENT_ID"
+        ],
+        "description": "the OAuth client id of a Google Cloud OAuth app with the Google Analytics Data API enabled (Google Cloud console > APIs & Services > Credentials)"
+      },
+      "client_secret": {
+        "env": [
+          "GOOGLE_ANALYTICS_CLIENT_SECRET"
+        ],
+        "description": "that OAuth app's client secret"
+      },
+      "refresh_token": {
+        "env": [
+          "GOOGLE_ANALYTICS_REFRESH_TOKEN"
+        ],
+        "description": "a refresh token minted with that OAuth app for the scope https://www.googleapis.com/auth/analytics.readonly"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: reads properties the signed-in Google user can access. GA4 only; Universal Analytics properties are gone.",
+    "Property ids are digits only; the path takes them as properties/{id} and this catalog adds the prefix.",
+    "Report requests are POSTs but only read data.",
+    "Row counts and offsets are strings (int64) in the JSON. Default limit 10,000, maximum 250,000 per request. Page with offset.",
+    "Properties have token-based quotas; set returnPropertyQuota: true to see what a call used."
+  ],
+  "sources": [
+    "https://developers.google.com/analytics/devguides/reporting/data/v1",
+    "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport",
+    "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runRealtimeReport",
+    "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/getMetadata"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "google-analytics.report.run",
+      "name": "Run a Google Analytics report",
+      "summary": "Rows of metrics grouped by dimensions over date ranges, with filters and ordering.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/properties/{property_id}:runReport",
+      "params": {
+        "property_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GA4 property id, digits only (Admin > Property details). Not the G-XXXX measurement id.",
+          "example": "123456789"
+        },
+        "dimensions": {
+          "in": "body",
+          "type": "array",
+          "description": "[{name: 'country'}, ...]. Names from google-analytics.metadata.get.",
+          "example": [
+            {
+              "name": "country"
+            }
+          ]
+        },
+        "metrics": {
+          "in": "body",
+          "type": "array",
+          "description": "[{name: 'activeUsers'}, ...]. Names from google-analytics.metadata.get.",
+          "example": [
+            {
+              "name": "activeUsers"
+            }
+          ]
+        },
+        "dateRanges": {
+          "in": "body",
+          "type": "array",
+          "description": "[{startDate, endDate}] with YYYY-MM-DD or 'today', 'yesterday', 'NdaysAgo'.",
+          "example": [
+            {
+              "startDate": "28daysAgo",
+              "endDate": "yesterday"
+            }
+          ]
+        },
+        "dimensionFilter": {
+          "in": "body",
+          "type": "object",
+          "description": "FilterExpression over dimensions. Metrics are not allowed here."
+        },
+        "metricFilter": {
+          "in": "body",
+          "type": "object",
+          "description": "FilterExpression over metrics, applied after aggregation (like HAVING)."
+        },
+        "orderBys": {
+          "in": "body",
+          "type": "array",
+          "description": "How to sort the rows."
+        },
+        "limit": {
+          "in": "body",
+          "type": "string",
+          "description": "Rows to return; default 10000, up to 250000.",
+          "example": "1000"
+        },
+        "offset": {
+          "in": "body",
+          "type": "string",
+          "description": "Zero-based index of the first row, for paging.",
+          "example": "0"
+        },
+        "metricAggregations": {
+          "in": "body",
+          "type": "array",
+          "description": "TOTAL, MAXIMUM or MINIMUM rows, shown under RESERVED_ dimension values."
+        },
+        "currencyCode": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO 4217 code for money metrics; default is the property's currency."
+        },
+        "keepEmptyRows": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include rows where every metric is 0."
+        },
+        "returnPropertyQuota": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the property's quota state."
+        }
+      },
+      "notes": [
+        "A read over POST: it only reports data.",
+        "Incompatible dimension and metric pairs are refused; check with the metadata endpoint."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport",
+      "verified": {
+        "docs": "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport"
+      }
+    },
+    {
+      "id": "google-analytics.report.realtime",
+      "name": "Run a realtime Google Analytics report",
+      "summary": "Events and users from the last 30 minutes (up to 60 on GA 360).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/properties/{property_id}:runRealtimeReport",
+      "params": {
+        "property_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GA4 property id, digits only (Admin > Property details). Not the G-XXXX measurement id.",
+          "example": "123456789"
+        },
+        "dimensions": {
+          "in": "body",
+          "type": "array",
+          "description": "[{name: 'country'}, ...]. Names from google-analytics.metadata.get.",
+          "example": [
+            {
+              "name": "country"
+            }
+          ]
+        },
+        "metrics": {
+          "in": "body",
+          "type": "array",
+          "description": "[{name: 'activeUsers'}, ...]. Names from google-analytics.metadata.get.",
+          "example": [
+            {
+              "name": "activeUsers"
+            }
+          ]
+        },
+        "minuteRanges": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 2 ranges [{name, startMinutesAgo, endMinutesAgo}]; default is the last 30 minutes."
+        },
+        "dimensionFilter": {
+          "in": "body",
+          "type": "object",
+          "description": "FilterExpression over dimensions."
+        },
+        "metricFilter": {
+          "in": "body",
+          "type": "object",
+          "description": "FilterExpression over metrics."
+        },
+        "orderBys": {
+          "in": "body",
+          "type": "array",
+          "description": "Row sorting."
+        },
+        "limit": {
+          "in": "body",
+          "type": "string",
+          "description": "Rows to return; default 10000, up to 250000."
+        },
+        "metricAggregations": {
+          "in": "body",
+          "type": "array",
+          "description": "Aggregated rows."
+        },
+        "returnPropertyQuota": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the realtime quota state."
+        }
+      },
+      "notes": [
+        "A read over POST. Realtime supports a smaller set of dimensions and metrics than runReport."
+      ],
+      "job": "analytics.report.realtime",
+      "docs_url": "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runRealtimeReport",
+      "verified": {
+        "docs": "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runRealtimeReport"
+      }
+    },
+    {
+      "id": "google-analytics.metadata.get",
+      "name": "List a property's dimensions and metrics",
+      "summary": "Every dimension and metric usable in reports for the property, including its custom ones.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/properties/{property_id}/metadata",
+      "params": {
+        "property_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GA4 property id, digits only (Admin > Property details). Not the G-XXXX measurement id.",
+          "example": "123456789"
+        }
+      },
+      "notes": [
+        "Use property id 0 to list only what every property shares (no custom fields)."
+      ],
+      "job": "analytics.metadata",
+      "docs_url": "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/getMetadata",
+      "verified": {
+        "docs": "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/getMetadata"
+      }
+    }
+  ]
+}

@@ -1,0 +1,910 @@
+{
+  "vendor": "contactout",
+  "name": "ContactOut",
+  "category": "enrichment",
+  "summary": "Find work and personal emails and phones from LinkedIn profiles, search people and companies, and verify emails.",
+  "docs_url": "https://api.contactout.com/",
+  "pricing_url": "https://contactout.com/pricing",
+  "base_url": "https://api.contactout.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CONTACTOUT_API_KEY"
+        ],
+        "description": "A ContactOut API token (ContactOut dashboard > API). Sent in the \"token\" header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits come in four kinds: email, phone, search and verifier; each call note says which is charged and only on a hit.",
+    "Rate limits: people search 60 per minute, contact checkers 150, everything else 1000.",
+    "LinkedIn URLs must be personal profile URLs (linkedin.com/in/ or /pub/), URL-encoded in query strings.",
+    "The Campaigns API (create, start, stop campaigns, add recipients) and hashed-email endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://api.contactout.com/"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "contactout.usage.stats",
+      "name": "Get API usage stats",
+      "summary": "Credit usage for a month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/stats",
+      "params": {
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "Month as YYYY-MM; defaults to the current month.",
+          "example": "2026-10"
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.linkedin.enrich",
+      "name": "Get a profile from a LinkedIn URL",
+      "summary": "Profile data, with contact info unless profile_only is true.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/linkedin/enrich",
+      "params": {
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL-encoded LinkedIn profile URL containing linkedin.com/in/ or /pub/ (no Sales Navigator or Recruiter URLs).",
+          "example": "https://www.linkedin.com/in/example"
+        },
+        "profile_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return profile data without contact info."
+        }
+      },
+      "notes": [
+        "Charges 1 email credit if an email is found and 1 phone credit if a phone is found; 1 search credit if profile_only=true or no contact info is found."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.email.enrich",
+      "name": "Get a profile from an email address",
+      "summary": "Profile for the person behind an email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/email/enrich",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email address."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "work_email adds real-time verification and slows the call.",
+          "enum": [
+            "work_email"
+          ]
+        }
+      },
+      "notes": [
+        "Charges 1 email credit if an email is found and 1 phone credit if a phone is found."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.enrich",
+      "name": "Enrich a person",
+      "summary": "Match by LinkedIn URL, email, phone or name plus company, location or education.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/enrich",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn URL (a primary identifier)."
+        },
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email (a primary identifier)."
+        },
+        "phone": {
+          "in": "body",
+          "type": "string",
+          "description": "Phone (a primary identifier)."
+        },
+        "full_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name; use with last_name."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "company": {
+          "in": "body",
+          "type": "array",
+          "description": "Company names, max 10."
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains, max 10."
+        },
+        "education": {
+          "in": "body",
+          "type": "array",
+          "description": "Schools, max 10."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Location."
+        },
+        "job_title": {
+          "in": "body",
+          "type": "string",
+          "description": "Job title."
+        },
+        "include": {
+          "in": "body",
+          "type": "array",
+          "description": "Contact data to return: work_email, personal_email, phone. Nothing contact-related is returned unless listed.",
+          "example": [
+            "work_email"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "Match needs one primary identifier, or a name plus at least one of company, location or education.",
+        "Charges 1 search credit if a profile is found, 1 email credit if an email is found, 1 phone credit if a phone is found."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.contact_by_linkedin",
+      "name": "Get contact info for a LinkedIn profile",
+      "summary": "Emails and optionally phones for one LinkedIn profile.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/linkedin",
+      "params": {
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL-encoded LinkedIn profile URL containing linkedin.com/in/ or /pub/ (no Sales Navigator or Recruiter URLs).",
+          "example": "https://www.linkedin.com/in/example"
+        },
+        "include_phone": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also look up phones. Default false."
+        },
+        "email_type": {
+          "in": "query",
+          "type": "string",
+          "description": "personal, work, \"personal,work\" or none; default both. Real-time verification runs only when work is asked for."
+        }
+      },
+      "notes": [
+        "Charges 1 email credit if an email is found and 1 phone credit if a phone is found with include_phone=true. email_type=none charges no email credit."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.contact_batch",
+      "name": "Get contact info for up to 100 LinkedIn profiles",
+      "summary": "Bulk version of contact info lookup.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/linkedin/batch",
+      "params": {
+        "profiles": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "LinkedIn URLs, max 100."
+        },
+        "include_phone": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also look up phones."
+        },
+        "email_type": {
+          "in": "body",
+          "type": "string",
+          "description": "personal, work, \"personal,work\" or none."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 email credit per profile with an email found, 1 phone credit per profile with a phone found when include_phone is true."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.contact_batch_v2",
+      "name": "Submit an asynchronous contact-info job",
+      "summary": "Up to 1,000 LinkedIn profiles; guesses and verifies work emails when none is on file.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/linkedin/batch",
+      "params": {
+        "profiles": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "LinkedIn URLs, max 1000."
+        },
+        "include_phone": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also look up phones."
+        },
+        "email_type": {
+          "in": "body",
+          "type": "string",
+          "description": "personal, work, \"personal,work\" or none."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Returns a status (QUEUED) and a job_id; poll contactout.people.contact_batch_v2_result.",
+        "1 email credit per profile with an email found, 1 phone credit per profile with a phone found when include_phone is true."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.contact_batch_v2_result",
+      "name": "Get an asynchronous contact-info job",
+      "summary": "Poll a job started with the v2 batch call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/people/linkedin/batch/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "UUID returned when the job was submitted."
+        }
+      },
+      "notes": [
+        "No separate charge is documented; the job was charged per profile."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.company.enrich",
+      "name": "Get company data from domains",
+      "summary": "Company profiles for up to 30 domains.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/domain/enrich",
+      "params": {
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Domains, max 30.",
+          "example": [
+            "example.com"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 search credit per company found."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.search",
+      "name": "Search people",
+      "summary": "Search a profile database by title, seniority, company, location, skills and more.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/search",
+      "params": {
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1 to 25, default 25."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Person name."
+        },
+        "job_title": {
+          "in": "body",
+          "type": "array",
+          "description": "Job titles, max 50."
+        },
+        "past_job_title": {
+          "in": "body",
+          "type": "array",
+          "description": "Past job titles, max 50."
+        },
+        "current_titles_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default true."
+        },
+        "job_function": {
+          "in": "body",
+          "type": "array",
+          "description": "Job functions, max 50."
+        },
+        "seniority": {
+          "in": "body",
+          "type": "array",
+          "description": "Seniority levels, max 50."
+        },
+        "skills": {
+          "in": "body",
+          "type": "array",
+          "description": "Skills, max 50; Boolean allowed."
+        },
+        "location": {
+          "in": "body",
+          "type": "array",
+          "description": "Locations, max 50."
+        },
+        "company": {
+          "in": "body",
+          "type": "array",
+          "description": "Current companies, max 50."
+        },
+        "past_company": {
+          "in": "body",
+          "type": "array",
+          "description": "Past companies, max 50."
+        },
+        "domain": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains, max 50."
+        },
+        "industry": {
+          "in": "body",
+          "type": "array",
+          "description": "Industries; prefix NOT to exclude."
+        },
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword; Boolean allowed."
+        },
+        "company_size": {
+          "in": "body",
+          "type": "array",
+          "description": "Company size buckets."
+        },
+        "years_of_experience": {
+          "in": "body",
+          "type": "array",
+          "description": "Ranges formatted X_Y."
+        },
+        "recently_changed_jobs": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Current job began in the last 3 calendar months. Default false."
+        },
+        "data_types": {
+          "in": "body",
+          "type": "array",
+          "description": "Which contact data must exist: personal_email, work_email, phone."
+        },
+        "reveal_info": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Reveal contact info for each profile. Default false; costs email/phone credits."
+        },
+        "detailed_experience": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include detailed experience. Default false."
+        },
+        "detailed_education": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include detailed education. Default false."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "Rate limit 60 requests per minute.",
+        "1 search credit per profile returned; with reveal_info=true, 1 email or phone credit per profile where contact info is found.",
+        "Many filters not listed here (education, languages, exclusions, location radius, output_fields) are in the docs."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.count",
+      "name": "Count people matching a search",
+      "summary": "How many profiles a search matches, with estimated emails and phones.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/count",
+      "params": {
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1 to 25, default 25."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Person name."
+        },
+        "job_title": {
+          "in": "body",
+          "type": "array",
+          "description": "Job titles, max 50."
+        },
+        "past_job_title": {
+          "in": "body",
+          "type": "array",
+          "description": "Past job titles, max 50."
+        },
+        "current_titles_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Default true."
+        },
+        "job_function": {
+          "in": "body",
+          "type": "array",
+          "description": "Job functions, max 50."
+        },
+        "seniority": {
+          "in": "body",
+          "type": "array",
+          "description": "Seniority levels, max 50."
+        },
+        "skills": {
+          "in": "body",
+          "type": "array",
+          "description": "Skills, max 50; Boolean allowed."
+        },
+        "location": {
+          "in": "body",
+          "type": "array",
+          "description": "Locations, max 50."
+        },
+        "company": {
+          "in": "body",
+          "type": "array",
+          "description": "Current companies, max 50."
+        },
+        "past_company": {
+          "in": "body",
+          "type": "array",
+          "description": "Past companies, max 50."
+        },
+        "domain": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains, max 50."
+        },
+        "industry": {
+          "in": "body",
+          "type": "array",
+          "description": "Industries; prefix NOT to exclude."
+        },
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "description": "Keyword; Boolean allowed."
+        },
+        "company_size": {
+          "in": "body",
+          "type": "array",
+          "description": "Company size buckets."
+        },
+        "years_of_experience": {
+          "in": "body",
+          "type": "array",
+          "description": "Ranges formatted X_Y."
+        },
+        "recently_changed_jobs": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Current job began in the last 3 calendar months. Default false."
+        },
+        "detailed_experience": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include detailed experience. Default false."
+        },
+        "detailed_education": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include detailed education. Default false."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "No credits charged. Paid users only."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.decision_makers",
+      "name": "Find decision makers at a company",
+      "summary": "Key people at a company by LinkedIn company URL, domain or name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/decision-makers",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL containing linkedin.com/company/."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "reveal_info": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Reveal contact info per profile. Default false."
+        }
+      },
+      "notes": [
+        "At least one of linkedin_url, domain or name is needed.",
+        "1 search credit per profile returned; with reveal_info=true, 1 email or phone credit per profile where info is found."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.company.search",
+      "name": "Search companies",
+      "summary": "Companies by size, location, industry, technology, revenue, funding and hiring.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/company/search",
+      "params": {
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "name": {
+          "in": "body",
+          "type": "array",
+          "description": "Company names, max 50."
+        },
+        "domain": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains, max 50."
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn company URLs, max 25; cannot be combined with other filters."
+        },
+        "size": {
+          "in": "body",
+          "type": "array",
+          "description": "Size buckets."
+        },
+        "hq_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Headquarters only."
+        },
+        "location": {
+          "in": "body",
+          "type": "array",
+          "description": "Locations, max 50."
+        },
+        "industry": {
+          "in": "body",
+          "type": "array",
+          "description": "Industries, max 50."
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies, max 50; Boolean allowed."
+        },
+        "min_revenue": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum revenue."
+        },
+        "max_revenue": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum revenue."
+        },
+        "recently_funded": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Latest funding round in the last 12 months."
+        },
+        "is_currently_hiring": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Hiring filter."
+        },
+        "hiring_job_titles": {
+          "in": "body",
+          "type": "array",
+          "description": "Open job titles, max 50."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 search credit per company returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.email.to_linkedin",
+      "name": "Find a LinkedIn profile from an email",
+      "summary": "Reverse lookup of the LinkedIn URL for an email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/person",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email address."
+        }
+      },
+      "notes": [
+        "The credit charge is not stated in the docs."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.email.verify",
+      "name": "Verify an email address",
+      "summary": "Single email verification: valid, invalid or accept_all.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/email/verify",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email to verify."
+        }
+      },
+      "notes": [
+        "1 verifier credit when the result is valid, invalid or accept_all."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.email.verify_batch",
+      "name": "Verify up to 100 emails",
+      "summary": "Bulk email verification job.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/email/verify/batch",
+      "params": {
+        "emails": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Emails, max 100."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "A read over POST: nothing is changed. It starts a job; poll contactout.email.verify_batch_result.",
+        "1 verifier credit per email whose result is valid, invalid or accept_all."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.email.verify_batch_result",
+      "name": "Get a bulk verification job",
+      "summary": "Status and results of a bulk verification.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/email/verify/batch/{job_uuid}",
+      "params": {
+        "job_uuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job id from the batch call."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.personal_email_status",
+      "name": "Check whether a profile has a personal email",
+      "summary": "Availability check, no credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/linkedin/personal_email_status",
+      "params": {
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL-encoded LinkedIn profile URL containing linkedin.com/in/ or /pub/ (no Sales Navigator or Recruiter URLs).",
+          "example": "https://www.linkedin.com/in/example"
+        }
+      },
+      "notes": [
+        "Uses no credits; paid users only. Rate limit 150 per minute."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.work_email_status",
+      "name": "Check whether a profile has a work email",
+      "summary": "Availability check, no credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/linkedin/work_email_status",
+      "params": {
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL-encoded LinkedIn profile URL containing linkedin.com/in/ or /pub/ (no Sales Navigator or Recruiter URLs).",
+          "example": "https://www.linkedin.com/in/example"
+        }
+      },
+      "notes": [
+        "Uses no credits; paid users only. Rate limit 150 per minute."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    },
+    {
+      "id": "contactout.people.phone_status",
+      "name": "Check whether a profile has a phone number",
+      "summary": "Availability check, no credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/linkedin/phone_status",
+      "params": {
+        "profile": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL-encoded LinkedIn profile URL containing linkedin.com/in/ or /pub/ (no Sales Navigator or Recruiter URLs).",
+          "example": "https://www.linkedin.com/in/example"
+        }
+      },
+      "notes": [
+        "Uses no credits; paid users only. Rate limit 150 per minute."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://api.contactout.com/",
+      "verified": {
+        "docs": "https://api.contactout.com/"
+      }
+    }
+  ]
+}

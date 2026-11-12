@@ -1,0 +1,218 @@
+{
+  "vendor": "mempool-space",
+  "name": "mempool.space",
+  "category": "finance",
+  "summary": "Bitcoin blockchain data from mempool.space's keyless REST API: addresses, transactions, blocks, mempool backlog, fee estimates and BTC prices.",
+  "docs_url": "https://mempool.space/docs/api/rest",
+  "base_url": "https://mempool.space/api",
+  "notes": [
+    "Keyless public API. Exceeding its rate limits answers 429, and repeated violations can get you banned; enterprise sponsorship raises limits.",
+    "Lists are newest first and page by transaction id: pass the last txid seen to get the next page, not a page number.",
+    "This entry leaves out POST /api/tx, which broadcasts a transaction to the Bitcoin network."
+  ],
+  "sources": [
+    "https://mempool.space/docs/api/rest"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "mempool-space.address.get",
+      "name": "Get a Bitcoin address's summary",
+      "summary": "Funded and spent output counts and sums for one address, on chain and in the mempool.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/address/{address}",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Bitcoin address.",
+          "example": "1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv"
+        }
+      },
+      "job": "crypto.account",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.address.txs",
+      "name": "List a Bitcoin address's transactions",
+      "summary": "Up to 50 mempool transactions plus the first 25 confirmed ones of an address, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/address/{address}/txs",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Bitcoin address.",
+          "example": "1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv"
+        },
+        "after_txid": {
+          "in": "query",
+          "type": "string",
+          "description": "Last confirmed txid seen, to get the next confirmed transactions."
+        }
+      },
+      "job": "crypto.transactions",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.address.utxo",
+      "name": "List a Bitcoin address's unspent outputs",
+      "summary": "Unspent transaction outputs of an address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/address/{address}/utxo",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Bitcoin address.",
+          "example": "1wiz18xYmhRX6xStj2b9t1rwWX4GKUgpv"
+        }
+      },
+      "job": "crypto.account",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.tx.get",
+      "name": "Get a Bitcoin transaction",
+      "summary": "Inputs, outputs, fee and confirmation status of one transaction.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tx/{txid}",
+      "params": {
+        "txid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Transaction id (hex)."
+        }
+      },
+      "job": "crypto.transactions",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.blocks.list",
+      "name": "List blocks from a height",
+      "summary": "Ten blocks, including the one at the given height.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/blocks/{start_height}",
+      "params": {
+        "start_height": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Block height to start from.",
+          "example": 730000
+        }
+      },
+      "notes": [
+        "Get the current tip with GET /blocks/tip/height."
+      ],
+      "job": "crypto.blocks",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.blocks.tip_height",
+      "name": "Get the latest block height",
+      "summary": "Height of the chain tip, as plain text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/blocks/tip/height",
+      "job": "crypto.blocks",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.fees.recommended",
+      "name": "Get recommended fee rates",
+      "summary": "Suggested fee rates for a new transaction.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/fees/recommended",
+      "job": "crypto.fees",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.mempool.stats",
+      "name": "Get mempool backlog statistics",
+      "summary": "Current mempool backlog statistics.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/mempool",
+      "job": "crypto.fees",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.prices.current",
+      "name": "Get the current Bitcoin price",
+      "summary": "Latest BTC price in the main fiat currencies (USD, EUR, GBP, CAD, CHF, AUD, JPY).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/prices",
+      "job": "crypto.price",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    },
+    {
+      "id": "mempool-space.prices.historical",
+      "name": "Get historical Bitcoin prices",
+      "summary": "BTC price at a time, in one currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/historical-price",
+      "params": {
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiat currency code.",
+          "example": "EUR"
+        },
+        "timestamp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Point in time, as in the docs' example 1500000000.",
+          "example": 1500000000
+        }
+      },
+      "notes": [
+        "Without either parameter the answer is the full price history in every currency, which is large."
+      ],
+      "job": "market.history",
+      "docs_url": "https://mempool.space/docs/api/rest",
+      "verified": {
+        "docs": "https://mempool.space/docs/api/rest"
+      }
+    }
+  ]
+}

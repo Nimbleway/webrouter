@@ -1,0 +1,314 @@
+{
+  "vendor": "loc-gov",
+  "name": "Library of Congress loc.gov API",
+  "category": "search",
+  "summary": "Search and metadata for the Library of Congress's digitized collections (audio recordings, photos, maps, manuscripts, newspapers, books, films...) from the keyless loc.gov JSON API.",
+  "docs_url": "https://www.loc.gov/apis/json-and-yaml/",
+  "base_url": "https://www.loc.gov",
+  "auth": {
+    "inject": [
+      {
+        "in": "query",
+        "name": "fo",
+        "value": "json"
+      }
+    ]
+  },
+  "notes": [
+    "Keyless. Every call here carries fo=json for a JSON answer.",
+    "Strict rate limit: 20 requests per minute for this API; going over blocks you for an hour. Under heavy traffic you may get 429 or a CAPTCHA page below that rate; pause when you do.",
+    "Paging (c per page, sp page number) stops at the 100,000th result, and some searches fail earlier; narrow with fa filters instead of paging deep.",
+    "Facet values in fa are not controlled vocabularies, so an exact value may miss variants.",
+    "Catalog (MARC) records are not served here, only digitized items, collections and their metadata."
+  ],
+  "sources": [
+    "https://www.loc.gov/apis/json-and-yaml/",
+    "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/",
+    "https://www.loc.gov/apis/json-and-yaml/requests/parameters/",
+    "https://www.loc.gov/apis/json-and-yaml/working-within-limits/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "loc-gov.search",
+      "name": "Search the digitized collections",
+      "summary": "Items, collections and web pages matching keywords, with facets and paging.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords across metadata and available full text (including video transcripts).",
+          "example": "jazz",
+          "required": true
+        },
+        "fa": {
+          "in": "query",
+          "type": "string",
+          "description": "Filters as name:value joined with '|': access-restricted, digitized, contributor, language, location, subject, online-format, original-format, partof."
+        },
+        "c": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 25 by default, keep it at 1,000 or less.",
+          "example": 50
+        },
+        "sp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1.",
+          "example": 1
+        },
+        "sb": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort.",
+          "enum": [
+            "date",
+            "date_desc",
+            "title_s",
+            "title_s_desc",
+            "shelf_id",
+            "shelf_id_desc"
+          ]
+        },
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these attributes, comma-separated, dot notation for sub-attributes (e.g. item,resources or item.data)."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/",
+      "verified": {
+        "docs": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/"
+      }
+    },
+    {
+      "id": "loc-gov.format.search",
+      "name": "Browse or search one format",
+      "summary": "Items of one original format (audio, photos, maps...), optionally matching keywords.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{format}/",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Format slug.",
+          "enum": [
+            "audio",
+            "books",
+            "film-and-videos",
+            "legislation",
+            "manuscripts",
+            "maps",
+            "newspapers",
+            "photos",
+            "notated-music",
+            "web-archives"
+          ],
+          "example": "audio"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords across metadata and available full text (including video transcripts).",
+          "example": "jazz",
+          "required": false
+        },
+        "fa": {
+          "in": "query",
+          "type": "string",
+          "description": "Filters as name:value joined with '|': access-restricted, digitized, contributor, language, location, subject, online-format, original-format, partof."
+        },
+        "c": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 25 by default, keep it at 1,000 or less.",
+          "example": 50
+        },
+        "sp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1.",
+          "example": 1
+        },
+        "sb": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort.",
+          "enum": [
+            "date",
+            "date_desc",
+            "title_s",
+            "title_s_desc",
+            "shelf_id",
+            "shelf_id_desc"
+          ]
+        },
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these attributes, comma-separated, dot notation for sub-attributes (e.g. item,resources or item.data)."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/",
+      "verified": {
+        "docs": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/"
+      }
+    },
+    {
+      "id": "loc-gov.collections.list",
+      "name": "List collections",
+      "summary": "Every digital collection, with paging.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/",
+      "params": {
+        "c": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 25 by default, keep it at 1,000 or less.",
+          "example": 50
+        },
+        "sp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1.",
+          "example": 1
+        },
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these attributes, comma-separated, dot notation for sub-attributes (e.g. item,resources or item.data)."
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/",
+      "verified": {
+        "docs": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/"
+      }
+    },
+    {
+      "id": "loc-gov.collection.search",
+      "name": "Browse or search one collection",
+      "summary": "Items of one collection, optionally matching keywords.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/{collection}/",
+      "params": {
+        "collection": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Collection slug in kebab case.",
+          "example": "civil-war-maps"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords across metadata and available full text (including video transcripts).",
+          "example": "jazz",
+          "required": false
+        },
+        "fa": {
+          "in": "query",
+          "type": "string",
+          "description": "Filters as name:value joined with '|': access-restricted, digitized, contributor, language, location, subject, online-format, original-format, partof."
+        },
+        "c": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 25 by default, keep it at 1,000 or less.",
+          "example": 50
+        },
+        "sp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1.",
+          "example": 1
+        },
+        "sb": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort.",
+          "enum": [
+            "date",
+            "date_desc",
+            "title_s",
+            "title_s_desc",
+            "shelf_id",
+            "shelf_id_desc"
+          ]
+        },
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these attributes, comma-separated, dot notation for sub-attributes (e.g. item,resources or item.data)."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/",
+      "verified": {
+        "docs": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/"
+      }
+    },
+    {
+      "id": "loc-gov.item.get",
+      "name": "Get an item",
+      "summary": "One item's metadata and its resources (files, images, audio).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/item/{item_id}/",
+      "params": {
+        "item_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Item id, as in https://www.loc.gov/item/{id}/."
+        },
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these attributes, comma-separated, dot notation for sub-attributes (e.g. item,resources or item.data)."
+        }
+      },
+      "job": "index.metadata",
+      "docs_url": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/",
+      "verified": {
+        "docs": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/"
+      }
+    },
+    {
+      "id": "loc-gov.resource.get",
+      "name": "Get a resource",
+      "summary": "One resource of an item (its files and pages).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/resource/{resource_id}/",
+      "params": {
+        "resource_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Resource id, as in https://www.loc.gov/resource/{id}/."
+        },
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these attributes, comma-separated, dot notation for sub-attributes (e.g. item,resources or item.data)."
+        }
+      },
+      "job": "index.metadata",
+      "docs_url": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/",
+      "verified": {
+        "docs": "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,352 @@
+{
+  "vendor": "govinfo",
+  "name": "GovInfo",
+  "category": "government",
+  "summary": "The US Government Publishing Office's GovInfo API: official publications of all three branches (bills, Congressional Record, Federal Register, CFR, court opinions, public laws) with search, change lists, package and granule metadata and related documents.",
+  "docs_url": "https://api.govinfo.gov/docs/",
+  "base_url": "https://api.govinfo.gov",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GOVINFO_API_KEY"
+        ],
+        "description": "api.data.gov key (free sign-up at https://www.govinfo.gov/api-signup); DEMO_KEY works with a much lower limit. Sent as the api_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limits per key (rolling hour): 36,000 requests per hour, 1,200 per minute, 40 per second; 429 when over. DEMO_KEY is far lower.",
+    "Lists page with offsetMark: send '*' first, then follow the nextPage value in each response. pageSize is required on list calls, at most 1000. The older offset parameter is deprecated.",
+    "Collection codes (BILLS, CREC, FR, CFR, PLAW, USCOURTS, CHRG, ...) come from collections.list.",
+    "A package or granule summary links to its content (htm, xml, pdf, mods, premis, zip). A first request for a ZIP or MODS file may return 503 with Retry-After: 30 while it is generated; retry after the delay."
+  ],
+  "sources": [
+    "https://api.govinfo.gov/docs/",
+    "https://github.com/usgpo/api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "govinfo.search",
+      "name": "Search GovInfo",
+      "summary": "Full-text search across GovInfo with the same query syntax as the GovInfo website.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search query in GovInfo syntax; field operators like collection:(USCOURTS) are allowed.",
+          "example": "collection:(BILLS) and congress:118 broadband"
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Results per page.",
+          "example": 25
+        },
+        "offsetMark": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "'*' for the first page, then the offsetMark the previous response gave.",
+          "example": "*"
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "List of {field, sortOrder}. Supported fields: score (DESC only), publishdate, lastModified, title (ASC or DESC).",
+          "example": [
+            {
+              "field": "score",
+              "sortOrder": "DESC"
+            }
+          ]
+        },
+        "historical": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include historical content.",
+          "example": true
+        },
+        "resultLevel": {
+          "in": "body",
+          "type": "string",
+          "description": "Level of detail of each result.",
+          "example": "default"
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "web.search",
+      "docs_url": "https://github.com/usgpo/api#search-service",
+      "verified": {
+        "docs": "https://github.com/usgpo/api#search-service"
+      }
+    },
+    {
+      "id": "govinfo.collections.list",
+      "name": "List collections",
+      "summary": "Every GovInfo collection with its code, name and package and granule counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections",
+      "job": "datasets.list",
+      "docs_url": "https://github.com/usgpo/api#collections-service",
+      "verified": {
+        "docs": "https://github.com/usgpo/api#collections-service"
+      }
+    },
+    {
+      "id": "govinfo.collections.updated",
+      "name": "List packages added or changed in a collection",
+      "summary": "Package ids in one collection added or modified since a date-time, for tracking updates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/{collection}/{lastModifiedStartDate}",
+      "params": {
+        "collection": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Collection code, e.g. BILLS, CREC, FR, PLAW, USCOURTS.",
+          "example": "BILLS"
+        },
+        "lastModifiedStartDate": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Start of the lastModified window, ISO 8601 yyyy-MM-dd'T'HH:mm:ss'Z'.",
+          "example": "2025-01-01T00:00:00Z"
+        },
+        "offsetMark": {
+          "in": "query",
+          "type": "string",
+          "description": "'*' first, then the value from nextPage.",
+          "example": "*"
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Records per request, at most 1000.",
+          "example": 100
+        },
+        "congress": {
+          "in": "query",
+          "type": "integer",
+          "description": "Congress number, where applicable (e.g. 118).",
+          "example": 118
+        },
+        "docClass": {
+          "in": "query",
+          "type": "string",
+          "description": "Collection-specific category, e.g. bill type (s, hr) in BILLS or section (HOUSE, SENATE) in CREC.",
+          "example": "hr"
+        }
+      },
+      "notes": [
+        "lastModified is when GovInfo added or updated the package, not the publication date; use published.list for publication dates.",
+        "For an end date too, call /collections/{collection}/{start}/{end} raw."
+      ],
+      "job": "records.changes",
+      "docs_url": "https://github.com/usgpo/api#collections-service",
+      "verified": {
+        "docs": "https://api.govinfo.gov/docs/"
+      }
+    },
+    {
+      "id": "govinfo.published.list",
+      "name": "List packages by publication date",
+      "summary": "Packages in the given collections issued between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/published/{dateIssuedStartDate}/{dateIssuedEndDate}",
+      "params": {
+        "dateIssuedStartDate": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Earliest dateIssued, YYYY-MM-DD.",
+          "example": "2019-01-01"
+        },
+        "dateIssuedEndDate": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Latest dateIssued, YYYY-MM-DD.",
+          "example": "2019-07-31"
+        },
+        "collection": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated collection codes.",
+          "example": "BILLS"
+        },
+        "offsetMark": {
+          "in": "query",
+          "type": "string",
+          "description": "'*' first, then the value from nextPage.",
+          "example": "*"
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Records per request, at most 1000.",
+          "example": 100
+        },
+        "congress": {
+          "in": "query",
+          "type": "string",
+          "description": "Congress number (e.g. 116).",
+          "example": "116"
+        },
+        "docClass": {
+          "in": "query",
+          "type": "string",
+          "description": "Collection-specific category, e.g. bill type in BILLS.",
+          "example": "s"
+        },
+        "modifiedSince": {
+          "in": "query",
+          "type": "string",
+          "description": "Only packages modified since this ISO 8601 date-time.",
+          "example": "2020-02-28T00:00:00Z"
+        }
+      },
+      "job": "records.list",
+      "docs_url": "https://github.com/usgpo/api#published-service",
+      "verified": {
+        "docs": "https://api.govinfo.gov/docs/"
+      }
+    },
+    {
+      "id": "govinfo.packages.summary",
+      "name": "Get a package summary",
+      "summary": "Metadata of one package and links to every content and metadata format (text, XML, PDF, MODS, ZIP).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/packages/{packageId}/summary",
+      "params": {
+        "packageId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GovInfo package id.",
+          "example": "BILLS-115hr1625enr"
+        }
+      },
+      "job": "records.get",
+      "docs_url": "https://github.com/usgpo/api#packages-service",
+      "verified": {
+        "docs": "https://api.govinfo.gov/docs/"
+      }
+    },
+    {
+      "id": "govinfo.packages.granules",
+      "name": "List a package's granules",
+      "summary": "The granules (sections, articles, hearings parts) of one package, with titles, ids and summary links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/packages/{packageId}/granules",
+      "params": {
+        "packageId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GovInfo package id.",
+          "example": "CREC-2018-01-03"
+        },
+        "offsetMark": {
+          "in": "query",
+          "type": "string",
+          "description": "'*' first, then the value from nextPage.",
+          "example": "*"
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Records per request, at most 1000.",
+          "example": 100
+        },
+        "granuleClass": {
+          "in": "query",
+          "type": "string",
+          "description": "Collection-specific granule category filter."
+        }
+      },
+      "docs_url": "https://github.com/usgpo/api#granules-service",
+      "verified": {
+        "docs": "https://api.govinfo.gov/docs/"
+      }
+    },
+    {
+      "id": "govinfo.granules.summary",
+      "name": "Get a granule summary",
+      "summary": "Metadata of one granule and links to its content and metadata formats.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/packages/{packageId}/granules/{granuleId}/summary",
+      "params": {
+        "packageId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GovInfo package id.",
+          "example": "FR-2018-04-12"
+        },
+        "granuleId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Granule id from packages.granules.",
+          "example": "2018-07777"
+        }
+      },
+      "docs_url": "https://github.com/usgpo/api#granules-summary",
+      "verified": {
+        "docs": "https://api.govinfo.gov/docs/"
+      }
+    },
+    {
+      "id": "govinfo.related",
+      "name": "List related documents",
+      "summary": "Relationships of a package or granule: bill versions, history, public laws, reports, CFR citations and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/related/{accessId}",
+      "params": {
+        "accessId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package id or granule id.",
+          "example": "BILLS-116hr748enr"
+        }
+      },
+      "notes": [
+        "Each relationship links to /related/{accessId}/{collection} for the related documents in that collection."
+      ],
+      "job": "records.related",
+      "docs_url": "https://github.com/usgpo/api#related-service",
+      "verified": {
+        "docs": "https://api.govinfo.gov/docs/"
+      }
+    }
+  ]
+}

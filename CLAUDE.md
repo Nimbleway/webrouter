@@ -16,8 +16,8 @@ session) and `browse` (a hosted browser agent). Each call behaves the same
 whichever backend serves it. Beside them, `call_vendor` reaches a vendor's own
 API (Google Ads, Datadog, ...) with the user's credentials, from a catalog of
 vendors listed in [VENDORS.md](VENDORS.md).
-It ships a Python library and an MCP server. [README.md](README.md) is the full
-reference.
+It ships a Python library and an MCP server. [README.md](README.md) is the overview;
+[docs.webrouter.net](https://docs.webrouter.net) is the full reference.
 
 ## Set it up
 
@@ -87,7 +87,8 @@ git pull && make setup
 
 ## Where to look
 
-- [README.md](README.md) — the API, every backend, and what each option does
+- [README.md](README.md): the project overview, advanced APIs and contributor-facing reference
+- [Documentation](https://docs.webrouter.net): getting started, core methods, providers and errors
 - [docs/mcp.md](docs/mcp.md) — the MCP server in depth
 - [examples/](examples/) — runnable scripts (`uv run python examples/main.py`)
 - [CONTRIBUTING.md](CONTRIBUTING.md) — adding a provider and opening a pull request

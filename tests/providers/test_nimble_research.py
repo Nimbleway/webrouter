@@ -346,7 +346,7 @@ def test_live_research_answers_with_citations() -> None:
 @pytest.mark.integration
 @pytest.mark.skipif(not os.getenv("NIMBLE_API_KEY"), reason="NIMBLE_API_KEY not set")
 def test_live_enrichment_fills_in_a_row_schema_per_record() -> None:
-    """The README's enrichment, as written: a row model, two records, Nimble's default effort."""
+    """The docs/research.mdx enrichment example: a row model, two records, Nimble's default effort."""
     from pydantic import BaseModel
 
     from tests.conftest import billing_aware

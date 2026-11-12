@@ -40,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--search-depth",
         choices=["lite", "fast", "deep"],
-        help="sent to every backend; see README's search-depth table for what each vendor makes of it",
+        help="sent to every backend; see https://docs.webrouter.net/search#search-depth for each mapping",
     )
     parser.add_argument("--concurrency", type=int, default=4, help="questions in flight at once (default: 4)")
     parser.add_argument("--out", help="write every row -- grade, latency, answer, error -- to this CSV")

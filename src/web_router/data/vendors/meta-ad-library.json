@@ -1,0 +1,184 @@
+{
+  "vendor": "meta-ad-library",
+  "name": "Meta Ad Library",
+  "category": "advertising",
+  "summary": "Search the public Meta Ad Library: ads running on Facebook, Instagram and other Meta apps by keyword or page, including political and issue ads.",
+  "docs_url": "https://www.facebook.com/ads/library/api/",
+  "base_url": "https://graph.facebook.com/{api_version}",
+  "settings": {
+    "api_version": {
+      "env": [
+        "META_AD_LIBRARY_API_VERSION"
+      ],
+      "default": "v27.0",
+      "choices": [
+        "v25.0",
+        "v26.0",
+        "v27.0"
+      ],
+      "description": "Graph API version used for ads_archive."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "META_AD_LIBRARY_ACCESS_TOKEN"
+        ],
+        "description": "a Meta access token for an app whose developer has been identity-verified for the Ad Library API (https://www.facebook.com/ID)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Public data, not your own account: any ad in the library, subject to Meta's coverage.",
+    "Ads outside the EU are only returned when they concern social issues, elections or politics; commercial ads are searchable for the EU and UK.",
+    "Keywords are not translated: write search_terms in the ads' language.",
+    "Error 190 is an invalid token, 613 a rate limit."
+  ],
+  "sources": [
+    "https://developers.facebook.com/docs/graph-api/reference/ads_archive/"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "meta-ad-library.ads.search",
+      "name": "Search the Meta Ad Library",
+      "summary": "Ads by keyword or Page, filtered by country, status, date, platform and media type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ads_archive",
+      "params": {
+        "ad_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ad category. Required.",
+          "enum": [
+            "ALL",
+            "EMPLOYMENT_ADS",
+            "FINANCIAL_PRODUCTS_AND_SERVICES_ADS",
+            "HOUSING_ADS",
+            "POLITICAL_AND_ISSUE_ADS"
+          ],
+          "example": "ALL"
+        },
+        "ad_reached_countries": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "JSON array of ISO country codes the ad reached, e.g. [\"US\",\"GB\"], or [\"ALL\"].",
+          "example": "[\"US\"]",
+          "style": "json"
+        },
+        "search_terms": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords, up to 100 characters. Spaces act as AND."
+        },
+        "search_type": {
+          "in": "query",
+          "type": "string",
+          "description": "How search_terms match.",
+          "enum": [
+            "KEYWORD_UNORDERED",
+            "KEYWORD_EXACT_PHRASE"
+          ]
+        },
+        "search_page_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array of Facebook Page ids, up to 10, e.g. [\"123\",\"456\"].",
+          "style": "json"
+        },
+        "ad_active_status": {
+          "in": "query",
+          "type": "string",
+          "description": "Delivery status; default ACTIVE.",
+          "enum": [
+            "ACTIVE",
+            "ALL",
+            "INACTIVE"
+          ]
+        },
+        "ad_delivery_date_min": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; ads delivered on or after."
+        },
+        "ad_delivery_date_max": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; ads delivered on or before."
+        },
+        "languages": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array of ISO 639-1 codes (plus CMN, YUE), e.g. [\"en\",\"es\"].",
+          "style": "json"
+        },
+        "media_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by media.",
+          "enum": [
+            "ALL",
+            "IMAGE",
+            "MEME",
+            "VIDEO",
+            "NONE"
+          ]
+        },
+        "publisher_platforms": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array of FACEBOOK, INSTAGRAM, AUDIENCE_NETWORK, MESSENGER, WHATSAPP, OCULUS, THREADS, STREAMING_SERVICES.",
+          "style": "json"
+        },
+        "bylines": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array of full 'paid for by' disclaimers. Political ads only.",
+          "style": "json"
+        },
+        "unmask_removed_content": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include content removed for policy violations."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ArchivedAd fields to return.",
+          "example": "id,ad_creation_time,ad_creative_bodies,page_name,ad_snapshot_url"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "paging.cursors.after from the previous answer."
+        }
+      },
+      "notes": [
+        "Pass fields explicitly: the answer carries only the ids unless you name the fields you want.",
+        "An empty data array on a later page means the results are exhausted.",
+        "Spend and impressions are ranges, and only available for political and issue ads and for EU-served ads."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://developers.facebook.com/docs/graph-api/reference/ads_archive/",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/graph-api/reference/ads_archive/"
+      }
+    }
+  ]
+}

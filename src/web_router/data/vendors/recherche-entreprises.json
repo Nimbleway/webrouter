@@ -1,0 +1,307 @@
+{
+  "vendor": "recherche-entreprises",
+  "name": "API Recherche d'entreprises",
+  "category": "company-data",
+  "summary": "Search French companies, associations and public bodies (SIREN/SIRET) by name, address, directors, location and many labels, from the open Annuaire des Entreprises.",
+  "docs_url": "https://recherche-entreprises.api.gouv.fr/docs/",
+  "base_url": "https://recherche-entreprises.api.gouv.fr",
+  "notes": [
+    "Keyless. At most 7 requests per second per IP and 30 per second per ASN (shared clouds hit it); 429 comes with Retry-After.",
+    "Non-diffusible companies and companies refused RCS registration are not returned; this is not the full Sirene base.",
+    "A q of exactly 9 digits (SIREN) or 14 digits (SIRET) is a direct lookup that silently ignores every other filter.",
+    "Parameter names and values are French; many filters take comma-separated lists. per_page caps at 25."
+  ],
+  "sources": [
+    "https://recherche-entreprises.api.gouv.fr/docs/",
+    "https://recherche-entreprises.api.gouv.fr/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "recherche-entreprises.companies.search",
+      "name": "Search companies",
+      "summary": "Legal units with head office, directors, finances and matching establishments, by text or SIREN/SIRET plus filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text (name, address, directors, elected officials), or a 9-digit SIREN / 14-digit SIRET for a direct lookup.",
+          "example": "la poste"
+        },
+        "code_postal": {
+          "in": "query",
+          "type": "string",
+          "description": "5-digit postal code(s), comma-separated; filters establishments."
+        },
+        "code_commune": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE commune code(s), comma-separated."
+        },
+        "departement": {
+          "in": "query",
+          "type": "string",
+          "description": "Department code(s), comma-separated.",
+          "example": "75"
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "2-digit region code(s), comma-separated."
+        },
+        "epci": {
+          "in": "query",
+          "type": "string",
+          "description": "EPCI SIREN(s), comma-separated."
+        },
+        "categorie_entreprise": {
+          "in": "query",
+          "type": "string",
+          "description": "PME, ETI or GE; comma-separated list accepted."
+        },
+        "etat_administratif": {
+          "in": "query",
+          "type": "string",
+          "description": "A active, C ceased.",
+          "enum": [
+            "A",
+            "C"
+          ]
+        },
+        "nature_juridique": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE legal category code(s), comma-separated."
+        },
+        "tranche_effectif_salarie": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE headcount band code(s), comma-separated."
+        },
+        "nom_personne": {
+          "in": "query",
+          "type": "string",
+          "description": "Surname of a director or elected official."
+        },
+        "prenoms_personne": {
+          "in": "query",
+          "type": "string",
+          "description": "First name(s) of a director or elected official."
+        },
+        "date_naissance_personne_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest birth date of that person, yyyy-mm-dd or yyyy-mm (matched to the month)."
+        },
+        "date_naissance_personne_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest birth date of that person, yyyy-mm-dd or yyyy-mm."
+        },
+        "type_personne": {
+          "in": "query",
+          "type": "string",
+          "description": "dirigeant or elu.",
+          "enum": [
+            "dirigeant",
+            "elu"
+          ]
+        },
+        "ca_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum turnover (EUR)."
+        },
+        "ca_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum turnover (EUR)."
+        },
+        "resultat_net_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum net income (EUR)."
+        },
+        "resultat_net_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum net income (EUR)."
+        },
+        "est_association": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only associations."
+        },
+        "est_entrepreneur_individuel": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only sole proprietorships."
+        },
+        "est_ess": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only social and solidarity economy companies."
+        },
+        "est_collectivite_territoriale": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only local authorities."
+        },
+        "est_rge": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only RGE-certified companies."
+        },
+        "est_bio": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only companies with an organic-certified establishment."
+        },
+        "est_qualiopi": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only Qualiopi-certified companies."
+        },
+        "est_societe_mission": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only sociétés à mission."
+        },
+        "activite_principale": {
+          "in": "query",
+          "type": "string",
+          "description": "NAF/APE activity code(s), comma-separated.",
+          "example": "62.01Z"
+        },
+        "section_activite_principale": {
+          "in": "query",
+          "type": "string",
+          "description": "NAF section letter(s) A-U, comma-separated."
+        },
+        "limite_matching_etablissements": {
+          "in": "query",
+          "type": "integer",
+          "description": "Matching establishments included per result, 1-100; default 10."
+        },
+        "minimal": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a minimal response without secondary fields."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Only with minimal=true: secondary fields to add, comma-separated: complements, dirigeants, finances, matching_etablissements, siege, score, tva."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 10, at most 25."
+        },
+        "page_etablissements": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of the matching establishments; default 1."
+        },
+        "sort_by_size": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Sort results by company size (number of establishments)."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://recherche-entreprises.api.gouv.fr/docs/",
+      "verified": {
+        "docs": "https://recherche-entreprises.api.gouv.fr/docs/"
+      }
+    },
+    {
+      "id": "recherche-entreprises.companies.near",
+      "name": "Search companies near a point",
+      "summary": "Establishments within a radius of a latitude/longitude, optionally filtered by activity.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/near_point",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude.",
+          "required": true,
+          "example": 48.8566
+        },
+        "long": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude.",
+          "required": true,
+          "example": 2.3522
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Radius in km, at most 50; default 5."
+        },
+        "activite_principale": {
+          "in": "query",
+          "type": "string",
+          "description": "NAF/APE activity code(s), comma-separated.",
+          "example": "62.01Z"
+        },
+        "section_activite_principale": {
+          "in": "query",
+          "type": "string",
+          "description": "NAF section letter(s) A-U, comma-separated."
+        },
+        "limite_matching_etablissements": {
+          "in": "query",
+          "type": "integer",
+          "description": "Matching establishments included per result, 1-100; default 10."
+        },
+        "minimal": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return a minimal response without secondary fields."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Only with minimal=true: secondary fields to add, comma-separated: complements, dirigeants, finances, matching_etablissements, siege, score, tva."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 10, at most 25."
+        },
+        "page_etablissements": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of the matching establishments; default 1."
+        },
+        "sort_by_size": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Sort results by company size (number of establishments)."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://recherche-entreprises.api.gouv.fr/docs/",
+      "verified": {
+        "docs": "https://recherche-entreprises.api.gouv.fr/docs/"
+      }
+    }
+  ]
+}

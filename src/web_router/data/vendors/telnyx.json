@@ -1,0 +1,327 @@
+{
+  "vendor": "telnyx",
+  "name": "Telnyx",
+  "category": "messaging",
+  "summary": "Telnyx communications: messages, phone numbers, number lookup, available-number search, usage detail records and balance.",
+  "docs_url": "https://developers.telnyx.com/api-reference",
+  "pricing_url": "https://telnyx.com/pricing",
+  "base_url": "https://{host}/v2",
+  "settings": {
+    "host": {
+      "env": [
+        "TELNYX_API_HOST"
+      ],
+      "default": "api.telnyx.com",
+      "choices": [
+        "api.telnyx.com",
+        "api.telnyx.eu",
+        "api.telnyx.com.au",
+        "api.telnyx.ca",
+        "api.telnyx.me"
+      ],
+      "description": "Regional endpoint: api.telnyx.com (North America, default), .eu, .com.au, .ca or .me. The same key works on every region."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TELNYX_API_KEY"
+        ],
+        "description": "A Telnyx API key (KEY...) from the Mission Control portal, sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Lists page with page[number] and page[size]; filters use bracketed names (filter[status]).",
+    "Phone numbers are +E.164 everywhere.",
+    "Rate limits vary by endpoint and are counted per region; a 429 means slow down, and x-ratelimit-remaining is sent when available."
+  ],
+  "sources": [
+    "https://developers.telnyx.com/docs/development/api-fundamentals/reliability/rate-limiting.md",
+    "https://developers.telnyx.com/docs/account-setup/regional-endpoints.md",
+    "https://github.com/team-telnyx/openapi"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "telnyx.balance.get",
+      "name": "Get account balance",
+      "summary": "Balance, available credit and credit limit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/balance",
+      "job": "account.usage",
+      "docs_url": "https://developers.telnyx.com/api-reference/billing/get-user-balance-details",
+      "verified": {
+        "docs": "https://developers.telnyx.com/api-reference/billing/get-user-balance-details"
+      }
+    },
+    {
+      "id": "telnyx.phone_numbers.list",
+      "name": "List your phone numbers",
+      "summary": "Numbers on the account, with status, connection and tags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/phone_numbers",
+      "params": {
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page to load.",
+          "wire_name": "page[number]"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 250, default 20.",
+          "wire_name": "page[size]"
+        },
+        "filter_phone_number": {
+          "in": "query",
+          "type": "string",
+          "description": "Number digits, at least three.",
+          "wire_name": "filter[phone_number]"
+        },
+        "filter_status": {
+          "in": "query",
+          "type": "string",
+          "description": "Number status.",
+          "wire_name": "filter[status]",
+          "enum": [
+            "purchase-pending",
+            "purchase-failed",
+            "port-pending",
+            "active",
+            "deleted",
+            "port-failed",
+            "emergency-only",
+            "ported-out",
+            "port-out-pending"
+          ]
+        },
+        "filter_tag": {
+          "in": "query",
+          "type": "string",
+          "description": "Only numbers with this tag.",
+          "wire_name": "filter[tag]"
+        },
+        "filter_country_iso_alpha2": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code, ISO alpha-2.",
+          "wire_name": "filter[country_iso_alpha2]"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; created_at descending by default.",
+          "enum": [
+            "purchased_at",
+            "phone_number",
+            "connection_name",
+            "usage_payment_method"
+          ]
+        }
+      },
+      "docs_url": "https://developers.telnyx.com/api-reference/phone-number-configurations/list-phone-numbers",
+      "verified": {
+        "docs": "https://developers.telnyx.com/api-reference/phone-number-configurations/list-phone-numbers"
+      }
+    },
+    {
+      "id": "telnyx.messages.get",
+      "name": "Get a message",
+      "summary": "One sent or received message with its delivery status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/messages/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Message id (UUID)."
+        }
+      },
+      "notes": [
+        "Only messages up to 10 days old; older ones need an MDR report."
+      ],
+      "docs_url": "https://developers.telnyx.com/api-reference/messages/retrieve-a-message",
+      "verified": {
+        "docs": "https://developers.telnyx.com/api-reference/messages/retrieve-a-message"
+      }
+    },
+    {
+      "id": "telnyx.number_lookup",
+      "name": "Look up a phone number",
+      "summary": "Carrier, line type and, on request, caller name for a number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/number_lookup/{phone_number}",
+      "params": {
+        "phone_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Number to look up, +E.164.",
+          "example": "+18665552368"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Data source; repeat for several.",
+          "enum": [
+            "carrier",
+            "caller-name",
+            "caller-identity",
+            "enhanced-caller-name"
+          ]
+        }
+      },
+      "job": "phone.verify",
+      "docs_url": "https://developers.telnyx.com/api-reference/number-lookup/lookup-phone-number-data",
+      "verified": {
+        "docs": "https://developers.telnyx.com/api-reference/number-lookup/lookup-phone-number-data"
+      }
+    },
+    {
+      "id": "telnyx.available_numbers.search",
+      "name": "Search numbers to buy",
+      "summary": "Numbers in Telnyx inventory matching location, type and features.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/available_phone_numbers",
+      "params": {
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Country, ISO alpha-2.",
+          "wire_name": "filter[country_code]",
+          "example": "US"
+        },
+        "locality": {
+          "in": "query",
+          "type": "string",
+          "description": "City.",
+          "wire_name": "filter[locality]"
+        },
+        "administrative_area": {
+          "in": "query",
+          "type": "string",
+          "description": "US state or CA province.",
+          "wire_name": "filter[administrative_area]"
+        },
+        "national_destination_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Area code.",
+          "wire_name": "filter[national_destination_code]"
+        },
+        "phone_number_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Number type.",
+          "wire_name": "filter[phone_number_type]",
+          "enum": [
+            "local",
+            "toll_free",
+            "mobile",
+            "national",
+            "shared_cost"
+          ]
+        },
+        "features": {
+          "in": "query",
+          "type": "array",
+          "description": "Required features, e.g. sms, voice.",
+          "wire_name": "filter[features]"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results.",
+          "wire_name": "filter[limit]"
+        }
+      },
+      "docs_url": "https://developers.telnyx.com/api-reference/phone-number-search/list-available-phone-numbers",
+      "verified": {
+        "docs": "https://developers.telnyx.com/api-reference/phone-number-search/list-available-phone-numbers"
+      }
+    },
+    {
+      "id": "telnyx.detail_records.search",
+      "name": "Search usage detail records",
+      "summary": "Billing-grade records of messages, calls and other usage, by type and date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/detail_records",
+      "params": {
+        "record_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Record type; required.",
+          "wire_name": "filter[record_type]",
+          "enum": [
+            "ai-voice-assistant",
+            "amd",
+            "call-control",
+            "conference",
+            "conference-participant",
+            "embedding",
+            "fax",
+            "inference",
+            "inference-speech-to-text",
+            "media_storage",
+            "media-streaming",
+            "messaging",
+            "noise-suppression",
+            "recording",
+            "sip-trunking",
+            "siprec-client",
+            "stt",
+            "tts",
+            "verify",
+            "webrtc",
+            "wireless"
+          ]
+        },
+        "date_range": {
+          "in": "query",
+          "type": "string",
+          "description": "yesterday, today, last_week, this_month..., or last_N_days.",
+          "wire_name": "filter[date_range]"
+        },
+        "sort": {
+          "in": "query",
+          "type": "array",
+          "description": "Sort fields, e.g. -created_at; valid fields depend on record_type."
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "wire_name": "page[number]"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size.",
+          "wire_name": "page[size]"
+        }
+      },
+      "docs_url": "https://developers.telnyx.com/api-reference/detail-records/search-detail-records",
+      "verified": {
+        "docs": "https://developers.telnyx.com/api-reference/detail-records/search-detail-records"
+      }
+    }
+  ]
+}

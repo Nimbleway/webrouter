@@ -1,0 +1,259 @@
+{
+  "vendor": "statcan",
+  "name": "Statistics Canada Web Data Service",
+  "category": "finance",
+  "summary": "Statistics Canada tables (cubes) and time series: table lists and metadata, the latest data points of a series, and data by release-date range, from the keyless Web Data Service.",
+  "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+  "base_url": "https://www150.statcan.gc.ca/t1/wds/rest",
+  "notes": [
+    "Keyless. Limits: 25 requests per second per IP, 50 per second across the server.",
+    "Most methods are reads over POST whose body is a JSON array of request objects; this entry sends one object per call. Answers carry status SUCCESS or FAILED per object.",
+    "A table is a productId (8 digits, e.g. 35100003); a series is a vectorId (the number after 'v', e.g. 32164132) or a productId plus a 10-part coordinate of member ids (1.12.0.0.0.0.0.0.0.0).",
+    "Data is released every business day at 8:30 Eastern; between midnight and 8:30 some methods return nothing, and tables being updated can answer 409.",
+    "In Census tables (productIds starting 9810) zeros are fillers, so a FAILED status or responseStatusCode 2 can be normal."
+  ],
+  "sources": [
+    "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "statcan.cubes.list",
+      "name": "List all tables",
+      "summary": "Every table (cube) with its productId, in the lighter of the two list forms.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getAllCubesListLite",
+      "notes": [
+        "One large answer of every table; filter it locally."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+      "verified": {
+        "docs": "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+      }
+    },
+    {
+      "id": "statcan.cubes.changed",
+      "name": "List tables changed on a date",
+      "summary": "The tables updated on one day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getChangedCubeList/{date}",
+      "params": {
+        "date": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "ISO date, today or earlier.",
+          "example": "2017-12-07"
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+      "verified": {
+        "docs": "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+      }
+    },
+    {
+      "id": "statcan.cube.metadata",
+      "name": "Get a table's metadata",
+      "summary": "Metadata of one table, including its dimensions and their members.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/getCubeMetadata",
+      "body_array": true,
+      "params": {
+        "productId": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Table id, 8 digits.",
+          "example": 35100003
+        }
+      },
+      "notes": [
+        "A read over POST; the body goes as a one-item array."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+      "verified": {
+        "docs": "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+      }
+    },
+    {
+      "id": "statcan.series.info",
+      "name": "Get a series' metadata by vector",
+      "summary": "Metadata of one series, including its table and coordinate.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/getSeriesInfoFromVector",
+      "body_array": true,
+      "params": {
+        "vectorId": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Series vector id, without the 'v'.",
+          "example": 32164132
+        }
+      },
+      "notes": [
+        "A read over POST; the body goes as a one-item array."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+      "verified": {
+        "docs": "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+      }
+    },
+    {
+      "id": "statcan.series.latest",
+      "name": "Get a series' latest data points by vector",
+      "summary": "The last N reference periods of one series.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/getDataFromVectorsAndLatestNPeriods",
+      "body_array": true,
+      "params": {
+        "vectorId": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Series vector id, without the 'v'.",
+          "example": 32164132
+        },
+        "latestN": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "How many latest periods.",
+          "example": 3
+        }
+      },
+      "notes": [
+        "A read over POST; the body goes as a one-item array."
+      ],
+      "job": "economics.series",
+      "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+      "verified": {
+        "docs": "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+      }
+    },
+    {
+      "id": "statcan.series.latest_by_coordinate",
+      "name": "Get a series' latest data points by table and coordinate",
+      "summary": "The last N reference periods of the series at a coordinate of a table.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/getDataFromCubePidCoordAndLatestNPeriods",
+      "body_array": true,
+      "params": {
+        "productId": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Table id, 8 digits.",
+          "example": 35100003
+        },
+        "coordinate": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Ten dot-separated member ids, one per dimension, zero-padded.",
+          "example": "1.12.0.0.0.0.0.0.0.0"
+        },
+        "latestN": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "How many latest periods.",
+          "example": 3
+        }
+      },
+      "notes": [
+        "A read over POST; the body goes as a one-item array."
+      ],
+      "job": "economics.series",
+      "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+      "verified": {
+        "docs": "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+      }
+    },
+    {
+      "id": "statcan.series.by_release_range",
+      "name": "Get series data released in a date range",
+      "summary": "Data points of several series whose release time falls between two times.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/getBulkVectorDataByRange",
+      "params": {
+        "vectorIds": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Vector ids as strings.",
+          "example": [
+            "74804",
+            "1"
+          ]
+        },
+        "startDataPointReleaseDate": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DDTHH:MM.",
+          "example": "2015-12-01T08:30"
+        },
+        "endDataPointReleaseDate": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DDTHH:MM.",
+          "example": "2018-03-31T19:00"
+        }
+      },
+      "notes": [
+        "A read over POST. The range is on release dates, not reference periods."
+      ],
+      "job": "economics.series",
+      "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+      "verified": {
+        "docs": "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+      }
+    },
+    {
+      "id": "statcan.cube.download_csv",
+      "name": "Get a full-table CSV download link",
+      "summary": "A URL to a ZIP of the whole table as CSV, in the 'object' field.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getFullTableDownloadCSV/{productId}/{lang}",
+      "params": {
+        "productId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Table id, 8 digits.",
+          "example": 14100287
+        },
+        "lang": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Language.",
+          "enum": [
+            "en",
+            "fr"
+          ],
+          "example": "en"
+        }
+      },
+      "job": "datasets.download",
+      "docs_url": "https://www.statcan.gc.ca/en/developers/wds/user-guide",
+      "verified": {
+        "docs": "https://www.statcan.gc.ca/en/developers/wds/user-guide"
+      }
+    }
+  ]
+}

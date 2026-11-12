@@ -1,0 +1,418 @@
+{
+  "vendor": "courtlistener",
+  "name": "CourtListener",
+  "category": "government",
+  "summary": "Free Law Project's US legal database: case law opinions, PACER dockets and filings, judges and oral arguments, with full-text search and citation lookup.",
+  "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/overview",
+  "base_url": "https://www.courtlistener.com/api/rest/v4",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "COURTLISTENER_API_KEY"
+        ],
+        "description": "A CourtListener API token (free account, shown on your profile's API page). Sent as 'Authorization: Token <token>'."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Token {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Default throttle for authenticated users: 5 requests per minute, 50 per hour, 125 per day, rolling windows, all applied at once. Use fields/omit to keep payloads small.",
+    "Filters are Django-style: field=value, field__gte / __lte / __gt / __lt / __range, related fields joined with __ (cluster__docket__court=scotus), and ! to negate (court__jurisdiction!=F). An OPTIONS request on an endpoint lists its filters and ordering fields.",
+    "A case's web URL carries the cluster id, not the opinion id; look a case up on clusters. Use cluster case names, not docket names.",
+    "Docket numbers are not unique; always add a court filter."
+  ],
+  "sources": [
+    "https://wiki.free.law/c/courtlistener/help/api/rest/v4/overview",
+    "https://wiki.free.law/c/courtlistener/help/api/rest/v4/search",
+    "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law",
+    "https://wiki.free.law/c/courtlistener/help/api/rest/v4/query-refinement",
+    "https://wiki.free.law/c/courtlistener/help/api/rest/v4/citation-lookup"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "courtlistener.search",
+      "name": "Search case law, dockets, judges or oral arguments",
+      "summary": "Full-text search with highlighted snippets; type picks opinions, RECAP dockets/documents, judges or audio.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Query; supports field operators such as caseName:foo.",
+          "required": true,
+          "example": "qualified immunity"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "o case law (default), r dockets with up to 3 documents, rd RECAP documents, d dockets, p judges, oa oral arguments.",
+          "enum": [
+            "o",
+            "r",
+            "rd",
+            "d",
+            "p",
+            "oa"
+          ]
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order; relevance by default."
+        },
+        "highlight": {
+          "in": "query",
+          "type": "string",
+          "description": "on to highlight matches; off by default.",
+          "enum": [
+            "on"
+          ]
+        },
+        "semantic": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for semantic search (case law only)."
+        }
+      },
+      "job": "legal.search",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/search",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/search"
+      },
+      "notes": [
+        "Pages with the cursor in the next URL. Counts for types d and r are approximate above 2,000.",
+        "Results are cached for ten minutes; for monitoring, the Alert API is preferred over polling."
+      ]
+    },
+    {
+      "id": "courtlistener.clusters.list",
+      "name": "List opinion clusters",
+      "summary": "Cases (opinion clusters) filtered by docket, court, date and other fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/clusters/",
+      "params": {
+        "docket__court": {
+          "in": "query",
+          "type": "string",
+          "description": "Court id.",
+          "example": "scotus"
+        },
+        "docket__docket_number": {
+          "in": "query",
+          "type": "string",
+          "description": "Docket number.",
+          "example": "23A994"
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated; prefix - for descending (OPTIONS lists the allowed ones).",
+          "example": "-date_modified"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these fields, comma-separated; __ for nested fields."
+        },
+        "omit": {
+          "in": "query",
+          "type": "string",
+          "description": "Drop these fields, comma-separated."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100 pages. Ordering by id, date_modified or date_created pages with the next/previous URLs instead."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "on returns only the total count.",
+          "enum": [
+            "on"
+          ]
+        }
+      },
+      "job": "legal.cases",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law"
+      }
+    },
+    {
+      "id": "courtlistener.clusters.get",
+      "name": "Get an opinion cluster",
+      "summary": "One case: names, dates, citations, judges and links to its opinions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/clusters/{id}/",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "description": "Cluster id.",
+          "required": true
+        }
+      },
+      "job": "legal.cases",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law"
+      }
+    },
+    {
+      "id": "courtlistener.opinions.list",
+      "name": "List opinions",
+      "summary": "Opinions filtered by cluster, court or docket fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opinions/",
+      "params": {
+        "cluster__docket__court": {
+          "in": "query",
+          "type": "string",
+          "description": "Court id.",
+          "example": "scotus"
+        },
+        "cluster__docket__docket_number": {
+          "in": "query",
+          "type": "string",
+          "description": "Docket number."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated; prefix - for descending (OPTIONS lists the allowed ones).",
+          "example": "-date_modified"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these fields, comma-separated; __ for nested fields."
+        },
+        "omit": {
+          "in": "query",
+          "type": "string",
+          "description": "Drop these fields, comma-separated."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100 pages. Ordering by id, date_modified or date_created pages with the next/previous URLs instead."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "on returns only the total count.",
+          "enum": [
+            "on"
+          ]
+        }
+      },
+      "job": "legal.cases",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law"
+      }
+    },
+    {
+      "id": "courtlistener.opinions.get",
+      "name": "Get an opinion",
+      "summary": "One opinion's text (html_with_citations is the most reliable field), type, author and the opinions it cites.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opinions/{id}/",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "description": "Opinion id.",
+          "required": true
+        }
+      },
+      "job": "legal.cases",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law"
+      }
+    },
+    {
+      "id": "courtlistener.dockets.list",
+      "name": "List dockets",
+      "summary": "Dockets filtered by court, docket number and other fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dockets/",
+      "params": {
+        "court": {
+          "in": "query",
+          "type": "string",
+          "description": "Court id.",
+          "example": "scotus"
+        },
+        "docket_number": {
+          "in": "query",
+          "type": "string",
+          "description": "Docket number.",
+          "example": "23A994"
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated; prefix - for descending (OPTIONS lists the allowed ones).",
+          "example": "-date_modified"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these fields, comma-separated; __ for nested fields."
+        },
+        "omit": {
+          "in": "query",
+          "type": "string",
+          "description": "Drop these fields, comma-separated."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100 pages. Ordering by id, date_modified or date_created pages with the next/previous URLs instead."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "on returns only the total count.",
+          "enum": [
+            "on"
+          ]
+        }
+      },
+      "job": "legal.dockets",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law"
+      },
+      "notes": [
+        "Docket entries, parties and attorneys are not in docket responses."
+      ]
+    },
+    {
+      "id": "courtlistener.dockets.get",
+      "name": "Get a docket",
+      "summary": "One docket's case metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dockets/{id}/",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "description": "Docket id.",
+          "required": true
+        }
+      },
+      "job": "legal.dockets",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law"
+      }
+    },
+    {
+      "id": "courtlistener.courts.list",
+      "name": "List courts",
+      "summary": "Court ids, names and jurisdictions, for the court filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/courts/",
+      "params": {
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort fields, comma-separated; prefix - for descending (OPTIONS lists the allowed ones).",
+          "example": "-date_modified"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Only these fields, comma-separated; __ for nested fields."
+        },
+        "omit": {
+          "in": "query",
+          "type": "string",
+          "description": "Drop these fields, comma-separated."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100 pages. Ordering by id, date_modified or date_created pages with the next/previous URLs instead."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "on returns only the total count.",
+          "enum": [
+            "on"
+          ]
+        }
+      },
+      "job": "legal.courts",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/case-law"
+      },
+      "notes": [
+        "Changes rarely; cache it."
+      ]
+    },
+    {
+      "id": "courtlistener.citations.lookup",
+      "name": "Look up citations in text",
+      "summary": "Parses legal citations out of text (or one volume/reporter/page) and resolves them to clusters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/citation-lookup/",
+      "params": {
+        "text": {
+          "in": "body",
+          "type": "string",
+          "description": "Text to parse, up to 64,000 characters."
+        },
+        "volume": {
+          "in": "body",
+          "type": "string",
+          "description": "Volume of a single citation (with reporter and page)."
+        },
+        "reporter": {
+          "in": "body",
+          "type": "string",
+          "description": "Reporter of a single citation."
+        },
+        "page": {
+          "in": "body",
+          "type": "string",
+          "description": "Page of a single citation."
+        }
+      },
+      "job": "legal.citations",
+      "docs_url": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/citation-lookup",
+      "verified": {
+        "docs": "https://wiki.free.law/c/courtlistener/help/api/rest/v4/citation-lookup"
+      },
+      "body_type": "form",
+      "notes": [
+        "A read over POST, form-encoded. Up to 250 citations per request; 60 valid citations per minute, then 429 with a wait_util timestamp (field name as the docs spell it).",
+        "Statutes, law journals, id. and supra citations are not looked up."
+      ]
+    }
+  ]
+}

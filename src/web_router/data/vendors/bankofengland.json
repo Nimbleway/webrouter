@@ -1,0 +1,198 @@
+{
+  "vendor": "bankofengland",
+  "name": "Bank of England",
+  "category": "finance",
+  "summary": "Bank of England Statistical Interactive Database: Bank Rate, SONIA, yields, exchange rates and other series by code, as CSV or XML, keyless.",
+  "docs_url": "https://www.bankofengland.co.uk/boeapps/database/help.asp",
+  "base_url": "https://www.bankofengland.co.uk/boeapps/database",
+  "notes": [
+    "Free and keyless; no credentials. There is no JSON: data comes back as CSV or XML.",
+    "Series are named by codes (e.g. LPMAUZI); look codes up in the database at bankofengland.co.uk/boeapps/database.",
+    "Dates are DD/Mon/YYYY (01/Feb/2006), not ISO; Dateto also takes 'now'.",
+    "At most 300 series codes per CSV or XML request.",
+    "A bad series code can come back as an HTML page rather than CSV; check the content type."
+  ],
+  "sources": [
+    "https://www.bankofengland.co.uk/boeapps/database/help.asp?Highlight=CSV"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "bankofengland.series.csv",
+      "name": "Download series as CSV",
+      "summary": "Observations of one or more series between two dates, as CSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/_iadb-fromshowcolumns.asp",
+      "params": {
+        "csv_x": {
+          "in": "query",
+          "wire_name": "csv.x",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "yes"
+          ],
+          "example": "yes",
+          "description": "Selects CSV output; always 'yes'."
+        },
+        "Datefrom": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start date, DD/Mon/YYYY.",
+          "example": "01/Feb/2006"
+        },
+        "Dateto": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date, DD/Mon/YYYY, or 'now'.",
+          "example": "now"
+        },
+        "SeriesCodes": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated series codes, at most 300.",
+          "example": "LPMAUZI,LPMAVAA"
+        },
+        "UsingCodes": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "Y"
+          ],
+          "example": "Y",
+          "description": "Always 'Y'."
+        },
+        "CSVF": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "TT",
+            "TN",
+            "CT",
+            "CN"
+          ],
+          "example": "TN",
+          "description": "Layout: TT tabular with titles, TN tabular no titles, CT columnar with titles, CN columnar no titles."
+        },
+        "VPD": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "Y",
+            "N"
+          ],
+          "description": "Y includes provisional data."
+        },
+        "VFD": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "Y",
+            "N"
+          ],
+          "description": "Y includes observation footnotes."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://www.bankofengland.co.uk/boeapps/database/help.asp?Highlight=CSV",
+      "verified": {
+        "docs": "https://www.bankofengland.co.uk/boeapps/database/help.asp?Highlight=CSV"
+      }
+    },
+    {
+      "id": "bankofengland.series.xml",
+      "name": "Download series as XML",
+      "summary": "Observations of one or more series between two dates as XML, optionally only updates since a date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/_iadb-fromshowcolumns.asp",
+      "params": {
+        "xml_x": {
+          "in": "query",
+          "wire_name": "xml.x",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "yes"
+          ],
+          "example": "yes",
+          "description": "Selects XML output; always 'yes'."
+        },
+        "CodeVer": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "new"
+          ],
+          "example": "new",
+          "description": "Always 'new'."
+        },
+        "Datefrom": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start date, DD/Mon/YYYY.",
+          "example": "01/Feb/2006"
+        },
+        "Dateto": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date, DD/Mon/YYYY, or 'now'.",
+          "example": "now"
+        },
+        "SeriesCodes": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated series codes, at most 300; 'all' returns metadata for series added in the range, without observations.",
+          "example": "LPMAUZI,LPMAVAA"
+        },
+        "VPD": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "Y",
+            "N"
+          ],
+          "description": "Y includes provisional data."
+        },
+        "VFD": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "Y",
+            "N"
+          ],
+          "description": "Y includes observation footnotes."
+        },
+        "VUD": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "A",
+            "B"
+          ],
+          "description": "A all observations in the range including updates; B only new and revised observations."
+        },
+        "VUDdate": {
+          "in": "query",
+          "type": "string",
+          "description": "Updates applied since this date, or 'latest' for updates since the previous working day."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://www.bankofengland.co.uk/boeapps/database/help.asp?Highlight=CSV",
+      "verified": {
+        "docs": "https://www.bankofengland.co.uk/boeapps/database/help.asp?Highlight=CSV"
+      }
+    }
+  ]
+}

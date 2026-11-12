@@ -1,0 +1,106 @@
+{
+  "vendor": "who-gho",
+  "name": "WHO Global Health Observatory",
+  "category": "health",
+  "summary": "World Health Organization health statistics by country or region, year and disaggregation such as sex, from the keyless GHO OData API.",
+  "docs_url": "https://www.who.int/data/gho/info/gho-odata-api",
+  "base_url": "https://ghoapi.azureedge.net/api",
+  "notes": [
+    "Keyless. An OData API: narrow answers with $filter (operators eq, ne, ge, lt joined by 'and'; functions contains() and date()); no other OData options are documented.",
+    "Find an indicator's code with indicators.list ($filter=contains(IndicatorName,'...')), then fetch its data with indicator.data.",
+    "Disaggregation is in Dim1 (e.g. Dim1 eq 'MLE' for male); Dim1 eq null keeps only non-disaggregated rows, Dim1 ne null only disaggregated ones. Filter years on TimeDimensionBegin with date(), e.g. date(TimeDimensionBegin) ge 2011-01-01.",
+    "No paging or size limits are documented; an unfiltered indicator returns every country and year."
+  ],
+  "sources": [
+    "https://www.who.int/data/gho/info/gho-odata-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "who-gho.indicators.list",
+      "name": "List or find indicators",
+      "summary": "Indicator codes and names, optionally filtered by name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Indicator",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData filter on IndicatorName.",
+          "example": "contains(IndicatorName,'Household')"
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://www.who.int/data/gho/info/gho-odata-api",
+      "verified": {
+        "docs": "https://www.who.int/data/gho/info/gho-odata-api"
+      }
+    },
+    {
+      "id": "who-gho.indicator.data",
+      "name": "Get an indicator's data",
+      "summary": "Values of one indicator by country or region, year and disaggregation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{indicator}",
+      "params": {
+        "indicator": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Indicator code.",
+          "example": "WHOSIS_000001"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$filter",
+          "description": "OData filter on dimensions and time.",
+          "example": "Dim1 eq 'MLE' and date(TimeDimensionBegin) ge 2011-01-01"
+        }
+      },
+      "job": "economics.series",
+      "docs_url": "https://www.who.int/data/gho/info/gho-odata-api",
+      "verified": {
+        "docs": "https://www.who.int/data/gho/info/gho-odata-api"
+      }
+    },
+    {
+      "id": "who-gho.dimensions.list",
+      "name": "List dimensions",
+      "summary": "The dimensions data is broken down by (e.g. COUNTRY, REGION).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Dimension",
+      "job": "datasets.schema",
+      "docs_url": "https://www.who.int/data/gho/info/gho-odata-api",
+      "verified": {
+        "docs": "https://www.who.int/data/gho/info/gho-odata-api"
+      }
+    },
+    {
+      "id": "who-gho.dimension.values",
+      "name": "List a dimension's values",
+      "summary": "Codes and names of one dimension's values, e.g. every country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/DIMENSION/{dimension}/DimensionValues",
+      "params": {
+        "dimension": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dimension code.",
+          "example": "COUNTRY"
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://www.who.int/data/gho/info/gho-odata-api",
+      "verified": {
+        "docs": "https://www.who.int/data/gho/info/gho-odata-api"
+      }
+    }
+  ]
+}

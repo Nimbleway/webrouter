@@ -1,0 +1,469 @@
+{
+  "vendor": "alphavantage",
+  "name": "Alpha Vantage",
+  "category": "finance",
+  "summary": "Stock, forex and crypto prices, company fundamentals, earnings, market news sentiment and technical indicators.",
+  "docs_url": "https://www.alphavantage.co/documentation/",
+  "pricing_url": "https://www.alphavantage.co/premium/",
+  "base_url": "https://www.alphavantage.co",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ALPHAVANTAGE_API_KEY",
+          "ALPHA_VANTAGE_API_KEY"
+        ],
+        "description": "An Alpha Vantage API key (alphavantage.co/support/#api-key). Sent as the apikey query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is GET /query with a 'function' parameter naming the dataset; each endpoint here fixes that value, so pass it as listed.",
+    "The free key allows 25 requests per day; premium plans allow 150 to 1200 requests per minute and unlock endpoints marked premium.",
+    "Realtime or 15-minute delayed US data (entitlement) needs a premium plan; without it quotes are end-of-day.",
+    "Technical indicators, intraday series, options, commodities and economic indicators are documented but not in this entry."
+  ],
+  "sources": [
+    "https://www.alphavantage.co/documentation/",
+    "https://www.alphavantage.co/support/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "alphavantage.quote",
+      "name": "Get the latest quote for a ticker",
+      "summary": "Latest price, volume, change and previous close for one symbol.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "GLOBAL_QUOTE"
+          ],
+          "description": "Always GLOBAL_QUOTE.",
+          "example": "GLOBAL_QUOTE"
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker, e.g. IBM.",
+          "example": "IBM"
+        },
+        "datatype": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "description": "json (default) or csv."
+        },
+        "entitlement": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "realtime",
+            "delayed"
+          ],
+          "description": "Unset: end-of-day data. realtime or delayed (15-minute) US data need a premium plan."
+        }
+      },
+      "notes": [
+        "Free tier data is updated at the end of each trading day."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://www.alphavantage.co/documentation/#latestprice",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#latestprice"
+      }
+    },
+    {
+      "id": "alphavantage.daily",
+      "name": "Get daily price history",
+      "summary": "Raw (as-traded) daily open, high, low, close and volume for an equity.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "TIME_SERIES_DAILY"
+          ],
+          "description": "Always TIME_SERIES_DAILY.",
+          "example": "TIME_SERIES_DAILY"
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker, e.g. IBM.",
+          "example": "IBM"
+        },
+        "outputsize": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "compact",
+            "full"
+          ],
+          "description": "compact (default): latest 100 points; full: 25+ years (premium)."
+        },
+        "datatype": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "description": "json (default) or csv."
+        }
+      },
+      "notes": [
+        "Non-US listings take an exchange suffix, e.g. TSCO.LON, SHOP.TRT."
+      ],
+      "job": "market.history",
+      "docs_url": "https://www.alphavantage.co/documentation/#daily",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#daily"
+      }
+    },
+    {
+      "id": "alphavantage.symbol_search",
+      "name": "Search tickers by keyword",
+      "summary": "Best-matching symbols with name, type, region, currency and match score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SYMBOL_SEARCH"
+          ],
+          "description": "Always SYMBOL_SEARCH.",
+          "example": "SYMBOL_SEARCH"
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Free text, e.g. microsoft.",
+          "example": "microsoft"
+        },
+        "datatype": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "description": "json (default) or csv."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://www.alphavantage.co/documentation/#symbolsearch",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#symbolsearch"
+      }
+    },
+    {
+      "id": "alphavantage.news",
+      "name": "Get market news and sentiment",
+      "summary": "News articles with ticker and topic sentiment scores, filtered by tickers, topics and time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "NEWS_SENTIMENT"
+          ],
+          "description": "Always NEWS_SENTIMENT.",
+          "example": "NEWS_SENTIMENT"
+        },
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated symbols an article must all mention; crypto as CRYPTO:BTC, forex as FOREX:USD.",
+          "example": "AAPL"
+        },
+        "topics": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated topics: blockchain, earnings, ipo, mergers_and_acquisitions, financial_markets, economy_fiscal, economy_monetary, economy_macro, energy_transportation, finance, life_sciences, manufacturing, real_estate, retail_wholesale, technology."
+        },
+        "time_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYYMMDDTHHMM.",
+          "example": "20220410T0130"
+        },
+        "time_to": {
+          "in": "query",
+          "type": "string",
+          "description": "End, YYYYMMDDTHHMM; defaults to now."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "LATEST",
+            "EARLIEST",
+            "RELEVANCE"
+          ],
+          "description": "Default LATEST."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 50, up to 1000."
+        }
+      },
+      "notes": [
+        "Marked premium in the docs."
+      ],
+      "job": "news.search",
+      "docs_url": "https://www.alphavantage.co/documentation/#news-sentiment",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#news-sentiment"
+      }
+    },
+    {
+      "id": "alphavantage.overview",
+      "name": "Get a company overview",
+      "summary": "Company description, sector, market cap, ratios (P/E, EPS, margins) and other key metrics.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "OVERVIEW"
+          ],
+          "description": "Always OVERVIEW.",
+          "example": "OVERVIEW"
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker, e.g. IBM.",
+          "example": "IBM"
+        }
+      },
+      "notes": [
+        "Marked premium in the docs."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://www.alphavantage.co/documentation/#company-overview",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#company-overview"
+      }
+    },
+    {
+      "id": "alphavantage.income_statement",
+      "name": "Get income statements",
+      "summary": "Annual and quarterly income statements, fields normalized to GAAP/IFRS.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "INCOME_STATEMENT"
+          ],
+          "description": "Always INCOME_STATEMENT.",
+          "example": "INCOME_STATEMENT"
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker, e.g. IBM.",
+          "example": "IBM"
+        }
+      },
+      "notes": [
+        "BALANCE_SHEET and CASH_FLOW take the same parameters with their own function value."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://www.alphavantage.co/documentation/#income-statement",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#income-statement"
+      }
+    },
+    {
+      "id": "alphavantage.earnings",
+      "name": "Get earnings history",
+      "summary": "Annual and quarterly EPS; quarterly rows include analyst estimates and surprise.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "EARNINGS"
+          ],
+          "description": "Always EARNINGS.",
+          "example": "EARNINGS"
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker, e.g. IBM.",
+          "example": "IBM"
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://www.alphavantage.co/documentation/#earnings",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#earnings"
+      }
+    },
+    {
+      "id": "alphavantage.top_movers",
+      "name": "Get top US gainers, losers and most active",
+      "summary": "Top 20 gainers, losers and most actively traded US tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "TOP_GAINERS_LOSERS"
+          ],
+          "description": "Always TOP_GAINERS_LOSERS.",
+          "example": "TOP_GAINERS_LOSERS"
+        },
+        "entitlement": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "realtime",
+            "delayed"
+          ],
+          "description": "Unset: end-of-day data. realtime or delayed (15-minute) US data need a premium plan."
+        }
+      },
+      "notes": [
+        "End-of-day by default."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://www.alphavantage.co/documentation/#gainer-loser",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#gainer-loser"
+      }
+    },
+    {
+      "id": "alphavantage.fx_rate",
+      "name": "Get a currency exchange rate",
+      "summary": "Realtime exchange rate between two currencies, fiat or crypto.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "CURRENCY_EXCHANGE_RATE"
+          ],
+          "description": "Always CURRENCY_EXCHANGE_RATE.",
+          "example": "CURRENCY_EXCHANGE_RATE"
+        },
+        "from_currency": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Source currency, e.g. USD or BTC.",
+          "example": "USD"
+        },
+        "to_currency": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target currency, e.g. JPY or EUR.",
+          "example": "JPY"
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://www.alphavantage.co/documentation/#currency-exchange",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#currency-exchange"
+      }
+    },
+    {
+      "id": "alphavantage.crypto_daily",
+      "name": "Get daily crypto price history",
+      "summary": "Daily OHLCV for a cryptocurrency in a market currency and in USD, refreshed at midnight UTC.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "function": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "DIGITAL_CURRENCY_DAILY"
+          ],
+          "description": "Always DIGITAL_CURRENCY_DAILY.",
+          "example": "DIGITAL_CURRENCY_DAILY"
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Cryptocurrency, e.g. BTC.",
+          "example": "BTC"
+        },
+        "market": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Quote currency, e.g. EUR.",
+          "example": "EUR"
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://www.alphavantage.co/documentation/#currency-daily",
+      "verified": {
+        "docs": "https://www.alphavantage.co/documentation/#currency-daily"
+      }
+    }
+  ]
+}
