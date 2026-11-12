@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+from web_router.constants import INSTALL_EXTRA
+
 MSG_PROVIDER_WRONG_METHOD = "Provider {name!r} does not serve this method. The providers that do: {available}."
 """A built-in provider asked for a method it has no backend for: ``brave`` for an extract, say."""
 
-MSG_EXTRA_MISSING = (
-    "{what} needs the {module!r} package, which the {extra!r} extra installs: "
-    'pip install "webrouter[{extra}]" (or uv sync --extra {extra} in a web-router clone).'
-)
+MSG_EXTRA_MISSING = "{what} needs the {module!r} package, which the {extra!r} extra installs: " + INSTALL_EXTRA + "."
 """A missing optional dependency, named with the install line that fixes it."""
 
 HTTPX_MODULE = "httpx"
