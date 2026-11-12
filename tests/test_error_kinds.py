@@ -110,3 +110,22 @@ def test_every_member_failing_keeps_each_ones_error_and_their_shared_kind() -> N
     assert isinstance(same, ProviderError)
     assert same.failures == refused and same.kind == "auth" and same.retryable is False
     assert mixed.kind == "upstream" and mixed.retryable is True
+
+
+def test_an_infinite_retry_after_is_no_wait_at_all() -> None:
+    error = ProviderError("acme", "HTTP 429", original=_status_error(429, {"Retry-After": "inf"}))
+
+    assert error.retry_after is None
+
+
+def test_a_wrapped_backend_failure_keeps_its_kind() -> None:
+    inner = ProviderError("acme", "HTTP 429", original=_status_error(429))
+
+    assert ProviderError("acme", "the job could not be read", original=inner).kind == "rate_limit"
+
+
+def test_live_data_refuses_a_bad_option_as_an_invalid_parameter() -> None:
+    with pytest.raises(InvalidParameterError) as caught:
+        WebRouter().live_data("x", {}, provider="nimble", format="pdf")  # type: ignore[arg-type]
+
+    assert caught.value.field == "format"

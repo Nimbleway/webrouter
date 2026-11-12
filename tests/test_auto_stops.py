@@ -163,3 +163,73 @@ def test_oxylabs_live_data_says_the_extract_credentials_are_another_set(monkeypa
         OxylabsLiveDataProvider()
     assert "separate credential" not in str(caught.value), "nothing to confuse it with"
     assert os.environ.get(ENV_OXYLABS_WEB_API_KEY) is None
+
+
+def test_a_page_that_is_not_retried_keeps_its_failure_and_kind() -> None:
+    """The 404 is left out of the retry, not out of the answer, while the blocked page is retried and read."""
+    gone, blocked = "https://example.org/removed", "https://example.org/blocked"
+
+    class GoneAndBlocked(ExtractProvider):
+        name = "goneandblocked"
+        supported_parameters = frozenset({"urls", "format"})
+        supported_formats = frozenset({"markdown"})
+        default_format = "markdown"
+        batches_urls = True
+
+        def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+            failures = [
+                ExtractFailure(url=gone, error="HTTP 404", kind="target", status_code=404),
+                ExtractFailure(url=blocked, error="challenge", kind="upstream"),
+            ]
+            documents = [ExtractedDocument(url=url, content=TEXT) for url in urls if url not in (gone, blocked)]
+            return ExtractResponse(provider=self.name, documents=documents, failures=failures, raw=[{}])
+
+        async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+            return self._extract(request, urls)
+
+    second = _extractor("second")
+    for member in (GoneAndBlocked, second):
+        register_extract_provider(member.name, member)
+    try:
+        auto = AutoExtractProvider(chain=[("goneandblocked", {}), ("second", {})])
+        response = auto.extract(ExtractRequest(urls=["https://example.org/a", gone, blocked]))
+    finally:
+        for member in (GoneAndBlocked, second):
+            unregister_extract_provider(member.name)
+
+    assert second.calls == [[blocked]], "only the blocked page is worth another backend"
+    assert [document.url for document in response.documents] == ["https://example.org/a", blocked]
+    assert [(failure.url, failure.kind, failure.status_code) for failure in response.failures] == [
+        (gone, "target", 404)
+    ]
+
+
+def test_a_batch_whose_every_page_is_gone_stops_auto() -> None:
+    gone = "https://example.org/removed"
+
+    class AllGone(ExtractProvider):
+        name = "allgone"
+        supported_parameters = frozenset({"urls", "format"})
+        supported_formats = frozenset({"markdown"})
+        default_format = "markdown"
+
+        def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+            failure = ExtractFailure(url=urls[0], error="HTTP 404", kind="target", status_code=404)
+            return ExtractResponse(provider="allgone", documents=[], failures=[failure], raw=[{}])
+
+        async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+            return self._extract(request, urls)
+
+    second = _extractor("second")
+    for member in (AllGone, second):
+        register_extract_provider(member.name, member)
+    try:
+        auto = AutoExtractProvider(chain=[("allgone", {}), ("second", {})])
+        with pytest.raises(ProviderError) as caught:
+            auto.extract(ExtractRequest(urls=[gone]))
+    finally:
+        for member in (AllGone, second):
+            unregister_extract_provider(member.name)
+
+    assert caught.value.kind == "target"
+    assert second.calls == []

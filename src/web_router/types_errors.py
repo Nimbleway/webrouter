@@ -7,10 +7,12 @@ A leaf of the import graph, like the other ``types_*`` modules: it imports nothi
 from __future__ import annotations
 
 import asyncio
+import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
-from typing import Final, Literal
+from typing import Final, Literal, cast, get_args
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -32,6 +34,7 @@ RETRYABLE_KINDS: Final = frozenset({"rate_limit", "timeout", "upstream"})
 """The kinds a later retry, of the same backend or another, may get past."""
 
 CHAIN_STOPPING_KINDS: Final = frozenset({"local", "target"})
+RETRY_AFTER_HEADER: Final = "retry-after"
 """The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
 
 KIND_BY_STATUS: Final[dict[int, ProviderErrorKind]] = {
@@ -94,6 +97,14 @@ def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
     address as the problem (an unresolvable host, an invalid URL) is ``target``
     whatever status it came with: no other backend could do better.
     """
+    inner = getattr(original, "kind", None)
+    if inner in get_args(ProviderErrorKind):
+        # A backend's failure wrapped once more (a retry, a job poll) is still that failure.
+        return ErrorFacts(
+            cast(ProviderErrorKind, inner),
+            getattr(original, "status_code", None),
+            getattr(original, "retry_after", None),
+        )
     status = _status(original)
     text = f"{message} {original if original is not None else ''}".lower()
     retry_after = _retry_after(original)
@@ -144,13 +155,15 @@ def _timed_out(original: BaseException | None) -> bool:
 def _retry_after(original: BaseException | None) -> float | None:
     """Seconds from a ``Retry-After`` header, as seconds or an HTTP date; ``None`` when absent or unreadable."""
     headers = getattr(getattr(original, "response", None), "headers", None)
-    raw = headers.get("retry-after") if headers is not None else None
+    raw = headers.get(RETRY_AFTER_HEADER) if headers is not None else None
     if not raw:
         return None
     try:
-        return max(0.0, float(raw))
+        seconds = float(raw)
     except ValueError:
         pass
+    else:
+        return max(0.0, seconds) if math.isfinite(seconds) else None
     try:
         when = parsedate_to_datetime(raw)
     except (TypeError, ValueError):
@@ -178,6 +191,13 @@ class ExtractFailure(BaseModel):
         if self.kind is None:
             self.kind = classify(None, self.error).kind
         return self
+
+    @staticmethod
+    def shared_kind(failures: Sequence[ExtractFailure]) -> ProviderErrorKind | None:
+        """``target`` when every URL failed for its own page, so a call that read none of them stops ``auto``."""
+        if failures and all(failure.kind == ERROR_KIND_TARGET for failure in failures):
+            return ERROR_KIND_TARGET
+        return None
 
     @classmethod
     def from_error(cls, url: str, error: BaseException) -> ExtractFailure:

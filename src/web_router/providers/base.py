@@ -472,11 +472,11 @@ class _Collected:
         detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
         late = [error for _, error in self.errors if isinstance(error, DeadlineExceededError)]
         if late and len(late) == len(self.errors) and not self.reported:
-            # Every URL that failed ran out of time. One that failed for a reason of its own -- a call that raised, or a
-            # URL a backend reported in its answer -- keeps the summary below, which names each.
+            # Every URL ran out of time; one that failed for a reason of its own keeps the summary below, naming each.
             return DeadlineExceededError(self.provider, late[0].seconds)
         original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
-        return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
+        message = MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail)
+        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.shared_kind(failures))
 
 
 class LiveDataProvider(TemplateMethods, _BaseProvider):
