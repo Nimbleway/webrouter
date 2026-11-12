@@ -9,7 +9,8 @@ Vendors differ here, so the search follows what each one offers:
 - **local** -- the vendor's listing takes no keywords (Nimble's Extract
   Templates, Bright Data's dataset list) or there is no listing API at all
   (Oxylabs' documented sources), so the whole catalogue is read page by page
-  and matched here on each source's name, site, kind of page and description.
+  and matched here on each source's name, site, kind of page and description,
+  then ranked by :mod:`web_router.live_data_rank`.
 
 Either way the answer is a :class:`~web_router.LiveDataSourcePage` whose
 ``query`` and ``search`` say what was asked and how it was matched. Kept out
@@ -30,6 +31,7 @@ from web_router.constants_live_data import (
     MSG_LIVE_DATA_SOURCES_FAILED,
 )
 from web_router.live_data_catalogue import aread_catalogue, check_page, read_catalogue
+from web_router.live_data_rank import read_query, relevant, score
 from web_router.providers.base import LiveDataProvider
 from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
 
@@ -89,24 +91,18 @@ async def asearch_live_data_sources(
 
 
 def matches(source: LiveDataSource, query: str) -> bool:
-    """Whether every word of ``query`` appears, ignoring case, in what ``source`` says about itself."""
-    text = _haystack(source)
-    return all(word in text for word in query.casefold().split())
+    """Whether ``source`` answers ``query`` at all; see :func:`~web_router.live_data_rank.relevant`."""
+    return relevant(source, read_query(query))
+
+
+def ranked(sources: list[LiveDataSource], query: str) -> list[LiveDataSource]:
+    """The sources that match ``query``, best first by :func:`~web_router.live_data_rank.score`; ties keep order."""
+    asked = read_query(query)
+    found = [source for source in sources if relevant(source, asked)]
+    return sorted(found, key=lambda source: -score(source, asked))
 
 
 # -- helpers ------------------------------------------------------------------
-
-
-def _haystack(source: LiveDataSource) -> str:
-    title = source.extra.get("title")
-    parts = (source.name, source.domain, source.entity_type, title if isinstance(title, str) else None)
-    return " ".join(part for part in (*parts, source.description) if part).casefold()
-
-
-def _named_by(source: LiveDataSource, words: list[str]) -> bool:
-    """Every word is in the source's name or site, which ranks it above a match in its description alone."""
-    text = " ".join(part for part in (source.name, source.domain) if part).casefold()
-    return all(word in text for word in words)
 
 
 def _matched(
@@ -118,7 +114,7 @@ def _matched(
     offset: int | None,
     complete: bool,
 ) -> LiveDataSourcePage:
-    """One page of the local matches: name and site matches first, then the rest, each in catalogue order.
+    """One page of the local matches, ranked by site, kind of page, locale and quality.
 
     ``raw`` holds the backend's untouched listing payloads the search read, in
     order, so a raw handle shows what the vendor answered, not what matched.
@@ -126,9 +122,7 @@ def _matched(
     sources = [source for page in pages for source in page.sources]
     if not complete:
         logger.warning(MSG_LIVE_DATA_SEARCH_CAPPED.format(provider=provider, query=query, read=len(sources)))
-    words = query.casefold().split()
-    found = [source for source in sources if matches(source, query)]
-    found.sort(key=lambda source: not _named_by(source, words))  # stable, so catalogue order holds within each
+    found = ranked(sources, query)
     start = offset or 0
     page = found[start:] if limit is None else found[start : start + limit]
     raw: list[Any] = [listing.raw for listing in pages if listing.raw is not None]
@@ -148,6 +142,7 @@ __all__: list[str] = [
     "NativeSourceSearch",
     "asearch_live_data_sources",
     "matches",
+    "ranked",
     "search_live_data_sources",
     "search_mode",
 ]

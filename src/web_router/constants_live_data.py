@@ -68,8 +68,9 @@ MCP_LIVE_DATA_SOURCES_PROPERTIES: dict[str, dict[str, Any]] = {
         "type": "string",
         "description": (
             "Keywords to find a source by -- a site, a brand, the kind of page ('amazon product', 'linkedin "
-            "jobs'). Searched by the vendor's own search where it has one, else matched here on name, site "
-            "and description. Unset lists the catalogue in order."
+            "jobs', 'amazon uk product'). Searched by the vendor's own search where it has one, else matched "
+            "here: the site words must appear, a kind of page (product, search, category, reviews) is matched "
+            "as a kind, and the main site ranks first unless a country is named. Unset lists the catalogue."
         ),
     },
     "limit": {"type": "integer", "minimum": 1, "description": "How many sources to list. Unset, the backend's page."},
@@ -100,14 +101,16 @@ MCP_LIVE_DATA_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_DESC_LIVE_DATA_SOURCES = (
-    "List a vendor's live data sources: ready-made scrapers for one site each, turning one kind of "
+    "List live data sources: ready-made scrapers for one site each, turning one kind of "
     "page -- a retailer's product page, a job listing, a search results page -- into records with "
     "fixed fields, fetched fresh on every run. Returns in about a second, with each source's name, "
     "site, what it extracts, the names of the inputs a run must pass (`required_inputs`) and one input "
     "the vendor recorded a run with (`sample_inputs`). Call it before `live_data` to find a source for "
     "the site at hand; a catalogue can be long, so pass `query` with the site or the kind of page, and "
     "page with `limit` and `offset`. The answer's `search` says whether the vendor searched ('native') "
-    "or the catalogue was matched here ('local'). Then "
+    "or the catalogue was matched here ('local'). Leave `provider` out to search every vendor configured "
+    "here at once: each row names its `provider`, which `live_data_source` and `live_data` then take, and "
+    "`failures` names any vendor that could not answer. Then "
     "`live_data_source` for the full schemas and samples."
 )
 
@@ -123,8 +126,9 @@ MCP_DESC_LIVE_DATA = (
     "Run a live data source and get structured records back -- the site's fields, scraped for this "
     "call by a scraper built for that site, rather than prose to read through. One record for a "
     "product page, many for a search or a listing. Takes seconds, up to a few minutes on some "
-    "vendors, and bills one run on the vendor's account at the vendor's own rate. `provider` is "
-    "required, since a source's name belongs to one vendor. Use it when `live_data_sources` lists a "
+    "vendors, and bills one run on the vendor's account at the vendor's own rate. Pass the `provider` "
+    "that `live_data_sources` named for the source, since a source's name belongs to one vendor; it may "
+    "be left out only when one vendor is configured. Use it when `live_data_sources` lists a "
     "source for the site and item you have; use `extract` for a page no source covers, and `search` "
     "to find pages. `inputs` are the source's own, from `live_data_source`. A run the backend could "
     "not complete is an error, never an empty answer."

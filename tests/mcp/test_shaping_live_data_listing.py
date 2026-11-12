@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from web_router.exceptions import ProviderError
+from web_router.mcp.messages import error_text
 from web_router.mcp.shaping import render
 from web_router.mcp.shaping_live_data import shape_live_data_sources
 from web_router.types_live_data import LiveDataSample, LiveDataSource, LiveDataSourcePage
@@ -110,3 +112,14 @@ def test_a_listing_counts_the_rows_it_shows_not_the_rows_it_was_given() -> None:
 
     assert shaped["source_count"] == len(shaped["sources"]) < 200
     assert shaped["total"] == 200, "the backend's own count of the catalogue is untouched"
+
+
+def test_a_backends_failure_reason_is_redacted_as_a_tool_error_is() -> None:
+    leaked = "[brightdata] HTTP 401: https://api.example.com/v1/list?api_key=SECRET123"
+    page = LiveDataSourcePage(provider="auto", sources=[], failures={"brightdata": leaked, "apify": "HTTP 503"})
+
+    shaped = shape_live_data_sources(page, "h1", budget=10_000)
+
+    assert "SECRET123" not in render(shaped)
+    assert "SECRET123" not in error_text(ProviderError("brightdata", leaked)), "the control: a tool error is redacted"
+    assert shaped["failures"]["apify"] == "HTTP 503", "a reason with no URL passes through unchanged"

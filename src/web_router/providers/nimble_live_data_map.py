@@ -39,7 +39,7 @@ from web_router.types_live_data import (
     LiveDataSourcePage,
 )
 
-_SOURCE_MAPPED = frozenset({"name", "created_at", "updated_at", "published_version"})
+_SOURCE_MAPPED = frozenset({"name", "created_at", "updated_at", "published_version", "metadata"})
 _SOURCE_METADATA_MAPPED = frozenset({"description", "domain", "entity_type"})
 
 
@@ -146,7 +146,8 @@ def to_source(provider: str, item: dict[str, Any]) -> LiveDataSource:
     as a describe does.
     """
     version = item.get("published_version") or {}
-    metadata = version.get("metadata") or {}
+    # A public template's listing row carries no version; its site, kind and description sit on the row itself.
+    metadata = version.get("metadata") or item.get("metadata") or {}
     return LiveDataSource(
         provider=provider,
         name=item.get("name") or "",

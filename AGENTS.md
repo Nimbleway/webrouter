@@ -30,9 +30,14 @@ for others -- which is why it is a method and not an option on `extract`.
 by `query`: natively where the vendor's API has a search, as Apify's Store
 does, otherwise by reading the whole catalogue and matching here) and
 `live_data_source` describes one, schemas and all; the three share one
-registry. Nimble, Apify, Bright Data and Oxylabs. No keyless tier and no
-`auto`: a run fetches and parses on the backend's account, and a source's
-name belongs to one vendor, so `provider` is required. **A backend joins only
+registry. Nimble, Apify, Bright Data and Oxylabs. No keyless tier, and a
+run has no `auto`: it fetches and parses on the backend's account, and a
+source's name belongs to one vendor. The caller still never has to name
+one: `live_data_sources` with no `provider` asks every backend with a key
+at once and merges the pages (`live_data_any.py`), each source naming its
+own backend, and `live_data`/`live_data_source` take that `LiveDataSource`
+whole; a bare name needs `provider` unless one backend is configured.
+**A backend joins only
 if it fetches on request**: data a vendor collected earlier and serves from
 storage is that vendor's own API, reached through `call_vendor`, never here.
 These were `run_template`, `templates` and `template`; the old names, and the
