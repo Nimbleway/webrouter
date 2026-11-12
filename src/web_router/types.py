@@ -39,10 +39,9 @@ ExtractFormat = Literal["markdown", "html", "text"]
 - ``html``: the page's HTML, as the backend fetched it.
 - ``text``: the visible text, with no markup at all.
 
-Backends do not all offer all three: one that cannot produce the format you
-asked for raises :class:`~web_router.exceptions.UnsupportedFormatError` rather
-than returning a different one under the same name. See the format table at
-https://docs.webrouter.net/extract#formats
+Backends do not all offer all three: one that cannot produce the format you asked for raises
+:class:`~web_router.exceptions.UnsupportedFormatError` rather than returning a different one under the same name.
+See the format table at https://docs.webrouter.net/extract#formats
 """
 
 
@@ -73,6 +72,7 @@ class Provider(str, Enum):
     PERPLEXITY = "perplexity"
     LINKUP = "linkup"
     WEBIQ = "webiq"
+    OCTEN = "octen"
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
     AGENTCORE = "agentcore"

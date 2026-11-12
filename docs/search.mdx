@@ -42,7 +42,9 @@ less under its name.
 | `fast` | A truncated body, a few thousand characters | `standard` | `advanced` | `highlights` | text ≤ 3,000 | passage ≤ 3,000 | excerpts ≤ 3,000 | 1,024 tokens a page | snippet ≤ 3,000 | refused | refused |
 | `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
 
-Linkup, AgentCore and Parallel MCP do not map it. Where a vendor's size setting
+Octen serves `fast` (`full_content` at its default of 2,048 tokens a page) and `deep` (100,000 tokens, its
+maximum), and refuses `lite`: its default highlight runs to about 2,000 characters. Linkup, AgentCore and
+Parallel MCP do not map it. Where a vendor's size setting
 does not bind (Tavily's `basic` returns up to three chunks of about 500
 characters, You.com's snippets can run past 500, Exa's highlights cap,
 Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
@@ -96,6 +98,7 @@ date gets today (UTC) minus 1, 7, 30 or 365 days.
 | Exa, Exa MCP, Linkup, Parallel, AgentCore | a start date (`startPublishedDate`, `fromDate`, `after_date`, `publishedDateFilter.from`) |
 | Keenable | `published_after` (`1d`, `7d`, `1mo`, `1y`) |
 | DeepSeek | `after:YYYY-MM-DD` in the query |
+| Octen | `time_range` (`day`, `week`, `month`, `year`) |
 
 WebIQ and Parallel MCP do not map it.
 

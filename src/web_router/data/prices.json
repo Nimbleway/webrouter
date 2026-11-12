@@ -749,6 +749,24 @@
       "latency_measured": null
     },
     {
+      "provider": "octen",
+      "method": "search",
+      "mode": null,
+      "price_usd": 1,
+      "unit": "per_1k",
+      "note": "80% off the $5 list price; full content $0.50 per 1k results on top",
+      "source_url": "https://docs.octen.ai/overview/pricing",
+      "checked": "2026-11-12",
+      "setup": "`octen`",
+      "setting": "default (highlights, no `full_content`)",
+      "does": "Titles, URLs, dates and a query-relevant highlight per result",
+      "latency_p50_s": null,
+      "latency_p90_s": null,
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
+    },
+    {
       "provider": "agentcore",
       "method": "search",
       "mode": null,
