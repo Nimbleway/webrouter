@@ -1,6 +1,6 @@
 """The one research effort a call sends, chosen once: before its candidates are priced or a router is asked.
 
-Experimental. The request is shared by every backend the call may try, so the
+The request is shared by every backend the call may try, so the
 effort is :func:`~web_router.routing.params.shared_effort`'s pick over them;
 an effort the caller set stands. The candidate builder prices research at it,
 and a call no router orders -- on ``auto`` or on a backend the caller named --

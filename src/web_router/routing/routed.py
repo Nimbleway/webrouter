@@ -32,6 +32,7 @@ from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
+from web_router.routing.cost_order import cost_route
 from web_router.routing.decide import decided
 from web_router.routing.effort_call import Only, named, unrouted, with_record
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
@@ -42,6 +43,8 @@ from web_router.routing.record import prompt_of
 from web_router.routing.route_tools import ALL_TOOLS, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
+from web_router.spend import SpendSink
+from web_router.spend_record import log_spent
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
@@ -59,6 +62,8 @@ class RouterSetup(RouterOwner):
     _route_tools: frozenset[ToolName] = ALL_TOOLS
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
+    _spend_sink: SpendSink | None = None
+    """Where each answered call is logged: set by ``log_spend()``, ``None`` logs nothing."""
     """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
 
     def _attach_router(
@@ -108,6 +113,11 @@ class RouterSetup(RouterOwner):
         )
         return req, found
 
+    def _spent(self, response: _ResponseT, tool: ToolName) -> _ResponseT:
+        """``response``, written to the spend log first when the router keeps one (``log_spend()``)."""
+        log_spent(self._spend_sink, response, tool)
+        return response
+
     def _attached(self) -> AttachedRouter:
         assert self._router is not None  # a call is routed only with a router attached
         return self._router
@@ -120,10 +130,13 @@ class RouterSetup(RouterOwner):
         routed: tuple[RouteRequest, CandidateSet] | None,
         outcome: RouterOutcome | None,
     ) -> tuple[CallRoute | None, _RequestT, DecisionRecord | None]:
-        """The order in force, the request and the record: the router's merged, or with none the budget's effort."""
+        """The order in force, the request and the record: the router's merged, else the budget's effort and order."""
         if routed is None or outcome is None:
             request, mapped = unrouted(chain, request, budget)
-            return None, request, mapped
+            route, ordered = cost_route(chain, _TOOL_OF[type(request)], request, budget)
+            if ordered is not None:
+                mapped = ordered if mapped is None else mapped.model_copy(update={"merged": ordered.merged})
+            return route, request, mapped
         return self._merged(routed, outcome, request)
 
     def _merged(
@@ -171,7 +184,8 @@ class SyncRouted(RouterSetup):
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
                 answered = logged.settle(with_record(call(request), record or chosen))
-        return metered(answered, _TOOL_OF[type(request)], request, started)
+        tool = _TOOL_OF[type(request)]
+        return self._spent(metered(answered, tool, request, started), tool)
 
 
 class AsyncRouted(RouterSetup):
@@ -191,4 +205,5 @@ class AsyncRouted(RouterSetup):
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
                 answered = logged.settle(with_record(await call(request), record or chosen))
-        return metered(answered, _TOOL_OF[type(request)], request, started)
+        tool = _TOOL_OF[type(request)]
+        return self._spent(metered(answered, tool, request, started), tool)

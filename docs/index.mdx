@@ -9,7 +9,7 @@ icon: "house"
 WebRouter connects your agent to the internet's primitives (search, extract, answer, research and browser sessions) through one interface, across many providers.
 
 - **No vendor lock-in.** The same call and result shape on every provider that serves a method; switching is one argument. Apache 2.0, and you hold your own keys.
-- **Routing and fallback.** `auto` tries the providers you hold keys for, best benchmarked first, and falls back to the next. An experimental [router](/smart-routing) can pick the tool and provider for each task within a cost and time budget.
+- **Routing and fallback.** `auto` tries the providers you hold keys for, best benchmarked first, and falls back to the next. Every response says what it cost; [budgets](/budgets) cap a call or a session in dollars and seconds, and an experimental [router](/smart-routing) can pick the tool and provider for each task.
 - **Many providers.** Tavily, Exa, Brave, Firecrawl, Nimble and more: see [Providers](/providers).
 - **Security by default.** WebRouter never logs or stores your keys, and sends each key only to its own provider. An option a provider cannot honour raises instead of being dropped.
 

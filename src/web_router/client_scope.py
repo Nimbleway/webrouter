@@ -1,6 +1,6 @@
 """The scopes :meth:`~web_router.WebRouter.budget` returns: a router's budgeted methods, spending from one budget.
 
-Experimental. Each method is the router's own, with the same arguments,
+Each method is the router's own, with the same arguments,
 called with the scope's :class:`~web_router.routing.pool.BudgetPool` in force,
 so it works from any thread or task. Entering the scope also puts the pool in
 force for the calls made on the router itself inside the block.
@@ -85,7 +85,7 @@ def _aspending(
 
 
 class BudgetScope(_Scope):
-    """A :class:`~web_router.WebRouter`'s budgeted methods, all spending from one budget. Experimental."""
+    """A :class:`~web_router.WebRouter`'s budgeted methods, all spending from one budget."""
 
     router: WebRouter
 
@@ -110,7 +110,7 @@ class BudgetScope(_Scope):
 
 
 class AsyncBudgetScope(_Scope):
-    """An :class:`~web_router.AsyncWebRouter`'s budgeted methods, all spending from one budget. Experimental."""
+    """An :class:`~web_router.AsyncWebRouter`'s budgeted methods, all spending from one budget."""
 
     router: AsyncWebRouter
 

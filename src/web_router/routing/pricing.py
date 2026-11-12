@@ -1,6 +1,6 @@
 """What one attempt is estimated to cost and take: the one pricing rule every routing part reads.
 
-Experimental. The ledger charges by it, the candidate builder prices
+The ledger charges by it, the candidate builder prices
 candidates by it, the effort mapping fits efforts by it, and the merge rule
 checks a router's ``search_depth`` by it, so a candidate is never priced one
 way when offered and another when run.
@@ -59,6 +59,11 @@ def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
     if row is None or row.estimate_is_floor or row.estimate_usd is None:
         return None
     return row.estimate_usd
+
+
+def cost_key(cost: float | None) -> tuple[bool, float]:
+    """An estimate as a sort key, the one every cost order uses: known before unknown, then cheapest, $0 first."""
+    return cost is None, cost or 0.0
 
 
 def over_cost(cost: float, left: float) -> bool:

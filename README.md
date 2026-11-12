@@ -52,9 +52,9 @@ print(results.provider, [doc.url for doc in pages.documents])
 - **Routing based on published benchmarks.** `auto` tries the providers you hold keys for in the
   order committed benchmark results rank them, and falls back on an error or an
   empty answer. `response.provider` always says who answered.
-- **Cost control.** Cap a call or a whole session in dollars and seconds, with
-  list prices for every provider shipped in the package
-  ([experimental](#budgets-and-cost-control)).
+- **Cost control.** Every response says what it cost and how long it took. Cap
+  a call or a whole session in dollars and seconds, try the free backends
+  first, and keep a log of what you spent ([budgets](#budgets-and-cost-control)).
 - **Keyless to start.** Search, extract and a local browser work with no API
   key. Every key you add unlocks more providers and fallbacks.
 - **Built for agents.** An MCP server, plus ready-made tools for LangChain,
@@ -144,27 +144,33 @@ lists each method's order and how it is generated.
 
 ## Budgets and cost control
 
-*Experimental: names may change before 1.0.*
-
 ```python
 from web_router import Budget, WebRouter, prices
 
-router = WebRouter()
-router.search("...", budget=Budget(max_cost_usd=0.01, time_limit_s=10))
+router = WebRouter(router="cheapest_first")  # free backends first, then the cheapest paid ones
+response = router.answer("...", budget=Budget(max_cost_usd=0.01, time_limit_s=10))
+response.provider, response.cost_usd, response.cost_source, response.elapsed_s
 
 with router.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
     b.search("...")
     b.research("...")
     b.status()  # spent, reserved, remaining, time left
 
+router.log_spend("spend.jsonl").report()  # what you spent, by day, backend and method
 prices.estimate("tavily", "search")  # 0.008: list price of one request
 ```
 
+Every response carries `cost_usd`: the backend's own figure where it states
+one (`cost_source="reported"`), else an estimate. With no router, a cost cap
+makes `auto` try the cheaper of the backends that score alike first.
+
 Each attempt is checked against what is left before it starts, so parallel
 calls never overspend together, and a backend that does not fit is skipped
-with the reason recorded. Costs are estimates from the list prices shipped in
-`web_router.prices`, not your bill. An optional router can also pick the
-method and provider for each prompt within the budget, and
+with the reason recorded. Estimates come from the list prices shipped in
+`web_router.prices`, not your bill. Only search (its keyless backends) and
+`open_browser` (`local`) have a $0 backend; [Cost and budgets](https://docs.webrouter.net/budgets)
+has the table per method, a fall-back for a batch that runs out, and the spend log. An
+experimental router can also pick the method and provider for each prompt, and
 `url_policy="public_only"` keeps a planned call off private and cloud-metadata
 hosts. See [Smart routing](https://docs.webrouter.net/smart-routing).
 

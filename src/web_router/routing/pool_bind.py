@@ -1,4 +1,4 @@
-"""Which shared budgets are in force here: the pools a router's calls spend from. Experimental.
+"""Which shared budgets are in force here: the pools a router's calls spend from.
 
 Held in a context variable, as the per-call deadline is, so a call made on the
 router inside ``with wr.budget(...)`` spends from its pool too (:mod:`.pool`).

@@ -1,0 +1,275 @@
+---
+title: "Cost and budgets"
+description: "What each call cost, caps on one call or a session, the cheapest backends first, and a log of what you spent."
+icon: "coins"
+---
+
+Every response says what the call cost and how long it took. A budget caps
+what one call, or a block of calls, may spend and wait. Under a cost cap `auto`
+tries the cheaper of the backends that score alike, the `cheapest_first` router
+tries the free ones first, and a spend log keeps what you spent across runs.
+
+```python
+from web_router import Budget, WebRouter
+
+router = WebRouter()
+response = router.search("...")
+response.provider, response.elapsed_s, response.cost_usd, response.cost_source
+# ('perplexity', 0.49, 0.005, 'estimated')
+
+router.search("...", budget=Budget(max_cost_usd=0.01, time_limit_s=10))
+
+with router.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
+    b.search("...")
+    b.research("...")
+    b.status()  # spent, reserved, remaining, time left
+
+log = router.log_spend("spend.jsonl")  # every call from now on, one line each
+log.report()  # summed by day, backend and method
+```
+
+Costs are estimates from the list prices shipped in
+[`web_router.prices`](#estimated-prices), not your bill, except where a
+backend's response states its own cost.
+
+## What each call cost
+
+Every `search`, `extract`, `answer`, `research` and `browse` response carries,
+with or without a budget:
+
+- `elapsed_s`: wall-clock seconds from the call to its answer, a research or
+  browse wait and every backend `auto` tried before it included.
+- `cost_usd`: what the backend that answered charged, in US dollars, or `None`
+  when that is not known.
+- `cost_source`: `reported` when the backend's response stated it (Perplexity's
+  `usage.cost.total_cost`, Exa's `costDollars.total`), `estimated` when it is
+  the list price for this request -- its depth, result count and URLs -- or,
+  for a backend billed by tokens, the mean its own responses stated over the
+  published benchmark (Perplexity's answer, about $0.0012).
+
+Attempts that failed before the answer are not in `cost_usd`; with a budget or
+a router, `response.decision` lists each with its estimate and seconds, and
+`decision.estimated_cost_usd` is the whole call's (see
+[the decision record](/smart-routing#the-decision-record)).
+
+## What each method costs
+
+| Method | $0 backends | Cheapest listed | Notes |
+| --- | --- | --- | --- |
+| `search` | `you-mcp`, `exa-mcp`, `parallel-mcp` (keyless) | `deepseek`, $0.00075 | Keyless Tavily is $0.008; keyless Keenable has no price, so a cost cap skips it |
+| `extract` | none | `deepseek`, $0.00075 a page | Keyless Jina is free at 20 requests a minute but billed by tokens with a key, so a cost cap skips it |
+| `answer` | none | `perplexity`, about $0.0012 (measured) | Then Brave ($0.004 plus tokens, a floor a cap skips), Exa and You.com ($0.005) |
+| `research` | none | `parallel`, $0.025 a run | Nimble, You.com and Perplexity above its default have no known price |
+| `browse` | none | `browser-use`, $0.01 a task plus steps | Its price is a floor, so a cost cap skips it |
+| `open_browser` | `local` (your own Chromium) | `steel` and `hyperbrowser`, $0.10 an hour | Per minute of the session's `timeout`; Anchor's $0.05 is a floor ($0.01 a browser on top), so a cost cap skips it |
+| `live_data` | none | `nimble`, $0.003 a run | Never routed or capped by a budget |
+
+`answer`, `research` and `browse` have no free tier: every backend bills each
+call. For 20 short questions under a few cents, search the keyless backends
+and read their pages, or answer on Perplexity at its measured mean.
+[`PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md)
+lists every row with its source.
+## Budgets
+
+`budget=Budget(max_cost_usd=, time_limit_s=, strict=)` caps one call to
+`search`, `extract`, `answer`, `research`, `browse`, `plan` or `run`; a
+limit that is not a finite number of 0 or more raises `InvalidParameterError`. Before
+each attempt WebRouter checks its estimate against what is left and skips it
+if it does not fit; when nothing fits, it raises `BudgetExceededError`, naming
+each skip. Costs are estimates from the list prices in
+[`web_router.prices`](#estimated-prices), not your bill, and a
+failed attempt still counts.
+
+- **Unknown price.** Under a cost cap, a backend whose price is unknown never
+  runs: it is skipped, and the record says why. A price marked as a floor
+  (Brave's answer, Browser Use's browse, Anchor's browser) counts as unknown,
+  and so does a search asking for more results than its price assumes
+  (Nimble's and You.com's deep search, Exa's search), and any request with
+  `provider_options` or a search `effort` other than `medium`, either of which
+  can change what is billed. With no cost cap it
+  runs. A backend billed by tokens is priced at the mean cost its own
+  responses stated over the published benchmark where one was measured
+  (Perplexity's answer), and is unknown otherwise (Perplexity's research).
+- **Free tiers.** The keyless MCP search endpoints (`you-mcp`, `exa-mcp`,
+  `parallel-mcp`) are priced $0, so a cost cap does not skip them. Keyless
+  Tavily is priced, $0.008 a search. Keyless Keenable has no price, so a
+  cost cap skips it.
+- **Unknown p90.** Under a time cap, a backend with no measured p90 runs
+  within the time left; `strict=True` skips it instead. Research's p90 comes
+  from the effort table first, then the price list.
+- **A p90 that does not fit.** Under a time cap, a backend whose measured p90 is
+  more than the time left is skipped.
+- **Time cap.** Search, extract and answer stop at it and raise
+  `DeadlineExceededError`. Research and browse are capped on the wait, not the
+  job: they wait at most `min(timeout, time left)`, then raise
+  `ResearchTimeoutError` or `BrowseTimeoutError` with the job id, the job
+  still running.
+- **Research effort.** Under a cost or time cap, a research call with no
+  `effort` set runs at the cheapest measured effort whose accuracy is within
+  the noise floor of the best measured effort that fits the budget left. It is
+  chosen once, before the router is asked, to fit every backend it may try and
+  to be one each of them takes for the request (Nimble refuses `low` on an
+  enrichment, so a $0.10 cap runs it at `medium`); its candidates are priced
+  at it. That holds on `auto` or a named backend, routed or not, for
+  `plan()`/`run()` and for `submit_research`. With no effort that fits and
+  that a backend takes, it runs at its default, which the budget checks like
+  any other. An effort you or the router set is kept.
+
+## A budget for several calls
+
+To spend several calls from one budget:
+
+```python
+with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
+    b.search("...")
+    b.research("...")  # calls on wr inside the block spend from it too
+    b.status()  # spent, reserved, remaining, elapsed, time left
+```
+
+Every `search`, `extract`, `answer`, `research`, `browse`, `plan`, `run`,
+`submit_research` and `submit_browse` inside the block spends from it; `live_data` and `open_browser` do not,
+nor do the calls of another router. Each call is capped at what is left, in
+dollars and seconds, and that is what a router is shown. A call spends from
+every scope of its router in force when it starts, wherever the scope was
+made, so a scope made before an outer block cannot escape that block's cap.
+Each attempt reserves its estimate before it starts, so parallel threads and
+tasks cannot reserve past the cap together. The cap is on estimates, not on
+the bill. A call a backend makes inside a budgeted call, on its own router or
+another, is reserved once, by the call it is made in; it settles in the shared budget
+even when it runs in another thread or task, or after the call that started it
+has ended. An outer call's own `budget=` counts every nested call's attempts
+too, `auto` or a named backend, with or without a `budget=` of its own. A thread started inside the block calls through `b`. On
+`AsyncWebRouter`, every method here is awaited and the scope is
+`async with awr.budget(...)`.
+
+## Cheapest first under a cost cap
+
+With a cost cap and no router, `auto` tries search's and answer's backends in
+cost order among those the benchmark cannot tell apart. The default order is
+ranked by measured accuracy, and backends within the method's noise floor of
+each other -- a gap smaller than a rerun's spread -- form one tier. Under a cost
+cap each tier runs cheapest first, priced for this request: its depth, result
+count and URLs, a $0 backend first, an unknown price last. A measurably better
+backend still runs before a cheaper, worse one. The order is on
+`response.decision.merged`.
+
+Extract, research and browse keep their order: no benchmark ranks their
+backends' quality, so there is nothing to trade cost against. A `chain` you set
+or a backend you name runs as given.
+
+## Free backends first
+
+When price matters more than the accuracy gap, attach the built-in
+`cheapest_first` router. It orders the backends of every routed call -- search,
+extract, answer, research and browse -- by estimated cost, $0 first, then the
+cheapest paid ones, an unknown price last; ties keep the default order. It
+needs no key and calls nothing. `open_browser` is never routed: name
+`provider="local"` for a free browser.
+
+```python
+from web_router import Budget, WebRouter
+
+router = WebRouter(router="cheapest_first")  # or router=cheapest_first, the function
+with router.budget(Budget(max_cost_usd=0.05, time_limit_s=90)) as b:
+    for question in questions:
+        response = b.search(question)  # you-mcp, exa-mcp, parallel-mcp before any paid backend
+```
+
+A `chain` in `provider_config` fixes one order for every call, the backends
+you list and no others; `router=` decides the order per call from the
+candidates, their prices and the budget, so use `chain` to say *which* backends,
+and a router to say *in what order* for each call.
+
+## When the budget runs out
+
+A call that nothing fits raises `BudgetExceededError` before anything is
+billed, with `skipped` naming each backend and why. In a batch, catch it and
+fall back to a free backend: a $0 call fits whatever money is left.
+
+```python
+from web_router import Budget, BudgetExceededError, WebRouter
+
+router = WebRouter()
+with router.budget(Budget(max_cost_usd=0.05, time_limit_s=90)) as b:
+    for question in questions:
+        try:
+            print(b.answer(question).answer)
+        except BudgetExceededError:
+            hits = b.search(question, provider="you-mcp")  # keyless and $0: free search instead
+            print(hits.answer or [result.url for result in hits.results])
+```
+
+The time cap still holds for the fallback: once the block's time is spent,
+every call raises.
+
+## A spend log
+
+Each router can log every call it answers -- with or without a budget -- one
+line per call, and sum it by day, backend and method:
+
+```python
+from datetime import date
+
+log = router.log_spend("~/.web-router/spend.jsonl")  # a SpendLog; None stops logging
+
+log.report()  # [SpendRow(key={'day': '2026-11-12', 'provider': 'exa', 'method': 'answer'}, calls=20, cost_usd=0.1, ...)]
+log.report(by=["provider"], since=date(2026, 11, 1))
+log.entries()  # every SpendEntry, oldest first
+```
+
+An entry holds when the call answered, the method, the backend, `cost_usd` and
+`cost_source`, `elapsed_s`, the decision's id, and `call_estimate_usd`: under a
+budget or a router, the decision record's estimate for the whole call, failed
+attempts included. It holds no prompt, query or URL. A call that raised logs
+nothing. `SpendRow` splits each group's `cost_usd` into `reported_usd` and
+`estimated_usd`, and counts the calls with no known cost in `unpriced_calls`.
+
+Any object with `record(entry)` is a sink -- a database, a metrics client --
+and `spend_report(entries, by=...)` sums entries from anywhere. A sink that
+raises never fails the call: the router logs a warning and returns the answer.
+
+## Estimated prices
+
+`web_router.prices` is the price list the library ships: the published list
+price of every (provider, method, mode) WebRouter calls, each with the vendor
+page it comes from and the date it was checked. The figures are estimates --
+pay-as-you-go list prices, not your plan's or a negotiated rate, and a call can
+bill more than its row (content add-ons, tokens) -- and a response that carries
+one says so in `cost_source`.
+
+```python
+from web_router import prices
+
+prices.estimate("tavily", "search")  # 0.008: one request at the default depth
+prices.estimate("tavily", "search", "fast")  # 0.016: search_depth="fast"
+prices.estimate("linkup", "research", "max")  # 2.5: one run at effort="max"
+prices.estimate("perplexity", "research")  # None: billed by tokens
+row = prices.price("exa", "search")  # the whole row: unit, note, source_url, checked
+```
+
+`estimate()` is the cost of one request, page, run or browser-minute, and
+`None` when the vendor publishes no price (`unit="unknown"`), bills by tokens
+(`unit="token_billed"`), or the list has no row for that mode -- never another
+mode's price. A mode is WebRouter's own `search_depth` or `effort` value, or a
+vendor mode sent through `provider_options` written with a leading `:`
+(`":ultra-fast"`); leave it unset for a call that sets none.
+[`PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md) shows the same list as tables,
+with the notes behind each figure.
+
+A search or answer row also carries measured latency, from the committed
+benchmark results in `benchmarks/providers/frozen/`: the median and
+90th-percentile seconds of the calls that succeeded, how many there were
+(`latency_n`), the runs pooled (`latency_runs`) and the newest one's date
+(`latency_measured`).
+
+```python
+prices.estimate_latency("exa", "answer")  # (1.317, 1.618): p50 and p90 seconds
+prices.estimate_latency("tavily", "extract")  # None: not measured
+```
+
+It is `None` for every method and mode no benchmark measured -- extract,
+research, browse and the modes the scans did not run -- never a guess. A
+benchmark latency drifts from run to run, which is why each row pools every
+run that covers it, leaving out reruns of the same questions so none counts
+twice. `make latency` rewrites the fields from the frozen
+results, and a test fails while they disagree.
