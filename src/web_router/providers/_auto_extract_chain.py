@@ -8,8 +8,8 @@ refused GitHub. Returning that answer as it came would leave the GitHub URL
 failed while a later member could have read it, so the URLs the answer failed
 are sent on down the chain, each pass to the members after the one that
 answered the last. The response keeps the first answering member as its
-``provider``; a URL no later member reads stays in ``failures`` with every
-member's reason.
+``provider``; a URL no later member reads stays in ``failures`` with the
+reason from each member that answered for it.
 """
 
 from __future__ import annotations

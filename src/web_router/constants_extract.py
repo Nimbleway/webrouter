@@ -78,7 +78,7 @@ EXTRACT_LOGIN_MARKERS: Final = (
 """Phrases of a login wall's text, matched like :data:`EXTRACT_CHALLENGE_MARKERS`."""
 
 EXTRACT_LOGIN_URL_PARTS: Final = ("/authwall",)
-"""Parts of the URL a login wall redirects to, whatever the page's length: LinkedIn's lands on ``/authwall``."""
+"""How the path a login wall redirects to begins, whatever the page's length: LinkedIn's is ``/authwall``."""
 
 HTML_TITLE: Final = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 """An HTML body's ``<title>``, read when a backend returns HTML with no title of its own.

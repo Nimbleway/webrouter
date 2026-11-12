@@ -63,6 +63,7 @@ def test_a_challenge_or_login_page_is_a_failure_saying_which(fields: dict[str, A
     "fields",
     [
         {"title": "Sign in with Apple: a guide", "content": ARTICLE},
+        {"url": "https://blog.example.com/posts?ref=/authwall", "content": ARTICLE},
         {"title": "Cloudflare challenges explained", "content": ARTICLE + "verify you are human"},
         {
             "title": "Example Domain",

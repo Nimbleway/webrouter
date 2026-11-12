@@ -117,7 +117,7 @@ Under `auto`, a batch that partly fails on one backend is not the end of it:
 each URL that backend failed is sent on to the backends after it in the chain,
 and what they read joins the answer, in the order you asked. `response.provider`
 names the backend that answered first. A URL no backend could read stays in
-`failures`, its error naming each backend's reason.
+`failures`, its error giving the reason from each backend that answered for it.
 
 ## Reading a page behind a login
 

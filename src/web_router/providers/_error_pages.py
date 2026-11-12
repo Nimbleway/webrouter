@@ -11,6 +11,7 @@ from __future__ import annotations
 import html
 from collections.abc import Iterable
 from http import HTTPStatus
+from urllib.parse import urlsplit
 
 from web_router.constants import MSG_EXTRACT_BAD_STATUS
 from web_router.constants_extract import (
@@ -56,7 +57,7 @@ def not_the_page(document: ExtractedDocument) -> str | None:
     title = _title(document)
     if EXTRACT_CHALLENGE_TITLE.search(title):
         return MSG_EXTRACT_CHALLENGE
-    if EXTRACT_LOGIN_TITLE.search(title) or any(part in document.url for part in EXTRACT_LOGIN_URL_PARTS):
+    if EXTRACT_LOGIN_TITLE.search(title) or urlsplit(document.url).path.startswith(EXTRACT_LOGIN_URL_PARTS):
         return MSG_EXTRACT_LOGIN_WALL
     if len(document.content) >= EXTRACT_WALL_MAX_CHARS:
         return None

@@ -52,7 +52,7 @@ def _document(document: ExtractedDocument, document_chars: int) -> dict[str, Any
     """One page: its status, so a model can tell a page from an error, and any warning about it."""
     row: dict[str, Any] = {"url": document.url, "title": document.title, "status_code": document.status_code}
     if document.warnings:
-        row["warnings"] = document.warnings
+        row["warnings"] = [cut_to_budget(warning, INTEGRATION_RESULT_CHARS) for warning in document.warnings]
     row["content"] = cut_to_budget(document.content, document_chars)
     return row
 
