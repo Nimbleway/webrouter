@@ -64,6 +64,15 @@ def test_a_query_is_searched_on_every_backend(two_backends: None) -> None:
     assert page.query == "amazon" and page.search == "local"
 
 
+def test_a_query_ranks_every_backend_on_one_scale(two_backends: None) -> None:
+    """Taking turns would put paged's weak match second; scored alike, fake's two strong matches lead."""
+    page = WebRouter().live_data_sources(query="example", limit=3)
+
+    # Both of fake's are on example.com itself, with a schema and a sample; shop_reviews only mentions it.
+    assert page.names[:2] == ["books_pdp", "jobs_listing"]
+    assert "shop_reviews" not in page.names
+
+
 def test_limit_and_offset_page_the_merged_list(two_backends: None) -> None:
     first = WebRouter().live_data_sources(limit=2)
     second = WebRouter().live_data_sources(limit=2, offset=2)

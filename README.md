@@ -509,13 +509,25 @@ brand, the kind of page -- searched the way each vendor allows:
 | Backend | How `query` is searched | Order |
 | --- | --- | --- |
 | `apify` | natively: the Store's own `search`, over an Actor's title, name, description, owner and readme | the Store's relevance |
-| `nimble` | locally: Nimble's template list takes no keywords, so the catalogue is read page by page and matched here | name and site matches first, then catalogue order |
+| `nimble` | locally: Nimble's template list takes no keywords, so the catalogue is read page by page and matched here | ranked here: site, kind of page, country, quality |
 | `brightdata` | locally: Bright Data's dataset list takes no parameters | as above |
 | `oxylabs` | locally: the Web API lists its scrapers but takes no keywords | as above |
 
-A local search matches every word, ignoring case, on a source's name, site,
-kind of page and description, reads at most 5,000 sources, and pages its
-matches with `limit` and `offset`. `page.total` counts the matches, and is
+A local search reads a query as a site, a kind of page and, optionally, a
+country: in `"amazon uk product"`, `amazon` is the site, `product` the kind
+and `uk` the country. Every site word must appear, ignoring case, in a
+source's name, site, kind of page or description. The kind is matched as a
+kind, not as text -- product, search, category, reviews, offers or article,
+read from the source's name and else from its vendor's label -- so `"amazon
+product"` leaves out a reviews page that mentions products, and keeps a
+source that does not say its kind, below the ones that do. Matches are
+ranked by how the site matches (its own domain first), the kind, the main
+site before other countries unless the query names one, and then quality:
+the vendor's public catalogue before an account's private copy, a published
+version, a schema and a sample, and no `test` or `copy` in the name. With no
+`provider`, every vendor's matches are ranked on that one scale, Apify's
+included. A local search reads at most 5,000 sources and pages its matches
+with `limit` and `offset`. `page.total` counts the matches, and is
 `None` if the catalogue was read only in part. `page.query` and `page.search`
 (`"native"` or `"local"`) say what was asked and how. A custom backend whose
 vendor searches its own catalogue derives from `NativeSourceSearch` as well

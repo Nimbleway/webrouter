@@ -68,8 +68,9 @@ MCP_LIVE_DATA_SOURCES_PROPERTIES: dict[str, dict[str, Any]] = {
         "type": "string",
         "description": (
             "Keywords to find a source by -- a site, a brand, the kind of page ('amazon product', 'linkedin "
-            "jobs'). Searched by the vendor's own search where it has one, else matched here on name, site "
-            "and description. Unset lists the catalogue in order."
+            "jobs', 'amazon uk product'). Searched by the vendor's own search where it has one, else matched "
+            "here: the site words must appear, a kind of page (product, search, category, reviews) is matched "
+            "as a kind, and the main site ranks first unless a country is named. Unset lists the catalogue."
         ),
     },
     "limit": {"type": "integer", "minimum": 1, "description": "How many sources to list. Unset, the backend's page."},
