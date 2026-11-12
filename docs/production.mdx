@@ -1,0 +1,197 @@
+---
+title: "Running in production"
+description: "Timeouts, one shared router per process, closing it, threads and event loops, logging, cooldowns after a 429, a concurrency cap and warm-up."
+sidebarTitle: "Production"
+icon: "server"
+---
+
+A script can build a router, make a call and exit. A service makes thousands of
+calls from many threads or tasks, has a deadline for each, and needs to know
+what happened when a call was slow. This page covers what changes.
+
+```python
+from web_router import WebRouter
+
+router = WebRouter(max_concurrency=16)  # one per process, built at startup
+router.warmup()
+
+def handle(query: str):
+    response = router.search(query, timeout=5)
+    return router.extract(response.urls[:3], timeout=10)
+
+# at shutdown
+router.close()
+```
+
+## Timeouts
+
+Without a timeout, each backend a call tries waits up to its own HTTP timeout,
+60 seconds by default, and `auto` may try several in turn: one call can take
+minutes. Pass `timeout=` on every `search` and `extract`:
+
+```python
+router.search("nvidia q3 earnings", timeout=5)
+router.extract(urls, timeout=10)
+```
+
+- The call waits at most that many seconds. The built-in backends clamp each
+  HTTP request to the time left, so they do not return late; a custom backend
+  that blocks past it returns late on the sync router, and is cancelled at the
+  deadline on the async one.
+- `auto` starts a backend only while time is left, and passes over one whose
+  measured p90 latency would not fit before calling it.
+- An extract keeps every page that came back in time. A page still loading at
+  the deadline lands in `failures` with `kind` `timeout`; see
+  [Extract](/extract#under-a-timeout).
+- Running out with nothing to return raises `DeadlineExceededError`, naming
+  each backend tried and the one in flight when time ran out.
+
+`timeout=5` is the shortcut for `budget=Budget(time_limit_s=5)`. Given both, the
+tighter time cap holds, and the response's `decision` records each attempt. For
+`answer`, `research` and `browse`, pass `budget=Budget(time_limit_s=...)`;
+`research` and `browse` also take their own `timeout`.
+
+Prefer `timeout=` to wrapping a call in `asyncio.wait_for`. Cancelling from
+outside can leave the socket it was using open, and it discards the pages an
+extract had already read; `timeout=` stops each vendor call cleanly
+and keeps them.
+
+## One router per process
+
+A router holds the HTTP clients, and their connection pools, of every backend
+it has called. Build one at startup and share it; do not build one per request
+or per task. A router per task opened ten times the connections in one test and
+used a third more memory, and every new router pays for its clients again.
+
+- `WebRouter` is meant to be shared across threads. Each backend is built
+  once, under a lock, and reused by every thread.
+- `AsyncWebRouter` belongs to one event loop: its clients are bound to the loop
+  that first used them. Build one per loop. One per process is one per loop for
+  most services.
+- Per-call settings go on the call (`provider=`, `timeout=`, `budget=`), never
+  on a new router.
+
+## Closing a router
+
+Close a router when you are done with it, so its connections, and any browser
+sessions it opened, are released. Use it as a context manager:
+
+```python
+with WebRouter() as router:
+    router.search("...")
+
+async with AsyncWebRouter() as router:
+    await router.search("...")
+```
+
+or call `router.close()` (sync) or `await router.aclose()` (async) at shutdown.
+A router dropped without closing leaves its sockets for the garbage collector,
+which shows up as `ResourceWarning: unclosed <socket ...>` and, for browser sessions,
+as sessions billed until the backend times them out.
+
+## Threads and event loops
+
+The sync `WebRouter` blocks the thread it is called on. Called on a thread that
+is running an event loop, it holds every other task on that loop still until it
+returns, so it warns:
+
+```text
+RuntimeWarning: WebRouter.search() was called inside a running event loop, which it blocks until the call returns.
+```
+
+Inside `async def` code, use `AsyncWebRouter` and `await` it, or hand the sync
+call to a worker thread with `asyncio.to_thread(router.search, query)`. The call
+still runs after the warning, so a script that does this on purpose keeps
+working.
+
+## Logging
+
+Every module logs under the `web_router` logger, which carries only a
+`NullHandler`: nothing is printed until you configure logging.
+
+```python
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("web_router").setLevel(logging.DEBUG)  # every hop, the successes too
+```
+
+| Level | What |
+| --- | --- |
+| `DEBUG` | Each `auto` hop that answered: the method, the backend and how long it took |
+| `INFO` | Each `auto` hop that failed (kind, status, time), a backend passed over while it cools down, and the start of a cooldown |
+| `WARNING` | A configured key the backend refused, which `auto` would otherwise hide by moving on |
+
+```text
+INFO web_router.providers._hop: auto search: tavily failed (rate_limit, status 429) in 0.412s
+INFO web_router.providers._cooldown: tavily cools down for 10.0s after a 429
+DEBUG web_router.providers._hop: auto search: keenable answered in 0.733s
+```
+
+The records name the backend and, for an extract, the hosts it was asked for.
+They never carry a key, a path or a query string. `httpx`'s own INFO records
+print each request URL with its query string, which for some backends holds the
+key: keep the `httpx` logger at `WARNING` in production.
+
+## Cooldowns after a 429 or 402
+
+When a backend answers 429 (throttled) or 402 (out of quota), `auto` leaves it
+alone for a while instead of paying the same failed round trip on every call.
+The cooldown lasts as long as the backend's `Retry-After` header says, or, with
+none, 10 seconds after a 429 and 60 after a 402, and never more than 10
+minutes.
+
+- Each router keeps its own cooldowns, shared by all its threads and methods.
+  This is another reason to share one router.
+- A backend passed over shows in the call's failures as a `rate_limit` error
+  with `retry_after` set to the seconds left, and in `decision.hops`.
+- A backend you name with `provider=` is still called while it cools down, and
+  a 429 or 402 it answers starts its cooldown for later `auto` calls.
+- An extract that read some URLs but was throttled on others starts the
+  backend's cooldown too, for the status's default.
+- When every backend `auto` would try is cooling down, the call fails at once
+  with `AllProvidersFailedError`, each failure carrying its `retry_after`.
+
+## Capping concurrent calls
+
+`max_concurrency=` caps how many vendor calls a router has in flight at once,
+across every search, extract and answer it serves:
+
+```python
+router = WebRouter(max_concurrency=8)
+```
+
+It counts vendor calls, not your calls: an extract of twenty URLs through a
+backend that reads one URL per call takes up to twenty slots, one at a time.
+Without it, each extract caps only its own fan-out (8 calls at once), so fifteen
+concurrent single-URL extracts send fifteen calls at once to the same backend. A
+call waits for a slot within its own `timeout`; a URL still waiting when the
+timeout runs out is a `timeout` failure. On `AsyncWebRouter` the cap applies
+per event loop.
+
+## Keyless tiers
+
+The keyless backends (`tavily`'s anonymous tier, `you-mcp`, `exa-mcp`,
+`parallel-mcp`, `keenable`, `jina`) are rate-limited per IP address, and their
+limits are not published. In testing, a few concurrent callers used up some of
+them within about ten calls. `you-mcp` answered keyless at the time of writing,
+and answers 402 "Free tier limit exceeded" once its free tier runs out. A service
+whose pods share one egress IP shares those limits: hold a key for at least one
+backend of each method you call, and let the keyless tier be the fallback.
+[Providers](/providers) lists the variable for each.
+
+## Warm-up
+
+A router builds nothing until a call needs it: the first call imports the
+provider modules and builds their HTTP clients and TLS contexts. On an async
+service that first call held the event loop for about 200 milliseconds. Call
+`warmup()` once at startup to do that work before you serve requests:
+
+```python
+router = AsyncWebRouter()
+router.warmup()  # builds the search and extract backends auto would try, and their clients
+```
+
+It sends no request and bills nothing, and returns the names of the backends it
+built. A backend that cannot be built yet, such as one missing its key, is left
+out, as `auto` would leave it.

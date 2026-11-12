@@ -116,6 +116,7 @@ from web_router.providers._chain import (
     _valued,
 )
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers._hop import ahop, hop
 from web_router.providers.auto_browser import AutoBrowserProvider as AutoBrowserProvider
 from web_router.providers.base import (
     BrowseJob,
@@ -182,8 +183,7 @@ class AutoProvider(SearchProvider):
             chain, members_config, AUTO_CHAIN_SEARCH, self.default_chain
         )
         self.fallback_on_empty = fallback_on_empty
-        # Keyed by position, not by name: the same provider can appear twice on different terms -- Tavily keyed, then
-        # Tavily keyless.
+        # Keyed by position, not name: one provider can appear twice on different terms -- Tavily keyed, then keyless.
         self._members: dict[int, SearchProvider] = {}
 
     @staticmethod
@@ -221,7 +221,7 @@ class AutoProvider(SearchProvider):
             if not admitted("search", provider_name, request):
                 continue
             try:
-                response = self._member(position).search(request)
+                response = hop("search", provider_name, self._member(position).search, request)
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
@@ -242,7 +242,7 @@ class AutoProvider(SearchProvider):
             if not admitted("search", provider_name, request):
                 continue
             try:
-                response = await self._member(position).asearch(request)
+                response = await ahop("search", provider_name, self._member(position).asearch, request)
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
@@ -321,8 +321,7 @@ class AutoExtractProvider(ExtractProvider):
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
     supported_formats: ClassVar[frozenset[ExtractFormat]] = AUTO_EXTRACT_FORMATS
     default_format: ClassVar[ExtractFormat] = AUTO_EXTRACT_DEFAULT_FORMAT
-    # The members each batch as their own API allows, so there is nothing to split up here: one delegated call carries
-    # the whole request.
+    # The members each batch as their own API allows, so nothing is split up here: one delegated call carries it all.
     batches_urls: ClassVar[bool] = True
 
     def __init__(

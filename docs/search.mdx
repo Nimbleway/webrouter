@@ -30,6 +30,20 @@ when you switch providers. `search_depth` is how much text comes back per
 result; `effort` is how hard the backend looks. The exact field each backend
 sends is in its `contracts/search/<name>.json`.
 
+## Timeout
+
+```python
+response = router.search("nvidia q3 earnings", timeout=5)
+```
+
+`timeout=` caps how many seconds the call waits. Under `auto`, a backend is
+tried only while time is left, and one whose measured p90 latency would not fit
+is passed over before it is called; running out raises `DeadlineExceededError`,
+naming each backend tried. Without it a call waits on each backend's own HTTP
+timeout, 60 seconds by default, for each backend `auto` tries. `timeout=5` is
+the same as `budget=Budget(time_limit_s=5)`; see
+[Running in production](/production#timeouts).
+
 ## Search depth
 
 Three levels, each defined by size, mapped onto each backend's own knobs. A

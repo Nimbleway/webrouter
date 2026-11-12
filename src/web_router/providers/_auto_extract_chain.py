@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers._hop import ahop, hop
 from web_router.routing.attempts import admitted, failed
 from web_router.types import ExtractRequest, ExtractResponse
 from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET
@@ -74,7 +75,7 @@ def _first_answer(
         if not admitted("extract", provider_name, delegated):
             continue
         try:
-            response = auto._member(position).extract(delegated)
+            response = hop("extract", provider_name, auto._member(position).extract, delegated)
         except DeadlineExceededError as exc:
             return _held_or_late(held, auto.name, failures, exc, provider_name, "extract"), []
         except _RECOVERABLE as exc:
@@ -99,7 +100,7 @@ async def _afirst_answer(
         if not admitted("extract", provider_name, delegated):
             continue
         try:
-            response = await auto._member(position).aextract(delegated)
+            response = await ahop("extract", provider_name, auto._member(position).aextract, delegated)
         except DeadlineExceededError as exc:
             return _held_or_late(held, auto.name, failures, exc, provider_name, "extract"), []
         except _RECOVERABLE as exc:

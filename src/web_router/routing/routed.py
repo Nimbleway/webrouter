@@ -27,12 +27,14 @@ from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_invoke import ROUTER_URL_POLICY_ATTR
+from web_router.providers._runtime import Runtime, lent, noting
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.decide import decided
 from web_router.routing.effort_call import Only, named, unrouted, with_record
+from web_router.routing.in_loop import warn_if_in_loop
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.pool import limited
@@ -58,6 +60,8 @@ class RouterSetup(RouterOwner):
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
     """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
+    _runtime: Runtime | None = None
+    """The router's cooldowns and ``max_concurrency`` cap, lent to every call it routes; set by its constructor."""
 
     def _attach_router(
         self,
@@ -160,12 +164,13 @@ class SyncRouted(RouterSetup):
 
         A routed call runs in the order the router chose, and its response records how.
         """
+        warn_if_in_loop(_TOOL_OF[type(request)])
         request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
-        with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
+        with lent(self._runtime), budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with _logged(scope, route) as logged:
+            with _logged(scope, route) as logged, noting(self._runtime, chain):
                 return logged.settle(with_record(call(request), record or chosen))
 
 
@@ -179,9 +184,9 @@ class AsyncRouted(RouterSetup):
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
         request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
-        with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
+        with lent(self._runtime), budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with _logged(scope, route) as logged:
+            with _logged(scope, route) as logged, noting(self._runtime, chain):
                 return logged.settle(with_record(await call(request), record or chosen))
