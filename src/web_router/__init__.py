@@ -69,6 +69,7 @@ from web_router.exceptions import (
 )
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotFoundError
+from web_router.exceptions_typed import AllProvidersFailedError, InvalidParameterError
 from web_router.exceptions_vendors import VendorNotFoundError, VendorWriteRefusedError
 from web_router.live_data_search import NativeSourceSearch
 from web_router.providers.answer import AnswerProvider
@@ -187,6 +188,7 @@ __all__ = [
     "LIVE_DATA_PARAMETERS",
     "NORMALIZED_PARAMETERS",
     "RESEARCH_PARAMETERS",
+    "AllProvidersFailedError",
     "AnswerProvider",
     "AnswerRequest",
     "AnswerResponse",
@@ -237,6 +239,7 @@ __all__ = [
     "ExtractRequest",
     "ExtractResponse",
     "ExtractedDocument",
+    "InvalidParameterError",
     "LiveDataJobError",
     "LiveDataProvider",
     "LiveDataRequest",

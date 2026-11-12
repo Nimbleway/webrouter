@@ -22,6 +22,7 @@ from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
+from web_router.types_errors import ExtractFailure as ExtractFailure
 from web_router.types_options import RECENCY_DESCRIPTION, SEARCH_DEPTH_DESCRIPTION, SEARCH_EFFORT_DESCRIPTION
 from web_router.types_options import Recency as Recency
 from web_router.types_options import ResearchEffort as ResearchEffort
@@ -286,15 +287,6 @@ class ExtractedDocument(BaseModel):
         default_factory=dict,
         description="Provider-specific fields with no normalized equivalent.",
     )
-
-
-class ExtractFailure(BaseModel):
-    """A URL the provider could not fetch, and why."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    error: str
 
 
 class ExtractResponse(BaseModel):

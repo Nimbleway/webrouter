@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from web_router._validation import refused_as_parameter
 from web_router.constants import AUTO_CLIENT_OPTION, DELEGATING_PROVIDERS
 from web_router.types import (
     BrowseRequest,
@@ -36,6 +37,7 @@ JsonSchema = dict[str, Any] | type[BaseModel]
 """A schema for a structured answer: JSON Schema, or the pydantic model to take one from."""
 
 
+@refused_as_parameter(SearchRequest)
 def build_search_request(
     query: str, *, provider_options: dict[str, Any] | None, **options: Unpack[SearchOptions]
 ) -> SearchRequest:
@@ -43,6 +45,7 @@ def build_search_request(
     return SearchRequest(query=query, provider_options=provider_options or {}, **options)
 
 
+@refused_as_parameter(ExtractRequest)
 def build_extract_request(
     urls: str | list[str],
     *,
@@ -61,6 +64,7 @@ def build_extract_request(
     )
 
 
+@refused_as_parameter(ResearchRequest)
 def build_research_request(
     query: str,
     *,
@@ -82,6 +86,7 @@ def build_research_request(
     )
 
 
+@refused_as_parameter(BrowserRequest)
 def build_browser_request(
     *,
     proxy_country: str | None,
@@ -109,6 +114,7 @@ def build_browser_request(
     )
 
 
+@refused_as_parameter(BrowseRequest)
 def build_browse_request(
     task: str,
     *,

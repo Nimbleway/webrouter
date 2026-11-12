@@ -14,6 +14,7 @@ from pydantic import ConfigDict
 
 from web_router._urls import shown
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
+from web_router.exceptions_typed import InvalidParameterError
 from web_router.types_decision import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
@@ -67,13 +68,14 @@ class Budget:
     def __post_init__(self) -> None:
         """
         Raises:
-            ValueError: for a cap that is not a finite number of 0 or more -- negative, text, a bool, NaN,
+            InvalidParameterError: a :class:`ValueError`, for a cap that is not a finite number of 0 or
+                more -- negative, text, a bool, NaN,
                 infinity, or too large for a float: it would cap nothing or everything, or fail later.
         """
         for name in ("max_cost_usd", "time_limit_s"):
             value = getattr(self, name)
             if value is not None and not _finite_cap(value):
-                raise ValueError(MSG_BUDGET_VALUE.format(name=name, value=value))
+                raise InvalidParameterError(name, MSG_BUDGET_VALUE.format(name=name, value=value))
 
 
 @dataclass(frozen=True, kw_only=True)

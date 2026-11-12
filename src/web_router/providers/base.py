@@ -426,7 +426,7 @@ class _Collected:
     def fail(self, urls: list[str], error: ProviderError | DeadlineExceededError) -> None:
         """Record a call that raised as a failure against each URL it carried."""
         self.errors.append((urls, error))
-        self.failures.extend(ExtractFailure(url=url, error=str(error)) for url in urls)
+        self.failures.extend(ExtractFailure.from_error(url, error) for url in urls)
 
     def resolved(self) -> ExtractResponse:
         # Not `if self.failures`: an empty answer is the one outcome a caller cannot tell from a page with no text.

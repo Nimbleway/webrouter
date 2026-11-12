@@ -15,14 +15,19 @@ threaded through every provider between the router and the chain.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from web_router.constants_errors import MSG_KEY_REFUSED
 from web_router.routing.contract import ToolName
 from web_router.types import NormalizedRequest
+from web_router.types_errors import CHAIN_STOPPING_KINDS, ERROR_KIND_AUTH
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -113,9 +118,21 @@ def admitted(tool: ToolName, provider: str, request: NormalizedRequest) -> bool:
 
 
 def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseException) -> None:
-    """Note in ``failures`` that ``provider`` failed with ``exc``, and tell the call's failure hook, if any."""
+    """Note in ``failures`` that ``provider`` failed with ``exc``, and tell the call's failure hook, if any.
+
+    Raises ``exc`` itself when no other backend could do better: a ``local``
+    failure (a closed event loop, a provider's own bug) would fail every
+    member the same way, and a ``target`` one (a host that does not resolve,
+    an invalid URL) is the page's, not the backend's. Moving on would only
+    bill more calls and hide the cause.
+    """
     failures[provider] = exc
     noted(tool, provider, exc)
+    if getattr(exc, "kind", None) == ERROR_KIND_AUTH:
+        # A configured key that is refused is a setup problem auto would otherwise hide by moving on.
+        logger.warning(MSG_KEY_REFUSED, provider, getattr(exc, "status_code", None))
+    if getattr(exc, "kind", None) in CHAIN_STOPPING_KINDS:
+        raise exc
 
 
 def noted(tool: ToolName, provider: str, exc: BaseException) -> None:

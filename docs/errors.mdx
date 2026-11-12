@@ -27,7 +27,9 @@ except WebRouterError as exc:
 | `MissingParameterError` | The browse backend cannot start without an option you left unset: `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
 | `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost: the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers`; the other rows are unaffected |
-| `ProviderError` | The backend itself failed: HTTP error, SDK exception, bad credentials. Through `auto`, every member that could serve the call failed, and the message names each one's reason | Depends on the backend; the original error is wrapped, not swallowed |
+| `ProviderError` | The backend itself failed: HTTP error, SDK exception, bad credentials | Branch on `kind` (see below); the original error is on `original`, wrapped, not swallowed |
+| `AllProvidersFailedError` | A `ProviderError`: every backend `auto` tried failed | `failures` maps each backend to its own error; `kind` is theirs when they agree |
+| `InvalidParameterError` | An option is not a value the method takes: an empty query, `max_results=0`, an unknown `search_depth`, a negative `Budget` cap. Raised before any backend is called | Fix the value: `field` names the option and `allowed` its values. Also a `ValueError` |
 | `LiveDataJobError` | A `ProviderError`: a live data run the vendor runs as a job (Oxylabs) failed after it was submitted | The run may still have billed: `job_id` names the job to read later |
 | `NoAnswerProviderError` | A `ProviderNotFoundError`: `answer()` was called with no provider and none could be chosen, or `auto` had no backend to try | Set an answer backend's key, or name one; `configured` lists the ones with a key and `env_vars` the variables that would add one |
 | `VendorNotFoundError` | A vendor call or lookup named a vendor or endpoint the catalog does not hold | Use `vendors()` or `find_vendor_endpoints()` to inspect the catalog |
@@ -40,3 +42,36 @@ except WebRouterError as exc:
 These are **siblings, not a hierarchy**: `ProviderNotInstalledError` is not a
 subclass of `ConfigurationError`, so `except ConfigurationError` will not catch
 a missing extra. Catch `WebRouterError` unless you mean one specific case.
+
+## What kind of failure it was
+
+Every `ProviderError` says what kind of failure it was, so code can decide what
+to do without reading the message. A failed URL in an extract (`ExtractFailure`)
+carries the same `kind` and `status_code`.
+
+| Field | Meaning |
+| --- | --- |
+| `kind` | `auth` (the key was refused: 401, 403), `rate_limit` (429, 402), `bad_request` (400, 422), `not_found` (404), `timeout`, `target` (the page is the problem: its host does not resolve, or its URL is not one), `local` (a failure on this side: an async router reused on a second event loop, or a provider's own bug), or `upstream` (anything else the backend did) |
+| `status_code` | The backend's HTTP status, when it answered with one |
+| `retryable` | Whether trying again, on the same backend or another, may work: `rate_limit`, `timeout` and `upstream` |
+| `retry_after` | Seconds the backend asked you to wait (`Retry-After`), when it said |
+
+```python
+from web_router import AllProvidersFailedError, ProviderError, WebRouter
+
+try:
+    WebRouter().search("...")
+except AllProvidersFailedError as exc:
+    for backend, error in exc.failures.items():
+        print(backend, error.kind, error.status_code)
+except ProviderError as exc:
+    if exc.retryable:
+        ...  # back off for exc.retry_after seconds, then try again
+```
+
+`auto` moves on to its next backend after most failures, but not after a
+`local` or a `target` one: the next backend would fail the same way, and
+trying it would only bill another call. It raises that error instead. A key
+that is refused (`auth`) moves on, and is logged at `WARNING` on the
+`web_router` logger, so a broken key is not hidden by the backend that
+answered after it.

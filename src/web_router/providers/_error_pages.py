@@ -28,6 +28,19 @@ from web_router.constants_extract import (
     MSG_EXTRACT_NEAR_EMPTY,
 )
 from web_router.types import ExtractedDocument, ExtractFailure
+from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_UPSTREAM, TARGET_GONE_STATUSES
+
+
+def _failure(document: ExtractedDocument, reason: str) -> ExtractFailure:
+    """A page that is not the one asked for, as a failure: the site's own "gone" is ``target``, else ``upstream``.
+
+    A 404 or 410 is the site saying the page is not there, and every backend
+    would read the same; a challenge, a login wall or a 5xx is what this
+    backend met, and another may get past it.
+    """
+    status = document.status_code
+    kind = ERROR_KIND_TARGET if status in TARGET_GONE_STATUSES else ERROR_KIND_UPSTREAM
+    return ExtractFailure(url=document.url, error=reason, kind=kind, status_code=status)
 
 
 def split_error_pages(documents: Iterable[ExtractedDocument]) -> tuple[list[ExtractedDocument], list[ExtractFailure]]:
@@ -43,7 +56,7 @@ def split_error_pages(documents: Iterable[ExtractedDocument]) -> tuple[list[Extr
     for document in documents:
         reason = not_the_page(document)
         if reason is not None:
-            failed.append(ExtractFailure(url=document.url, error=reason))
+            failed.append(_failure(document, reason))
         else:
             kept.append(_warned(document))
     return kept, failed

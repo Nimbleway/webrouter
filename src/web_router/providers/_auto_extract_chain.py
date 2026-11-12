@@ -21,6 +21,7 @@ from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_r
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.routing.attempts import admitted, failed
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse
+from web_router.types_errors import ERROR_KIND_TARGET
 
 if TYPE_CHECKING:
     from web_router.providers.auto import AutoExtractProvider
@@ -107,7 +108,8 @@ async def _afirst_answer(
 
 
 def _failed_urls(response: ExtractResponse) -> list[str]:
-    return list(dict.fromkeys(failure.url for failure in response.failures))
+    """The URLs worth another backend: not those whose failure is the page's own (a 404, an unresolvable host)."""
+    return list(dict.fromkeys(failure.url for failure in response.failures if failure.kind != ERROR_KIND_TARGET))
 
 
 def _also_failed(response: ExtractResponse, exc: WebRouterError) -> ExtractResponse:

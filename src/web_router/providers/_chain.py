@@ -37,6 +37,7 @@ from web_router.exceptions import (
     ProviderNotInstalledError,
     WebRouterError,
 )
+from web_router.exceptions_typed import AllProvidersFailedError
 from web_router.types import ExtractResponse, SearchResponse
 from web_router.types import provider_name as _lookup_name
 from web_router.types_answer import AnswerResponse
@@ -263,7 +264,7 @@ def _exhausted(
         return ProviderNotInstalledError(provider, AUTO_EXTRA)
 
     detail = "; ".join(f"{name}: {exc}" for name, exc in failures.items())
-    return ProviderError(provider, template.format(failures=detail))
+    return AllProvidersFailedError(provider, template.format(failures=detail), failures)
 
 
 def _empty_search(response: SearchResponse) -> bool:
