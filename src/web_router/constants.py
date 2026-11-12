@@ -727,7 +727,7 @@ MSG_AUTO_UNFORMATTED = "returns only {formats}"
 
 MSG_AUTO_SEARCH_NO_MEMBER = (
     "No backend in its chain maps it, so nothing was searched: {skipped}. Drop the option, set a "
-    "credential for a backend that maps it, or name one -- see the search table in README.md."
+    "credential for a backend that maps it, or name one -- see the search table at https://docs.webrouter.net/providers#search."
 )
 """Replaces the ``provider_options`` advice, which ``auto`` cannot act on. Raised before any member is tried."""
 
@@ -741,13 +741,13 @@ MSG_MAX_BAD_HEDGE = "hedge is the seconds the first backend runs alone, a number
 
 MSG_AUTO_EXTRACT_NO_MEMBER = (
     "No backend in its chain returns it, so nothing was fetched: {skipped}. Ask for one of those, set a "
-    "credential for a backend that returns it, or name one -- see the extract table in README.md."
+    "credential for a backend that returns it, or name one -- see the extract table at https://docs.webrouter.net/providers#extract."
 )
 """Replaces the usual advice on the format error. Raised before any member is tried."""
 
 MSG_AUTO_EXTRACT_UNMAPPED = (
     "No backend in its chain maps it, so nothing was fetched: {skipped}. Drop the option, set a "
-    "credential for a backend that maps it, or name one -- see the extract table in README.md."
+    "credential for a backend that maps it, or name one -- see the extract table at https://docs.webrouter.net/providers#extract."
 )
 """The same for an option -- ``profile`` -- that no member returning the format maps."""
 
@@ -2426,7 +2426,7 @@ MSG_AUTO_RESEARCH_EXHAUSTED = "no backend in the chain started the run: {failure
 
 MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND = (
     "No configured research backend maps it, so no run was started: {skipped}. Drop the option, "
-    "or set a credential for a backend that maps it -- see the research table in README.md."
+    "or set a credential for a backend that maps it -- see the research table at https://docs.webrouter.net/providers#research."
 )
 """Replaces the usual advice on the parameter error, which points at ``provider_options`` --
 something ``auto`` does not have. Reported before any run starts, so nothing is billed for a

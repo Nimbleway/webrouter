@@ -82,5 +82,5 @@ MSG_BRAVE_SEARCH_VALUES = (
     + ", ".join(sorted(BRAVE_COUNTRIES))
     + ", and locale at a language "
     "it lists (pt and zh alone are refused, as each could be either of two). Ask for one of those, leave it "
-    "unset, or name another provider -- see the search table in README.md."
+    "unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )

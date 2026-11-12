@@ -1,0 +1,179 @@
+---
+title: "Agent integrations"
+description: "Give an agent WebRouter's tools: the MCP server, LangChain, Claude and OpenAI tool definitions, or your own wrapper."
+icon: "robot"
+---
+
+## The MCP server
+
+The package ships a **self-hosted stdio MCP server**, so an agent can call these
+methods as tools: `search`, `extract`, the live data tools, `answer`, `research`,
+`browse`, the `browser_*` tools for driving a browser itself, and `web_run`,
+`budget_start` and `budget_status` for [smart routing](/smart-routing).
+It runs in your own process and sends each key only to the backend it belongs to.
+The [MCP guide](https://github.com/Nimbleway/webrouter/blob/main/docs/mcp.md)
+covers installation, client setup, credentials, tool costs, browser guards,
+routing and budgets.
+
+Which backend serves a call stays the caller's choice. The shipped integrations
+are the [MCP server](/integrations#the-mcp-server), [LangChain](/integrations#langchain),
+[Claude](/integrations#claude-agents), and [OpenAI](/integrations#openai-agents).
+
+`auto` uses every key held; see the [`Provider.AUTO`](/providers#search) row in the search table.
+
+## Framework checklist
+
+When integrating WebRouter:
+
+- [ ] Accept a `search_provider` or `extract_provider` parameter
+- [ ] Default to `"auto"` (WebRouter's default provider)
+- [ ] Pass it to `WebRouter(search_provider)` or `AsyncWebRouter(...)`
+- [ ] Use `router.search()` or `router.extract()` in your implementation
+- [ ] Let `WebRouterError` propagate or wrap it in your own exception
+- [ ] Document credential environment variables (`NIMBLE_API_KEY`, etc.)
+- [ ] Document the `auto` behavior above
+
+Error types are in [Errors](/errors). Adding a backend, or keeping one private,
+is [Adding a provider](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#adding-a-provider).
+
+## LangChain
+
+`web_router.integrations.langchain` puts search and extract in front of a
+LangChain agent as two tools, `web_search` and `web_extract`:
+
+```python
+from langchain.agents import create_agent
+from web_router import WebRouter
+from web_router.integrations.langchain import web_router_tools
+
+tools = web_router_tools(WebRouter(), provider="nimble", max_results=5)
+agent = create_agent("openai:gpt-4.1", tools=tools)
+```
+
+Or build them one at a time — `WebRouterSearch(router=..., provider=...,
+max_results=..., search_depth=...)` and `WebRouterExtract(...)` — and pass
+`async_router=AsyncWebRouter()` to serve `agent.ainvoke` without a worker thread.
+`WebRouterAnswer(router=..., provider="linkup")` adds `web_answer`, a backend's
+written answer to one question with its sources. It is not among
+`web_router_tools()`: every answer backend needs a key and bills each call.
+
+**The model supplies the query or the URLs; you supply everything else.** The
+provider, `max_results`, `search_depth` and the domain filters are fixed when
+the tool is built and sent unchanged on every call, so an agent behaves the
+same whichever backend serves it and switching backends is one argument. An
+option the provider does not map raises on the first call, to you — not to the
+model, which could not fix it.
+
+**The model reads a compact rendering; you keep the whole response.** Each
+tool answers in LangChain's `content_and_artifact` form: the model sees JSON in
+one layout for every backend, each result's text cut to `result_chars` (a
+page to `document_chars`), and the tool message's `artifact` carries the
+untouched `SearchResponse` or `ExtractResponse`. A backend failure reaches the
+model as a one-line error it can react to; `web_extract` names the URLs it
+could not read rather than failing the call.
+
+## Claude agents
+
+`web_router.integrations.anthropic` gives a Claude agent the same two tools,
+as plain custom tool definitions, and the guide that says when to use which:
+
+```python
+from anthropic import AsyncAnthropic
+from web_router import AsyncWebRouter
+from web_router.integrations.anthropic import WebRouterTools
+
+tools = WebRouterTools(AsyncWebRouter(), provider="nimble", max_results=5)
+agent = await AsyncAnthropic().beta.agents.create(
+    name="researcher",
+    model="claude-opus-5",
+    system=tools.guide(),  # when to reach for which tool
+    tools=tools.definitions(),  # web_router_search, web_router_extract
+)
+
+# In the session, for each agent.custom_tool_use event:
+result = await tools.acall(event.name, event.input)
+await client.beta.sessions.events.send(
+    session.id, events=[{"type": "user.custom_tool_result", "custom_tool_use_id": event.id, **result.event_fields()}]
+)
+```
+
+The definitions serve a Managed Agents agent and the Messages API's `tools`
+alike, and the module needs no SDK and no extra: your Anthropic client sends
+them, and `call` / `acall` run each call here, on your keys. The options rule
+is the LangChain tools' — the model supplies the query or the URLs, you fix the
+rest — and so is the rendering, byte for byte. Input the model got wrong comes
+back as an error result it can fix; a backend failure does too; your own setup
+mistake raises. The tools are named `web_router_search` and
+`web_router_extract`, never `web_search`, so an agent that also holds Claude's
+built-in search cannot confuse the two.
+
+**Answer is opt-in.** `methods=["search", "extract", "answer"]` adds
+`web_router_answer`: one question in, the backend's written answer and its
+citations out, each snippet cut to `result_chars`. It goes to `answer_provider`,
+else to `provider` when that backend answers, else to the router's default
+answer backend, and the tools raise `NoAnswerProviderError` when they are built
+if there is none to use. It sends only the question; the search options are not
+passed to it.
+
+`routing_guide()` (or `tools.guide()`, for exactly the tools you expose) is a
+first version of the judgment half: cheapest tool first, one fact per search,
+read a page only when its snippet falls short. Research and browse join the
+tools once the guide can say when one is worth its bill.
+
+## OpenAI agents
+
+`web_router.integrations.openai` gives an OpenAI model the same two tools, as
+function tool definitions:
+
+```python
+from openai import OpenAI
+from web_router import WebRouter
+from web_router.integrations.openai import WebRouterTools
+
+client = OpenAI()
+tools = WebRouterTools(WebRouter(), provider="nimble", max_results=5)
+request = {"model": "gpt-4.1", "instructions": tools.guide(), "tools": tools.definitions()}
+
+response = client.responses.create(input="Who won the 2026 Tour de France?", **request)
+while calls := [item for item in response.output if item.type == "function_call"]:
+    outputs = [tools.call(c.name, c.arguments).function_call_output(c.call_id) for c in calls]
+    response = client.responses.create(input=outputs, previous_response_id=response.id, **request)
+print(response.output_text)
+```
+
+It is the Claude module with an OpenAI envelope: the same constructor, tools,
+rendering, errors and routing guide, and no SDK or extra. `definitions()` is
+the Responses API shape and `chat_definitions()` the Chat Completions one;
+answer a call with `function_call_output(call_id)` or
+`tool_message(tool_call_id)`. `call` / `acall` take the arguments as the JSON
+string OpenAI hands over, or already decoded, and arguments that are not valid
+JSON come back as an error result the model can fix. The definitions are
+strict, so OpenAI holds the model's arguments to the schema. OpenAI has no
+error flag on a tool's output, so an error's text says on its own that the
+call failed or did not run. The tools keep their `web_router_` names, so they
+never collide with OpenAI's built-in `web_search` either.
+
+## Wrapping `search` for your own agent
+
+The integrations above already fix `max_results` when the tool is built, so the
+model never picks it. A model that may pick it will sometimes ask for one
+result and answer thinly. For a framework with no integration, do the same:
+keep `max_results` out of the schema the model sees and pin 5 to 10 yourself.
+`WebRouterTools` gives you that schema and the compact rendering, whatever
+sends them:
+
+```python
+from web_router import WebRouter
+from web_router.integrations.anthropic import WebRouterTools
+
+tools = WebRouterTools(WebRouter(), methods=["search"], max_results=8)
+schema = tools.definitions()[0]["input_schema"]  # only `query`
+
+
+def web_search(query: str) -> str:
+    return tools.call("web_router_search", {"query": query}).content
+```
+
+If you do expose `max_results`, its description in `SearchRequest`'s JSON
+schema tells the model when to ask for more. The MCP server shows it the same
+text.

@@ -62,3 +62,99 @@ a stray log of a provider does not leak one. Provider clients also never follow 
 (`httpx` would replay the auth header to the redirect target, including one on
 another host), so a provider sending a credential rejects
 `follow_redirects=True`. See [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md#credentials).
+
+## Passing keys and settings in code
+
+```python
+router = WebRouter(
+    Provider.NIMBLE,
+    provider_config={
+        Provider.NIMBLE: {"api_key": "..."},
+        Provider.TAVILY: {"api_key": "...", "timeout": 30},
+    },
+)
+
+response = router.search("query", provider=Provider.TAVILY)  # per-call override
+```
+
+`provider_config` is the one place credentials and client settings are passed
+explicitly; everything else comes from the environment. It reaches a backend
+`auto` calls as well as one you name, and a backend given an `api_key` there
+joins `auto`'s default chain as one whose key is in the environment does. Providers are
+constructed lazily and cached, so configuring a backend you never call costs
+nothing.
+
+Switching backend on every call? Build the provider once and pass it, so its
+settings travel with it instead of being restated:
+
+```python
+from web_router.providers.tavily import TavilyProvider
+
+tavily = TavilyProvider(api_key="...", timeout=30)
+
+for query in queries:
+    router.search(query, provider=tavily)
+```
+
+A provider you construct is yours: the router uses it, never caches it, and
+`router.close()` leaves it open for you to close.
+
+Already hold an authenticated Nimble client — one per end user, say, with
+your own headers and a connection pool shared across your app? Pass it as
+`async_client` to any of the three Nimble classes, directly or through
+`provider_config`, and the provider calls through it instead of building one
+from a key:
+
+```python
+from nimble_python import AsyncNimble
+
+client = AsyncNimble(api_key=user_key, default_headers={...})
+
+async with AsyncWebRouter(provider_config={Provider.NIMBLE: {"async_client": client}}) as router:
+    await router.search("query")  # auto counts Nimble as configured, no NIMBLE_API_KEY needed
+```
+
+The client stays yours: the provider reads no key, builds no sync client — a
+sync call raises `ConfigurationError`, and so does a synchronous `WebRouter`
+handed one in `provider_config`, rather than letting `auto` pass over Nimble
+unannounced — and never closes it. Its credential is the one used: an
+`api_key` passed beside it raises `ConfigurationError` instead of replacing it.
+Other options passed beside it, such as `timeout`, apply to a copy that shares
+its connection pool, and research keeps the client's own timeouts, clamping
+only the read limit to the run's budget.
+
+## Which providers can I actually use?
+
+```python
+from web_router import available_providers, configured_providers
+
+available_providers()  # every name the router knows
+configured_providers()  # the ones you have a credential for, plus the keyless ones
+```
+
+Both return plain strings, not `Provider` members: they report what is
+registered at runtime, which includes backends you added yourself and so cannot
+be an enum. Feed a result straight back to `search(provider=...)`.
+
+`configured_providers()` reads environment variables only — a key passed through
+`provider_config` will not show up there (a router's `auto` still counts it), and a key that is present may still be
+rejected by the service. It answers "worth trying", not "guaranteed to work".
+
+## Reaching a provider's own options
+
+Every search API has capabilities beyond the shared surface. Those pass through
+untranslated:
+
+```python
+router.search("nvidia earnings", provider_options={"topic": "news"})
+```
+
+`provider_options` is an escape hatch, not a destination. Options used through
+it are provider-specific by definition, so the portability guarantee above does
+not apply to them.
+
+**If you work on a search API, this is the part to change.** Promoting one of
+your options into the shared surface — so it works the same way across every
+backend — is a small, well-defined PR, and the fastest way to make WebRouter
+represent your API properly. See
+[CONTRIBUTING.md](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#promoting-a-provider-option).

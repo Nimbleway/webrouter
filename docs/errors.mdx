@@ -31,7 +31,7 @@ except WebRouterError as exc:
 | `VendorNotFoundError` | A vendor call or lookup named a vendor or endpoint the catalog does not hold | Use `vendors()` or `find_vendor_endpoints()` to inspect the catalog |
 | `VendorWriteRefusedError` | A vendor call would change data and `allow_writes=True` was not passed | Review the operation, then opt in explicitly when you intend the write |
 | `BrowserActionError` | A page action on a browser handle failed; subclasses say how (see [Driving the page](/browser#driving-the-page)) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
-| `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](https://github.com/Nimbleway/webrouter/blob/main/README.md#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
+| `BudgetExceededError` | Nothing the call could run fits its `Budget` (experimental, see [Budgets](/smart-routing#budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
 | `DeadlineExceededError` | A search, extract, live data run or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
 | `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
 

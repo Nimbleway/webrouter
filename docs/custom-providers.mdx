@@ -1,0 +1,97 @@
+---
+title: "Adding a provider"
+description: "Write a search or extract backend of your own in two methods, register it, and every router feature works with it."
+icon: "puzzle-piece"
+---
+
+Most of these APIs have no Python SDK worth the dependency, so the short path is
+`HttpSearchProvider` — it owns the client, auth headers, HTTP error handling and
+cleanup, and leaves you two methods:
+
+```python
+from web_router import register_provider
+from web_router.providers import HttpSearchProvider, build_payload
+from web_router.types import SearchRequest, SearchResponse, SearchResult
+
+
+class AcmeProvider(HttpSearchProvider):
+    name = "acme"
+    supported_parameters = frozenset({"max_results"})
+    base_url = "https://api.acme.com"
+    search_path = "/v1/search"
+    env_api_key = "ACME_API_KEY"
+
+    def _build_payload(self, request: SearchRequest) -> dict:
+        return build_payload(request, {"max_results": "limit"}, query=request.query)
+
+    def _to_response(self, request: SearchRequest, payload: dict) -> SearchResponse:
+        return SearchResponse(
+            provider=self.name,
+            query=request.query,
+            results=[SearchResult(url=hit["url"], title=hit["title"]) for hit in payload["hits"]],
+            raw=payload,  # nothing is thrown away
+        )
+
+
+register_provider("acme", AcmeProvider)  # custom names are strings: the enum is closed
+```
+
+Wrapping a real SDK instead? Subclass `SearchProvider` and implement `_search`
+and `_asearch`, as `nimble.py` and `tavily.py` do.
+
+Either way you write translation only. The base class rejects options you did
+not declare and wraps whatever your backend raises in `ProviderError` — which is
+why you implement `_search` and callers use `search`. `build_payload` handles the
+other two: it drops the options you left unset and always passes
+`provider_options` through last.
+
+An extract backend is the same shape against `HttpExtractProvider`, with
+`extract_path` in place of `search_path` and a `format` table instead of a depth
+one:
+
+```python
+from web_router import register_extract_provider
+from web_router.providers import HttpExtractProvider, build_payload
+from web_router.types import ExtractedDocument, ExtractRequest, ExtractResponse
+
+ACME_FORMATS = {"markdown": "md", "html": "raw"}
+
+
+class AcmeExtractProvider(HttpExtractProvider):
+    name = "acme"
+    supported_parameters = frozenset({"format"})
+    supported_formats = frozenset(ACME_FORMATS)  # the table is the single description
+    default_format = "html"
+    base_url = "https://api.acme.com"
+    extract_path = "/v1/fetch"
+    env_api_key = "ACME_API_KEY"
+
+    def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict:
+        return build_payload(request, url=urls[0], as_=ACME_FORMATS[self.format_of(request)])
+
+    def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict) -> ExtractResponse:
+        return ExtractResponse(
+            provider=self.name,
+            documents=[
+                ExtractedDocument(
+                    # This call's own URL, not `request.urls[0]` -- the base
+                    # class calls you once per URL, so the request holds them all.
+                    url=urls[0],
+                    content=payload["body"],
+                    format=self.format_of(request),
+                )
+            ],
+            raw=[payload],
+        )
+
+
+register_extract_provider("acme", AcmeExtractProvider)
+```
+
+`batches_urls` is left alone above, so the base class calls this once per URL and
+assembles one response. Set it to `True` only if a single call really takes the
+whole list, as Tavily's and Exa's do.
+
+`perplexity.py` and `firecrawl.py` are the shortest complete examples, and
+[CONTRIBUTING.md](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#adding-a-provider) has the full checklist —
+keyless endpoints, redirects, and reusing an existing provider's normalization.
