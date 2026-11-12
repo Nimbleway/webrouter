@@ -52,3 +52,12 @@ def test_with_nothing_remembered_there_is_no_warning(isolated_home: Path) -> Non
 
     assert sources.foreign() == []
     assert "warning" not in sources.report()
+
+
+def test_a_link_inside_the_project_to_a_file_elsewhere_is_still_foreign(isolated_home: Path) -> None:
+    elsewhere = write(isolated_home / "other-project" / ".env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    link = Path.cwd() / "linked.env"
+    link.symlink_to(elsewhere)
+    _remember(link)
+
+    assert EnvSources.at_startup().foreign() == [link]

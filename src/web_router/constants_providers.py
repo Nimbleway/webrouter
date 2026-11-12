@@ -10,3 +10,6 @@ MSG_EXTRA_MISSING = (
     'pip install "webrouter[{extra}]" (or uv sync --extra {extra} in a web-router clone).'
 )
 """A missing optional dependency, named with the install line that fixes it."""
+
+HTTPX_MODULE = "httpx"
+"""The HTTP client the REST-backed providers need, which every method extra installs."""

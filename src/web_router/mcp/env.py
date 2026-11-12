@@ -154,13 +154,14 @@ class EnvSources:
 
     def foreign(self) -> list[Path]:
         """The remembered files loaded at startup that lie outside the working directory: keys from another project."""
-        here = Path.cwd()
+        # Resolved, so a link inside the project to a file elsewhere still counts as elsewhere.
+        here = Path.cwd().resolve()
         return [
             lookup.path
             for lookup in self.searched
             if lookup.source == MCP_ENV_SOURCE_REMEMBERED
             and lookup.status == MCP_ENV_STATUS_USED
-            and not lookup.path.is_relative_to(here)
+            and not lookup.path.resolve().is_relative_to(here)
         ]
 
     def noted(self, instructions: str) -> str:

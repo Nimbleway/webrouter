@@ -19,7 +19,7 @@ backend to serve both.
 from typing import TYPE_CHECKING, Any
 
 from web_router.constants import EXTRA_SEARCH
-from web_router.constants_providers import MSG_EXTRA_MISSING
+from web_router.constants_providers import HTTPX_MODULE, MSG_EXTRA_MISSING
 from web_router.providers._utils import build_payload
 from web_router.providers.base import ExtractProvider, SearchProvider
 
@@ -48,10 +48,10 @@ def __getattr__(name: str) -> Any:
         try:
             import web_router.providers._http as http
         except ModuleNotFoundError as exc:
-            if exc.name != "httpx":
+            if exc.name != HTTPX_MODULE:
                 raise
             # Still a ModuleNotFoundError, so code catching that keeps working, but naming the fix.
-            message = MSG_EXTRA_MISSING.format(what=name, module="httpx", extra=EXTRA_SEARCH)
-            raise ModuleNotFoundError(message, name="httpx") from exc
+            message = MSG_EXTRA_MISSING.format(what=name, module=HTTPX_MODULE, extra=EXTRA_SEARCH)
+            raise ModuleNotFoundError(message, name=HTTPX_MODULE) from exc
         return getattr(http, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
