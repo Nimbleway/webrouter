@@ -59,7 +59,7 @@ from web_router.constants_errors import MSG_REUSED_LOOP
 from web_router.constants_invoke import MSG_ROUTER_FAILED
 from web_router.constants_providers import MSG_PROVIDER_WRONG_METHOD
 from web_router.types import Provider
-from web_router.types_errors import RETRYABLE_KINDS, classify, reused_loop
+from web_router.types_errors import classify, is_retryable, reused_loop
 
 _BUILTIN_NAMES = frozenset(provider.value for provider in Provider)
 
@@ -332,7 +332,7 @@ class ProviderError(WebRouterError):
         facts = classify(original, message)
         self.kind = kind or facts.kind
         self.status_code = facts.status_code
-        self.retryable = self.kind in RETRYABLE_KINDS
+        self.retryable = is_retryable(self.kind)
         self.retry_after = facts.retry_after
 
 

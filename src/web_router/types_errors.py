@@ -35,6 +35,7 @@ RETRYABLE_KINDS: Final = frozenset({"rate_limit", "timeout", "upstream"})
 
 CHAIN_STOPPING_KINDS: Final = frozenset({"local", "target"})
 RETRY_AFTER_HEADER: Final = "retry-after"
+_CAUSE_DEPTH: Final = 4
 """The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
 
 KIND_BY_STATUS: Final[dict[int, ProviderErrorKind]] = {
@@ -87,7 +88,7 @@ class ErrorFacts:
 
     @property
     def retryable(self) -> bool:
-        return self.kind in RETRYABLE_KINDS
+        return is_retryable(self.kind)
 
 
 def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
@@ -108,6 +109,10 @@ def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
     status = _status(original)
     text = f"{message} {original if original is not None else ''}".lower()
     retry_after = _retry_after(original)
+    by_status = KIND_BY_STATUS.get(status) if status is not None else None
+    if by_status in ("auth", "rate_limit"):
+        # A refused key or a throttle is the backend's answer about the caller, whatever its body goes on to say.
+        return ErrorFacts(by_status, status, retry_after)
     # A failure to reach the backend itself says nothing about the page, whatever its text.
     if not _connect_failed(original) and any(marker in text for marker in TARGET_MARKERS):
         return ErrorFacts(ERROR_KIND_TARGET, status, retry_after)
@@ -119,6 +124,11 @@ def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
     if is_local(original):
         return ErrorFacts(ERROR_KIND_LOCAL)
     return ErrorFacts(ERROR_KIND_UPSTREAM)
+
+
+def is_retryable(kind: str | None) -> bool:
+    """Whether a failure of ``kind`` may go away on another try, on the same backend or another."""
+    return kind in RETRYABLE_KINDS
 
 
 def reused_loop(exc: BaseException | None) -> bool:
@@ -147,9 +157,13 @@ def _connect_failed(original: BaseException | None) -> bool:
 
 
 def _timed_out(original: BaseException | None) -> bool:
-    if isinstance(original, (TimeoutError, asyncio.TimeoutError)):
-        return True
-    return original is not None and "timeout" in type(original).__name__.lower()
+    """Whether ``original``, or an error it carries as its cause (an SDK's connection error), is a timeout."""
+    seen = 0
+    while original is not None and seen < _CAUSE_DEPTH:
+        if isinstance(original, (TimeoutError, asyncio.TimeoutError)) or "timeout" in type(original).__name__.lower():
+            return True
+        original, seen = getattr(original, "__cause__", None) or getattr(original, "__context__", None), seen + 1
+    return False
 
 
 def _retry_after(original: BaseException | None) -> float | None:
@@ -166,8 +180,10 @@ def _retry_after(original: BaseException | None) -> float | None:
         return max(0.0, seconds) if math.isfinite(seconds) else None
     try:
         when = parsedate_to_datetime(raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, IndexError):
         return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)  # an HTTP date is GMT; one sent without a zone is read so
     return max(0.0, (when - datetime.now(UTC)).total_seconds())
 
 
@@ -189,7 +205,8 @@ class ExtractFailure(BaseModel):
     @model_validator(mode="after")
     def _kind_from_error(self) -> ExtractFailure:
         if self.kind is None:
-            self.kind = classify(None, self.error).kind
+            gone = self.status_code in TARGET_GONE_STATUSES
+            self.kind = ERROR_KIND_TARGET if gone else classify(None, self.error).kind
         return self
 
     @staticmethod
@@ -212,4 +229,4 @@ class ExtractFailure(BaseModel):
     @property
     def retryable(self) -> bool:
         """Whether another try, on this backend or another, may get the page."""
-        return self.kind in RETRYABLE_KINDS
+        return is_retryable(self.kind)

@@ -242,12 +242,12 @@ class NimbleExtractProvider(_NimbleClients, ExtractProvider):
         status = payload.get("status")
         data = payload.get("data") or {}
 
-        # Nimble answers 200 and says in `status` whether it got the page, so a
-        # block or a fatal fetch error arrives as a successful call carrying no
-        # content. Reporting that as an empty document would hide it.
+        # Nimble answers 200 and says in `status` whether it got the page: a block or a fatal fetch error is a
+        # successful call with no content, which reported as an empty document would be hidden.
         if status != NIMBLE_EXTRACT_SUCCESS_STATUS:
             detail = MSG_EXTRACT_BAD_STATUS.format(status=status)
-            failure = ExtractFailure(url=url, error="; ".join([detail, *(payload.get("warnings") or [])]))
+            reason = "; ".join([detail, *(payload.get("warnings") or [])])
+            failure = ExtractFailure(url=url, error=reason, status_code=_as_int(payload.get("status_code")))
             return ExtractResponse(provider=self.name, failures=[failure], raw=[payload])
 
         body_format = self.format_of(request)

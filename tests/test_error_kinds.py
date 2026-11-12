@@ -129,3 +129,35 @@ def test_live_data_refuses_a_bad_option_as_an_invalid_parameter() -> None:
         WebRouter().live_data("x", {}, provider="nimble", format="pdf")  # type: ignore[arg-type]
 
     assert caught.value.field == "format"
+
+
+def test_a_retry_after_date_without_a_zone_is_read_as_utc() -> None:
+    error = ProviderError("acme", "HTTP 503", original=_status_error(503, {"Retry-After": "Wed, 21 Oct 2015 07:28:00"}))
+
+    assert error.retry_after == 0.0, "a date in the past is no wait, and reading it raised nothing"
+    assert error.kind == "upstream"
+
+
+def test_a_refused_key_is_auth_whatever_its_body_says() -> None:
+    error = ProviderError("acme", "HTTP 401: invalid url or key", original=_status_error(401))
+
+    assert error.kind == "auth"
+
+
+def test_a_timeout_carried_as_the_cause_is_a_timeout() -> None:
+    class APIConnectionError(Exception):
+        pass
+
+    try:
+        try:
+            raise httpx.ConnectTimeout("connect")
+        except httpx.ConnectTimeout as inner:
+            raise APIConnectionError("Connection error.") from inner
+    except APIConnectionError as outer:
+        wrapped = outer
+
+    assert ProviderError("acme", "search failed", original=wrapped).kind == "timeout"
+
+
+def test_a_failure_with_a_gone_status_is_target_even_when_its_text_is_bare() -> None:
+    assert ExtractFailure(url="u", error="status: failed", status_code=404).kind == "target"
