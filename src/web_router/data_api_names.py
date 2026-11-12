@@ -2,7 +2,7 @@
 
 Discovery is on for every search, so a match has to be one the query asked
 for. A query must name the data API -- its id ("datadog", "google ads" for
-``google-ads``) or a distinctive word of its display name ("Edgar", "Crunchbase")
+``google-ads``, "data.gov.au" for ``data-gov-au``) or a distinctive word of its display name ("Edgar", "Crunchbase")
 -- and say what it wants from it: another query word in an endpoint's id or job,
 or, for an API named by its id, anywhere in an endpoint's name or summary. A
 query that names an API by its id and nothing else lists its first read
@@ -12,7 +12,6 @@ endpoints. Everyday searches name no data API, so they list none.
 from __future__ import annotations
 
 import functools
-import itertools
 import re
 from collections import Counter
 
@@ -28,10 +27,8 @@ from web_router.vendors.schema import Vendor, VendorEndpoint
 _TOKEN = re.compile(r"[a-z0-9]+")
 _ID_BONUS = 10
 """How far naming an API by its id ranks it above one named only by a word of its display name."""
-
-
-def _slug(vendor: Vendor) -> str:
-    return vendor.vendor.replace("-", "")
+_ID_MAX_TOKENS = 3
+"""The most query tokens an id is matched across: ``data.gov.au`` names ``data-gov-au``."""
 
 
 def _name_words(vendor: Vendor) -> set[str]:
@@ -57,12 +54,14 @@ def _naming_words(catalog: VendorCatalog) -> dict[str, frozenset[str]]:
 def named_endpoints(catalog: VendorCatalog, query: str) -> list[tuple[Vendor, VendorEndpoint]]:
     """The read endpoints of the data APIs ``query`` names, best first; empty when it names none."""
     tokens = _TOKEN.findall(query.lower())
-    ids = set(tokens) | {first + second for first, second in itertools.pairwise(tokens)}
+    ids = {
+        "".join(tokens[start : start + size]) for size in range(1, _ID_MAX_TOKENS + 1) for start in range(len(tokens))
+    }
     query_words = words(query) - VENDOR_FIND_STOP_WORDS
     naming = _naming_words(catalog)
     scored: list[tuple[int, int, str, Vendor, VendorEndpoint]] = []
     for vendor in catalog.all():
-        by_id = _slug(vendor) in ids
+        by_id = vendor.vendor.replace("-", "") in ids
         named = query_words & naming[vendor.vendor]
         if by_id:
             named |= query_words & words(vendor.vendor.replace("-", " "))
