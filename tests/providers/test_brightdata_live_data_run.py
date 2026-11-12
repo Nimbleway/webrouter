@@ -89,9 +89,21 @@ def test_a_scrape_still_running_when_the_wait_ends_names_its_snapshot() -> None:
     assert [request.url.path for request in api.requests].count("/datasets/v3/scrape") == 1
 
 
-def test_a_failed_snapshot_names_itself() -> None:
-    provider, _ = _waiting(_slow_scrape("running", "failed"))
-    with pytest.raises(LiveDataJobError, match="failed") as raised:
+@pytest.mark.parametrize(
+    ("progress", "said"),
+    [
+        ({"status": "failed", "error_message": "Snapshot is empty"}, "Snapshot is empty"),
+        ({"status": "failed"}, "no reason"),
+    ],
+)
+def test_a_failed_snapshot_names_itself_and_bright_datas_reason(progress: dict[str, str], said: str) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/datasets/v3/scrape":
+            return httpx.Response(202, json={"snapshot_id": "sd_abc"})
+        return httpx.Response(200, json=progress)
+
+    provider, _ = _waiting(respond)
+    with pytest.raises(LiveDataJobError, match=said) as raised:
         provider.run(LiveDataRequest(source=DATASET, inputs={"url": URL}))
     assert raised.value.job_id == "sd_abc"
 

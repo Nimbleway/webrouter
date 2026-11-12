@@ -19,6 +19,7 @@ from web_router.constants_live_data_vendors import (
     BRIGHTDATA_SNAPSHOT_FAILED,
     BRIGHTDATA_SNAPSHOT_PATH,
     BRIGHTDATA_SNAPSHOT_READY,
+    MSG_BRIGHTDATA_NO_REASON,
     MSG_BRIGHTDATA_NO_SNAPSHOT,
     MSG_BRIGHTDATA_PENDING,
     MSG_BRIGHTDATA_SNAPSHOT_CANCELED,
@@ -51,13 +52,15 @@ class SnapshotWait(JobWait):
 
     def done(self, payload: Any) -> bool:
         """Whether the snapshot is ready to read; raises when it failed or was canceled, as it then never will be."""
-        status = (payload if isinstance(payload, dict) else {}).get("status")
+        body = payload if isinstance(payload, dict) else {}
+        status = body.get("status")
         terminal = {
             BRIGHTDATA_SNAPSHOT_FAILED: MSG_BRIGHTDATA_SNAPSHOT_FAILED,
             BRIGHTDATA_SNAPSHOT_CANCELED: MSG_BRIGHTDATA_SNAPSHOT_CANCELED,
         }
         if status in terminal:
-            message = terminal[status].format(job_id=self.job_id, source=self.request.source)
+            reason = body.get("error_message") or MSG_BRIGHTDATA_NO_REASON
+            message = terminal[status].format(job_id=self.job_id, source=self.request.source, reason=reason)
             raise LiveDataJobError(self.provider, message, job_id=self.job_id)
         return status == BRIGHTDATA_SNAPSHOT_READY
 

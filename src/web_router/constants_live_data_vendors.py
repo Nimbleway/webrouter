@@ -51,7 +51,8 @@ MSG_BRIGHTDATA_NO_SNAPSHOT: Final = (
     "Bright Data kept scraping {source!r} past its synchronous window but returned no snapshot id to read it by"
 )
 
-MSG_BRIGHTDATA_SNAPSHOT_FAILED: Final = "Bright Data's snapshot {job_id} for {source!r} failed"
+MSG_BRIGHTDATA_SNAPSHOT_FAILED: Final = "Bright Data's snapshot {job_id} for {source!r} failed: {reason}"
+MSG_BRIGHTDATA_NO_REASON: Final = "Bright Data gave no reason"
 
 MSG_BRIGHTDATA_SNAPSHOT_CANCELED: Final = (
     "Bright Data's snapshot {job_id} for {source!r} was canceled; it has no records"
