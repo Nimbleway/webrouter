@@ -12,7 +12,7 @@ from typing import Any
 from web_router.constants_live_data_vendors import (
     BRIGHTDATA_PENDING_STATUS,
     MSG_BRIGHTDATA_ALL_FAILED,
-    MSG_BRIGHTDATA_PENDING,
+    MSG_BRIGHTDATA_NOT_READY,
 )
 from web_router.exceptions import ProviderError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
@@ -23,10 +23,13 @@ _LISTED_MAPPED = frozenset({"id", "name", "description", "domain", "category"})
 
 
 def to_response(provider: str, request: LiveDataRequest, status_code: int, payload: Any) -> LiveDataResponse:
-    """A scrape's rows as records; a failed input's row goes to ``extra["errors"]``, never counted as a record."""
+    """A scrape's or a snapshot's rows as records; a failed input's row goes to ``extra["errors"]``, never a record.
+
+    A 202 here means there are no rows yet; the provider waits on a scrape's
+    202 before it gets this far, so only a snapshot read too early meets it.
+    """
     if status_code == BRIGHTDATA_PENDING_STATUS:
-        snapshot_id = (payload or {}).get("snapshot_id")
-        raise ProviderError(provider, MSG_BRIGHTDATA_PENDING.format(source=request.source, snapshot_id=snapshot_id))
+        raise ProviderError(provider, MSG_BRIGHTDATA_NOT_READY.format(source=request.source))
     rows = [row for row in payload if isinstance(row, dict)] if isinstance(payload, list) else []
     errors = [row for row in rows if row.get("error") or row.get("error_code")]
     records = [row for row in rows if row not in errors]
