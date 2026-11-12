@@ -1,0 +1,164 @@
+{
+  "vendor": "pypi",
+  "name": "PyPI",
+  "category": "developer",
+  "summary": "Python Package Index metadata: a project's latest info, every release and file with hashes, known vulnerabilities, the simple index, and PyPI-wide size stats.",
+  "docs_url": "https://docs.pypi.org/api/",
+  "base_url": "https://pypi.org",
+  "notes": [
+    "Keyless. JSON and Index responses are CDN-cached and not rate limited at the edge, but PyPI asks for a unique User-Agent with contact details, serial requests over time rather than thousands in minutes, and may block abusive clients.",
+    "Responses carry an ETag; respect it on repeated requests. For watching new releases PyPI recommends its RSS feeds.",
+    "In the JSON API, downloads is always -1, has_sig always false and bugtrack_url always null; the project-level releases key is deprecated in favour of the Index API."
+  ],
+  "sources": [
+    "https://docs.pypi.org/api/",
+    "https://docs.pypi.org/api/json/",
+    "https://docs.pypi.org/api/index-api/",
+    "https://docs.pypi.org/api/stats/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "pypi.project.get",
+      "name": "Get a project",
+      "summary": "Latest-version metadata (summary, license, requires_dist, project URLs), every release's files with hashes, and vulnerabilities of the latest release.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pypi/{project}/json",
+      "params": {
+        "project": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project name.",
+          "example": "sampleproject"
+        }
+      },
+      "job": "packages.get",
+      "docs_url": "https://docs.pypi.org/api/json/",
+      "verified": {
+        "docs": "https://docs.pypi.org/api/json/"
+      }
+    },
+    {
+      "id": "pypi.release.get",
+      "name": "Get one release of a project",
+      "summary": "Metadata, files and known vulnerabilities of one version.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pypi/{project}/{version}/json",
+      "params": {
+        "project": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project name.",
+          "example": "sampleproject"
+        },
+        "version": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Release version string.",
+          "example": "4.0.0"
+        }
+      },
+      "job": "packages.versions",
+      "docs_url": "https://docs.pypi.org/api/json/",
+      "verified": {
+        "docs": "https://docs.pypi.org/api/json/"
+      }
+    },
+    {
+      "id": "pypi.simple.project",
+      "name": "List a project's distribution files",
+      "summary": "Every wheel and sdist URL of a project with hashes, from the PEP 503/691 index.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/simple/{project}/",
+      "params": {
+        "project": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project name; matched case-insensitively with _, - and . treated as equal.",
+          "example": "beautifulsoup4"
+        },
+        "accept": {
+          "in": "header",
+          "type": "string",
+          "description": "application/vnd.pypi.simple.v1+json for JSON; without it the HTML index comes back.",
+          "example": "application/vnd.pypi.simple.v1+json",
+          "enum": [
+            "application/vnd.pypi.simple.v1+json",
+            "application/vnd.pypi.simple.v1+html"
+          ],
+          "wire_name": "Accept"
+        }
+      },
+      "notes": [
+        "The X-PyPI-Last-Serial header gives the project's latest serial."
+      ],
+      "job": "packages.versions",
+      "docs_url": "https://docs.pypi.org/api/index-api/",
+      "verified": {
+        "docs": "https://docs.pypi.org/api/index-api/"
+      }
+    },
+    {
+      "id": "pypi.simple.list",
+      "name": "List every project",
+      "summary": "The names (and last serials) of all projects on PyPI.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/simple/",
+      "params": {
+        "accept": {
+          "in": "header",
+          "type": "string",
+          "description": "application/vnd.pypi.simple.v1+json for JSON; without it the HTML index comes back.",
+          "example": "application/vnd.pypi.simple.v1+json",
+          "enum": [
+            "application/vnd.pypi.simple.v1+json",
+            "application/vnd.pypi.simple.v1+html"
+          ],
+          "wire_name": "Accept"
+        }
+      },
+      "notes": [
+        "A very large response: hundreds of thousands of projects in one document."
+      ],
+      "job": "packages.list",
+      "docs_url": "https://docs.pypi.org/api/index-api/",
+      "verified": {
+        "docs": "https://docs.pypi.org/api/index-api/"
+      }
+    },
+    {
+      "id": "pypi.stats",
+      "name": "Get PyPI storage stats",
+      "summary": "Total size of all packages in bytes and the top 100 packages by size.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stats/",
+      "params": {
+        "accept": {
+          "in": "header",
+          "type": "string",
+          "required": true,
+          "description": "Must be application/json, or an HTML page comes back.",
+          "example": "application/json",
+          "enum": [
+            "application/json"
+          ],
+          "wire_name": "Accept"
+        }
+      },
+      "job": "packages.stats",
+      "docs_url": "https://docs.pypi.org/api/stats/",
+      "verified": {
+        "docs": "https://docs.pypi.org/api/stats/"
+      }
+    }
+  ]
+}

@@ -61,6 +61,11 @@ def test_a_filled_contract_is_complete(key: str) -> None:
     assert all(field in contract for field in HAND_FIELDS), f"{key}: fill in all of {', '.join(HAND_FIELDS)}"
     sources = contract["source"] if isinstance(contract["source"], list) else [contract["source"]]
     assert sources and all(map(_filled, sources)), f"{key}: name the vendor's documentation in `source`"
+    notes_as_urls = [s for s in sources if s.startswith(("http://", "https://")) and len(s.split()) > 1]
+    assert not notes_as_urls, (
+        f"{key}: a `source` that starts with a URL must be only the URL, or the docs watch fetches the note "
+        f"too; write a note as prose that names the URL inside it: {notes_as_urls}"
+    )
     assert isinstance(contract["vendor_options"], dict), (
         f"{key}: list the vendor's unmapped options in `vendor_options`"
     )

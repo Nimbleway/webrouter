@@ -1,0 +1,387 @@
+{
+  "vendor": "microsoft-graph",
+  "name": "Microsoft Graph (Microsoft 365)",
+  "category": "productivity",
+  "summary": "Microsoft 365 / Entra ID tenant data through Microsoft Graph: users, groups and members, licence subscriptions and assignments, Microsoft 365 activity reports and sign-in logs.",
+  "docs_url": "https://learn.microsoft.com/en-us/graph/overview",
+  "base_url": "https://graph.microsoft.com/v1.0",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "MS_GRAPH_CLIENT_ID"
+        ],
+        "description": "Application (client) id of an Entra ID app registration."
+      },
+      "client_secret": {
+        "env": [
+          "MS_GRAPH_CLIENT_SECRET"
+        ],
+        "description": "A client secret of that app registration (web/confidential client)."
+      },
+      "refresh_token": {
+        "env": [
+          "MS_GRAPH_REFRESH_TOKEN"
+        ],
+        "description": "A refresh token from the authorization code flow, requested with offline_access and the Graph permissions the calls need (User.Read.All, GroupMember.Read.All, LicenseAssignment.Read.All, Reports.Read.All, AuditLog.Read.All)."
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}",
+      "scope": "https://graph.microsoft.com/.default"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Calls act as the signed-in user behind the refresh token (delegated permissions): besides the app's consented Graph permissions, that user needs an Entra role that can read the data (e.g. Global Reader or Reports Reader for reports and sign-ins).",
+    "Lists page with @odata.nextLink: call that full URL for the next page; $skip is not supported on directory objects.",
+    "Advanced queries ($search, $count, most $filter/$orderby on users, groups and members) need the ConsistencyLevel: eventual header and $count=true.",
+    "Usage reports answer 302 to a short-lived pre-signed CSV download, not JSON.",
+    "Throttled requests get 429 with a Retry-After header."
+  ],
+  "sources": [
+    "https://learn.microsoft.com/en-us/graph/overview",
+    "https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow",
+    "https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/group-list?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/subscribedsku-list?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/user-list-licensedetails?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/reportroot-getoffice365activeuserdetail?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/signin-list?view=graph-rest-1.0"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "microsoft-graph.users.list",
+      "name": "List users",
+      "summary": "Users in the tenant with name, mail, job title and any $select-ed properties.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return; defaults to a small set.",
+          "wire_name": "$select"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter, e.g. startswith(displayName,'a') or accountEnabled eq true.",
+          "wire_name": "$filter"
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Quoted property:text search, e.g. \"displayName:anna\". Needs ConsistencyLevel: eventual and $count=true.",
+          "wire_name": "$search"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "OData order, e.g. displayName.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 100, max 999.",
+          "wire_name": "$top"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include @odata.count; needed with $search and advanced filters.",
+          "wire_name": "$count"
+        },
+        "consistency_level": {
+          "in": "header",
+          "type": "string",
+          "description": "eventual; required with $search, $count and advanced $filter/$orderby queries.",
+          "enum": [
+            "eventual"
+          ],
+          "wire_name": "ConsistencyLevel"
+        }
+      },
+      "job": "directory.users.list",
+      "docs_url": "https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0"
+      }
+    },
+    {
+      "id": "microsoft-graph.users.get",
+      "name": "Get a user",
+      "summary": "One user's profile by object id or userPrincipalName.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{user}",
+      "params": {
+        "user": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Object id or userPrincipalName.",
+          "example": "adelev@contoso.com"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return; defaults to a small set.",
+          "wire_name": "$select"
+        }
+      },
+      "job": "directory.users.get",
+      "docs_url": "https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0"
+      }
+    },
+    {
+      "id": "microsoft-graph.users.licenses",
+      "name": "List a user's licences",
+      "summary": "Licence SKUs and service plans assigned to a user, directly or through groups.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{user}/licenseDetails",
+      "params": {
+        "user": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Object id or userPrincipalName."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return; defaults to a small set.",
+          "wire_name": "$select"
+        }
+      },
+      "job": "directory.licenses.list",
+      "docs_url": "https://learn.microsoft.com/en-us/graph/api/user-list-licensedetails?view=graph-rest-1.0",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/graph/api/user-list-licensedetails?view=graph-rest-1.0"
+      }
+    },
+    {
+      "id": "microsoft-graph.groups.list",
+      "name": "List groups",
+      "summary": "Groups in the tenant (Microsoft 365, security, distribution).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/groups",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return; defaults to a small set.",
+          "wire_name": "$select"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter, e.g. startswith(displayName,'a') or accountEnabled eq true.",
+          "wire_name": "$filter"
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Quoted property:text search, e.g. \"displayName:anna\". Needs ConsistencyLevel: eventual and $count=true.",
+          "wire_name": "$search"
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "OData order, e.g. displayName.",
+          "wire_name": "$orderby"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size.",
+          "wire_name": "$top"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include @odata.count; needed with $search and advanced filters.",
+          "wire_name": "$count"
+        },
+        "consistency_level": {
+          "in": "header",
+          "type": "string",
+          "description": "eventual; required with $search, $count and advanced $filter/$orderby queries.",
+          "enum": [
+            "eventual"
+          ],
+          "wire_name": "ConsistencyLevel"
+        }
+      },
+      "job": "directory.groups.list",
+      "docs_url": "https://learn.microsoft.com/en-us/graph/api/group-list?view=graph-rest-1.0",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/graph/api/group-list?view=graph-rest-1.0"
+      }
+    },
+    {
+      "id": "microsoft-graph.groups.members",
+      "name": "List group members",
+      "summary": "Direct members of a group (users, devices, contacts, groups).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/groups/{group_id}/members",
+      "params": {
+        "group_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Group object id."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return; defaults to a small set.",
+          "wire_name": "$select"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter, e.g. startswith(displayName,'a') or accountEnabled eq true.",
+          "wire_name": "$filter"
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Quoted property:text search, e.g. \"displayName:anna\". Needs ConsistencyLevel: eventual and $count=true.",
+          "wire_name": "$search"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 100, max 999.",
+          "wire_name": "$top"
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to include @odata.count; needed with $search and advanced filters.",
+          "wire_name": "$count"
+        },
+        "consistency_level": {
+          "in": "header",
+          "type": "string",
+          "description": "eventual; required with $search, $count and advanced $filter/$orderby queries.",
+          "enum": [
+            "eventual"
+          ],
+          "wire_name": "ConsistencyLevel"
+        }
+      },
+      "notes": [
+        "Not transitive: nested groups' members are not expanded."
+      ],
+      "job": "directory.groups.members",
+      "docs_url": "https://learn.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0"
+      }
+    },
+    {
+      "id": "microsoft-graph.subscribed_skus.list",
+      "name": "List licence subscriptions",
+      "summary": "The tenant's commercial subscriptions with enabled, consumed and suspended units per SKU.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/subscribedSkus",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return; defaults to a small set.",
+          "wire_name": "$select"
+        }
+      },
+      "job": "directory.licenses.list",
+      "docs_url": "https://learn.microsoft.com/en-us/graph/api/subscribedsku-list?view=graph-rest-1.0",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/graph/api/subscribedsku-list?view=graph-rest-1.0"
+      }
+    },
+    {
+      "id": "microsoft-graph.reports.active_users",
+      "name": "Get Microsoft 365 active user detail",
+      "summary": "Per-user licence flags and last activity dates for Exchange, OneDrive, SharePoint, Teams and Yammer, as CSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/reports/getOffice365ActiveUserDetail(period='{period}')",
+      "params": {
+        "period": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Days aggregated.",
+          "enum": [
+            "D7",
+            "D30",
+            "D90",
+            "D180"
+          ],
+          "example": "D7"
+        }
+      },
+      "notes": [
+        "Answers 302 to a pre-signed CSV URL valid for a few minutes. Needs Reports.Read.All."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://learn.microsoft.com/en-us/graph/api/reportroot-getoffice365activeuserdetail?view=graph-rest-1.0",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/graph/api/reportroot-getoffice365activeuserdetail?view=graph-rest-1.0"
+      }
+    },
+    {
+      "id": "microsoft-graph.signins.list",
+      "name": "List sign-ins",
+      "summary": "Entra ID sign-in events, newest first, with user, app, IP, location, device and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/auditLogs/signIns",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter; give a time range to avoid timeouts, e.g. createdDateTime ge 2024-07-01T00:00:00Z.",
+          "wire_name": "$filter"
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default and max 1000.",
+          "wire_name": "$top"
+        }
+      },
+      "notes": [
+        "Only events within Entra ID's retention period are available. Needs AuditLog.Read.All."
+      ],
+      "job": "logs.search",
+      "docs_url": "https://learn.microsoft.com/en-us/graph/api/signin-list?view=graph-rest-1.0",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/graph/api/signin-list?view=graph-rest-1.0"
+      }
+    }
+  ]
+}

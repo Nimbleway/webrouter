@@ -1,0 +1,520 @@
+{
+  "vendor": "posthog",
+  "name": "PostHog",
+  "category": "analytics",
+  "summary": "Product analytics from a PostHog project: SQL (HogQL) queries over events and persons, saved insights and dashboards, persons, events and feature flags.",
+  "docs_url": "https://posthog.com/docs/api",
+  "pricing_url": "https://posthog.com/pricing",
+  "base_url": "https://{region}.posthog.com",
+  "settings": {
+    "region": {
+      "env": [
+        "POSTHOG_REGION"
+      ],
+      "default": "us",
+      "choices": [
+        "us",
+        "eu"
+      ],
+      "description": "PostHog Cloud region: us (us.posthog.com) or eu (eu.posthog.com). A key only works in its own region."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "POSTHOG_PERSONAL_API_KEY",
+          "POSTHOG_API_KEY"
+        ],
+        "description": "a PostHog personal API key (Settings > Personal API keys) with the read scopes needed; not the project token"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every project endpoint needs the numeric project_id in the path; it is in the project's settings and app URL.",
+    "The query endpoint is the general way to read data: SQL over events, persons, sessions. Without your own LIMIT it returns 100 rows; with one, up to 50,000. It is not an export path.",
+    "Rate limits per key: query 240/min and 2,400/hour with 3 concurrent queries and a 10 s execution cap per project; analytics endpoints (insights, persons) 240/min and 1,200/hour. Personal keys also draw from an hourly read budget (429 api_queries_budget_exceeded).",
+    "List endpoints page with limit/offset and return next/previous URLs."
+  ],
+  "sources": [
+    "https://posthog.com/docs/api",
+    "https://posthog.com/docs/api/queries",
+    "https://us.posthog.com/api/schema/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "posthog.users.me",
+      "name": "Get the authenticated user",
+      "summary": "The profile and settings of the user who owns the API key (pass @me).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/users/{uuid}/",
+      "params": {
+        "uuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "@me for the key's own user.",
+          "example": "@me"
+        }
+      },
+      "notes": [
+        "Needs user:read."
+      ],
+      "job": "account.validate",
+      "docs_url": "https://us.posthog.com/api/schema/",
+      "verified": {
+        "docs": "https://us.posthog.com/api/schema/"
+      }
+    },
+    {
+      "id": "posthog.query.run",
+      "name": "Run a SQL (HogQL) query",
+      "summary": "Run a HogQL query over events, persons and other tables in a project and get rows back.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/projects/{project_id}/query/",
+      "params": {
+        "project_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id, from the project's settings page or URL.",
+          "example": "12345"
+        },
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{\"kind\": \"HogQLQuery\", \"query\": \"<SQL>\"}.",
+          "example": {
+            "kind": "HogQLQuery",
+            "query": "SELECT event, count() FROM events WHERE timestamp > now() - INTERVAL 7 DAY GROUP BY event ORDER BY count() DESC LIMIT 20"
+          }
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "A label for the query in the query_log table."
+        },
+        "refresh": {
+          "in": "body",
+          "type": "string",
+          "description": "Execution mode; default blocking. async returns a query id to poll with posthog.query.get.",
+          "enum": [
+            "blocking",
+            "async",
+            "force_blocking",
+            "force_async",
+            "force_cache",
+            "lazy_async",
+            "async_except_on_cache_miss"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Needs query:read.",
+        "Long queries: use refresh async and poll GET /api/projects/{project_id}/query/{id}/."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://posthog.com/docs/api/queries",
+      "verified": {
+        "docs": "https://posthog.com/docs/api/queries"
+      }
+    },
+    {
+      "id": "posthog.query.get",
+      "name": "Get an async query's status and results",
+      "summary": "Poll a query started with an async refresh mode.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/projects/{project_id}/query/{id}/",
+      "params": {
+        "project_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id, from the project's settings page or URL.",
+          "example": "12345"
+        },
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The query id from posthog.query.run."
+        }
+      },
+      "notes": [
+        "Needs query:read."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://posthog.com/docs/api/queries",
+      "verified": {
+        "docs": "https://posthog.com/docs/api/queries"
+      }
+    },
+    {
+      "id": "posthog.insights.list",
+      "name": "List saved insights",
+      "summary": "Saved insights (trends, funnels, retention, SQL...) with their queries and, unless basic, their results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/projects/{project_id}/insights/",
+      "params": {
+        "project_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id, from the project's settings page or URL.",
+          "example": "12345"
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Matches name, description and tags."
+        },
+        "insight": {
+          "in": "query",
+          "type": "string",
+          "description": "Only one insight type.",
+          "enum": [
+            "BI",
+            "FUNNELS",
+            "JOURNEYS",
+            "JSON",
+            "LIFECYCLE",
+            "PATHS",
+            "RETENTION",
+            "SQL",
+            "STICKINESS",
+            "TRENDS"
+          ]
+        },
+        "saved": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only saved insights (or ones on a visible dashboard)."
+        },
+        "basic": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Metadata only, no results; faster."
+        },
+        "short_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The 8-character id in an insight's URL."
+        },
+        "refresh": {
+          "in": "query",
+          "type": "string",
+          "description": "How to compute results; force_cache returns cached data only.",
+          "enum": [
+            "blocking",
+            "async",
+            "force_blocking",
+            "force_async",
+            "force_cache",
+            "lazy_async",
+            "async_except_on_cache_miss"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first result; or follow 'next'."
+        }
+      },
+      "notes": [
+        "Needs insight:read."
+      ],
+      "job": "dashboards.list",
+      "docs_url": "https://us.posthog.com/api/schema/",
+      "verified": {
+        "docs": "https://us.posthog.com/api/schema/"
+      }
+    },
+    {
+      "id": "posthog.insights.get",
+      "name": "Get an insight with its results",
+      "summary": "One saved insight by numeric id or short_id, with computed results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/projects/{project_id}/insights/{id}/",
+      "params": {
+        "project_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id, from the project's settings page or URL.",
+          "example": "12345"
+        },
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Numeric id or 8-character short_id.",
+          "example": "AaVQ8Ijw"
+        },
+        "refresh": {
+          "in": "query",
+          "type": "string",
+          "description": "How aggressively to recompute.",
+          "enum": [
+            "blocking",
+            "async",
+            "force_blocking",
+            "force_async",
+            "force_cache",
+            "lazy_async",
+            "async_except_on_cache_miss"
+          ]
+        }
+      },
+      "notes": [
+        "Needs insight:read."
+      ],
+      "job": "dashboards.get",
+      "docs_url": "https://us.posthog.com/api/schema/",
+      "verified": {
+        "docs": "https://us.posthog.com/api/schema/"
+      }
+    },
+    {
+      "id": "posthog.dashboards.list",
+      "name": "List dashboards",
+      "summary": "Dashboards in a project with name, description, tags and pinned state.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/projects/{project_id}/dashboards/",
+      "params": {
+        "project_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id, from the project's settings page or URL.",
+          "example": "12345"
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Matches name, description and tags."
+        },
+        "pinned": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first result; or follow 'next'."
+        }
+      },
+      "notes": [
+        "Needs dashboard:read."
+      ],
+      "job": "dashboards.list",
+      "docs_url": "https://us.posthog.com/api/schema/",
+      "verified": {
+        "docs": "https://us.posthog.com/api/schema/"
+      }
+    },
+    {
+      "id": "posthog.persons.list",
+      "name": "List persons",
+      "summary": "Persons (identified users) filtered by email, distinct id, search term or properties.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/projects/{project_id}/persons/",
+      "params": {
+        "project_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id, from the project's settings page or URL.",
+          "example": "12345"
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact email."
+        },
+        "distinct_id": {
+          "in": "query",
+          "type": "string"
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Partial match on email, name, person id or distinct id."
+        },
+        "properties": {
+          "in": "query",
+          "type": "string",
+          "description": "Person property filters (JSON)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first result; or follow 'next'."
+        }
+      },
+      "notes": [
+        "Needs person:read."
+      ],
+      "docs_url": "https://us.posthog.com/api/schema/",
+      "verified": {
+        "docs": "https://us.posthog.com/api/schema/"
+      }
+    },
+    {
+      "id": "posthog.events.list",
+      "name": "List events",
+      "summary": "Raw events in a time window, by event name, person or distinct id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/projects/{project_id}/events/",
+      "params": {
+        "project_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id, from the project's settings page or URL.",
+          "example": "12345"
+        },
+        "event": {
+          "in": "query",
+          "type": "string",
+          "description": "Event name.",
+          "example": "$pageview"
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events after this time; default 24 hours ago."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events before this time; default now."
+        },
+        "distinct_id": {
+          "in": "query",
+          "type": "string"
+        },
+        "person_id": {
+          "in": "query",
+          "type": "string"
+        },
+        "properties": {
+          "in": "query",
+          "type": "string",
+          "description": "Event/person property filters (JSON)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer"
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Fails above 100,000; page by time instead."
+        }
+      },
+      "notes": [
+        "Needs query:read. For aggregates use posthog.query.run."
+      ],
+      "job": "events.list",
+      "docs_url": "https://us.posthog.com/api/schema/",
+      "verified": {
+        "docs": "https://us.posthog.com/api/schema/"
+      }
+    },
+    {
+      "id": "posthog.flags.list",
+      "name": "List feature flags",
+      "summary": "Feature flags with key, rollout and filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/projects/{project_id}/feature_flags/",
+      "params": {
+        "project_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id, from the project's settings page or URL.",
+          "example": "12345"
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Key or name."
+        },
+        "key": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact key."
+        },
+        "active": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "true",
+            "false",
+            "STALE"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "boolean",
+            "experiment",
+            "multivariant",
+            "remote_config"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first result; or follow 'next'."
+        }
+      },
+      "notes": [
+        "Needs feature_flag:read."
+      ],
+      "docs_url": "https://us.posthog.com/api/schema/",
+      "verified": {
+        "docs": "https://us.posthog.com/api/schema/"
+      }
+    }
+  ]
+}

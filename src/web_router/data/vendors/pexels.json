@@ -1,0 +1,429 @@
+{
+  "vendor": "pexels",
+  "name": "Pexels",
+  "category": "media",
+  "summary": "Free stock photos and videos: search, curated and popular feeds, single items with download URLs per size, and collections.",
+  "docs_url": "https://www.pexels.com/api/documentation/",
+  "base_url": "https://api.pexels.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "PEXELS_API_KEY"
+        ],
+        "description": "A free Pexels API key (pexels.com/api). Sent as the raw Authorization header value, with no Bearer prefix."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Default limits: 200 requests an hour and 20,000 a month; X-Ratelimit-Limit, X-Ratelimit-Remaining and X-Ratelimit-Reset come back on 2xx answers only.",
+    "Terms: show a prominent link to Pexels wherever results are displayed, and credit the photographer when possible.",
+    "Each photo carries src URLs per size (original, large2x, large, medium, small, portrait, landscape, tiny); each video carries video_files with quality, width, height and link. Lists carry next_page/prev_page URLs only when that page exists."
+  ],
+  "sources": [
+    "https://www.pexels.com/api/documentation/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "pexels.photos.search",
+      "name": "Search photos",
+      "summary": "Stock photos matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Search terms.",
+          "required": true,
+          "example": "ocean"
+        },
+        "orientation": {
+          "in": "query",
+          "type": "string",
+          "description": "Orientation.",
+          "enum": [
+            "landscape",
+            "portrait",
+            "square"
+          ]
+        },
+        "size": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum size: large 24MP, medium 12MP, small 4MP.",
+          "enum": [
+            "large",
+            "medium",
+            "small"
+          ]
+        },
+        "color": {
+          "in": "query",
+          "type": "string",
+          "description": "red, orange, yellow, green, turquoise, blue, violet, pink, brown, black, gray, white, or a hex code such as #ffffff."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Locale of the query.",
+          "enum": [
+            "en-US",
+            "pt-BR",
+            "es-ES",
+            "ca-ES",
+            "de-DE",
+            "it-IT",
+            "fr-FR",
+            "sv-SE",
+            "id-ID",
+            "pl-PL",
+            "ja-JP",
+            "zh-TW",
+            "zh-CN",
+            "ko-KR",
+            "th-TH",
+            "nl-NL",
+            "hu-HU",
+            "vi-VN",
+            "cs-CZ",
+            "da-DK",
+            "fi-FI",
+            "uk-UA",
+            "el-GR",
+            "ro-RO",
+            "nb-NO",
+            "sk-SK",
+            "tr-TR",
+            "ru-RU"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 15, max 80."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://www.pexels.com/api/documentation/#photos-search",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#photos-search"
+      }
+    },
+    {
+      "id": "pexels.photos.curated",
+      "name": "List curated photos",
+      "summary": "Photos hand-picked by the Pexels team, with at least one new photo added each hour.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/curated",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 15, max 80."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://www.pexels.com/api/documentation/#photos-curated",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#photos-curated"
+      }
+    },
+    {
+      "id": "pexels.photos.get",
+      "name": "Get a photo",
+      "summary": "One photo with its size-specific URLs and photographer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/photos/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Photo id."
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://www.pexels.com/api/documentation/#photos-show",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#photos-show"
+      }
+    },
+    {
+      "id": "pexels.videos.search",
+      "name": "Search videos",
+      "summary": "Stock videos matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/videos/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Search terms.",
+          "required": true,
+          "example": "nature"
+        },
+        "orientation": {
+          "in": "query",
+          "type": "string",
+          "description": "Orientation.",
+          "enum": [
+            "landscape",
+            "portrait",
+            "square"
+          ]
+        },
+        "size": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum size: large 4K, medium Full HD, small HD.",
+          "enum": [
+            "large",
+            "medium",
+            "small"
+          ]
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Locale of the query.",
+          "enum": [
+            "en-US",
+            "pt-BR",
+            "es-ES",
+            "ca-ES",
+            "de-DE",
+            "it-IT",
+            "fr-FR",
+            "sv-SE",
+            "id-ID",
+            "pl-PL",
+            "ja-JP",
+            "zh-TW",
+            "zh-CN",
+            "ko-KR",
+            "th-TH",
+            "nl-NL",
+            "hu-HU",
+            "vi-VN",
+            "cs-CZ",
+            "da-DK",
+            "fi-FI",
+            "uk-UA",
+            "el-GR",
+            "ro-RO",
+            "nb-NO",
+            "sk-SK",
+            "tr-TR",
+            "ru-RU"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 15, max 80."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://www.pexels.com/api/documentation/#videos-search",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#videos-search"
+      }
+    },
+    {
+      "id": "pexels.videos.popular",
+      "name": "List popular videos",
+      "summary": "Currently popular videos, optionally filtered by size and duration.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/videos/popular",
+      "params": {
+        "min_width": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum width in pixels."
+        },
+        "min_height": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum height in pixels."
+        },
+        "min_duration": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum duration in seconds."
+        },
+        "max_duration": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum duration in seconds."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 15, max 80."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://www.pexels.com/api/documentation/#videos-popular",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#videos-popular"
+      }
+    },
+    {
+      "id": "pexels.videos.get",
+      "name": "Get a video",
+      "summary": "One video with its files and preview pictures.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/videos/videos/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Video id."
+        }
+      },
+      "notes": [
+        "The documented path really repeats videos: /v1/videos/videos/{id}."
+      ],
+      "job": "media.stock.get",
+      "docs_url": "https://www.pexels.com/api/documentation/#videos-show",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#videos-show"
+      }
+    },
+    {
+      "id": "pexels.collections.featured",
+      "name": "List featured collections",
+      "summary": "Collections curated by Pexels.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/featured",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 15, max 80."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://www.pexels.com/api/documentation/#collections-featured",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#collections-featured"
+      }
+    },
+    {
+      "id": "pexels.collections.mine",
+      "name": "List the user's collections",
+      "summary": "Collections owned by the key's account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 15, max 80."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://www.pexels.com/api/documentation/#collections-all",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#collections-all"
+      }
+    },
+    {
+      "id": "pexels.collections.media",
+      "name": "List a collection's media",
+      "summary": "Photos and videos in one collection.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Collection id."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only photos or only videos; all media when omitted.",
+          "enum": [
+            "photos",
+            "videos"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order, default asc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 15, max 80."
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://www.pexels.com/api/documentation/#collections-media",
+      "verified": {
+        "docs": "https://www.pexels.com/api/documentation/#collections-media"
+      }
+    }
+  ]
+}

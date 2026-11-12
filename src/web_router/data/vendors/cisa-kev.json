@@ -1,0 +1,65 @@
+{
+  "vendor": "cisa-kev",
+  "name": "CISA Known Exploited Vulnerabilities (KEV) catalog",
+  "category": "security",
+  "summary": "CISA's catalog of CVEs known to be exploited in the wild, with vendor, product, date added, required action, due date and ransomware use, as free JSON and CSV feeds.",
+  "docs_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+  "base_url": "https://www.cisa.gov",
+  "notes": [
+    "Keyless static files, not a query API: each call returns the whole catalog. Filter it locally (e.g. by cveID, vendorProject or dateAdded).",
+    "The JSON has catalogVersion, dateReleased, count and vulnerabilities[]; each entry has cveID, vendorProject, product, vulnerabilityName, dateAdded, shortDescription, requiredAction, dueDate, knownRansomwareCampaignUse, notes and cwes.",
+    "Dates are YYYY-MM-DD. knownRansomwareCampaignUse is 'Known' or 'Unknown'."
+  ],
+  "sources": [
+    "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+    "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities_schema.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "cisa-kev.catalog.json",
+      "name": "Get the KEV catalog as JSON",
+      "summary": "Every known exploited vulnerability in one JSON document.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+      "params": {},
+      "job": "security.vulns.list",
+      "docs_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "verified": {
+        "docs": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+      }
+    },
+    {
+      "id": "cisa-kev.catalog.csv",
+      "name": "Get the KEV catalog as CSV",
+      "summary": "Every known exploited vulnerability as one CSV file.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sites/default/files/csv/known_exploited_vulnerabilities.csv",
+      "params": {},
+      "notes": [
+        "Answer is CSV text, not JSON."
+      ],
+      "job": "security.vulns.list",
+      "docs_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "verified": {
+        "docs": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+      }
+    },
+    {
+      "id": "cisa-kev.catalog.schema",
+      "name": "Get the KEV JSON schema",
+      "summary": "The JSON Schema describing the catalog's fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sites/default/files/feeds/known_exploited_vulnerabilities_schema.json",
+      "params": {},
+      "job": "datasets.schema",
+      "docs_url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "verified": {
+        "docs": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+      }
+    }
+  ]
+}

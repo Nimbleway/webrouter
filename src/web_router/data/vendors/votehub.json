@@ -1,0 +1,143 @@
+{
+  "vendor": "votehub",
+  "name": "VoteHub Polling API",
+  "category": "government",
+  "summary": "US political polling data aggregated from many pollsters: approval, favorability, generic-ballot and race polls with their source links.",
+  "docs_url": "https://votehub.com/polls/api/",
+  "base_url": "https://api.votehub.com",
+  "notes": [
+    "Keyless and free; a beta API whose endpoints and coverage are still growing.",
+    "Data is licensed CC BY 4.0: credit VoteHub when you use it, and each poll carries the URL of its original source.",
+    "In the docs sample_size appears as a string in some responses; parse it before comparing."
+  ],
+  "sources": [
+    "https://votehub.com/polls/api/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "votehub.polls.list",
+      "name": "List polls",
+      "summary": "US political polls (approval, favorability, generic ballot, races) with pollster, dates, sample size, population, source URL and answers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/polls",
+      "params": {
+        "poll_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact poll type, e.g. approval, generic-ballot, favorability (see poll_types.list).",
+          "example": "approval"
+        },
+        "pollster": {
+          "in": "query",
+          "type": "string",
+          "description": "Pollster name, partial match."
+        },
+        "subject": {
+          "in": "query",
+          "type": "string",
+          "description": "Poll subject, e.g. a politician's name; dashes and spaces are interchangeable (see subjects.list).",
+          "example": "donald-trump"
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Polls ending on or after this date, YYYY-MM-DD."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Polls ending on or before this date, YYYY-MM-DD."
+        },
+        "min_sample_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum sample size."
+        },
+        "population": {
+          "in": "query",
+          "type": "string",
+          "description": "rv registered voters, lv likely voters, a all adults/voters.",
+          "example": "rv"
+        }
+      },
+      "notes": [
+        "With no filters it returns every poll in the database; filter by poll_type and subject or dates."
+      ],
+      "job": "polls.search",
+      "docs_url": "https://votehub.com/polls/api/",
+      "verified": {
+        "docs": "https://votehub.com/polls/api/"
+      }
+    },
+    {
+      "id": "votehub.polls.get",
+      "name": "Get a poll",
+      "summary": "One poll by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/polls/{poll_id}",
+      "params": {
+        "poll_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Poll id from polls.list.",
+          "example": "appdonips4x59vt9j"
+        }
+      },
+      "notes": [],
+      "job": "polls.get",
+      "docs_url": "https://votehub.com/polls/api/",
+      "verified": {
+        "docs": "https://votehub.com/polls/api/"
+      }
+    },
+    {
+      "id": "votehub.pollsters.list",
+      "name": "List pollsters",
+      "summary": "Every distinct pollster name in the database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pollsters",
+      "params": {},
+      "notes": [],
+      "job": "polls.reference",
+      "docs_url": "https://votehub.com/polls/api/",
+      "verified": {
+        "docs": "https://votehub.com/polls/api/"
+      }
+    },
+    {
+      "id": "votehub.subjects.list",
+      "name": "List poll subjects",
+      "summary": "Subjects with the poll types available for each, i.e. which subject and poll_type filters combine.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/subjects",
+      "params": {},
+      "notes": [],
+      "job": "polls.reference",
+      "docs_url": "https://votehub.com/polls/api/",
+      "verified": {
+        "docs": "https://votehub.com/polls/api/"
+      }
+    },
+    {
+      "id": "votehub.poll_types.list",
+      "name": "List poll types",
+      "summary": "Every distinct poll type, such as approval, favorability and generic-ballot.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/poll-types",
+      "params": {},
+      "notes": [],
+      "job": "polls.reference",
+      "docs_url": "https://votehub.com/polls/api/",
+      "verified": {
+        "docs": "https://votehub.com/polls/api/"
+      }
+    }
+  ]
+}

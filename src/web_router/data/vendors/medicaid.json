@@ -1,0 +1,224 @@
+{
+  "vendor": "medicaid",
+  "name": "Medicaid open data (data.medicaid.gov)",
+  "category": "health",
+  "summary": "CMS Medicaid datasets, including State Drug Utilization Data (SDUD) and NADAC drug acquisition costs: find a dataset, then filter, sort and page its rows.",
+  "docs_url": "https://data.medicaid.gov/api/1",
+  "base_url": "https://data.medicaid.gov",
+  "notes": [
+    "Keyless and read-only here; the write and harvest endpoints of the same API need site credentials and are left out.",
+    "Two-step flow: find a dataset's identifier with datasets.search (e.g. fulltext 'NADAC 2026' or 'State Drug Utilization Data 2024'; SDUD and NADAC are one dataset per year), then query rows with rows.query using that identifier and distribution index 0.",
+    "rows.query pages with limit and offset and reports the total match count in 'count'; set schema=false to drop the column schema from each response.",
+    "Column names are machine names (e.g. ndc, ndc_description, nadac_per_unit, effective_date for NADAC); read one row first to learn them."
+  ],
+  "sources": [
+    "https://data.medicaid.gov/api/1"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "medicaid.datasets.search",
+      "name": "Search the dataset catalog",
+      "summary": "Datasets whose metadata match a full-text search, with identifiers, titles and descriptions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/1/search",
+      "params": {
+        "fulltext": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search over dataset metadata.",
+          "example": "NADAC"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page-size",
+          "description": "Results per page, 1-100; default 10."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort property: title, modified, description, keyword, publisher__name, theme or search_api_relevance."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "sort-order",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "facets": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated facets to return; 0 for none; omit for all."
+        },
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter on the keyword facet."
+        },
+        "theme": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter on the theme facet."
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://data.medicaid.gov/api/1",
+      "verified": {
+        "docs": "https://data.medicaid.gov/api/1"
+      }
+    },
+    {
+      "id": "medicaid.datasets.get",
+      "name": "Get a dataset's metadata",
+      "summary": "One dataset's title, description, update dates and distributions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/1/metastore/schemas/dataset/items/{identifier}",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset identifier.",
+          "example": "fbb83258-11c7-47f5-8b18-5f8e79f7e704"
+        },
+        "show_reference_ids": {
+          "in": "query",
+          "type": "boolean",
+          "wire_name": "show-reference-ids",
+          "description": "Include the distribution identifiers the datastore endpoints use."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://data.medicaid.gov/api/1",
+      "verified": {
+        "docs": "https://data.medicaid.gov/api/1"
+      }
+    },
+    {
+      "id": "medicaid.rows.query",
+      "name": "Query a dataset's rows",
+      "summary": "Rows of one dataset filtered by conditions, sorted and paged, as JSON.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/1/datastore/query/{dataset_id}/{index}",
+      "params": {
+        "dataset_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset identifier.",
+          "example": "fbb83258-11c7-47f5-8b18-5f8e79f7e704"
+        },
+        "index": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Position of the distribution in the dataset's distribution list; 0 for the first.",
+          "example": "0"
+        },
+        "conditions": {
+          "in": "body",
+          "type": "array",
+          "description": "Filters ANDed together, each {property, value, operator}; operator is one of =, <>, <, <=, >, >=, like, between, in, not in, contains, starts with, match (default =).",
+          "example": [
+            {
+              "property": "ndc_description",
+              "value": "%ATORVASTATIN%",
+              "operator": "like"
+            }
+          ]
+        },
+        "properties": {
+          "in": "body",
+          "type": "array",
+          "description": "Columns to return; all when omitted."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort directives, each {property, order} with order asc or desc."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most rows to return; at least 1.",
+          "example": 100
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Rows to skip; default 0."
+        },
+        "count": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the total match count; default true."
+        },
+        "results": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the rows; false with count true gives only the count."
+        },
+        "schema": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the column schema; default true."
+        },
+        "keys": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Rows as keyed objects (default true) or plain arrays."
+        }
+      },
+      "notes": [
+        "A read over POST: the query travels as the JSON body."
+      ],
+      "job": "datasets.query",
+      "docs_url": "https://data.medicaid.gov/api/1",
+      "verified": {
+        "docs": "https://data.medicaid.gov/api/1"
+      }
+    },
+    {
+      "id": "medicaid.rows.sql",
+      "name": "Query rows with SQL-like syntax",
+      "summary": "Rows from a datastore table selected with bracketed SELECT, WHERE and LIMIT/OFFSET clauses.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/1/datastore/sql",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Each clause in brackets, no spaces between selected columns, ending with a semicolon: [SELECT a,b FROM DATASTORE_UUID][WHERE c = \"CCC\"][LIMIT 500 OFFSET 0];"
+        },
+        "show_db_columns": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return machine column names (no spaces) instead of human headers."
+        }
+      },
+      "notes": [
+        "FROM takes the distribution's datastore identifier (from datasets.get with show-reference-ids), not the dataset identifier.",
+        "At most 500 rows per query; page with LIMIT/OFFSET."
+      ],
+      "job": "datasets.query",
+      "docs_url": "https://data.medicaid.gov/api/1",
+      "verified": {
+        "docs": "https://data.medicaid.gov/api/1"
+      }
+    }
+  ]
+}

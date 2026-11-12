@@ -1,0 +1,323 @@
+{
+  "vendor": "un-comtrade",
+  "name": "UN Comtrade",
+  "category": "finance",
+  "summary": "International merchandise and services trade statistics by reporter, partner, commodity and flow from UN Comtrade's keyless public API: preview queries, world shares, data availability and metadata.",
+  "docs_url": "https://comtradeplus.un.org/ApiDocs",
+  "base_url": "https://comtradeapi.un.org/public/v1",
+  "notes": [
+    "The public endpoints here need no key. Preview queries return at most 500 records; /preview takes one period and one commodity code per call.",
+    "Path codes: typeCode C (goods) or S (services); freqCode A (annual) or M (monthly); clCode the classification (HS, H6..H0, S4..S1, BE, BE5, EB, EB10, EB02, EBS).",
+    "Full queries, bulk files and async jobs need a free subscription key (Ocp-Apim-Subscription-Key) on other paths; this entry covers only the public ones."
+  ],
+  "sources": [
+    "https://comtradeplus.un.org/ApiDocs",
+    "https://comtradedeveloper.un.org"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "un-comtrade.trade.preview",
+      "name": "Preview trade flows",
+      "summary": "Trade values by reporter, partner, commodity and flow for one period, up to 500 records.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/preview/{typeCode}/{freqCode}/{clCode}",
+      "params": {
+        "typeCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "C goods, S services.",
+          "enum": [
+            "C",
+            "S"
+          ],
+          "example": "C"
+        },
+        "freqCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A annual, M monthly.",
+          "enum": [
+            "A",
+            "M"
+          ],
+          "example": "A"
+        },
+        "clCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Classification code.",
+          "example": "HS"
+        },
+        "reporterCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Reporter codes, comma-separated."
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "One period: YYYY or YYYYMM.",
+          "example": "2022"
+        },
+        "partnerCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Partner codes, comma-separated."
+        },
+        "cmdCode": {
+          "in": "query",
+          "type": "string",
+          "description": "One commodity code."
+        },
+        "flowCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Trade flow codes, comma-separated."
+        }
+      },
+      "job": "trade.flows",
+      "docs_url": "https://comtradeplus.un.org/ApiDocs",
+      "verified": {
+        "docs": "https://comtradeplus.un.org/ApiDocs"
+      }
+    },
+    {
+      "id": "un-comtrade.trade.preview_tariffline",
+      "name": "Preview tariff-line trade flows",
+      "summary": "Tariff-line detail (with customs procedure and mode of transport) for several periods and commodities, up to 500 records.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/previewTariffline/{typeCode}/{freqCode}/{clCode}",
+      "params": {
+        "typeCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "C goods, S services.",
+          "enum": [
+            "C",
+            "S"
+          ],
+          "example": "C"
+        },
+        "freqCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A annual, M monthly.",
+          "enum": [
+            "A",
+            "M"
+          ],
+          "example": "M"
+        },
+        "clCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "HS or H6..H0.",
+          "example": "HS"
+        },
+        "reporterCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Reporter code."
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "Periods, comma-separated (YYYY or YYYYMM)."
+        },
+        "partnerCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Partner code."
+        },
+        "partner2Code": {
+          "in": "query",
+          "type": "string",
+          "description": "Second partner code."
+        },
+        "cmdCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Commodity codes, comma-separated."
+        },
+        "flowCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Trade flow codes, comma-separated."
+        },
+        "customsCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Customs procedure codes, comma-separated."
+        },
+        "motCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Mode of transport codes, comma-separated."
+        }
+      },
+      "job": "trade.flows",
+      "docs_url": "https://comtradeplus.un.org/ApiDocs",
+      "verified": {
+        "docs": "https://comtradeplus.un.org/ApiDocs"
+      }
+    },
+    {
+      "id": "un-comtrade.trade.world_share",
+      "name": "Get reporters' share of world trade",
+      "summary": "Each reporter's share of world trade for a period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getWorldShare/{typeCode}/{freqCode}",
+      "params": {
+        "typeCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "C goods, S services.",
+          "enum": [
+            "C",
+            "S"
+          ],
+          "example": "C"
+        },
+        "freqCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A annual, M monthly.",
+          "enum": [
+            "A",
+            "M"
+          ],
+          "example": "A"
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY or YYYYMM, comma-separated, or 'recent'.",
+          "example": "recent"
+        },
+        "reporterCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Reporter codes, comma-separated."
+        }
+      },
+      "job": "trade.flows",
+      "docs_url": "https://comtradeplus.un.org/ApiDocs",
+      "verified": {
+        "docs": "https://comtradeplus.un.org/ApiDocs"
+      }
+    },
+    {
+      "id": "un-comtrade.availability",
+      "name": "Get data availability",
+      "summary": "Which reporters and periods have data for a type, frequency and classification.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getDA/{typeCode}/{freqCode}/{clCode}",
+      "params": {
+        "typeCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "C goods, S services.",
+          "enum": [
+            "C",
+            "S"
+          ],
+          "example": "C"
+        },
+        "freqCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A annual, M monthly.",
+          "enum": [
+            "A",
+            "M"
+          ],
+          "example": "A"
+        },
+        "clCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Classification code.",
+          "example": "HS"
+        }
+      },
+      "job": "coverage.list",
+      "docs_url": "https://comtradeplus.un.org/ApiDocs",
+      "verified": {
+        "docs": "https://comtradeplus.un.org/ApiDocs"
+      }
+    },
+    {
+      "id": "un-comtrade.metadata",
+      "name": "Get dataset metadata",
+      "summary": "Metadata and notes of the datasets for a type, frequency and classification.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getMetadata/{typeCode}/{freqCode}/{clCode}",
+      "params": {
+        "typeCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "C goods, S services.",
+          "enum": [
+            "C",
+            "S"
+          ],
+          "example": "C"
+        },
+        "freqCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A annual, M monthly.",
+          "enum": [
+            "A",
+            "M"
+          ],
+          "example": "A"
+        },
+        "clCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Classification code.",
+          "example": "HS"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://comtradeplus.un.org/ApiDocs",
+      "verified": {
+        "docs": "https://comtradeplus.un.org/ApiDocs"
+      }
+    },
+    {
+      "id": "un-comtrade.releases",
+      "name": "List data releases",
+      "summary": "Recent Comtrade data releases.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getComtradeReleases",
+      "job": "datasets.list",
+      "docs_url": "https://comtradeplus.un.org/ApiDocs",
+      "verified": {
+        "docs": "https://comtradeplus.un.org/ApiDocs"
+      }
+    }
+  ]
+}

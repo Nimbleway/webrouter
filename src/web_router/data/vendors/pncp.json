@@ -1,0 +1,312 @@
+{
+  "vendor": "pncp",
+  "name": "PNCP (Portal Nacional de Contratações Públicas)",
+  "category": "government",
+  "summary": "Brazil's national public procurement portal: tenders open for bids, published procurements, contracts and price-registration records (atas) from federal, state and municipal bodies.",
+  "docs_url": "https://pncp.gov.br/api/consulta/swagger-ui/index.html",
+  "base_url": "https://pncp.gov.br/api/consulta",
+  "notes": [
+    "Keyless public query API (API de Consulta), run by Serpro for the Brazilian government.",
+    "Dates are strings in yyyyMMdd form (20240131), not ISO dates.",
+    "Paging is required: pagina starts at 1; tamanhoPagina is 10-50 on the procurement lists and 10-500 on contracts and atas. Responses carry the page in a data array with totals alongside.",
+    "Organisations are identified by CNPJ (14 digits, no punctuation); uf is the two-letter Brazilian state code."
+  ],
+  "sources": [
+    "https://pncp.gov.br/api/consulta/swagger-ui/index.html",
+    "https://pncp.gov.br/api/consulta/v3/api-docs"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "pncp.tenders.open",
+      "name": "List procurements open for bids",
+      "summary": "Procurements whose proposal-receiving period is still open up to a date, optionally by modality, state, municipality or buying body.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/contratacoes/proposta",
+      "params": {
+        "dataFinal": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date, yyyyMMdd.",
+          "example": "20261231"
+        },
+        "codigoModalidadeContratacao": {
+          "in": "query",
+          "type": "integer",
+          "description": "PNCP procurement-modality code (pregão, concorrência, dispensa and so on, per PNCP's domain tables)."
+        },
+        "uf": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code.",
+          "example": "SP"
+        },
+        "codigoMunicipioIbge": {
+          "in": "query",
+          "type": "string",
+          "description": "IBGE municipality code."
+        },
+        "cnpj": {
+          "in": "query",
+          "type": "string",
+          "description": "CNPJ of the buying body."
+        },
+        "codigoUnidadeAdministrativa": {
+          "in": "query",
+          "type": "string",
+          "description": "Code of the buying administrative unit (1-30 characters)."
+        },
+        "idUsuario": {
+          "in": "query",
+          "type": "integer",
+          "description": "Id of the publishing system (portal) user."
+        },
+        "pagina": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number, from 1.",
+          "example": 1
+        },
+        "tamanhoPagina": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 10-50.",
+          "example": 50
+        }
+      },
+      "job": "procurement.tenders.search",
+      "docs_url": "https://pncp.gov.br/api/consulta/swagger-ui/index.html",
+      "verified": {
+        "docs": "https://pncp.gov.br/api/consulta/v3/api-docs"
+      }
+    },
+    {
+      "id": "pncp.tenders.published",
+      "name": "List procurements by publication date",
+      "summary": "Procurements published in a date range for one modality, optionally by dispute mode, state, municipality or buying body.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/contratacoes/publicacao",
+      "params": {
+        "dataInicial": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start date, yyyyMMdd.",
+          "example": "20260101"
+        },
+        "dataFinal": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date, yyyyMMdd.",
+          "example": "20260131"
+        },
+        "codigoModalidadeContratacao": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "PNCP procurement-modality code, per PNCP's domain tables."
+        },
+        "codigoModoDisputa": {
+          "in": "query",
+          "type": "integer",
+          "description": "PNCP dispute-mode code."
+        },
+        "uf": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state code."
+        },
+        "codigoMunicipioIbge": {
+          "in": "query",
+          "type": "string",
+          "description": "IBGE municipality code."
+        },
+        "cnpj": {
+          "in": "query",
+          "type": "string",
+          "description": "CNPJ of the buying body."
+        },
+        "codigoUnidadeAdministrativa": {
+          "in": "query",
+          "type": "string",
+          "description": "Code of the buying administrative unit."
+        },
+        "idUsuario": {
+          "in": "query",
+          "type": "integer",
+          "description": "Id of the publishing system (portal) user."
+        },
+        "pagina": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number, from 1.",
+          "example": 1
+        },
+        "tamanhoPagina": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 10-50."
+        }
+      },
+      "job": "procurement.tenders.search",
+      "docs_url": "https://pncp.gov.br/api/consulta/swagger-ui/index.html",
+      "verified": {
+        "docs": "https://pncp.gov.br/api/consulta/v3/api-docs"
+      }
+    },
+    {
+      "id": "pncp.tenders.get",
+      "name": "Get one procurement",
+      "summary": "One procurement by the buying body's CNPJ, year and sequence number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/orgaos/{cnpj}/compras/{ano}/{sequencial}",
+      "params": {
+        "cnpj": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CNPJ of the buying body, 14 digits."
+        },
+        "ano": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Year of the procurement."
+        },
+        "sequencial": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Sequence number of the procurement within that body and year, from 1."
+        }
+      },
+      "notes": [
+        "The three parts come from a list result's orgaoEntidade.cnpj, anoCompra and sequencialCompra."
+      ],
+      "job": "procurement.tenders.get",
+      "docs_url": "https://pncp.gov.br/api/consulta/swagger-ui/index.html",
+      "verified": {
+        "docs": "https://pncp.gov.br/api/consulta/v3/api-docs"
+      }
+    },
+    {
+      "id": "pncp.contracts.list",
+      "name": "List contracts by publication date",
+      "summary": "Contracts published in a date range, optionally for one buying body or unit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/contratos",
+      "params": {
+        "dataInicial": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start date, yyyyMMdd.",
+          "example": "20260101"
+        },
+        "dataFinal": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date, yyyyMMdd.",
+          "example": "20260131"
+        },
+        "cnpjOrgao": {
+          "in": "query",
+          "type": "string",
+          "description": "CNPJ of the contracting body."
+        },
+        "codigoUnidadeAdministrativa": {
+          "in": "query",
+          "type": "string",
+          "description": "Code of the administrative unit."
+        },
+        "usuarioId": {
+          "in": "query",
+          "type": "integer",
+          "description": "Id of the publishing system (portal) user."
+        },
+        "pagina": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number, from 1.",
+          "example": 1
+        },
+        "tamanhoPagina": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 10-500."
+        }
+      },
+      "job": "procurement.contracts.search",
+      "docs_url": "https://pncp.gov.br/api/consulta/swagger-ui/index.html",
+      "verified": {
+        "docs": "https://pncp.gov.br/api/consulta/v3/api-docs"
+      }
+    },
+    {
+      "id": "pncp.atas.list",
+      "name": "List price-registration records in force",
+      "summary": "Atas de Registro de Preço whose validity overlaps a date range, optionally for one body or unit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/atas",
+      "params": {
+        "dataInicial": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start date, yyyyMMdd.",
+          "example": "20260101"
+        },
+        "dataFinal": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date, yyyyMMdd.",
+          "example": "20260131"
+        },
+        "idUsuario": {
+          "in": "query",
+          "type": "integer",
+          "description": "Id of the publishing system (portal) user."
+        },
+        "cnpj": {
+          "in": "query",
+          "type": "string",
+          "description": "CNPJ of the managing body."
+        },
+        "codigoUnidadeAdministrativa": {
+          "in": "query",
+          "type": "string",
+          "description": "Code of the administrative unit (1-30 characters)."
+        },
+        "pagina": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page number, from 1.",
+          "example": 1
+        },
+        "tamanhoPagina": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 10-500."
+        }
+      },
+      "job": "procurement.contracts.search",
+      "docs_url": "https://pncp.gov.br/api/consulta/swagger-ui/index.html",
+      "verified": {
+        "docs": "https://pncp.gov.br/api/consulta/v3/api-docs"
+      }
+    }
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "vendor": "didit",
+  "name": "Didit",
+  "category": "verification",
+  "summary": "Identity verification: KYC/KYB verification sessions and their decisions.",
+  "docs_url": "https://docs.didit.me/getting-started/introduction",
+  "pricing_url": "https://docs.didit.me/getting-started/pricing",
+  "base_url": "https://verification.didit.me",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DIDIT_API_KEY"
+        ],
+        "description": "A Didit application API key (console, or the programmatic sign-up); sk_live_ for live, sk_test_ for sandbox. Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "A wrong or expired key answers 401; a missing key 403.",
+    "Checks are billed per completed check from prepaid credit (full KYC $0.33, AML screening $0.20 at list price); the sandbox is free, with 500 test sessions per 24 hours per sandbox application.",
+    "Session results arrive by webhook in production; list and decision calls are for lookups, not tight polling.",
+    "Session decisions carry personal data (documents, faces, addresses): handle them as such."
+  ],
+  "sources": [
+    "https://docs.didit.me/llms.txt",
+    "https://docs.didit.me/getting-started/api-authentication",
+    "https://docs.didit.me/sessions-api/list-sessions",
+    "https://docs.didit.me/sessions-api/retrieve-session",
+    "https://docs.didit.me/sessions-api/create-session",
+    "https://docs.didit.me/standalone-apis/aml-screening"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "didit.sessions.list",
+      "name": "List verification sessions",
+      "summary": "KYC and/or KYB sessions with status, filtered by status, your user id, dates, country or free text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/sessions/",
+      "params": {
+        "session_kind": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "user",
+            "business",
+            "all"
+          ],
+          "description": "user (KYC, default), business (KYB) or all."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated statuses, case-sensitive, e.g. 'Approved,In Review'."
+        },
+        "vendor_data": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact match on the vendor_data sent at creation (your user id)."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text: a session reference (S-0001), UUID, name, email prefix, document number or vendor_data."
+        },
+        "workflow_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated workflow UUIDs."
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Created on or after, YYYY-MM-DD (UTC)."
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "Created up to, YYYY-MM-DD (UTC)."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country filter."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page (per kind with session_kind=all), default 50."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip; prefer the next/previous URLs in the answer."
+        }
+      },
+      "job": "identity.sessions.list",
+      "docs_url": "https://docs.didit.me/sessions-api/list-sessions",
+      "verified": {
+        "docs": "https://docs.didit.me/sessions-api/list-sessions"
+      }
+    },
+    {
+      "id": "didit.sessions.decision",
+      "name": "Get a session's decision",
+      "summary": "The full result of one KYC or KYB session: status, ID, liveness, face match, AML, registry and OCR data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/session/{sessionId}/decision/",
+      "params": {
+        "sessionId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Session UUID from sessions.create or sessions.list. A malformed UUID answers a 404 HTML page."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra sections: events, resubmissions, or events,resubmissions."
+        }
+      },
+      "notes": [
+        "Needs the read:sessions privilege on the key."
+      ],
+      "job": "identity.sessions.get",
+      "docs_url": "https://docs.didit.me/sessions-api/retrieve-session",
+      "verified": {
+        "docs": "https://docs.didit.me/sessions-api/retrieve-session"
+      }
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "vendor": "ecb",
+  "name": "European Central Bank",
+  "category": "finance",
+  "summary": "ECB Data Portal SDMX API: euro reference exchange rates, ECB interest rates, inflation, money and banking statistics, keyless.",
+  "docs_url": "https://data.ecb.europa.eu/help/api/overview",
+  "base_url": "https://data-api.ecb.europa.eu/service",
+  "notes": [
+    "Free and keyless; no credentials.",
+    "Data is addressed by dataflow (e.g. EXR, exchange rates) and a series key: dimension codes in the dataflow's order joined by dots, e.g. EXR + D.USD.EUR.SP00.A (daily USD per EUR reference rate).",
+    "In a key, an empty position is a wildcard (D..EUR.SP00.A = every currency) and + is OR (D.USD+JPY.EUR.SP00.A).",
+    "The default response is SDMX-ML XML; pass format=jsondata for SDMX-JSON or format=csvdata for CSV.",
+    "Find dataflows with ecb.dataflows and a dataflow's dimensions and codes with ecb.datastructure (references=children)."
+  ],
+  "sources": [
+    "https://data.ecb.europa.eu/help/api/overview",
+    "https://data.ecb.europa.eu/help/api/data",
+    "https://data.ecb.europa.eu/help/api/data-examples",
+    "https://data.ecb.europa.eu/help/api/metadata",
+    "https://data.ecb.europa.eu/help/api/content-negotiation"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ecb.data",
+      "name": "Get time series data",
+      "summary": "Observations of every series in a dataflow matching a series key, filtered by period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/{flowRef}/{key}",
+      "params": {
+        "flowRef": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataflow id, optionally AGENCY,FLOW,VERSION.",
+          "example": "EXR"
+        },
+        "key": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Series key; empty positions wildcard, + for OR.",
+          "example": "D.USD.EUR.SP00.A"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "jsondata",
+            "csvdata",
+            "structurespecificdata",
+            "genericdata"
+          ],
+          "description": "Response format; default genericdata (SDMX-ML XML).",
+          "example": "jsondata"
+        },
+        "startPeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "Start period: YYYY, YYYY-S1, YYYY-Q1, YYYY-MM, YYYY-W01 or YYYY-MM-DD by frequency.",
+          "example": "2024-01-01"
+        },
+        "endPeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "End period, same formats."
+        },
+        "lastNObservations": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only the N most recent observations per series.",
+          "example": 1
+        },
+        "firstNObservations": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only the N first observations per series."
+        },
+        "updatedAfter": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 timestamp; only observations added, revised or deleted since then."
+        },
+        "detail": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "full",
+            "dataonly",
+            "serieskeysonly",
+            "nodata"
+          ],
+          "description": "full (default) data and attributes; dataonly without attributes; serieskeysonly lists matching series only; nodata series and attributes without observations."
+        },
+        "includeHistory": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return previous versions of the data; default false."
+        }
+      },
+      "notes": [
+        "A whole dataflow with no key can be very large and slow; always give a key.",
+        "detail=serieskeysonly lists the series a wildcard key matches without the data."
+      ],
+      "job": "market.history",
+      "docs_url": "https://data.ecb.europa.eu/help/api/data",
+      "verified": {
+        "docs": "https://data.ecb.europa.eu/help/api/data"
+      }
+    },
+    {
+      "id": "ecb.dataflows",
+      "name": "List dataflows",
+      "summary": "Every dataflow (dataset) the ECB publishes, with names.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dataflow/ECB",
+      "params": {
+        "detail": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "full",
+            "allstubs",
+            "referencestubs"
+          ],
+          "description": "allstubs returns only id, agency, version and name."
+        }
+      },
+      "notes": [
+        "Returns SDMX-ML structure XML."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://data.ecb.europa.eu/help/api/metadata",
+      "verified": {
+        "docs": "https://data.ecb.europa.eu/help/api/metadata"
+      }
+    },
+    {
+      "id": "ecb.datastructure",
+      "name": "Get a dataflow's structure",
+      "summary": "Dimensions of a data structure definition and, with references=children, the codelists for each dimension.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datastructure/ECB/{resourceID}",
+      "params": {
+        "resourceID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Data structure definition id.",
+          "example": "ECB_EXR1"
+        },
+        "references": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "none",
+            "parents",
+            "parentsandsiblings",
+            "children",
+            "descendants",
+            "all"
+          ],
+          "description": "Also return related artefacts; children adds the codelists and concept schemes used."
+        },
+        "detail": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "full",
+            "allstubs",
+            "referencestubs"
+          ],
+          "description": "Amount of detail."
+        }
+      },
+      "notes": [
+        "Returns SDMX-ML structure XML."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://data.ecb.europa.eu/help/api/metadata",
+      "verified": {
+        "docs": "https://data.ecb.europa.eu/help/api/metadata"
+      }
+    },
+    {
+      "id": "ecb.codelist",
+      "name": "Get a codelist",
+      "summary": "Codes and labels of one codelist (e.g. CL_FREQ, the frequency codes).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/codelist/ECB/{resourceID}",
+      "params": {
+        "resourceID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Codelist id.",
+          "example": "CL_FREQ"
+        }
+      },
+      "notes": [
+        "Returns SDMX-ML structure XML."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://data.ecb.europa.eu/help/api/metadata",
+      "verified": {
+        "docs": "https://data.ecb.europa.eu/help/api/metadata"
+      }
+    }
+  ]
+}

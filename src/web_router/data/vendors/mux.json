@@ -1,0 +1,371 @@
+{
+  "vendor": "mux",
+  "name": "Mux",
+  "category": "media",
+  "summary": "Video hosting and streaming (assets, live streams) and Mux Data playback analytics: views, viewers, startup time, rebuffering and quality metrics.",
+  "docs_url": "https://www.mux.com/docs/api-reference/",
+  "pricing_url": "https://www.mux.com/pricing",
+  "base_url": "https://api.mux.com",
+  "auth": {
+    "credentials": {
+      "token_id": {
+        "env": [
+          "MUX_TOKEN_ID"
+        ],
+        "description": "A Mux access token id (Settings > Access Tokens), the Basic auth username. Tokens are per environment."
+      },
+      "token_secret": {
+        "env": [
+          "MUX_TOKEN_SECRET"
+        ],
+        "description": "The access token's secret, the Basic auth password."
+      }
+    },
+    "basic": {
+      "username": "{token_id}",
+      "password": "{token_secret}"
+    }
+  },
+  "notes": [
+    "A token is scoped to one Mux environment (development and production differ); a read-only token is enough for every call here.",
+    "Paging is page/limit (limit max 100); only list assets also takes a cursor (next_cursor, null at the end).",
+    "Rate limits: Video GETs refill 5/s (high-priority token) or 1/s (low); the Data API allows about 5 requests per second. 429 when exceeded; see x-ratelimit-remaining.",
+    "Data API timeframes are epoch seconds or durations like 24:hours; array parameters are sent as repeated name[] query keys."
+  ],
+  "sources": [
+    "https://www.mux.com/docs/core/make-api-requests",
+    "https://www.mux.com/docs/api-reference/video/assets/list-assets",
+    "https://www.mux.com/docs/api-reference/video/assets/get-asset",
+    "https://www.mux.com/docs/api-reference/video/live-streams/list-live-streams",
+    "https://www.mux.com/docs/api-reference/data/metrics/get-overall-values",
+    "https://www.mux.com/docs/api-reference/data/metrics/list-breakdown-values",
+    "https://www.mux.com/docs/api-reference/data/video-views/list-video-views",
+    "https://www.mux.com/docs/api-reference/data/dimensions/list-dimensions"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "mux.assets.list",
+      "name": "List video assets",
+      "summary": "Assets with status, duration, playback ids, tracks and creation time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/video/v1/assets",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous page."
+        },
+        "live_stream_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only assets recorded from this live stream."
+        },
+        "upload_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only the asset from this direct upload."
+        }
+      },
+      "job": "media.assets.list",
+      "docs_url": "https://www.mux.com/docs/api-reference/video/assets/list-assets",
+      "verified": {
+        "docs": "https://www.mux.com/docs/api-reference/video/assets/list-assets"
+      }
+    },
+    {
+      "id": "mux.assets.get",
+      "name": "Get a video asset",
+      "summary": "One asset's status, duration, resolution, playback ids, tracks and errors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/video/v1/assets/{asset_id}",
+      "params": {
+        "asset_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Asset id."
+        }
+      },
+      "job": "media.assets.get",
+      "docs_url": "https://www.mux.com/docs/api-reference/video/assets/get-asset",
+      "verified": {
+        "docs": "https://www.mux.com/docs/api-reference/video/assets/get-asset"
+      }
+    },
+    {
+      "id": "mux.live_streams.list",
+      "name": "List live streams",
+      "summary": "Live streams with status, stream key and playback ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/video/v1/live-streams",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "stream_key": {
+          "in": "query",
+          "type": "string",
+          "description": "Only the stream with this key."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Status filter.",
+          "enum": [
+            "active",
+            "idle",
+            "disabled"
+          ]
+        }
+      },
+      "job": "media.streams.list",
+      "docs_url": "https://www.mux.com/docs/api-reference/video/live-streams/list-live-streams",
+      "verified": {
+        "docs": "https://www.mux.com/docs/api-reference/video/live-streams/list-live-streams"
+      }
+    },
+    {
+      "id": "mux.metrics.overall",
+      "name": "Get a playback metric's overall value",
+      "summary": "One metric's value over a timeframe, with total views and watch time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/v1/metrics/{metric_id}/overall",
+      "params": {
+        "metric_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Metric id, e.g. views, unique_viewers, playing_time, video_startup_time, rebuffer_percentage, playback_failure_percentage, viewer_experience_score.",
+          "example": "views"
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "array",
+          "description": "Two epoch-second timestamps, or one duration such as 24:hours or 7:days.",
+          "wire_name": "timeframe[]",
+          "example": [
+            "7:days"
+          ]
+        },
+        "filters": {
+          "in": "query",
+          "type": "array",
+          "description": "dimension:value pairs, e.g. country:US; prefix ! to exclude.",
+          "wire_name": "filters[]"
+        },
+        "metric_filters": {
+          "in": "query",
+          "type": "array",
+          "description": "Metric conditions, e.g. aggregate_startup_time>=1000.",
+          "wire_name": "metric_filters[]"
+        },
+        "measurement": {
+          "in": "query",
+          "type": "string",
+          "description": "Aggregation; each metric has its own default.",
+          "enum": [
+            "95th",
+            "median",
+            "avg",
+            "count",
+            "sum"
+          ]
+        }
+      },
+      "job": "metrics.query",
+      "docs_url": "https://www.mux.com/docs/api-reference/data/metrics/get-overall-values",
+      "verified": {
+        "docs": "https://www.mux.com/docs/api-reference/data/metrics/get-overall-values"
+      }
+    },
+    {
+      "id": "mux.metrics.breakdown",
+      "name": "Break a playback metric down by dimension",
+      "summary": "A metric's value per value of a dimension (country, browser, asset_id, video_title, cdn, ...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/v1/metrics/{metric_id}/breakdown",
+      "params": {
+        "metric_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Metric id, e.g. views, unique_viewers, playing_time, video_startup_time, rebuffer_percentage, playback_failure_percentage, viewer_experience_score.",
+          "example": "views"
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Dimension to group by, e.g. country, browser, asset_id, video_title, cdn, viewer_device_category.",
+          "example": "country"
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "array",
+          "description": "Two epoch-second timestamps, or one duration such as 24:hours or 7:days.",
+          "wire_name": "timeframe[]",
+          "example": [
+            "7:days"
+          ]
+        },
+        "filters": {
+          "in": "query",
+          "type": "array",
+          "description": "dimension:value pairs, e.g. country:US; prefix ! to exclude.",
+          "wire_name": "filters[]"
+        },
+        "metric_filters": {
+          "in": "query",
+          "type": "array",
+          "description": "Metric conditions, e.g. aggregate_startup_time>=1000.",
+          "wire_name": "metric_filters[]"
+        },
+        "measurement": {
+          "in": "query",
+          "type": "string",
+          "description": "Aggregation; each metric has its own default.",
+          "enum": [
+            "95th",
+            "median",
+            "avg",
+            "count",
+            "sum"
+          ]
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort key.",
+          "enum": [
+            "negative_impact",
+            "value",
+            "views",
+            "field"
+          ]
+        },
+        "order_direction": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        }
+      },
+      "job": "metrics.query",
+      "docs_url": "https://www.mux.com/docs/api-reference/data/metrics/list-breakdown-values",
+      "verified": {
+        "docs": "https://www.mux.com/docs/api-reference/data/metrics/list-breakdown-values"
+      }
+    },
+    {
+      "id": "mux.views.list",
+      "name": "List video views",
+      "summary": "Individual playback views with viewer, video, player and error details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/v1/video-views",
+      "params": {
+        "viewer_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this viewer's views."
+        },
+        "error_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only views with this error."
+        },
+        "order_direction": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "filters": {
+          "in": "query",
+          "type": "array",
+          "description": "dimension:value pairs, e.g. country:US; prefix ! to exclude.",
+          "wire_name": "filters[]"
+        },
+        "metric_filters": {
+          "in": "query",
+          "type": "array",
+          "description": "Metric conditions, e.g. aggregate_startup_time>=1000.",
+          "wire_name": "metric_filters[]"
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "array",
+          "description": "Two epoch-second timestamps, or one duration such as 24:hours or 7:days.",
+          "wire_name": "timeframe[]",
+          "example": [
+            "7:days"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 25."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        }
+      },
+      "job": "analytics.events",
+      "docs_url": "https://www.mux.com/docs/api-reference/data/video-views/list-video-views",
+      "verified": {
+        "docs": "https://www.mux.com/docs/api-reference/data/video-views/list-video-views"
+      }
+    },
+    {
+      "id": "mux.dimensions.list",
+      "name": "List data dimensions",
+      "summary": "The dimensions available for filtering and breakdowns.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/v1/dimensions",
+      "job": "metrics.list",
+      "docs_url": "https://www.mux.com/docs/api-reference/data/dimensions/list-dimensions",
+      "verified": {
+        "docs": "https://www.mux.com/docs/api-reference/data/dimensions/list-dimensions"
+      }
+    }
+  ]
+}

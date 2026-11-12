@@ -1,0 +1,295 @@
+{
+  "vendor": "gdacs",
+  "name": "GDACS",
+  "category": "environment",
+  "summary": "Global Disaster Alert and Coordination System (EC, UN OCHA): alerts and impact data for earthquakes, tropical cyclones, floods, volcanoes, droughts and wildfires worldwide.",
+  "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
+  "base_url": "https://www.gdacs.org/gdacsapi",
+  "notes": [
+    "Keyless and free. GDACS asks that the source be acknowledged as 'Global Disaster Alert and Coordination System, GDACS'.",
+    "An event is keyed by eventtype plus eventid (e.g. TC 1001067); detail calls need both. Event type codes include EQ (earthquake), TC (tropical cyclone) and FL (flood); lists of types or alert levels are separated by ';'.",
+    "Alert levels are green, orange and red. Ask for green explicitly when you want every event, e.g. alertlevel=red;orange;green.",
+    "Event lists return at most 100 records per call, ordered by todate descending; page with pagenumber (and pagesize). Event lists come back as GeoJSON.",
+    "GDACS caches collections between updates; save a collection and compare its 'datetime' property before calling again rather than polling hard."
+  ],
+  "sources": [
+    "https://www.gdacs.org/gdacsapi/swagger/index.html",
+    "https://data.gdacs.org/Documents/2025/GDACS_API_quickstart_v1.pdf"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "gdacs.events.search",
+      "name": "Search disaster events",
+      "summary": "Events by hazard type, alert level, date window and country, as GeoJSON features with severity and affected countries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/events/geteventlist/SEARCH",
+      "params": {
+        "eventlist": {
+          "in": "query",
+          "description": "Event types to search, ';'-separated.",
+          "example": "EQ;TC"
+        },
+        "alertlevel": {
+          "in": "query",
+          "description": "Alert levels, ';'-separated: green, orange, red.",
+          "example": "red;orange;green"
+        },
+        "fromdate": {
+          "in": "query",
+          "wire_name": "fromDate",
+          "description": "Start of the window, YYYY-MM-DD.",
+          "example": "2026-10-01"
+        },
+        "todate": {
+          "in": "query",
+          "wire_name": "toDate",
+          "description": "End of the window, YYYY-MM-DD.",
+          "example": "2026-11-09"
+        },
+        "country": {
+          "in": "query",
+          "description": "Only events affecting this country."
+        },
+        "severity": {
+          "in": "query",
+          "type": "number",
+          "description": "Severity filter."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "pageSize",
+          "description": "Records per page, at most 100."
+        },
+        "pagenumber": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "pageNumber",
+          "description": "Page of the result set, for the next block of records."
+        }
+      },
+      "notes": [
+        "Pass an explicit date window for history; ordered by todate descending."
+      ],
+      "job": "alerts.disaster.search",
+      "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
+      "verified": {
+        "docs": "https://www.gdacs.org/gdacsapi/swagger/index.html"
+      }
+    },
+    {
+      "id": "gdacs.events.latest",
+      "name": "List recently updated disaster events",
+      "summary": "Events modified since a date (default: the last 6 months), by type, alert level and country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/Events/geteventlist/latest",
+      "params": {
+        "eventlist": {
+          "in": "query",
+          "description": "Event types, ';'-separated.",
+          "example": "EQ;TC;FL"
+        },
+        "alertlevel": {
+          "in": "query",
+          "description": "Alert levels, ';'-separated: green, orange, red."
+        },
+        "datemodified": {
+          "in": "query",
+          "description": "Only events modified since this date; empty means the last 6 months."
+        },
+        "country": {
+          "in": "query",
+          "description": "Only events affecting this country."
+        },
+        "severity": {
+          "in": "query",
+          "type": "number",
+          "description": "Severity filter."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "pageSize",
+          "description": "Records per page, at most 100."
+        },
+        "pagenumber": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "pageNumber",
+          "description": "Page of the result set."
+        }
+      },
+      "job": "alerts.disaster.latest",
+      "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
+      "verified": {
+        "docs": "https://www.gdacs.org/gdacsapi/swagger/index.html"
+      }
+    },
+    {
+      "id": "gdacs.events.by_area",
+      "name": "List events in an area",
+      "summary": "Events whose geometry matches a WKT area, over the last few days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/Events/geteventlist/eventsbyarea",
+      "params": {
+        "geometryArea": {
+          "in": "query",
+          "required": true,
+          "description": "The area as WKT, e.g. a POLYGON."
+        },
+        "days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Days back to search; default 4, maximum 30."
+        }
+      },
+      "job": "alerts.disaster.search",
+      "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
+      "verified": {
+        "docs": "https://www.gdacs.org/gdacsapi/swagger/index.html"
+      }
+    },
+    {
+      "id": "gdacs.events.get",
+      "name": "Get one disaster event",
+      "summary": "An event's data: alert level, severity, affected countries, episodes and links to its resources.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/Events/geteventdata",
+      "params": {
+        "eventtype": {
+          "in": "query",
+          "required": true,
+          "description": "The event type code.",
+          "example": "TC"
+        },
+        "eventid": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The event id.",
+          "example": 1001067
+        },
+        "source": {
+          "in": "query",
+          "description": "For cyclones, the source to filter episodes by."
+        }
+      },
+      "job": "alerts.disaster.get",
+      "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
+      "verified": {
+        "docs": "https://www.gdacs.org/gdacsapi/swagger/index.html"
+      }
+    },
+    {
+      "id": "gdacs.events.alert_levels",
+      "name": "List an event's alert levels by episode",
+      "summary": "The alert level calculated for each episode of an event, to see how it escalated.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/Events/geteventalertlevel",
+      "params": {
+        "eventtype": {
+          "in": "query",
+          "required": true,
+          "description": "The event type code."
+        },
+        "eventid": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The event id."
+        }
+      },
+      "job": "alerts.disaster.history",
+      "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
+      "verified": {
+        "docs": "https://www.gdacs.org/gdacsapi/swagger/index.html"
+      }
+    },
+    {
+      "id": "gdacs.events.geometry",
+      "name": "Get an event's polygons",
+      "summary": "Geometry for an event episode by polygon type, e.g. shakemap intensity or cyclone wind buffers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/Polygons/getgeometry",
+      "params": {
+        "eventtype": {
+          "in": "query",
+          "required": true,
+          "description": "The event type code."
+        },
+        "eventid": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The event id."
+        },
+        "episodeid": {
+          "in": "query",
+          "type": "integer",
+          "description": "The episode id."
+        },
+        "polygontype": {
+          "in": "query",
+          "description": "The polygon type."
+        },
+        "source": {
+          "in": "query",
+          "description": "The source."
+        },
+        "showPreliminary": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Earthquakes only: true always shows the circle and preliminary shakemap polygons; otherwise the last official shakemap polygons when there are any."
+        },
+        "showBaseGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Earthquakes only, with showPreliminary false: true shows the 100 km circle."
+        }
+      },
+      "job": "alerts.disaster.geometry",
+      "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
+      "verified": {
+        "docs": "https://www.gdacs.org/gdacsapi/swagger/index.html"
+      }
+    },
+    {
+      "id": "gdacs.events.news",
+      "name": "Get news about an event",
+      "summary": "Media articles (EMM news) collected for an event.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/Emm/getemmnewsbykey",
+      "params": {
+        "eventtype": {
+          "in": "query",
+          "required": true,
+          "description": "The event type code."
+        },
+        "eventid": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The event id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum articles to return."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://www.gdacs.org/gdacsapi/swagger/index.html",
+      "verified": {
+        "docs": "https://www.gdacs.org/gdacsapi/swagger/index.html"
+      }
+    }
+  ]
+}

@@ -1,0 +1,353 @@
+{
+  "vendor": "carsxe",
+  "name": "CarsXE",
+  "category": "commerce",
+  "summary": "Vehicle data: VIN decoding, license plate lookup in 50+ countries, market value, history, recalls, lien and theft checks, and year/make/model search.",
+  "docs_url": "https://docs.carsxe.com/docs",
+  "pricing_url": "https://carsxe.com/pricing",
+  "base_url": "https://api.carsxe.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CARSXE_API_KEY"
+        ],
+        "description": "A CarsXE API key (carsxe.com > Dashboard > Developer). Sent as the key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every lookup deducts credits from the plan's monthly bundle, only on success: failed lookups and no-data errors are free. Costs per call are in each endpoint's notes.",
+    "VINs are exactly 17 characters.",
+    "Plan quotas answer 429 when exceeded; see the rate-limits guide."
+  ],
+  "sources": [
+    "https://docs.carsxe.com/docs/get-started",
+    "https://carsxe.com/openapi.yaml",
+    "https://carsxe.com/llms.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "carsxe.vin.specs",
+      "name": "Decode a VIN",
+      "summary": "Make, model, year, engine, trim, colours, equipment and warranties for a VIN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/specs",
+      "params": {
+        "vin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "17-character VIN."
+        },
+        "deepdata": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "1"
+          ],
+          "description": "1 for extra data; much slower."
+        },
+        "disableIntVINDecoding": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "1"
+          ],
+          "description": "1 to fail instead of falling back to international VIN decoding."
+        }
+      },
+      "notes": [
+        "2 credits per successful lookup."
+      ],
+      "job": "vehicle.vin.decode",
+      "docs_url": "https://docs.carsxe.com/docs/products/specifications",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    },
+    {
+      "id": "carsxe.plate.decode",
+      "name": "Decode a license plate",
+      "summary": "Vehicle data, and usually the VIN, for a plate in 60+ countries (plate decoder v2).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/platedecoder",
+      "params": {
+        "plate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Registration or license plate number."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 code; optional for US."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "US state, Australian state or Canadian province; required for AU and CA. For US, omit it (with country=US) to search every state."
+        },
+        "district": {
+          "in": "query",
+          "type": "string",
+          "description": "Required for Pakistan (PK) plates from Khyber-Pakhtunkhwa."
+        },
+        "require_vin": {
+          "in": "query",
+          "type": "boolean",
+          "description": "ES only: always include a VIN; billed twice."
+        }
+      },
+      "notes": [
+        "5 credits per successful lookup. A US search without state answers {results, count, billed_credits} instead of one object."
+      ],
+      "job": "vehicle.plate.decode",
+      "docs_url": "https://docs.carsxe.com/docs/products/plate-decoder",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    },
+    {
+      "id": "carsxe.market_value",
+      "name": "Get a vehicle's market value",
+      "summary": "Wholesale, retail, trade-in and auction values by condition for a VIN, adjusted for mileage and state (v2).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/marketvalue",
+      "params": {
+        "vin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "17-character VIN."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "US state for the regional adjustment."
+        },
+        "mileage": {
+          "in": "query",
+          "type": "number",
+          "description": "Current mileage; applies the matching mileage band to every condition tier."
+        },
+        "condition": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "excellent",
+            "clean",
+            "average",
+            "rough"
+          ],
+          "description": "Echoed back; does not gate mileage adjustments."
+        }
+      },
+      "notes": [
+        "25 credits per successful lookup."
+      ],
+      "job": "vehicle.value",
+      "docs_url": "https://docs.carsxe.com/docs/products/market-value",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    },
+    {
+      "id": "carsxe.history",
+      "name": "Get a vehicle history report",
+      "summary": "Title, brand, junk/salvage and insurance records for a VIN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/history",
+      "params": {
+        "vin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "17-character VIN."
+        }
+      },
+      "notes": [
+        "25 credits per successful lookup."
+      ],
+      "job": "vehicle.history",
+      "docs_url": "https://docs.carsxe.com/docs/products/vehicle-history",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    },
+    {
+      "id": "carsxe.recalls",
+      "name": "Get open recalls for a VIN",
+      "summary": "Open safety recalls for one vehicle.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/recalls",
+      "params": {
+        "vin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "17-character VIN."
+        }
+      },
+      "notes": [
+        "5 credits per successful lookup."
+      ],
+      "job": "vehicle.recalls",
+      "docs_url": "https://docs.carsxe.com/docs/products/recalls",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    },
+    {
+      "id": "carsxe.recalls_ymm",
+      "name": "Get recalls by year, make and model",
+      "summary": "Open safety recalls for a model year, without a VIN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/recalls-ymm",
+      "params": {
+        "year": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "4-digit model year.",
+          "example": "2019"
+        },
+        "make": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Manufacturer, case-insensitive.",
+          "example": "Toyota"
+        },
+        "model": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Model, case-insensitive.",
+          "example": "Camry"
+        }
+      },
+      "notes": [
+        "1 credit per successful lookup."
+      ],
+      "job": "vehicle.recalls",
+      "docs_url": "https://docs.carsxe.com/docs/products/recalls",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    },
+    {
+      "id": "carsxe.lien_theft",
+      "name": "Check liens and theft records",
+      "summary": "Active lien and theft records for a US vehicle.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/lien-theft",
+      "params": {
+        "vin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "17-character VIN."
+        }
+      },
+      "notes": [
+        "5 credits per successful lookup. US only."
+      ],
+      "job": "vehicle.history",
+      "docs_url": "https://docs.carsxe.com/docs/products/lien-theft",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    },
+    {
+      "id": "carsxe.ymm",
+      "name": "Look up a vehicle by year, make and model",
+      "summary": "Vehicle data for a year/make/model (and trim) without a VIN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/ymm",
+      "params": {
+        "year": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Model year."
+        },
+        "make": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Manufacturer, e.g. Toyota."
+        },
+        "model": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Model, e.g. Camry."
+        },
+        "trim": {
+          "in": "query",
+          "type": "string",
+          "description": "Trim, e.g. XLE."
+        },
+        "allTrimOptions": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "1"
+          ],
+          "description": "1 to return every trim option."
+        }
+      },
+      "notes": [
+        "2 credits per successful lookup."
+      ],
+      "job": "vehicle.specs",
+      "docs_url": "https://docs.carsxe.com/docs/products/year-make-model",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    },
+    {
+      "id": "carsxe.obd.decode",
+      "name": "Decode an OBD-II trouble code",
+      "summary": "Meaning of a diagnostic trouble code such as P0115.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/obdcodesdecoder",
+      "params": {
+        "code": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The OBD code.",
+          "example": "P0115"
+        }
+      },
+      "notes": [
+        "1 credit per successful lookup."
+      ],
+      "job": "vehicle.obd.decode",
+      "docs_url": "https://docs.carsxe.com/docs/products/obd-codes-decoder",
+      "verified": {
+        "docs": "https://carsxe.com/openapi.yaml"
+      }
+    }
+  ]
+}

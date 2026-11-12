@@ -1,0 +1,154 @@
+{
+  "vendor": "nih-reporter",
+  "name": "NIH RePORTER",
+  "category": "science",
+  "summary": "NIH RePORTER's API over federally funded research awards (NIH and other agencies): search projects by investigator, organization, fiscal year, text, funding and dates, and find the publications linked to them.",
+  "docs_url": "https://api.reporter.nih.gov/",
+  "base_url": "https://api.reporter.nih.gov",
+  "notes": [
+    "Free and keyless. NIH asks for no more than one request per second, and large jobs on weekends or weekdays 9 PM-5 AM Eastern; abusive IPs get blocked.",
+    "Both calls are reads over POST with a JSON body.",
+    "No fuzzy, proximity or range searches except where a criterion says so (name and org fields are wildcard-matched).",
+    "Paging: limit (default 50, max 500) and offset (max 14,999); larger result sets must be split with narrower criteria."
+  ],
+  "sources": [
+    "https://api.reporter.nih.gov/",
+    "https://api.reporter.nih.gov/swagger/v2/swagger.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nih-reporter.projects.search",
+      "name": "Search funded projects",
+      "summary": "Research projects matching criteria, with award amounts, investigators, organization, dates, abstract and terms.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/projects/search",
+      "params": {
+        "criteria": {
+          "in": "body",
+          "type": "object",
+          "description": "Search criteria, e.g. fiscal_years [2023], pi_names [{any_name}], org_names, org_states, project_nums, agencies, activity_codes, award_amount_range {min_amount,max_amount}, project_start_date {from_date,to_date}, advanced_text_search {operator, search_field, search_text}, use_relevance.",
+          "example": {
+            "fiscal_years": [
+              2024
+            ],
+            "advanced_text_search": {
+              "operator": "and",
+              "search_field": "projecttitle,terms",
+              "search_text": "brain disorder"
+            }
+          }
+        },
+        "include_fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Only these result fields (PascalCase names, e.g. ApplId, ProjectNum, OrgName, AwardAmount).",
+          "example": [
+            "ApplId",
+            "ProjectNum",
+            "ProjectTitle",
+            "OrgName",
+            "AwardAmount"
+          ]
+        },
+        "exclude_fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Drop these result fields."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Start record, 0-based; max 14,999.",
+          "example": 0
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records per request: default 50, max 500.",
+          "example": 50
+        },
+        "sort_field": {
+          "in": "body",
+          "type": "string",
+          "description": "Field to sort on.",
+          "example": "project_start_date"
+        },
+        "sort_order": {
+          "in": "body",
+          "type": "string",
+          "description": "asc or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "The response meta carries a search_id and a RePORTER web URL for the same result set; a later request can pass only search_id to page the same search."
+      ],
+      "job": "grants.search",
+      "docs_url": "https://api.reporter.nih.gov/",
+      "verified": {
+        "docs": "https://api.reporter.nih.gov/"
+      }
+    },
+    {
+      "id": "nih-reporter.publications.search",
+      "name": "Find publications of projects",
+      "summary": "Links between projects and PubMed publications: PMID, core project number and application id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/publications/search",
+      "params": {
+        "criteria": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "One or more of pmids, appl_ids, core_project_nums (lists).",
+          "example": {
+            "core_project_nums": [
+              "R01DK102815"
+            ]
+          }
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Start record, 0-based.",
+          "example": 0
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records per request.",
+          "example": 50
+        },
+        "sort_field": {
+          "in": "body",
+          "type": "string",
+          "description": "Field to sort on."
+        },
+        "sort_order": {
+          "in": "body",
+          "type": "string",
+          "description": "asc or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Returns ids only; fetch the articles themselves from PubMed by PMID."
+      ],
+      "job": "scholar.search",
+      "docs_url": "https://api.reporter.nih.gov/",
+      "verified": {
+        "docs": "https://api.reporter.nih.gov/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,643 @@
+{
+  "vendor": "fiscal-ai",
+  "name": "Fiscal.ai",
+  "category": "finance",
+  "summary": "Public company financials from Fiscal.ai: as-reported and standardized statements, ratios, segments and KPIs, stock prices, filings, news and earnings call transcripts for companies in the US, Canada, UK and EU.",
+  "docs_url": "https://docs.fiscal.ai/",
+  "base_url": "https://api.fiscal.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FISCAL_API_KEY"
+        ],
+        "description": "a Fiscal.ai API key (fiscal.ai/get-started/api/professional starts a free trial)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Name a company by ticker (US), ticker plus exchange or micCode, companyKey (EXCHANGE_TICKER), cik or fscl. CUSIP, ISIN and FIGI lookups exist but CUSIP/ISIN need an extra license.",
+    "Free-plan keys: 50 requests a minute, 250 a day (reset at midnight UTC), and only 100 included companies; paid limits are set by contract.",
+    "Endpoint versions differ (v1, v3); older v1/v2 company endpoints are deprecated in favour of the ones here."
+  ],
+  "sources": [
+    "https://docs.fiscal.ai/llms.txt",
+    "https://docs.fiscal.ai/docs/authentication",
+    "https://docs.fiscal.ai/docs/guides/rate-limits",
+    "https://api.fiscal.ai/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fiscal-ai.companies.list",
+      "name": "List companies",
+      "summary": "Covered companies with names, classification, primary listing, market cap and identifiers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/companies-list",
+      "params": {
+        "pageNumber": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based page."
+        },
+        "compact": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Slimmer rows, identifiers kept."
+        },
+        "allCompanies": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the full ~55,000-company universe, not just API-enabled data; not on the free plan."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://docs.fiscal.ai/docs/api-reference#companies-list",
+      "verified": {
+        "docs": "https://docs.fiscal.ai/docs/api-reference#companies-list"
+      }
+    },
+    {
+      "id": "fiscal-ai.company.profile",
+      "name": "Get a company profile",
+      "summary": "Names, sector and industry, headquarters, leadership, founding and IPO years, market cap and identifiers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/company/profile",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.fiscal.ai/docs/api-reference#company-profile",
+      "verified": {
+        "docs": "https://docs.fiscal.ai/docs/api-reference#company-profile"
+      }
+    },
+    {
+      "id": "fiscal-ai.financials.standardized",
+      "name": "Get standardized statements",
+      "summary": "Income statement, balance sheet or cash flow mapped to a common schema for cross-company comparison.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/financials/{statementType}/standardized",
+      "params": {
+        "statementType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "income-statement",
+          "enum": [
+            "income-statement",
+            "balance-sheet",
+            "cash-flow-statement"
+          ]
+        },
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        },
+        "periodType": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated period types: annual (default), quarterly, semi-annual, ltm, ytd, latest.",
+          "example": "annual,quarterly"
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency code."
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://docs.fiscal.ai/docs/api-reference#financials-standardized-income-statement",
+      "verified": {
+        "docs": "https://docs.fiscal.ai/docs/api-reference#financials-standardized-income-statement"
+      }
+    },
+    {
+      "id": "fiscal-ai.financials.as_reported",
+      "name": "Get as-reported statements",
+      "summary": "Statement line items exactly as the company disclosed them, with source document links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/financials/{statementType}/as-reported",
+      "params": {
+        "statementType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "income-statement",
+          "enum": [
+            "income-statement",
+            "balance-sheet",
+            "cash-flow-statement"
+          ]
+        },
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        },
+        "periodType": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated period types: annual (default), quarterly, semi-annual, ltm, ytd, latest.",
+          "example": "annual,quarterly"
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency code."
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://docs.fiscal.ai/docs/api-reference#financials-as-reported-income-statement",
+      "verified": {
+        "docs": "https://docs.fiscal.ai/docs/api-reference#financials-as-reported-income-statement"
+      }
+    },
+    {
+      "id": "fiscal-ai.ratios.get",
+      "name": "Get financial ratios",
+      "summary": "Every supported ratio as a time series per period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/ratios",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        },
+        "periodType": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated period types: annual (default), quarterly, semi-annual, ltm, ytd, latest.",
+          "example": "annual,quarterly"
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency code."
+        },
+        "ratioId": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ratio ids to keep (see /v1/ratios-list)."
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.fiscal.ai/docs/api-reference#company-ratios",
+      "verified": {
+        "docs": "https://docs.fiscal.ai/docs/api-reference#company-ratios"
+      }
+    },
+    {
+      "id": "fiscal-ai.segments_kpis.get",
+      "name": "Get segments and KPIs",
+      "summary": "Business segment figures and company-specific KPIs per period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/company/segments-and-kpis",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        },
+        "periodType": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated period types: annual (default), quarterly, semi-annual, ltm, ytd, latest.",
+          "example": "annual,quarterly"
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency code."
+        }
+      },
+      "notes": [
+        "v2 returns stable numeric KPI ids; v1 is legacy."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://api.fiscal.ai/docs",
+      "verified": {
+        "docs": "https://api.fiscal.ai/docs"
+      }
+    },
+    {
+      "id": "fiscal-ai.prices.daily",
+      "name": "Get daily stock prices",
+      "summary": "Daily open, close and volume, newest first, split-adjusted, in the listing's trading currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/company/stock-prices",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD."
+        },
+        "latest": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only the most recent price."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://api.fiscal.ai/docs",
+      "verified": {
+        "docs": "https://api.fiscal.ai/docs"
+      }
+    },
+    {
+      "id": "fiscal-ai.filings.list",
+      "name": "List a company's filings",
+      "summary": "Filings newest first, 1,000 per page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/company/filings",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based page."
+        }
+      },
+      "job": "company.documents",
+      "docs_url": "https://api.fiscal.ai/docs",
+      "verified": {
+        "docs": "https://api.fiscal.ai/docs"
+      }
+    },
+    {
+      "id": "fiscal-ai.news.company",
+      "name": "Get company news",
+      "summary": "News about one company, filterable by event type and importance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/news",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; defaults to a recent window of about two weeks."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD."
+        },
+        "eventType": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "earnings",
+            "guidance",
+            "dividend",
+            "stock_split",
+            "buyback",
+            "ma",
+            "partnership",
+            "product_launch",
+            "expansion",
+            "regulatory",
+            "legal",
+            "executive",
+            "restructuring",
+            "financing",
+            "technology",
+            "esg",
+            "analyst",
+            "market_commentary",
+            "other"
+          ]
+        },
+        "importance": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 5."
+        },
+        "directArticle": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://api.fiscal.ai/docs",
+      "verified": {
+        "docs": "https://api.fiscal.ai/docs"
+      }
+    },
+    {
+      "id": "fiscal-ai.transcripts.get",
+      "name": "Get an earnings call transcript",
+      "summary": "Speakers, text, paragraphs and timing of one earnings call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/ir-events/transcript/{eventKey}",
+      "params": {
+        "eventKey": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "q{quarter}-{year}.",
+          "example": "q2-2025"
+        },
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; alone for US tickers, else with exchange or micCode.",
+          "example": "MSFT"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange code, with ticker."
+        },
+        "micCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Market identifier code (MIC), with ticker."
+        },
+        "companyKey": {
+          "in": "query",
+          "type": "string",
+          "description": "EXCHANGE_TICKER key instead of ticker.",
+          "example": "NASDAQ_MSFT"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "fscl": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal.ai stable company identifier instead of ticker."
+        }
+      },
+      "notes": [
+        "List a company's events and their keys with /v1/company/ir-events."
+      ],
+      "docs_url": "https://api.fiscal.ai/docs",
+      "verified": {
+        "docs": "https://api.fiscal.ai/docs"
+      }
+    }
+  ]
+}
