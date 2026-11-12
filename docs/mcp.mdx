@@ -21,13 +21,13 @@ reference.
 
 ## Install, with no credentials at all
 
-The default `auto` chain falls back to backends that need no key, so the first
+The default `auto` chain falls back to backends that need no key, so the firs
 run needs nothing but a clone and [uv](https://docs.astral.sh/uv/):
 
 ```bash
-git clone https://github.com/Nimbleway/webrouter.git
+git clone https://github.com/Nimbleway/webrouter.gi
 cd webrouter && make setup
-uv run web-router-mcp    # a check that it starts: it waits silently for a client; Ctrl-C stops it
+uv run web-router-mcp    # a check that it starts: it waits silently for a client; Ctrl-C stops i
 ```
 
 Without a clone, install it from PyPI: `pip install "webrouter[all]"` (or
@@ -37,7 +37,7 @@ An install without the `mcp` extra has the command too; it prints the line
 that installs the extra and exits.
 
 That is a working `search` and a working `extract` with no account, no key and
-no signup — the keyless backends listed in 
+no signup — the keyless backends listed in
 [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials). Then
 register it with your client, using the absolute path of your clone:
 
@@ -65,10 +65,10 @@ register it with your client, using the absolute path of your clone:
   }
   ```
 
-  A client started from the desktop often has no shell `PATH`, so it may not
+  A client started from the desktop often has no shell `PATH`, so it may no
   find `uv`: put the output of `which uv` in `command` instead.
 
-`--project` points uv at your clone and keeps the working directory your client
+`--project` points uv at your clone and keeps the working directory your clien
 chose. `--all-extras` turns on every tool, the `browser_*` ones included, and
 lets a fresh clone start before `make setup` has run; `make setup` also
 installs the Chromium the `local` browser drives. Without Playwright the server
@@ -90,7 +90,7 @@ cp .env.example "$HOME/Library/Application Support/web-router/.env"
 
 On Linux the directory is `~/.config/web-router` (or
 `$XDG_CONFIG_HOME/web-router`), on Windows `%APPDATA%\web-router`. Fill in the
-keys you hold, then restart the client: a server keeps the environment it
+keys you hold, then restart the client: a server keeps the environment i
 started with, unless the model loads the file with [`load_env`](#loading-keys-mid-conversation-load_env).
 Each person brings their own keys: there is no shared key store, and a key
 goes from the machine it was set on only to its own provider.
@@ -110,7 +110,7 @@ An earlier place wins, per variable; a later file only fills what is still
 unset, and a credential of two variables (Oxylabs' username and password,
 Bright Data's token and zone) only as a whole: a file holding half of one sets
 none of it, so it never blocks a later file holding both. So a project's own `.env` and a
-remembered file can add keys but never replace or complete yours: a repo that
+remembered file can add keys but never replace or complete yours: a repo tha
 commits a `.env` with its owner's key does not take over your traffic. The capabilities resource says which file each variable came
 from. The server never creates the user config directory except to record a
 remembered path. A `WEB_ROUTER_ENV_FILE` that names no file is reported rather
@@ -131,7 +131,7 @@ Whichever file it is, only the provider credentials listed in
 [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) are taken from it. A switch such as
 `WEB_ROUTER_MCP_ALLOW_FILE_URLS` or `CHROME_PATH` in a file is ignored, because
 a server registered at user scope starts in any workspace and that workspace's
-file is not whoever runs the server; `${...}` is not expanded, so a file cannot
+file is not whoever runs the server; `${...}` is not expanded, so a file canno
 copy another secret into a provider's key. The server never writes a
 credential anywhere, never sends one to anything but the backend it belongs to,
 and never reports one back to the model.
@@ -146,7 +146,7 @@ loads its provider credentials under the same rules, without a restart:
 load_env(path="~/work/.env")                 -> {"file": "/Users/you/work/.env",
                                                  "loaded": ["BRAVE_SEARCH_API_KEY"],
                                                  "configured": {"search": ["auto", "brave", "you-mcp"], ...}}
-load_env(path="~/work/.env", remember=true)  # ...and read it on every start
+load_env(path="~/work/.env", remember=true)  # ...and read it on every star
 ```
 
 It returns the variables it loaded by name and the backends now configured per
@@ -163,20 +163,20 @@ jobs still being polled, carry on where they started.
 `env-path` in the user config directory, read after that directory's own
 `.env`, so it too can only add keys. Delete that file to forget it. A key
 rotated in the original file takes effect on the next start. The tool's
-description tells the model to call it only with a path you gave and to set
+description tells the model to call it only with a path you gave and to se
 `remember` only when you ask.
 
 A remembered path is read in every project the server starts in. When the file
 lies outside the server's working directory, so its keys belong to another
-checkout, the capabilities resource's `env` starts with a `warning` naming it
-and the record to delete, and the server's instructions tell the model that
+checkout, the capabilities resource's `env` starts with a `warning` naming i
+and the record to delete, and the server's instructions tell the model tha
 billed backends are live. A setup you believe is keyless can then still bill:
 check the warning, or delete `env-path`.
 
 A key already set is never replaced, so a load can only add backends. That is
 also its one risk: a model steered by a page it read could call `load_env` on a
 file someone planted on this machine, adding a key for a backend you hold none
-for, and later calls through `auto` could then run on that account. The result
+for, and later calls through `auto` could then run on that account. The resul
 names every variable a load set, and the capabilities resource lists every load.
 
 ### What the server found
@@ -201,9 +201,9 @@ backend lists:
 — every place it looked, in order, and what it found there (`used`, `missing`,
 `unreadable` with a `reason`, `no credentials`, or `nothing new` when an earlier
 place had set everything it holds); each variable loaded at startup and the
-file it came from; whether `WEB_ROUTER_ENV_FILE` named a file that is not
+file it came from; whether `WEB_ROUTER_ENV_FILE` named a file that is no
 there; the variables the client already exported, by name; and each `load_env`
-since. With no provider key at
+since. With no provider key a
 all it also carries a `hint` saying how to add one, the server's instructions
 say no keys were found and that the model can ask for a `.env` path and call
 `load_env` — or carry on keyless — and every other
@@ -272,7 +272,7 @@ tells the model that `search_depth` is how much text comes back per result and
 `effort` how hard the backend looks, and that higher effort costs more and
 takes longer, so it leaves `effort` unset unless needed.
 
-Over MCP the model chooses `max_results`, not you. Its description steers it
+Over MCP the model chooses `max_results`, not you. Its description steers i
 away from a single result, but the choice stays the model's. A host that wants
 the number fixed should [wrap `search` itself](https://docs.webrouter.net/integrations#wrapping-search-for-your-own-agent).
 
@@ -280,7 +280,7 @@ the number fixed should [wrap `search` itself](https://docs.webrouter.net/integr
 
 A research run takes minutes and an MCP client talks over one pipe. So
 `research` submits the run, waits 25 seconds, and either answers outright or
-hands back a handle with the run still going. Poll `research_status` with that
+hands back a handle with the run still going. Poll `research_status` with tha
 handle — calling `research` again would start, and pay for, a second run.
 `browse` and `browse_status` work the same way, and each status tool refuses a
 handle from the other.
@@ -295,7 +295,7 @@ options and the backend order -- and the server runs it. The result is the
 method's own tool output (`search`'s, `extract`'s, ...) with `tool`, the
 method that ran, a `handle` for `fetch_raw`, and the `decision` record.
 `dry_run=true` returns the plan alone and calls nothing. `max_cost_usd` and
-`time_limit_s` cap that one call, planning included, within the budget
+`time_limit_s` cap that one call, planning included, within the budge
 below; each must be a positive, finite number. When the router picks
 `research` or `browse`, `web_run` waits as those tools do, 25 seconds or less
 if its own `time_limit_s` or the budget has less left, and then hands back a
@@ -305,7 +305,7 @@ unchanged: `search`, `extract` and the rest never ask the router.
 The router is set by the operator -- whoever starts the server and sets its
 environment -- once, when the server starts:
 
-- unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
+- unset, the built-in rules router (`web_router.routing.rules.rules`): a promp
   with an `http(s)` URL is read with `extract`, anything else searched;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library. It is imported before
@@ -365,11 +365,11 @@ environment -- once, when the server starts:
   often a provider credential too. The server captures it, and every
   `api_key_env`, as `api_key` at startup, before it reads any `.env` file, so
   neither a project's `.env` nor `load_env` can supply or replace a router's
-  key: export it where the server starts. A preset's variable that is unset
-  there stops the server, and a vendor's variable named for a router that
+  key: export it where the server starts. A preset's variable that is unse
+  there stops the server, and a vendor's variable named for a router tha
   posts to any other host is refused. The capabilities resource names a
   preset's host too, as the record does: `llm(api.openai.com)`,
-  `systemone(api.typesafe.ai)`. A value that is not
+  `systemone(api.typesafe.ai)`. A value that is no
   a JSON object, or one set beside no built-in router, stops the server;
 - `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
   order, which is `search`.
@@ -390,8 +390,8 @@ account hand a vendor an intranet or metadata URL. The browser
 tools have their own guard ([Where the browser may go](#where-the-browser-may-go)),
 which checks DNS answers and redirects but refuses only cloud metadata hosts
 and the browser's debugging port: other loopback and private hosts are
-admitted there. A refused URL stays in the prompt text, though, and the prompt
-itself goes to the backend that serves it, as its search query or browse task, as it
+admitted there. A refused URL stays in the prompt text, though, and the promp
+itself goes to the backend that serves it, as its search query or browse task, as i
 would through `search`. The built-in router runs in the server's process and
 sends nothing out; an operator's router runs there too, but it is your code,
 and may send the prompt on, to a model's server for instance. The `remote`
@@ -402,12 +402,12 @@ time leaves `web_run` on the static order. A `fallback` router sends the
 same to every service it asks, in order, one that times out included.
 
 **The budget.** Every billed tool -- `search`, `extract`, `answer`, `research`,
-`browse`, `live_data`, `browser_open` and `web_run` -- spends from one budget
+`browse`, `live_data`, `browser_open` and `web_run` -- spends from one budge
 per connection, a shared budget as `wr.budget(...)` is in the library. Each
-attempt reserves its estimated list price before it starts, and a call that
+attempt reserves its estimated list price before it starts, and a call tha
 does not fit is refused with `BudgetExceededError` before anything bills. A
 live data run is charged its list price; a cloud browser per minute of its
-lifetime (`timeout`), rounded up to whole minutes, on the dearest backend that
+lifetime (`timeout`), rounded up to whole minutes, on the dearest backend tha
 can serve the options asked for. A browser option that can bill an extra
 charge (a proxy country, stealth, CAPTCHA solving, a profile) makes a paid
 backend's price unknown. Under a cost cap a backend whose price is
@@ -426,7 +426,7 @@ wait no longer than it has left.
 - **`budget_start(max_cost_usd, time_limit_s)`** opens a new task inside the
   ceiling, with both limits stated each time -- positive, finite numbers, or
   the call is refused -- and a clock from now. Each
-  reservation must fit the task and the ceiling, so the limits are cut to what
+  reservation must fit the task and the ceiling, so the limits are cut to wha
   the ceiling has left. A call still running when a new task starts stays
   charged to the connection.
 - **`budget_status()`** returns the task in force, the connection's totals
@@ -444,7 +444,7 @@ wait no longer than it has left.
 
   `budget` is `null` with no ceiling and no `budget_start`. Its
   `max_cost_usd` and `time_limit_s` are those in force, cut to the ceiling,
-  and `remaining_usd` counts against the ceiling too; `connection` is what
+  and `remaining_usd` counts against the ceiling too; `connection` is wha
   every task on the connection has spent and reserved. `ceiling` is always
   there, each limit `null` when the operator set none.
 
@@ -485,7 +485,7 @@ these with `[redacted]`:
   inspector, CDP, websocket, connect or connection endpoint — `liveViewUrl`,
   `debuggerFullscreenUrl`, `wsEndpoint`, `connectUrl`, `CDPURL` and the like,
   matched in any case, with or without separators.
-- **Any URL that is a session on its face**, wherever it appears, free text
+- **Any URL that is a session on its face**, wherever it appears, free tex
   included: a `ws://` / `wss://` scheme; a username or password in it;
   `devtools`, `cdp`, `live` or `debug` in its host or path, as in
   `http://127.0.0.1:9222/devtools/browser/…`; or a `token`, `apiKey`,
@@ -520,7 +520,7 @@ whoever holds it drives the browser, and several backends put the account key
 in it — the backend's own session id and any live-view URL stay in the server.
 Every browser tool's output and error message goes through the same redaction
 as a browse result, and on top of it every one of those values is replaced
-literally wherever it appears, so a page that quotes its own debugging endpoint
+literally wherever it appears, so a page that quotes its own debugging endpoin
 still does not hand it over. `browser_read` stores the page already scrubbed,
 so `fetch_raw` on its handle can only return what is safe.
 
@@ -528,10 +528,10 @@ Each session keeps one handle and one CDP connection for its whole life —
 several backends end a session when its CDP client disconnects — and runs one
 action at a time.
 
-### What `browser_open` takes, and what it does not
+### What `browser_open` takes, and what it does no
 
 `provider` (the browser backends configured here, `local` always among them),
-`headless`, `timeout` (the session's lifetime: 600 seconds when unset, and at
+`headless`, `timeout` (the session's lifetime: 600 seconds when unset, and a
 most 600 however it is set), `idle_timeout`, `viewport`, `proxy_country`,
 `stealth` (`"off"`, `"low"` or `"high"`) and `solve_captchas` — but only the
 ones a backend configured here maps, as for every other tool, and `stealth`
@@ -590,7 +590,7 @@ The policy is enforced at these points:
   IPv4 it carries.
 - A Playwright route on the browser context sees each request's *first* hop and
   aborts one to a refused address — a link, a form, a script's `fetch`, a
-  WebSocket. It does not see redirect hops: Playwright routes only the first
+  WebSocket. It does not see redirect hops: Playwright routes only the firs
   request of a chain. For a host that is a name rather than an address, the
   route also resolves it, on a worker thread, and aborts the request if any
   address it resolves to is link-local or a metadata address, or is the
@@ -621,7 +621,7 @@ Blocking the CDP port inside the browser as well, through CDP
 `connect_over_cdp` connection, so it is not used.
 
 The DNS check narrows DNS rebinding; it does not close it. The route's lookup
-and the browser's are two separate lookups: once the route lets a request
+and the browser's are two separate lookups: once the route lets a reques
 through, Chrome resolves the name again with its own resolver and cache, and
 connects to whatever that answer is. A name served with a short TTL can answer
 the route with a public address and the browser, a moment later, with
@@ -629,7 +629,7 @@ the route with a public address and the browser, a moment later, with
 address that was checked, so a server that times its answers can still reach
 a refused address. What the check does rule out is the plain alias — a name
 that always resolves to a refused address, whether it was a first hop the route
-saw or a redirect hop resolved when the action settled — and a rebinding that
+saw or a redirect hop resolved when the action settled — and a rebinding tha
 has already flipped by the time it is looked up. Other limits of the same
 check: a name that does not resolve here is let through (the browser's lookup
 fails the same way, unless its resolver — DNS over HTTPS, say — differs from
@@ -637,15 +637,15 @@ the system one); and a CDP host that is itself a name, as on a cloud vendor, is 
 and loopback alone, not by the addresses it resolves to.
 
 An operator who needs local files — a test fixture, say — sets
-`WEB_ROUTER_MCP_ALLOW_FILE_URLS=1` where the server runs. It is an environment
-variable and never a tool argument, so a conversation cannot turn it on, and it
+`WEB_ROUTER_MCP_ALLOW_FILE_URLS=1` where the server runs. It is an environmen
+variable and never a tool argument, so a conversation cannot turn it on, and i
 opens `file:` alone.
 
 ### Snapshots, refs and errors
 
 `browser_snapshot` returns the tree as its own text block, capped at **40,000
 characters** (about 10,000 tokens) unless the call passes `max_chars`. That is
-far more than the 8,000 a search result gets, because a ref past the cut cannot
+far more than the 8,000 a search result gets, because a ref past the cut canno
 be clicked; it holds the whole tree of a typical article, results page or form.
 A cut tree says so in `truncated` and `note`.
 
@@ -653,7 +653,7 @@ A ref is good until the next snapshot or navigation. `browser_click` and
 `browser_type` check before touching the page that exactly one of `ref` and
 `selector` was given and that the ref looks like one (`e14`, not `[ref=e14]`).
 A failed action comes back as an error saying what to do next: a stale ref says
-to take a new snapshot, a missing selector to check it or use a ref, a timeout
+to take a new snapshot, a missing selector to check it or use a ref, a timeou
 to retry or pass a larger `timeout`. A page or connection that is gone releases
 the session and says to open a new one.
 
@@ -718,7 +718,7 @@ So a shaped result:
 - caps the whole response at **8000 characters** (`WEB_ROUTER_MCP_MAX_CHARS`
   overrides it);
 - cuts long text at a word boundary and marks the cut ` ... [truncated]`;
-- drops whole results from the end of a list only when trimming text is not
+- drops whole results from the end of a list only when trimming text is no
   enough, and never drops the last one;
 - **never inlines `raw`**;
 - says in the result itself that it was shortened, and which handle gets the
@@ -728,7 +728,7 @@ So a shaped result:
 
 Every result carries a `handle`. `fetch_raw` takes it and returns the backend's
 untouched payload, uncapped — nothing is lost, it is just not spent on the
-context window unless you ask for it. The session keeps the 64 most recent
+context window unless you ask for it. The session keeps the 64 most recen
 handles and evicts the oldest, so a long conversation stays bounded.
 
 Everything else — parameter names, provider selection, error messages — is a
