@@ -77,6 +77,10 @@ OXYLABS_FAILED_FETCH_FLOOR: Final = 400
 
 OXYLABS_DOCS_URL: Final = "https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers"
 
+OXYLABS_SOURCE_DESCRIPTION: Final = "Oxylabs' dedicated {name} scraper{mode}: {docs}"
+OXYLABS_SOURCE_AS_JOB: Final = ", run as a job"
+"""A listed scraper's description; the second is added for a scraper Oxylabs runs only as a job."""
+
 MSG_OXYLABS_NO_FIELDS: Final = "Oxylabs returned no parsed fields for {source!r} ({url})"
 
 MSG_BRIGHTDATA_RENAMED_HINT: Final = (
