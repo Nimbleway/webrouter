@@ -18,20 +18,28 @@ from __future__ import annotations
 import os
 from typing import Any, ClassVar
 
+import httpx
+
 from web_router.constants_litellm import (
     ENV_LITELLM_PROXY_API_BASE,
     ENV_LITELLM_PROXY_API_KEY,
+    LITELLM_ANSWER_FIELD,
     LITELLM_API_KEY_HEADER,
     LITELLM_API_KEY_PREFIX,
     LITELLM_DATE_FIELD,
     LITELLM_EXCERPTS_FIELD,
     LITELLM_MAPPED_RESULT_FIELDS,
     LITELLM_MAX_RESULTS_FIELD,
+    LITELLM_METADATA_FIELD,
     LITELLM_QUERY_FIELD,
+    LITELLM_RAW_CONTENT_FIELD,
+    LITELLM_REQUEST_ID_FIELDS,
     LITELLM_RESULTS_FIELD,
+    LITELLM_SCORE_FIELD,
     LITELLM_SEARCH_PATH,
     LITELLM_SEARCH_TOOL_BY_PROVIDER,
     LITELLM_SNIPPET_FIELD,
+    MSG_LITELLM_PROXY_URL,
     PROVIDER_EXA_LITELLM,
     PROVIDER_PARALLEL_LITELLM,
     PROVIDER_TAVILY_LITELLM,
@@ -44,6 +52,7 @@ from web_router.providers._utils import best_text
 from web_router.providers.exa import ExaProvider
 from web_router.providers.parallel_search import ParallelProvider
 from web_router.providers.tavily import TavilyProvider, search_fields
+from web_router.routing.remote_url import checked_url
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 
@@ -66,12 +75,19 @@ class LiteLLMSearchMixin:
             search_tool: The ``search_tool_name`` the proxy lists this vendor under. Defaults to the vendor's name.
             **kwargs: Forwarded to :class:`HttpSearchProvider`; ``api_key`` falls back to ``LITELLM_PROXY_API_KEY``.
 
-        Raises:
-            The proxy URL is checked on the first call, not here, as ``agentcore`` checks its gateway: a router
-            builds every configured backend up front.
+        A missing or unsafe proxy URL raises :class:`ConfigurationError` on the first call, not here, as
+        ``agentcore`` checks its gateway: a router builds every configured backend up front. The URL is held to the
+        ``remote`` router's rule (``https``, or ``http`` to loopback; no credentials, query or fragment), since the
+        proxy key rides on every request; an unsafe one is never given to the client.
         """
-        self._proxy_url = (base_url or os.environ.get(ENV_LITELLM_PROXY_API_BASE) or "").strip().rstrip("/")
-        super().__init__(base_url=self._proxy_url or None, **kwargs)  # type: ignore[call-arg]
+        url = (base_url or os.environ.get(ENV_LITELLM_PROXY_API_BASE) or "").strip()
+        self._url_error: ConfigurationError | None = None
+        try:
+            url = checked_url(url, httpx).rstrip("/") if url else ""
+        except ConfigurationError:
+            self._url_error, url = ConfigurationError(MSG_LITELLM_PROXY_URL.format(provider=self.name)), ""
+        self._proxy_url = url
+        super().__init__(base_url=url or None, **kwargs)  # type: ignore[call-arg]
         if search_tool:
             self.search_path = LITELLM_SEARCH_PATH.format(tool=search_tool)  # type: ignore[misc]
 
@@ -81,6 +97,8 @@ class LiteLLMSearchMixin:
         return payload
 
     def _require_proxy(self) -> None:
+        if self._url_error is not None:
+            raise self._url_error
         if not self._proxy_url:
             raise ConfigurationError.missing_setting(self.name, env_var=ENV_LITELLM_PROXY_API_BASE, setting="base_url")
 
@@ -102,24 +120,29 @@ class LiteLLMSearchMixin:
         }
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
+        metadata = payload.get(LITELLM_METADATA_FIELD) or {}
         return SearchResponse(
             provider=self.name,
             query=request.query,
             results=[_to_result(hit, request) for hit in payload.get(LITELLM_RESULTS_FIELD) or []],
+            answer=metadata.get(LITELLM_ANSWER_FIELD),
+            request_id=next((metadata[key] for key in LITELLM_REQUEST_ID_FIELDS if metadata.get(key)), None),
             raw=payload,
         )
 
 
 def _to_result(hit: dict[str, Any], request: SearchRequest) -> SearchResult:
     # The snippet is the vendor's body for the hit -- Exa's text, Tavily's content, Parallel's first excerpt -- and
-    # Parallel's other excerpts ride beside it.
+    # Parallel's other excerpts ride beside it. Tavily's full page, when asked for, is raw_content, as natively.
     snippet = hit.get(LITELLM_SNIPPET_FIELD) or ""
     excerpts = [excerpt for excerpt in hit.get(LITELLM_EXCERPTS_FIELD) or [] if excerpt and excerpt != snippet]
+    body = best_text(hit.get(LITELLM_RAW_CONTENT_FIELD), "\n\n".join([snippet, *excerpts]))
     return SearchResult(
         url=hit.get("url", ""),
         title=hit.get("title") or "",
         description=as_snippet(snippet),
-        content=lite_body(best_text("\n\n".join([snippet, *excerpts]), snippet), request.search_depth),
+        content=lite_body(body, request.search_depth),
+        score=hit.get(LITELLM_SCORE_FIELD),
         published_date=hit.get(LITELLM_DATE_FIELD),
         extra={k: v for k, v in hit.items() if k not in LITELLM_MAPPED_RESULT_FIELDS},
     )

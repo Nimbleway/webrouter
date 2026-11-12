@@ -114,6 +114,46 @@ def test_the_reply_is_normalized_the_same_for_every_vendor() -> None:
     assert result.extra == {"last_updated": "2026-11-01"}
 
 
+def test_tavily_extras_land_where_native_tavily_puts_them() -> None:
+    """Score, the full page and the answer, which LiteLLM documents for Tavily (``raw_content`` and ``score`` on a
+    result, ``answer`` and ``request_id`` under ``provider_metadata``), fill the same fields ``tavily`` fills."""
+    hit = {"url": "https://a.com", "title": "A", "snippet": "short", "raw_content": "the whole page", "score": 0.83}
+    payload = {"results": [hit], "provider_metadata": {"answer": "RAG is...", "request_id": "req-1"}}
+    response = TavilyLiteLLMProvider(api_key="k", base_url=PROXY)._to_response(SearchRequest(query="q"), payload)
+    (result,) = response.results
+
+    assert (response.answer, response.request_id) == ("RAG is...", "req-1")
+    assert (result.content, result.description, result.score) == ("the whole page", "short", 0.83)
+    assert result.extra == {}
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://proxy.example.com",
+        "https://user:secret@proxy.example.com",
+        "https://proxy.example.com?key=secret",
+        "ftp://proxy.example.com",
+    ],
+)
+def test_an_unsafe_proxy_url_never_gets_the_key(url: str) -> None:
+    seen: list[httpx.Request] = []
+    provider = ExaLiteLLMProvider(api_key="k", base_url=url, transport=_recording(seen))
+
+    with pytest.raises(ConfigurationError, match="LITELLM_PROXY_API_BASE") as raised:
+        provider.search(SearchRequest(query="q"))
+    assert seen == []
+    assert "secret" not in str(raised.value)
+
+
+def test_plain_http_is_allowed_to_this_machine() -> None:
+    seen: list[httpx.Request] = []
+    ExaLiteLLMProvider(api_key="k", base_url="http://localhost:4000", transport=_recording(seen)).search(
+        SearchRequest(query="q")
+    )
+    assert str(seen[0].url) == "http://localhost:4000/v1/search/exa"
+
+
 # -- Live, through a LiteLLM proxy ----------------------------------------------------------------------------------
 
 
