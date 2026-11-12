@@ -11,6 +11,7 @@ every method, so they live here once. The chains themselves are in
 from __future__ import annotations
 
 import inspect
+import threading
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from http import HTTPStatus
 from typing import Any, TypeAlias, TypeVar
@@ -55,6 +56,26 @@ all things another member of the chain may not suffer from. Anything else --
 notably :class:`UnsupportedParameterError` -- is a bug in this class rather
 than a property of the backend, and propagates.
 """
+
+_MemberT = TypeVar("_MemberT")
+
+
+class _Members(dict[int, _MemberT]):
+    """An auto provider's members by position, each built on first use.
+
+    Built under a lock: threads sharing one router must not each build, and
+    leak, a member of their own, of which ``close()`` would see only the last.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._lock = threading.Lock()
+
+    def built(self, position: int, build: Callable[[], _MemberT]) -> _MemberT:
+        with self._lock:
+            if position not in self:
+                self[position] = build()
+            return self[position]
 
 
 def _keyed_chain(preferred: tuple[str, ...], configured: set[str]) -> tuple[tuple[str, dict[str, Any]], ...]:

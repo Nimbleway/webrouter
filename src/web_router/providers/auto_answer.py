@@ -41,6 +41,7 @@ from web_router.providers._chain import (
     _held_or_raise,
     _keyed_chain,
     _member_options,
+    _Members,
     _members_and_chain,
     _quoted,
 )
@@ -93,7 +94,7 @@ class AutoAnswerProvider(AnswerProvider):
             answering = set(available_answer_providers())
             self._chain = tuple(member for member in self._chain if member[0] in answering)
         self.fallback_on_empty = fallback_on_empty
-        self._members: dict[int, AnswerProvider] = {}
+        self._members: _Members[AnswerProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -118,12 +119,10 @@ class AutoAnswerProvider(AnswerProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry_answer import create_answer_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_answer_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        name, options = self._chain[position]
+        return self._members.built(
+            position, lambda: create_answer_provider(name, **_member_options(self._members_config, name, options))
+        )
 
     def _answer(self, request: AnswerRequest) -> AnswerResponse:
         failures: dict[str, WebRouterError] = {}
