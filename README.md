@@ -176,7 +176,7 @@ hosts. See [Smart routing](https://docs.webrouter.net/smart-routing).
 claude mcp add web-router -- uvx --from "webrouter[mcp]" web-router-mcp
 ```
 
-The [MCP guide](docs/mcp.md) covers Claude Desktop, Cursor and other clients,
+The [MCP guide](https://docs.webrouter.net/mcp) covers Claude Desktop, Cursor and other clients,
 credentials, tool costs and browser guards.
 
 **Agent frameworks.** Ready-made `web_search` and `web_extract` tools, with a
@@ -227,7 +227,7 @@ SealQA or your own CSV) with an LLM judge. See
 | [Quickstart](https://docs.webrouter.net/quickstart) | [Extract](https://docs.webrouter.net/extract) | [Smart routing](https://docs.webrouter.net/smart-routing) |
 | [How it works](https://docs.webrouter.net/how-it-works) | [Answer](https://docs.webrouter.net/answer) | [Benchmarks](https://docs.webrouter.net/benchmarks) |
 | [Providers](https://docs.webrouter.net/providers) | [Research](https://docs.webrouter.net/research) | [Adding a provider](https://docs.webrouter.net/custom-providers) |
-| [Configuration](https://docs.webrouter.net/configuration) | [Live data](https://docs.webrouter.net/live-data) | [MCP server](docs/mcp.md) |
+| [Configuration](https://docs.webrouter.net/configuration) | [Live data](https://docs.webrouter.net/live-data) | [MCP server](https://docs.webrouter.net/mcp) |
 | [Errors](https://docs.webrouter.net/errors) | [Browser](https://docs.webrouter.net/browser) | [Examples](examples/) |
 | | [Vendor data](https://docs.webrouter.net/vendors) | [Changelog](CHANGELOG.md) |
 

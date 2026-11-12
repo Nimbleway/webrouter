@@ -1,4 +1,8 @@
-# A baseline system prompt for agents using web-router
+---
+title: "Agent system prompt"
+description: "A baseline system prompt for an agent whose tools are web-router's, over MCP or the library, plus the same contract as an installable agent skill."
+icon: "message-bot"
+---
 
 A starting block for an Anthropic agent — the Claude API's tool runner, the
 Agent SDK, or any framework that takes a system prompt — whose tools are
@@ -81,3 +85,9 @@ with what it has rather than discovering it by refusal.
 **Latency expectations prevent duplicate runs.** The single most expensive
 failure mode is a model impatient with a job-shaped call. Keep the "poll,
 never resubmit" line even in a heavily trimmed prompt.
+
+## As an agent skill
+
+The same contract ships as an agent skill, [`skills/web-router/SKILL.md`](https://github.com/Nimbleway/webrouter/blob/main/skills/web-router/SKILL.md),
+for a client that loads skills instead of a pasted prompt. Copy the `skills/web-router` folder into your
+client's skills directory (for Claude Code, `~/.claude/skills/` or a project's `.claude/skills/`).

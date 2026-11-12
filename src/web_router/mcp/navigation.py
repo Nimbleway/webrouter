@@ -27,7 +27,7 @@ would block the debugging port inside the browser as well, but over
 
 The DNS check narrows DNS rebinding but cannot close it: the browser does its
 own lookup after the route lets a request through, and a name with a short TTL
-can answer that one differently. ``docs/mcp.md`` says what is left.
+can answer that one differently. ``docs/mcp.mdx`` says what is left.
 """
 
 from __future__ import annotations
