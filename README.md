@@ -1000,7 +1000,9 @@ paid for. `evaluate()` is `search` only, for the same reason `benchmark()` is.
 ## Smart routing (experimental)
 
 Everything in this section is experimental: any name in it may change before
-1.0. With no router and no budget, nothing here changes a call.
+1.0. The default router, `rules`, is asked by `plan()` and `run()` alone: with no
+budget, `search()`, `extract()` and every other method you call run as they
+would with no router. `router=None` attaches none.
 
 A router is your code. WebRouter shows it a prompt and the candidates that
 could serve it, each priced and timed; the router picks the method and orders
@@ -1093,7 +1095,10 @@ the network and the hour: rerun the script for your own router.
 
 `plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method
 (`tool`), its options (`params`), the backends in order (`providers`) and the
-decision record. With no router it is a search, unless `tool` pins a method.
+decision record. With the default `rules` router a prompt with a URL is read,
+one asking for a report, a comparison or an in-depth analysis researched
+(billed per run: pass a `budget`), and anything else searched; with
+`router=None` it is a search. `tool` pins a method either way.
 `run(plan)` calls that method on `auto` in that order and returns its own
 response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
 `ResearchResponse` or `BrowseResponse`. `run(prompt)` does both. A saved
@@ -1222,8 +1227,13 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships one keyless router, `web_router.routing.rules.rules`: a
-prompt with a URL is extracted, anything else searched, and two model routers,
+The library ships one keyless router, `rules`, attached unless you pass
+`router=` (`router="rules"` names it, `router=None` attaches none): a prompt
+with a URL is extracted; one asking in so many words for a report, a comparison
+or an in-depth analysis is researched, or searched when no research backend is
+configured; anything else is searched. It reads English phrases, never single
+words like "why" or "list", and never picks `browse` or `answer`. It also ships
+two model routers,
 `router="llm"` and `router="systemone"`: see
 [Decision APIs](#decision-apis-deciderrouter-routerllm-and-routersystemone).
 Six example routers, tested offline: [rules](examples/router_rules.py), a
