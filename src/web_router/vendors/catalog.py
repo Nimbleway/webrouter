@@ -37,7 +37,7 @@ from web_router.vendors.schema import Vendor, VendorEndpoint
 _WORD = re.compile(r"[a-z0-9]+")
 
 
-def _words(text: str) -> set[str]:
+def words(text: str) -> set[str]:
     """Lowercase words, plurals folded: "monitors" and "monitor" are one word to a search."""
     return {
         word[:-1] if len(word) > 3 and word.endswith("s") and not word.endswith("ss") else word
@@ -93,9 +93,8 @@ class VendorCatalog:
         category: str | None = None,
         kind: str | None = None,
         limit: int | None = None,
-        min_score: int = 0,
     ) -> list[VendorEndpoint]:
-        """Endpoints whose words match ``query``, best match first, scoring at least ``min_score``.
+        """Endpoints whose words match ``query``, best match first.
 
         A plain word-overlap score over the id, name, summary, job and the
         vendor's own name and category, with filler words ("a", "for", "the")
@@ -105,8 +104,8 @@ class VendorCatalog:
         """
         if vendor is not None:
             self.vendor(vendor)
-        words = _words(query) - VENDOR_FIND_STOP_WORDS
-        if not words and _words(query):
+        query_words = words(query) - VENDOR_FIND_STOP_WORDS
+        if not query_words and words(query):
             return []  # a query of filler words only asks for nothing, not for everything
         scored: list[tuple[int, str, VendorEndpoint]] = []
         for endpoint in self._endpoints.values():
@@ -117,8 +116,8 @@ class VendorCatalog:
                 continue
             if kind is not None and endpoint.kind != kind:
                 continue
-            score = _score(words, endpoint, owner)
-            if (words and score == 0) or score < min_score:
+            score = _score(query_words, endpoint, owner)
+            if query_words and score == 0:
                 continue
             scored.append((-score, endpoint.id, endpoint))
         scored.sort(key=lambda row: (row[0], row[1]))
@@ -126,12 +125,12 @@ class VendorCatalog:
         return found if limit is None else found[:limit]
 
 
-def _score(words: set[str], endpoint: VendorEndpoint, vendor: Vendor) -> int:
-    if not words:
+def _score(query_words: set[str], endpoint: VendorEndpoint, vendor: Vendor) -> int:
+    if not query_words:
         return 0
-    strong = _words(f"{endpoint.id} {endpoint.job or ''} {vendor.name} {vendor.vendor}")
-    weak = _words(f"{endpoint.name} {endpoint.summary} {vendor.category}")
-    return 3 * len(words & strong) + len(words & weak)
+    strong = words(f"{endpoint.id} {endpoint.job or ''} {vendor.name} {vendor.vendor}")
+    weak = words(f"{endpoint.name} {endpoint.summary} {vendor.category}")
+    return 3 * len(query_words & strong) + len(query_words & weak)
 
 
 def load_vendor_file(path: Path | str, text: str | None = None) -> Vendor:

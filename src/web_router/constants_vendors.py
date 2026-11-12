@@ -31,24 +31,6 @@ VENDOR_ERROR_BODY_LIMIT: Final = 2000
 VENDOR_FIND_LIMIT: Final = 20
 """Endpoints :meth:`~web_router.WebRouter.find_vendor_endpoints` returns when no limit is given."""
 
-DATA_API_SEARCH_LIMIT: Final = 3
-"""Data APIs :meth:`~web_router.WebRouter.search` lists beside the web results when ``max_results`` is not set."""
-
-DATA_API_MIN_SCORE: Final = 3
-"""The least match score a data API needs to be listed by ``search``: one query word in its id, job or name.
-
-A word that only appears in an endpoint's summary or category scores 1, which
-is too weak to list beside every web search, since discovery is on by default.
-"""
-
-DATA_APIS_ONLY_PROVIDER: Final = "data-apis"
-"""``SearchResponse.provider`` for a ``search(data_apis_only=True)``: the local catalog answered, no web backend."""
-
-MSG_DATA_APIS_ONLY_CONFLICT: Final = (
-    "search(data_apis_only=True) calls no web backend, so it does not take {names}; drop them, or search the web."
-)
-MSG_DATA_APIS_ONLY_OFF: Final = "search(data_apis_only=True) needs data_apis=True: it lists data APIs and nothing else."
-
 VENDOR_FIND_STOP_WORDS: Final = frozenset(
     {
         "a",

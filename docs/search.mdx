@@ -45,9 +45,14 @@ response.data_apis[0].missing  # the variable to set for each one that is not
 ```
 
 Matching reads the local catalog, so it costs nothing and calls nothing; a match
-is never run, and calling it stays `call_vendor()`'s. Only read endpoints are
-listed, at most three, and only on a query word in an endpoint's id, job or
-vendor name, so most web searches list none. `data_apis=False` leaves them out,
+is never run, and calling it stays `call_vendor()`'s. A search lists a data API
+only when the query names it — by its id (`datadog`, `google ads`) or a
+distinctive word of its name (`edgar`) — and asks for something it serves: another
+query word in an endpoint's id or job, or, for an API named by its id, in an
+endpoint's name or summary. A query that names an API and nothing else lists
+its first read endpoints. Only read endpoints are listed, at most three, so an
+everyday web search lists none. A catalog that fails to load is logged and
+skipped, and the web results come back as usual. `data_apis=False` leaves them out,
 `configured_only=True` keeps the ones you hold credentials for, and
 `data_apis_only=True` lists them alone and calls no web backend (its
 `provider` is `"data-apis"`); it refuses every web option but `max_results`,
