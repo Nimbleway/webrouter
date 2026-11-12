@@ -10,7 +10,8 @@ from typing import Any, Literal
 
 MCP_SERVER_INSTRUCTIONS = (
     "Search, read and research the web through whichever backends this machine holds keys for; each tool's "
-    "description says what it costs and how long it takes. "
+    "description says what it costs and how long it takes, and its `provider` lists only the backends "
+    "configured here -- omit it and the router picks one. "
     "When a lookup ends at a page that needs interaction -- a login, a form, a multi-step portal, a "
     "result gated on the user's own details -- do not stop at describing the steps: tell the user a "
     "browser could finish the task and ask before opening one. For a page that needs the user's own "
@@ -132,18 +133,15 @@ MCP_BUDGET_START_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_DESC_WEB_RUN = (
-    "Hand a request in plain words to web-router's router, which picks the method and backends and runs it: "
-    "by default a prompt naming a URL is read (`extract`) and anything else searched. Use it when you would "
-    "rather not choose; call a tool directly for its options. `dry_run=true` returns the plan -- method, "
-    "options, backend order and decision record -- and bills nothing. The result is shaped like the "
-    "method's own, with the method that ran and the decision record."
+    "Hand a request in plain words to web-router's router, which picks the method and backends and runs "
+    "it (by default: a URL is read, anything else searched). Call a tool directly for its options. "
+    "`dry_run=true` returns the plan and bills nothing."
 )
 
 MCP_DESC_BUDGET_START = (
-    "Start a new task budget, `max_cost_usd` at estimated list prices and `time_limit_s` from now, that "
-    "every billed tool then spends from; a call that does not fit is refused before anything bills. State "
-    "both limits each time: the previous task's budget closes. The operator's ceiling, if set, still caps "
-    "it. Under a cost cap a backend whose price is unknown never runs."
+    "Start a task budget, `max_cost_usd` at list prices and `time_limit_s` from now, that every billed "
+    "tool spends from; a call that does not fit is refused before it bills. It replaces the previous one, "
+    "and the operator's ceiling still caps it."
 )
 
 MCP_DESC_BUDGET_STATUS = (

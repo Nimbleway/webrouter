@@ -44,6 +44,7 @@ from mcp_types import (
     ContentBlock,
     ImageContent,
     ListResourcesResult,
+    ListResourceTemplatesResult,
     ListToolsResult,
     PaginatedRequestParams,
     ReadResourceRequestParams,
@@ -157,6 +158,13 @@ def build_server(tools: WebRouterTools) -> Server[object]:
     ) -> ListResourcesResult:
         return list_resources()
 
+    async def on_list_resource_templates(
+        context: ServerRequestContext[object],
+        params: PaginatedRequestParams | None,
+    ) -> ListResourceTemplatesResult:
+        # None to offer, but a client that asks is answered rather than told the method does not exist.
+        return ListResourceTemplatesResult(resource_templates=[])
+
     async def on_read_resource(
         context: ServerRequestContext[object],
         params: ReadResourceRequestParams,
@@ -170,6 +178,7 @@ def build_server(tools: WebRouterTools) -> Server[object]:
         on_list_tools=on_list_tools,
         on_call_tool=on_call_tool,
         on_list_resources=on_list_resources,
+        on_list_resource_templates=on_list_resource_templates,
         on_read_resource=on_read_resource,
     )
 

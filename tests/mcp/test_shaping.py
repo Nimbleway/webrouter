@@ -17,12 +17,12 @@ from web_router.mcp.shaping import (
     max_response_chars,
     redact,
     render,
-    shape_answer,
     shape_browse,
     shape_extract,
     shape_search,
     truncate,
 )
+from web_router.mcp.shaping_answer import shape_answer
 from web_router.types import (
     BrowseResponse,
     BrowseStep,
@@ -68,7 +68,7 @@ def test_a_shaped_search_fits_the_budget_and_says_it_was_cut() -> None:
     assert len(render(payload)) <= 1200
     assert payload["truncated"] is True
     assert "fetch_raw" in payload["note"]
-    assert payload["handle"] in payload["note"]
+    assert payload["handle"] == "search-0001"
 
 
 def test_raw_is_never_inlined_in_a_shaped_result() -> None:
@@ -84,7 +84,7 @@ def test_dropping_whole_results_is_reported_with_the_count() -> None:
     assert len(payload["results"]) < 20
     # The count of what came back is kept even when the results themselves are not.
     assert payload["result_count"] == 20
-    assert "did not fit" in payload["note"]
+    assert "left out" in payload["note"]
 
 
 def test_text_is_cut_before_any_result_is_dropped() -> None:
@@ -93,7 +93,9 @@ def test_text_is_cut_before_any_result_is_dropped() -> None:
 
     assert len(payload["results"]) == 10
     assert len(render(payload)) <= MCP_MAX_RESPONSE_CHARS
-    assert "did not fit" not in payload["note"]
+    # Each result's text was cut, and says so where it was; the result list itself is whole, so not `truncated`.
+    assert all(result["content"].endswith(MCP_TRUNCATION_MARKER) for result in payload["results"])
+    assert payload["truncated"] is False and "note" not in payload
 
 
 def test_an_untruncated_result_carries_no_note() -> None:
@@ -163,7 +165,7 @@ def test_a_budget_too_small_for_the_shape_keeps_the_shape() -> None:
     payload = shape_search(_search_response(count=1), "search-0001", budget=100)
 
     assert payload["results"][0]["url"] == "https://example.com/0"
-    assert payload["truncated"] is True
+    assert payload["results"][0]["content"].endswith(MCP_TRUNCATION_MARKER)
 
 
 @pytest.mark.parametrize(
@@ -308,7 +310,7 @@ def test_a_devtools_endpoint_written_without_a_scheme_is_redacted(text: str) -> 
     assert count == 1 and "/devtools/" not in cleaned and MCP_REDACTED in cleaned
 
 
-def test_a_long_answer_is_cut_and_keeps_its_cited_sources_first() -> None:
+def test_a_long_answer_is_cut_and_lists_only_its_cited_sources() -> None:
     uncited = [Citation(url=f"https://read.example/{i}", snippet=_PROSE) for i in range(30)]
     cited = Citation(url="https://cited.example", snippet=_PROSE, field="[31]")
     response = AnswerResponse(provider="perplexity", query="q", answer=_PROSE * 3, citations=[*uncited, cited])
@@ -318,5 +320,29 @@ def test_a_long_answer_is_cut_and_keeps_its_cited_sources_first() -> None:
     assert len(render(shaped)) <= 4000
     assert shaped["answer"].endswith(MCP_TRUNCATION_MARKER)
     assert shaped["truncated"] is True
-    assert shaped["citation_count"] == 31, "the count is the backend's, whatever the cut left"
+    assert shaped["citations"] == [{"url": "https://cited.example", "marker": "[31]"}], "cited, no snippet"
+    assert shaped["uncited_sources"] == 30, "the pages it only read are counted, not listed"
+
+
+def test_all_sources_lists_the_cited_first_and_snippets_are_opt_in() -> None:
+    uncited = [Citation(url=f"https://read.example/{i}", snippet=_PROSE) for i in range(30)]
+    cited = Citation(url="https://cited.example", snippet=_PROSE, field="[31]")
+    response = AnswerResponse(provider="perplexity", query="q", answer="short", citations=[*uncited, cited])
+
+    shaped = shape_answer(response, "answer-0001", budget=4000, all_sources=True, snippets=True)
+
     assert shaped["citations"][0]["url"] == "https://cited.example", "a cited source outlives the cut"
+    assert shaped["citations"][0]["snippet"].startswith("alpha")
+    assert "uncited_sources" not in shaped
+    # Snippets are the only text cut, so the answer and its sources are whole: not `truncated`.
+    assert shaped["truncated"] is (len(shaped["citations"]) < 31)
+
+
+def test_an_answer_whose_backend_marks_no_source_lists_them_all() -> None:
+    response = AnswerResponse(
+        provider="exa", query="q", answer="a", citations=[Citation(url=f"https://e.example/{i}") for i in range(3)]
+    )
+
+    shaped = shape_answer(response, "answer-0001", budget=4000)
+
+    assert [row["url"] for row in shaped["citations"]] == [f"https://e.example/{i}" for i in range(3)]

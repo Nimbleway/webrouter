@@ -25,9 +25,8 @@ no snippet-sized setting refuses ``lite``: each declares the levels it serves in
 """
 
 SEARCH_DEPTH_DESCRIPTION = (
-    "How much page text comes back per result: 'lite' a snippet of up to about 500 characters, 'fast' a truncated "
-    "body of a few thousand, 'deep' the whole page, and the slowest. A backend that cannot return a level's size "
-    "refuses that level rather than returning less."
+    "Text per result: 'lite' a snippet (~500 characters), 'fast' a few thousand, 'deep' the whole page, slowest. "
+    "Unset, the backend's own default; a backend that cannot return a level's size refuses it."
 )
 """What ``search_depth`` means, in the request model and the MCP schema alike."""
 

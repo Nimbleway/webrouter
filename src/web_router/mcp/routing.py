@@ -34,13 +34,13 @@ from web_router.mcp.budget import budget_start, budget_status, positive_limit, w
 from web_router.mcp.shaping import (
     max_response_chars,
     redact,
-    shape_answer,
     shape_browse,
     shape_extract,
     shape_pending,
     shape_research,
     shape_search,
 )
+from web_router.mcp.shaping_answer import shape_answer
 from web_router.providers._deadline import call_deadline
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.routing.contract import Budget, Plan

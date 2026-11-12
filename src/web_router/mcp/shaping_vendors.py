@@ -14,7 +14,7 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from web_router.constants import MCP_JSON_INDENT
+from web_router.constants_mcp_context import MCP_JSON_SEPARATORS
 from web_router.constants_vendors_mcp import MCP_MSG_VENDOR_BINARY, MCP_MSG_VENDOR_TRUNCATED
 from web_router.mcp.shaping import redact, redaction_note, render, truncate
 from web_router.vendors.credentials import CredentialSource, missing_credentials
@@ -174,7 +174,11 @@ def shape_vendor_response(response: VendorResponse, handle: str, *, budget: int)
         payload["note"] = note
     if len(render(payload)) <= budget:
         return payload
-    text = data if isinstance(data, str) else json.dumps(data, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str)
+    text = (
+        data
+        if isinstance(data, str)
+        else json.dumps(data, separators=MCP_JSON_SEPARATORS, ensure_ascii=False, default=str)
+    )
     payload["truncated"] = True
     payload["note"] = f"{note} {MCP_MSG_VENDOR_TRUNCATED.format(handle=handle)}".strip()
     # Measured on the rendered answer, note included: the cut text is escaped again when rendered, so a

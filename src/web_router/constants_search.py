@@ -27,7 +27,7 @@ def described(model: type[BaseModel], field: str) -> str:
 
 MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "What to search for."},
-    "max_results": {"type": "integer", "minimum": 1, "description": described(SearchRequest, "max_results")},
+    "max_results": {"type": "integer", "minimum": 1, "description": "Unset, the backend's default; 5 to 10 suit most."},
     "search_depth": {
         "type": "string",
         "enum": list(get_args(SearchDepth)),
@@ -45,23 +45,18 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     },
     "country": {"type": "string", "description": described(SearchRequest, "country")},
     "locale": {"type": "string", "description": described(SearchRequest, "locale")},
-    "recency": {"type": "string", "enum": list(get_args(Recency)), "description": described(SearchRequest, "recency")},
+    "recency": {"type": "string", "enum": list(get_args(Recency)), "description": "Only sources dated within this."},
     "effort": {
         "type": "string",
         "enum": list(get_args(ResearchEffort)),
-        "description": described(SearchRequest, "effort"),
+        "description": "Higher costs more and takes longer: leave it unset unless needed.",
     },
 }
 
 MCP_DESC_SEARCH = (
-    "Search the web: ranked links with their titles, descriptions and page text. Returns in about "
-    "a second; free on the keyless backends, billed when a paid one is set. Use it to find pages you "
-    "do not have URLs for; use `extract` when you already have the URL, and `research` only when "
-    "the question needs an investigation rather than a list of results. `search_depth` sets how much "
-    "text comes back per result; `effort` how hard the backend looks, and higher effort costs more and "
-    "takes longer by a vendor-specific amount, so leave it unset unless needed. When the page that answers "
-    "needs a login, a form or other interaction, suggest a browser (`browser_open`) to the user "
-    "rather than only listing the steps."
+    "Search the web: ranked links with titles and page text, in about a second; free on the keyless "
+    "backends, billed on a paid one. For pages you have no URL for; `extract` reads a URL you have, "
+    "`research` investigates. Leave `effort` unset unless needed: higher costs more and takes longer."
 )
 
 MSG_UNSUPPORTED_DEPTH = (

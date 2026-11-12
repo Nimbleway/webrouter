@@ -11,7 +11,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from web_router.constants import MCP_JSON_INDENT, MCP_MIN_FIELD_CHARS, MCP_MSG_OVERSIZED, MCP_MSG_SAMPLES_OMITTED
+from web_router.constants import MCP_MIN_FIELD_CHARS, MCP_MSG_OVERSIZED, MCP_MSG_SAMPLES_OMITTED
+from web_router.constants_mcp_context import MCP_JSON_SEPARATORS
 from web_router.mcp.shaping import _fit, render
 from web_router.types_live_data import LiveDataResponse, LiveDataSource, LiveDataSourcePage
 
@@ -138,7 +139,9 @@ def _bounded(
 
 def _size(value: Any) -> int:
     """How many characters a field takes once serialized as the tool returns it; nothing for an absent one."""
-    return 0 if value is None else len(json.dumps(value, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str))
+    return (
+        0 if value is None else len(json.dumps(value, separators=MCP_JSON_SEPARATORS, ensure_ascii=False, default=str))
+    )
 
 
 def _source_row(template: LiveDataSource) -> dict[str, Any]:
