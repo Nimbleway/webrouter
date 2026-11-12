@@ -130,7 +130,8 @@ def test_a_progress_read_that_fails_still_names_the_snapshot() -> None:
         provider.run(LiveDataRequest(source=DATASET, inputs={"url": URL}))
 
 
-def test_a_records_read_that_fails_still_names_the_snapshot() -> None:
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+async def test_a_records_read_that_fails_still_names_the_snapshot(asynchronous: bool) -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/datasets/v3/scrape":
             return httpx.Response(202, json={"snapshot_id": "sd_abc"})
@@ -139,8 +140,9 @@ def test_a_records_read_that_fails_still_names_the_snapshot() -> None:
         return httpx.Response(500, text="boom")
 
     provider, _ = _waiting(respond)
+    request = LiveDataRequest(source=DATASET, inputs={"url": URL})
     with pytest.raises(LiveDataJobError, match="sd_abc") as raised:
-        provider.run(LiveDataRequest(source=DATASET, inputs={"url": URL}))
+        await provider.arun(request) if asynchronous else provider.run(request)
     assert raised.value.job_id == "sd_abc"
 
 
