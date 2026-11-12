@@ -26,6 +26,9 @@ README_NAMES = {
     "Keenable": "keenable",
     "DeepSeek": "deepseek",
     "AgentCore": "agentcore",
+    "Exa LiteLLM": "exa-litellm",
+    "Tavily LiteLLM": "tavily-litellm",
+    "Parallel LiteLLM": "parallel-litellm",
 }
 
 

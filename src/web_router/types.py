@@ -22,7 +22,13 @@ from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
-from web_router.types_options import RECENCY_DESCRIPTION, SEARCH_DEPTH_DESCRIPTION, SEARCH_EFFORT_DESCRIPTION
+from web_router.types_options import (
+    EXTRACT_PROFILE_DESCRIPTION,
+    MAX_RESULTS_DESCRIPTION,
+    RECENCY_DESCRIPTION,
+    SEARCH_DEPTH_DESCRIPTION,
+    SEARCH_EFFORT_DESCRIPTION,
+)
 from web_router.types_options import Recency as Recency
 from web_router.types_options import ResearchEffort as ResearchEffort
 from web_router.types_options import SearchDepth as SearchDepth
@@ -79,6 +85,9 @@ class Provider(str, Enum):
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
     PARALLEL_MCP = "parallel-mcp"
+    EXA_LITELLM = "exa-litellm"
+    TAVILY_LITELLM = "tavily-litellm"
+    PARALLEL_LITELLM = "parallel-litellm"
     OXYLABS = "oxylabs"
     BRIGHTDATA = "brightdata"
     FIRECRAWL = "firecrawl"
@@ -140,13 +149,6 @@ class NormalizedRequest(BaseModel):
         return {name for name in self.normalized_parameters() if getattr(self, name) is not None}
 
 
-MAX_RESULTS_DESCRIPTION = (
-    "How many results to return; unset, the backend's own default. For an agent: 5 to 10 for most questions,"
-    " more for news or a question with several parts, and 1 only when the user asked for a single link."
-)
-"""What a model reads about ``max_results``, in this schema and the MCP server's."""
-
-
 class SearchRequest(NormalizedRequest):
     """A normalized search request.
 
@@ -192,10 +194,7 @@ class ExtractRequest(NormalizedRequest):
         Field(min_length=1, description="The URLs to fetch, in the order the documents come back."),
     ]
     format: ExtractFormat | None = Field(default=None, description="Which representation of each page to return.")
-    profile: str | None = Field(
-        default=None,
-        description="The backend's id for a saved profile whose cookies are sent with each fetch.",
-    )
+    profile: str | None = Field(default=None, description=EXTRACT_PROFILE_DESCRIPTION)
 
 
 EXTRACT_ALWAYS_SENT = ExtractRequest.always_sent

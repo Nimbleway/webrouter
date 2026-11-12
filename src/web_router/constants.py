@@ -12,6 +12,7 @@ from typing import Any, Literal, get_args
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_litellm import LITELLM_ENV_BY_PROVIDER
 from web_router.constants_live_data import (
     MCP_DESC_LIVE_DATA,
     MCP_DESC_LIVE_DATA_SOURCE,
@@ -193,6 +194,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_YOU_MCP: None,
     PROVIDER_EXA_MCP: None,
     PROVIDER_PARALLEL_MCP: None,
+    **LITELLM_ENV_BY_PROVIDER,
     PROVIDER_AUTO: None,
 }
 """Which variable holds each provider's credential; ``None`` means it needs none.
@@ -2861,14 +2863,6 @@ MSG_EVALS_JUDGE_STOPPED = "the reply stopped on {stop_reason!r} before it was fi
 
 MSG_EVALS_ROW_OUTCOME = "an EvaluationRow carries exactly one of grade and error, and failed_at with the error alone"
 
-
-# --- Brave ------------------------------------------------------------------
-
-BRAVE_BASE_URL = "https://api.search.brave.com"
-BRAVE_SEARCH_PATH = "/res/v1/web/search"
-BRAVE_API_KEY_HEADER = "X-Subscription-Token"
-BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
-"""Brave wraps query terms in these; they are its markup, not page content."""
 
 # --- Exa --------------------------------------------------------------------
 

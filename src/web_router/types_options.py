@@ -84,3 +84,13 @@ class SearchOptions(TypedDict, total=False):
     locale: str | None
     recency: Recency | None
     effort: ResearchEffort | None
+
+
+MAX_RESULTS_DESCRIPTION = (
+    "How many results to return; unset, the backend's own default. For an agent: 5 to 10 for most questions,"
+    " more for news or a question with several parts, and 1 only when the user asked for a single link."
+)
+"""What a model reads about ``max_results``, in this schema and the MCP server's."""
+
+EXTRACT_PROFILE_DESCRIPTION = "The backend's id for a saved profile whose cookies are sent with each fetch."
+"""What a model reads about an extract's ``profile``."""

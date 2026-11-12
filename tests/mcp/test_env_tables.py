@@ -14,6 +14,7 @@ from web_router.constants import (
     ENV_LOCAL_BROWSER_PATH,
     ENV_OPENAI_API_KEY,
 )
+from web_router.constants_litellm import ENV_LITELLM_PROXY_API_BASE
 from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY, ENV_REMOTE_ROUTER_URL
 from web_router.mcp.env import EnvSources
 from web_router.mcp.env_credentials import ALL_ENV_TABLES, credential_variables
@@ -28,9 +29,11 @@ NOT_CREDENTIALS = {
     ENV_LOCAL_BROWSER_PATH,
     ENV_REMOTE_ROUTER_API_KEY,
     ENV_REMOTE_ROUTER_URL,
+    ENV_LITELLM_PROXY_API_BASE,
 }
 """The judges' keys belong to ``evaluate()``, ``CHROME_PATH`` is a path a foreign file must not aim, and the remote
-router's URL and key are read from the server's process environment only, never loaded from a file."""
+router's URL and key, and a LiteLLM proxy's URL, are read from the server's process environment only, never loaded
+from a file."""
 
 
 def test_the_remote_router_variables_are_never_credentials() -> None:

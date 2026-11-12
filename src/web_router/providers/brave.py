@@ -19,21 +19,21 @@ from __future__ import annotations
 from typing import Any, ClassVar, Literal
 
 from web_router.constants import (
-    BRAVE_API_KEY_HEADER,
-    BRAVE_BASE_URL,
-    BRAVE_HIGHLIGHT_TAGS,
-    BRAVE_SEARCH_PATH,
     ENV_BRAVE_API_KEY,
     PROVIDER_BRAVE,
 )
 from web_router.constants_brave import (
+    BRAVE_API_KEY_HEADER,
+    BRAVE_BASE_URL,
     BRAVE_COUNTRIES,
     BRAVE_EXCLUDE_DOMAIN,
     BRAVE_FRESHNESS,
+    BRAVE_HIGHLIGHT_TAGS,
     BRAVE_QUERY_MAX_CHARS,
     BRAVE_QUERY_MAX_WORDS,
     BRAVE_SEARCH_PARAM_NAMES,
     BRAVE_SEARCH_PARAMETERS,
+    BRAVE_SEARCH_PATH,
     MSG_BRAVE_QUERY_TOO_LONG,
     MSG_BRAVE_SEARCH_VALUES,
 )

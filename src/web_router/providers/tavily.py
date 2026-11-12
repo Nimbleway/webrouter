@@ -48,6 +48,24 @@ from web_router.types import (
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "content", "raw_content", "score", "published_date"})
 
 
+def search_fields(request: SearchRequest, *, timeout: float | None = None) -> dict[str, Any]:
+    """Tavily's search fields for ``request``: its SDK's ``search()`` keywords, which are its REST body's fields."""
+    depth = mapped(TAVILY_PARAMS_BY_DEPTH, request.search_depth)
+    return build_payload(
+        request,
+        TAVILY_PARAM_NAMES,
+        query=request.query,
+        timeout=timeout,
+        country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
+        # The language alone, as the ISO 639-1 code Tavily documents.
+        language=language_code(request.locale) if request.locale else None,
+        time_range=mapped(TAVILY_TIME_RANGE, request.recency),
+        **(depth or {}),
+        **(TAVILY_LANGUAGE_FILTER if request.locale else {}),
+        **(TAVILY_RECENCY_FILTER if request.recency else {}),
+    )
+
+
 class TavilyProvider(SearchProvider):
     """Routes searches to the Tavily Search API."""
 
@@ -108,21 +126,7 @@ class TavilyProvider(SearchProvider):
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
-        depth = mapped(TAVILY_PARAMS_BY_DEPTH, request.search_depth)
-        payload = build_payload(
-            request,
-            TAVILY_PARAM_NAMES,
-            query=request.query,
-            timeout=self._timeout,
-            country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
-            # The language alone, as the ISO 639-1 code Tavily documents.
-            language=language_code(request.locale) if request.locale else None,
-            time_range=mapped(TAVILY_TIME_RANGE, request.recency),
-            **(depth or {}),
-            **(TAVILY_LANGUAGE_FILTER if request.locale else {}),
-            **(TAVILY_RECENCY_FILTER if request.recency else {}),
-        )
-        return clamped_timeout(payload, TAVILY_SDK_SEARCH_TIMEOUT)
+        return clamped_timeout(search_fields(request, timeout=self._timeout), TAVILY_SDK_SEARCH_TIMEOUT)
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         results = []
