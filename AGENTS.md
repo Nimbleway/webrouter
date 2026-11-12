@@ -127,7 +127,8 @@ src/web_router/
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
 ├── client_search.py    search(), with timeout=, mixed into both routers: the web results, plus the
 │                       data APIs that match, from data_api_discovery.py (types_data_api.py's DataApiMatch)
-├── client_core.py      extract(), with timeout=, mixed into both routers
+├── client_core.py      extract(), with timeout=, mixed into both routers: the pages, plus the data APIs
+│                       that serve each page's site (the catalog's `sites`)
 ├── client_warmup.py    warmup(): the search and extract backends and clients a first call builds
 ├── client_live_data.py live_data(), live_data_sources(), live_data_source() and the
 │                       deprecated template names, mixed into both routers

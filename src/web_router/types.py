@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from web_router.types_citation import Citation as Citation
 from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
-from web_router.types_data_api import DATA_APIS_DESCRIPTION, DataApiMatch
+from web_router.types_data_api import DATA_API_SITE_DESCRIPTION, DATA_APIS_DESCRIPTION, DataApiMatch
 from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
@@ -293,15 +293,15 @@ class ExtractedDocument(BaseModel):
     extra: dict[str, Any] = Field(
         default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
+    data_apis: list[DataApiMatch] = Field(default_factory=list, description=DATA_API_SITE_DESCRIPTION)
 
 
 class ExtractResponse(BaseModel):
     """The result of one extract call, tagged with the provider that served it.
 
-    Extracting several URLs can partly succeed: what came back is in
-    :attr:`documents`, and every URL that did not is in :attr:`failures` with
-    the reason. A call where *nothing* came back raises instead, so a failure
-    is never something you have to go looking for.
+    Extracting several URLs can partly succeed: what came back is in :attr:`documents`, and every URL that
+    did not is in :attr:`failures` with the reason. A call where *nothing* came back raises instead, so a
+    failure is never something you have to go looking for.
     """
 
     # Unknown keys are a provider bug: the untouched payload belongs in `raw`.

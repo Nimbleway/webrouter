@@ -16,6 +16,7 @@ import re
 from collections.abc import Iterable
 from importlib import resources
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from pydantic import ValidationError
 
@@ -84,6 +85,13 @@ class VendorCatalog:
                 vendor=vendor_name, known=", ".join(endpoint.id for endpoint in vendor.endpoints)
             )
         raise VendorNotFoundError(endpoint_id, MSG_VENDOR_ENDPOINT_UNKNOWN.format(endpoint=endpoint_id, hint=hint))
+
+    def for_site(self, url: str) -> list[Vendor]:
+        """The vendors whose ``sites`` serve ``url``'s host or a domain it belongs to, by name."""
+        host = (urlsplit(url).hostname or "").lower()
+        return [
+            vendor for vendor in self.all() if any(host == site or host.endswith(f".{site}") for site in vendor.sites)
+        ]
 
     def find(
         self,
