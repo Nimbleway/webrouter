@@ -76,8 +76,9 @@ Beside the ladder:
   `search` or `extract`; an operator's router may pick a billed method. Call
   a tool yourself when you know which you want.
 - **`vendors`**, **`vendor_endpoint`**, **`call_vendor`** reach one vendor's
-  own API (Google Ads, Datadog, ...) with the user's credentials, and return
-  its answer untouched. List with `vendors`, read the endpoint's parameters
+  own API (Google Ads, Datadog, ...) with the user's credentials. The data
+  is the vendor's own, shaped to fit like every result: `fetch_raw` holds the
+  rest of a long one. List with `vendors`, read the endpoint's parameters
   with `vendor_endpoint`, then call. This is the user's own account, not the
   open web.
 

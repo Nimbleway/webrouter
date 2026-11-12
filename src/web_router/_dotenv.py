@@ -11,7 +11,7 @@ import os
 import re
 from pathlib import Path
 
-from web_router.constants_dotenv import DOTENV_FILENAME, MSG_DOTENV_NOT_READ
+from web_router.constants_dotenv import DOTENV_FILENAME, DOTENV_MAX_BYTES, MSG_DOTENV_NOT_READ, MSG_DOTENV_PREFIX
 
 _ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
 _VARIABLE = re.compile(r"\b[A-Z][A-Z0-9_]*\b")
@@ -30,19 +30,29 @@ def nearest_dotenv(start: Path | None = None) -> Path | None:
     return None
 
 
+def _value(raw: str) -> str:
+    """An assignment's value: what a pair of quotes holds, else the text before an inline `` #`` comment."""
+    if raw[:1] in ("'", '"'):
+        end = raw.find(raw[0], 1)
+        return raw[1:end] if end > 0 else raw[1:]
+    return "" if raw.startswith("#") else raw.split(" #", 1)[0].strip()
+
+
 def _set_in(path: Path) -> set[str]:
-    """The variables ``path`` gives a non-empty value; an unreadable file sets none."""
+    """The variables ``path`` gives a non-empty value; an unreadable or oversized file sets none."""
     try:
+        if path.stat().st_size > DOTENV_MAX_BYTES:
+            return set()
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return set()
     found = (_ASSIGNMENT.match(line) for line in lines)
-    return {match[1] for match in found if match and match[2].strip("'\"")}
+    return {match[1] for match in found if match and _value(match[2])}
 
 
 def dotenv_hint(message: str, start: Path | None = None) -> str:
     """:data:`MSG_DOTENV_NOT_READ` for the first variable ``message`` names that an unread ``.env`` sets, or ""."""
-    if DOTENV_FILENAME + " exists at" in message:  # already added, as on an unpickled error
+    if MSG_DOTENV_PREFIX in message:  # already added, as on an unpickled error
         return ""
     path = nearest_dotenv(start)
     if path is None:

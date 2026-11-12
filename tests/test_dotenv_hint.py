@@ -16,7 +16,9 @@ KEY = "WR_TEST_DOTENV_KEY"
 @pytest.fixture
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A working directory, one level below a ``.env`` that sets :data:`KEY`, with the environment lacking it."""
-    (tmp_path / ".env").write_text(f"# keys\nexport {KEY}='abc'\nEMPTY_ONE=\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(
+        f"# keys\nexport {KEY}='abc'\nEMPTY_ONE=\nQUOTED_EMPTY=\"\" # unset\nCOMMENTED= # unset\n", encoding="utf-8"
+    )
     work = tmp_path / "src"
     work.mkdir()
     monkeypatch.chdir(work)
@@ -27,7 +29,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_a_missing_key_set_in_a_parent_dotenv_names_the_file(project: Path) -> None:
     error = ConfigurationError.missing_api_key("nimble", KEY)
     assert f"A .env exists at {(project / '.env').resolve()} and sets {KEY}" in str(error)
-    assert "uv run --env-file .env" in str(error)
+    assert f"uv run --env-file {(project / '.env').resolve()}" in str(error)
 
 
 def test_no_hint_once_the_environment_holds_the_key(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -35,8 +37,9 @@ def test_no_hint_once_the_environment_holds_the_key(project: Path, monkeypatch: 
     assert ".env exists" not in str(ConfigurationError.missing_api_key("nimble", KEY))
 
 
-def test_no_hint_for_a_variable_the_dotenv_leaves_empty(project: Path) -> None:
-    assert dotenv_hint("Set the EMPTY_ONE environment variable.") == ""
+@pytest.mark.parametrize("name", ["EMPTY_ONE", "QUOTED_EMPTY", "COMMENTED"])
+def test_no_hint_for_a_variable_the_dotenv_leaves_empty(project: Path, name: str) -> None:
+    assert dotenv_hint(f"Set the {name} environment variable.") == ""
 
 
 def test_no_hint_without_a_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
