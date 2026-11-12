@@ -22,7 +22,7 @@ This page takes you from install to a working search and extract in four steps. 
     ```
     </CodeGroup>
 
-    The package is `webrouter`; the import name is `web_router`. Put the keys you hold in your environment or a `.env` file; none is required. [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names each variable.
+    The package is `webrouter`; the import name is `web_router`. Put the keys you hold in your environment; none is required. The library reads the environment only, so load a `.env` yourself: `uv run --env-file .env python app.py`, or `load_dotenv()` from `python-dotenv`. [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names each variable.
   </Step>
   <Step title="Search with no key">
     ```python quickstart.py wrap

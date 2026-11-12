@@ -40,6 +40,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+- A `ConfigurationError` that names a variable the nearest `.env` sets (in the working directory or a parent), while the environment does not, now says so: "A .env exists at <path> and sets <VARIABLE>, but the library does not read it", with how to load it (`uv run --env-file .env`, or python-dotenv's `load_dotenv()`).
+- Docs: the quickstart, the answer page and the vendors page no longer say the library reads a `.env`; it reads the environment only, and they show how to load one. CLAUDE.md's set-up adds `uv run --env-file .env`.
+- Docs: `answer` has `auto` -- the answer backends you hold keys for, in ranked order, each one tried billing -- and AGENTS.md, the answer page and the agent prompt no longer say it has none.
+- The agent skill (`skills/web-router/SKILL.md`) and the baseline agent prompt (`docs/agent-prompt.md`) name every MCP tool -- `answer`, `web_run`, `budget_start`/`budget_status`, `vendors`/`vendor_endpoint`/`call_vendor` and the live data tools were missing from one or both -- say they are written for the MCP server with a table mapping each tool to its Python method, add four rules on checking results (read the canonical page for "latest" facts, check `status_code`, check `failures`, rephrase rather than guess), and say search takes a few seconds rather than about one. A test fails when a new MCP tool is named in neither. CLAUDE.md links both and says how to install the skill.
 - Asking a method for a built-in provider that does not serve it (`extract(provider="brave")`) now says "Provider 'brave' does not serve this method" and lists the ones that do, instead of calling a real provider unknown. A name nothing registers is still "Unknown provider".
 - A deadline error no longer ends in two periods when the last failure it quotes ends in one.
 - The MCP server's unknown-handle message names the live data tools, not the `templates` and `template` tools it no longer has.
