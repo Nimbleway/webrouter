@@ -30,6 +30,7 @@ from web_router.constants_valyu import (
 from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpSearchProvider
+from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import best_text, build_payload
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
@@ -85,13 +86,15 @@ class ValyuProvider(HttpSearchProvider):
 
     @staticmethod
     def _to_result(hit: dict[str, Any]) -> SearchResult:
-        description = hit.get("description") or ""
         content = hit.get("content")
+        body = content if isinstance(content, str) else ""
+        # With no description of its own, the opening of the body is the snippet.
+        description = hit.get("description") or as_snippet(body)
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
             description=description,
-            content=best_text(content if isinstance(content, str) else None, description),
+            content=best_text(body, description),
             score=hit.get("relevance_score"),
             # Valyu sends "" for a page with no known date.
             published_date=hit.get("publication_date") or None,

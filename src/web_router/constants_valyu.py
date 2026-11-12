@@ -29,8 +29,6 @@ rather than choosing how much of a page comes back. Both are reachable through
 ``provider_options``.
 """
 
-VALYU_SEARCH_NAMES = {"max_results": "max_num_results"}
-
 VALYU_MAX_RESULTS = 20
 """The most results one search returns on a standard plan; a larger ``max_num_results`` is lowered to it.
 
@@ -48,10 +46,10 @@ Valyu's own default, ``all``, lets a model pick datasets beside the web
 VALYU_COUNTRIES = frozenset(
     {
         "AR", "AU", "AT", "BE", "BR", "CA", "CL", "DK", "FI", "FR", "DE", "HK", "IN", "ID", "IT", "JP", "KR", "MY",
-        "MX", "NL", "NZ", "CN", "PL", "PT", "PH", "RU", "SA", "ZA", "ES", "SE", "CH", "TW", "TR", "GB", "US",
+        "MX", "NL", "NZ", "NO", "CN", "PL", "PT", "PH", "RU", "SA", "ZA", "ES", "SE", "CH", "TW", "TR", "GB", "US",
     }
 )  # fmt: skip
-"""The ``country_code`` values Valyu lists; another is a 400, so it is refused before the call."""
+"""The ``country_code`` values Valyu lists, 36 of them; another is a 400, so it is refused before the call."""
 
 MSG_VALYU_COUNTRY = (
     "Valyu geo-targets only the countries it lists: "

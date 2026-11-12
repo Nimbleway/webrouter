@@ -115,6 +115,7 @@ def test_an_unmapped_option_is_refused_rather_than_dropped(provider: ValyuProvid
 
 def test_a_country_valyu_does_not_list_is_refused(provider: ValyuProvider) -> None:
     provider.validate(SearchRequest(query="hi", country="us"))
+    provider.validate(SearchRequest(query="hi", country="no"))
     with pytest.raises(UnsupportedParameterError, match="geo-targets only the countries it lists"):
         provider.validate(SearchRequest(query="hi", country="IL"))
 
@@ -132,6 +133,15 @@ def test_results_map_and_nothing_is_invented(provider: ValyuProvider) -> None:
     assert first.extra["source"] == "web" and "content" not in first.extra
     # No description and no body: nothing is made up for either, and "" is no date.
     assert (second.description, second.content, second.published_date) == ("", "", None)
+
+
+def test_with_no_description_the_snippet_is_the_opening_of_the_body(provider: ValyuProvider) -> None:
+    body = "word " * 200
+    (result,) = provider._to_response(
+        SearchRequest(query="q"), {"success": True, "results": [{"url": "https://e.com", "content": body}]}
+    ).results
+    assert result.content == body
+    assert body.startswith(result.description.rstrip("\u2026")) and len(result.description) < len(body)
 
 
 def test_an_unsuccessful_answer_raises(provider: ValyuProvider) -> None:
