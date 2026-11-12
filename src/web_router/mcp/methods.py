@@ -25,6 +25,7 @@ from web_router.constants import (
     MCP_TOOL_EXTRACT,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_SEARCH,
+    PROVIDER_AUTO,
     RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.constants_live_data import (
@@ -81,7 +82,7 @@ class Method:
 def _configured_answer() -> list[str]:
     """Answer's backends with a key, led by ``auto`` once there is one, as research's are; nothing with none."""
     names = configured_answer_providers()
-    return ["auto", *names] if names else []
+    return [PROVIDER_AUTO, *names] if names else []
 
 
 _LIVE_DATA_METHOD = Method(
