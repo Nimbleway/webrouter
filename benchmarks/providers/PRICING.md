@@ -214,6 +214,18 @@ requests a second.
 | `:content` | `deepseek:content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 <!-- /prices -->
 
+### Keirolabs
+
+Per search, however many results it returns ([pricing](https://keirolabs.cloud/pricing)): $0.10 per 1k on
+the Essential plan ($29.99 a month, 300,000 searches included), $0.06 per 1k on Pro and $0.03 per 1k on
+Startup.
+
+<!-- prices: method=search provider=keirolabs -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `keirolabs` | default (lite search) | Titles, URLs and a snippet per result; no page body or date | $0.10 per 1k; Essential plan ($29.99 a month, 300k searches included); $0.06 per 1k on Pro, $0.03 per 1k on Startup | [keirolabs.cloud](https://keirolabs.cloud/pricing) | 2026-11-12 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the

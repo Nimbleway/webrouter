@@ -749,6 +749,24 @@
       "latency_measured": null
     },
     {
+      "provider": "keirolabs",
+      "method": "search",
+      "mode": null,
+      "price_usd": 0.1,
+      "unit": "per_1k",
+      "note": "Essential plan ($29.99 a month, 300k searches included); $0.06 per 1k on Pro, $0.03 per 1k on Startup",
+      "source_url": "https://keirolabs.cloud/pricing",
+      "checked": "2026-11-12",
+      "setup": "`keirolabs`",
+      "setting": "default (lite search)",
+      "does": "Titles, URLs and a snippet per result; no page body or date",
+      "latency_p50_s": null,
+      "latency_p90_s": null,
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
+    },
+    {
       "provider": "agentcore",
       "method": "search",
       "mode": null,
