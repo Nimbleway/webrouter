@@ -86,7 +86,7 @@ have not moved there yet.
 
 ## Provider support
 
-Twelve search backends, seven extract backends, a template catalogue, five
+Twelve search backends, seven extract backends, a live data catalogue, five
 answer backends, three agentic research backends (plus Exa's, retired upstream), five
 browser-session backends and three browser agents. One call each. Switching
 between them is one argument.

@@ -16,8 +16,8 @@ session) and `browse` (a hosted browser agent). Each call behaves the same
 whichever backend serves it. Beside them, `call_vendor` reaches a vendor's own
 API (Google Ads, Datadog, ...) with the user's credentials, from a catalog of
 vendors listed in [VENDORS.md](VENDORS.md).
-It ships a Python library and an MCP server. [README.md](README.md) is the full
-reference.
+It ships a Python library and an MCP server. [README.md](README.md) is the overview;
+[docs.webrouter.net](https://docs.webrouter.net) is the full reference.
 
 ## Set it up
 
