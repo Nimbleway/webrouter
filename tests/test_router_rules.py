@@ -21,6 +21,8 @@ RESEARCH = [
     "Can you research how tariffs affect EU steel?",
     "please research which CRMs suit startups",
     "Write me a short report on lithium prices",
+    "Give me a report on lithium prices",
+    "Analyze the market for home batteries in Europe",
     "prepare an investor briefing on Nvidia",
     "Give me an in-depth overview of RAG",
     "a deep dive into WebGPU adoption",

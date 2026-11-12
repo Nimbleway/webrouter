@@ -25,8 +25,9 @@ RULES_RESEARCH_PATTERN = (
     # Or asking, anywhere, for what research writes.
     r"|\b(?:in[-\s]depth|deep[-\s]dive|literature\s+review|pros\s+and\s+cons"
     r"|market\s+(?:research|analysis|landscape)|compet(?:itive|itor)\s+(?:analysis|landscape)"
+    r"|analy[sz]e\s+(?:the\s+)?(?:market|competition|competitors|industry)"
     r"|comprehensive\s+(?:report|analysis|overview|review|comparison|guide))\b"
-    r"|\b(?:write|prepare|produce|draft|create)\s+(?:me\s+)?an?\s+(?:[\w-]+\s+){0,3}?(?:report|analysis|briefing)\b"
+    r"|\b(?:write|prepare|produce|draft|create|give)\s+(?:me\s+)?an?\s+(?:[\w-]+\s+){0,3}?(?:report|analysis|briefing)\b"
     r"|\bcompare\b.{1,200}?\b(?:and|vs\.?|versus|with|to|against)\b"
 )
 """What the rules router reads as a request for research, case-insensitive: phrases, not single words.
