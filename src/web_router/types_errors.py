@@ -184,7 +184,7 @@ def _retry_after(original: BaseException | None) -> float | None:
         return None
     if when.tzinfo is None:
         when = when.replace(tzinfo=UTC)  # an HTTP date is GMT; one sent without a zone is read so
-    return max(0.0, (when - datetime.now(UTC)).total_seconds())
+    return max(0.0, float((when - datetime.now(UTC)).total_seconds()))
 
 
 class ExtractFailure(BaseModel):
