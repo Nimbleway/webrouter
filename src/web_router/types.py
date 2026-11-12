@@ -95,8 +95,7 @@ class Provider(str, Enum):
     AUTO = "auto"
     MAX = "max"
 
-    # A str-mixin enum otherwise renders as "Provider.NIMBLE" in f-strings and
-    # str(), which would reach users through error messages and `raw` payloads.
+    # A str-mixin enum otherwise renders as "Provider.NIMBLE" in f-strings, error messages and `raw` payloads.
     __str__ = str.__str__
 
 
@@ -280,6 +279,9 @@ class ExtractedDocument(BaseModel):
     )
     status_code: int | None = Field(default=None, description="The fetched page's HTTP status, when reported.")
     published_date: str | None = None
+    warnings: list[str] = Field(
+        default_factory=list, description="What looked off about a page that came back, such as a near-empty body."
+    )
     extra: dict[str, Any] = Field(
         default_factory=dict,
         description="Provider-specific fields with no normalized equivalent.",
@@ -636,8 +638,7 @@ class BrowserSession(BaseModel):
     raw: dict[str, Any] | None = Field(
         default=None,
         repr=False,
-        # Out of model_dump() too, not just repr: a session serialized into a
-        # log or an API response would otherwise carry the key-bearing URL.
+        # Out of model_dump() too, not just repr: a session serialized into a log would carry the key-bearing URL.
         exclude=True,
         description="The provider's untouched response payload. Read it as an attribute; it is never serialized.",
     )
@@ -678,8 +679,7 @@ class BrowseRequest(NormalizedRequest):
     ] = None
     allowed_domains: Annotated[
         list[Annotated[str, Field(min_length=1)]] | None,
-        # An empty list would read as "no domain allowed" to one backend and
-        # "no restriction" to another, so it is refused rather than guessed at.
+        # An empty list reads as "no domain allowed" to one backend and "no restriction" to another: refused.
         Field(default=None, min_length=1, description="Keep the agent on these domains."),
     ] = None
 
