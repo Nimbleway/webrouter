@@ -740,6 +740,22 @@ Through this server: the user puts the key in their .env, and you call
 the server is restarted.
 ```
 
+## Serving fewer tools: `WEB_ROUTER_MCP_TOOLS`
+
+The model reads every listed tool on every turn: all 27, with every key set,
+are about 26 KB (some 6.4k tokens). Name the ones you want, comma-separated, and
+the rest are neither listed nor callable:
+
+```bash
+WEB_ROUTER_MCP_TOOLS=search,extract,answer,fetch_raw   # about 5.8 KB
+WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw,browser_*
+```
+
+A trailing `*` matches a prefix. Unset or blank serves every tool; a name that
+matches nothing is ignored with a warning in the server's log. Keep `fetch_raw`
+if results may be cut, and `load_env` if keys may be added mid-conversation.
+Read once at startup, from the real environment only.
+
 ## Environment variables the server itself reads
 
 | Variable | Default | Meaning |

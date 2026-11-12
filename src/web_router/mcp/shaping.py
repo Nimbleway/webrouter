@@ -21,37 +21,25 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import parse_qsl, urlsplit
 
 from web_router.constants import (
     ENV_MCP_MAX_CHARS,
     MCP_ANSWER_SHARE,
     MCP_HANDLE_LIMIT,
     MCP_HANDLE_TEMPLATE,
-    MCP_JSON_INDENT,
     MCP_MAX_RESPONSE_CHARS,
     MCP_MIN_FIELD_CHARS,
     MCP_MSG_DROPPED,
-    MCP_MSG_REDACTED,
     MCP_MSG_TRUNCATED,
-    MCP_REDACT_DEVTOOLS_PATTERN,
-    MCP_REDACT_PLURAL,
-    MCP_REDACT_QUERY_PARAMS,
-    MCP_REDACT_SECRET_KEY_SUFFIXES,
-    MCP_REDACT_SECRET_KEYS,
-    MCP_REDACT_SESSION_ID_KEY_SUFFIXES,
-    MCP_REDACT_SESSION_KEY_FRAGMENTS,
-    MCP_REDACT_SESSION_KEY_WORDS,
-    MCP_REDACT_URL_SCHEMES,
-    MCP_REDACT_URL_SESSION_WORDS,
-    MCP_REDACTED,
     MCP_TRUNCATION_MARKER,
     MCP_WORD_SEARCH_WINDOW,
 )
+from web_router.constants_mcp_context import MCP_EMPTY_VALUES, MCP_JSON_SEPARATORS
+from web_router.mcp.redaction import redact as redact  # re-exported: callers import it from here
+from web_router.mcp.redaction import redaction_note as redaction_note
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
     BrowseProgress,
@@ -62,12 +50,6 @@ from web_router.types import (
     ResearchResponse,
     SearchResponse,
 )
-from web_router.types_answer import AnswerResponse
-
-_URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"'<>]+")
-_DEVTOOLS = re.compile(MCP_REDACT_DEVTOOLS_PATTERN)
-_CAMEL_BOUNDARY = re.compile(r"([a-z0-9])([A-Z])|([A-Z]+)([A-Z][a-z])")
-_WORD = re.compile(r"[a-z0-9]+")
 
 
 def max_response_chars() -> int:
@@ -83,13 +65,27 @@ def max_response_chars() -> int:
         return MCP_MAX_RESPONSE_CHARS
 
 
-def render(payload: dict[str, Any]) -> str:
+def render(payload: Any) -> str:
     """Serialize a shaped result the way the tool returns it.
 
     The same function the budget is measured against, so the cap counts the
     characters that actually reach the client rather than an estimate of them.
     """
-    return json.dumps(payload, indent=MCP_JSON_INDENT, ensure_ascii=False, default=str)
+    return json.dumps(payload, separators=MCP_JSON_SEPARATORS, ensure_ascii=False, default=str)
+
+
+def compact(row: dict[str, Any], *, whole: tuple[str, ...] = ()) -> dict[str, Any]:
+    """``row`` without the keys that say nothing -- ``None``, ``""`` and ``[]`` -- which every turn would pay for.
+
+    One level deep, on the rows this module builds: never inside ``structured``
+    or a backend's payload, where an empty value is the caller's or the vendor's own;
+    a key in ``whole`` -- ``structured`` -- is left out only when ``None``, since ``[]`` can be its answer.
+    """
+    return {
+        key: value
+        for key, value in row.items()
+        if value is not None and (key in whole or value not in MCP_EMPTY_VALUES)
+    }
 
 
 def truncate(text: str, limit: int) -> str:
@@ -164,49 +160,59 @@ def shape_search(response: SearchResponse, handle: str, *, budget: int) -> dict[
     ``description`` is dropped on purpose: the library defines ``content`` as
     the fullest text available and falls back to the description when there is
     no body, so carrying both would spend half the budget saying the same thing
-    twice.
+    twice. Each result's text is the part a cut trims, marked where it was cut;
+    ``truncated`` says only that the answer was cut or a result left out.
     """
     results = [
-        {
-            "url": result.url,
-            "title": result.title,
-            "content": result.content,
-            "score": result.score,
-            "published_date": result.published_date,
-        }
+        compact(
+            {
+                "url": result.url,
+                "title": result.title,
+                "content": result.content,
+                "score": result.score,
+                "published_date": result.published_date,
+            }
+        )
         for result in response.results
     ]
     # A synthesized answer is worth more per character than any one result, so
     # it gets its own share rather than competing with them for the budget.
-    answer = truncate(response.answer, int(budget * MCP_ANSWER_SHARE)) if response.answer else response.answer
-    payload: dict[str, Any] = {
-        "provider": response.provider,
-        "query": response.query,
-        "answer": answer,
-        "result_count": len(response.results),
-        "results": results,
-    }
-    return _fit(payload, results, ("content",), handle=handle, budget=budget, shortened=answer != response.answer)
+    answer = _cut_answer(response.answer, budget)
+    payload = compact(
+        {
+            "provider": response.provider,
+            "query": response.query,
+            "answer": answer,
+            "result_count": len(response.results),
+            "results": results,
+        }
+    )
+    shortened = answer != response.answer
+    return _fit(payload, results, ("content",), handle=handle, budget=budget, shortened=shortened, main=False)
 
 
 def shape_extract(response: ExtractResponse, handle: str, *, budget: int) -> dict[str, Any]:
     """An extract response, cut to fit. Failures are kept whole -- they are short and they matter."""
     documents = [
-        {
-            "url": document.url,
-            "title": document.title,
-            "format": document.format,
-            "status_code": document.status_code,
-            "content": document.content,
-        }
+        compact(
+            {
+                "url": document.url,
+                "title": document.title,
+                "format": document.format,
+                "status_code": document.status_code,
+                "content": document.content,
+            }
+        )
         for document in response.documents
     ]
-    payload: dict[str, Any] = {
-        "provider": response.provider,
-        "document_count": len(response.documents),
-        "documents": documents,
-        "failures": [{"url": failure.url, "error": failure.error} for failure in response.failures],
-    }
+    payload = compact(
+        {
+            "provider": response.provider,
+            "document_count": len(response.documents),
+            "documents": documents,
+            "failures": [{"url": failure.url, "error": failure.error} for failure in response.failures],
+        }
+    )
     return _fit(payload, documents, ("content",), handle=handle, budget=budget)
 
 
@@ -216,9 +222,9 @@ def _cut_answer(text: str | None, budget: int) -> str | None:
 
 
 def _citation_rows(citations: list[Citation]) -> list[dict[str, Any]]:
-    """The citations a research run or an answer carries, as the rows a cut trims the snippets of."""
+    """The citations a research run carries, as the rows a cut trims the snippets of."""
     return [
-        {"url": citation.url, "title": citation.title, "field": citation.field, "snippet": citation.snippet}
+        compact({"url": citation.url, "title": citation.title, "field": citation.field, "snippet": citation.snippet})
         for citation in citations
     ]
 
@@ -232,35 +238,20 @@ def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> d
     """
     answer = _cut_answer(response.answer, budget)
     citations = _citation_rows(response.citations)
-    payload: dict[str, Any] = {
-        "provider": response.provider,
-        "query": response.query,
-        "state": "completed",
-        "outcome": response.outcome,
-        "answer": answer,
-        "structured": response.structured,
-        "citations": citations,
-    }
-    return _fit(payload, citations, ("snippet",), handle=handle, budget=budget, shortened=answer != response.answer)
-
-
-def shape_answer(response: AnswerResponse, handle: str, *, budget: int) -> dict[str, Any]:
-    """A written answer and its sources, cut to fit -- the answer first, with its own share of the budget.
-
-    The sources the answer cites (``field`` set) come before the ones it only
-    read, so a cut, which drops from the end, drops an uncited page before a cited one.
-    """
-    answer = _cut_answer(response.answer, budget)
-    citations = _citation_rows(sorted(response.citations, key=lambda citation: citation.field is None))
-    payload: dict[str, Any] = {
-        "provider": response.provider,
-        "query": response.query,
-        "outcome": response.outcome,
-        "answer": answer,
-        "citation_count": len(citations),
-        "citations": citations,
-    }
-    return _fit(payload, citations, ("snippet",), handle=handle, budget=budget, shortened=answer != response.answer)
+    payload = compact(
+        {
+            "provider": response.provider,
+            "query": response.query,
+            "state": "completed",
+            "outcome": response.outcome,
+            "answer": answer,
+            "structured": response.structured,
+            "citations": citations,
+        },
+        whole=("structured",),
+    )
+    shortened = answer != response.answer
+    return _fit(payload, citations, ("snippet",), handle=handle, budget=budget, shortened=shortened, main=False)
 
 
 def shape_browse(response: BrowseResponse, handle: str, *, budget: int) -> dict[str, Any]:
@@ -272,142 +263,38 @@ def shape_browse(response: BrowseResponse, handle: str, *, budget: int) -> dict[
     ``request_id`` is left out as research leaves it out -- the progress shape
     already carries the job id.
     """
-    answer_budget = int(budget * MCP_ANSWER_SHARE)
-    answer = truncate(response.answer, answer_budget) if response.answer else response.answer
+    answer = _cut_answer(response.answer, budget)
     steps = [
-        {"action": step.action, "url": step.url, "detail": step.detail, "screenshot_url": step.screenshot_url}
+        compact({"action": step.action, "url": step.url, "detail": step.detail, "screenshot_url": step.screenshot_url})
         for step in response.steps
     ]
-    payload: dict[str, Any] = {
-        "provider": response.provider,
-        "task": response.task,
-        "state": "completed",
-        "outcome": response.outcome,
-        "answer": answer,
-        "structured": response.structured,
-        "recording_url": response.recording_url,
-        "step_count": len(response.steps),
-        "steps": steps,
-    }
+    payload = compact(
+        {
+            "provider": response.provider,
+            "task": response.task,
+            "state": "completed",
+            "outcome": response.outcome,
+            "answer": answer,
+            "structured": response.structured,
+            "recording_url": response.recording_url,
+            "step_count": len(response.steps),
+            "steps": steps,
+        },
+        whole=("structured",),
+    )
     # Redacted before fitting, so the budget is measured on what is sent.
     payload, count = redact(payload)
     shortened = answer != response.answer
     return _fit(
         payload,
-        payload["steps"],
+        payload.get("steps", []),
         ("detail",),
         handle=handle,
         budget=budget,
         shortened=shortened,
         extra_note=redaction_note(count),
+        main=False,
     )
-
-
-def redact(value: Any) -> tuple[Any, int]:
-    """A copy of ``value`` with every browser-session URL and credential replaced, and how many were.
-
-    Taken out, anywhere in the structure: everything beneath a key that names a
-    credential or a backend's session id; any URL beneath a key that names a
-    way into a running browser (a live view, a debugger, a CDP, websocket or
-    connection endpoint); and any URL that is one on its face -- a websocket scheme, a userinfo part, a
-    credential in its query, or a session word in its host or path. URLs are
-    found inside longer strings too, because an agent's own notes can quote
-    one. The rules are the ``MCP_REDACT_*`` tables in ``constants.py``.
-    """
-    return _redact(value, None)
-
-
-_SECRET = "secret"
-_SESSION_ID = "session_id"
-_SESSION = "session"
-_WHOLE = frozenset({_SECRET, _SESSION_ID})
-
-
-def _redact(value: Any, context: str | None) -> tuple[Any, int]:
-    if isinstance(value, dict):
-        total = 0
-        cleaned: dict[Any, Any] = {}
-        for name, item in value.items():
-            # A credential key outranks a session one, and neither is forgotten
-            # by a plainer key further down: {"live": {"url": ...}} is still a live view.
-            inner = context if context in _WHOLE else (_classify(str(name)) or context)
-            cleaned[name], count = _redact(item, inner)
-            total += count
-        return cleaned, total
-    if isinstance(value, (list, tuple)):
-        items = [_redact(item, context) for item in value]
-        cleaned_items = [item for item, _ in items]
-        return (tuple(cleaned_items) if isinstance(value, tuple) else cleaned_items), sum(n for _, n in items)
-    if context == _SESSION_ID and isinstance(value, (int, float)) and not isinstance(value, bool):
-        return MCP_REDACTED, 1
-    if not isinstance(value, str) or not value:
-        return value, 0
-    if context in _WHOLE or (context == _SESSION and _URL.search(value)):
-        return MCP_REDACTED, 1
-    count = 0
-
-    def _replace(match: re.Match[str]) -> str:
-        nonlocal count
-        if not _is_sensitive_url(match.group(0)):
-            return match.group(0)
-        count += 1
-        return MCP_REDACTED
-
-    value = _URL.sub(_replace, value)
-    value, devtools = _DEVTOOLS.subn(MCP_REDACTED, value)
-    return value, count + devtools
-
-
-def _classify(key: str) -> str | None:
-    """Whether a field's name marks its contents as a credential, a session's id, a way into one, or neither."""
-    words = _key_words(key)
-    joined = "".join(words)
-    if any(
-        form in MCP_REDACT_SECRET_KEYS or form.endswith(MCP_REDACT_SECRET_KEY_SUFFIXES) for form in _singular(joined)
-    ):
-        return _SECRET
-    if any(form.endswith(MCP_REDACT_SESSION_ID_KEY_SUFFIXES) for form in _singular(joined)):
-        return _SESSION_ID
-    if any(not MCP_REDACT_SESSION_KEY_WORDS.isdisjoint(_singular(word)) for word in words) or any(
-        fragment in joined for fragment in MCP_REDACT_SESSION_KEY_FRAGMENTS
-    ):
-        return _SESSION
-    return None
-
-
-def _singular(word: str) -> set[str]:
-    return {word, word.removesuffix(MCP_REDACT_PLURAL)}
-
-
-def _key_words(key: str) -> list[str]:
-    """``wsEndpoint`` -> ``["ws", "endpoint"]``; ``live_view_url`` -> ``["live", "view", "url"]``."""
-    spaced = _CAMEL_BOUNDARY.sub(lambda match: " ".join(part for part in match.groups() if part), key)
-    return _WORD.findall(spaced.lower())
-
-
-def _is_sensitive_url(url: str) -> bool:
-    try:
-        parts = urlsplit(url)
-        userinfo = parts.username or parts.password
-        host = parts.hostname or ""
-    except ValueError:
-        # Unparseable is not proof of safety; a URL this layer cannot read is not sent on.
-        return True
-    if parts.scheme.lower() in MCP_REDACT_URL_SCHEMES or userinfo:
-        return True
-    if not MCP_REDACT_URL_SESSION_WORDS.isdisjoint(_WORD.findall(f"{host} {parts.path}".lower())):
-        return True
-    params = parse_qsl(parts.query, keep_blank_values=True) + parse_qsl(parts.fragment, keep_blank_values=True)
-    return any(_normalize(name) in MCP_REDACT_QUERY_PARAMS for name, _ in params)
-
-
-def _normalize(name: str) -> str:
-    return name.lower().replace("_", "").replace("-", "")
-
-
-def redaction_note(count: int) -> str:
-    """The sentence a redacted result carries, empty when nothing was redacted."""
-    return MCP_MSG_REDACTED.format(count=count, marker=MCP_REDACTED) if count else ""
 
 
 def shape_progress(progress: ResearchProgress | BrowseProgress, handle: str) -> dict[str, Any]:
@@ -442,11 +329,15 @@ def _fit(
     budget: int,
     shortened: bool = False,
     extra_note: str = "",
+    main: bool = True,
 ) -> dict[str, Any]:
     """Shrink a shaped payload until it serializes inside ``budget``, and say so if it did.
 
     ``extra_note`` is appended to the note, and sets one on its own when nothing
-    was cut; it is inside the loop so the budget counts it.
+    was cut; it is inside the loop so the budget counts it. ``main`` says whether
+    the items' text is the result's main content, so that cutting it sets
+    ``truncated``; when it is not -- a search result's text, a citation's
+    snippet -- only a cut answer (``shortened``) or a dropped item does.
 
     Long text goes first: each item gets an equal share of the budget, lowered
     until the payload fits. Only at :data:`MCP_MIN_FIELD_CHARS` are whole items
@@ -457,7 +348,7 @@ def _fit(
     share = max(MCP_MIN_FIELD_CHARS, budget // max(len(items), 1))
     dropped, total = 0, len(items)
     while True:
-        shortened = any([_shorten(item, text_keys, share) for item in items]) or shortened  # a list: cut every item
+        shortened = (any([_shorten(item, text_keys, share) for item in items]) and main) or shortened  # cut every item
         payload["handle"] = handle
         payload["truncated"] = shortened or dropped > 0
         note = ""
@@ -486,7 +377,7 @@ def _fit(
             # worth more than staying under a self-imposed cap.
             return payload
         else:
-            shortened = True
+            shortened = shortened or main
 
 
 def _shorten(item: dict[str, Any], text_keys: tuple[str, ...], limit: int) -> bool:

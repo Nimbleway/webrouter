@@ -12,7 +12,6 @@ from typing import Any, get_args
 
 from web_router._chains import chain as _chain
 from web_router.types_answer import Recency
-from web_router.types_options import RECENCY_DESCRIPTION
 
 __all__ = [
     "ANSWER_MARKER",
@@ -23,7 +22,11 @@ __all__ = [
     "INTEGRATION_OPT_IN_METHODS",
     "LANGCHAIN_ANSWER_TOOL_NAME",
     "MCP_ANSWER_PROPERTIES",
+    "MCP_ANSWER_SHAPING_PROPERTIES",
+    "MCP_ARG_ALL_SOURCES",
+    "MCP_ARG_SNIPPETS",
     "MCP_DESC_ANSWER",
+    "MCP_MSG_ANSWER_BAD_FLAGS",
     "MSG_ANSWER_FAILED",
     "MSG_ANSWER_NONE_CONFIGURED",
     "MSG_ANSWER_NO_DEFAULT",
@@ -52,6 +55,20 @@ MSG_ANSWER_NONE_CONFIGURED = (
 )
 """The same refusal with nothing configured: what to set, rather than a list of names that cannot run."""
 
+MCP_ARG_ALL_SOURCES = "all_sources"
+MCP_ARG_SNIPPETS = "snippets"
+
+MCP_MSG_ANSWER_BAD_FLAGS = "answer takes `all_sources` and `snippets` as booleans, true or false."
+
+MCP_ANSWER_SHAPING_PROPERTIES: dict[str, dict[str, Any]] = {
+    MCP_ARG_ALL_SOURCES: {
+        "type": "boolean",
+        "description": "Also list the sources the answer read but did not cite.",
+    },
+    MCP_ARG_SNIPPETS: {"type": "boolean", "description": "Include each source's quoted passage."},
+}
+"""``answer``'s own arguments: how much of its sources to show. This layer reads them; the library never sees them."""
+
 MCP_ANSWER_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "The question to answer."},
     "include_domains": {
@@ -69,16 +86,16 @@ MCP_ANSWER_PROPERTIES: dict[str, dict[str, Any]] = {
     "recency": {
         "type": "string",
         "enum": list(get_args(Recency)),
-        "description": RECENCY_DESCRIPTION,
+        "description": "Only sources dated within this.",
     },
+    # This layer's own, never sent to the library: how much of the sources to show.
+    **MCP_ANSWER_SHAPING_PROPERTIES,
 }
 
 MCP_DESC_ANSWER = (
-    "Answer one question: the backend searches and writes a short answer itself, returned with the sources "
-    "it rests on. A few seconds, and bills one call. Use it for a closed question whose answer is a sentence "
-    "or two; `search` returns the pages themselves. The answer is the backend's own, unedited: check it "
-    "against the sources when it matters. A source cited inline carries its marker (e.g. '[2]') in `field`. "
-    "Unset, `provider` tries the configured backends in ranked order, each one tried billing."
+    "Answer one closed question in a sentence or two: the backend searches and writes the answer, with "
+    "the sources it cites, each by its marker (e.g. '[2]'). A few seconds; bills one call. Unedited: "
+    "check it against the sources when it matters. `search` returns the pages themselves."
 )
 
 # answer()'s `auto`: the configured answer backends, in the order route-eval ranked them.

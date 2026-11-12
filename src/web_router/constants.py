@@ -3509,8 +3509,6 @@ MCP_HANDLE_TEMPLATE = "{tool}-{number:04d}"
 
 MCP_TRUNCATION_MARKER = " ... [truncated]"
 
-MCP_JSON_INDENT = 2
-
 MCP_REDACTED = "[redacted]"
 """What a browse result shows in place of a URL or value that would hand the model a credential."""
 
@@ -3668,10 +3666,7 @@ MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
     "format": {
         "type": "string",
         "enum": list(get_args(ExtractFormat)),
-        "description": (
-            "Which representation of each page to return. A backend that cannot produce it says so "
-            "rather than returning a different one."
-        ),
+        "description": "A backend that cannot produce it refuses rather than return another.",
     },
 }
 
@@ -3765,35 +3760,32 @@ MCP_ARG_STEALTH = "stealth"
 MCP_BROWSER_OPEN_PROPERTIES: dict[str, dict[str, Any]] = {
     "headless": {
         "type": "boolean",
-        "description": "Run without a visible window. With `local`, false opens a window on this machine's screen.",
+        "description": "With `local`, false shows a window on this machine.",
     },
     "timeout": {
         "type": "number",
         "exclusiveMinimum": 0,
         "maximum": MCP_BROWSER_SESSION_TIMEOUT_LIMIT,
-        "description": (
-            f"Seconds the session may live, however busy it is: at most, and when unset, "
-            f"{MCP_BROWSER_SESSION_TIMEOUT_LIMIT:g}s."
-        ),
+        "description": f"Seconds the session may live; unset, {MCP_BROWSER_SESSION_TIMEOUT_LIMIT:g}.",
     },
     "idle_timeout": {
         "type": "number",
         "exclusiveMinimum": 0,
         "maximum": MCP_BROWSER_SESSION_TIMEOUT_LIMIT,
-        "description": "Seconds the backend may let the session sit unused before ending it itself.",
+        "description": "Seconds unused before the backend ends it.",
     },
     "viewport": {
         "type": "object",
         "properties": {"width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}},
         "required": ["width", "height"],
         "additionalProperties": False,
-        "description": "The size of the page the session renders, in CSS pixels.",
+        "description": "In CSS pixels.",
     },
     "proxy_country": {"type": "string", "description": "Country code the session's traffic exits from, e.g. 'US'."},
     MCP_ARG_STEALTH: {
         "type": "string",
         "enum": list(get_args(StealthLevel)),
-        "description": "How hard the backend hides automation: 'off', 'low' or 'high'. Unset, its default.",
+        "description": "How hard it hides automation. Unset, the backend's default.",
     },
     "solve_captchas": {"type": "boolean", "description": _described(BrowserRequest, "solve_captchas")},
 }
@@ -3804,23 +3796,17 @@ _MCP_ACTION_TIMEOUT_PROPERTY: dict[str, Any] = {
     "type": "number",
     "exclusiveMinimum": 0,
     "maximum": MCP_BROWSER_ACTION_TIMEOUT_LIMIT,
-    "description": (
-        f"Seconds this action may take. Unset, {BROWSER_ACTION_TIMEOUT:g}s; "
-        f"at most {MCP_BROWSER_ACTION_TIMEOUT_LIMIT:g}s."
-    ),
+    "description": f"Seconds; unset, {BROWSER_ACTION_TIMEOUT:g}.",
 }
 
 _MCP_TARGET_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_REF: {
         "type": "string",
-        "description": (
-            "The element's ref from the latest `browser_snapshot`, exactly as printed after `ref=` -- "
-            "for `[ref=e14]`, pass 'e14'. Pass this or `selector`, not both."
-        ),
+        "description": "A ref from the latest `browser_snapshot`: for `[ref=e14]`, 'e14'. This or `selector`.",
     },
     MCP_ARG_SELECTOR: {
         "type": "string",
-        "description": "A CSS or Playwright selector, e.g. 'button[type=submit]'. Pass this or `ref`, not both.",
+        "description": "A CSS or Playwright selector. This or `ref`.",
     },
 }
 
@@ -3841,10 +3827,7 @@ MCP_BROWSER_SNAPSHOT_PROPERTIES: dict[str, dict[str, Any]] = {
         "type": "integer",
         "minimum": 1,
         "maximum": MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT,
-        "description": (
-            f"Cap on the tree, in characters. Unset, {MCP_BROWSER_SNAPSHOT_MAX_CHARS}; at most "
-            f"{MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT}."
-        ),
+        "description": "Cap on the tree, in characters.",
     },
     "timeout": _MCP_ACTION_TIMEOUT_PROPERTY,
 }
@@ -3960,19 +3943,16 @@ MCP_PROVIDER_DESCRIPTION = "The backend to use, of those configured here; omit i
 # (`web_run` hands it to ours), and latency and cost are what it chooses on.
 
 MCP_DESC_EXTRACT = (
-    "Read pages you already have URLs for, as markdown, HTML or plain text, in about a second for a small "
-    "batch. It reads pages, it does not find them: pass URLs from `search`, the user or a page you read. A "
-    "page whose content needs a login, a form or clicks cannot be read this way; that is `browser_open`'s. "
-    "provider='max' races every configured backend and returns the first answer, at one fetch per backend "
-    "per URL: use it only when the user asked for speed over cost."
+    "Read pages you have URLs for, as markdown, HTML or text, in about a second. It reads, it does not "
+    "find: URLs come from `search`, the user or a page. A page behind a login or clicks is "
+    "`browser_open`'s. provider='max' races every backend, one fetch each: only when the user wants speed "
+    "over cost."
 )
 
 MCP_DESC_RESEARCH = (
-    "Start an agentic research run: the backend searches, reads and cross-checks over many turns, which takes "
-    "MINUTES and bills for the run. Worth it for what a handful of searches cannot settle -- a comparison "
-    "across sources, a structured dataset, enriching records you hold; a lookup is `search`'s. It waits "
-    "{wait:g}s, then hands back a handle: poll `research_status` with it, since calling this again starts, "
-    "and pays for, a second run."
+    "Start an agentic research run: many turns of searching and reading, which takes MINUTES and bills "
+    "for the run. For comparisons, datasets or enriching records; a lookup is `search`'s. After {wait:g}s "
+    "it returns a handle: poll `research_status`, since calling this again pays for a second run."
 )
 
 MCP_DESC_RESEARCH_STATUS = (
@@ -3980,11 +3960,10 @@ MCP_DESC_RESEARCH_STATUS = (
 )
 
 MCP_DESC_BROWSE = (
-    "Hand a task to a hosted browser agent that clicks, types and reads through pages until it is done, "
-    "which takes MINUTES and bills for the run. Worth it for what needs a browser -- a form, a site's own "
-    "search, a page behind interaction; a page you have the URL of is `extract`'s. It waits {wait:g}s, then "
-    "hands back a handle: poll `browse_status` with it, since calling this again starts, and pays for, a "
-    "second task."
+    "Hand a task to a hosted browser agent that clicks and types until done: MINUTES, billed per task. "
+    "For forms, a site's own search, pages behind interaction; a URL you have is `extract`'s. After "
+    "{wait:g}s it returns a handle: poll `browse_status`, since calling this again pays for a second "
+    "task."
 )
 
 MCP_DESC_BROWSE_STATUS = (
@@ -3993,27 +3972,22 @@ MCP_DESC_BROWSE_STATUS = (
 )
 
 MCP_DESC_FETCH_RAW = (
-    "Return the backend's full, unshaped payload for a handle an earlier result carried. Instant -- nothing "
-    "is called again -- but it can be very large: ask for it when a result says it was cut and you need "
-    "the rest. Session URLs and credentials in a browse or browser payload are redacted."
+    "The backend's full, unshaped payload for a handle: instant, but can be very large. Use it when a "
+    "result was cut and you need the rest. Session URLs and credentials in browser payloads are redacted."
 )
 
 MCP_DESC_LOAD_ENV = (
-    "Load API keys from a .env file on this machine, so the backends they unlock work at once, without a "
-    "restart. Instant. Call it only with a path the user gave you: ask them where their .env is, and never ask "
-    "them to paste a key. Only the provider credentials web-router reads are taken, and a variable already set "
-    "keeps its value. The result names the variables loaded -- never their values -- and the backends now "
-    "configured. Set `remember`, which has the server read the file on every start, only when the user asks."
+    "Load API keys from a .env file the user names, so their backends work at once. Ask where it is; "
+    "never ask for a key. Only provider credentials are read, an already-set variable wins, and only "
+    "names are returned. Set `remember` (read it on every start) only when the user asks."
 )
 
 MCP_DESC_BROWSER_OPEN = (
-    "Open a browser session you drive yourself and get a `session_id` for the other browser_* tools. Takes "
-    "a few seconds. A cloud backend BILLS FOR EVERY MINUTE it is open; `local` runs a browser on this machine "
-    "for free, and with headless=false opens a visible window there. Use it for logins, forms, multi-step "
-    "portals and results gated on the user's own details, and ask the user first. Call `browser_close` when "
-    "done; a session idle for {idle:g}s is released anyway, and at most {max_sessions} are open at once. "
-    "With no `provider`, `stealth`, `proxy_country` or `solve_captchas` route past `local` to a BILLED "
-    "vendor. Only http(s) pages open."
+    "Open a browser session you drive with the other browser_* tools. A cloud backend BILLS FOR EVERY MINUTE; "
+    "`local` is free on this machine, and headless=false shows its window. For logins, forms and portals: "
+    "ask the user first, and `browser_close` when done (idle {idle:g}s ends it; at most {max_sessions} "
+    "open). Unset `provider` with `stealth`, `proxy_country` or `solve_captchas` routes to a BILLED "
+    "vendor."
 )
 
 MCP_DESC_BROWSER_GOTO = (
@@ -4022,10 +3996,9 @@ MCP_DESC_BROWSER_GOTO = (
 )
 
 MCP_DESC_BROWSER_SNAPSHOT = (
-    "Read the page as its accessibility tree, one element per line, each tagged `[ref=eN]` -- the "
-    "view to act from. Pass a ref to `browser_click` or `browser_type`. A ref is good until the next "
-    "snapshot or navigation, so snapshot again after anything changes the page. Capped at "
-    "{max_chars} characters unless you pass `max_chars`; the result says when it was cut."
+    "The page's accessibility tree, one element per line tagged `[ref=eN]` for `browser_click` and "
+    "`browser_type`. Refs last until the next snapshot or navigation. Capped at {max_chars} characters "
+    "unless `max_chars` says otherwise."
 )
 
 MCP_DESC_BROWSER_CLICK = (
@@ -4041,15 +4014,13 @@ MCP_DESC_BROWSER_TYPE = (
 MCP_DESC_BROWSER_PRESS = "Press a key on whatever has focus: 'Enter', 'Escape', 'Tab', 'ArrowDown', 'Control+A'."
 
 MCP_DESC_BROWSER_SCREENSHOT = (
-    "Take a PNG screenshot of the page, returned as an image. The viewport by default; `full_page` "
-    "captures the whole scrollable page, which can be large. Use `browser_snapshot` to find things to "
-    "click -- a screenshot carries no refs."
+    "A PNG of the viewport, or the whole page with `full_page`. It carries no refs: use "
+    "`browser_snapshot` to find things to click."
 )
 
 MCP_DESC_BROWSER_READ = (
-    "Read the page as it is now -- after your clicks and typing -- as rendered text or live HTML, "
-    "shaped like an `extract` result. Shortened to fit a context window; `fetch_raw` with its handle "
-    "returns the whole page."
+    "Read the page as it is now, as text or live HTML, shaped like an `extract` result; `fetch_raw` with "
+    "its handle returns all of it."
 )
 
 MCP_DESC_BROWSER_CLOSE = (
@@ -4114,12 +4085,9 @@ MCP_MSG_ENV_NOTHING_NEW = (
 
 MCP_MSG_ENV_REMEMBERED = "The path is recorded in {pointer}; the server reads that file every time it starts."
 
-MCP_MSG_TRUNCATED = (
-    "Shortened to fit a context window: long text is cut at a word boundary and marked "
-    "{marker!r}.{dropped} Call fetch_raw with handle {handle!r} for the backend's untouched payload."
-)
+MCP_MSG_TRUNCATED = "Cut to fit.{dropped} fetch_raw with this handle returns it all."
 
-MCP_MSG_DROPPED = " {dropped} of {total} items did not fit and were left out."
+MCP_MSG_DROPPED = " {dropped} of {total} items left out."
 
 MCP_MSG_OVERSIZED = (
     "{field} is {size} characters and cannot be cut without changing what it means, so it was left out "
