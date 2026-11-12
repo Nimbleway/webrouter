@@ -6,6 +6,7 @@ management API, error codes). Values are synthetic; the provider was verified li
 
 from __future__ import annotations
 
+import asyncio
 import os
 import time
 
@@ -158,6 +159,50 @@ async def test_a_call_deadline_ends_the_wait_with_the_snapshots_id(asynchronous:
     assert caught.value.job_id == "sd_abc"
     assert time.monotonic() - started < 0.8
     assert [request.url.path for request in api.requests].count("/datasets/v3/scrape") == 1
+
+
+def _late_202(provider: BrightDataLiveDataProvider, scrape: float) -> list[str]:
+    """Wire ``provider`` sync and async: the scrape answers 202 after ``scrape`` s, each poll "running" after 0.5 s."""
+    paths: list[str] = []
+
+    def respond(request: httpx.Request) -> tuple[float, httpx.Response]:
+        paths.append(request.url.path)
+        if request.url.path == "/datasets/v3/scrape":
+            return scrape, httpx.Response(202, json={"snapshot_id": "sd_abc"})
+        return 0.5, httpx.Response(200, json={"status": "running"})
+
+    def sync(request: httpx.Request) -> httpx.Response:
+        pause, answer = respond(request)
+        time.sleep(pause)
+        return answer
+
+    async def asynchronous(request: httpx.Request) -> httpx.Response:
+        pause, answer = respond(request)
+        await asyncio.sleep(pause)
+        return answer
+
+    provider._sync = httpx.Client(**provider._client_kwargs, transport=httpx.MockTransport(sync))
+    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=httpx.MockTransport(asynchronous))
+    return paths
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize(("scrape", "polled"), [(0.7, False), (0.2, True)], ids=["no-time-left", "time-to-poll"])
+async def test_a_202_with_no_time_left_names_its_snapshot_before_polling(
+    asynchronous: bool, scrape: float, polled: bool
+) -> None:
+    provider, _ = _waiting(None, wait=300.0)
+    provider.poll_seconds = 0.05  # type: ignore[misc]
+    paths = _late_202(provider, scrape)
+    request = LiveDataRequest(source=DATASET, inputs={"url": URL})
+    started = time.monotonic()
+    with call_deadline(1.0), pytest.raises(LiveDataJobError, match="still scraping") as caught:
+        if asynchronous:
+            await provider.arun(request)
+        else:
+            provider.run(request)
+    assert caught.value.job_id == "sd_abc" and time.monotonic() - started < 1.0
+    assert ("/datasets/v3/progress/sd_abc" in paths) is polled
 
 
 def test_a_202_without_a_snapshot_id_raises() -> None:

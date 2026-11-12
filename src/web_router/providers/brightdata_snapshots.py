@@ -83,16 +83,18 @@ def wait_and_read(provider: BrightDataLiveDataProvider, request: LiveDataRequest
     The wait lasts up to the provider's ``wait_seconds``, or until just before
     the call's deadline if sooner, polling every ``poll_seconds``. Every
     failure past the 202 names the snapshot: a poll or the read that fails, a
-    snapshot that failed or was canceled, and a wait that ran out.
+    snapshot that failed or was canceled, and a wait that ran out. The wait
+    is checked before each poll, so a 202 that leaves no time raises with the
+    snapshot's id rather than sending a poll the caller's deadline cuts off.
     """
     snapshot = _waiting(provider, request, response)
     with job_deadline(snapshot.until):
         while True:
+            snapshot.check()
             with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
                 if snapshot.done(provider._send("GET", snapshot.path)):
                     break
             time.sleep(snapshot.pause())
-            snapshot.check()
         with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
             read = provider._client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
             return provider._to_response(request, read)
@@ -105,11 +107,11 @@ async def await_and_read(
     snapshot = _waiting(provider, request, response)
     with job_deadline(snapshot.until):
         while True:
+            snapshot.check()
             with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
                 if snapshot.done(await provider._asend("GET", snapshot.path)):
                     break
             await asyncio.sleep(snapshot.pause())
-            snapshot.check()
         with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
             read = await provider._async_client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
             return provider._to_response(request, read)
