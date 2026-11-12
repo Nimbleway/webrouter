@@ -1,15 +1,12 @@
 """Provider registry, one table per method.
 
-Providers are looked up by name and imported lazily, so installing web-router
-without a provider's optional dependency stays valid until that provider is
-actually requested.
+Providers are looked up by name and imported lazily, so installing web-router without a provider's optional
+dependency stays valid until that provider is actually requested.
 
-There is a table per method rather than per vendor, because a name does not
-imply a capability: ``brave`` searches and cannot extract, ``oxylabs`` extracts
-and cannot search, and ``nimble`` searches, extracts, runs templates
-and researches through four different classes.
-Asking the wrong table for a name reports it as unknown and lists the ones that
-method does serve, which is the honest answer.
+There is a table per method rather than per vendor, because a name does not imply a capability: ``brave``
+searches and cannot extract, ``oxylabs`` extracts and cannot search, and ``nimble`` searches, extracts, runs
+templates and researches through four different classes. Asking the wrong table for a name reports it as unknown
+and lists the ones that method does serve, which is the honest answer.
 """
 
 from __future__ import annotations
@@ -43,6 +40,7 @@ from web_router.constants import (
     PROVIDER_HYPERBROWSER,
     PROVIDER_JINA,
     PROVIDER_KEENABLE,
+    PROVIDER_KEIROLABS,
     PROVIDER_KERNEL,
     PROVIDER_LINKUP,
     PROVIDER_LOCAL,
@@ -90,6 +88,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_PARALLEL: ("web_router.providers.parallel_search", "ParallelProvider", EXTRA_SEARCH),
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityProvider", EXTRA_SEARCH),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupProvider", EXTRA_SEARCH),
+    PROVIDER_KEIROLABS: ("web_router.providers.keirolabs", "KeirolabsProvider", EXTRA_SEARCH),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQProvider", EXTRA_SEARCH),
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableProvider", EXTRA_SEARCH),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekProvider", EXTRA_SEARCH),

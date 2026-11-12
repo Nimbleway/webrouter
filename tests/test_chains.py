@@ -26,6 +26,7 @@ README_NAMES = {
     "Keenable": "keenable",
     "DeepSeek": "deepseek",
     "AgentCore": "agentcore",
+    "Keirolabs": "keirolabs",
 }
 
 
