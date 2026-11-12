@@ -530,7 +530,8 @@ price of every (provider, method, mode) WebRouter calls, each with the vendor
 page it comes from and the date it was checked. It is experimental and may
 change before 1.0. The figures are estimates -- pay-as-you-go list prices, not
 your plan's or a negotiated rate, and a call can bill more than its row (content
-add-ons, tokens) -- and the router never puts one in a response.
+add-ons, tokens) -- and a response's `cost_usd` drawn from one is labelled
+`cost_source="estimated"`.
 
 ```python
 from web_router import prices
