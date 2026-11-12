@@ -1,7 +1,9 @@
-"""What the Bright Data live data tests share: one scraper's catalogue entry and a provider wired to a recording API."""
+"""What the Bright Data live data tests share: a scraper's entry, a provider on a recording API, and slow scrapes."""
 
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import Any
 
 import httpx
@@ -44,3 +46,50 @@ def _by_path(records: Any, catalogue: Any = (SCRAPER,)) -> Any:
         return httpx.Response(200, json=records)
 
     return respond
+
+
+def _slow_scrape(*progress: str, records: object = ({"title": "late"},)) -> object:
+    """A scrape past the synchronous window: 202, then each of ``progress`` in turn, then the snapshot's ``records``."""
+    left = list(progress)
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/datasets/v3/scrape":
+            return httpx.Response(202, json={"snapshot_id": "sd_abc", "message": "Your request is still in progress"})
+        if path == "/datasets/v3/progress/sd_abc":
+            return httpx.Response(200, json={"status": left.pop(0) if len(left) > 1 else left[0]})
+        assert path == "/datasets/v3/snapshot/sd_abc"
+        return httpx.Response(200, json=list(records))
+
+    return respond
+
+
+def _waiting(respond: object, *, wait: float = 5.0) -> tuple[BrightDataLiveDataProvider, Api]:
+    provider, api = _provider(respond)
+    provider.poll_seconds, provider.wait_seconds = 0.0, wait  # type: ignore[misc]
+    return provider, api
+
+
+def _late_202(provider: BrightDataLiveDataProvider, scrape: float) -> list[str]:
+    """Wire ``provider`` sync and async: the scrape answers 202 after ``scrape`` s, each poll "running" after 0.5 s."""
+    paths: list[str] = []
+
+    def respond(request: httpx.Request) -> tuple[float, httpx.Response]:
+        paths.append(request.url.path)
+        if request.url.path == "/datasets/v3/scrape":
+            return scrape, httpx.Response(202, json={"snapshot_id": "sd_abc"})
+        return 0.5, httpx.Response(200, json={"status": "running"})
+
+    def sync(request: httpx.Request) -> httpx.Response:
+        pause, answer = respond(request)
+        time.sleep(pause)
+        return answer
+
+    async def asynchronous(request: httpx.Request) -> httpx.Response:
+        pause, answer = respond(request)
+        await asyncio.sleep(pause)
+        return answer
+
+    provider._sync = httpx.Client(**provider._client_kwargs, transport=httpx.MockTransport(sync))
+    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=httpx.MockTransport(asynchronous))
+    return paths
