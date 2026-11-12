@@ -64,6 +64,9 @@
     "Some endpoints and parameters need Analyst plan or above; the Demo plan covers a subset.",
     "Coin ids are CoinGecko slugs (bitcoin, not BTC); look them up with coingecko.search or coingecko.coins.list."
   ],
+  "sites": [
+    "coingecko.com"
+  ],
   "sources": [
     "https://docs.coingecko.com/reference/introduction",
     "https://docs.coingecko.com/reference/authentication",

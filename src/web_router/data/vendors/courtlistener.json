@@ -28,6 +28,9 @@
     "A case's web URL carries the cluster id, not the opinion id; look a case up on clusters. Use cluster case names, not docket names.",
     "Docket numbers are not unique; always add a court filter."
   ],
+  "sites": [
+    "courtlistener.com"
+  ],
   "sources": [
     "https://wiki.free.law/c/courtlistener/help/api/rest/v4/overview",
     "https://wiki.free.law/c/courtlistener/help/api/rest/v4/search",

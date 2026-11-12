@@ -40,6 +40,7 @@ from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
 from web_router.client_config import config_for
+from web_router.client_extract import AsyncExtract, SyncExtract
 from web_router.client_handles import _HandleT, _HandleTracking
 from web_router.client_live_data import AsyncLiveData, SyncLiveData
 from web_router.client_plan import AsyncPlan, SyncPlan
@@ -48,7 +49,6 @@ from web_router.client_requests import (
     async_client_holders,
     build_browse_request,
     build_browser_request,
-    build_extract_request,
     build_research_request,
 )
 from web_router.client_search import AsyncSearch, SyncSearch
@@ -88,8 +88,6 @@ from web_router.routing.submitted import asubmitted, submitted
 from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
     BrowseResponse,
-    ExtractFormat,
-    ExtractResponse,
     Provider,
     ResearchEffort,
     ResearchResponse,
@@ -266,7 +264,15 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
 
 
 class WebRouter(
-    _BaseRouter[BrowserHandle], SyncSearch, SyncAnswer, SyncLiveData, SyncBenchmark, SyncPlan, SyncBudget, SyncVendors
+    _BaseRouter[BrowserHandle],
+    SyncExtract,
+    SyncSearch,
+    SyncAnswer,
+    SyncLiveData,
+    SyncBenchmark,
+    SyncPlan,
+    SyncBudget,
+    SyncVendors,
 ):
     """Synchronous router.
 
@@ -311,29 +317,6 @@ class WebRouter(
         if async_only:
             self._close_refused_router()  # built by name above, and this router is never returned to close it
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
-
-    def extract(
-        self,
-        urls: str | list[str],
-        *,
-        provider: str | Provider | ExtractProvider | None = None,
-        format: ExtractFormat | None = None,
-        profile: str | None = None,
-        provider_options: dict[str, Any] | None = None,
-        budget: Budget | None = None,
-    ) -> ExtractResponse:
-        """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
-
-        Several URLs can partly succeed: what came back is in
-        :attr:`~web_router.ExtractResponse.documents` and everything that did
-        not is in :attr:`~web_router.ExtractResponse.failures`. A call where
-        nothing came back raises instead. ``profile`` names a saved identity on
-        the backend -- the one a browser session logged into -- whose cookies
-        are sent with each fetch; a backend without saved profiles refuses it.
-        """
-        request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
-        chain = self.get_extract_provider(provider)
-        return self._routed(chain, request, budget, chain.extract)
 
     def research(
         self,
@@ -569,6 +552,7 @@ class WebRouter(
 
 class AsyncWebRouter(
     _BaseRouter[AsyncBrowserHandle],
+    AsyncExtract,
     AsyncSearch,
     AsyncAnswer,
     AsyncLiveData,
@@ -583,27 +567,6 @@ class AsyncWebRouter(
         >>> async with AsyncWebRouter("nimble") as router:
         ...     response = await router.search("latest nvidia earnings")
     """
-
-    async def extract(
-        self,
-        urls: str | list[str],
-        *,
-        provider: str | Provider | ExtractProvider | None = None,
-        format: ExtractFormat | None = None,
-        profile: str | None = None,
-        provider_options: dict[str, Any] | None = None,
-        budget: Budget | None = None,
-    ) -> ExtractResponse:
-        """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
-
-        Backends that take one URL per call are fanned out concurrently. As on
-        the sync router, a partly successful call returns its failures and one
-        where nothing came back raises, and ``profile`` is the saved identity
-        whose cookies each fetch carries.
-        """
-        request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
-        chain = self.get_extract_provider(provider)
-        return await self._arouted(chain, request, budget, chain.aextract)
 
     async def research(
         self,

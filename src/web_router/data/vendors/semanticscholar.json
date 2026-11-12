@@ -29,6 +29,9 @@
     "Without fields, responses carry only paperId and title (or authorId and name).",
     "Papers have two IDs: paperId (string) and corpusId (integer, used by the datasets)."
   ],
+  "sites": [
+    "semanticscholar.org"
+  ],
   "sources": [
     "https://api.semanticscholar.org/api-docs/graph",
     "https://api.semanticscholar.org/graph/v1/swagger.json",

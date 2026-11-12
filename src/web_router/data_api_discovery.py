@@ -10,6 +10,7 @@ changes data is found with :meth:`~web_router.WebRouter.find_vendor_endpoints`.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from typing import Any
 
 from web_router.client_requests import build_search_request
@@ -26,6 +27,7 @@ from web_router.types import SearchResponse
 from web_router.types_data_api import DataApiMatch
 from web_router.vendors.catalog import VendorCatalog, get_catalog
 from web_router.vendors.credentials import CredentialSource, missing_credentials
+from web_router.vendors.schema import Vendor, VendorEndpoint
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +41,18 @@ def find_matches(
     catalog: VendorCatalog | None = None,
 ) -> list[DataApiMatch]:
     """The endpoints of the data APIs ``query`` names, best first; ``configured_only`` keeps the callable ones."""
+    pairs = named_endpoints(catalog or get_catalog(), query)
+    return listed(
+        pairs, source, configured_only=configured_only, limit=DATA_API_SEARCH_LIMIT if limit is None else limit
+    )
+
+
+def listed(
+    pairs: Iterable[tuple[Vendor, VendorEndpoint]], source: CredentialSource, *, configured_only: bool, limit: int
+) -> list[DataApiMatch]:
+    """The first ``limit`` of ``pairs`` as matches, each saying whether its credentials are set."""
     matches: list[DataApiMatch] = []
-    for owner, endpoint in named_endpoints(catalog or get_catalog(), query):
+    for owner, endpoint in pairs:
         missing = missing_credentials(owner, source, endpoint)
         if configured_only and missing:
             continue
@@ -56,7 +68,7 @@ def find_matches(
                 missing=missing,
             )
         )
-        if len(matches) >= (DATA_API_SEARCH_LIMIT if limit is None else limit):
+        if len(matches) >= limit:
             break
     return matches
 

@@ -31,6 +31,14 @@
     "Responses are always gzip or deflate compressed. Every response is a wrapper with items, has_more and quota_remaining; total only with filter=total or a custom filter.",
     "Dates are Unix epoch seconds. Bodies are not returned by default: pass filter=withbody."
   ],
+  "sites": [
+    "stackoverflow.com",
+    "stackexchange.com",
+    "superuser.com",
+    "serverfault.com",
+    "askubuntu.com",
+    "mathoverflow.net"
+  ],
   "sources": [
     "https://api.stackexchange.com/docs",
     "https://api.stackexchange.com/docs/authentication",

@@ -11,6 +11,9 @@ from typing import Final
 DATA_API_SEARCH_LIMIT: Final = 3
 """Data APIs :meth:`~web_router.WebRouter.search` lists beside the web results when ``max_results`` is not set."""
 
+DATA_API_EXTRACT_LIMIT: Final = 3
+"""Data APIs :meth:`~web_router.WebRouter.extract` lists for each page whose site a catalog entry serves."""
+
 DATA_API_NAME_MIN_LENGTH: Final = 4
 """The shortest word of a data API's display name that names it on its own: "fed" or "who" are everyday words."""
 

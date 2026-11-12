@@ -29,6 +29,9 @@
     "Paging is page (from 1) and per_page (1 to 1000; default 30, tags default 10).",
     "Dates and date-times are RFC 3339."
   ],
+  "sites": [
+    "dev.to"
+  ],
   "sources": [
     "https://developers.forem.com/api/v1",
     "https://github.com/forem/forem/blob/main/swagger/v1/api_v1.json"

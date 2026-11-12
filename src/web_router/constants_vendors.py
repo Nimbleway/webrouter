@@ -100,6 +100,11 @@ VENDOR_ENDPOINT_ID_PATTERN: Final = r"^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9_.-]*$
 
 VENDOR_ENV_PATTERN: Final = r"^[A-Z][A-Z0-9_]*$"
 
+VENDOR_SITE_PATTERN: Final = r"^[a-z0-9-]+(\.[a-z0-9-]+)+$"
+"""A website a data API serves, as a bare lowercase host: ``youtube.com``, never a URL or a path."""
+
+MSG_VENDOR_CATALOG_SITE: Final = "site {site!r} is not a bare lowercase host such as 'youtube.com'"
+
 VENDOR_CATEGORY_DESCRIPTIONS: Final = {
     "advertising": "Ad accounts and ad libraries: campaigns, spend, creatives.",
     "analytics": "Web and product analytics, tag management, CRM and marketing data.",

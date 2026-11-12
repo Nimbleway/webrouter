@@ -36,6 +36,9 @@
     "Times are ISO 8601 UTC, YYYY-MM-DDTHH:MM:SSZ.",
     "Pull requests are issues too: comments on a PR conversation go through the issues endpoints, and issue numbers and PR numbers share one sequence."
   ],
+  "sites": [
+    "github.com"
+  ],
   "sources": [
     "https://docs.github.com/en/rest/search/search",
     "https://docs.github.com/en/rest/repos/repos",

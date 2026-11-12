@@ -41,6 +41,9 @@
     "Pass linked_partitioning=true and follow next_href to page; collections default to 50 items, max 200. offset is deprecated.",
     "The Authorization scheme is 'OAuth', not 'Bearer'."
   ],
+  "sites": [
+    "soundcloud.com"
+  ],
   "sources": [
     "https://developers.soundcloud.com/docs/api/guide",
     "https://developers.soundcloud.com/docs/api/explorer/open-api"

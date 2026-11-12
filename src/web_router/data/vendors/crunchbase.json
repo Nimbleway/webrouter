@@ -27,6 +27,9 @@
     "Your key only returns the fields and collections of your licensed package.",
     "Search pages with after_id (the last result uuid); entity cards hold at most 100 items, then page with organization.card."
   ],
+  "sites": [
+    "crunchbase.com"
+  ],
   "sources": [
     "https://data.crunchbase.com/docs/api-essentials.md",
     "https://data.crunchbase.com/docs/entity-lookup.md",

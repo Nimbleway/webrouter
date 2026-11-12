@@ -30,6 +30,9 @@
     "Some endpoints and history depth depend on the plan; a 403 means the endpoint is not on the key's plan.",
     "Many endpoints also work keyless at /public-api/<path>, at lower rate limits; this entry calls the keyed paths."
   ],
+  "sites": [
+    "coinmarketcap.com"
+  ],
   "sources": [
     "https://coinmarketcap.com/api/documentation/guides/authentication.md",
     "https://coinmarketcap.com/api/documentation/ai-agent-hub/skills/cmc-api-crypto.md",

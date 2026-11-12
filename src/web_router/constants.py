@@ -12,6 +12,7 @@ from typing import Any, Literal, get_args
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_extract import MCP_DESC_EXTRACT, MCP_EXTRACT_PROPERTIES
 from web_router.constants_live_data import (
     MCP_DESC_LIVE_DATA,
     MCP_DESC_LIVE_DATA_SOURCE,
@@ -46,7 +47,6 @@ from web_router.types import (
     BrowserRequest,
     BrowserState,
     ExtractFormat,
-    ExtractRequest,
     FieldPath,
     JobState,
     Provider,
@@ -3658,25 +3658,6 @@ The three template tools share one registry, and the browser tools' method is
 ``provider_config`` speak the same name.
 """
 
-# `profile` is left out on purpose, as on `browser_open`: a saved, logged-in
-# identity is the user's own, set in code, never from a conversation.
-MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
-    "urls": {
-        "type": "array",
-        "items": {"type": "string"},
-        "minItems": 1,
-        "description": _described(ExtractRequest, "urls"),
-    },
-    "format": {
-        "type": "string",
-        "enum": list(get_args(ExtractFormat)),
-        "description": (
-            "Which representation of each page to return. A backend that cannot produce it says so "
-            "rather than returning a different one."
-        ),
-    },
-}
-
 MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": _described(ResearchRequest, "query")},
     "output_schema": {
@@ -3960,14 +3941,6 @@ MCP_PROVIDER_DESCRIPTION = "The backend to use, of those configured here; omit i
 
 # A tool description is the routing decision: the model choosing between the tools is the actual router
 # (`web_run` hands it to ours), and latency and cost are what it chooses on.
-
-MCP_DESC_EXTRACT = (
-    "Read pages you already have URLs for, as markdown, HTML or plain text, in about a second for a small "
-    "batch. It reads pages, it does not find them: pass URLs from `search`, the user or a page you read. A "
-    "page whose content needs a login, a form or clicks cannot be read this way; that is `browser_open`'s. "
-    "provider='max' races every configured backend and returns the first answer, at one fetch per backend "
-    "per URL: use it only when the user asked for speed over cost."
-)
 
 MCP_DESC_RESEARCH = (
     "Start an agentic research run: the backend searches, reads and cross-checks over many turns, which takes "

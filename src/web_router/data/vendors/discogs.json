@@ -40,6 +40,9 @@
     "Lists page with page and per_page (max 100); pagination.urls.next in the answer, or the Link header, gives the next page.",
     "Image URLs are only returned to authenticated requests."
   ],
+  "sites": [
+    "discogs.com"
+  ],
   "sources": [
     "https://www.discogs.com/developers"
   ],

@@ -115,6 +115,8 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_extract.py   extract(), mixed into both routers: the pages, plus the data APIs
+│                       that serve each page's site (the catalog's `sites`)
 ├── client_search.py    search(), mixed into both routers: the web results, plus the data APIs
 │                       that match, from data_api_discovery.py (types_data_api.py's DataApiMatch)
 ├── client_live_data.py live_data(), live_data_sources(), live_data_source() and the
