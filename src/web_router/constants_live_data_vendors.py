@@ -23,6 +23,7 @@ BRIGHTDATA_PROGRESS_PATH: Final = "/datasets/v3/progress"
 BRIGHTDATA_SNAPSHOT_PATH: Final = "/datasets/v3/snapshot"
 BRIGHTDATA_SNAPSHOT_READY: Final = "ready"
 BRIGHTDATA_SNAPSHOT_FAILED: Final = "failed"
+BRIGHTDATA_SNAPSHOT_CANCELED: Final = "canceled"
 
 BRIGHTDATA_SNAPSHOT_POLL_SECONDS: Final = 5.0
 BRIGHTDATA_SNAPSHOT_WAIT_SECONDS: Final = 300.0
@@ -51,6 +52,10 @@ MSG_BRIGHTDATA_NO_SNAPSHOT: Final = (
 )
 
 MSG_BRIGHTDATA_SNAPSHOT_FAILED: Final = "Bright Data's snapshot {job_id} for {source!r} failed"
+
+MSG_BRIGHTDATA_SNAPSHOT_CANCELED: Final = (
+    "Bright Data's snapshot {job_id} for {source!r} was canceled; it has no records"
+)
 
 MSG_BRIGHTDATA_POLL_FAILED: Final = (
     "Bright Data's snapshot {job_id} for {source!r} was started, but reading it failed: {error}. "

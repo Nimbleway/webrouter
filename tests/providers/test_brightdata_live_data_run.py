@@ -96,6 +96,14 @@ def test_a_failed_snapshot_names_itself() -> None:
     assert raised.value.job_id == "sd_abc"
 
 
+def test_a_canceled_snapshot_ends_the_wait_at_once() -> None:
+    provider, api = _waiting(_slow_scrape("canceled"))
+    with pytest.raises(LiveDataJobError, match="canceled") as raised:
+        provider.run(LiveDataRequest(source=DATASET, inputs={"url": URL}))
+    assert raised.value.job_id == "sd_abc" and "still scraping" not in str(raised.value)
+    assert [request.url.path for request in api.requests].count("/datasets/v3/progress/sd_abc") == 1
+
+
 def test_a_progress_read_that_fails_still_names_the_snapshot() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/datasets/v3/scrape":
