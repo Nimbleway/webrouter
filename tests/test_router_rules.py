@@ -50,6 +50,8 @@ SEARCH = [
     "What is market research?",
     "what are the pros and cons of a literature review",
     "Define competitive analysis",
+    "How do I compare two columns in Excel and return the matching rows?",
+    "how to write a report in LaTeX",
     "Can you analyze this sentence for its subject and verb?",
     "research papers on sleep and memory",
     "what is a research report",

@@ -36,9 +36,12 @@ A wrong research pick costs a run of up to a few dollars and a minute or more, w
 cheap call the caller can follow with research, so a question that only says why, how, all or list is searched.
 English only: a prompt in another language is searched."""
 
-RULES_DEFINITION_PATTERN = r"^\W*(?:what\s+(?:is|are|was|were|'s)|define|definition\s+of|meaning\s+of)\b"
-"""A prompt asking what something is, which the rules router searches even when it names research's words:
-"What is market research?"."""
+RULES_DEFINITION_PATTERN = (
+    r"^\W*(?:what\s+(?:is|are|was|were|'s)|define|definition\s+of|meaning\s+of"
+    r"|how\s+(?:do|can|could|should|would)\s+(?:i|you|we)|how\s+to)\b"
+)
+"""A prompt asking what something is or how to do something, which the rules router searches even when it names
+research's words: "What is market research?", "How do I compare two columns in Excel and ...?"."""
 
 PROMPT_PARAMS = frozenset({"query", "task"})
 """The options that carry a plan's prompt, left out of its ``repr`` with the prompt itself."""
