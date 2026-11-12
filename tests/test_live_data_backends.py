@@ -15,6 +15,7 @@ import pytest
 
 from web_router import WebRouter
 from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
+from web_router.exceptions import ConfigurationError
 
 
 @pytest.fixture(autouse=True)
@@ -52,3 +53,16 @@ def test_a_keyed_backend_whose_sdk_is_missing_is_named_in_failures(
 
     assert {source.provider for source in page.sources} == {"fake"}
     assert "nimble" in page.failures
+
+
+def test_a_run_names_why_a_keyed_backend_cannot_start(no_nimble_sdk: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NIMBLE_API_KEY", "test-key")
+    router = WebRouter()
+
+    with pytest.raises(ConfigurationError, match="optional dependency") as listed:
+        router.live_data_sources()
+    with pytest.raises(ConfigurationError, match="optional dependency") as ran:
+        router.live_data("x", {})
+
+    assert "NIMBLE_API_KEY" not in str(ran.value), "the variable is set: the install is what is missing"
+    assert str(ran.value) == str(listed.value)

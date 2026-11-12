@@ -103,11 +103,10 @@ def backend_for(
         return router.get_live_data_provider(provider if provider is not None else source.provider), source.name
     if provider is not None:
         return router.get_live_data_provider(provider), source
-    backends = usable_backends(router)
+    failures: dict[str, str] = {}
+    backends = _or_raise(usable_backends(router, failures), failures)
     if len(backends) == 1:
         return backends[0], source
-    if not backends:
-        raise _no_backend()
     raise ConfigurationError(
         MSG_LIVE_DATA_WHICH_BACKEND.format(source=source, providers=", ".join(backend.name for backend in backends))
     )
