@@ -281,8 +281,11 @@ unchanged: `search`, `extract` and the rest never ask the router.
 The router is set by the operator -- whoever starts the server and sets its
 environment -- once, when the server starts:
 
-- unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
-  with an `http(s)` URL is read with `extract`, anything else searched;
+- unset, the built-in rules router (`rules`, also the library's default): a
+  prompt with an `http(s)` URL is read with `extract`; one asking for a report,
+  a comparison or an in-depth analysis runs `research`, billed per run, or
+  `search` when no research backend is configured; anything else is searched.
+  `WEB_ROUTER_MCP_ROUTER=rules` names it;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library. It is imported before
   any `.env` file loads, so code that runs at import sees only the server's own
