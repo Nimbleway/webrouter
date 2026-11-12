@@ -9,7 +9,8 @@ method for a request in words.
 
 It runs as a subprocess of your own client, on your own machine, and reads your
 own credentials out of your own environment. There is no hosted service in the
-middle and nothing to sign up for: no key ever leaves the process you started.
+middle and nothing to sign up for: each key is sent only to its own provider,
+and to nothing else.
 
 Installing and adding keys are the next two sections; the rest of this page is
 reference.
@@ -26,7 +27,7 @@ uv run web-router-mcp    # a check that it starts: it waits silently for a clien
 ```
 
 That is a working `search` and a working `extract` with no account, no key and
-no signup — the keyless backends listed in 
+no signup — the keyless backends listed in
 [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials). Then
 register it with your client, using the absolute path of your clone:
 
@@ -81,8 +82,8 @@ On Linux the directory is `~/.config/web-router` (or
 `$XDG_CONFIG_HOME/web-router`), on Windows `%APPDATA%\web-router`. Fill in the
 keys you hold, then restart the client: a server keeps the environment it
 started with, unless the model loads the file with [`load_env`](#loading-keys-mid-conversation-load_env).
-Each person brings their own keys: there is no shared key store, and no key
-leaves the machine it was set on.
+Each person brings their own keys: there is no shared key store, and a key
+goes from the machine it was set on only to its own provider.
 
 Credentials come from the environment of the process your client launches, and
 then from `.env` files. At startup the server reads every one of four places,

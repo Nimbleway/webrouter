@@ -175,7 +175,9 @@ questions on 2026-11-01, graded by `openai:gpt-4o`.
   answer is the text with Brave's `<citation>` and `<usage>` tags taken out; each tag is a citation, in order,
   with its `number` and its `start_index` / `end_index` into the answer in `extra`, and Brave writes no marker
   into the text, so `field` is unset. Its `<usage>` tag, in `raw`, states the call's cost: $0.054 for one
-  question, almost all of it input tokens, about ten times the others. Every option is refused.
+  question, almost all of it input tokens, about ten times the others. The price list's $0.004 is the
+  per-request part alone, marked as a floor, so a budget's cost cap treats Brave's answer as unpriced and skips it.
+  Every option is refused.
 
 **Choosing one.** On 300 SimpleQA questions graded by one judge, all five land
 at 94-95% and their intervals overlap, so accuracy does not separate them --

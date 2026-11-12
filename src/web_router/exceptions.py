@@ -56,6 +56,10 @@ from web_router.constants import (
 )
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
 from web_router.constants_invoke import MSG_ROUTER_FAILED
+from web_router.constants_providers import MSG_PROVIDER_WRONG_METHOD
+from web_router.types import Provider
+
+_BUILTIN_NAMES = frozenset(provider.value for provider in Provider)
 
 
 def describe(exc: BaseException) -> str:
@@ -98,7 +102,9 @@ class ProviderNotFoundError(WebRouterError):
         # Deduplicated: the router looks a default up in both method registries,
         # and a provider serving both would otherwise be listed twice.
         self.available = sorted(set(available))
-        super().__init__(MSG_UNKNOWN_PROVIDER.format(name=name, available=", ".join(self.available)))
+        # A built-in name is a real provider asked for a method it does not serve, not a typo.
+        template = MSG_PROVIDER_WRONG_METHOD if name in _BUILTIN_NAMES else MSG_UNKNOWN_PROVIDER
+        super().__init__(template.format(name=name, available=", ".join(self.available)))
 
 
 class NoAnswerProviderError(ProviderNotFoundError):
@@ -285,7 +291,8 @@ class DeadlineExceededError(WebRouterError):
         self.provider = provider
         self.seconds = seconds
         message = MSG_DEADLINE_EXCEEDED.format(provider=provider, seconds=seconds)
-        super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried) if tried else ""))
+        # A failure's own text may end in a period already; the message adds its own.
+        super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried.rstrip(".")) if tried else ""))
 
 
 class RouterError(WebRouterError):

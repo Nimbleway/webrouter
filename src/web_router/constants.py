@@ -4156,8 +4156,8 @@ MCP_MSG_REDACTED = (
 MCP_MSG_UNKNOWN_TOOL = "Unknown tool {name!r}. This server serves: {tools}."
 
 MCP_MSG_UNKNOWN_HANDLE = (
-    "Unknown handle {handle!r}. Handles come back from search, extract, templates, template, "
-    "live_data, answer, research, browse and browser_read, and only the {limit} most recent are kept."
+    "Unknown handle {handle!r}. Handles come back from search, extract, live_data_sources, "
+    "live_data_source, live_data, answer, research, browse and browser_read, and only the {limit} most recent are kept."
 )
 
 MCP_MSG_NOT_A_JOB = (
