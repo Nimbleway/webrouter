@@ -35,10 +35,10 @@ from web_router.constants_live_data import (
     MCP_TOOL_LIVE_DATA_SOURCE,
     MCP_TOOL_LIVE_DATA_SOURCES,
 )
+from web_router.live_data_backends import custom_live_data_backends
 from web_router.mcp.env_credentials import env_names
 from web_router.providers.base import _BaseProvider
 from web_router.registry import (
-    available_live_data_providers,
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
@@ -149,8 +149,7 @@ def unconfigured_live_data(tool: str, arguments: Mapping[str, Any]) -> Method | 
     method = METHODS.get(tool)
     if method is None or method.key != MCP_METHOD_LIVE_DATA or arguments.get(MCP_ARG_PROVIDER) is not None:
         return None
-    custom = set(available_live_data_providers()) - set(LIVE_DATA_ENV_BY_PROVIDER)
-    return None if method.configured() or custom else method
+    return None if method.configured() or custom_live_data_backends() else method
 
 
 def configured() -> dict[str, list[str]]:

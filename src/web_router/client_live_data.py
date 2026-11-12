@@ -23,7 +23,8 @@ import threading
 from collections.abc import Mapping
 from typing import Any
 
-from web_router.live_data_any import asearch_every_backend, backend_for, search_every_backend
+from web_router.live_data_any import asearch_every_backend, search_every_backend
+from web_router.live_data_backends import backend_for
 from web_router.live_data_compat_router import AsyncTemplateMethods, SyncTemplateMethods
 from web_router.live_data_search import asearch_live_data_sources, search_live_data_sources
 from web_router.providers.base import LiveDataProvider
@@ -70,6 +71,11 @@ class _LiveDataLookup:
         )
 
 
+def _keywords(query: str | None) -> str | None:
+    """``query`` stripped, or ``None`` when it holds no words, so a blank query lists rather than searches."""
+    return query.strip() if query and query.strip() else None
+
+
 class SyncLiveData(SyncTemplateMethods, _LiveDataLookup):
     def live_data_sources(
         self,
@@ -99,7 +105,7 @@ class SyncLiveData(SyncTemplateMethods, _LiveDataLookup):
         page and description, name and site matches first (Nimble, Bright
         Data, Oxylabs). The page's ``search`` says which happened.
         """
-        keywords = query.strip() if query and query.strip() else None
+        keywords = _keywords(query)
         if provider is None:
             return search_every_backend(self, keywords, limit=limit, offset=offset)
         backend = self.get_live_data_provider(provider)
@@ -159,7 +165,7 @@ class AsyncLiveData(AsyncTemplateMethods, _LiveDataLookup):
         offset: int | None = None,
     ) -> LiveDataSourcePage:
         """List one page of live data sources, or of those matching ``query``. As on the sync router."""
-        keywords = query.strip() if query and query.strip() else None
+        keywords = _keywords(query)
         if provider is None:
             return await asearch_every_backend(self, keywords, limit=limit, offset=offset)
         backend = self.get_live_data_provider(provider)

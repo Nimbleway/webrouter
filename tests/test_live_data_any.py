@@ -19,7 +19,7 @@ from tests._live_data_paged import PagedProvider
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.live_data_any import usable_backends
+from web_router.live_data_backends import usable_backends
 from web_router.registry import register_live_data_provider, unregister_live_data_provider
 
 

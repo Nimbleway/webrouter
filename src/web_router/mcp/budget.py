@@ -41,7 +41,7 @@ from web_router.constants_mcp import (
     MCP_PRICE_OPEN_BROWSER,
     MCP_TOOL_BUDGET_START,
 )
-from web_router.live_data_any import backend_for
+from web_router.live_data_backends import backend_for
 from web_router.providers._deadline import current_deadline
 from web_router.providers.auto_browser import AutoBrowserProvider
 from web_router.routing.attempts import Attempt

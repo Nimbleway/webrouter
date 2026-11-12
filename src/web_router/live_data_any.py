@@ -14,7 +14,8 @@ never names the vendor:
 
 A backend that fails is left out and named in the page's ``failures``; the
 page raises only when every backend failed. Kept out of
-:mod:`web_router.client_live_data` so the routers stay thin.
+:mod:`web_router.client_live_data` so the routers stay thin; which backends
+count, and which one a run goes to, is :mod:`web_router.live_data_backends`.
 """
 
 from __future__ import annotations
@@ -26,24 +27,15 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 from web_router.constants_live_data import (
-    LIVE_DATA_ENV_BY_PROVIDER,
     LIVE_DATA_EVERY_BACKEND,
     LIVE_DATA_SEARCH_PAGE,
     MSG_LIVE_DATA_EVERY_BACKEND_FAILED,
-    MSG_LIVE_DATA_NO_BACKEND,
-    MSG_LIVE_DATA_OTHER_BACKEND,
-    MSG_LIVE_DATA_WHICH_BACKEND,
 )
 from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
+from web_router.live_data_backends import usable_backends_or_raise
 from web_router.live_data_catalogue import check_page
 from web_router.live_data_search import asearch_live_data_sources, search_live_data_sources
 from web_router.providers.base import LiveDataProvider
-from web_router.registry import (
-    available_live_data_providers,
-    configured_live_data_providers,
-    get_live_data_provider_class,
-)
-from web_router.types import Provider, provider_name
 from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
 
 if TYPE_CHECKING:
@@ -52,74 +44,12 @@ if TYPE_CHECKING:
 _LEFT_OUT = (ConfigurationError, ProviderNotInstalledError, ProviderError)
 """What leaves one backend out of a page from every backend, rather than failing the call."""
 
-_KEY_SETTINGS = ("api_key", "client")
-"""Settings that configure a backend in code, beside a ``key_argument`` of its own where it has one."""
-
-
-def usable_backends(router: _LiveDataLookup, failures: dict[str, str] | None = None) -> list[LiveDataProvider]:
-    """Every live data backend ``router`` can use, in name order: a key in the environment or in code.
-
-    A custom backend registered with :func:`~web_router.register_live_data_provider`
-    is tried too, since registering it is the caller's say-so. One that cannot
-    be built -- no key after all, its extra not installed -- is left out, and
-    named in ``failures`` when the caller passes a dict for them.
-    """
-    builtin = set(LIVE_DATA_ENV_BY_PROVIDER)
-    in_env = set(configured_live_data_providers())
-    backends: list[LiveDataProvider] = []
-    for name in available_live_data_providers():
-        if name in builtin and name not in in_env and not _keyed_in_code(router, name):
-            continue
-        try:
-            backends.append(router.get_live_data_provider(name))
-        except (ConfigurationError, ProviderNotInstalledError) as error:
-            if failures is not None:
-                failures[name] = str(error)
-    return backends
-
-
-def backend_for(
-    router: _LiveDataLookup,
-    source: str | LiveDataSource,
-    provider: str | Provider | LiveDataProvider | None,
-) -> tuple[LiveDataProvider, str]:
-    """The backend that runs or describes ``source``, and the name it knows the source by.
-
-    A :class:`~web_router.LiveDataSource` names its own backend. A bare name
-    needs ``provider``, unless this router can use exactly one live data
-    backend, which is then the only place the name can be.
-
-    Raises:
-        ConfigurationError: ``provider`` contradicts the source's own, or a
-            bare name could be on several backends, or on none.
-    """
-    if isinstance(source, LiveDataSource):
-        if provider is not None and _name_of(provider) != source.provider:
-            raise ConfigurationError(
-                MSG_LIVE_DATA_OTHER_BACKEND.format(
-                    source=source.name, owner=source.provider, provider=_name_of(provider)
-                )
-            )
-        return router.get_live_data_provider(provider if provider is not None else source.provider), source.name
-    if provider is not None:
-        return router.get_live_data_provider(provider), source
-    failures: dict[str, str] = {}
-    backends = _or_raise(usable_backends(router, failures), failures)
-    if len(backends) == 1:
-        return backends[0], source
-    raise ConfigurationError(
-        MSG_LIVE_DATA_WHICH_BACKEND.format(source=source, providers=", ".join(backend.name for backend in backends))
-    )
-
 
 def search_every_backend(
     router: _LiveDataLookup, query: str | None, *, limit: int | None, offset: int | None
 ) -> LiveDataSourcePage:
     """One page of the sources every usable backend lists, or matches for ``query``, asked at once."""
-    check_page(limit, offset)
-    failures: dict[str, str] = {}
-    backends = _or_raise(usable_backends(router, failures), failures)
-    want = None if limit is None else (offset or 0) + limit
+    backends, failures, want = _prepared(router, limit, offset)
     answers: dict[str, LiveDataSourcePage | BaseException] = {}
     with ThreadPoolExecutor(max_workers=len(backends)) as pool:
         # Each worker runs in a copy of this context, so the caller's deadline reaches every backend.
@@ -137,16 +67,23 @@ async def asearch_every_backend(
     router: _LiveDataLookup, query: str | None, *, limit: int | None, offset: int | None
 ) -> LiveDataSourcePage:
     """Async counterpart of :func:`search_every_backend`."""
-    check_page(limit, offset)
-    failures: dict[str, str] = {}
-    backends = _or_raise(usable_backends(router, failures), failures)
-    want = None if limit is None else (offset or 0) + limit
+    backends, failures, want = _prepared(router, limit, offset)
     results = await asyncio.gather(*(_aask(backend, query, want) for backend in backends), return_exceptions=True)
     answers = {backend.name: result for backend, result in zip(backends, results, strict=True)}
     return _merged(answers, failures, query, limit=limit, offset=offset)
 
 
 # -- helpers ------------------------------------------------------------------
+
+
+def _prepared(
+    router: _LiveDataLookup, limit: int | None, offset: int | None
+) -> tuple[list[LiveDataProvider], dict[str, str], int | None]:
+    """The page checked, the backends to ask, the ones that failed to build, and how many sources to ask each for."""
+    check_page(limit, offset)
+    failures: dict[str, str] = {}
+    backends = usable_backends_or_raise(router, failures)
+    return backends, failures, None if limit is None else (offset or 0) + limit
 
 
 def _ask(backend: LiveDataProvider, query: str | None, want: int | None) -> LiveDataSourcePage:
@@ -247,40 +184,4 @@ def _in_turn(lists: Iterable[list[LiveDataSource]]) -> Iterable[LiveDataSource]:
         yield from (sources[index] for sources in rows if index < len(sources))
 
 
-def _keyed_in_code(router: _LiveDataLookup, name: str) -> bool:
-    """Whether ``provider_config`` hands built-in backend ``name`` a key or a client.
-
-    The plain settings are read first, without importing the backend; its own
-    ``key_argument`` only after, and a backend whose SDK is missing has none
-    to read, so it was never a candidate.
-    """
-    config = router._config_for(name)
-    if any(config.get(setting) for setting in _KEY_SETTINGS):
-        return True
-    try:
-        provider_class = get_live_data_provider_class(name)
-    except ProviderNotInstalledError:
-        return False
-    # Oxylabs names its Web API key `web_api_key`, as `api_key` there is extract's password.
-    return bool(config.get(getattr(provider_class, "key_argument", "api_key")))
-
-
-def _name_of(provider: str | Provider | LiveDataProvider) -> str:
-    return provider.name if isinstance(provider, LiveDataProvider) else provider_name(provider)
-
-
-def _no_backend() -> ConfigurationError:
-    names = sorted({env_var for env_vars in LIVE_DATA_ENV_BY_PROVIDER.values() for env_var in env_vars})
-    return ConfigurationError(MSG_LIVE_DATA_NO_BACKEND.format(env_vars=", ".join(names)))
-
-
-def _or_raise(backends: list[LiveDataProvider], failures: dict[str, str]) -> list[LiveDataProvider]:
-    """``backends``, or the reason there are none: no key anywhere, or every keyed one failed to build."""
-    if backends:
-        return backends
-    if failures:
-        raise ConfigurationError(MSG_LIVE_DATA_EVERY_BACKEND_FAILED.format(failures=failures))
-    raise _no_backend()
-
-
-__all__: list[str] = ["asearch_every_backend", "backend_for", "search_every_backend", "usable_backends"]
+__all__: list[str] = ["asearch_every_backend", "search_every_backend"]
