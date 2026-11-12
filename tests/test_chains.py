@@ -1,4 +1,4 @@
-"""The generated default orders: ``auto`` reads them from ``data/chains.json``, and the README agrees with it."""
+"""The generated default orders: ``auto`` reads them from ``data/chains.json``, and the docs agree with it."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from web_router import WebRouter
 from web_router._chains import chains
 from web_router.constants import ENV_BY_PROVIDER
 
-README = Path(__file__).resolve().parents[1] / "README.md"
+PAGE = Path(__file__).resolve().parents[1] / "docs" / "providers.mdx"
 
 README_NAMES = {
     "Perplexity": "perplexity",
@@ -48,15 +48,15 @@ def test_every_member_is_either_measured_or_marked_unmeasured() -> None:
         assert entry["preferred"][: len(measured)] == measured, "the ranked members come first, in their rank"
 
 
-def test_the_readme_search_table_matches_the_file() -> None:
-    row = re.search(r"^\| `search` \| (?P<keyed>[^|]+) \| [^|]+ \| (?P<added>[^|]+) \|$", README.read_text(), re.M)
+def test_the_docs_search_table_matches_the_file() -> None:
+    row = re.search(r"^\| `search` \| (?P<keyed>[^|]+) \| [^|]+ \| (?P<added>[^|]+) \|$", PAGE.read_text(), re.M)
     assert row is not None
     assert _names(row["keyed"]) == chains()["search"]["preferred"]
     assert _names(row["added"]) == chains()["search"]["appended"]
 
 
-def test_the_readme_answer_order_matches_the_file() -> None:
-    text = " ".join(README.read_text().split())
+def test_the_docs_answer_order_matches_the_file() -> None:
+    text = " ".join(PAGE.read_text().split())
     found = re.search(r"cheaper at list price: (?P<order>.+?), which the scan has not measured", text)
     assert found is not None
     assert _names(found["order"]) == chains()["answer"]["preferred"]

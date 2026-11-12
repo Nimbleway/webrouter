@@ -65,7 +65,23 @@
           "extract",
           "answer",
           "research",
+          "live-data",
           "browser"
+        ]
+      },
+      {
+        "group": "Agents and routing",
+        "pages": [
+          "integrations",
+          "smart-routing"
+        ]
+      },
+      {
+        "group": "Guides",
+        "pages": [
+          "benchmarks",
+          "vendors",
+          "custom-providers"
         ]
       },
       {

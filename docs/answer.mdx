@@ -36,7 +36,7 @@ Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra ti
 ```
 
 With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
-Which one: they score alike on accuracy (see [the answer comparison](https://github.com/Nimbleway/webrouter/blob/main/README.md#answer)), so pick
+Which one: they score alike on accuracy (see [the answer comparison](/providers#answer)), so pick
 on what you need -- Linkup had the lowest median latency in that scan (0.9 s); Perplexity, You.com
 and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
 Linkup tie each source to a sentence. [`examples/answer.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/answer.py)
@@ -54,7 +54,7 @@ The options are `include_domains`, `exclude_domains`, `country`, `locale` and
 where the router sets the start date itself (Linkup), it counts back from
 today's date in UTC. A backend that does not
 map one raises `UnsupportedParameterError` before anything is sent -- the
-[answer table](https://github.com/Nimbleway/webrouter/blob/main/README.md#answer) says which backend maps what.
+[answer table](/providers#answer) says which backend maps what.
 
 With `provider` unset, the router's default answers when it is an answer
 backend. On the usual default, `auto`, that is every answer backend you hold a

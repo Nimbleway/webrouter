@@ -26,8 +26,8 @@ uv run web-router-mcp    # a check that it starts: it waits silently for a clien
 ```
 
 That is a working `search` and a working `extract` with no account, no key and
-no signup — the keyless backends listed in the README's
-[Working with no credentials](../README.md#working-with-no-credentials). Then
+no signup — the keyless backends listed in 
+[Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials). Then
 register it with your client, using the absolute path of your clone:
 
 - **Inside the clone**, Claude Code needs nothing: the committed `.mcp.json`
@@ -250,7 +250,7 @@ takes longer, so it leaves `effort` unset unless needed.
 
 Over MCP the model chooses `max_results`, not you. Its description steers it
 away from a single result, but the choice stays the model's. A host that wants
-the number fixed should [wrap `search` itself](../README.md#wrapping-search-for-your-own-agent).
+the number fixed should [wrap `search` itself](https://docs.webrouter.net/integrations#wrapping-search-for-your-own-agent).
 
 ### `research` never blocks the session
 
@@ -287,7 +287,7 @@ environment -- once, when the server starts:
   installed -- any form `router=` takes on the library. It is imported before
   any `.env` file loads, so code that runs at import sees only the server's own
   process environment. The built-in
-  [decision-API routers](../README.md#decision-apis-deciderrouter-routerllm-and-routersystemone),
+  [decision-API routers](https://docs.webrouter.net/smart-routing#decision-apis),
   `llm` and `systemone`, need a `router_config`: name them with
   `WEB_ROUTER_MCP_ROUTER_CONFIG`, below, or build one here: a
   `my_router.py` holding
@@ -304,13 +304,13 @@ environment -- once, when the server starts:
   prompt, its URLs whole, the budget and the candidate ids with their
   estimated cost and p90 latency, never a provider key;
 - `WEB_ROUTER_MCP_ROUTER=remote` asks your router service over HTTP, the
-  library's built-in [`remote` router](../README.md#a-router-service-routerremote):
+  library's built-in [`remote` router](https://docs.webrouter.net/smart-routing#a-router-service):
   `WEB_ROUTER_REMOTE_ROUTER_URL` is its URL (`https`, or `http` to
   `localhost` or a loopback address; no credentials or query) and
   `WEB_ROUTER_REMOTE_ROUTER_API_KEY` its optional bearer key, both read once
   from the same process environment at startup;
 - `WEB_ROUTER_MCP_ROUTER=<name>` names any other built-in router, such as
-  [`fallback`](../README.md#chaining-routers-routerfallback), with its
+  [`fallback`](https://docs.webrouter.net/smart-routing#chaining-routers), with its
   `router_config` as a JSON object in `WEB_ROUTER_MCP_ROUTER_CONFIG`, the
   same keys the library takes, flat for one router:
   `WEB_ROUTER_MCP_ROUTER=llm WEB_ROUTER_MCP_ROUTER_CONFIG='{"preset": "openai", "model": "gpt-4.1-mini"}'`.
@@ -666,8 +666,8 @@ is generated when the client lists the tools, from the backends this machine
 holds keys for. Hold only a Tavily key and that is what the enum says; the
 model is never shown thirteen backends it cannot reach, and cannot pick one
 that is certain to throw. With no key at all, search and extract offer `auto`
-and the keyless backends the README lists in
-[Working with no credentials](../README.md#working-with-no-credentials) (and
+and the keyless backends listed in
+[Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials) (and
 extract also `max`, which races them); research and browse offer only `auto`,
 which has nothing to run on; and the live data tools and `answer` offer nothing,
 since every backend bills. Once a key is set, `answer` with no `provider` tries

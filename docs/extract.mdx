@@ -87,6 +87,28 @@ single entry from a backend that took every URL at once, one per URL that came
 back from a backend that did not. A call that failed outright is in `failures`
 instead; there was no payload to keep.
 
+## Reading a page behind a login
+
+`profile` is the extract side of the browser's `profile`: a saved identity on
+the backend — its cookies and storage — whose cookies are sent with each fetch.
+Log in once in a browser session that persists to it, release the session, and
+the fetches that name the same id read the page as that user:
+
+```python
+with router.open_browser(provider="browserbase", profile=context_id, persist_profile=True) as browser:
+    browser.goto("https://example.com/login")
+    ...  # type the credentials, submit
+
+response = router.extract("https://example.com/account/orders", provider="browserbase", profile=context_id)
+```
+
+The fetch never writes cookies back, so an expired login means another
+session. Browserbase is the one backend that maps it, through its Contexts; a
+backend without saved profiles raises `UnsupportedParameterError` rather than
+fetching anonymously, and `auto` and `max` pass such members over. The MCP
+server never offers it: a logged-in identity is set in code, not from a
+conversation.
+
 ## The fastest answer any backend can give: `max`
 
 `auto` tries its backends one after another and stops at the first that works.

@@ -201,7 +201,7 @@ src/web_router/
 │   │                   from router_config, and closed by the router that built them
 │   ├── wire.py         the JSON wire format, schema 1: a RouteRequest out, a
 │   │                   RouteDecision back
-│   ├── wire_schema.py  the JSON Schema files and README examples made from those types
+│   ├── wire_schema.py  the JSON Schema files and docs examples made from those types
 │   ├── remote.py       RemoteRouter, router="remote": a router service over httpx,
 │   │                   async only, one try, 64 KiB answers, scheme and host shown
 │   ├── remote_url.py   its URL check: https, or http to localhost or a loopback
@@ -821,7 +821,7 @@ a member of `max`.
 Search's keyed members (`AUTO_PREFERRED`) and answer's (`AUTO_ANSWER_PREFERRED`)
 are generated: `make chains` ranks them with route-eval on the frozen results
 and writes `data/chains.json`, and a test fails when that file is stale or the
-README's order disagrees with it. All of search's keyed members come before the
+providers page's order disagrees with it. All of search's keyed members come before the
 keyless tier -- so a key held only for research serves plain searches too, on
 purpose. A backend that joins later goes at the end of the file's `appended`
 (search; after the keyless tier) or `preferred` (answer), or of
@@ -1217,7 +1217,7 @@ earlier belongs in the vendor catalogue for `call_vendor`, not here.
    parse), the catalogue mapping, and a skipping `@pytest.mark.integration`
    live test that lists, describes and runs one source.
 5. A price row in `prices.json` (`make prices`), a contract (`make contracts
-   PROVIDER=live_data/<name>`), the README support table and `CHANGELOG.md`.
+   PROVIDER=live_data/<name>`), the `docs/providers.mdx` support table and `CHANGELOG.md`.
 
 ## Adding a vendor
 
@@ -1292,7 +1292,7 @@ The same shape as the two below, against `ResearchProvider` or
 4. Add `tests/providers/test_<name>_research.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
 
 ## Adding an answer provider
 
@@ -1318,7 +1318,7 @@ Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
    `@pytest.mark.integration` live test. `tests/test_answer_contract.py`
    already holds every unmapped option to a refusal before anything is sent.
 5. Start its contract with `make contracts PROVIDER=answer/<name>`, and update
-   the README support table and `CHANGELOG.md`.
+   the `docs/providers.mdx` support table and `CHANGELOG.md`.
 
 ## Adding a browser provider
 
@@ -1416,7 +1416,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>.py` covering parameter mapping and response
    normalization against a recorded payload, plus one `@pytest.mark.integration`
    live test that skips without credentials.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
 
 ## Adding an extract provider
 
@@ -1441,7 +1441,7 @@ searches gets a second class in its existing module rather than a new one.
 4. Add `tests/providers/test_<name>.py` and the live checks in
    `tests/test_integration_surface.py`, which run only against providers that
    declare the format under test.
-5. Update the README support tables and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support tables and `CHANGELOG.md`.
 
 ## Testing
 

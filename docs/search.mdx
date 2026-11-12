@@ -20,7 +20,7 @@ response = router.search(
 ```
 
 Every option except `query` is optional. Which ones a given provider maps is in
-the [search support table](https://github.com/Nimbleway/webrouter/blob/main/README.md#search); setting one it does not map raises rather than being
+the [search support table](/providers#search); setting one it does not map raises rather than being
 ignored, and so does a value it cannot serve (a depth level it lacks, a country
 off its list) before anything is sent, so `auto` passes that backend over.
 

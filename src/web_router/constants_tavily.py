@@ -74,5 +74,5 @@ TAVILY_TIME_RANGE: dict[Recency, str] = {"day": "day", "week": "week", "month": 
 
 MSG_TAVILY_COUNTRY = (
     "Tavily boosts only the countries it lists (166, by name), and only on topic general. Ask for one of those "
-    "without another topic, leave country unset, or name another provider -- see the search table in README.md."
+    "without another topic, leave country unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )

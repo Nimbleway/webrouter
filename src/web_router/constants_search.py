@@ -66,7 +66,7 @@ MCP_DESC_SEARCH = (
 
 MSG_UNSUPPORTED_DEPTH = (
     "It serves search_depth at {levels}. Ask for one of those, leave it unset for the backend's own default, or "
-    "name a provider that serves the level -- see the search table in README.md."
+    "name a provider that serves the level -- see the search table at https://docs.webrouter.net/providers#search."
 )
 """Follows :data:`~web_router.constants.MSG_UNSUPPORTED_VALUES`: a shorter body is never served in a level's place."""
 

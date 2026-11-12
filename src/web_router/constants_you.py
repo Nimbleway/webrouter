@@ -89,7 +89,7 @@ YOU_ANSWER_REFUSED_RECENCY: frozenset[Recency] = frozenset({"day"})
 
 MSG_YOU_ANSWER_RECENCY = (
     "You.com answers with recency 'day' citing pages several days old, so it is refused: ask for 'week' or wider, "
-    "or name another provider -- see the answer table in README.md."
+    "or name another provider -- see the answer table at https://docs.webrouter.net/providers#answer."
 )
 
 YOU_ANSWER_MARKER = re.compile(r"\[\[(\d+(?:,\s*\d+)*)\]\]")
@@ -123,7 +123,7 @@ MSG_YOU_SEARCH_VALUES = (
     + ", ".join(sorted(YOU_COUNTRIES))
     + ", and locale at a language "
     "it lists (see its language list; pt and zh alone are refused, as each could be either of two). Ask for one of "
-    "those, leave it unset, or name another provider -- see the search table in README.md."
+    "those, leave it unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )
 
 MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE = (

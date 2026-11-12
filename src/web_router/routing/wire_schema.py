@@ -1,4 +1,4 @@
-"""The router wire format's JSON Schema files and the examples they and the README show, generated from the types.
+"""The router wire format's JSON Schema files and the examples they and the docs show, generated from the types.
 
 Experimental. Both files under ``web_router/data/schemas/router/v1/`` come from
 :class:`RouteRequest` and :class:`RouteDecision` through :mod:`.wire`'s own
@@ -43,7 +43,7 @@ EXAMPLE_REQUEST = RouteRequest(
     urls=("https://example.com/pricing",),
     budget=Budget(max_cost_usd=0.05, time_limit_s=30.0),
 )
-"""The request the README and the schema file show, generated so neither can drift from the types."""
+"""The request the docs and the schema file show, generated so neither can drift from the types."""
 
 EXAMPLE_DECISION = RouteDecision(
     tools=["extract"],
@@ -52,11 +52,11 @@ EXAMPLE_DECISION = RouteDecision(
     confidence=0.9,
     reason="the prompt names a URL",
 )
-"""The decision the README and the schema file show."""
+"""The decision the docs and the schema file show."""
 
 
 def example_json(name: str) -> str:
-    """The README's example for one schema file: its wire JSON, one field per line."""
+    """The docs' example for one schema file: its wire JSON, one field per line."""
     wire = request_to_wire(EXAMPLE_REQUEST) if name == WIRE_REQUEST_FILE else decision_to_wire(EXAMPLE_DECISION)
     return json.dumps(wire, indent=2)
 
