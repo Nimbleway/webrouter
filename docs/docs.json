@@ -72,7 +72,9 @@
       {
         "group": "Agents and routing",
         "pages": [
+          "mcp",
           "integrations",
+          "agent-prompt",
           "smart-routing"
         ]
       },

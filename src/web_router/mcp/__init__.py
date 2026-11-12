@@ -21,7 +21,7 @@ connection until ``browser_close``, an idle timeout or shutdown releases it.
 
 At startup the server loads keys from ``WEB_ROUTER_ENV_FILE``, a ``.env`` in its
 working directory, or one in the user config directory -- see
-:mod:`web_router.mcp.env`. See docs/mcp.md for the client configuration block.
+:mod:`web_router.mcp.env`. See docs/mcp.mdx (docs.webrouter.net/mcp) for the client configuration block.
 """
 
 from web_router.mcp.browsers import BrowserSessions
