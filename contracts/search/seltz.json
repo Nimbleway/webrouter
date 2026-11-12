@@ -84,11 +84,7 @@
     },
     "fields": {
       "status": "passthrough",
-      "note": "Which of content, snippets and properties each document carries."
-    },
-    "snippet_options": {
-      "status": "passthrough",
-      "note": "Limits on the snippets returned, per result and across the response."
+      "note": "Which of content, snippets and properties each document carries; snippet limits (max_snippets_per_result, max_tokens...) go in an object under fields.snippets."
     }
   }
 }
