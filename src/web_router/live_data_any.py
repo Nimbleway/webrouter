@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 from web_router.constants_live_data import (
     LIVE_DATA_ENV_BY_PROVIDER,
     LIVE_DATA_EVERY_BACKEND,
+    LIVE_DATA_SEARCH_PAGE,
     MSG_LIVE_DATA_EVERY_BACKEND_FAILED,
     MSG_LIVE_DATA_NO_BACKEND,
     MSG_LIVE_DATA_OTHER_BACKEND,
@@ -145,17 +146,53 @@ async def asearch_every_backend(
 
 
 def _ask(backend: LiveDataProvider, query: str | None, want: int | None) -> LiveDataSourcePage:
-    """One backend's first ``want`` sources, or matches for ``query``: the pages after are merged across backends."""
+    """One backend's first ``want`` sources, or matches for ``query``: the pages after are merged across backends.
+
+    The listing is read in pages of at most :data:`LIVE_DATA_SEARCH_PAGE`, a
+    backend's own cap on one page, so a deep offset still reaches its sources.
+    """
     if query:
         return search_live_data_sources(backend, query, limit=want, offset=0)
-    return backend.live_data_sources(limit=want, offset=None)
+    if want is None:
+        return backend.live_data_sources(limit=None, offset=None)
+    pages: list[LiveDataSourcePage] = []
+    while (size := _next_page_size(pages, want)) is not None:
+        pages.append(backend.live_data_sources(limit=size, offset=sum(len(page.sources) for page in pages)))
+    return _joined(pages)
 
 
 async def _aask(backend: LiveDataProvider, query: str | None, want: int | None) -> LiveDataSourcePage:
     """Async counterpart of :func:`_ask`."""
     if query:
         return await asearch_live_data_sources(backend, query, limit=want, offset=0)
-    return await backend.alive_data_sources(limit=want, offset=None)
+    if want is None:
+        return await backend.alive_data_sources(limit=None, offset=None)
+    pages: list[LiveDataSourcePage] = []
+    while (size := _next_page_size(pages, want)) is not None:
+        pages.append(await backend.alive_data_sources(limit=size, offset=sum(len(page.sources) for page in pages)))
+    return _joined(pages)
+
+
+def _next_page_size(pages: list[LiveDataSourcePage], want: int) -> int | None:
+    """How many sources to ask for next to reach ``want``, or ``None`` once read: enough, a short page, or ``total``."""
+    if not pages:
+        return min(want, LIVE_DATA_SEARCH_PAGE)
+    read = sum(len(page.sources) for page in pages)
+    last = pages[-1]
+    asked = min(want - read + len(last.sources), LIVE_DATA_SEARCH_PAGE)
+    if read >= want or not last.sources or (last.total is not None and read >= last.total):
+        return None
+    if last.total is None and len(last.sources) < asked:
+        return None
+    return min(want - read, LIVE_DATA_SEARCH_PAGE)
+
+
+def _joined(pages: list[LiveDataSourcePage]) -> LiveDataSourcePage:
+    """One backend's listing pages as one page from its start."""
+    if len(pages) == 1:
+        return pages[0]
+    sources = [source for page in pages for source in page.sources]
+    return pages[-1].model_copy(update={"sources": sources, "offset": 0, "raw": [page.raw for page in pages]})
 
 
 def _merged(
