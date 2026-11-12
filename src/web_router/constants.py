@@ -72,6 +72,7 @@ PROVIDER_LINKUP = Provider.LINKUP.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
+PROVIDER_VALYU = Provider.VALYU.value
 PROVIDER_AGENTCORE = Provider.AGENTCORE.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
@@ -160,6 +161,7 @@ ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
+ENV_VALYU_API_KEY = "VALYU_API_KEY"
 ENV_AGENTCORE_GATEWAY_URL = "AGENTCORE_GATEWAY_URL"
 ENV_OXYLABS_USERNAME = "OXYLABS_USERNAME"
 ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
@@ -187,6 +189,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
+    PROVIDER_VALYU: ENV_VALYU_API_KEY,
     # Not a credential: the AWS one comes from botocore's chain. The gateway is
     # what has to exist before a call can be worth trying.
     PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
@@ -197,14 +200,12 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
 }
 """Which variable holds each provider's credential; ``None`` means it needs none.
 
-A table rather than a class attribute so :func:`configured_providers` can answer
-without importing a single provider module, and with it every optional SDK.
-``tests/test_contract.py`` checks it against the registry.
+A table rather than a class attribute so :func:`configured_providers` can answer without importing a single
+provider module, and with it every optional SDK. ``tests/test_contract.py`` checks it against the registry.
 
-Search only -- :data:`EXTRACT_ENV_BY_PROVIDER` is the same table for extract.
-The two are separate because the two method registries are: a name that serves
-both appears in each, and one that serves only extract appears in neither this
-nor :func:`available_providers`.
+Search only -- :data:`EXTRACT_ENV_BY_PROVIDER` is the same table for extract. The two are separate because the
+two method registries are: a name that serves both appears in each, and one that serves only extract appears in
+neither this nor :func:`available_providers`.
 """
 
 EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -557,11 +558,10 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek`` and
-``agentcore`` joined after the scan that set the order, and the ranking set has
-no rows for them. A backend that joins later goes at the end of the file's
-``appended``, so joining changes no environment's routing; ``make chains`` moves
-it ahead of the keyless tier only once frozen results rank it.
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore`` and ``valyu`` joined after the
+scan that set the order, and the ranking set has no rows for them. A backend that joins later goes at the end of
+the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it ahead of the
+keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (

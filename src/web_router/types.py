@@ -49,10 +49,9 @@ https://docs.webrouter.net/extract#formats
 class Provider(str, Enum):
     """The providers built into web-router.
 
-    Every argument that names a provider also accepts a plain string; this
-    exists so the built-in names are discoverable from an editor rather than
-    remembered. Backends added with :func:`web_router.register_provider` are
-    named by string, which is why the string form is never going away.
+    Every argument that names a provider also accepts a plain string; this exists so the built-in names are
+    discoverable from an editor rather than remembered. Backends added with :func:`web_router.register_provider`
+    are named by string, which is why the string form is never going away.
 
     Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl``
     and ``jina`` extract but do not search, and most search backends do not
@@ -75,6 +74,7 @@ class Provider(str, Enum):
     WEBIQ = "webiq"
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
+    VALYU = "valyu"
     AGENTCORE = "agentcore"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"

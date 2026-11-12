@@ -1,0 +1,119 @@
+{
+  "provider": "valyu",
+  "method": "search",
+  "class": "web_router.providers.valyu.ValyuProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.valyu.ai",
+    "paths": {
+      "search_path": "/v1/search"
+    },
+    "method": "POST",
+    "auth_header": "X-API-Key"
+  },
+  "credentials": [
+    "VALYU_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query",
+    "body.search_type": "web"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_num_results": 3
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.included_sources": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.excluded_sources": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.country_code": "US"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.start_date": "2026-01-14"
+      },
+      "week": {
+        "body.start_date": "2026-01-08"
+      },
+      "month": {
+        "body.start_date": "2025-12-16"
+      },
+      "year": {
+        "body.start_date": "2025-01-15"
+      }
+    }
+  },
+  "not_mapped": [
+    "effort",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.valyu.ai/api-reference/endpoint/search"
+  ],
+  "verified": {
+    "max_results": "docs: https://docs.valyu.ai/api-reference/endpoint/search",
+    "include_domains": "docs: https://docs.valyu.ai/api-reference/endpoint/search",
+    "exclude_domains": "docs: https://docs.valyu.ai/api-reference/endpoint/search",
+    "country": "docs: https://docs.valyu.ai/api-reference/endpoint/search",
+    "recency": "docs: https://docs.valyu.ai/api-reference/endpoint/search"
+  },
+  "vendor_options": {
+    "response_length": {
+      "status": "passthrough",
+      "note": "short (25,000 characters, the default), medium, large, max or a character count per result."
+    },
+    "fast_mode": {
+      "status": "passthrough",
+      "note": "Lower latency, shorter results."
+    },
+    "relevance_threshold": {
+      "status": "passthrough",
+      "note": "Minimum relevance score from 0 to 1; 0.5 by default."
+    },
+    "max_price": {
+      "status": "passthrough",
+      "note": "Caps the cost of the whole request."
+    },
+    "end_date": {
+      "status": "passthrough",
+      "note": "Results published on or before this date; recency sends start_date alone."
+    },
+    "scope_policy": {
+      "status": "passthrough",
+      "note": "advisory or strict, for dataset ids in included_sources."
+    },
+    "source_biases": {
+      "status": "passthrough",
+      "note": "Per-domain ranking bias from -5 to 5."
+    },
+    "instructions": {
+      "status": "passthrough",
+      "note": "Natural-language ranking instructions, up to 500 characters."
+    },
+    "include_image_links": {
+      "status": "passthrough",
+      "note": "false replaces images with their alt text."
+    },
+    "is_tool_call": {
+      "status": "passthrough",
+      "note": "Whether the request comes from an AI tool call; affects query rewriting."
+    }
+  }
+}
