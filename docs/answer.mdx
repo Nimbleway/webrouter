@@ -49,6 +49,28 @@ backend marks which source backs which sentence, the marker is in
 `citation.field`; where it does not (Parallel), every citation backs the answer
 as a whole. `outcome` is `partial` only when the backend says it stopped early.
 
+## What it cost and who ran
+
+Every answer says who wrote it, how long the call took and what it cost, with no
+budget set:
+
+```python
+response.provider  # who answered
+response.elapsed_s  # wall-clock seconds, every backend tried before it included
+response.cost_usd  # what that backend charged, in US dollars, or None
+response.cost_source  # 'reported' or 'estimated'
+```
+
+Perplexity and Exa state their own cost, so theirs is `reported`: Perplexity's
+is `usage.cost.total_cost` in `raw[0]`, an object, not a number (about $0.0012
+an answer). Every other backend's is `estimated` from the price list in
+`web_router.prices` -- an estimate, not your bill. Perplexity is billed by
+tokens, so before a call (under a budget, say) it is estimated at the mean its
+responses stated over the [answer scan](/providers#answer). No answer backend is
+free. With a `budget=` or a router, `response.decision` also lists every
+attempt, failed ones included, with its estimated cost and seconds (see
+[the decision record](/smart-routing#the-decision-record)).
+
 The options are `include_domains`, `exclude_domains`, `country`, `locale` and
 `recency` (`"day"`, `"week"`, `"month"` or `"year"`). Windows count whole days;
 where the router sets the start date itself (Linkup), it counts back from

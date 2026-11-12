@@ -150,8 +150,8 @@ questions on 2026-11-01, graded by `openai:gpt-4o`.
 
 - `perplexity` answers in about two seconds (median 1.9 s over 300 questions) and cites inline as `[2]`; a
   citation whose marker appears in the answer carries it in `field`, and the
-  response states its own cost under `raw[0]["usage"]["cost"]` (about $0.0012
-  an answer over 300 questions). `country` is its `user_location`: an emergency-number question
+  response states its own cost as `raw[0]["usage"]["cost"]["total_cost"]`, which
+  is `response.cost_usd` (about $0.0012 an answer over 300 questions). `country` is its `user_location`: an emergency-number question
   answered 999 for `GB` and 911 for `US`.
 - `you` answers in about two seconds (median 1.7 s over 300 questions). Its `citations` are only the sources the
   answer cites, marked `[[1, 2]]`; each carries in `field` the whole marker
