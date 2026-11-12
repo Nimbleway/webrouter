@@ -78,7 +78,7 @@ def test_a_scrape_past_the_synchronous_window_is_waited_for_and_read_from_its_sn
     assert response.records == [{"title": "late"}]
     paths = [request.url.path for request in api.requests]
     assert paths.count("/datasets/v3/scrape") == 1 and paths.count("/datasets/v3/progress/sd_abc") == 3
-    assert dict(api.last.url.params) == {"format": "json", "include_errors": "true"}
+    assert dict(api.last.url.params) == {"format": "json"}
 
 
 def test_a_scrape_still_running_when_the_wait_ends_names_its_snapshot() -> None:

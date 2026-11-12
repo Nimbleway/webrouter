@@ -185,8 +185,9 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
             return snapshot.done(await self._asend("GET", snapshot.path))
 
     def _read(self) -> dict[str, Any]:
-        """A snapshot's records, as a scrape answers them: JSON, failed inputs included."""
-        return {"params": {"format": "json", "include_errors": "true"}, **self._clamped()}
+        """A snapshot's records as JSON. The snapshot endpoint refuses ``include_errors`` (HTTP 400, checked live on
+        2026-11-12); a failed input's row comes back with the records either way, and lands in ``extra["errors"]``."""
+        return {"params": {"format": "json"}, **self._clamped()}
 
     @staticmethod
     def _scrape(request: LiveDataRequest, scraper: Scraper) -> dict[str, Any]:
