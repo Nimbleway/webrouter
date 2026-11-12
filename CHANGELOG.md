@@ -40,6 +40,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+- Asking a method for a built-in provider that does not serve it (`extract(provider="brave")`) now says "Provider 'brave' does not serve this method" and lists the ones that do, instead of calling a real provider unknown. A name nothing registers is still "Unknown provider".
+- A deadline error no longer ends in two periods when the last failure it quotes ends in one.
+- The MCP server's unknown-handle message names the live data tools, not the `templates` and `template` tools it no longer has.
+- The MCP `answer` tool offers `auto` in its `provider` choices beside the backends that hold a key, as `research` does; it was accepted but not listed.
+- Docs: the install extras table lists `answer`, `vendors` and `aws`, and says `all` leaves out `mcp`, `evals` and `langchain`; the errors table adds `LiveDataJobError`, `NoAnswerProviderError` and what `auto` raises when every member fails; the MCP guide no longer says a key never leaves the process (each goes to its own provider); the Brave answer row says why its $0.004 list price is a floor; `examples/error_handling.py` shows an unmapped option again, on Parallel's keyless MCP endpoint, since You.com's now maps `country`.
 - The Claude and OpenAI tools' sync `call()` on an `AsyncWebRouter` runs every call on one long-lived event loop instead of a new one each time, so a pool bound to its loop, such as the `remote` router's, is reused rather than dropped with a `ResourceWarning` on every call after the first; called from code with a running event loop, it raises `ConfigurationError` pointing to `acall()` rather than blocking that loop.
 - `research(provider="nimble")` no longer cites an `output.sources` entry that has no URL as a citation with an empty `url`.
 - Nimble `research` at `effort="max"` runs again. Nimble's API refuses its own `max` tier, which is not open yet, with a 422, so `max` now sends `x-high`, the deepest tier it runs today.

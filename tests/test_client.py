@@ -12,6 +12,14 @@ def test_unknown_default_provider_fails_fast(fake_provider: type) -> None:
         WebRouter("nope")
 
 
+def test_a_provider_asked_for_a_method_it_does_not_serve_says_so() -> None:
+    """Brave is a real provider, so asking it to extract is not reported as an unknown name."""
+    with pytest.raises(ProviderNotFoundError, match="'brave' does not serve this method") as caught:
+        WebRouter().extract("https://example.com", provider=Provider.BRAVE)
+    assert "jina" in str(caught.value)
+    assert "brave" not in caught.value.available
+
+
 def test_the_names_a_router_suggests_are_listed_once_each() -> None:
     """The router checks both method registries, and `nimble` is in each of them."""
     with pytest.raises(ProviderNotFoundError) as caught:

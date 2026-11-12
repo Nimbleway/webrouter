@@ -197,3 +197,10 @@ def test_a_poll_the_deadline_cuts_off_raises_researchs_timeout_with_the_runs_id(
     with call_deadline(600), pytest.raises(ResearchTimeoutError) as caught:
         _CutOffInPoll().research(ResearchRequest(query="q"), timeout=600)
     assert caught.value.job_id == "job-1", "the run started and bills: its id picks it back up"
+
+
+def test_a_failure_ending_in_a_period_is_not_given_a_second_one() -> None:
+    from web_router.exceptions import DeadlineExceededError
+
+    message = str(DeadlineExceededError("auto", 5, tried="tavily: timed out."))
+    assert message.endswith("Before it ran out: tavily: timed out.")

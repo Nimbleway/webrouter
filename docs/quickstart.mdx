@@ -95,13 +95,15 @@ You can install fewer extras by naming them in place of `all`. Extras are named 
 
 | Extra | Installs |
 | --- | --- |
-| `search`, `extract`, `research` | Every provider that can serve that method |
+| `search`, `extract`, `research`, `answer` | Every provider that can serve that method |
 | `browser` | Playwright, so a browser handle can drive the page |
 | `mcp` | The MCP server, which exposes the methods as tools. Add `browser` for its `browser_*` tools |
 | `evals` | The OpenAI and Anthropic SDKs behind the built-in judges of `evaluate()` |
 | `langchain` | `langchain-core` for the LangChain tools |
 | `remote` | httpx for the built-in `remote` router |
-| `all` | Everything above |
+| `vendors` | httpx for `call_vendor()` and the vendor catalog |
+| `aws` | `botocore`, for AWS AgentCore Web Search |
+| `all` | Every method's providers, `browser`, `vendors`, `aws` and `remote`. Not `mcp`, `evals` or `langchain`: add those by name, as in `webrouter[all,mcp]` |
 
 `open_browser` needs no Playwright: a vendor session opens over httpx, which `[all]` installs, and `local` needs only the standard library and a Chrome or Chromium.
 

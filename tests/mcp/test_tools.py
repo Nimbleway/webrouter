@@ -777,7 +777,7 @@ async def test_answer_needs_no_provider_argument(no_keys: None, monkeypatch: pyt
     monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
     session = WebRouterTools(AsyncWebRouter())
     schema = _tool(session, MCP_TOOL_ANSWER).input_schema
-    assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
+    assert schema["properties"]["provider"]["enum"] == ["auto", PROVIDER_LINKUP]
     assert "provider" not in schema["required"]
 
     auto = session.router.get_answer_provider()
@@ -800,7 +800,7 @@ def test_answer_says_so_when_nothing_can_serve_it(
     monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
     schema = _tool(tools, MCP_TOOL_ANSWER).input_schema
     assert "NOTHING IS CONFIGURED" not in _tool(tools, MCP_TOOL_ANSWER).description
-    assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
+    assert schema["properties"]["provider"]["enum"] == ["auto", PROVIDER_LINKUP]
 
 
 def test_answer_offers_only_the_options_a_configured_backend_maps(

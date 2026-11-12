@@ -78,6 +78,12 @@ class Method:
     """The arguments a backend may or may not map, as opposed to the ones every backend takes."""
 
 
+def _configured_answer() -> list[str]:
+    """Answer's backends with a key, led by ``auto`` once there is one, as research's are; nothing with none."""
+    names = configured_answer_providers()
+    return ["auto", *names] if names else []
+
+
 _LIVE_DATA_METHOD = Method(
     MCP_METHOD_LIVE_DATA, configured_live_data_providers, get_live_data_provider_class, LIVE_DATA_ENV_BY_PROVIDER
 )
@@ -99,7 +105,7 @@ METHODS: dict[str, Method] = {
     MCP_TOOL_LIVE_DATA: replace(_LIVE_DATA_METHOD, options=LIVE_DATA_PARAMETERS),
     MCP_TOOL_ANSWER: Method(
         MCP_TOOL_ANSWER,
-        configured_answer_providers,
+        _configured_answer,
         get_answer_provider_class,
         ANSWER_ENV_BY_PROVIDER,
         ANSWER_PARAMETERS,
@@ -169,7 +175,7 @@ def usable(method: Method) -> bool:
     of their own -- they need whatever their chain does. For search and extract
     that chain ends in a keyless backend and always works; for research and
     browse every backend bills, so ``auto`` alone means nothing here can
-    actually run. Answer's ``auto`` is not listed among its backends, so it is usable exactly when a
+    actually run. Answer's ``auto`` is listed only beside a backend with a key, so it is usable exactly when a
     key is there.
     """
     return any(provider not in DELEGATING_PROVIDERS for provider in method.configured())
