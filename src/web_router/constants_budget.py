@@ -46,3 +46,6 @@ SECONDS_PER_MINUTE = 60.0
 
 BROWSER_UNBILLED_OPTIONS = frozenset({"timeout", "idle_timeout", "viewport", "headless"})
 """The browser options no vendor bills apart; any other -- a proxy, stealth, CAPTCHA solving -- may turn on an extra."""
+
+TOKEN_BILLED = "token_billed"
+"""The price list's unit for a row billed by tokens, estimated at a benchmark's measured mean."""

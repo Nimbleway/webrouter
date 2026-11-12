@@ -33,6 +33,7 @@ from web_router.constants_perplexity import (
     PERPLEXITY_ANSWER_RECENCY_FIELD,
     PERPLEXITY_ANSWER_STOPPED,
     PERPLEXITY_ANSWER_TOOL,
+    PERPLEXITY_COST_PATH,
     PERPLEXITY_OUTPUT_FETCH_URL_RESULTS,
     PERPLEXITY_OUTPUT_MESSAGE,
     PERPLEXITY_OUTPUT_SEARCH_RESULTS,
@@ -40,6 +41,7 @@ from web_router.constants_perplexity import (
     PERPLEXITY_SOURCE_LISTS,
 )
 from web_router.exceptions import ProviderError
+from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpAnswerProvider
 from web_router.providers._utils import build_payload, compact, error_detail, mapped
 from web_router.providers.answer import cited_marker, refuse_domain_pair
@@ -66,8 +68,8 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
     as ``[2]``, the ``id`` of a ``search_results`` entry; a citation whose
     marker appears in the answer carries it in ``field``, and one the answer
     never cites has ``None``. A response Perplexity reports ``incomplete`` is
-    ``partial``. The response states its own cost under ``usage.cost``, kept
-    in ``raw``.
+    ``partial``. The response states its own cost under ``usage.cost``, whose
+    ``total_cost`` is ``cost_usd``, reported.
 
     The filters go to the ``web_search`` tool, configured only when one is set:
     a domain list is ``search_domain_filter`` (an excluded domain prefixed
@@ -125,6 +127,7 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
             outcome="partial" if payload.get("status") == PERPLEXITY_INCOMPLETE_STATUS else "complete",
             request_id=payload.get("id"),
             raw=[payload],
+            **stated_cost(payload, *PERPLEXITY_COST_PATH),
         )
 
 

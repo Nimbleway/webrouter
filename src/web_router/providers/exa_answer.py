@@ -11,7 +11,8 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from web_router.constants import ENV_EXA_API_KEY, EXA_API_KEY_HEADER, EXA_BASE_URL, PROVIDER_EXA
-from web_router.constants_exa import EXA_ANSWER_CITATION_TEXT_FIELD, EXA_ANSWER_PATH
+from web_router.constants_exa import EXA_ANSWER_CITATION_TEXT_FIELD, EXA_ANSWER_PATH, EXA_COST_PATH
+from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpAnswerProvider
 from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import build_payload
@@ -29,7 +30,7 @@ class ExaAnswerProvider(HttpAnswerProvider):
     citation whose marker appears in the answer carries it in ``field``. A
     cited page's ``text``, when Exa returns it, is its snippet. ``requestId``
     is the request id, and ``costDollars`` -- the call's own stated cost --
-    stays in ``raw``.
+    is ``cost_usd``, reported.
 
     No normalized option is mapped: Exa's Answer API documents no domain or
     date filter, and ``userLocation`` showed no clear effect live, so
@@ -66,4 +67,5 @@ class ExaAnswerProvider(HttpAnswerProvider):
             ],
             request_id=payload.get("requestId"),
             raw=[payload],
+            **stated_cost(payload, *EXA_COST_PATH),
         )

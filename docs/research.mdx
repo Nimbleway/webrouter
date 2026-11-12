@@ -109,7 +109,35 @@ response.raw  # every untouched payload the run took
 
 `Citation.field` says **which part of the answer a source backs** (a JSON path
 into `structured`, or a marker in `answer`) for the backends that attribute per
-field. `None` means it cites the answer as a whole.
+field. `None` means the backend tied that source to no part of the answer: a
+page it consulted, or one it cites without saying where.
+
+`Citation.snippet` is the passage the backend quoted from the page, and is empty
+when it quoted none. Nimble quotes excerpts only from a run with trust; a run
+without it (the default) cites inline as `[1]` and ends its prose with its own
+`Source index:` list, one `[N] title -- URL` line per source. That list stays in
+`answer` as written; it is read so that each source the prose cites carries its
+marker in `field`, and the paragraphs or list items that cite it in
+`citation.extra["answer_passages"]` -- the claims to check against that page.
+
+## What it cost and who ran
+
+Every response says how long the call took and what it cost, with no budget set:
+
+```python
+response.provider  # who answered
+response.elapsed_s  # wall-clock seconds, the whole wait and every backend tried included
+response.cost_usd  # what that backend charged for the run, in US dollars, or None
+response.cost_source  # 'reported' or 'estimated'
+```
+
+`cost_usd` is `reported` when the backend's response states its cost
+(Perplexity's `usage.cost.total_cost`, kept in `raw` too), and `estimated` from
+the price list in `web_router.prices` otherwise: an estimate, not your bill.
+A backend with no known price, such as Perplexity at an effort no benchmark
+measured, has `None`. A run that failed before the one that answered is not in
+it: with a `budget=` or a router, `response.decision` lists every attempt with
+its estimated cost and seconds (see [the decision record](/smart-routing#the-decision-record)).
 
 `outcome` is `"partial"` only when the backend itself reported stopping early:
 an exhausted budget, a truncated generation. A run that simply found little is

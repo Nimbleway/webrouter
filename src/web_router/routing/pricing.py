@@ -5,9 +5,11 @@ candidates by it, the effort mapping fits efforts by it, and the merge rule
 checks a router's ``search_depth`` by it, so a candidate is never priced one
 way when offered and another when run.
 
-- **Cost** is the price list's estimate for (provider, method, mode). It is
-  unknown -- ``None`` -- when the list has no price (no row, ``unknown``, or
-  billed by tokens), when the row is only a floor with charges billed on top
+- **Cost** is the price list's estimate for (provider, method, mode); for a
+  row billed by tokens, at its default mode, the mean cost per call the
+  benchmark behind the method's ``auto`` order measured (``data/chains.json``).
+  It is unknown -- ``None`` -- when the list has no price (no row, ``unknown``,
+  or billed by tokens and unmeasured), when the row is only a floor with charges billed on top
   (``estimate_is_floor``), when the request carries ``provider_options``,
   which can change the mode the vendor bills, or a search ``effort`` other
   than ``medium`` (which sends nothing), whose tier the list does not key, and when a search asks for more
@@ -28,6 +30,7 @@ from __future__ import annotations
 import math
 
 from web_router import prices
+from web_router._chains import measured_cost
 from web_router.constants_budget import (
     BROWSER_UNBILLED_OPTIONS,
     COST_TOLERANCE_USD,
@@ -35,6 +38,7 @@ from web_router.constants_budget import (
     OVER_COST,
     OVER_TIME,
     SECONDS_PER_MINUTE,
+    TOKEN_BILLED,
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
@@ -45,8 +49,13 @@ from web_router.types import BrowserRequest, ExtractRequest, ResearchRequest, Se
 
 
 def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
-    """The list price of one ``tool`` call on ``provider`` at ``mode``; ``None`` when unknown or only a floor."""
+    """The list price of one ``tool`` call on ``provider`` at ``mode``; ``None`` when unknown or only a floor.
+
+    A row billed by tokens is estimated at the benchmark's measured mean, at its default mode only.
+    """
     row = prices.price(provider, tool, mode)
+    if getattr(row, "unit", None) == TOKEN_BILLED and (mode is None or getattr(row, "default", False)):
+        return measured_cost(tool, provider)
     if row is None or row.estimate_is_floor or row.estimate_usd is None:
         return None
     return row.estimate_usd
