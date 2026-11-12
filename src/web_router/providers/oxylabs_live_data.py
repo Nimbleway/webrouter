@@ -26,10 +26,11 @@ verified live**: no Web API key was available.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from typing import Any, ClassVar
 
-from web_router.constants import PROVIDER_OXYLABS
+from web_router.constants import ENV_OXYLABS_USERNAME, PROVIDER_OXYLABS
 from web_router.constants_live_data_vendors import (
     ENV_OXYLABS_WEB_API_KEY,
     MSG_OXYLABS_JOB_RESULT_FAILED,
@@ -43,6 +44,8 @@ from web_router.constants_live_data_vendors import (
     OXYLABS_TRANSPORT_PARAMS,
     OXYLABS_WEB_API_BASE_URL,
 )
+from web_router.constants_providers import MSG_OXYLABS_TWO_CREDENTIALS
+from web_router.exceptions import ConfigurationError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._deadline import job_deadline
 from web_router.providers._http_live_data import HttpLiveDataProvider
@@ -89,10 +92,15 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
                 extract's Realtime password, which must not reach the Web API
                 as a bearer token, so the Web API key has a name of its own.
         """
-        del username
-        kwargs["api_key"] = resolve_setting(
-            web_api_key, env_var=ENV_OXYLABS_WEB_API_KEY, provider=PROVIDER_OXYLABS, setting="web_api_key"
-        )
+        try:
+            kwargs["api_key"] = resolve_setting(
+                web_api_key, env_var=ENV_OXYLABS_WEB_API_KEY, provider=PROVIDER_OXYLABS, setting="web_api_key"
+            )
+        except ConfigurationError as exc:
+            # The extract credentials are set, so the caller believes Oxylabs is configured: say they are another set.
+            if not (username or os.environ.get(ENV_OXYLABS_USERNAME)):
+                raise
+            raise ConfigurationError(f"{exc}{MSG_OXYLABS_TWO_CREDENTIALS}") from None
         super().__init__(**kwargs)
         self._catalogue: dict[str, Scraper] | None = None
 

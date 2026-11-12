@@ -21,6 +21,7 @@ import threading
 from collections.abc import Mapping
 from typing import Any
 
+from web_router._validation import refused_as_parameter
 from web_router.live_data_compat_router import AsyncTemplateMethods, SyncTemplateMethods
 from web_router.live_data_search import asearch_live_data_sources, search_live_data_sources
 from web_router.providers.base import LiveDataProvider
@@ -55,6 +56,7 @@ class _LiveDataLookup:
             return self._live_data_instances[key]
 
     @staticmethod
+    @refused_as_parameter(LiveDataRequest)
     def _live_data_request(
         source: str,
         inputs: Mapping[str, Any] | None,

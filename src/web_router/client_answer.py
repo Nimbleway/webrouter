@@ -9,6 +9,7 @@ from __future__ import annotations
 import threading
 from typing import Any
 
+from web_router._validation import refused_as_parameter
 from web_router.providers.answer import AnswerProvider
 from web_router.registry_answer import create_answer_provider, default_answer_provider
 from web_router.routing import Budget
@@ -48,6 +49,7 @@ class _AnswerLookup:
             return self._answer_instances[key]
 
     @staticmethod
+    @refused_as_parameter(AnswerRequest)
     def _answer_request(query: str, provider_options: dict[str, Any] | None, **options: Any) -> AnswerRequest:
         return AnswerRequest(query=query, provider_options=provider_options or {}, **options)
 
