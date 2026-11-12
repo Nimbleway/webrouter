@@ -34,6 +34,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from web_router._dotenv import dotenv_hint
 from web_router.constants import (
     MSG_BENCHMARK_TIMEOUT,
     MSG_BROWSE_TIMEOUT,
@@ -76,7 +77,16 @@ class WebRouterError(Exception):
 
 
 class ConfigurationError(WebRouterError):
-    """The router or a provider was configured incorrectly."""
+    """The router or a provider was configured incorrectly.
+
+    A message naming a variable that the nearest ``.env`` sets, and the environment does not, says so: the
+    library never reads that file itself.
+    """
+
+    def __init__(self, *args: object) -> None:
+        if len(args) == 1 and isinstance(args[0], str):
+            args = (args[0] + dotenv_hint(args[0]),)
+        super().__init__(*args)
 
     @classmethod
     def missing_api_key(cls, provider: str, env_var: str) -> ConfigurationError:

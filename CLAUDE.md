@@ -36,6 +36,13 @@ unlocks more backends and fallbacks, and research, browse and cloud browsers
 each need at least one; with a key for every backend, every capability is
 available. `.env.example` names each variable and where to get it.
 
+The library reads the process environment only, never `.env` (the MCP server
+loads it for you). Run scripts with the file loaded:
+
+```bash
+uv run --env-file .env python my_script.py
+```
+
 Check it works:
 
 ```bash
@@ -79,6 +86,25 @@ The `web-router://capabilities` resource shows which backends are configured,
 and its `unlock` map lists each backend still missing a key and the variable
 that would add it: ask the model to read it.
 
+## Teach the agent to use it
+
+Two texts tell an agent how to use the MCP tools well -- which method is
+cheapest, what bills, how to check a result before trusting it. Both use the
+MCP server's tool names, with a table mapping each to its Python method:
+
+- [skills/web-router/SKILL.md](skills/web-router/SKILL.md): a Claude Code
+  skill. Install it for every project by linking it into the user's skills
+  folder, so a `git pull` here updates it:
+
+  ```bash
+  mkdir -p ~/.claude/skills && ln -s "$PWD/skills/web-router" ~/.claude/skills/web-router
+  ```
+
+  For one project only, link it into that project's `.claude/skills/` instead.
+- [docs/agent-prompt.md](docs/agent-prompt.md): the same guidance as a system
+  prompt, for an agent built on the Claude API, the Agent SDK or another
+  framework.
+
 ## Update
 
 ```bash
@@ -90,5 +116,6 @@ git pull && make setup
 - [README.md](README.md): the project overview, quickstart and links into the docs
 - [Documentation](https://docs.webrouter.net): getting started, core methods, providers and errors
 - [docs/mcp.md](docs/mcp.md) — the MCP server in depth
+- [skills/web-router/SKILL.md](skills/web-router/SKILL.md) and [docs/agent-prompt.md](docs/agent-prompt.md) — how an agent should use the tools
 - [examples/](examples/) — runnable scripts (`uv run python examples/main.py`)
 - [CONTRIBUTING.md](CONTRIBUTING.md) — adding a provider and opening a pull request

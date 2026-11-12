@@ -13,15 +13,17 @@ Three steps to a first answer:
 
 1. Install with the `answer` extra: `pip install "webrouter[answer]"`
    (`make setup` in a clone installs every extra).
-2. Set one answer backend's key in your environment or `.env`, for example
+2. Set one answer backend's key in your environment, for example
    `PERPLEXITY_API_KEY` -- [Configuration](/configuration) lists each one's variable.
+   The library reads the environment only; keys in a `.env` file need loading
+   first, with `uv run --env-file .env python app.py` or `python-dotenv`.
 3. Ask:
 
 ```python wrap
 from web_router import WebRouter
 
 with WebRouter() as router:
-    response = router.answer("who won the 2022 world cup final")  # the one backend you hold a key for
+    response = router.answer("who won the 2022 world cup final")  # auto: the backends you hold keys for
 
 print(response.answer)
 for citation in response.citations:
@@ -35,7 +37,9 @@ Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra ti
 ...
 ```
 
-With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
+With `provider` unset, `auto` tries the answer backends you hold keys for in
+ranked order and passes over one that fails or answers with nothing; each one it
+tries bills. To pin one, name it: `router.answer(q, provider="linkup")`.
 Which one: they score alike on accuracy (see [the answer comparison](/providers#answer)), so pick
 on what you need -- Linkup had the lowest median latency in that scan (0.9 s); Perplexity, You.com
 and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
