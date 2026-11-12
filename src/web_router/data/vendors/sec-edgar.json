@@ -1,0 +1,189 @@
+{
+  "vendor": "sec-edgar",
+  "name": "SEC EDGAR",
+  "category": "finance",
+  "summary": "US public company filing histories and XBRL financial data (company facts, single concepts, cross-company frames) from the SEC's free EDGAR APIs.",
+  "docs_url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+  "base_url": "https://data.sec.gov",
+  "hosts": {
+    "www": "https://www.sec.gov"
+  },
+  "settings": {
+    "user_agent": {
+      "env": [
+        "SEC_EDGAR_USER_AGENT"
+      ],
+      "description": "the User-Agent the SEC asks automated clients to declare: a company or name and an admin contact email, e.g. 'Sample Company Name AdminContact@example.com'"
+    }
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Keyless, but the SEC asks every automated client to declare a User-Agent with a name and contact email; set SEC_EDGAR_USER_AGENT.",
+    "Fair access: at most 10 requests per second across all your machines; heavier use is throttled.",
+    "CIKs in data.sec.gov paths are zero-padded to 10 digits (CIK0000320193). Map a ticker to its CIK with tickers.list.",
+    "XBRL data covers standard taxonomies (us-gaap, ifrs-full, dei, srt) only, not company-custom tags. For bulk work the SEC publishes nightly companyfacts.zip and submissions.zip instead."
+  ],
+  "sites": [
+    "sec.gov"
+  ],
+  "sources": [
+    "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+    "https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data",
+    "https://www.sec.gov/about/developer-resources"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sec-edgar.tickers.list",
+      "name": "List tickers and CIKs",
+      "summary": "Every ticker with its CIK and EDGAR company name, as one JSON file.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/files/company_tickers.json",
+      "params": {},
+      "notes": [
+        "A single file of all companies; filter it locally. Updated periodically, accuracy not guaranteed by the SEC."
+      ],
+      "job": "company.search",
+      "host": "www",
+      "docs_url": "https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data",
+      "verified": {
+        "docs": "https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data"
+      }
+    },
+    {
+      "id": "sec-edgar.submissions.get",
+      "name": "Get a company's filings",
+      "summary": "Names, tickers, exchanges and filing history (form, date, accession number, primary document) of one filer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/submissions/CIK{cik}.json",
+      "params": {
+        "cik": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CIK zero-padded to 10 digits.",
+          "example": "0000320193"
+        }
+      },
+      "notes": [
+        "Holds at least one year or the 1,000 most recent filings, whichever is more; older ones are in additional files the response lists."
+      ],
+      "job": "company.documents",
+      "docs_url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "verified": {
+        "docs": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces"
+      }
+    },
+    {
+      "id": "sec-edgar.facts.company",
+      "name": "Get all XBRL facts of a company",
+      "summary": "Every reported value of every standard concept for one company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/xbrl/companyfacts/CIK{cik}.json",
+      "params": {
+        "cik": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CIK zero-padded to 10 digits.",
+          "example": "0000320193"
+        }
+      },
+      "notes": [
+        "Returns every concept in one response; use facts.concept for one line item."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "verified": {
+        "docs": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces"
+      }
+    },
+    {
+      "id": "sec-edgar.facts.concept",
+      "name": "Get one XBRL concept of a company",
+      "summary": "All reported values of one concept (e.g. Revenues) for one company, per unit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/xbrl/companyconcept/CIK{cik}/{taxonomy}/{tag}.json",
+      "params": {
+        "cik": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CIK zero-padded to 10 digits.",
+          "example": "0000320193"
+        },
+        "taxonomy": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Taxonomy: us-gaap, ifrs-full, dei or srt.",
+          "example": "us-gaap"
+        },
+        "tag": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "XBRL concept name.",
+          "example": "AccountsPayableCurrent"
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "verified": {
+        "docs": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces"
+      }
+    },
+    {
+      "id": "sec-edgar.facts.frame",
+      "name": "Get one concept across companies",
+      "summary": "The latest value of one concept for one period from every filer that reported it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/xbrl/frames/{taxonomy}/{tag}/{unit}/{period}.json",
+      "params": {
+        "taxonomy": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Taxonomy: us-gaap, ifrs-full, dei or srt.",
+          "example": "us-gaap"
+        },
+        "tag": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "XBRL concept name.",
+          "example": "AccountsPayableCurrent"
+        },
+        "unit": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Unit of measure, e.g. USD, shares, or a ratio like USD-per-shares; pure for unitless.",
+          "example": "USD"
+        },
+        "period": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CY#### annual, CY####Q# quarterly, CY####Q#I instantaneous (balance-sheet items).",
+          "example": "CY2019Q1I"
+        }
+      },
+      "notes": [
+        "Each filer contributes one fact, from its most recent filing that best fits the calendar period, so start and end dates differ across companies."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "verified": {
+        "docs": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces"
+      }
+    }
+  ]
+}

@@ -8,20 +8,23 @@ never called (see :mod:`web_router.data_api_discovery`).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 from web_router.client_requests import build_search_request
-from web_router.data_api_discovery import matches_only, with_matches
+from web_router.data_api_discovery import load_catalog, matches_only, with_matches
+from web_router.types import SearchResponse
 
 if TYPE_CHECKING:
     from web_router.client import AsyncWebRouter, WebRouter
     from web_router.providers.base import SearchProvider
     from web_router.routing import Budget
-    from web_router.types import Provider, Recency, ResearchEffort, SearchDepth, SearchRequest, SearchResponse
+    from web_router.types import Provider, Recency, ResearchEffort, SearchDepth, SearchRequest
+    from web_router.vendors.catalog import VendorCatalog
 
 
 class _SearchPlan:
-    """What both routers share: the data-APIs-only answer, or the request and the chain that serves it."""
+    """What both routers share: the data-APIs-only answer, or what a web search needs to run and be matched."""
 
     def _search_plan(
         self,
@@ -34,7 +37,7 @@ class _SearchPlan:
         data_apis: bool,
         data_apis_only: bool,
         configured_only: bool,
-    ) -> SearchResponse | tuple[SearchProvider, SearchRequest]:
+    ) -> SearchResponse | _WebSearch:
         router = cast("WebRouter", self)
         if data_apis_only:
             return matches_only(
@@ -45,11 +48,22 @@ class _SearchPlan:
                 max_results=max_results,
                 web_options={**options, "provider": provider, "budget": budget},
             )
-        return router.get_provider(provider), build_search_request(query, max_results=max_results, **options)
+        # The catalog is read before the backend is called, so a broken one is known before anything is billed.
+        catalog = load_catalog(data_apis)
+        request = build_search_request(query, max_results=max_results, **options)
+        return _WebSearch(router.get_provider(provider), request, catalog, configured_only)
 
-    def _with_matches(self, response: SearchResponse, *, data_apis: bool, configured_only: bool) -> SearchResponse:
+    def _with_matches(self, response: SearchResponse, plan: _WebSearch) -> SearchResponse:
         source = cast("WebRouter", self).vendor_credential_source()
-        return with_matches(response, source, data_apis=data_apis, configured_only=configured_only)
+        return with_matches(response, source, catalog=plan.catalog, configured_only=plan.configured_only)
+
+
+@dataclass(frozen=True)
+class _WebSearch:
+    chain: SearchProvider
+    request: SearchRequest
+    catalog: VendorCatalog | None
+    configured_only: bool
 
 
 class SyncSearch(_SearchPlan):
@@ -83,14 +97,20 @@ class SyncSearch(_SearchPlan):
         but ``max_results``, which then caps the matches.
         """
         options = _options(search_depth, include_domains, exclude_domains, country, locale, recency, effort)
-        flags = {"data_apis": data_apis, "configured_only": configured_only}
-        options["provider_options"] = provider_options
-        plan = self._search_plan(query, provider, max_results, budget, options, data_apis_only=data_apis_only, **flags)
-        if not isinstance(plan, tuple):
+        plan = self._search_plan(
+            query,
+            provider,
+            max_results,
+            budget,
+            {**options, "provider_options": provider_options},
+            data_apis=data_apis,
+            data_apis_only=data_apis_only,
+            configured_only=configured_only,
+        )
+        if isinstance(plan, SearchResponse):
             return plan
-        chain, request = plan
-        response = cast("WebRouter", self)._routed(chain, request, budget, chain.search)
-        return self._with_matches(response, **flags)
+        response = cast("WebRouter", self)._routed(plan.chain, plan.request, budget, plan.chain.search)
+        return self._with_matches(response, plan)
 
 
 class AsyncSearch(_SearchPlan):
@@ -118,14 +138,20 @@ class AsyncSearch(_SearchPlan):
         The options are the sync router's; see :meth:`~web_router.WebRouter.search`.
         """
         options = _options(search_depth, include_domains, exclude_domains, country, locale, recency, effort)
-        flags = {"data_apis": data_apis, "configured_only": configured_only}
-        options["provider_options"] = provider_options
-        plan = self._search_plan(query, provider, max_results, budget, options, data_apis_only=data_apis_only, **flags)
-        if not isinstance(plan, tuple):
+        plan = self._search_plan(
+            query,
+            provider,
+            max_results,
+            budget,
+            {**options, "provider_options": provider_options},
+            data_apis=data_apis,
+            data_apis_only=data_apis_only,
+            configured_only=configured_only,
+        )
+        if isinstance(plan, SearchResponse):
             return plan
-        chain, request = plan
-        response = await cast("AsyncWebRouter", self)._arouted(chain, request, budget, chain.asearch)
-        return self._with_matches(response, **flags)
+        response = await cast("AsyncWebRouter", self)._arouted(plan.chain, plan.request, budget, plan.chain.asearch)
+        return self._with_matches(response, plan)
 
 
 def _options(

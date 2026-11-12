@@ -1,0 +1,291 @@
+{
+  "vendor": "treasury-fiscal-data",
+  "name": "US Treasury Fiscal Data",
+  "category": "finance",
+  "summary": "US federal finance datasets from the Treasury's keyless Fiscal Data API: public debt, average interest rates on Treasury securities, Treasury reporting exchange rates, Daily and Monthly Treasury Statements.",
+  "docs_url": "https://fiscaldata.treasury.gov/api-documentation/",
+  "base_url": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service",
+  "notes": [
+    "Keyless. Every dataset takes the same fields, filter, sort, format and page[number]/page[size] parameters.",
+    "Sort by -record_date and filter on record_date to get the latest rows; the default order is the first column ascending, which is usually the oldest date.",
+    "Pages hold 100 records by default; meta carries total-count and total-pages, and links the next page.",
+    "Every field comes back as a string, nulls as the string \"null\"; meta.dataTypes gives each field's type and meta.labels its readable name.",
+    "Each dataset has its own version prefix (v1 or v2) in the path; the docs list all datasets."
+  ],
+  "sources": [
+    "https://fiscaldata.treasury.gov/api-documentation/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "treasury-fiscal-data.debt.to_penny",
+      "name": "Get total public debt outstanding",
+      "summary": "Total public debt outstanding by record date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/accounting/od/debt_to_penny",
+      "params": {
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field names; all when unset. Leaving fields out can aggregate (sum) the rest."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "field:operator:value, comma-separated; operators lt, lte, gt, gte, eq, in (list in parentheses); dates YYYY-MM-DD.",
+          "example": "record_date:gte:2024-01-01"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields; prefix '-' for descending. Default: first column ascending.",
+          "example": "-record_date"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Answer format; json by default.",
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ]
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[number]",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[size]",
+          "description": "Records per page; 100 by default."
+        }
+      },
+      "job": "economics.series",
+      "docs_url": "https://fiscaldata.treasury.gov/api-documentation/",
+      "verified": {
+        "docs": "https://fiscaldata.treasury.gov/api-documentation/"
+      }
+    },
+    {
+      "id": "treasury-fiscal-data.debt.avg_interest_rates",
+      "name": "Get average interest rates on Treasury securities",
+      "summary": "Average interest rates on Treasury securities by record date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/accounting/od/avg_interest_rates",
+      "params": {
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field names; all when unset. Leaving fields out can aggregate (sum) the rest."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "field:operator:value, comma-separated; operators lt, lte, gt, gte, eq, in (list in parentheses); dates YYYY-MM-DD.",
+          "example": "record_date:gte:2024-01-01"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields; prefix '-' for descending. Default: first column ascending.",
+          "example": "-record_date"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Answer format; json by default.",
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ]
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[number]",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[size]",
+          "description": "Records per page; 100 by default."
+        }
+      },
+      "job": "economics.series",
+      "docs_url": "https://fiscaldata.treasury.gov/api-documentation/",
+      "verified": {
+        "docs": "https://fiscaldata.treasury.gov/api-documentation/"
+      }
+    },
+    {
+      "id": "treasury-fiscal-data.rates_of_exchange",
+      "name": "Get Treasury reporting rates of exchange",
+      "summary": "Exchange rates of foreign currencies used for federal reporting, by record date (quarter-end dates in the docs' sample).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/accounting/od/rates_of_exchange",
+      "params": {
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field names; all when unset. Leaving fields out can aggregate (sum) the rest."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "field:operator:value, comma-separated; operators lt, lte, gt, gte, eq, in (list in parentheses); dates YYYY-MM-DD.",
+          "example": "record_date:gte:2024-01-01"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields; prefix '-' for descending. Default: first column ascending.",
+          "example": "-record_date"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Answer format; json by default.",
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ]
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[number]",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[size]",
+          "description": "Records per page; 100 by default."
+        }
+      },
+      "job": "market.fx",
+      "docs_url": "https://fiscaldata.treasury.gov/api-documentation/",
+      "verified": {
+        "docs": "https://fiscaldata.treasury.gov/api-documentation/"
+      }
+    },
+    {
+      "id": "treasury-fiscal-data.dts.operating_cash",
+      "name": "Get Daily Treasury Statement deposits and withdrawals",
+      "summary": "Daily Treasury Statement deposits and withdrawals of operating cash.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/accounting/dts/deposits_withdrawals_operating_cash",
+      "params": {
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field names; all when unset. Leaving fields out can aggregate (sum) the rest."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "field:operator:value, comma-separated; operators lt, lte, gt, gte, eq, in (list in parentheses); dates YYYY-MM-DD.",
+          "example": "record_date:gte:2024-01-01"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields; prefix '-' for descending. Default: first column ascending.",
+          "example": "-record_date"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Answer format; json by default.",
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ]
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[number]",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[size]",
+          "description": "Records per page; 100 by default."
+        }
+      },
+      "job": "economics.series",
+      "docs_url": "https://fiscaldata.treasury.gov/api-documentation/",
+      "verified": {
+        "docs": "https://fiscaldata.treasury.gov/api-documentation/"
+      }
+    },
+    {
+      "id": "treasury-fiscal-data.mts.table_1",
+      "name": "Get Monthly Treasury Statement summary",
+      "summary": "Monthly Treasury Statement table 1.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/accounting/mts/mts_table_1",
+      "params": {
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field names; all when unset. Leaving fields out can aggregate (sum) the rest."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "field:operator:value, comma-separated; operators lt, lte, gt, gte, eq, in (list in parentheses); dates YYYY-MM-DD.",
+          "example": "record_date:gte:2024-01-01"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields; prefix '-' for descending. Default: first column ascending.",
+          "example": "-record_date"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Answer format; json by default.",
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ]
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[number]",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page[size]",
+          "description": "Records per page; 100 by default."
+        }
+      },
+      "job": "economics.series",
+      "docs_url": "https://fiscaldata.treasury.gov/api-documentation/",
+      "verified": {
+        "docs": "https://fiscaldata.treasury.gov/api-documentation/"
+      }
+    }
+  ]
+}

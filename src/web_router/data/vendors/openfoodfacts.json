@@ -1,0 +1,264 @@
+{
+  "vendor": "openfoodfacts",
+  "name": "Open Food Facts",
+  "category": "health",
+  "summary": "Keyless open database of packaged food products: ingredients, nutrition facts, Nutri-Score, NOVA, allergens and labels by barcode, plus filtered product search.",
+  "docs_url": "https://openfoodfacts.github.io/openfoodfacts-server/api/",
+  "base_url": "https://world.openfoodfacts.org",
+  "settings": {
+    "user_agent": {
+      "env": [
+        "OPENFOODFACTS_USER_AGENT"
+      ],
+      "default": "WebRouter (+https://github.com/Nimbleway/webrouter)",
+      "description": "the custom User-Agent Open Food Facts asks every client to send, as AppName/Version (ContactEmail), e.g. 'MyApp/1.0 (me@example.com)'; the default names WebRouter, so set your own with contact details for heavy use."
+    }
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Reads need no key, only a custom User-Agent (set OPENFOODFACTS_USER_AGENT).",
+    "Rate limits per IP: 15 product reads and 10 searches per minute; going over can get the IP banned. For bulk work use the CSV/JSONL data exports instead.",
+    "Search v2 has no full-text query: it filters by tags and nutrient values only.",
+    "Data is crowd-sourced; fields can be missing or wrong. Writes (adding or editing products) need an account and are not in this entry."
+  ],
+  "sites": [
+    "openfoodfacts.org"
+  ],
+  "sources": [
+    "https://openfoodfacts.github.io/openfoodfacts-server/api/",
+    "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-v2/",
+    "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-cheatsheet/",
+    "https://openfoodfacts.github.io/openfoodfacts-server/api/tutorial-off-api/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "openfoodfacts.product.get",
+      "name": "Get a product by barcode",
+      "summary": "Name, brand, ingredients, nutriments per 100 g and per serving, Nutri-Score, NOVA, allergens and images for one barcode.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/product/{code}",
+      "params": {
+        "code": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The product barcode (EAN/UPC).",
+          "example": "3017620422003"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated product fields to return, e.g. product_name,brands,nutriments,nutrition_grades,ingredients_text,allergens_tags. Use it: full products are large."
+        },
+        "lc": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code for localized fields."
+        },
+        "cc": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code for country-specific fields."
+        },
+        "blame": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to add who last modified each field."
+        }
+      },
+      "notes": [
+        "The answer carries status 1 when the product was found."
+      ],
+      "job": "products.get",
+      "docs_url": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-v2/",
+      "verified": {
+        "docs": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-v2/"
+      }
+    },
+    {
+      "id": "openfoodfacts.products.search",
+      "name": "Search products by filters",
+      "summary": "Products matching tag and nutrient filters, paged, with total count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/search",
+      "params": {
+        "categories_tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Category filter, e.g. en:breakfast-cereals. Comma = AND, pipe = OR, a '-' prefix excludes; use taxonomy ids like en:organic."
+        },
+        "brands_tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Brand filter. Comma = AND, pipe = OR, a '-' prefix excludes; use taxonomy ids like en:organic."
+        },
+        "labels_tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Label filter, e.g. en:organic. Comma = AND, pipe = OR, a '-' prefix excludes; use taxonomy ids like en:organic."
+        },
+        "countries_tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Country of sale filter, e.g. en:france. Comma = AND, pipe = OR, a '-' prefix excludes; use taxonomy ids like en:organic."
+        },
+        "nutrition_grades_tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Nutri-Score grade filter, a to e. Comma = AND, pipe = OR, a '-' prefix excludes; use taxonomy ids like en:organic."
+        },
+        "allergens_tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Allergen filter, e.g. en:gluten. Comma = AND, pipe = OR, a '-' prefix excludes; use taxonomy ids like en:organic."
+        },
+        "stores_tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Store filter. Comma = AND, pipe = OR, a '-' prefix excludes; use taxonomy ids like en:organic."
+        },
+        "code": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated barcodes, to fetch several products in one call."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated product fields to return, e.g. product_name,brands,nutriments,nutrition_grades,ingredients_text,allergens_tags. Use it: full products are large."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Default is popularity (food) or last modification.",
+          "enum": [
+            "product_name",
+            "last_modified_t",
+            "scans_n",
+            "unique_scans_n",
+            "created_t",
+            "completeness",
+            "popularity_key",
+            "nutriscore_score",
+            "nova_score",
+            "nothing",
+            "ecoscore_score"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Products per page.",
+          "example": 24
+        }
+      },
+      "notes": [
+        "Nutrient filters put the condition in the parameter name, e.g. sugars_100g<10 or salt_serving>1; this entry cannot take them, so send them as a raw call to /api/v2/search.",
+        "page_count in the answer is the number of products on this page, not the number of pages; total pages = floor((count - 1) / page_size) + 1.",
+        "Language-specific tag filters put the language in the name, e.g. categories_tags_en=orange-juices; send them as a raw call to the same path."
+      ],
+      "job": "products.search",
+      "docs_url": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-v2/",
+      "verified": {
+        "docs": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-v2/"
+      }
+    },
+    {
+      "id": "openfoodfacts.suggest",
+      "name": "Suggest taxonomy terms",
+      "summary": "Autocomplete values of one tag type (categories, labels, brands, allergens, ...) containing a term.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cgi/suggest.pl",
+      "params": {
+        "tagtype": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Taxonomy id: categories, labels, ingredients, brands, countries, additives, allergens, packaging_shapes, ...",
+          "example": "categories"
+        },
+        "term": {
+          "in": "query",
+          "type": "string",
+          "description": "Text the suggestions contain.",
+          "example": "choco"
+        }
+      },
+      "job": "reference.keywords",
+      "docs_url": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-v2/",
+      "verified": {
+        "docs": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-v2/"
+      }
+    },
+    {
+      "id": "openfoodfacts.taxonomy.get",
+      "name": "Get taxonomy entries",
+      "summary": "Entries of a taxonomy (names, synonyms, parents/children) for given tags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/taxonomy",
+      "params": {
+        "tagtype": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Taxonomy id, e.g. categories, labels, additives.",
+          "example": "categories"
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated tag ids.",
+          "example": "en:chocolates"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Entry fields to return."
+        },
+        "lc": {
+          "in": "query",
+          "type": "string",
+          "description": "Language codes for names."
+        },
+        "cc": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code."
+        },
+        "include_children": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to include child entries."
+        },
+        "include_parents": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to include parent entries."
+        },
+        "include_root_entries": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to include root entries."
+        }
+      },
+      "job": "reference.taxonomy",
+      "docs_url": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-cheatsheet/",
+      "verified": {
+        "docs": "https://openfoodfacts.github.io/openfoodfacts-server/api/ref-cheatsheet/"
+      }
+    }
+  ]
+}

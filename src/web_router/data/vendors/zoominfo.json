@@ -1,0 +1,427 @@
+{
+  "vendor": "zoominfo",
+  "name": "ZoomInfo",
+  "category": "enrichment",
+  "summary": "B2B contact and company search and enrichment, scoops, intent and lookups from ZoomInfo's Data API.",
+  "docs_url": "https://docs.gtm.ai/reference/api-overview",
+  "pricing_url": "https://www.zoominfo.com/pricing",
+  "base_url": "https://api.zoominfo.com/gtm",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "ZOOMINFO_CLIENT_ID"
+        ],
+        "description": "Client id of a ZoomInfo Developer Portal application set up for the client credentials flow."
+      },
+      "client_secret": {
+        "env": [
+          "ZOOMINFO_CLIENT_SECRET"
+        ],
+        "description": "That application's client secret."
+      }
+    },
+    "oauth2": {
+      "grant": "client_credentials",
+      "token_url": "https://api.zoominfo.com/gtm/oauth/v1/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "client_auth": "basic"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "headers": {
+    "Content-Type": "application/vnd.api+json"
+  },
+  "notes": [
+    "Requests and responses are JSON:API: the body is {data: {type, attributes}}; page with page[number] and page[size].",
+    "Search and lookups are free; enrich spends 1 bulk data credit per record not already under management.",
+    "Rate limits per package: 5 to 35 requests a second plus hourly and daily caps; X-RateLimit-* headers on every answer, and Retry-After plus X-RateLimit-Rejected-Bucket on a 429.",
+    "The token's scopes (api:data:contact, api:data:company, ...) and the account's package decide which endpoints answer; Intent needs the Intent SKU.",
+    "Intent, news, org charts, technologies, corporate hierarchy and the Copilot endpoints are documented but not in this entry."
+  ],
+  "sources": [
+    "https://docs.zoominfo.com/llms.txt",
+    "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml",
+    "https://docs.gtm.ai/reference/oauth-authentication.md",
+    "https://docs.gtm.ai/zoominfoenterprise/docs/client-credentials-flow.md",
+    "https://docs.gtm.ai/docs/credit-usage-and-limits.md",
+    "https://docs.gtm.ai/docs/rate-limits.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "zoominfo.usage.get",
+      "name": "Get API usage and limits",
+      "summary": "The current user's API usage and limits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/v1/users/usage",
+      "job": "account.usage",
+      "docs_url": "https://docs.gtm.ai/reference/userinterface_userusage",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    },
+    {
+      "id": "zoominfo.lookup.search_fields",
+      "name": "List search fields",
+      "summary": "Input or output fields the search endpoints accept or return for an entity.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/v1/lookup/search",
+      "params": {
+        "entity": {
+          "in": "query",
+          "wire_name": "filter[entity]",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "contact",
+            "company",
+            "scoop",
+            "news",
+            "intent"
+          ]
+        },
+        "field_type": {
+          "in": "query",
+          "wire_name": "filter[fieldType]",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "input",
+            "output"
+          ]
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "reference.keywords",
+      "docs_url": "https://docs.gtm.ai/reference/lookupsearchinterface_lookupsearch",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    },
+    {
+      "id": "zoominfo.lookup.enrich_fields",
+      "name": "List enrich fields",
+      "summary": "Input or output fields the enrich endpoints accept or return; outputFields values come from here.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/v1/lookup/enrich",
+      "params": {
+        "entity": {
+          "in": "query",
+          "wire_name": "filter[entity]",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "contact",
+            "company",
+            "scoop",
+            "news",
+            "intent",
+            "technology",
+            "orgChart",
+            "corporate-hierarchy"
+          ]
+        },
+        "field_type": {
+          "in": "query",
+          "wire_name": "filter[fieldType]",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "input",
+            "output"
+          ]
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "reference.keywords",
+      "docs_url": "https://docs.gtm.ai/reference/lookupenrichinterface_lookupenrich",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    },
+    {
+      "id": "zoominfo.lookup.values",
+      "name": "Get lookup values for a field",
+      "summary": "Allowed values for a search input such as industry codes, management levels or metro regions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/v1/lookup/{fieldName}",
+      "params": {
+        "fieldName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Lookup field name, e.g. company-rankings.",
+          "example": "company-rankings"
+        },
+        "category": {
+          "in": "query",
+          "wire_name": "filter[category]",
+          "type": "string",
+          "description": "Category; hashtag lookups only."
+        },
+        "parent_category": {
+          "in": "query",
+          "wire_name": "filter[parentCategory]",
+          "type": "string",
+          "description": "Parent category; hashtag and tech lookups."
+        },
+        "sub_category": {
+          "in": "query",
+          "wire_name": "filter[subCategory]",
+          "type": "string",
+          "description": "Sub-category; hashtag and tech lookups."
+        },
+        "vendor_name": {
+          "in": "query",
+          "wire_name": "filter[vendor]",
+          "type": "string",
+          "description": "Vendor; hashtag and tech lookups."
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "reference.industries",
+      "docs_url": "https://docs.gtm.ai/reference/lookupinterface_lookup",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    },
+    {
+      "id": "zoominfo.contacts.search",
+      "name": "Search contacts",
+      "summary": "Contacts matching name, title, management level, department, company, location and firmographic filters; returns ids and has* flags, not emails or phones.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/data/v1/contacts/search",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "JSON:API resource {type: 'ContactSearch', attributes: {...}}; attributes include fullName, firstName, lastName, jobTitle, managementLevel, department, companyName, companyId, companyWebsite, emailAddress, personId, state, country, industryCodes, revenueMin/Max, employeeRangeMin and more.",
+          "example": {
+            "type": "ContactSearch",
+            "attributes": {
+              "companyName": "ZoomInfo",
+              "jobTitle": "CEO"
+            }
+          }
+        },
+        "page_number": {
+          "in": "query",
+          "wire_name": "page[number]",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "wire_name": "page[size]",
+          "type": "integer",
+          "description": "Records per page, 1-100, default 25."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "contactAccuracyScore, lastName, companyName, hierarchy, sourceCount, lastMentioned or relevance; prefix '-' for descending."
+        }
+      },
+      "notes": [
+        "A read over POST. Free: search consumes no credits."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.gtm.ai/reference/searchinterface_searchcontact",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    },
+    {
+      "id": "zoominfo.companies.search",
+      "name": "Search companies",
+      "summary": "Companies matching name, website, industry, location, revenue, headcount, funding and growth filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/data/v1/companies/search",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "JSON:API resource {type: 'CompanySearch', attributes: {...}}; attributes include companyName, companyWebsite, companyId, industryCodes, industryKeywords, state, country, metroRegion, revenueMin/Max, employeeRangeMin/Max, fundingAmountMin/Max, companyType and more.",
+          "example": {
+            "type": "CompanySearch",
+            "attributes": {
+              "companyName": "Zoominfo"
+            }
+          }
+        },
+        "page_number": {
+          "in": "query",
+          "wire_name": "page[number]",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "wire_name": "page[size]",
+          "type": "integer",
+          "description": "Records per page, 1-100, default 25."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "name, employeeCount or revenue; prefix '-' for descending."
+        }
+      },
+      "notes": [
+        "A read over POST. Free."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.gtm.ai/reference/searchinterface_searchcompany",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    },
+    {
+      "id": "zoominfo.contacts.enrich",
+      "name": "Enrich contacts",
+      "summary": "Full records (emails, phones, job, location, employment history, company) for up to 25 contacts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/data/v1/contacts/enrich",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{type: 'ContactEnrich', attributes: {matchPersonInput: [up to 25 of {personId | emailAddress | fullName/firstName/lastName + companyName/companyId | phone | externalURL ...}], outputFields: [...], requiredFields: [...]}}.",
+          "example": {
+            "type": "ContactEnrich",
+            "attributes": {
+              "matchPersonInput": [
+                {
+                  "personId": 4191419698
+                }
+              ],
+              "outputFields": [
+                "id",
+                "firstName",
+                "lastName",
+                "email",
+                "jobTitle",
+                "companyName"
+              ]
+            }
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. 1 bulk data credit per contact not already under management (records stay under management for 12 months; re-enriching them is free but counts toward the record limit).",
+        "Search first and enrich by personId for exact matches; outputFields chooses what comes back."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.gtm.ai/reference/enrichinterface_enrichcontact",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    },
+    {
+      "id": "zoominfo.companies.enrich",
+      "name": "Enrich companies",
+      "summary": "Full firmographic records (industry, revenue, headcount, funding, parent companies) for up to 25 companies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/data/v1/companies/enrich",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{type: 'CompanyEnrich', attributes: {matchCompanyInput: [up to 25 of {companyId | companyName | companyWebsite | companyTicker | companyPhone | address fields | ipAddress}], outputFields: [...]}}.",
+          "example": {
+            "type": "CompanyEnrich",
+            "attributes": {
+              "matchCompanyInput": [
+                {
+                  "companyWebsite": "www.zoominfo.com"
+                }
+              ],
+              "outputFields": [
+                "id",
+                "name",
+                "website",
+                "revenue",
+                "employeeCount"
+              ]
+            }
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. 1 bulk data credit per company not already under management."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.gtm.ai/reference/enrichinterface_enrichcompany",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    },
+    {
+      "id": "zoominfo.scoops.search",
+      "name": "Search scoops",
+      "summary": "Business-event signals (leadership moves, funding, expansions, projects) matching company and topic filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/data/v1/scoops/search",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "JSON:API resource {type: 'ScoopSearch', attributes: {...}}; see the docs for scoop filters."
+        },
+        "page_number": {
+          "in": "query",
+          "wire_name": "page[number]",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "wire_name": "page[size]",
+          "type": "integer",
+          "description": "Records per page, 1-100, default 25."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "scoopId, originalPublishedDate, description, link or linkText; prefix '-' for descending."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.gtm.ai/reference/searchinterface_searchscoop",
+      "verified": {
+        "docs": "https://docs.zoominfo.com/openapi/openapi-data-v1.yaml"
+      }
+    }
+  ]
+}

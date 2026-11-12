@@ -1,0 +1,299 @@
+{
+  "vendor": "klaviyo",
+  "name": "Klaviyo",
+  "category": "analytics",
+  "summary": "Email, SMS and push campaign and flow performance (opens, clicks, conversions, revenue), metrics and their aggregates from a Klaviyo account.",
+  "docs_url": "https://developers.klaviyo.com/en/reference/api_overview",
+  "pricing_url": "https://www.klaviyo.com/pricing",
+  "base_url": "https://a.klaviyo.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "KLAVIYO_API_KEY"
+        ],
+        "description": "a Klaviyo private API key (Settings > API keys) with read scopes for campaigns, flows and metrics"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Klaviyo-API-Key {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "revision": "2026-10-15",
+    "Content-Type": "application/vnd.api+json"
+  },
+  "notes": [
+    "Every call carries a revision header (an API version date); this entry pins 2026-10-15.",
+    "Bodies are JSON:API: {\"data\": {\"type\": ..., \"attributes\": {...}}}. List filters are strings such as equals(status,'live') or greater-than(created,2026-01-01T00:00:00Z); paging follows links.next or page[cursor].",
+    "Reporting endpoints (campaign and flow values) are rate limited hard: 1 per second, 2 per minute, 225 per day. They match the numbers in Klaviyo's UI; metric aggregates are for raw event counts.",
+    "Reports need a conversion_metric_id: find the Placed Order (or other conversion) metric's id with klaviyo.metrics.list."
+  ],
+  "sources": [
+    "https://developers.klaviyo.com/en/reference/query_campaign_values",
+    "https://developers.klaviyo.com/en/reference/query_flow_values",
+    "https://developers.klaviyo.com/en/reference/get_campaigns",
+    "https://developers.klaviyo.com/en/reference/get_flows",
+    "https://developers.klaviyo.com/en/reference/get_metrics",
+    "https://developers.klaviyo.com/en/reference/query_metric_aggregates"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "klaviyo.campaigns.report",
+      "name": "Campaign performance report",
+      "summary": "Opens, clicks, deliveries, conversions and revenue per campaign (and message, channel) over a timeframe.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/campaign-values-reports",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{\"type\": \"campaign-values-report\", \"attributes\": {statistics, timeframe, conversion_metric_id, group_by, filter}}. statistics (required): any of average_order_value, bounce_rate, bounced, bounced_or_failed, bounced_or_failed_rate, click_rate, click_to_open_rate, clicks, clicks_unique, conversion_rate, conversion_uniques, conversion_value, conversions, delivered, delivery_rate, failed, failed_rate, message_segment_count_sum, open_rate, opens, opens_unique, recipients, revenue_per_recipient, spam_complaint_rate, spam_complaints, text_message_credit_usage_amount, text_message_roi, text_message_spend, unsubscribe_rate, unsubscribe_uniques, unsubscribes. timeframe (required): {\"key\": one of last_12_months, last_30_days, last_365_days, last_3_months, last_7_days, last_90_days, last_month, last_week, last_year, this_month, this_week, this_year, today, yesterday} or {\"start\", \"end\"} date-times, at most one year, in the account's timezone. conversion_metric_id (required): the metric id conversions count (e.g. Placed Order, from klaviyo.metrics.list). group_by: any of campaign_id, campaign_message_id, campaign_message_name, group, group_name, send_channel, tag_id, tag_name, text_message_format, variation, variation_name. filter: e.g. and(equals(campaign_id,\"abc\"),contains-any(send_channel,[\"email\",\"sms\"])); send_channel is email, sms, push-notification or whatsapp.",
+          "example": {
+            "type": "campaign-values-report",
+            "attributes": {
+              "statistics": [
+                "opens",
+                "open_rate",
+                "clicks",
+                "conversion_value"
+              ],
+              "timeframe": {
+                "key": "last_30_days"
+              },
+              "conversion_metric_id": "RESQ6t"
+            }
+          }
+        },
+        "page_cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page."
+        }
+      },
+      "notes": [
+        "A read over POST. Needs campaigns:read. 1/s, 2/min, 225/day."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://developers.klaviyo.com/en/reference/query_campaign_values",
+      "verified": {
+        "docs": "https://developers.klaviyo.com/en/reference/query_campaign_values"
+      }
+    },
+    {
+      "id": "klaviyo.flows.report",
+      "name": "Flow performance report",
+      "summary": "Opens, clicks, deliveries, conversions and revenue per flow (and message, channel) over a timeframe.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/flow-values-reports",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{\"type\": \"flow-values-report\", \"attributes\": {statistics, timeframe, conversion_metric_id, group_by, filter}}. statistics (required): any of average_order_value, bounce_rate, bounced, bounced_or_failed, bounced_or_failed_rate, click_rate, click_to_open_rate, clicks, clicks_unique, conversion_rate, conversion_uniques, conversion_value, conversions, delivered, delivery_rate, failed, failed_rate, message_segment_count_sum, open_rate, opens, opens_unique, recipients, revenue_per_recipient, spam_complaint_rate, spam_complaints, text_message_credit_usage_amount, text_message_roi, text_message_spend, unsubscribe_rate, unsubscribe_uniques, unsubscribes. timeframe (required): {\"key\": one of last_12_months, last_30_days, last_365_days, last_3_months, last_7_days, last_90_days, last_month, last_week, last_year, this_month, this_week, this_year, today, yesterday} or {\"start\", \"end\"} date-times, at most one year, in the account's timezone. conversion_metric_id (required): the metric id conversions count (e.g. Placed Order, from klaviyo.metrics.list). group_by: any of flow_id, flow_message_id, flow_message_name, flow_name, send_channel, tag_id, tag_name, text_message_format, variation, variation_name. filter: e.g. and(equals(flow_id,\"abc\"),contains-any(send_channel,[\"email\",\"sms\"])); send_channel is email, sms, push-notification or whatsapp.",
+          "example": {
+            "type": "flow-values-report",
+            "attributes": {
+              "statistics": [
+                "opens",
+                "open_rate",
+                "clicks",
+                "conversion_value"
+              ],
+              "timeframe": {
+                "key": "last_30_days"
+              },
+              "conversion_metric_id": "RESQ6t"
+            }
+          }
+        },
+        "page_cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page."
+        }
+      },
+      "notes": [
+        "A read over POST. Needs flows:read. 1/s, 2/min, 225/day."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://developers.klaviyo.com/en/reference/query_flow_values",
+      "verified": {
+        "docs": "https://developers.klaviyo.com/en/reference/query_flow_values"
+      }
+    },
+    {
+      "id": "klaviyo.campaigns.list",
+      "name": "List campaigns",
+      "summary": "Campaigns with name, status, send settings and optionally their messages, audiences and tags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/campaigns",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter string. Fields: id (any), name (contains), archived (equals), builder (equals), created_at / updated_at (greater-or-equal, greater-than, less-or-equal, less-than).",
+          "example": "greater-than(created_at,2026-10-01T00:00:00Z)"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "created_at",
+            "-created_at",
+            "updated_at",
+            "-updated_at",
+            "id",
+            "-id",
+            "name",
+            "-name"
+          ]
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: campaign-audiences, campaign-messages, tags."
+        },
+        "page_size": {
+          "in": "query",
+          "wire_name": "page[size]",
+          "type": "integer",
+          "description": "1-100, default 100."
+        },
+        "page_cursor": {
+          "in": "query",
+          "wire_name": "page[cursor]",
+          "type": "string",
+          "description": "Cursor from links.next."
+        }
+      },
+      "notes": [
+        "Needs campaigns:read."
+      ],
+      "docs_url": "https://developers.klaviyo.com/en/reference/get_campaigns",
+      "verified": {
+        "docs": "https://developers.klaviyo.com/en/reference/get_campaigns"
+      }
+    },
+    {
+      "id": "klaviyo.flows.list",
+      "name": "List flows",
+      "summary": "Automated flows with name, status, trigger type and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/flows",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter string. Fields: id (any), name (contains, ends-with, equals, starts-with), status (equals), archived (equals), created / updated (equals, greater-or-equal, greater-than, less-or-equal, less-than), trigger_type (equals: Metric, Added to List, Unconfigured, Date Based, Price Drop, Low Inventory).",
+          "example": "equals(status,'live')"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "created, id, name, status, trigger_type or updated; prefix - for descending."
+        },
+        "page_size": {
+          "in": "query",
+          "wire_name": "page[size]",
+          "type": "integer",
+          "description": "1-50, default 50."
+        },
+        "page_cursor": {
+          "in": "query",
+          "wire_name": "page[cursor]",
+          "type": "string"
+        }
+      },
+      "notes": [
+        "Needs flows:read."
+      ],
+      "docs_url": "https://developers.klaviyo.com/en/reference/get_flows",
+      "verified": {
+        "docs": "https://developers.klaviyo.com/en/reference/get_flows"
+      }
+    },
+    {
+      "id": "klaviyo.metrics.list",
+      "name": "List metrics",
+      "summary": "Event metrics in the account (Placed Order, Opened Email, ...) with their ids and integrations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/metrics",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "equals(integration.name,'...') or equals(integration.category,'...').",
+          "example": "equals(integration.name,'Shopify')"
+        },
+        "page_cursor": {
+          "in": "query",
+          "wire_name": "page[cursor]",
+          "type": "string",
+          "description": "Up to 200 per page."
+        }
+      },
+      "notes": [
+        "Needs metrics:read."
+      ],
+      "job": "metrics.list",
+      "docs_url": "https://developers.klaviyo.com/en/reference/get_metrics",
+      "verified": {
+        "docs": "https://developers.klaviyo.com/en/reference/get_metrics"
+      }
+    },
+    {
+      "id": "klaviyo.metrics.aggregate",
+      "name": "Aggregate a metric over time",
+      "summary": "Counts, sums or unique counts of one metric's events per day, hour, week or month, optionally grouped by dimensions like $flow or Campaign Name.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/metric-aggregates",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{\"type\": \"metric-aggregate\", \"attributes\": {metric_id (required), measurements (required: count, sum_value, unique), filter (required: a datetime range as [\"greater-or-equal(datetime,...)\", \"less-than(datetime,...)\"]), interval (day default, hour, week, month), by (dimensions such as $flow, $message, $attributed_channel, Campaign Name, URL), timezone (IANA, default UTC), page_size (default 500), sort}}.",
+          "example": {
+            "type": "metric-aggregate",
+            "attributes": {
+              "metric_id": "0rG4eQ",
+              "measurements": [
+                "count",
+                "sum_value"
+              ],
+              "interval": "day",
+              "filter": [
+                "greater-or-equal(datetime,2026-10-01T00:00:00)",
+                "less-than(datetime,2026-11-01T00:00:00)"
+              ],
+              "timezone": "UTC"
+            }
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Needs metrics:read. 3/s, 60/min.",
+        "Custom metrics are not supported here."
+      ],
+      "job": "metrics.query",
+      "docs_url": "https://developers.klaviyo.com/en/reference/query_metric_aggregates",
+      "verified": {
+        "docs": "https://developers.klaviyo.com/en/reference/query_metric_aggregates"
+      }
+    }
+  ]
+}

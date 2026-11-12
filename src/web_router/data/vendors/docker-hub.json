@@ -1,0 +1,206 @@
+{
+  "vendor": "docker-hub",
+  "name": "Docker Hub",
+  "category": "developer",
+  "summary": "Docker Hub repositories and image tags: descriptions, pull and star counts, last update, tag digests, sizes and platforms.",
+  "docs_url": "https://docs.docker.com/reference/api/hub/latest/",
+  "base_url": "https://hub.docker.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "DOCKER_HUB_TOKEN"
+        ],
+        "required": false,
+        "description": "a short-lived bearer JWT from POST https://hub.docker.com/v2/auth/token with your username and a personal access token; needed for private repositories and endpoints the docs mark as authenticated"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Public repositories are readable without a token. The bearer token is a JWT minted from POST /v2/auth/token ({identifier, secret}); it expires, so refresh DOCKER_HUB_TOKEN when calls start returning 401.",
+    "Rate-limited: a 429 carries Retry-After (seconds). These limits are separate from image pull limits.",
+    "Lists page with page and page_size and return count, next and previous."
+  ],
+  "sites": [
+    "hub.docker.com"
+  ],
+  "sources": [
+    "https://docs.docker.com/reference/api/hub/latest/",
+    "https://docs.docker.com/reference/api/hub/latest.yaml"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "docker-hub.repositories.list",
+      "name": "List a namespace's repositories",
+      "summary": "Repositories of a user or organization, with pull counts, stars and last update.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/namespaces/{namespace}/repositories",
+      "params": {
+        "namespace": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Namespace: a Docker Hub user or organization; library for official images.",
+          "example": "library"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, starting at 1.",
+          "example": 1
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; default 10.",
+          "example": 100
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Only repositories whose name contains this."
+        },
+        "ordering": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; prefix - for descending.",
+          "enum": [
+            "name",
+            "-name",
+            "last_updated",
+            "-last_updated",
+            "pull_count",
+            "-pull_count"
+          ]
+        }
+      },
+      "job": "packages.list",
+      "docs_url": "https://docs.docker.com/reference/api/hub/latest/",
+      "verified": {
+        "docs": "https://docs.docker.com/reference/api/hub/latest/"
+      }
+    },
+    {
+      "id": "docker-hub.repositories.get",
+      "name": "Get a repository",
+      "summary": "One repository's description, pull count, star count, status and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/namespaces/{namespace}/repositories/{repository}",
+      "params": {
+        "namespace": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Namespace: a Docker Hub user or organization; library for official images.",
+          "example": "library"
+        },
+        "repository": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Repository name within the namespace.",
+          "example": "nginx"
+        }
+      },
+      "job": "packages.get",
+      "docs_url": "https://docs.docker.com/reference/api/hub/latest/",
+      "verified": {
+        "docs": "https://docs.docker.com/reference/api/hub/latest/"
+      }
+    },
+    {
+      "id": "docker-hub.tags.list",
+      "name": "List a repository's tags",
+      "summary": "Tags with digests, sizes, platforms and last-pushed dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/namespaces/{namespace}/repositories/{repository}/tags",
+      "params": {
+        "namespace": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Namespace: a Docker Hub user or organization; library for official images.",
+          "example": "library"
+        },
+        "repository": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Repository name within the namespace.",
+          "example": "nginx"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, starting at 1.",
+          "example": 1
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; default 10.",
+          "example": 100
+        }
+      },
+      "notes": [
+        "The docs list bearer auth for this endpoint; set DOCKER_HUB_TOKEN if an anonymous call is refused."
+      ],
+      "job": "packages.versions",
+      "docs_url": "https://docs.docker.com/reference/api/hub/latest/",
+      "verified": {
+        "docs": "https://docs.docker.com/reference/api/hub/latest/"
+      }
+    },
+    {
+      "id": "docker-hub.tags.get",
+      "name": "Get a tag",
+      "summary": "One tag's digest, images per platform, size and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/namespaces/{namespace}/repositories/{repository}/tags/{tag}",
+      "params": {
+        "namespace": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Namespace: a Docker Hub user or organization; library for official images.",
+          "example": "library"
+        },
+        "repository": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Repository name within the namespace.",
+          "example": "nginx"
+        },
+        "tag": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Tag name.",
+          "example": "latest"
+        }
+      },
+      "notes": [
+        "The docs list bearer auth for this endpoint; set DOCKER_HUB_TOKEN if an anonymous call is refused."
+      ],
+      "job": "packages.versions",
+      "docs_url": "https://docs.docker.com/reference/api/hub/latest/",
+      "verified": {
+        "docs": "https://docs.docker.com/reference/api/hub/latest/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "vendor": "hn-algolia",
+  "name": "Hacker News Search (Algolia)",
+  "category": "search",
+  "summary": "Full-text search over Hacker News stories, comments, polls and users, plus whole items with their comment trees, from the free HN Search API built on Algolia.",
+  "docs_url": "https://hn.algolia.com/api",
+  "base_url": "https://hn.algolia.com/api/v1",
+  "notes": [
+    "Keyless and free. Limited to 10,000 requests per hour per IP.",
+    "Results page from 0; the response gives nbHits, nbPages, page and hitsPerPage.",
+    "The documented parameters are query, tags, numericFilters and page (plus hitsPerPage); the API is built on Algolia's search API, whose other query parameters it says are also accepted.",
+    "Timestamps for numericFilters are Unix seconds (created_at_i)."
+  ],
+  "sites": [
+    "news.ycombinator.com"
+  ],
+  "sources": [
+    "https://hn.algolia.com/api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "hn-algolia.search",
+      "name": "Search Hacker News by relevance",
+      "summary": "Stories, comments and polls matching a query, sorted by relevance, then points, then comment count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text query."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Tag filter, comma-separated tags are ANDed; parenthesised ones are ORed, e.g. author_pg,(story,poll). Tags: story, comment, poll, pollopt, show_hn, ask_hn, front_page, author_USERNAME, story_ID.",
+          "example": "story"
+        },
+        "numericFilters": {
+          "in": "query",
+          "type": "string",
+          "description": "Numeric conditions, comma-separated, with <, <=, =, >, >= on created_at_i (Unix seconds), points or num_comments, e.g. created_at_i>1700000000."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 0."
+        },
+        "hitsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page (default 20)."
+        },
+        "restrictSearchableAttributes": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit matching to one attribute, e.g. url (the docs' example)."
+        }
+      },
+      "notes": [
+        "tags=front_page with no query returns what is on the front page now."
+      ],
+      "job": "social.search",
+      "docs_url": "https://hn.algolia.com/api",
+      "verified": {
+        "docs": "https://hn.algolia.com/api"
+      }
+    },
+    {
+      "id": "hn-algolia.search_by_date",
+      "name": "Search Hacker News by date",
+      "summary": "Items matching a query or filter, most recent first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search_by_date",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text query."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Tag filter, comma-separated tags are ANDed; parenthesised ones are ORed, e.g. author_pg,(story,poll). Tags: story, comment, poll, pollopt, show_hn, ask_hn, front_page, author_USERNAME, story_ID.",
+          "example": "story"
+        },
+        "numericFilters": {
+          "in": "query",
+          "type": "string",
+          "description": "Numeric conditions, comma-separated, with <, <=, =, >, >= on created_at_i (Unix seconds), points or num_comments, e.g. created_at_i>1700000000."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 0."
+        },
+        "hitsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page (default 20)."
+        }
+      },
+      "notes": [
+        "Use tags=story (or comment) with numericFilters=created_at_i>X to poll for new items."
+      ],
+      "job": "social.search",
+      "docs_url": "https://hn.algolia.com/api",
+      "verified": {
+        "docs": "https://hn.algolia.com/api"
+      }
+    },
+    {
+      "id": "hn-algolia.item.get",
+      "name": "Get an item with its comments",
+      "summary": "A story, comment or poll by ID with author, points, text and the full nested children tree.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/items/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "HN item ID.",
+          "example": 1
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://hn.algolia.com/api",
+      "verified": {
+        "docs": "https://hn.algolia.com/api"
+      }
+    },
+    {
+      "id": "hn-algolia.user.get",
+      "name": "Get a user",
+      "summary": "Username, about text and karma of an HN user.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{username}",
+      "params": {
+        "username": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "HN username.",
+          "example": "pg"
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://hn.algolia.com/api",
+      "verified": {
+        "docs": "https://hn.algolia.com/api"
+      }
+    }
+  ]
+}

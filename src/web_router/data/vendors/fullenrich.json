@@ -1,0 +1,470 @@
+{
+  "vendor": "fullenrich",
+  "name": "FullEnrich",
+  "category": "enrichment",
+  "summary": "Waterfall enrichment of work emails, personal emails and mobile phones across 20+ providers, plus people and company search and reverse email lookup.",
+  "docs_url": "https://docs.fullenrich.com/api/v2/general/introduction",
+  "pricing_url": "https://fullenrich.com/pricing",
+  "base_url": "https://app.fullenrich.com/api/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FULLENRICH_API_KEY"
+        ],
+        "description": "A FullEnrich API key (app.fullenrich.com/app/api). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "60 API calls per minute across all endpoints; enrich and reverse lookup take up to 100 contacts per call, with 100 concurrent enrichments per workspace.",
+    "Credits are spent only when something is found; see each endpoint's notes for the price.",
+    "Enrichment data is kept 3 months (GDPR); fetch results within that window.",
+    "Sub-account and bring-your-own-key management endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://docs.fullenrich.com/llms.txt",
+    "https://docs.fullenrich.com/api/v2/reference/openapi.yaml",
+    "https://docs.fullenrich.com/api/v2/general/authentication.md",
+    "https://docs.fullenrich.com/api/v2/general/credit.md",
+    "https://docs.fullenrich.com/api/v2/general/ratelimit.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fullenrich.account.credits",
+      "name": "Get credit balance",
+      "summary": "Credits the API key can spend now, capped by any consumption limit on the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/credits",
+      "job": "account.usage",
+      "docs_url": "https://docs.fullenrich.com/api/v2/account/credits/get",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/account/credits/get.md"
+      }
+    },
+    {
+      "id": "fullenrich.account.verify_key",
+      "name": "Check the API key",
+      "summary": "Whether the API key is valid.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/keys/verify",
+      "job": "account.validate",
+      "docs_url": "https://docs.fullenrich.com/api/v2/account/keys/verify/get",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/account/keys/verify/get.md"
+      }
+    },
+    {
+      "id": "fullenrich.contact.enrich",
+      "name": "Start a contact enrichment",
+      "summary": "Waterfall search for work emails, personal emails and mobile phones of up to 100 contacts; answers with an enrichment_id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/contact/enrich/bulk",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A readable name for the enrichment, shown in the dashboard."
+        },
+        "data": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Contacts, up to 100: {first_name, last_name, domain, company_name, linkedin_url, enrich_fields, custom}. enrich_fields takes contact.work_emails, contact.personal_emails, contact.phones.",
+          "example": [
+            {
+              "first_name": "Grégoire",
+              "last_name": "Démogé",
+              "domain": "fullenrich.com",
+              "company_name": "FullEnrich",
+              "linkedin_url": "https://www.linkedin.com/in/jane-doe-example/",
+              "enrich_fields": [
+                "contact.work_emails"
+              ]
+            }
+          ]
+        },
+        "silentFail": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip contacts with invalid or missing input instead of failing the whole request."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Spends credits only on results: 1 per work email found, 3 per personal email, 10 per mobile phone (custom plans may differ). Re-enriching the same input within 3 months costs 0.",
+        "Asynchronous: poll fullenrich.contact.enrich_result with the enrichment_id.",
+        "The example contact is FullEnrich's free test contact; it costs 0 credits only with exactly that data."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.fullenrich.com/api/v2/contact/enrich/bulk/post",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/contact/enrich/bulk/post.md"
+      }
+    },
+    {
+      "id": "fullenrich.contact.enrich_result",
+      "name": "Get enrichment results",
+      "summary": "Status and found contact data of an enrichment.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/contact/enrich/bulk/{enrichment_id}",
+      "params": {
+        "enrichment_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id returned when the enrichment started."
+        },
+        "forceResults": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return what was found so far even if the enrichment is not finished; not recommended for regular use."
+        }
+      },
+      "notes": [
+        "Results are kept 3 months; an older enrichment_id errors."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://docs.fullenrich.com/api/v2/contact/enrich/bulk/get",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/contact/enrich/bulk/get.md"
+      }
+    },
+    {
+      "id": "fullenrich.contact.reverse_email",
+      "name": "Start a reverse email lookup",
+      "summary": "Find the person and company behind up to 100 email addresses; answers with an id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/contact/reverse/email/bulk",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A readable name for the lookup, shown in the dashboard."
+        },
+        "data": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 items {email, custom}.",
+          "example": [
+            {
+              "email": "someone@example.com"
+            }
+          ]
+        },
+        "silentFail": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip empty or invalid emails instead of failing the whole request."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "1 credit per email whose owner is found.",
+        "Asynchronous: poll fullenrich.contact.reverse_email_result with the returned id."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.fullenrich.com/api/v2/contact/reverse/email/bulk/post",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/contact/reverse/email/bulk/post.md"
+      }
+    },
+    {
+      "id": "fullenrich.contact.reverse_email_result",
+      "name": "Get reverse email lookup results",
+      "summary": "Person and company found for each email of a reverse lookup.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/contact/reverse/email/bulk/{enrichment_id}",
+      "params": {
+        "enrichment_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id returned when the reverse lookup started."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.fullenrich.com/api/v2/contact/reverse/email/bulk/get",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/contact/reverse/email/bulk/get.md"
+      }
+    },
+    {
+      "id": "fullenrich.people.search",
+      "name": "Search people",
+      "summary": "People matching company, title, seniority, function, location, skill and tenure filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people/search",
+      "params": {
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, at most 10,000; use search_after beyond that."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return, default 10, max 100."
+        },
+        "search_after": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor: the search_after value from the previous answer."
+        },
+        "current_position_titles": {
+          "in": "body",
+          "type": "array",
+          "description": "Current job titles. Each filter is a list of {value, exclude, exact_match} objects (ranges such as headcounts take {min, max, exclude}); values in one field combine with AND.",
+          "example": [
+            {
+              "value": "CEO"
+            }
+          ]
+        },
+        "current_company_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Current company domains.",
+          "example": [
+            {
+              "value": "google.com",
+              "exact_match": true
+            }
+          ]
+        },
+        "current_company_names": {
+          "in": "body",
+          "type": "array",
+          "description": "Current company names."
+        },
+        "current_position_seniority_level": {
+          "in": "body",
+          "type": "array",
+          "description": "Seniority, e.g. Owner, Founder, C-level, VP, Director, Manager."
+        },
+        "current_position_job_functions": {
+          "in": "body",
+          "type": "array",
+          "description": "Job functions, e.g. Sales, Software & Data."
+        },
+        "person_locations": {
+          "in": "body",
+          "type": "array",
+          "description": "City, region or country of the person."
+        },
+        "person_names": {
+          "in": "body",
+          "type": "array",
+          "description": "First, last or full names."
+        },
+        "person_skills": {
+          "in": "body",
+          "type": "array",
+          "description": "Skills."
+        },
+        "current_company_industries": {
+          "in": "body",
+          "type": "array",
+          "description": "Industries of the current company."
+        },
+        "current_company_headcounts": {
+          "in": "body",
+          "type": "array",
+          "description": "Headcount ranges {min, max, exclude}."
+        }
+      },
+      "notes": [
+        "A read over POST. Synchronous. 0.25 credit per person returned; people already exported once cost nothing again.",
+        "More filters exist (past companies and titles, technologies, universities, tenure, days since job change); see the docs. Each filter is a list of {value, exclude, exact_match} objects (ranges such as headcounts take {min, max, exclude}); values in one field combine with AND."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.fullenrich.com/api/v2/people/search/post",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/people/search/post.md"
+      }
+    },
+    {
+      "id": "fullenrich.company.search",
+      "name": "Search companies",
+      "summary": "Companies matching name, domain, industry, keyword, technology, location, headcount and founding-year filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/search",
+      "params": {
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, at most 10,000; use search_after beyond that."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return, default 10, max 100."
+        },
+        "search_after": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor: the search_after value from the previous answer."
+        },
+        "names": {
+          "in": "body",
+          "type": "array",
+          "description": "Company names. Each filter is a list of {value, exclude, exact_match} objects (ranges such as headcounts take {min, max, exclude}); values in one field combine with AND."
+        },
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains.",
+          "example": [
+            {
+              "value": "fullenrich.com"
+            }
+          ]
+        },
+        "keywords": {
+          "in": "body",
+          "type": "array",
+          "description": "Words in the company description."
+        },
+        "industries": {
+          "in": "body",
+          "type": "array",
+          "description": "Industries, e.g. Software Development."
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies the company uses."
+        },
+        "headquarters_locations": {
+          "in": "body",
+          "type": "array",
+          "description": "Headquarters city, region or country."
+        },
+        "headcounts": {
+          "in": "body",
+          "type": "array",
+          "description": "Headcount ranges {min, max, exclude}."
+        },
+        "founded_years": {
+          "in": "body",
+          "type": "array",
+          "description": "Founding year ranges {min, max, exclude}."
+        },
+        "types": {
+          "in": "body",
+          "type": "array",
+          "description": "Company types, e.g. Public Company, Privately Held."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.25 credit per company returned; companies already exported once cost nothing again."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.fullenrich.com/api/v2/company/search/post",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/company/search/post.md"
+      }
+    },
+    {
+      "id": "fullenrich.people.lookup",
+      "name": "Look up one person",
+      "summary": "The best matching person profile by LinkedIn URL or id, or by full name plus a company identifier.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people/lookup",
+      "params": {
+        "person_professional_network_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL (most reliable)."
+        },
+        "person_professional_network_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "LinkedIn profile id."
+        },
+        "person_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name; send with a company identifier."
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Domain of the person's company, to disambiguate a name."
+        },
+        "company_professional_network_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn URL of the person's company."
+        },
+        "company_professional_network_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "LinkedIn id of the person's company."
+        }
+      },
+      "notes": [
+        "A read over POST. Priced as Search (per person returned). Returns a profile, not emails or phones: use fullenrich.contact.enrich for those."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.fullenrich.com/api/v2/people/lookup/post",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/people/lookup/post.md"
+      }
+    },
+    {
+      "id": "fullenrich.company.lookup",
+      "name": "Look up one company",
+      "summary": "The best matching company by domain or LinkedIn URL or id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/lookup",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain.",
+          "example": "fullenrich.com"
+        },
+        "professional_network_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Company LinkedIn URL."
+        },
+        "professional_network_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "Company LinkedIn id."
+        }
+      },
+      "notes": [
+        "A read over POST. Priced as Search."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.fullenrich.com/api/v2/company/lookup/post",
+      "verified": {
+        "docs": "https://docs.fullenrich.com/api/v2/company/lookup/post.md"
+      }
+    }
+  ]
+}

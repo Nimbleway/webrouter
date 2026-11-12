@@ -1,0 +1,350 @@
+{
+  "vendor": "opensanctions",
+  "name": "OpenSanctions",
+  "category": "government",
+  "summary": "OpenSanctions' hosted API over its consolidated sanctions, politically exposed persons and watchlist database: multi-property screening matches, full-text entity search, full entity records with relationships, and raw statements.",
+  "docs_url": "https://www.opensanctions.org/docs/api/",
+  "base_url": "https://api.opensanctions.org",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENSANCTIONS_API_KEY"
+        ],
+        "description": "OpenSanctions API key from the customer portal; free keys are issued for journalism, civil-society and academic work. Sent as 'Authorization: ApiKey <key>'."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "ApiKey {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Paid from prepaid credit bundles: one credit per metered operation. statements.list is not charged but still needs a key.",
+    "Use match.query for screening (scored candidates from structured properties); search.query is a user-facing text search and is not meant for screening.",
+    "The dataset path segment scopes a query: 'default' (recommended) is the combined collection of all datasets; a narrower name such as us_ofac_sdn only considers candidates from that source, and may miss enriched entities like relatives of PEPs. catalog.get lists every dataset name.",
+    "Paging on search and adjacent entities: limit up to 500, offset up to 9,499."
+  ],
+  "sources": [
+    "https://www.opensanctions.org/docs/api/",
+    "https://www.opensanctions.org/docs/api/authentication/",
+    "https://api.opensanctions.org/openapi.json",
+    "https://www.opensanctions.org/docs/api/request/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "opensanctions.match",
+      "name": "Screen entities against the lists",
+      "summary": "Scored candidate matches for one or more people, companies or vessels described by their properties (name, birth date, nationality, registration number...).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/match/{dataset}",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset or collection to match against.",
+          "example": "default"
+        },
+        "queries": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Map of your own query keys to entity examples {schema, properties}; property values are lists.",
+          "example": {
+            "q1": {
+              "schema": "Person",
+              "properties": {
+                "name": [
+                  "John Doe"
+                ],
+                "birthDate": [
+                  "1975-04-21"
+                ],
+                "nationality": [
+                  "us"
+                ]
+              }
+            }
+          }
+        },
+        "weights": {
+          "in": "body",
+          "type": "object",
+          "description": "Scoring feature weights to override.",
+          "example": {
+            "name_literal": 0.8
+          }
+        },
+        "config": {
+          "in": "body",
+          "type": "object",
+          "description": "Algorithm-specific configuration parameters."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Candidates per query: default 5, max 500.",
+          "example": 5
+        },
+        "threshold": {
+          "in": "query",
+          "type": "number",
+          "description": "Score at or above which a candidate counts as a match (default 0.7, which the default algorithm is calibrated for; raise it for fewer false positives).",
+          "example": 0.7
+        },
+        "algorithm": {
+          "in": "query",
+          "type": "string",
+          "description": "Scoring algorithm (default best; algorithms are listed at /algorithms).",
+          "example": "best"
+        },
+        "topics": {
+          "in": "query",
+          "type": "array",
+          "description": "Only entities with these risk topics, e.g. sanction, role.pep."
+        },
+        "exclude_dataset": {
+          "in": "query",
+          "type": "array",
+          "description": "Ignore entities from these datasets."
+        },
+        "changed_since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only entities changed since this date (YYYY-MM-DD, optional time)."
+        }
+      },
+      "notes": [
+        "A read over POST. Each query in the batch is answered under its own key in responses."
+      ],
+      "job": "sanctions.screen",
+      "docs_url": "https://www.opensanctions.org/docs/api/request/",
+      "verified": {
+        "docs": "https://www.opensanctions.org/docs/api/request/"
+      }
+    },
+    {
+      "id": "opensanctions.search",
+      "name": "Search entities by text",
+      "summary": "Entities whose names or text match a query, with facet counts by country, topic and dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/{dataset}",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset or collection to search.",
+          "example": "default"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Text query; field filters, wildcards and fuzzy syntax allowed.",
+          "example": "Vladimir Putin"
+        },
+        "schema": {
+          "in": "query",
+          "type": "string",
+          "description": "Entity type, e.g. Person, Company, Vessel (default Thing, all).",
+          "example": "Person"
+        },
+        "countries": {
+          "in": "query",
+          "type": "array",
+          "description": "Country codes to filter on.",
+          "example": [
+            "ru"
+          ]
+        },
+        "topics": {
+          "in": "query",
+          "type": "array",
+          "description": "Risk topics to filter on, e.g. sanction."
+        },
+        "datasets": {
+          "in": "query",
+          "type": "array",
+          "description": "Datasets to filter on."
+        },
+        "filter": {
+          "in": "query",
+          "type": "array",
+          "description": "field:value filters, e.g. properties.birthDate:1985."
+        },
+        "filter_op": {
+          "in": "query",
+          "type": "string",
+          "description": "How multiple values on one filter combine; OR is the legacy default, AND recommended.",
+          "enum": [
+            "OR",
+            "AND"
+          ]
+        },
+        "fuzzy": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Fuzzy matching."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results: default 10, max 500.",
+          "example": 10
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset, max 9,499.",
+          "example": 0
+        }
+      },
+      "job": "sanctions.search",
+      "docs_url": "https://www.opensanctions.org/docs/api/search/",
+      "verified": {
+        "docs": "https://api.opensanctions.org/openapi.json"
+      }
+    },
+    {
+      "id": "opensanctions.entities.get",
+      "name": "Get an entity",
+      "summary": "One entity in full, with data from every source dataset and nested sanctions, identifiers, family and business relationships.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entities/{entity_id}",
+      "params": {
+        "entity_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Entity id (e.g. a Wikidata id like Q7747 or an OpenSanctions id).",
+          "example": "Q7747"
+        },
+        "nested": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include adjacent entities inline (default true)."
+        }
+      },
+      "notes": [
+        "A merged id redirects to its canonical entity."
+      ],
+      "job": "sanctions.entity",
+      "docs_url": "https://www.opensanctions.org/docs/api/",
+      "verified": {
+        "docs": "https://api.opensanctions.org/openapi.json"
+      }
+    },
+    {
+      "id": "opensanctions.entities.adjacent",
+      "name": "List an entity's related entities",
+      "summary": "Passports, sanctions, associates and other adjacent entities of one entity, paged (beta).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entities/{entity_id}/adjacent",
+      "params": {
+        "entity_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Entity id.",
+          "example": "Q7747"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 10, max 500.",
+          "example": 10
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset, max 9,499.",
+          "example": 0
+        }
+      },
+      "notes": [
+        "Beta: the interface may change without announcement. Use it when entities.get would nest too many related records."
+      ],
+      "docs_url": "https://api.opensanctions.org/openapi.json",
+      "verified": {
+        "docs": "https://api.opensanctions.org/openapi.json"
+      }
+    },
+    {
+      "id": "opensanctions.catalog.get",
+      "name": "List datasets",
+      "summary": "The service manifest: every indexed dataset and collection and how often each is loaded.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/catalog",
+      "job": "sanctions.sources",
+      "docs_url": "https://api.opensanctions.org/openapi.json",
+      "verified": {
+        "docs": "https://api.opensanctions.org/openapi.json"
+      }
+    },
+    {
+      "id": "opensanctions.statements.list",
+      "name": "List raw statements",
+      "summary": "Raw entity data as statements (the statement-based data model).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/statements",
+      "params": {
+        "dataset": {
+          "in": "query",
+          "type": "string",
+          "description": "Dataset name."
+        },
+        "entity_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Source entity id."
+        },
+        "canonical_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Canonical (merged) entity id.",
+          "example": "Q7747"
+        },
+        "prop": {
+          "in": "query",
+          "type": "string",
+          "description": "Property name, e.g. name."
+        },
+        "schema": {
+          "in": "query",
+          "type": "string",
+          "description": "Entity type."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 50, max 5000.",
+          "example": 50
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset, max 9,499.",
+          "example": 0
+        }
+      },
+      "notes": [
+        "Not charged, but a valid key is still required."
+      ],
+      "docs_url": "https://api.opensanctions.org/openapi.json",
+      "verified": {
+        "docs": "https://api.opensanctions.org/openapi.json"
+      }
+    }
+  ]
+}

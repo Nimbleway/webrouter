@@ -1,0 +1,262 @@
+{
+  "vendor": "context7",
+  "name": "Context7",
+  "category": "developer",
+  "summary": "Up-to-date, version-specific documentation and code snippets for software libraries, ranked for a question; plus reading one web page narrowed to a question.",
+  "docs_url": "https://context7.com/docs/api-guide",
+  "pricing_url": "https://context7.com/plans",
+  "base_url": "https://context7.com/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CONTEXT7_API_KEY"
+        ],
+        "required": false,
+        "description": "A Context7 API key (context7.com/dashboard; starts with ctx7sk). Optional: search and docs work anonymously at low rate limits; a key raises them and reaches private libraries."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Library ids are URL paths: /owner/repo for GitHub (/vercel/next.js), /<source>/<id> otherwise; pin a version with /owner/repo/<version> or /owner/repo@<version>.",
+    "Typical flow: libs.search to find the id, then docs.context with it; or docs.search in one call when the library is known by name.",
+    "Answers are plain text by default; send type=json for structured results.",
+    "Over the limit answers 429 with Retry-After and RateLimit-Limit/-Remaining/-Reset headers; usage.get shows the month's requests."
+  ],
+  "sources": [
+    "https://context7.com/docs/api-guide",
+    "https://context7.com/openapi.json",
+    "https://context7.com/llms.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "context7.libs.search",
+      "name": "Find a library by name",
+      "summary": "Context7 libraries matching a name, ranked against the question you are trying to answer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/libs/search",
+      "params": {
+        "libraryName": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Library name, up to 500 characters.",
+          "example": "react"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The user's question or task, used for ranking.",
+          "example": "I need to manage state"
+        },
+        "fast": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "true skips LLM reranking for lower latency. Default false."
+        }
+      },
+      "job": "docs.libraries.search",
+      "docs_url": "https://context7.com/docs/api-reference/search/search-for-libraries",
+      "verified": {
+        "docs": "https://context7.com/openapi.json"
+      }
+    },
+    {
+      "id": "context7.docs.context",
+      "name": "Get documentation for a library",
+      "summary": "The snippets and doc sections of one library most relevant to a question, reranked.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/context",
+      "params": {
+        "libraryId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Context7 library id, optionally with a version.",
+          "example": "/facebook/react"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The question or task, up to 500 characters.",
+          "example": "How do I use useState?"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "txt"
+          ],
+          "description": "Default txt."
+        },
+        "fast": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "true skips LLM reranking."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Programming language to rank first, e.g. Python; a soft preference."
+        }
+      },
+      "notes": [
+        "A version that is not indexed is not an error: the nearest matching or newer stable release is served instead."
+      ],
+      "job": "docs.context",
+      "docs_url": "https://context7.com/docs/api-reference/context/get-documentation-context",
+      "verified": {
+        "docs": "https://context7.com/openapi.json"
+      }
+    },
+    {
+      "id": "context7.docs.search",
+      "name": "Search documentation in one call",
+      "summary": "Picks up to four relevant libraries for a question, fetches and reranks their docs, and returns one answer-sized result.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The question or task, up to 2000 characters; pasted error output is fine."
+        },
+        "library": {
+          "in": "query",
+          "type": "array",
+          "description": "Up to four library hints, repeated: a name like next.js or an id like /vercel/next.js."
+        },
+        "version": {
+          "in": "query",
+          "type": "string",
+          "description": "Version preference such as 15 or v2.3.1, or latest."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Programming-language preference; soft."
+        },
+        "context": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "broad"
+          ],
+          "description": "broad appends up to ~3,500 more tokens of the best pages."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "txt"
+          ],
+          "description": "Default txt."
+        }
+      },
+      "job": "docs.search",
+      "docs_url": "https://context7.com/docs/api-reference/search/search-documentation-in-one-request",
+      "verified": {
+        "docs": "https://context7.com/openapi.json"
+      }
+    },
+    {
+      "id": "context7.page.fetch",
+      "name": "Read a web page, optionally only the parts answering a question",
+      "summary": "A public page rendered to Markdown, whole in token-sized slices or narrowed to the sections that answer a question.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/fetch",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Public http(s) URL; local and private addresses are refused."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Question to narrow the page to."
+        },
+        "tokens": {
+          "in": "query",
+          "type": "integer",
+          "description": "100 to 10000. With query, caps the sections (default 1000); without, the slice size (default 5000)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Character offset when query is absent; send nextOffset from the previous answer."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "txt"
+          ],
+          "description": "Default txt."
+        }
+      },
+      "notes": [
+        "With query, a page that does not answer it returns 404 no_relevant_content: try another page."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://context7.com/docs/api-reference/search/read-one-web-page-optionally-narrowed-to-a-question",
+      "verified": {
+        "docs": "https://context7.com/openapi.json"
+      }
+    },
+    {
+      "id": "context7.usage.get",
+      "name": "Get API usage",
+      "summary": "This month's requests for the key's member and the teamspace, extra-request cost and daily counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/usage",
+      "params": {
+        "days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Days of daily history, 1 to 90, default 30 (free plans at most 10)."
+        }
+      },
+      "notes": [
+        "Needs an API key. Calls to it are not counted."
+      ],
+      "credentials": [
+        "api_key"
+      ],
+      "job": "account.usage",
+      "docs_url": "https://context7.com/docs/api-reference/usage/get-api-usage",
+      "verified": {
+        "docs": "https://context7.com/openapi.json"
+      }
+    }
+  ]
+}

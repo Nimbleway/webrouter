@@ -10,12 +10,13 @@ from typing import Any
 
 import pytest
 
-from tests.vendors.conftest import _COMMON, _endpoint
+from tests.vendors.data import _COMMON, _endpoint
 from web_router import AsyncWebRouter, WebRouter
-from web_router.constants_vendors import DATA_API_EXTRACT_LIMIT, VENDOR_ENV_CATALOG_DIR
-from web_router.data_api_discovery import site_matches
+from web_router.constants_data_api import DATA_API_EXTRACT_LIMIT
+from web_router.constants_vendors import VENDOR_ENV_CATALOG_DIR
+from web_router.data_api_sites import site_matches
 from web_router.exceptions import ConfigurationError
-from web_router.vendors.catalog import load_vendor_file, reload_catalog
+from web_router.vendors.catalog import get_catalog, load_vendor_file, reload_catalog
 from web_router.vendors.credentials import EnvCredentials
 
 CLIPS: dict[str, Any] = {
@@ -94,7 +95,7 @@ async def test_the_async_router_lists_them_too(fake_extract_provider: Any) -> No
 
 
 def test_a_url_with_no_host_matches_nothing() -> None:
-    assert site_matches("not a url", EnvCredentials()) == []
+    assert site_matches(get_catalog(), "not a url", EnvCredentials()) == []
 
 
 @pytest.mark.parametrize("site", ["https://clips.test", "Clips.test", "clips.test/videos", "localhost"])

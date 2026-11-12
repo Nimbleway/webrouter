@@ -1,0 +1,352 @@
+{
+  "vendor": "nws",
+  "name": "US National Weather Service",
+  "category": "environment",
+  "summary": "Official US forecasts (7-day and hourly), active weather alerts and station observations from the National Weather Service API (api.weather.gov).",
+  "docs_url": "https://www.weather.gov/documentation/services-web-api",
+  "base_url": "https://api.weather.gov",
+  "settings": {
+    "user_agent": {
+      "env": [
+        "NWS_USER_AGENT"
+      ],
+      "description": "The User-Agent NWS requires to identify your application, ideally with a website or contact email, e.g. '(myweatherapp.com, contact@myweatherapp.com)'."
+    }
+  },
+  "headers": {
+    "User-Agent": "{user_agent}",
+    "Accept": "application/geo+json"
+  },
+  "notes": [
+    "Keyless, but every request needs a User-Agent identifying the application; set NWS_USER_AGENT.",
+    "Rate limits exist but are not published; an over-limit error clears, typically within 5 seconds. Retry after a pause.",
+    "Forecasts are by grid, not by lat/lon: call points.get first, then use properties.gridId, gridX and gridY (or the forecast URLs it returns). The grid of a location can change, so re-check points now and then.",
+    "US territory only. Times are ISO 8601 with offset; temperatures are Fahrenheit unless units=si."
+  ],
+  "sources": [
+    "https://www.weather.gov/documentation/services-web-api",
+    "https://api.weather.gov/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nws.points.get",
+      "name": "Look up a location's forecast grid",
+      "summary": "The forecast office, grid x/y, forecast URLs, nearby stations and zones for a latitude/longitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/points/{latitude},{longitude}",
+      "params": {
+        "latitude": {
+          "in": "path",
+          "type": "number",
+          "required": true,
+          "description": "Latitude, up to 4 decimals.",
+          "example": 39.7456
+        },
+        "longitude": {
+          "in": "path",
+          "type": "number",
+          "required": true,
+          "description": "Longitude, up to 4 decimals.",
+          "example": -97.0892
+        }
+      },
+      "job": "weather.location",
+      "docs_url": "https://www.weather.gov/documentation/services-web-api",
+      "verified": {
+        "docs": "https://www.weather.gov/documentation/services-web-api"
+      }
+    },
+    {
+      "id": "nws.forecast.get",
+      "name": "Get the 7-day forecast",
+      "summary": "Twelve-hour day and night forecast periods for seven days, with text forecasts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/gridpoints/{wfo}/{x},{y}/forecast",
+      "params": {
+        "wfo": {
+          "in": "path",
+          "required": true,
+          "description": "Forecast office id (gridId from points.get).",
+          "example": "TOP"
+        },
+        "x": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Grid X.",
+          "example": 31
+        },
+        "y": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Grid Y.",
+          "example": 80
+        },
+        "units": {
+          "in": "query",
+          "description": "us (default) or si.",
+          "enum": [
+            "us",
+            "si"
+          ]
+        }
+      },
+      "job": "weather.forecast",
+      "docs_url": "https://www.weather.gov/documentation/services-web-api",
+      "verified": {
+        "docs": "https://api.weather.gov/openapi.json"
+      }
+    },
+    {
+      "id": "nws.forecast.hourly",
+      "name": "Get the hourly forecast",
+      "summary": "Hour-by-hour forecast periods for seven days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/gridpoints/{wfo}/{x},{y}/forecast/hourly",
+      "params": {
+        "wfo": {
+          "in": "path",
+          "required": true,
+          "description": "Forecast office id.",
+          "example": "TOP"
+        },
+        "x": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Grid X."
+        },
+        "y": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Grid Y."
+        },
+        "units": {
+          "in": "query",
+          "description": "us (default) or si.",
+          "enum": [
+            "us",
+            "si"
+          ]
+        }
+      },
+      "job": "weather.forecast",
+      "docs_url": "https://www.weather.gov/documentation/services-web-api",
+      "verified": {
+        "docs": "https://api.weather.gov/openapi.json"
+      }
+    },
+    {
+      "id": "nws.alerts.active",
+      "name": "List active weather alerts",
+      "summary": "Watches, warnings and advisories in effect, filtered by state, point, zone, event or severity.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/alerts/active",
+      "params": {
+        "area": {
+          "in": "query",
+          "description": "State/territory or marine area code; not with point, region or zone.",
+          "example": "KS"
+        },
+        "point": {
+          "in": "query",
+          "description": "latitude,longitude; not with area, region or zone.",
+          "example": "39.7456,-97.0892"
+        },
+        "zone": {
+          "in": "query",
+          "description": "Forecast or county zone id."
+        },
+        "region": {
+          "in": "query",
+          "description": "Marine region code."
+        },
+        "region_type": {
+          "in": "query",
+          "description": "land or marine.",
+          "enum": [
+            "land",
+            "marine"
+          ]
+        },
+        "event": {
+          "in": "query",
+          "description": "Event name, e.g. Tornado Warning."
+        },
+        "code": {
+          "in": "query",
+          "description": "Event code."
+        },
+        "status": {
+          "in": "query",
+          "description": "Status.",
+          "enum": [
+            "actual",
+            "exercise",
+            "system",
+            "test",
+            "draft"
+          ]
+        },
+        "message_type": {
+          "in": "query",
+          "description": "Message type.",
+          "enum": [
+            "alert",
+            "update",
+            "cancel"
+          ]
+        },
+        "urgency": {
+          "in": "query",
+          "description": "Urgency.",
+          "enum": [
+            "immediate",
+            "expected",
+            "future",
+            "past",
+            "unknown"
+          ]
+        },
+        "severity": {
+          "in": "query",
+          "description": "Severity.",
+          "enum": [
+            "extreme",
+            "severe",
+            "moderate",
+            "minor",
+            "unknown"
+          ]
+        },
+        "certainty": {
+          "in": "query",
+          "description": "Certainty.",
+          "enum": [
+            "observed",
+            "likely",
+            "possible",
+            "unlikely",
+            "unknown"
+          ]
+        }
+      },
+      "job": "weather.alerts",
+      "docs_url": "https://www.weather.gov/documentation/services-web-api",
+      "verified": {
+        "docs": "https://api.weather.gov/openapi.json"
+      }
+    },
+    {
+      "id": "nws.observations.latest",
+      "name": "Get a station's latest observation",
+      "summary": "The most recent observed temperature, wind, pressure, humidity and conditions at a station.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stations/{stationId}/observations/latest",
+      "params": {
+        "stationId": {
+          "in": "path",
+          "required": true,
+          "description": "Observation station id (from points.get's observationStations).",
+          "example": "KTOP"
+        },
+        "require_qc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only quality-controlled observations."
+        }
+      },
+      "notes": [
+        "Values are SI with a unitCode on each (wmoUnit:degC, km_h-1...), whatever units the forecast uses."
+      ],
+      "job": "weather.current",
+      "docs_url": "https://www.weather.gov/documentation/services-web-api",
+      "verified": {
+        "docs": "https://api.weather.gov/openapi.json"
+      }
+    },
+    {
+      "id": "nws.observations.list",
+      "name": "List a station's recent observations",
+      "summary": "Observations at a station over a time range; only the last seven days are kept.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stations/{stationId}/observations",
+      "params": {
+        "stationId": {
+          "in": "path",
+          "required": true,
+          "description": "Observation station id.",
+          "example": "KTOP"
+        },
+        "start": {
+          "in": "query",
+          "description": "Start time, ISO 8601."
+        },
+        "end": {
+          "in": "query",
+          "description": "End time, ISO 8601."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max observations."
+        },
+        "cursor": {
+          "in": "query",
+          "description": "Pagination cursor."
+        }
+      },
+      "job": "weather.history",
+      "docs_url": "https://www.weather.gov/documentation/services-web-api",
+      "verified": {
+        "docs": "https://api.weather.gov/openapi.json"
+      }
+    },
+    {
+      "id": "nws.gridpoint.stations",
+      "name": "List stations near a grid point",
+      "summary": "Observation stations usable for a forecast grid point, nearest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/gridpoints/{wfo}/{x},{y}/stations",
+      "params": {
+        "wfo": {
+          "in": "path",
+          "required": true,
+          "description": "Forecast office id."
+        },
+        "x": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Grid X."
+        },
+        "y": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Grid Y."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max stations."
+        }
+      },
+      "job": "weather.stations",
+      "docs_url": "https://www.weather.gov/documentation/services-web-api",
+      "verified": {
+        "docs": "https://api.weather.gov/openapi.json"
+      }
+    }
+  ]
+}

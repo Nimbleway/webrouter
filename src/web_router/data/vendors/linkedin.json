@@ -1,0 +1,175 @@
+{
+  "vendor": "linkedin",
+  "name": "LinkedIn",
+  "category": "social",
+  "summary": "LinkedIn's official API for the signed-in member: identity, and posts by a member or company page.",
+  "docs_url": "https://learn.microsoft.com/en-us/linkedin/",
+  "base_url": "https://api.linkedin.com",
+  "settings": {
+    "api_version": {
+      "env": [
+        "LINKEDIN_API_VERSION"
+      ],
+      "default": "202610",
+      "description": "The Linkedin-Version header, YYYYMM. LinkedIn sunsets each monthly version after about a year (202511 on 2026-11-16)."
+    }
+  },
+  "headers": {
+    "X-Restli-Protocol-Version": "2.0.0",
+    "Linkedin-Version": "{api_version}"
+  },
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "LINKEDIN_ACCESS_TOKEN"
+        ],
+        "description": "A LinkedIn member access token from the OAuth 2.0 flow, with the scopes you need (w_member_social to post, openid and profile for identity); LinkedIn Developer Portal > your app > Auth"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Only your own member data, or the company pages you administer: LinkedIn has no public search for people or posts. Permissions such as r_member_social are restricted to approved apps.",
+    "Every call carries Linkedin-Version and X-Restli-Protocol-Version headers; URNs in paths and query values must be URL-encoded.",
+    "Member access tokens expire; refresh them outside this catalog.",
+    "Finder calls need the X-RestLi-Method: FINDER header and page with start and count."
+  ],
+  "sources": [
+    "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2",
+    "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin",
+    "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "linkedin.me.userinfo",
+      "name": "Get the signed-in member",
+      "summary": "Name, picture, locale and (optionally) email of the token's member. sub is the member id: the person URN is urn:li:person:{sub}.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/userinfo",
+      "params": {},
+      "job": "social.profile",
+      "docs_url": "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2"
+      },
+      "notes": [
+        "Needs the openid and profile scopes (email for the email field). email and email_verified may be absent."
+      ]
+    },
+    {
+      "id": "linkedin.posts.by_author",
+      "name": "List posts by a member or organization",
+      "summary": "The posts authored by a person or a company page, last modified first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rest/posts",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always author.",
+          "example": "author",
+          "enum": [
+            "author"
+          ]
+        },
+        "author": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Person or organization URN, URL-encoded.",
+          "example": "urn%3Ali%3Aorganization%3A2414183"
+        },
+        "viewContext": {
+          "in": "query",
+          "type": "string",
+          "description": "READER (published version, default) or AUTHOR (latest version, including drafts).",
+          "enum": [
+            "READER",
+            "AUTHOR"
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first item; default 0."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size; default 10, max 100."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Descending order; default LAST_MODIFIED.",
+          "enum": [
+            "LAST_MODIFIED",
+            "CREATED"
+          ]
+        },
+        "X-RestLi-Method": {
+          "in": "header",
+          "type": "string",
+          "required": true,
+          "description": "Send FINDER.",
+          "example": "FINDER",
+          "enum": [
+            "FINDER"
+          ],
+          "wire_name": "X-RestLi-Method"
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
+      },
+      "notes": [
+        "A member's posts need r_member_social, which only approved apps get; an organization's need r_organization_social and an admin-type page role.",
+        "Pages by start and count; paging.links gives the next page."
+      ]
+    },
+    {
+      "id": "linkedin.posts.get",
+      "name": "Get a post",
+      "summary": "One post by its share or ugcPost URN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rest/posts/{post_urn}",
+      "params": {
+        "post_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Share or ugcPost URN, URL-encoded (urn%3Ali%3Ashare%3A123).",
+          "example": "urn:li:share:6844785523593134080"
+        },
+        "viewContext": {
+          "in": "query",
+          "type": "string",
+          "description": "READER (default) or AUTHOR.",
+          "enum": [
+            "READER",
+            "AUTHOR"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api"
+      }
+    }
+  ]
+}

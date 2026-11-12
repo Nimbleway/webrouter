@@ -1,0 +1,352 @@
+{
+  "vendor": "bestbuy",
+  "name": "Best Buy",
+  "category": "commerce",
+  "summary": "Best Buy US products: search and details with prices, stores and in-store availability, categories, trending and most-viewed products, and open-box offers.",
+  "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+  "base_url": "https://api.bestbuy.com/v1",
+  "hosts": {
+    "beta": "https://api.bestbuy.com/beta"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BESTBUY_API_KEY"
+        ],
+        "description": "A free Best Buy developer API key (developer.bestbuy.com), sent as the apiKey query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apiKey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Products, stores and categories answer XML unless format=json is passed; recommendations and open box are JSON only.",
+    "Search expressions go inside parentheses in the path: products(search=oven&salePrice<500), with & for AND, | for OR, in(a,b) and trailing * wildcards. Attribute names are case-sensitive.",
+    "Past 10 pages use cursorMark=* and then the returned nextCursorMark instead of page.",
+    "A 403 means a bad key or the call quota is exceeded; prefer one in(...) query over many single lookups to avoid per-second errors.",
+    "Links in responses (url, addToCartUrl) expire after seven days."
+  ],
+  "sites": [
+    "bestbuy.com"
+  ],
+  "sources": [
+    "https://bestbuyapis.github.io/api-documentation/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "bestbuy.products.search",
+      "name": "Search products",
+      "summary": "Products matching a search expression, with chosen attributes, sorting, facets and paging.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products({expression})",
+      "params": {
+        "expression": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Search expression, e.g. search=oven&salePrice<500, or manufacturer=apple&onSale=true.",
+          "example": "search=macbook"
+        },
+        "show": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated attributes to return, or all.",
+          "example": "sku,name,salePrice,regularPrice,url"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "attribute.asc or attribute.desc, comma-separated.",
+          "example": "salePrice.asc"
+        },
+        "facet": {
+          "in": "query",
+          "type": "string",
+          "description": "attribute,count for summary counts, e.g. manufacturer,5."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 10, max 100."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "cursorMark": {
+          "in": "query",
+          "type": "string",
+          "description": "* for the first page, then nextCursorMark, for result sets beyond 10 pages."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or xml; products, stores and categories default to XML.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "products.search",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    },
+    {
+      "id": "bestbuy.products.get",
+      "name": "Get a product",
+      "summary": "One product by SKU.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{sku}.json",
+      "params": {
+        "sku": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Best Buy SKU.",
+          "example": 6487435
+        },
+        "show": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated attributes to return, or all.",
+          "example": "sku,name,salePrice,regularPrice,url"
+        }
+      },
+      "job": "products.get",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    },
+    {
+      "id": "bestbuy.products.availability",
+      "name": "Get in-store availability",
+      "summary": "Stores within 250 miles of a postal code that have a SKU, nearest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{sku}/stores.json",
+      "params": {
+        "sku": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Best Buy SKU."
+        },
+        "postalCode": {
+          "in": "query",
+          "type": "string",
+          "description": "US ZIP code to search around.",
+          "example": "55423"
+        },
+        "storeId": {
+          "in": "query",
+          "type": "integer",
+          "description": "One store id instead of a postal code."
+        }
+      },
+      "job": "products.availability",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    },
+    {
+      "id": "bestbuy.stores.search",
+      "name": "Find stores",
+      "summary": "Stores matching an expression such as area(postalCode,miles), with hours or services on request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stores({expression})",
+      "params": {
+        "expression": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "e.g. area(55423,10) for stores within 10 miles of a ZIP (distance defaults to 10).",
+          "example": "area(55423,10)"
+        },
+        "show": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributes; hours, hoursAmPm, gmtOffset, detailedHours and services must be asked for."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 10, max 100."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or xml; products, stores and categories default to XML.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    },
+    {
+      "id": "bestbuy.categories.search",
+      "name": "Find categories",
+      "summary": "Categories by name, id or path id, with their paths and subcategories.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/categories({expression})",
+      "params": {
+        "expression": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "e.g. name=Laptops*, id=abcat0400000, or path.id=abcat0400000.",
+          "example": "name=Laptops*"
+        },
+        "show": {
+          "in": "query",
+          "type": "string",
+          "description": "Attributes, e.g. id,name,path,subCategories."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 10, max 100."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or xml; products, stores and categories default to XML.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "reference.categories",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    },
+    {
+      "id": "bestbuy.products.trending",
+      "name": "Get trending products",
+      "summary": "Top 10 products by views in a category over a rolling three hours.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/trendingViewed(categoryId={category_id})",
+      "params": {
+        "category_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Category id (not name).",
+          "example": "abcat0400000"
+        }
+      },
+      "job": "products.trending",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    },
+    {
+      "id": "bestbuy.products.most-viewed",
+      "name": "Get most-viewed products",
+      "summary": "Top 10 most-viewed products in a category, refreshed every two hours.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/mostViewed(categoryId={category_id})",
+      "params": {
+        "category_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Category id (not name).",
+          "example": "abcat0107000"
+        }
+      },
+      "job": "products.trending",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    },
+    {
+      "id": "bestbuy.products.also-viewed",
+      "name": "Get products also viewed",
+      "summary": "Top 10 products viewed together with a SKU over 30 days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{sku}/alsoViewed",
+      "params": {
+        "sku": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Best Buy SKU."
+        }
+      },
+      "job": "products.related",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    },
+    {
+      "id": "bestbuy.openbox.get",
+      "name": "Get open-box offers for a SKU",
+      "summary": "Open-box offers (excellent or certified condition) and prices for one product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{sku}/openBox",
+      "params": {
+        "sku": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Best Buy SKU."
+        }
+      },
+      "notes": [
+        "Beta API. No offers is a 200 with an empty result."
+      ],
+      "job": "products.offers",
+      "host": "beta",
+      "docs_url": "https://bestbuyapis.github.io/api-documentation/",
+      "verified": {
+        "docs": "https://bestbuyapis.github.io/api-documentation/"
+      }
+    }
+  ]
+}

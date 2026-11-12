@@ -1,102 +1,101 @@
-"""Data API discovery: catalog endpoints listed beside a ``search``'s web results and an ``extract``'s pages.
+"""Data API discovery in ``search``: the data APIs a query names, listed beside the web results.
 
-Search matches the query's words; extract matches each page's site against
-the catalog's ``sites``. Matching is local and free: it reads the catalog and calls nothing. A match is
+Matching is local and free: it reads the catalog and calls nothing (see
+:mod:`web_router.data_api_names` for when a query names a data API). A match is
 only ever listed; running one stays :meth:`~web_router.WebRouter.call_vendor`'s.
-Only read endpoints are listed: a search or a page read is a question, and an endpoint that
+Only read endpoints are listed: a search is a question, and an endpoint that
 changes data is found with :meth:`~web_router.WebRouter.find_vendor_endpoints`.
 """
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Iterable
 from typing import Any
-from urllib.parse import urlsplit
 
 from web_router.client_requests import build_search_request
-from web_router.constants_vendors import (
-    DATA_API_EXTRACT_LIMIT,
-    DATA_API_MIN_SCORE,
+from web_router.constants_data_api import (
     DATA_API_SEARCH_LIMIT,
     DATA_APIS_ONLY_PROVIDER,
+    MSG_DATA_API_CATALOG_SKIPPED,
     MSG_DATA_APIS_ONLY_CONFLICT,
     MSG_DATA_APIS_ONLY_OFF,
 )
-from web_router.types import ExtractedDocument, ExtractResponse, SearchResponse
+from web_router.data_api_names import named_endpoints
+from web_router.exceptions import ConfigurationError
+from web_router.types import SearchResponse
 from web_router.types_data_api import DataApiMatch
-from web_router.vendors.catalog import get_catalog
+from web_router.vendors.catalog import VendorCatalog, get_catalog
 from web_router.vendors.credentials import CredentialSource, missing_credentials
 from web_router.vendors.schema import Vendor, VendorEndpoint
 
-
-def _match(owner: Vendor, endpoint: VendorEndpoint, source: CredentialSource) -> DataApiMatch:
-    missing = missing_credentials(owner, source, endpoint)
-    return DataApiMatch(
-        endpoint=endpoint.id,
-        data_api=owner.vendor,
-        name=endpoint.name,
-        summary=endpoint.summary,
-        kind=endpoint.kind,
-        docs_url=endpoint.docs_url,
-        configured=not missing,
-        missing=missing,
-    )
+logger = logging.getLogger(__name__)
 
 
 def find_matches(
-    query: str, source: CredentialSource, *, configured_only: bool = False, limit: int | None = None
+    query: str,
+    source: CredentialSource,
+    *,
+    configured_only: bool = False,
+    limit: int | None = None,
+    catalog: VendorCatalog | None = None,
 ) -> list[DataApiMatch]:
-    """The endpoints matching ``query`` well enough to list, best first; ``configured_only`` keeps the callable ones."""
-    catalog = get_catalog()
+    """The endpoints of the data APIs ``query`` names, best first; ``configured_only`` keeps the callable ones."""
+    pairs = named_endpoints(catalog or get_catalog(), query)
+    return listed(
+        pairs, source, configured_only=configured_only, limit=DATA_API_SEARCH_LIMIT if limit is None else limit
+    )
+
+
+def listed(
+    pairs: Iterable[tuple[Vendor, VendorEndpoint]], source: CredentialSource, *, configured_only: bool, limit: int
+) -> list[DataApiMatch]:
+    """The first ``limit`` of ``pairs`` as matches, each saying whether its credentials are set."""
     matches: list[DataApiMatch] = []
-    for endpoint in catalog.find(query, kind="read", min_score=DATA_API_MIN_SCORE):
-        match = _match(catalog.vendor(endpoint.vendor), endpoint, source)
-        if configured_only and not match.configured:
+    for owner, endpoint in pairs:
+        missing = missing_credentials(owner, source, endpoint)
+        if configured_only and missing:
             continue
-        matches.append(match)
-        if len(matches) >= (DATA_API_SEARCH_LIMIT if limit is None else limit):
+        matches.append(
+            DataApiMatch(
+                endpoint=endpoint.id,
+                data_api=owner.vendor,
+                name=endpoint.name,
+                summary=endpoint.summary,
+                kind=endpoint.kind,
+                docs_url=endpoint.docs_url,
+                configured=not missing,
+                missing=missing,
+            )
+        )
+        if len(matches) >= limit:
             break
     return matches
 
 
+def load_catalog(data_apis: bool) -> VendorCatalog | None:
+    """The catalog a web search lists matches from, read before the backend is called; ``None`` when it will list none.
+
+    A catalog that does not load -- a broken file in ``WEB_ROUTER_VENDOR_CATALOG`` -- is logged and skipped, so the
+    web search it rides on still answers.
+    """
+    if not data_apis:
+        return None
+    try:
+        return get_catalog()
+    except ConfigurationError as exc:
+        logger.warning(MSG_DATA_API_CATALOG_SKIPPED, exc)
+        return None
+
+
 def with_matches(
-    response: SearchResponse, source: CredentialSource, *, data_apis: bool, configured_only: bool
+    response: SearchResponse, source: CredentialSource, *, catalog: VendorCatalog | None, configured_only: bool
 ) -> SearchResponse:
-    """``response`` with its data API matches, or untouched when discovery is off."""
-    if not data_apis:
+    """``response`` with its data API matches, or untouched when there is no catalog to read them from."""
+    if catalog is None:
         return response
-    matches = find_matches(response.query, source, configured_only=configured_only)
+    matches = find_matches(response.query, source, configured_only=configured_only, catalog=catalog)
     return response.model_copy(update={"data_apis": matches}) if matches else response
-
-
-def site_matches(url: str, source: CredentialSource, *, configured_only: bool = False) -> list[DataApiMatch]:
-    """The read endpoints of every data API that serves ``url``'s site: those whose words the URL's path holds first."""
-    catalog = get_catalog()
-    path = urlsplit(url)
-    matches: list[DataApiMatch] = []
-    for owner in catalog.for_site(url):
-        ranked = catalog.find(f"{path.path} {path.query}", vendor=owner.vendor, kind="read")
-        endpoints = [*ranked, *(item for item in owner.endpoints if item.kind == "read" and item not in ranked)]
-        for endpoint in endpoints:
-            match = _match(owner, endpoint, source)
-            if configured_only and not match.configured:
-                continue
-            matches.append(match)
-            if len(matches) >= DATA_API_EXTRACT_LIMIT:
-                return matches
-    return matches
-
-
-def with_site_matches(
-    response: ExtractResponse, source: CredentialSource, *, data_apis: bool, configured_only: bool
-) -> ExtractResponse:
-    """``response`` with each page's data API matches, or untouched when discovery is off or nothing matched."""
-    if not data_apis:
-        return response
-    documents: list[ExtractedDocument] = []
-    for document in response.documents:
-        matches = site_matches(document.url, source, configured_only=configured_only)
-        documents.append(document.model_copy(update={"data_apis": matches}) if matches else document)
-    return response.model_copy(update={"documents": documents})
 
 
 def matches_only(
@@ -110,7 +109,8 @@ def matches_only(
 ) -> SearchResponse:
     """A ``search(data_apis_only=True)``: the matches alone, with no web backend called.
 
-    A web option set alongside it raises rather than being dropped, since nothing here would honour it.
+    A web option set alongside it raises rather than being dropped, since nothing here would honour it. A catalog
+    that does not load raises too: the matches are all this search asked for.
     """
     if not data_apis:
         raise ValueError(MSG_DATA_APIS_ONLY_OFF)

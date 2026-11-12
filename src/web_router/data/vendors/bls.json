@@ -1,0 +1,182 @@
+{
+  "vendor": "bls",
+  "name": "US Bureau of Labor Statistics",
+  "category": "finance",
+  "summary": "US labor and price statistics (CPI, PPI, employment, unemployment, wages) as time series from the BLS Public Data API v2.",
+  "docs_url": "https://www.bls.gov/developers/api_signature_v2.htm",
+  "base_url": "https://api.bls.gov/publicAPI/v2",
+  "auth": {
+    "credentials": {
+      "registration_key": {
+        "env": [
+          "BLS_API_KEY"
+        ],
+        "description": "a free BLS Public Data API v2 registration key (register on bls.gov/developers; the key arrives by email). Sent as the registrationkey query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "registrationkey",
+        "value": "{registration_key}"
+      }
+    ]
+  },
+  "notes": [
+    "v2 limits per key: 500 queries a day, 50 series and 20 years per query, 50 requests per 10 seconds.",
+    "Series ids are uppercase codes and may contain _, - and #; lowercase letters and other characters are rejected. The popular-series and survey endpoints help find them.",
+    "With no years given, a series call returns the past three years. Years are four-digit YYYY values.",
+    "The optional catalog, calculations, annualaverage and aspects outputs need the registration key."
+  ],
+  "sources": [
+    "https://www.bls.gov/developers/api_signature_v2.htm",
+    "https://www.bls.gov/developers/api_faqs.htm"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "bls.series.get",
+      "name": "Get one series",
+      "summary": "Data for one series id, the past three years, or only the latest observation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/timeseries/data/{series_id}",
+      "params": {
+        "series_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "BLS series id.",
+          "example": "LAUCN040010000000005"
+        },
+        "latest": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true returns only the most recent observation."
+        }
+      },
+      "job": "economy.series.get",
+      "docs_url": "https://www.bls.gov/developers/api_signature_v2.htm",
+      "verified": {
+        "docs": "https://www.bls.gov/developers/api_signature_v2.htm"
+      }
+    },
+    {
+      "id": "bls.series.query",
+      "name": "Get several series over a year range",
+      "summary": "Data for up to 50 series between two years, with optional catalog metadata, net/percent changes and annual averages.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/timeseries/data/",
+      "params": {
+        "seriesid": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Series ids, up to 50.",
+          "example": [
+            "LAUCN040010000000005"
+          ]
+        },
+        "startyear": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "First year, YYYY.",
+          "example": "2010"
+        },
+        "endyear": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Last year, YYYY; at most 20 years after startyear.",
+          "example": "2014"
+        },
+        "catalog": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include series catalog metadata (title, survey, area...). Default false."
+        },
+        "calculations": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include net and percent changes. Default false."
+        },
+        "annualaverage": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include annual averages. Default false."
+        },
+        "aspects": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include aspect data (e.g. standard errors) where the series has it. Default false."
+        }
+      },
+      "notes": [
+        "A read sent as a POST with a JSON body."
+      ],
+      "job": "economy.series.get",
+      "docs_url": "https://www.bls.gov/developers/api_signature_v2.htm",
+      "verified": {
+        "docs": "https://www.bls.gov/developers/api_signature_v2.htm"
+      }
+    },
+    {
+      "id": "bls.series.popular",
+      "name": "List popular series",
+      "summary": "The 25 most requested series ids, overall or within one survey.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/timeseries/popular",
+      "params": {
+        "survey": {
+          "in": "query",
+          "type": "string",
+          "description": "Survey abbreviation to restrict to.",
+          "example": "LA"
+        }
+      },
+      "job": "economy.series.search",
+      "docs_url": "https://www.bls.gov/developers/api_signature_v2.htm",
+      "verified": {
+        "docs": "https://www.bls.gov/developers/api_signature_v2.htm"
+      }
+    },
+    {
+      "id": "bls.surveys.list",
+      "name": "List surveys",
+      "summary": "Every BLS survey with its abbreviation (CU, LN, CE, ...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/surveys",
+      "job": "economy.datasets.list",
+      "docs_url": "https://www.bls.gov/developers/api_signature_v2.htm",
+      "verified": {
+        "docs": "https://www.bls.gov/developers/api_signature_v2.htm"
+      }
+    },
+    {
+      "id": "bls.surveys.get",
+      "name": "Get a survey",
+      "summary": "Metadata for one survey by abbreviation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/surveys/{survey}",
+      "params": {
+        "survey": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Survey abbreviation.",
+          "example": "TU"
+        }
+      },
+      "job": "economy.datasets.get",
+      "docs_url": "https://www.bls.gov/developers/api_signature_v2.htm",
+      "verified": {
+        "docs": "https://www.bls.gov/developers/api_signature_v2.htm"
+      }
+    }
+  ]
+}

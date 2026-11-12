@@ -9,12 +9,8 @@ import pytest
 
 from tests.vendors.conftest import Recorder
 from web_router import AsyncWebRouter
-from web_router.constants_vendors import (
-    MCP_TOOL_CALL_VENDOR,
-    MCP_TOOL_VENDOR_ENDPOINT,
-    MCP_TOOL_VENDORS,
-    VENDOR_ENV_ALLOW_WRITES,
-)
+from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
+from web_router.constants_vendors_mcp import MCP_TOOL_CALL_VENDOR, MCP_TOOL_VENDOR_ENDPOINT, MCP_TOOL_VENDORS
 from web_router.exceptions_vendors import VendorWriteRefusedError
 from web_router.mcp.env import credential_variables
 from web_router.mcp.shaping_vendors import shape_vendor_response

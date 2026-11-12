@@ -1,0 +1,480 @@
+{
+  "vendor": "coingecko",
+  "name": "CoinGecko",
+  "category": "finance",
+  "summary": "Crypto prices, market data, history, OHLC candles and trending coins from CoinGecko.",
+  "docs_url": "https://docs.coingecko.com/reference/introduction",
+  "pricing_url": "https://www.coingecko.com/en/api/pricing",
+  "base_url": "https://{host}/api/v3",
+  "settings": {
+    "host": {
+      "env": [
+        "COINGECKO_HOST"
+      ],
+      "default": "api.coingecko.com",
+      "choices": [
+        "api.coingecko.com",
+        "pro-api.coingecko.com"
+      ],
+      "description": "api.coingecko.com for the Demo (free) plan, pro-api.coingecko.com for paid plans."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "demo_api_key": {
+        "env": [
+          "COINGECKO_DEMO_API_KEY"
+        ],
+        "required": false,
+        "description": "a CoinGecko Demo (free) API key (coingecko.com/en/developers/dashboard); use with host api.coingecko.com"
+      },
+      "pro_api_key": {
+        "env": [
+          "COINGECKO_PRO_API_KEY",
+          "COINGECKO_API_KEY"
+        ],
+        "required": false,
+        "description": "a CoinGecko paid-plan API key (coingecko.com/en/developers/dashboard); use with host pro-api.coingecko.com"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-cg-demo-api-key",
+        "value": "{demo_api_key}",
+        "optional": true,
+        "when": {
+          "host": "api.coingecko.com"
+        }
+      },
+      {
+        "in": "header",
+        "name": "x-cg-pro-api-key",
+        "value": "{pro_api_key}",
+        "optional": true,
+        "when": {
+          "host": "pro-api.coingecko.com"
+        }
+      }
+    ]
+  },
+  "notes": [
+    "Set COINGECKO_HOST to pro-api.coingecko.com for a paid key; the default api.coingecko.com is the Demo (free) host. Each key is sent only to its own host: the Demo key to api.coingecko.com, the paid key to pro-api.coingecko.com.",
+    "Each successful call spends 1 monthly credit; rate limits depend on the plan.",
+    "Some endpoints and parameters need Analyst plan or above; the Demo plan covers a subset.",
+    "Coin ids are CoinGecko slugs (bitcoin, not BTC); look them up with coingecko.search or coingecko.coins.list."
+  ],
+  "sites": [
+    "coingecko.com"
+  ],
+  "sources": [
+    "https://docs.coingecko.com/reference/introduction",
+    "https://docs.coingecko.com/reference/authentication",
+    "https://docs.coingecko.com/demo/reference/authentication",
+    "https://docs.coingecko.com/reference/endpoint-overview",
+    "https://docs.coingecko.com/openapi-specs/pro-api.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "coingecko.price.simple",
+      "name": "Get coin prices",
+      "summary": "Current price of one or more coins in one or more currencies, by id, name or symbol.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/simple/price",
+      "params": {
+        "vs_currencies": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated target currencies.",
+          "example": "usd"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated coin ids; wins over names and symbols.",
+          "example": "bitcoin,ethereum"
+        },
+        "names": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated coin names."
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated symbols."
+        },
+        "include_market_cap": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add market cap."
+        },
+        "include_24hr_vol": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add 24-hour volume."
+        },
+        "include_24hr_change": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add 24-hour change percentage."
+        },
+        "include_last_updated_at": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the last-updated UNIX timestamp."
+        },
+        "precision": {
+          "in": "query",
+          "type": "string",
+          "description": "Decimal places for the price."
+        }
+      },
+      "notes": [
+        "Up to 515 ids per call.",
+        "A symbol lookup returns only the top-ranked coin per symbol unless include_tokens=all."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://docs.coingecko.com/reference/simple-price",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/simple-price"
+      }
+    },
+    {
+      "id": "coingecko.coins.markets",
+      "name": "List coins with market data",
+      "summary": "Price, market cap, volume and change for many coins at once, ranked.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/coins/markets",
+      "params": {
+        "vs_currency": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target currency, e.g. usd.",
+          "example": "usd"
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated coin ids."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Coin category id; wins over ids."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, default market_cap_desc."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 250; default 100."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "sparkline": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add 7-day sparkline."
+        },
+        "price_change_percentage": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra change windows, comma-separated, e.g. 1h,24h,7d."
+        }
+      },
+      "notes": [
+        "Page with page and per_page; at most 250 ids per call."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://docs.coingecko.com/reference/coins-markets",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/coins-markets"
+      }
+    },
+    {
+      "id": "coingecko.coins.get",
+      "name": "Get a coin's metadata and market data",
+      "summary": "Everything CoinGecko holds on one coin: description, links, market data, tickers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/coins/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Coin API id, e.g. bitcoin (from coingecko.coins.list or search).",
+          "example": "bitcoin"
+        },
+        "localization": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include all localized names; default true."
+        },
+        "tickers": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include tickers; default true."
+        },
+        "market_data": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include market data; default true."
+        },
+        "sparkline": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include 7-day sparkline."
+        }
+      },
+      "notes": [
+        "The payload is large; turn off localization and tickers to shrink it."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://docs.coingecko.com/reference/coins-id",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/coins-id"
+      }
+    },
+    {
+      "id": "coingecko.coins.market_chart",
+      "name": "Get a coin's price history",
+      "summary": "Prices, market caps and volumes over the last N days, as [timestamp_ms, value] pairs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/coins/{id}/market_chart",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Coin API id, e.g. bitcoin (from coingecko.coins.list or search).",
+          "example": "bitcoin"
+        },
+        "vs_currency": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target currency, e.g. usd.",
+          "example": "usd"
+        },
+        "days": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Days back: an integer or max.",
+          "example": "30"
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "daily or hourly; leave empty for automatic granularity."
+        },
+        "precision": {
+          "in": "query",
+          "type": "string",
+          "description": "Decimal places for prices."
+        }
+      },
+      "notes": [
+        "Automatic granularity: 5-minute for 1 day, hourly for 2 to 90 days, daily above 90 days.",
+        "Timestamps are epoch milliseconds. Basic plan history is limited to the past 2 years."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.coingecko.com/reference/coins-id-market-chart",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/coins-id-market-chart"
+      }
+    },
+    {
+      "id": "coingecko.coins.ohlc",
+      "name": "Get a coin's OHLC candles",
+      "summary": "Open, high, low, close candles for the last N days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/coins/{id}/ohlc",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Coin API id, e.g. bitcoin (from coingecko.coins.list or search).",
+          "example": "bitcoin"
+        },
+        "vs_currency": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target currency, e.g. usd.",
+          "example": "usd"
+        },
+        "days": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Days back, e.g. 1, 7, 14, 30, 90, 180, 365, max.",
+          "example": "7"
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "daily or hourly, paid plans only."
+        },
+        "precision": {
+          "in": "query",
+          "type": "string",
+          "description": "Decimal places."
+        }
+      },
+      "notes": [
+        "Each candle is [close_time_ms, open, high, low, close]. Candle width is automatic: 30 minutes for 1 to 2 days, 4 hours for 3 to 30, 4 days beyond."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.coingecko.com/reference/coins-id-ohlc",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/coins-id-ohlc"
+      }
+    },
+    {
+      "id": "coingecko.coins.history",
+      "name": "Get a coin's snapshot on a date",
+      "summary": "Price, market cap and volume at 00:00 UTC on a given day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/coins/{id}/history",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Coin API id, e.g. bitcoin (from coingecko.coins.list or search).",
+          "example": "bitcoin"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Snapshot date, YYYY-MM-DD.",
+          "example": "2025-12-30"
+        },
+        "localization": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include localized names."
+        }
+      },
+      "notes": [
+        "The data is a snapshot at 00:00:00 UTC; the last completed day appears 35 minutes after midnight UTC. Basic plan history is limited to 2 years."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.coingecko.com/reference/coins-id-history",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/coins-id-history"
+      }
+    },
+    {
+      "id": "coingecko.coins.list",
+      "name": "List all coins",
+      "summary": "Every supported coin with its id, symbol and name; use it to map symbols to ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/coins/list",
+      "params": {
+        "include_platform": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add contract addresses per platform."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "active (default) or inactive."
+        }
+      },
+      "notes": [
+        "Not paginated; the response holds many thousands of rows."
+      ],
+      "docs_url": "https://docs.coingecko.com/reference/coins-list",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/coins-list"
+      }
+    },
+    {
+      "id": "coingecko.search",
+      "name": "Search coins, categories and markets",
+      "summary": "Search by name or symbol; results are sorted by market cap.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text.",
+          "example": "bitcoin"
+        }
+      },
+      "docs_url": "https://docs.coingecko.com/reference/search-data",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/search-data"
+      }
+    },
+    {
+      "id": "coingecko.trending",
+      "name": "List trending searches",
+      "summary": "Coins, NFTs and categories most searched in the last 24 hours.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/trending",
+      "params": {
+        "show_max": {
+          "in": "query",
+          "type": "string",
+          "description": "coins, nfts or categories (comma-separated) to return the maximum; Analyst plan and above."
+        }
+      },
+      "docs_url": "https://docs.coingecko.com/reference/trending-search",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/trending-search"
+      }
+    },
+    {
+      "id": "coingecko.global",
+      "name": "Get global crypto market data",
+      "summary": "Total market cap, volume, dominance and active coin counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/global",
+      "docs_url": "https://docs.coingecko.com/reference/crypto-global",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/crypto-global"
+      }
+    },
+    {
+      "id": "coingecko.ping",
+      "name": "Check server status",
+      "summary": "Answers with a greeting when the API is up.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ping",
+      "job": "account.validate",
+      "docs_url": "https://docs.coingecko.com/reference/ping-server",
+      "verified": {
+        "docs": "https://docs.coingecko.com/reference/ping-server"
+      }
+    }
+  ]
+}

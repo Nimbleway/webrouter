@@ -1,0 +1,593 @@
+{
+  "vendor": "fiber-ai",
+  "name": "Fiber AI",
+  "category": "company-data",
+  "summary": "B2B company and people search, LinkedIn live enrichment, and email and phone reveal.",
+  "docs_url": "https://api.fiber.ai/llms.txt",
+  "pricing_url": "https://fiber.ai/pricing",
+  "base_url": "https://api.fiber.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FIBER_API_KEY"
+        ],
+        "description": "a Fiber API key (fiber.ai/app/api)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced: every call states its cost, and responses carry chargeInfo with what was billed. GET /v1/get-org-credits is free.",
+    "The docs show the key in the body (POST) or query (GET); the x-api-key header is documented as equivalent and is what this entry sends.",
+    "Cursor pagination: send the cursor from the previous response; pageSize is capped at 1000.",
+    "Rate limits are per operation (for example 180 per minute for searches, 120 for lookups)."
+  ],
+  "sources": [
+    "https://api.fiber.ai/llms.txt",
+    "https://api.fiber.ai/ai-docs/index.md",
+    "https://api.fiber.ai/openapi.json",
+    "https://api.fiber.ai/ai-docs/companySearch.md",
+    "https://api.fiber.ai/ai-docs/peopleSearch.md",
+    "https://api.fiber.ai/ai-docs/kitchenSinkCompany.md",
+    "https://api.fiber.ai/ai-docs/syncQuickContactReveal.md"
+  ],
+  "endpoints": [
+    {
+      "id": "fiber-ai.account.credits",
+      "name": "Get organization credits",
+      "summary": "Credits max, used and available for the organization, with the per-operation credit prices.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/get-org-credits",
+      "params": {},
+      "notes": [
+        "Free. Check it before chargeable calls."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api.fiber.ai/ai-docs/getOrgCredits.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/getOrgCredits.md"
+      }
+    },
+    {
+      "id": "fiber-ai.company.search",
+      "name": "Search companies by filters",
+      "summary": "Filter-based company discovery: domain, location, headcount, industry, funding stage, keywords, founding date and more.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/company-search",
+      "params": {
+        "searchParams": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Typed filters, all optional: exactCompanyV2, domains, headquartersCountryCode, headquartersStateName, employeeCountV2, employeeCountRanges, keywords, industriesV2, stage, totalFundingUSD, lastFundingUSD, lastFundedOn, foundedOn, nameLike, acceleratorsV2. Most take anyOf/noneOf lists or lowerBound/upperBound."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Companies per page, default 25, max 1000.",
+          "example": 25
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Pagination cursor from the previous response."
+        },
+        "companyExclusionListIDs": {
+          "in": "body",
+          "type": "array",
+          "description": "Company exclusion list ids whose members are filtered out."
+        },
+        "includeCount": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return an estimated total match count (one extra credit)."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "Costs 1 credit per company returned, plus 1 when includeCount is true. Paginate with cursor.",
+        "Use the free enum endpoints (industries, regions, technologies) to build valid filter values."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.fiber.ai/ai-docs/companySearch.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/companySearch.md"
+      }
+    },
+    {
+      "id": "fiber-ai.people.search",
+      "name": "Search people by filters",
+      "summary": "Filter-based prospect discovery by title, seniority, function, location, current company and keywords.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people-search",
+      "params": {
+        "searchParams": {
+          "in": "body",
+          "type": "object",
+          "description": "Typed filters, all optional: country3LetterCode, numConnections, numFollowers, approxAge, keywords, keywordsV2, keywordSearchOptions, jobTitleV2, jobFunction, exactProfile, exactProfileV2, startedInRole, startedAtCompany, location."
+        },
+        "currentCompanies": {
+          "in": "body",
+          "type": "array",
+          "description": "Restrict to people currently working at these companies (identified by domain, LinkedIn URL or org id)."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Profiles per page, default 25, max 1000.",
+          "example": 25
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Pagination cursor from the previous response."
+        },
+        "prospectExclusionListIDs": {
+          "in": "body",
+          "type": "array",
+          "description": "Prospect exclusion list ids to filter out."
+        },
+        "companyExclusionListIDs": {
+          "in": "body",
+          "type": "array",
+          "description": "Company exclusion list ids; people at those companies are filtered out."
+        },
+        "includeCount": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return an estimated total match count (one extra credit)."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "Costs 1 credit per profile returned, plus 1 when includeCount is true. Paginate with cursor.",
+        "Search results carry no emails or phone numbers; use contacts.reveal for those."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.fiber.ai/ai-docs/peopleSearch.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/peopleSearch.md"
+      }
+    },
+    {
+      "id": "fiber-ai.jobs.search",
+      "name": "Search job postings",
+      "summary": "Job postings with flexible filters, useful as a hiring signal for companies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/job-search",
+      "params": {
+        "searchParams": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Job search filters."
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Jobs per page, default 25, max 1000."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Pagination cursor from the previous response."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "Costs 1 credit per job posting returned."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://api.fiber.ai/ai-docs/jobPostingSearch.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/jobPostingSearch.md"
+      }
+    },
+    {
+      "id": "fiber-ai.search.natural_language",
+      "name": "Search companies or people in plain language",
+      "summary": "Free-form query such as 'Senior PMs at Series A fintechs in New York'; the API picks companies or people and builds the filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/nlp-search/run",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "The natural-language query. Required on the first page.",
+          "example": "VPs of Sales at fintech startups in NYC"
+        },
+        "pageSize": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "pageToken": {
+          "in": "body",
+          "type": "string",
+          "description": "nextPageToken from the previous response; the query is then ignored."
+        },
+        "companyExclusionListIDs": {
+          "in": "body",
+          "type": "array",
+          "description": "Company exclusion list ids."
+        },
+        "peopleExclusionListIDs": {
+          "in": "body",
+          "type": "array",
+          "description": "People exclusion list ids."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "First page costs 2 credits for interpreting the query, plus 1 credit per company or profile returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.fiber.ai/ai-docs/slushieRun.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/slushieRun.md"
+      }
+    },
+    {
+      "id": "fiber-ai.company.lookup",
+      "name": "Look up a company from any identifier",
+      "summary": "Full company record from a LinkedIn slug, URL or org id, a domain or a name.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/kitchen-sink/company",
+      "params": {
+        "companyIdentifier": {
+          "in": "body",
+          "type": "object",
+          "description": "{identifier, value}: identifier is linkedinSlug, linkedinUrl or linkedinOrgID. Most accurate.",
+          "example": {
+            "identifier": "linkedinSlug",
+            "value": "microsoft"
+          }
+        },
+        "companyName": {
+          "in": "body",
+          "type": "object",
+          "description": "{value}: the company name; all words must match."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "object",
+          "description": "{value}: the company domain; https and www are stripped.",
+          "example": {
+            "value": "fiber.ai"
+          }
+        },
+        "companyLocation": {
+          "in": "body",
+          "type": "object",
+          "description": "{countryCode (ISO alpha-3), stateName, locality} to disambiguate."
+        },
+        "numCompanies": {
+          "in": "body",
+          "type": "integer",
+          "description": "Max results, 1 to 10, default 1."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "2 credits per lookup. Prefer a LinkedIn identifier or domain over a bare name, which can collide."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api.fiber.ai/ai-docs/kitchenSinkCompany.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/kitchenSinkCompany.md"
+      }
+    },
+    {
+      "id": "fiber-ai.people.lookup",
+      "name": "Look up a person from any identifier",
+      "summary": "Profile record from a LinkedIn URL or slug, an email, or a name with company details.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/kitchen-sink/person",
+      "params": {
+        "profileIdentifier": {
+          "in": "body",
+          "type": "object",
+          "description": "LinkedIn slug or URL as {identifier, value}. Best match accuracy."
+        },
+        "emailAddress": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address to look up."
+        },
+        "personName": {
+          "in": "body",
+          "type": "object",
+          "description": "Person name for matching; best with companyDomain or companyIdentifier."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "object",
+          "description": "{value}: domain of the person's current company."
+        },
+        "companyIdentifier": {
+          "in": "body",
+          "type": "object",
+          "description": "LinkedIn identifier of the current company."
+        },
+        "numProfiles": {
+          "in": "body",
+          "type": "integer",
+          "description": "Max results per lookup, default 1."
+        },
+        "liveFetch": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Fetch the LinkedIn profile in real time (2 extra credits)."
+        },
+        "forceCompanyMatch": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Require the match to work at the given company."
+        },
+        "fuzzySearch": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Fuzzy name matching."
+        },
+        "getDetailedEducation": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include school details per education entry."
+        },
+        "getDetailedWorkExperience": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include company details per work experience."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "2 credits per lookup. Returns no emails or phones; use contacts.reveal."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.fiber.ai/ai-docs/KitchenSinkProfile.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/KitchenSinkProfile.md"
+      }
+    },
+    {
+      "id": "fiber-ai.linkedin.profile_live",
+      "name": "Fetch a LinkedIn profile live",
+      "summary": "Fresh LinkedIn profile data: experience, education, skills and location.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/linkedin-live-fetch/profile/single",
+      "params": {
+        "identifier": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn slug, profile URL, Sales Navigator URN or numeric user id.",
+          "example": "jane-doe-example"
+        },
+        "getDetailedEducation": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add school details; slows the call."
+        },
+        "getDetailedWorkExperience": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add company details per job; slows the call."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "2 credits per profile. No emails or phone numbers in the answer."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.fiber.ai/ai-docs/profileLiveEnrich.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/profileLiveEnrich.md"
+      }
+    },
+    {
+      "id": "fiber-ai.linkedin.company_live",
+      "name": "Fetch a LinkedIn company live",
+      "summary": "Fresh LinkedIn company data, optionally with headcount history.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/linkedin-live-fetch/company/single",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "How value is given.",
+          "enum": [
+            "slug",
+            "orgId",
+            "liUrl"
+          ]
+        },
+        "value": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn slug, URL, org id or Fiber company id, matching type.",
+          "example": "microsoft"
+        },
+        "getHistoricalHeadcount": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add total headcount over time and growth trends."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "2 credits per company."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api.fiber.ai/ai-docs/companyLiveEnrich.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/companyLiveEnrich.md"
+      }
+    },
+    {
+      "id": "fiber-ai.contacts.reveal",
+      "name": "Reveal a person's emails and phones",
+      "summary": "Work email, personal email and phone numbers for one LinkedIn profile, synchronously.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/contact-details/single",
+      "params": {
+        "linkedinUrl": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL, slug, Sales Navigator URN or numeric user id.",
+          "example": "https://www.linkedin.com/in/jane-doe-example/"
+        },
+        "enrichmentType": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{getWorkEmails, getPersonalEmails, getPhoneNumbers}, booleans; you pay per selected type.",
+          "example": {
+            "getWorkEmails": true,
+            "getPersonalEmails": false,
+            "getPhoneNumbers": false
+          }
+        },
+        "patience": {
+          "in": "body",
+          "type": "string",
+          "description": "How long to wait validating email deliverability; higher is slower and more accurate.",
+          "enum": [
+            "MINIMUM",
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "EXTREME",
+            "MAXIMUM"
+          ]
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional current company; work emails on other domains go to unmatchedWorkEmails."
+        }
+      },
+      "notes": [
+        "A read over POST: it looks data up, though it spends credits.",
+        "Credits: 2 work email only, 2 personal only, 3 phone only, 3 all emails, 5 phones and emails.",
+        "Recommended client timeout is 2 minutes."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.fiber.ai/ai-docs/syncQuickContactReveal.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/syncQuickContactReveal.md"
+      }
+    },
+    {
+      "id": "fiber-ai.people.reverse_email",
+      "name": "Find a person from an email",
+      "summary": "The LinkedIn profile and details behind an email address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/email-to-person/single",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The email address to resolve.",
+          "example": "someone@example.com"
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "2 credits per lookup; cached not-found answers are not billed.",
+        "Space requests evenly to avoid 429s."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.fiber.ai/ai-docs/reverseEmailLookup.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/reverseEmailLookup.md"
+      }
+    },
+    {
+      "id": "fiber-ai.company.typeahead",
+      "name": "Find companies, schools or investors by name prefix",
+      "summary": "Partial-name search for companies, schools and investors, to get identifiers for filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/typeahead/company",
+      "params": {
+        "startsWith": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The name prefix to complete.",
+          "example": "micro"
+        },
+        "orgType": {
+          "in": "body",
+          "type": "string",
+          "description": "Limit to one organization type; omit for all.",
+          "enum": [
+            "investor",
+            "school"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "1 credit per request."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.fiber.ai/ai-docs/companyTypeahead.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/companyTypeahead.md"
+      }
+    },
+    {
+      "id": "fiber-ai.company.revenue",
+      "name": "Get a company's revenue estimate",
+      "summary": "Most recent annual revenue estimate for a company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/company-revenue",
+      "params": {
+        "companyMetadata": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{name, domain, linkedinUrl, linkedinOrgId}; give at least a LinkedIn URL or org id.",
+          "example": {
+            "linkedinUrl": "openai"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "4 credits per lookup; nothing is charged when the company or estimate is not found."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api.fiber.ai/ai-docs/getCompanyRevenue.md",
+      "verified": {
+        "docs": "https://api.fiber.ai/ai-docs/getCompanyRevenue.md"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

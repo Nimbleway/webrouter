@@ -1,0 +1,418 @@
+{
+  "vendor": "hunter",
+  "name": "Hunter",
+  "category": "enrichment",
+  "summary": "Find and verify professional email addresses by domain or person, and enrich people and companies.",
+  "docs_url": "https://hunter.io/api-documentation/v2",
+  "pricing_url": "https://hunter.io/pricing",
+  "base_url": "https://api.hunter.io/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HUNTER_API_KEY"
+        ],
+        "description": "A Hunter API key (hunter.io > API). Sent in the X-API-KEY header; Bearer and an api_key query parameter also work."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: a search costs 1, a verification 0.5, an enrichment 0.2 (account page). The X-Credits-Used and X-Credits-Unit response headers give the real charge per call.",
+    "Email finder charges nothing when no email is found; domain search charges once per new query with results.",
+    "Leads, lists, sequences and the other account-record endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://hunter.io/api-documentation/v2"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "hunter.account.get",
+      "name": "Get account and credit balance",
+      "summary": "Plan, reset date and used/available searches, verifications or credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account",
+      "notes": [
+        "Free. Use requests.*.remaining for what is left; \"calls\" is deprecated."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://hunter.io/api-documentation/v2#account",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#account"
+      }
+    },
+    {
+      "id": "hunter.domain.search",
+      "name": "Search emails at a domain",
+      "summary": "Email addresses found for a domain or company, with type, confidence and sources.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain-search",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain to search; wins over company.",
+          "example": "stripe.com"
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, used when no domain is given."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per call, default 10, max 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, default 0."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "personal or generic.",
+          "enum": [
+            "personal",
+            "generic"
+          ]
+        },
+        "provenance": {
+          "in": "query",
+          "type": "string",
+          "description": "found or inferred.",
+          "enum": [
+            "found",
+            "inferred"
+          ]
+        },
+        "seniority": {
+          "in": "query",
+          "type": "string",
+          "description": "Seniority filter."
+        },
+        "department": {
+          "in": "query",
+          "type": "string",
+          "description": "Department filter."
+        },
+        "verification_status": {
+          "in": "query",
+          "type": "string",
+          "description": "Verification status filter."
+        },
+        "required_field": {
+          "in": "query",
+          "type": "string",
+          "description": "Only emails that carry this field."
+        }
+      },
+      "notes": [
+        "Charged one search credit per new query that returns results; repeating the same query in the same period is free. The X-Credits-Used header reports the actual cost.",
+        "The location filter works only through POST, which this entry does not use."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://hunter.io/api-documentation/v2#domain-search",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#domain-search"
+      }
+    },
+    {
+      "id": "hunter.email.find",
+      "name": "Find a person's email",
+      "summary": "Most likely email of a person at a company from their name, plus confidence score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email-finder",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain (one of domain, company or linkedin_handle).",
+          "example": "stripe.com"
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name."
+        },
+        "linkedin_handle": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn handle; then no name is needed."
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "full_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name, instead of first and last."
+        },
+        "max_duration": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds to spend, 3 to 20, default 10."
+        }
+      },
+      "notes": [
+        "No credit is charged when no email is found; otherwise the cost is in the X-Credits-Used header.",
+        "Needs first_name and last_name (or full_name) unless linkedin_handle is sent."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://hunter.io/api-documentation/v2#email-finder",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#email-finder"
+      }
+    },
+    {
+      "id": "hunter.email.verify",
+      "name": "Verify an email address",
+      "summary": "Deliverability status and checks for one email address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email-verifier",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email to verify."
+        }
+      },
+      "notes": [
+        "Cost is in the X-Credits-Used header (account page: a verification costs 0.5). A 202 answer means verification is still running; call again later, and that counts as one request."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://hunter.io/api-documentation/v2#email-verifier",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#email-verifier"
+      }
+    },
+    {
+      "id": "hunter.email.count",
+      "name": "Count emails known for a domain",
+      "summary": "How many addresses Hunter holds for a domain or company, split by type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email-count",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain (one of domain or company)."
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, at least 3 characters."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "personal or generic.",
+          "enum": [
+            "personal",
+            "generic"
+          ]
+        }
+      },
+      "job": "company.employees",
+      "docs_url": "https://hunter.io/api-documentation/v2#email-count",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#email-count"
+      }
+    },
+    {
+      "id": "hunter.people.enrich",
+      "name": "Enrich a person from an email or LinkedIn handle",
+      "summary": "Profile data for a person.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/people/find",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email address (email or linkedin_handle is required)."
+        },
+        "linkedin_handle": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn handle; wins if both are sent."
+        },
+        "clearbit_format": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Answer in Clearbit's response format."
+        }
+      },
+      "notes": [
+        "Cost is in the X-Credits-Used header (account page: enrichment 0.2 credit)."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://hunter.io/api-documentation/v2#email-enrichment",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#email-enrichment"
+      }
+    },
+    {
+      "id": "hunter.company.enrich",
+      "name": "Enrich a company from a domain",
+      "summary": "Company profile for a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/find",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "stripe.com"
+        },
+        "clearbit_format": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Answer in Clearbit's response format."
+        }
+      },
+      "notes": [
+        "Cost is in the X-Credits-Used header."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://hunter.io/api-documentation/v2#company-enrichment",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#company-enrichment"
+      }
+    },
+    {
+      "id": "hunter.combined.enrich",
+      "name": "Enrich a person and their company",
+      "summary": "Person and company data from one email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/combined/find",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email."
+        },
+        "clearbit_format": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Answer in Clearbit's response format."
+        }
+      },
+      "notes": [
+        "Cost is in the X-Credits-Used header."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://hunter.io/api-documentation/v2#combined-enrichment",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#combined-enrichment"
+      }
+    },
+    {
+      "id": "hunter.discover",
+      "name": "Discover companies by filters",
+      "summary": "Companies matching natural-language or filter criteria.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/discover",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language description of the companies; required unless a filter is set."
+        },
+        "organization": {
+          "in": "body",
+          "type": "object",
+          "description": "Organization filter."
+        },
+        "headquarters_location": {
+          "in": "body",
+          "type": "object",
+          "description": "Headquarters location filter."
+        },
+        "industry": {
+          "in": "body",
+          "type": "object",
+          "description": "Industry filter."
+        },
+        "headcount": {
+          "in": "body",
+          "type": "array",
+          "description": "Headcount filter."
+        },
+        "company_type": {
+          "in": "body",
+          "type": "object",
+          "description": "Company type filter."
+        },
+        "keywords": {
+          "in": "body",
+          "type": "object",
+          "description": "Keywords filter."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results, default and max 100."
+        }
+      },
+      "notes": [
+        "A read over POST. Free. Filter shapes (object or array) are in the docs; some filters (similar_to, year_founded, technology, funding, offset) need a paid plan."
+      ],
+      "job": "company.search",
+      "docs_url": "https://hunter.io/api-documentation/v2#discover",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#discover"
+      }
+    },
+    {
+      "id": "hunter.leads.list",
+      "name": "List saved leads",
+      "summary": "Leads in the user's Hunter account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/leads",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 1000, default 20."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 100000."
+        }
+      },
+      "docs_url": "https://hunter.io/api-documentation/v2#leads",
+      "verified": {
+        "docs": "https://hunter.io/api-documentation/v2#leads"
+      }
+    }
+  ]
+}

@@ -1,0 +1,590 @@
+{
+  "vendor": "benzinga",
+  "name": "Benzinga",
+  "category": "finance",
+  "summary": "Benzinga financial news, analyst ratings, consensus price targets, and earnings, guidance and dividend calendars.",
+  "docs_url": "https://docs.benzinga.com/introduction/introduction",
+  "base_url": "https://api.benzinga.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BENZINGA_API_KEY"
+        ],
+        "description": "a Benzinga API key (benzinga.com/apis)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "accept": "application/json"
+  },
+  "notes": [
+    "A key only returns the datasets (news, ratings, calendars, ...) its licence covers; CUSIP filters need a separate licence agreement.",
+    "Calendar filters are named parameters[...] on the wire (parameters[tickers], parameters[date_from]); this entry maps them to plain names.",
+    "Page offsets stop at 100000: narrow by date or tickers instead of paging deep. For incremental sync use updatedSince (news) or updated (calendars).",
+    "The accept header is required by the API; this entry sends application/json."
+  ],
+  "sources": [
+    "https://docs.benzinga.com/introduction/introduction.md",
+    "https://docs.benzinga.com/llms.txt",
+    "https://docs.benzinga.com/api-reference/news-api/get-news-items.md",
+    "https://docs.benzinga.com/api-reference/calendar-api/get-ratings.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "benzinga.news",
+      "name": "Search financial news",
+      "summary": "Benzinga news items filtered by tickers, dates, channels or topics.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/news",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page offset, 0-100000; narrow by date or tickers rather than paging deep."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, max 100; default 15."
+        },
+        "displayOutput": {
+          "in": "query",
+          "type": "string",
+          "description": "headline (default), abstract (with teaser) or full (with body).",
+          "enum": [
+            "full",
+            "abstract",
+            "headline"
+          ]
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "One date, YYYY-MM-DD."
+        },
+        "dateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD."
+        },
+        "dateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD."
+        },
+        "updatedSince": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items updated since this Unix timestamp (UTC)."
+        },
+        "publishedSince": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items published since this Unix timestamp (UTC)."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order; default created:desc.",
+          "enum": [
+            "id:asc",
+            "id:desc",
+            "created:asc",
+            "created:desc",
+            "updated:asc",
+            "updated:desc"
+          ]
+        },
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tickers, max 50.",
+          "example": "AAPL,NVDA"
+        },
+        "primaryTickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tickers, matched as primary ticker only."
+        },
+        "isin": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISINs, max 50."
+        },
+        "channels": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated channel names or ids (see benzinga.news.channels)."
+        },
+        "topics": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated words or phrases searched in title, tags and body."
+        },
+        "topic_group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "and requires all topics, or (default) any.",
+          "enum": [
+            "and",
+            "or"
+          ]
+        },
+        "authors": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated authors."
+        },
+        "content_types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated content types."
+        }
+      },
+      "notes": [
+        "Bodies are only returned with displayOutput=full."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.benzinga.com/api-reference/news-api/get-news-items.md",
+      "verified": {
+        "docs": "https://docs.benzinga.com/api-reference/news-api/get-news-items.md"
+      }
+    },
+    {
+      "id": "benzinga.news.channels",
+      "name": "List news channels",
+      "summary": "Every news channel usable as a news filter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2.1/news/channels",
+      "params": {},
+      "job": "news.search",
+      "docs_url": "https://docs.benzinga.com/api-reference/news-api/channels/get-available-news-channels.md",
+      "verified": {
+        "docs": "https://docs.benzinga.com/api-reference/news-api/channels/get-available-news-channels.md"
+      }
+    },
+    {
+      "id": "benzinga.ratings",
+      "name": "Get analyst ratings",
+      "summary": "Upgrades, downgrades, initiations and price target changes, with analyst and firm.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2.1/calendar/ratings",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page offset, 0-100000."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 1000."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "One date, YYYY-MM-DD (shorthand for date_from = date_to); defaults to latest.",
+          "wire_name": "parameters[date]"
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD.",
+          "wire_name": "parameters[date_from]"
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD.",
+          "wire_name": "parameters[date_to]"
+        },
+        "importance": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum importance, 0-5.",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "wire_name": "parameters[importance]"
+        },
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tickers, max 50.",
+          "wire_name": "parameters[tickers]",
+          "example": "AAPL"
+        },
+        "updated": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records updated at or after this Unix timestamp (UTC); forces sort by update time.",
+          "wire_name": "parameters[updated]"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; * for all, including ratings_accuracy."
+        },
+        "analyst_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated analyst ids.",
+          "wire_name": "parameters[analyst_id]"
+        },
+        "firm_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated firm ids.",
+          "wire_name": "parameters[firm_id]"
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "description": "Rating action.",
+          "wire_name": "parameters[action]",
+          "enum": [
+            "Downgrades",
+            "Maintains",
+            "Reinstates",
+            "Reiterates",
+            "Upgrades",
+            "Assumes",
+            "Initiates Coverage On",
+            "Terminates Coverage On",
+            "Removes",
+            "Suspends",
+            "Firm Dissolved"
+          ]
+        },
+        "simplify": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Simplify ratings to standard categories; default false."
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.benzinga.com/api-reference/calendar-api/get-ratings.md",
+      "verified": {
+        "docs": "https://docs.benzinga.com/api-reference/calendar-api/get-ratings.md"
+      }
+    },
+    {
+      "id": "benzinga.consensus_ratings",
+      "name": "Get consensus analyst rating",
+      "summary": "Consensus rating, price target range and rating counts for one ticker.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/consensus-ratings",
+      "params": {
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Exactly one ticker.",
+          "required": true,
+          "wire_name": "parameters[tickers]",
+          "example": "AAPL"
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date.",
+          "wire_name": "parameters[date_from]"
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date.",
+          "wire_name": "parameters[date_to]"
+        },
+        "simplify": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Collapse to BUY, HOLD, SELL; default false (all five ratings)."
+        },
+        "aggregate_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Counts as number (default) or percentage.",
+          "enum": [
+            "number",
+            "percentage"
+          ]
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.benzinga.com/api-reference/calendar-api/get-consensus-ratings.md",
+      "verified": {
+        "docs": "https://docs.benzinga.com/api-reference/calendar-api/get-consensus-ratings.md"
+      }
+    },
+    {
+      "id": "benzinga.earnings",
+      "name": "Get earnings calendar",
+      "summary": "Earnings dates with actual and estimated EPS and revenue and surprises.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2.1/calendar/earnings",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page offset, 0-100000."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 1000."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "One date, YYYY-MM-DD (shorthand for date_from = date_to); defaults to latest.",
+          "wire_name": "parameters[date]"
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD.",
+          "wire_name": "parameters[date_from]"
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD.",
+          "wire_name": "parameters[date_to]"
+        },
+        "importance": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum importance, 0-5.",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "wire_name": "parameters[importance]"
+        },
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tickers, max 50.",
+          "wire_name": "parameters[tickers]",
+          "example": "AAPL"
+        },
+        "updated": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records updated at or after this Unix timestamp (UTC); forces sort by update time.",
+          "wire_name": "parameters[updated]"
+        }
+      },
+      "job": "events.list",
+      "docs_url": "https://docs.benzinga.com/api-reference/calendar-api/get-earnings.md",
+      "verified": {
+        "docs": "https://docs.benzinga.com/api-reference/calendar-api/get-earnings.md"
+      }
+    },
+    {
+      "id": "benzinga.guidance",
+      "name": "Get company guidance",
+      "summary": "Management EPS and revenue guidance ranges versus prior guidance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2.1/calendar/guidance",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page offset, 0-100000."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 1000."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "One date, YYYY-MM-DD (shorthand for date_from = date_to); defaults to latest.",
+          "wire_name": "parameters[date]"
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD.",
+          "wire_name": "parameters[date_from]"
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD.",
+          "wire_name": "parameters[date_to]"
+        },
+        "importance": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum importance, 0-5.",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "wire_name": "parameters[importance]"
+        },
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tickers, max 50.",
+          "wire_name": "parameters[tickers]",
+          "example": "AAPL"
+        },
+        "updated": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records updated at or after this Unix timestamp (UTC); forces sort by update time.",
+          "wire_name": "parameters[updated]"
+        },
+        "is_primary": {
+          "in": "query",
+          "type": "string",
+          "description": "Primary guidance only: Y (default), N or All.",
+          "wire_name": "parameters[is_primary]",
+          "enum": [
+            "Y",
+            "N",
+            "All"
+          ]
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.benzinga.com/api-reference/calendar-api/get-guidance.md",
+      "verified": {
+        "docs": "https://docs.benzinga.com/api-reference/calendar-api/get-guidance.md"
+      }
+    },
+    {
+      "id": "benzinga.dividends",
+      "name": "Get dividends calendar",
+      "summary": "Confirmed and unconfirmed dividends with amounts, yield and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2.2/calendar/dividends",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page offset, 0-100000."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 1000."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "One date, YYYY-MM-DD (shorthand for date_from = date_to); defaults to latest.",
+          "wire_name": "parameters[date]"
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD.",
+          "wire_name": "parameters[date_from]"
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD.",
+          "wire_name": "parameters[date_to]"
+        },
+        "importance": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum importance, 0-5.",
+          "enum": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "wire_name": "parameters[importance]"
+        },
+        "tickers": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated tickers, max 50.",
+          "wire_name": "parameters[tickers]",
+          "example": "AAPL"
+        },
+        "updated": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records updated at or after this Unix timestamp (UTC); forces sort by update time.",
+          "wire_name": "parameters[updated]"
+        },
+        "date_sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Which date the date filters apply to.",
+          "wire_name": "parameters[date_sort]",
+          "enum": [
+            "announced",
+            "ex",
+            "payable",
+            "record"
+          ]
+        },
+        "dividend_yield_operation": {
+          "in": "query",
+          "type": "string",
+          "description": "Comparison for dividend_yield.",
+          "wire_name": "parameters[dividend_yield_operation]",
+          "enum": [
+            "gt",
+            "gte",
+            "eq",
+            "lte",
+            "lt"
+          ]
+        },
+        "dividend_yield": {
+          "in": "query",
+          "type": "number",
+          "description": "Dividend yield to compare against.",
+          "wire_name": "parameters[dividend_yield]"
+        }
+      },
+      "job": "events.list",
+      "docs_url": "https://docs.benzinga.com/api-reference/calendar-api/get-dividends.md",
+      "verified": {
+        "docs": "https://docs.benzinga.com/api-reference/calendar-api/get-dividends.md"
+      }
+    }
+  ]
+}

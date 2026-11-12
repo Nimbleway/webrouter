@@ -1,0 +1,514 @@
+{
+  "vendor": "diffbot",
+  "name": "Diffbot",
+  "category": "company-data",
+  "summary": "Diffbot Knowledge Graph: search organizations, people and articles with DQL, and enhance records from partial data.",
+  "docs_url": "https://www.diffbot.com/docs/",
+  "pricing_url": "https://www.diffbot.com/pricing/",
+  "base_url": "https://kg.diffbot.com/kg/v3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DIFFBOT_TOKEN",
+          "DIFFBOT_API_KEY"
+        ],
+        "description": "a Diffbot API token (Diffbot dashboard home > token details)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The token goes in the token query parameter on every call, including POSTs.",
+    "Diffbot's other APIs (Extract, Crawl, Natural Language, Account) live on api.diffbot.com and are not in this entry.",
+    "The docs moved from docs.diffbot.com to www.diffbot.com/docs."
+  ],
+  "sources": [
+    "https://www.diffbot.com/docs/authentication",
+    "https://www.diffbot.com/docs/dql/get",
+    "https://www.diffbot.com/docs/dql/post",
+    "https://www.diffbot.com/docs/enhance/get",
+    "https://www.diffbot.com/docs/enhance/post"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "diffbot.kg.search",
+      "name": "Search the Knowledge Graph with DQL",
+      "summary": "Organizations, people, articles and other entities matching a DQL query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dql",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "DQL query.",
+          "example": "type:Organization locations.city.name:\"San Francisco\" nbEmployees>5000"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Query type (default query); crawl searches your custom crawl collections.",
+          "enum": [
+            "query",
+            "crawl"
+          ]
+        },
+        "col": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-delimited custom crawl collections, or all; only with type=crawl."
+        },
+        "from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset; from+size must be at most 10,000 for facet queries. Deprecated for Article queries."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results (default 50, -1 for all)."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format (default json).",
+          "enum": [
+            "json",
+            "jsonl",
+            "csv",
+            "xls",
+            "xlsx"
+          ]
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated paths to keep in the response, e.g. $.name;$.homepageUri."
+        },
+        "filterExclude": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated paths to drop from the response."
+        },
+        "jsonmode": {
+          "in": "query",
+          "type": "string",
+          "description": "extended returns origin information for facts; id returns only diffbotIds and origins.",
+          "enum": [
+            "extended",
+            "id"
+          ]
+        },
+        "nonCanonicalFacts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return non-canonical facts."
+        },
+        "noDedupArticles": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return all articles without deduplication."
+        },
+        "cluster": {
+          "in": "query",
+          "type": "string",
+          "description": "Articles only: all, best or dedupe.",
+          "enum": [
+            "all",
+            "best",
+            "dedupe"
+          ]
+        },
+        "report": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Generate a coverage report."
+        }
+      },
+      "notes": [
+        "Queries use Diffbot Query Language, e.g. type:Organization nbEmployees>5000. Check the DQL reference for current field names."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.diffbot.com/docs/dql/get",
+      "verified": {
+        "docs": "https://www.diffbot.com/docs/dql/get"
+      }
+    },
+    {
+      "id": "diffbot.kg.search_post",
+      "name": "Search the Knowledge Graph with DQL (POST)",
+      "summary": "The POST form of DQL search, for long queries.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/dql",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "DQL query.",
+          "example": "type:Organization locations.city.name:\"San Francisco\" nbEmployees>5000"
+        },
+        "type": {
+          "in": "body",
+          "type": "string",
+          "description": "Query type (default query); crawl searches your custom crawl collections.",
+          "enum": [
+            "query",
+            "crawl"
+          ]
+        },
+        "col": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-delimited custom crawl collections, or all; only with type=crawl."
+        },
+        "from": {
+          "in": "body",
+          "type": "integer",
+          "description": "Offset; from+size must be at most 10,000 for facet queries. Deprecated for Article queries."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results (default 50, -1 for all)."
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Output format (default json).",
+          "enum": [
+            "json",
+            "jsonl",
+            "csv",
+            "xls",
+            "xlsx"
+          ]
+        },
+        "filter": {
+          "in": "body",
+          "type": "string",
+          "description": "Semicolon-separated paths to keep in the response, e.g. $.name;$.homepageUri."
+        },
+        "filterExclude": {
+          "in": "body",
+          "type": "string",
+          "description": "Semicolon-separated paths to drop from the response."
+        },
+        "jsonmode": {
+          "in": "body",
+          "type": "string",
+          "description": "extended returns origin information for facts; id returns only diffbotIds and origins.",
+          "enum": [
+            "extended",
+            "id"
+          ]
+        },
+        "nonCanonicalFacts": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return non-canonical facts."
+        },
+        "noDedupArticles": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return all articles without deduplication."
+        },
+        "cluster": {
+          "in": "body",
+          "type": "string",
+          "description": "Articles only: all, best or dedupe.",
+          "enum": [
+            "all",
+            "best",
+            "dedupe"
+          ]
+        },
+        "report": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Generate a coverage report."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.diffbot.com/docs/dql/post",
+      "verified": {
+        "docs": "https://www.diffbot.com/docs/dql/post"
+      }
+    },
+    {
+      "id": "diffbot.kg.enhance",
+      "name": "Enhance a person or organization from partial data",
+      "summary": "Finds the best matching Person or Organization record for partial input and returns it with a score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enhance",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Entity type.",
+          "enum": [
+            "Person",
+            "Organization"
+          ]
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "DiffbotId of the entity."
+        },
+        "name": {
+          "in": "query",
+          "type": "array",
+          "description": "Entity name(s)."
+        },
+        "url": {
+          "in": "query",
+          "type": "array",
+          "description": "Homepage or origin URL(s)."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "Phone."
+        },
+        "email": {
+          "in": "query",
+          "type": "array",
+          "description": "Email(s); Person only."
+        },
+        "employer": {
+          "in": "query",
+          "type": "string",
+          "description": "Employer; Person only."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Job title; Person only."
+        },
+        "school": {
+          "in": "query",
+          "type": "string",
+          "description": "School; Person only."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location."
+        },
+        "description": {
+          "in": "query",
+          "type": "string",
+          "description": "Description."
+        },
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "description": "IP address."
+        },
+        "customId": {
+          "in": "query",
+          "type": "string",
+          "description": "Your own ID for correlation."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results (default 1)."
+        },
+        "threshold": {
+          "in": "query",
+          "type": "number",
+          "description": "Similarity threshold."
+        },
+        "refresh": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Recrawl the entity origins and rebuild the entity."
+        },
+        "search": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also search the web for origins and merge them in."
+        },
+        "nonCanonicalFacts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return non-canonical facts."
+        },
+        "jsonmode": {
+          "in": "query",
+          "type": "string",
+          "description": "extended returns origin information for facts.",
+          "enum": [
+            "extended"
+          ]
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated paths to keep."
+        },
+        "filterExclude": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated paths to drop."
+        }
+      },
+      "notes": [
+        "Works for both company and person lookups: set type to Organization or Person."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://www.diffbot.com/docs/enhance/get",
+      "verified": {
+        "docs": "https://www.diffbot.com/docs/enhance/get"
+      }
+    },
+    {
+      "id": "diffbot.kg.enhance_post",
+      "name": "Enhance a person or organization (POST)",
+      "summary": "The POST form of Enhance.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enhance",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Entity type.",
+          "enum": [
+            "Person",
+            "Organization"
+          ]
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "DiffbotId of the entity."
+        },
+        "name": {
+          "in": "body",
+          "type": "array",
+          "description": "Entity name(s)."
+        },
+        "url": {
+          "in": "body",
+          "type": "array",
+          "description": "Homepage or origin URL(s)."
+        },
+        "phone": {
+          "in": "body",
+          "type": "string",
+          "description": "Phone."
+        },
+        "email": {
+          "in": "body",
+          "type": "array",
+          "description": "Email(s); Person only."
+        },
+        "employer": {
+          "in": "body",
+          "type": "string",
+          "description": "Employer; Person only."
+        },
+        "title": {
+          "in": "body",
+          "type": "string",
+          "description": "Job title; Person only."
+        },
+        "school": {
+          "in": "body",
+          "type": "string",
+          "description": "School; Person only."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Location."
+        },
+        "description": {
+          "in": "body",
+          "type": "string",
+          "description": "Description."
+        },
+        "ip": {
+          "in": "body",
+          "type": "string",
+          "description": "IP address."
+        },
+        "customId": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own ID for correlation."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results (default 1)."
+        },
+        "threshold": {
+          "in": "body",
+          "type": "number",
+          "description": "Similarity threshold."
+        },
+        "refresh": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Recrawl the entity origins and rebuild the entity."
+        },
+        "search": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also search the web for origins and merge them in."
+        },
+        "nonCanonicalFacts": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return non-canonical facts."
+        },
+        "jsonmode": {
+          "in": "body",
+          "type": "string",
+          "description": "extended returns origin information for facts.",
+          "enum": [
+            "extended"
+          ]
+        },
+        "filter": {
+          "in": "body",
+          "type": "string",
+          "description": "Semicolon-separated paths to keep."
+        },
+        "filterExclude": {
+          "in": "body",
+          "type": "string",
+          "description": "Semicolon-separated paths to drop."
+        }
+      },
+      "notes": [
+        "A read over POST: it only looks up data."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://www.diffbot.com/docs/enhance/post",
+      "verified": {
+        "docs": "https://www.diffbot.com/docs/enhance/post"
+      }
+    }
+  ]
+}

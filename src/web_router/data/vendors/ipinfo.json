@@ -1,0 +1,125 @@
+{
+  "vendor": "ipinfo",
+  "name": "IPinfo",
+  "category": "maps",
+  "summary": "IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans.",
+  "docs_url": "https://ipinfo.io/developers/ipinfo-api",
+  "pricing_url": "https://ipinfo.io/pricing",
+  "base_url": "https://api.ipinfo.io",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "IPINFO_TOKEN"
+        ],
+        "description": "an IPinfo access token (ipinfo.io account > Token); free accounts get unlimited Lite lookups"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Lite (/lite) is free and unlimited: country, continent and ASN only. Core (/lookup) needs a paid plan and returns city-level geo plus network flags.",
+    "Paid plans have a monthly request quota; past it calls return 429 unless metered billing is on. No per-second throttling.",
+    "Use 'me' as the IP to look up the caller's own address."
+  ],
+  "sources": [
+    "https://ipinfo.io/developers/",
+    "https://ipinfo.io/developers/lite-api",
+    "https://ipinfo.io/developers/core-api",
+    "https://ipinfo.io/developers/batch-enrichment-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ipinfo.lite.lookup",
+      "name": "Look up an IP's country and ASN (Lite)",
+      "summary": "Country, continent, ASN number, name and domain for an IPv4 or IPv6 address. Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lite/{ip}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or 'me'.",
+          "example": "8.8.8.8"
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://ipinfo.io/developers/lite-api",
+      "verified": {
+        "docs": "https://ipinfo.io/developers/lite-api"
+      }
+    },
+    {
+      "id": "ipinfo.lite.field",
+      "name": "Get one Lite field for an IP",
+      "summary": "A single field of the Lite record (asn, as_name, as_domain, country_code, country, continent_code, continent) as plain text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lite/{ip}/{field}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or 'me'.",
+          "example": "8.8.8.8"
+        },
+        "field": {
+          "in": "path",
+          "required": true,
+          "description": "The field name.",
+          "enum": [
+            "ip",
+            "asn",
+            "as_name",
+            "as_domain",
+            "country_code",
+            "country",
+            "continent_code",
+            "continent"
+          ],
+          "example": "asn"
+        }
+      },
+      "notes": [
+        "Answers plain text, not JSON."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://ipinfo.io/developers/",
+      "verified": {
+        "docs": "https://ipinfo.io/developers/"
+      }
+    },
+    {
+      "id": "ipinfo.core.lookup",
+      "name": "Look up an IP's location and network (Core)",
+      "summary": "Hostname, city, region, country, coordinates, time zone, postal code, AS details and is_anonymous, is_hosting, is_mobile, is_anycast, is_satellite flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lookup/{ip}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or 'me'.",
+          "example": "8.8.8.8"
+        }
+      },
+      "notes": [
+        "Needs a Core plan or higher; counts against the monthly quota."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://ipinfo.io/developers/core-api",
+      "verified": {
+        "docs": "https://ipinfo.io/developers/core-api"
+      }
+    }
+  ]
+}

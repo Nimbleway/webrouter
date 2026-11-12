@@ -1,0 +1,293 @@
+{
+  "vendor": "bea",
+  "name": "US Bureau of Economic Analysis",
+  "category": "finance",
+  "summary": "BEA economic statistics through one data API; this entry names the dataset discovery calls and the Regional accounts (state, county and metro personal income, employment and GDP).",
+  "docs_url": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf",
+  "base_url": "https://apps.bea.gov/api",
+  "auth": {
+    "credentials": {
+      "user_id": {
+        "env": [
+          "BEA_API_KEY"
+        ],
+        "description": "The free 36-character BEA UserID from apps.bea.gov/api/signup (a disposable email is refused). Sent as the UserID query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "UserID",
+        "value": "{user_id}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is a GET to /data with a method parameter; each endpoint here fixes its method.",
+    "Limits per user per minute: 100 requests, 100 MB of data and 30 errors; going over locks the key out for about a minute.",
+    "Discover before fetching: parameters.list for a dataset, then parameter.values or parameter.values-filtered for valid TableName, LineCode and Year values.",
+    "Regional GeoFips takes codes or STATE, COUNTY, MSA; Year defaults to LAST5 and takes a list, LAST10 or ALL."
+  ],
+  "sources": [
+    "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "bea.datasets.list",
+      "name": "List datasets",
+      "summary": "Every dataset the API offers, with descriptions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data",
+      "params": {
+        "method": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be GETDATASETLIST.",
+          "example": "GETDATASETLIST",
+          "enum": [
+            "GETDATASETLIST"
+          ]
+        },
+        "ResultFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON (default) or XML.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf",
+      "verified": {
+        "docs": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf"
+      }
+    },
+    {
+      "id": "bea.parameters.list",
+      "name": "List a dataset's parameters",
+      "summary": "Parameters of one dataset: type, whether required, default and whether lists are accepted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data",
+      "params": {
+        "method": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be GetParameterList.",
+          "example": "GetParameterList",
+          "enum": [
+            "GetParameterList"
+          ]
+        },
+        "datasetname": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Dataset name, e.g. Regional or IntlServTrade; datasets.list gives all.",
+          "example": "Regional"
+        },
+        "ResultFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON (default) or XML.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf",
+      "verified": {
+        "docs": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf"
+      }
+    },
+    {
+      "id": "bea.parameter.values",
+      "name": "List values of a parameter",
+      "summary": "Valid values of one parameter of a dataset, e.g. every Regional TableName.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data",
+      "params": {
+        "method": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be GetParameterValues.",
+          "example": "GetParameterValues",
+          "enum": [
+            "GetParameterValues"
+          ]
+        },
+        "datasetname": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Dataset name, e.g. Regional or IntlServTrade; datasets.list gives all.",
+          "example": "Regional"
+        },
+        "ParameterName": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Parameter to list.",
+          "example": "TableName"
+        },
+        "ResultFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON (default) or XML.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf",
+      "verified": {
+        "docs": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf"
+      }
+    },
+    {
+      "id": "bea.parameter.values-filtered",
+      "name": "List values of a parameter given others",
+      "summary": "Valid values of one target parameter given other parameters, e.g. LineCodes of a table or Years of a table and area.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data",
+      "params": {
+        "method": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be GetParameterValuesFiltered.",
+          "example": "GetParameterValuesFiltered",
+          "enum": [
+            "GetParameterValuesFiltered"
+          ]
+        },
+        "datasetname": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Dataset name, e.g. Regional or IntlServTrade; datasets.list gives all.",
+          "example": "Regional"
+        },
+        "TargetParameter": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Parameter whose valid values are wanted.",
+          "example": "LineCode"
+        },
+        "TableName": {
+          "in": "query",
+          "type": "string",
+          "description": "Table to filter on.",
+          "example": "SAINC1"
+        },
+        "GeoFips": {
+          "in": "query",
+          "type": "string",
+          "description": "Area to filter on."
+        },
+        "ResultFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON (default) or XML.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        }
+      },
+      "notes": [
+        "Not implemented for every dataset; unsupported ones answer with an error."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf",
+      "verified": {
+        "docs": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf"
+      }
+    },
+    {
+      "id": "bea.regional.data",
+      "name": "Get regional economic data",
+      "summary": "Personal income, employment, GDP or price parities for states, counties or metro areas from one Regional table.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data",
+      "params": {
+        "method": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be GetData.",
+          "example": "GetData",
+          "enum": [
+            "GetData"
+          ]
+        },
+        "datasetname": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be Regional for this call.",
+          "example": "Regional",
+          "enum": [
+            "Regional"
+          ]
+        },
+        "TableName": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One table, e.g. CAINC1 (county personal income summary), SAINC1, SAGDP2, CAGDP2, MARPP.",
+          "example": "CAINC1"
+        },
+        "LineCode": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Line (statistic) in the table, or ALL for one area.",
+          "example": "3"
+        },
+        "GeoFips": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "FIPS codes (comma-separated), or STATE, COUNTY, MSA, TERR.",
+          "example": "COUNTY"
+        },
+        "Year": {
+          "in": "query",
+          "type": "string",
+          "description": "Years comma-separated, or LAST5 (default), LAST10, ALL.",
+          "example": "2022,2023"
+        },
+        "ResultFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON (default) or XML.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        }
+      },
+      "job": "economics.series",
+      "docs_url": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf",
+      "verified": {
+        "docs": "https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf"
+      }
+    }
+  ]
+}

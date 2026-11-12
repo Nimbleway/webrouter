@@ -1,0 +1,597 @@
+{
+  "vendor": "coinmarketcap",
+  "name": "CoinMarketCap",
+  "category": "finance",
+  "summary": "Crypto listings, latest and historical quotes, OHLCV, coin metadata, global market metrics and the Fear and Greed index from CoinMarketCap.",
+  "docs_url": "https://coinmarketcap.com/api/documentation/",
+  "pricing_url": "https://coinmarketcap.com/api/pricing/",
+  "base_url": "https://pro-api.coinmarketcap.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CMC_PRO_API_KEY"
+        ],
+        "description": "a CoinMarketCap Pro API key (pro.coinmarketcap.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-CMC_PRO_API_KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: 1 per successful call, plus more for large lists (see each endpoint) and 1 per extra convert currency beyond the first. Errors and /v1/key/info cost nothing.",
+    "Identify coins by CoinMarketCap id (1 = BTC, 1027 = ETH) rather than symbol: symbols are not unique. Get ids from coinmarketcap.cryptocurrency.map.",
+    "The v3 listings and quotes endpoints return status.error_code as a string ('0') and data and quote as arrays; v1/v2 endpoints return a number and objects.",
+    "Some endpoints and history depth depend on the plan; a 403 means the endpoint is not on the key's plan.",
+    "Many endpoints also work keyless at /public-api/<path>, at lower rate limits; this entry calls the keyed paths."
+  ],
+  "sites": [
+    "coinmarketcap.com"
+  ],
+  "sources": [
+    "https://coinmarketcap.com/api/documentation/guides/authentication.md",
+    "https://coinmarketcap.com/api/documentation/ai-agent-hub/skills/cmc-api-crypto.md",
+    "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "coinmarketcap.cryptocurrency.map",
+      "name": "Map symbols to CoinMarketCap ids",
+      "summary": "CoinMarketCap ids for coins, by symbol or as a paginated list.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/cryptocurrency/map",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated symbols; when set, other options are ignored.",
+          "example": "BTC,ETH"
+        },
+        "listing_status": {
+          "in": "query",
+          "type": "string",
+          "description": "active (default), inactive or untracked."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based offset."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of results."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "cmc_rank",
+            "id"
+          ],
+          "description": "Sort field."
+        },
+        "aux": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra fields: platform,first_historical_data,last_historical_data,is_active,status."
+        }
+      },
+      "notes": [
+        "Always 1 credit."
+      ],
+      "job": "market.symbols",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/cryptocurrency-id-map.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/cryptocurrency-id-map.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.cryptocurrency.listings_latest",
+      "name": "List coins by market cap",
+      "summary": "Paginated, sortable list of active coins with latest market data, with price, cap, volume and change filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/cryptocurrency/listings/latest",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based offset."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of results.",
+          "example": 100
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field: market_cap (default), market_cap_strict, name, symbol, date_added, price, circulating_supply, total_supply, max_supply, num_market_pairs, volume_24h, percent_change_1h, percent_change_24h, percent_change_7d, ..."
+        },
+        "sort_dir": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (asc or desc)."
+        },
+        "price_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum USD price."
+        },
+        "price_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum USD price."
+        },
+        "market_cap_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum market cap."
+        },
+        "market_cap_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum market cap."
+        },
+        "volume_24h_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum 24h USD volume."
+        },
+        "volume_24h_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum 24h USD volume."
+        },
+        "percent_change_24h_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum 24h percent change."
+        },
+        "percent_change_24h_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum 24h percent change."
+        },
+        "cryptocurrency_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Type of cryptocurrency to include."
+        },
+        "tag": {
+          "in": "query",
+          "type": "string",
+          "description": "Tag of cryptocurrency to include."
+        },
+        "convert": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated currency symbols to quote in (up to 120).",
+          "example": "USD"
+        },
+        "aux": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extra fields."
+        }
+      },
+      "notes": [
+        "1 credit per 250 coins returned (rounded up), plus 1 per extra convert currency. Updated every 15 seconds."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/listings-latest.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/listings-latest.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.cryptocurrency.quotes_latest",
+      "name": "Get latest coin quotes",
+      "summary": "Latest price, market cap, volume and changes for specific coins.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/cryptocurrency/quotes/latest",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated CoinMarketCap ids.",
+          "example": "1,1027"
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated slugs."
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated symbols."
+        },
+        "convert": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated currency symbols (up to 120)."
+        },
+        "convert_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Currencies by CoinMarketCap id instead of symbol."
+        },
+        "aux": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extra fields."
+        },
+        "skip_invalid": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip unmatched coins instead of failing the request."
+        }
+      },
+      "notes": [
+        "Pass one of id, slug or symbol.",
+        "1 credit per 250 coins, plus 1 per extra convert currency."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/quotes-latest.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/quotes-latest.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.cryptocurrency.quotes_historical",
+      "name": "Get historical coin quotes",
+      "summary": "Price, volume and market cap of coins at intervals over a time range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/cryptocurrency/quotes/historical",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated CoinMarketCap ids.",
+          "example": "1"
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated symbols."
+        },
+        "time_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Unix or ISO 8601 start.",
+          "example": "2024-01-01"
+        },
+        "time_end": {
+          "in": "query",
+          "type": "string",
+          "description": "Unix or ISO 8601 end, inclusive; default now."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of intervals when time_start and time_end are not both set; default 10, max 10000."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "yearly",
+            "monthly",
+            "weekly",
+            "daily",
+            "hourly",
+            "5m",
+            "10m",
+            "15m",
+            "30m",
+            "45m",
+            "1h",
+            "2h",
+            "3h",
+            "4h",
+            "6h",
+            "12h",
+            "24h",
+            "1d",
+            "2d",
+            "3d",
+            "7d",
+            "14d",
+            "15d",
+            "30d",
+            "60d",
+            "90d",
+            "365d"
+          ],
+          "description": "Sampling interval.",
+          "example": "daily"
+        },
+        "convert": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 3 currency symbols; default USD."
+        },
+        "aux": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extra fields."
+        },
+        "skip_invalid": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip unmatched coins instead of failing."
+        }
+      },
+      "notes": [
+        "Pass id or symbol.",
+        "1 credit per 100 data points (rounded up), plus 1 per extra convert currency.",
+        "Basic plan: 1 month intraday, 1 year daily."
+      ],
+      "job": "market.history",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/quotes-historical.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/quotes-historical.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.cryptocurrency.ohlcv_historical",
+      "name": "Get historical coin OHLCV",
+      "summary": "Daily or hourly open, high, low, close and volume for coins over a time range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/cryptocurrency/ohlcv/historical",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated CoinMarketCap ids.",
+          "example": "1,1027"
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated slugs."
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated symbols."
+        },
+        "time_period": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "daily",
+            "hourly"
+          ],
+          "description": "Candle period; default daily."
+        },
+        "time_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Unix or ISO 8601 start; only the date counts for daily.",
+          "example": "2024-01-01"
+        },
+        "time_end": {
+          "in": "query",
+          "type": "string",
+          "description": "Unix or ISO 8601 end, inclusive; default now."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of periods; default 10, max 10000."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "hourly",
+            "daily",
+            "weekly",
+            "monthly",
+            "yearly",
+            "1h",
+            "2h",
+            "3h",
+            "4h",
+            "6h",
+            "12h",
+            "1d",
+            "2d",
+            "3d",
+            "7d",
+            "14d",
+            "15d",
+            "30d",
+            "60d",
+            "90d",
+            "365d"
+          ],
+          "description": "How often time_period is sampled."
+        },
+        "convert": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 3 currency symbols; default USD."
+        },
+        "skip_invalid": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip unmatched coins instead of failing."
+        }
+      },
+      "notes": [
+        "Not on the free Basic plan.",
+        "1 credit per 100 data points (rounded up), plus 1 per extra convert currency."
+      ],
+      "job": "market.history",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/ohlcv-historical.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/ohlcv-historical.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.cryptocurrency.info",
+      "name": "Get coin metadata",
+      "summary": "Logo, description, website and social URLs, tags, platform and contract of coins.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/cryptocurrency/info",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated CoinMarketCap ids.",
+          "example": "1,1027"
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated slugs."
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated symbols."
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "A contract address."
+        },
+        "aux": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra fields: urls,logo,description,tags,platform,date_added,notice,status."
+        },
+        "skip_invalid": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip unmatched coins instead of failing."
+        }
+      },
+      "notes": [
+        "1 credit per 250 coins returned (rounded up)."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/metadata.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/cryptocurrency/metadata.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.global_metrics.latest",
+      "name": "Get global crypto market metrics",
+      "summary": "Total crypto market cap, volume, BTC and ETH dominance and related aggregates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/global-metrics/quotes/latest",
+      "params": {
+        "convert": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated currency symbols (up to 120)."
+        },
+        "convert_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Currencies by CoinMarketCap id."
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/global-metrics/quotes-latest-3.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/global-metrics/quotes-latest-3.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.fear_and_greed.latest",
+      "name": "Get the crypto Fear and Greed index",
+      "summary": "Latest CoinMarketCap Fear and Greed index value and label.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/fear-and-greed/latest",
+      "job": "market.quote",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/global-metrics/cmc-crypto-fear-and-greed-latest.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/global-metrics/cmc-crypto-fear-and-greed-latest.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.tools.price_conversion",
+      "name": "Convert a crypto or fiat amount",
+      "summary": "Convert an amount of one currency into others, now or at a past time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/tools/price-conversion",
+      "params": {
+        "amount": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Amount to convert.",
+          "example": 10.43
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "CoinMarketCap id of the source currency.",
+          "example": "1"
+        },
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Symbol of the source currency (id or symbol required)."
+        },
+        "time": {
+          "in": "query",
+          "type": "string",
+          "description": "Unix or ISO 8601 time for historical conversion; default now."
+        },
+        "convert": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 120 comma-separated target symbols.",
+          "example": "USD"
+        }
+      },
+      "notes": [
+        "Historical conversion needs a paid plan (Startup: 1 month)."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/tools/price-conversion-v2.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/tools/price-conversion-v2.md"
+      }
+    },
+    {
+      "id": "coinmarketcap.key.info",
+      "name": "Get API key usage",
+      "summary": "The key's plan, rate limits and credit usage, and when credits reset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/key/info",
+      "notes": [
+        "Costs no credits."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://coinmarketcap.com/api/documentation/pro-api-reference/tools/key-info.md",
+      "verified": {
+        "docs": "https://coinmarketcap.com/api/documentation/pro-api-reference/tools/key-info.md"
+      }
+    }
+  ]
+}

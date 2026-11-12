@@ -1,0 +1,198 @@
+{
+  "vendor": "postiz",
+  "name": "Postiz",
+  "category": "social",
+  "summary": "Posts scheduled and published to connected social channels (X, LinkedIn, Instagram, TikTok, YouTube and more), and their analytics.",
+  "docs_url": "https://docs.postiz.com/public-api/introduction",
+  "pricing_url": "https://postiz.com/pricing",
+  "base_url": "https://api.postiz.com/public/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "POSTIZ_API_KEY"
+        ],
+        "description": "A Postiz API key (Postiz Settings), or an OAuth token starting with pos_. Sent as the raw Authorization header value, with no Bearer prefix."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Postiz Cloud only; a self-hosted instance serves the same API at https://<your-domain>/api/public/v1, which this entry does not reach.",
+    "The API says integration where the UI says channel: every integration id comes from GET /integrations, never the platform name.",
+    "Rate limit: 100 requests per hour on Cloud, counted on the create-post endpoint only; batch several posts in one call.",
+    "A DELETE that answers 404 means already deleted."
+  ],
+  "sources": [
+    "https://docs.postiz.com/public-api/introduction",
+    "https://docs.postiz.com/public-api/integrations/list",
+    "https://docs.postiz.com/public-api/posts/list",
+    "https://docs.postiz.com/public-api/posts/create",
+    "https://docs.postiz.com/public-api/analytics/platform",
+    "https://docs.postiz.com/public-api/analytics/post",
+    "https://docs.postiz.com/public-api/integrations/find-slot",
+    "https://docs.postiz.com/public-api/notifications/list",
+    "https://docs.postiz.com/public-api/uploads/upload-from-url"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "postiz.integrations.list",
+      "name": "List connected channels",
+      "summary": "Connected social accounts (integrations) with their ids and platforms.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/integrations",
+      "params": {
+        "group": {
+          "in": "query",
+          "type": "string",
+          "description": "Only channels assigned to this customer (group) id."
+        }
+      },
+      "job": "social.accounts.list",
+      "docs_url": "https://docs.postiz.com/public-api/integrations/list",
+      "verified": {
+        "docs": "https://docs.postiz.com/public-api/integrations/list"
+      }
+    },
+    {
+      "id": "postiz.posts.list",
+      "name": "List posts in a date range",
+      "summary": "Scheduled and published posts between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/posts",
+      "params": {
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start, UTC ISO date-time.",
+          "example": "2024-12-01T00:00:00.000Z"
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End, UTC ISO date-time.",
+          "example": "2024-12-31T23:59:59.000Z"
+        },
+        "customer": {
+          "in": "query",
+          "type": "string",
+          "description": "Only posts of this customer id."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.postiz.com/public-api/posts/list",
+      "verified": {
+        "docs": "https://docs.postiz.com/public-api/posts/list"
+      }
+    },
+    {
+      "id": "postiz.analytics.channel",
+      "name": "Get channel analytics",
+      "summary": "Metrics such as followers, impressions and engagement for one channel, per day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/analytics/{integration}",
+      "params": {
+        "integration": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Integration id from postiz.integrations.list (not the platform name)."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Days to look back, e.g. 7, 30 or 90.",
+          "example": "7"
+        }
+      },
+      "notes": [
+        "Metrics differ by platform; some (e.g. Google My Business) return an empty payload rather than an error. 404 means the channel was disconnected."
+      ],
+      "job": "social.analytics",
+      "docs_url": "https://docs.postiz.com/public-api/analytics/platform",
+      "verified": {
+        "docs": "https://docs.postiz.com/public-api/analytics/platform"
+      }
+    },
+    {
+      "id": "postiz.analytics.post",
+      "name": "Get post analytics",
+      "summary": "Likes, comments, shares, impressions and similar for one published post.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/analytics/post/{postId}",
+      "params": {
+        "postId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Post id."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Days to look back, e.g. 7, 30 or 90.",
+          "example": "7"
+        }
+      },
+      "job": "social.analytics",
+      "docs_url": "https://docs.postiz.com/public-api/analytics/post",
+      "verified": {
+        "docs": "https://docs.postiz.com/public-api/analytics/post"
+      }
+    },
+    {
+      "id": "postiz.slot.find",
+      "name": "Find the next free posting slot",
+      "summary": "Next available time slot for posting to a channel.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/find-slot/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Integration id."
+        }
+      },
+      "docs_url": "https://docs.postiz.com/public-api/integrations/find-slot",
+      "verified": {
+        "docs": "https://docs.postiz.com/public-api/integrations/find-slot"
+      }
+    },
+    {
+      "id": "postiz.notifications.list",
+      "name": "List notifications",
+      "summary": "Organization notifications, newest first, 100 per page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/notifications",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 0-indexed, default 0."
+        }
+      },
+      "docs_url": "https://docs.postiz.com/public-api/notifications/list",
+      "verified": {
+        "docs": "https://docs.postiz.com/public-api/notifications/list"
+      }
+    }
+  ]
+}

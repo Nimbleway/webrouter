@@ -1,0 +1,419 @@
+{
+  "vendor": "health-canada-dpd",
+  "name": "Health Canada Drug Product Database",
+  "category": "health",
+  "summary": "Keyless Health Canada data on drugs marketed in Canada: products by DIN or brand, ingredients, companies, forms, routes, schedules and status.",
+  "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+  "base_url": "https://health-products.canada.ca/api/drug",
+  "notes": [
+    "Keyless. Start with drugproduct (by din or brandname) to get drug_code, then pass it as id to the other endpoints.",
+    "Responses are JSON arrays by default; type=xml switches to XML.",
+    "Status codes: 1 Approved, 2 Marketed, 3 Cancelled Pre Market, 4 Cancelled Post Market, 6 Dormant, 9 Cancelled (Unreturned Annual), 10 Cancelled (Safety Issue), 11 Authorized By Interim Order, 12 Interim Order Revoked, 13 Restricted Access, 14 Interim Order Expired, 15 Cancelled (Transitioned to Biocides)."
+  ],
+  "sources": [
+    "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "health-canada-dpd.products.search",
+      "name": "Find drug products",
+      "summary": "Drug products by DIN, brand name substring, status or drug code, with company and ingredient count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/drugproduct/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Drug product code.",
+          "example": 2049
+        },
+        "din": {
+          "in": "query",
+          "type": "string",
+          "description": "Drug Identification Number.",
+          "example": "00326925"
+        },
+        "brandname": {
+          "in": "query",
+          "type": "string",
+          "description": "Text matched within the brand name.",
+          "example": "cidyl"
+        },
+        "status": {
+          "in": "query",
+          "type": "integer",
+          "description": "Status code (see the vendor notes).",
+          "example": 2
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en (default) or fr.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "notes": [
+        "The docs list id as required, but din or brandname alone also return matches."
+      ],
+      "job": "drugs.search",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-dpd.ingredients.get",
+      "name": "Get active ingredients",
+      "summary": "Active ingredients and strengths of a drug product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/activeingredient/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Drug product code (drug_code from drugproduct).",
+          "example": 2049
+        },
+        "ingredientname": {
+          "in": "query",
+          "type": "string",
+          "description": "Text matched within the ingredient name.",
+          "example": "zinc"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en (default) or fr.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "drugs.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-dpd.companies.get",
+      "name": "Get a company",
+      "summary": "Details of a drug company by company code.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Company code."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en (default) or fr.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "drugs.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-dpd.forms.get",
+      "name": "Get dosage forms",
+      "summary": "Dosage forms of a drug product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/form/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Drug product code (drug_code from drugproduct).",
+          "example": 2049
+        },
+        "active": {
+          "in": "query",
+          "type": "string",
+          "description": "yes to return only forms dated after today or undated.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en (default) or fr.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "drugs.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-dpd.routes.get",
+      "name": "Get routes of administration",
+      "summary": "Routes of administration of a drug product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/route/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Drug product code (drug_code from drugproduct).",
+          "example": 2049
+        },
+        "active": {
+          "in": "query",
+          "type": "string",
+          "description": "Yes to return only routes dated after today or undated.",
+          "enum": [
+            "Yes"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en (default) or fr.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "drugs.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-dpd.schedules.get",
+      "name": "Get schedules",
+      "summary": "Regulatory schedules of a drug product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/schedule/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Drug product code (drug_code from drugproduct).",
+          "example": 2049
+        },
+        "active": {
+          "in": "query",
+          "type": "string",
+          "description": "yes to return only schedules dated after today or undated.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en (default) or fr.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "drugs.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-dpd.status.get",
+      "name": "Get product status",
+      "summary": "Status of a drug product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/status/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Drug product code (drug_code from drugproduct).",
+          "example": 2049
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en (default) or fr.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "drugs.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-dpd.therapeutic-class.get",
+      "name": "Get therapeutic class",
+      "summary": "Therapeutic classification of a drug product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/therapeuticclass/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Drug product code (drug_code from drugproduct).",
+          "example": 2049
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en (default) or fr.",
+          "enum": [
+            "en",
+            "fr"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "drugs.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    },
+    {
+      "id": "health-canada-dpd.packaging.get",
+      "name": "Get packaging",
+      "summary": "Packaging information of a drug product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/packaging/",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Drug product code (drug_code from drugproduct).",
+          "example": 2049
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "drugs.details",
+      "docs_url": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html",
+      "verified": {
+        "docs": "https://health-products.canada.ca/api/documentation/dpd-documentation-en.html"
+      }
+    }
+  ]
+}

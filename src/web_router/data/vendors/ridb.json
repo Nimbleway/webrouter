@@ -1,0 +1,411 @@
+{
+  "vendor": "ridb",
+  "name": "Recreation.gov RIDB",
+  "category": "commerce",
+  "summary": "The Recreation Information Database behind Recreation.gov: US federal recreation areas, facilities (campgrounds, trails, ranger stations), campsites, permits, tours, activities and events.",
+  "docs_url": "https://ridb.recreation.gov/docs",
+  "base_url": "https://ridb.recreation.gov/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "RIDB_API_KEY"
+        ],
+        "description": "your RIDB API key (ridb.recreation.gov), sent in the apikey header"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "List responses wrap records in RECDATA with paging in METADATA; page with limit (max 50) and offset.",
+    "Rate limit: 50 requests per second."
+  ],
+  "sources": [
+    "https://ridb.recreation.gov/docs",
+    "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ridb.recareas.search",
+      "name": "Search recreation areas",
+      "summary": "Recreation areas (parks, forests, lakes) by text, state, activity or distance from a point.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/recareas",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Text matched against name, description, keywords and stay limit.",
+          "example": "Yosemite"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, max 50 (default 50).",
+          "example": 50
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start record, 0-based."
+        },
+        "full": {
+          "in": "query",
+          "type": "string",
+          "description": "true for full records, false for compact ones.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated two-letter state codes.",
+          "example": "CO,VA"
+        },
+        "activity": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated activity ids or keywords.",
+          "example": "BOATING"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude in decimal degrees."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude in decimal degrees."
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Search radius in miles around latitude/longitude, max 25."
+        },
+        "lastupdated": {
+          "in": "query",
+          "type": "string",
+          "description": "Only records modified since this date, mm-dd-yyyy.",
+          "example": "10-01-2018"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort by ID, Date or Name."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    },
+    {
+      "id": "ridb.recareas.get",
+      "name": "Get a recreation area",
+      "summary": "One recreation area by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/recareas/{recAreaId}",
+      "params": {
+        "recAreaId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "RecArea id."
+        },
+        "full": {
+          "in": "query",
+          "type": "string",
+          "description": "true for full records, false for compact ones.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "job": "places.detail",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    },
+    {
+      "id": "ridb.facilities.search",
+      "name": "Search facilities",
+      "summary": "Facilities (campgrounds, trails, visitor centres) by text, state, activity or distance from a point.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/facilities",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Text matched against name, description, keywords and stay limit.",
+          "example": "campground"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, max 50 (default 50).",
+          "example": 50
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start record, 0-based."
+        },
+        "full": {
+          "in": "query",
+          "type": "string",
+          "description": "true for full records, false for compact ones.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated two-letter state codes.",
+          "example": "CO,VA"
+        },
+        "activity": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated activity ids or keywords.",
+          "example": "BOATING"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude in decimal degrees."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude in decimal degrees."
+        },
+        "radius": {
+          "in": "query",
+          "type": "number",
+          "description": "Search radius in miles around latitude/longitude, max 25."
+        },
+        "lastupdated": {
+          "in": "query",
+          "type": "string",
+          "description": "Only records modified since this date, mm-dd-yyyy.",
+          "example": "10-01-2018"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort by ID, Date or Name."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    },
+    {
+      "id": "ridb.facilities.get",
+      "name": "Get a facility",
+      "summary": "One facility by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/facilities/{facilityId}",
+      "params": {
+        "facilityId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Facility id."
+        },
+        "full": {
+          "in": "query",
+          "type": "string",
+          "description": "true for full records, false for compact ones.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "job": "places.detail",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    },
+    {
+      "id": "ridb.recareas.facilities",
+      "name": "List a recreation area's facilities",
+      "summary": "Facilities inside one recreation area.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/recareas/{recAreaId}/facilities",
+      "params": {
+        "recAreaId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "RecArea id."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Text filter."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, max 50 (default 50).",
+          "example": 50
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start record, 0-based."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    },
+    {
+      "id": "ridb.facilities.campsites",
+      "name": "List a facility's campsites",
+      "summary": "Campsites of one facility (campground).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/facilities/{facilityId}/campsites",
+      "params": {
+        "facilityId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Facility id."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Text matched against campsite name, type, loop, use type and accessibility."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, max 50 (default 50).",
+          "example": 50
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start record, 0-based."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    },
+    {
+      "id": "ridb.campsites.get",
+      "name": "Get a campsite",
+      "summary": "One campsite by id, with its attributes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/campsites/{campsiteId}",
+      "params": {
+        "campsiteId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Campsite id."
+        }
+      },
+      "job": "places.detail",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    },
+    {
+      "id": "ridb.activities.list",
+      "name": "List activities",
+      "summary": "The activity codes (camping, boating, ...) used as filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/activities",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Text filter."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, max 50 (default 50).",
+          "example": 50
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start record, 0-based."
+        }
+      },
+      "job": "places.categories",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    },
+    {
+      "id": "ridb.events.list",
+      "name": "List events",
+      "summary": "Events at recreation areas and facilities.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Text matched against name, dates, description and more."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, max 50 (default 50).",
+          "example": 50
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start record, 0-based."
+        }
+      },
+      "job": "events.list",
+      "docs_url": "https://ridb.recreation.gov/shared/swagger/ridb.yaml",
+      "verified": {
+        "docs": "https://ridb.recreation.gov/shared/swagger/ridb.yaml"
+      }
+    }
+  ]
+}

@@ -11,7 +11,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from web_router.client_requests import build_extract_request
-from web_router.data_api_discovery import with_site_matches
+from web_router.data_api_discovery import load_catalog
+from web_router.data_api_sites import with_site_matches
 
 if TYPE_CHECKING:
     from web_router.client import AsyncWebRouter, WebRouter
@@ -51,9 +52,10 @@ class SyncExtract:
         router = cast("WebRouter", self)
         request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = router.get_extract_provider(provider)
+        catalog = load_catalog(data_apis)  # read first, so a broken one is known before anything is billed
         response = router._routed(chain, request, budget, chain.extract)
         source = router.vendor_credential_source()
-        return with_site_matches(response, source, data_apis=data_apis, configured_only=configured_only)
+        return with_site_matches(response, source, catalog=catalog, configured_only=configured_only)
 
 
 class AsyncExtract:
@@ -80,6 +82,7 @@ class AsyncExtract:
         router = cast("AsyncWebRouter", self)
         request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = router.get_extract_provider(provider)
+        catalog = load_catalog(data_apis)  # read first, so a broken one is known before anything is billed
         response = await router._arouted(chain, request, budget, chain.aextract)
         source = router.vendor_credential_source()
-        return with_site_matches(response, source, data_apis=data_apis, configured_only=configured_only)
+        return with_site_matches(response, source, catalog=catalog, configured_only=configured_only)

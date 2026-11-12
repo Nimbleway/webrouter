@@ -1,0 +1,315 @@
+{
+  "vendor": "x",
+  "name": "X (Twitter) API",
+  "category": "social",
+  "summary": "X API v2: search recent posts, look up users and posts, and read timelines and followers.",
+  "docs_url": "https://docs.x.com/x-api",
+  "pricing_url": "https://docs.x.com/x-api/getting-started/pricing",
+  "base_url": "https://api.x.com/2",
+  "auth": {
+    "credentials": {
+      "bearer_token": {
+        "env": [
+          "X_BEARER_TOKEN"
+        ],
+        "description": "An X API bearer token: an app-only token for public reads (developer console > your app > Keys and tokens), or a user-context OAuth 2.0 access token for the user's own actions such as posting"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {bearer_token}"
+      }
+    ]
+  },
+  "notes": [
+    "A bearer token reads public data. Publishing needs a user-context access token with the right scopes, minted through X's OAuth 2.0 flow.",
+    "Responses carry only default fields (id, text for posts; id, name, username for users): request more with post.fields and user.fields.",
+    "Pagination is by next_token (search) or pagination_token (timelines) taken from meta in the previous answer.",
+    "Access and rate limits depend on the developer account's plan (see pricing_url)."
+  ],
+  "sites": [
+    "x.com",
+    "twitter.com"
+  ],
+  "sources": [
+    "https://docs.x.com/x-api",
+    "https://docs.x.com/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "x.posts.search_recent",
+      "name": "Search posts from the last 7 days",
+      "summary": "Posts matching a search query, newest first, limited to the past 7 days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tweets/search/recent",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "X search query with operators (from:, lang:, -is:retweet, ...).",
+          "example": "from:XDevelopers -is:retweet"
+        },
+        "max_results": {
+          "in": "query",
+          "type": "integer",
+          "description": "10 to 100."
+        },
+        "start_time": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601; must be within the last 7 days."
+        },
+        "end_time": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601."
+        },
+        "since_id": {
+          "in": "query",
+          "type": "string"
+        },
+        "until_id": {
+          "in": "query",
+          "type": "string"
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "recency or relevancy.",
+          "enum": [
+            "recency",
+            "relevancy"
+          ]
+        },
+        "next_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination token from meta.next_token."
+        },
+        "post_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated post fields to return.",
+          "example": "created_at,public_metrics,lang,conversation_id",
+          "wire_name": "post.fields"
+        },
+        "user_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated user fields to return.",
+          "example": "created_at,description,public_metrics,verified",
+          "wire_name": "user.fields"
+        },
+        "expansions": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated expansions, e.g. author_id to include the author in includes.users.",
+          "example": "author_id"
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.x.com/x-api/posts/search/introduction",
+      "verified": {
+        "docs": "https://docs.x.com/openapi.json"
+      },
+      "notes": [
+        "Only the last 7 days: older posts need the full-archive search, which is a higher access tier and not listed here.",
+        "Without post.fields a post comes back as just id and text. Ask for public_metrics, created_at, author_id.",
+        "Pages by meta.next_token. Reads are billed to the developer account's X API plan."
+      ]
+    },
+    {
+      "id": "x.users.by_username",
+      "name": "Get a user by username",
+      "summary": "Profile of one account by its handle (no @).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/by/username/{username}",
+      "params": {
+        "username": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Handle without the @.",
+          "example": "XDevelopers"
+        },
+        "user_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated user fields to return.",
+          "example": "created_at,description,public_metrics,verified",
+          "wire_name": "user.fields"
+        },
+        "expansions": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: pinned_post_id, most_recent_post_id."
+        },
+        "post_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated post fields to return.",
+          "example": "created_at,public_metrics,lang,conversation_id",
+          "wire_name": "post.fields"
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.x.com/x-api/users/lookup/introduction",
+      "verified": {
+        "docs": "https://docs.x.com/openapi.json"
+      },
+      "notes": [
+        "Returns only id, name and username unless user.fields asks for more (description, public_metrics, created_at, verified ...)."
+      ]
+    },
+    {
+      "id": "x.posts.get",
+      "name": "Get a post by id",
+      "summary": "One post with the fields you ask for.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tweets/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Post id.",
+          "example": "1460323737035677698"
+        },
+        "post_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated post fields to return.",
+          "example": "created_at,public_metrics,lang,conversation_id",
+          "wire_name": "post.fields"
+        },
+        "user_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated user fields to return.",
+          "example": "created_at,description,public_metrics,verified",
+          "wire_name": "user.fields"
+        },
+        "expansions": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated expansions, e.g. author_id to include the author in includes.users.",
+          "example": "author_id"
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.x.com/x-api/posts/lookup/introduction",
+      "verified": {
+        "docs": "https://docs.x.com/openapi.json"
+      }
+    },
+    {
+      "id": "x.users.posts",
+      "name": "List a user's posts",
+      "summary": "A user's recent posts timeline, by numeric user id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{id}/tweets",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Numeric user id (not the handle): get it from users.by_username."
+        },
+        "max_results": {
+          "in": "query",
+          "type": "integer",
+          "description": "5 to 100."
+        },
+        "pagination_token": {
+          "in": "query",
+          "type": "string",
+          "description": "meta.next_token from the previous page."
+        },
+        "start_time": {
+          "in": "query",
+          "type": "string"
+        },
+        "end_time": {
+          "in": "query",
+          "type": "string"
+        },
+        "since_id": {
+          "in": "query",
+          "type": "string"
+        },
+        "until_id": {
+          "in": "query",
+          "type": "string"
+        },
+        "exclude": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: replies, retweets."
+        },
+        "post_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated post fields to return.",
+          "example": "created_at,public_metrics,lang,conversation_id",
+          "wire_name": "post.fields"
+        },
+        "expansions": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated expansions, e.g. author_id to include the author in includes.users.",
+          "example": "author_id"
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.x.com/x-api/posts/timelines/introduction",
+      "verified": {
+        "docs": "https://docs.x.com/openapi.json"
+      }
+    },
+    {
+      "id": "x.users.followers",
+      "name": "List a user's followers",
+      "summary": "Accounts following a user, by numeric user id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{id}/followers",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Numeric user id."
+        },
+        "max_results": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 1000."
+        },
+        "pagination_token": {
+          "in": "query",
+          "type": "string"
+        },
+        "user_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated user fields to return.",
+          "example": "created_at,description,public_metrics,verified",
+          "wire_name": "user.fields"
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.x.com/x-api/users/follows/introduction",
+      "verified": {
+        "docs": "https://docs.x.com/openapi.json"
+      }
+    }
+  ]
+}

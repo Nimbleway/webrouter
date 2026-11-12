@@ -62,6 +62,25 @@ an agent reading the page pays for every character. Exa, which returns only
 text, returns `text` and says so. Ask for `html` by name to get the markup. `auto` takes all three formats and sends each call only to a
 member that returns the one asked for.
 
+## Data APIs that serve the page's site
+
+An extract also lists, on each page, the data APIs whose catalog entry names
+that page's site in its `sites` (subdomains included): YouTube, GitHub, Stack
+Overflow, Wikipedia, npm, PyPI, arXiv and others. Each page's `data_apis` holds
+the read endpoints of those APIs, those whose words the URL's path holds first,
+at most three, with whether each one's credentials are set:
+
+```python
+page = router.extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ").documents[0]
+page.data_apis[0].endpoint  # 'youtube.videos.get', the name call_vendor takes
+page.data_apis[0].configured  # False until YOUTUBE_API_KEY is set
+```
+
+Matching reads the local catalog, so it costs nothing and calls nothing; a match
+is never run. `data_apis=False` leaves them out and `configured_only=True` keeps
+the ones you hold credentials for. The MCP `extract` tool adds `data_apis` to a
+page only when it has matches.
+
 ## Partial failure
 
 Extracting several URLs can partly succeed, and it says so rather than pretending

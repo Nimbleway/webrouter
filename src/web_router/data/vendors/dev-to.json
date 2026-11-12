@@ -1,0 +1,342 @@
+{
+  "vendor": "dev-to",
+  "name": "DEV Community",
+  "category": "social",
+  "summary": "Articles, comments, users, tags and organizations on DEV (dev.to), the developer blogging community, through the Forem API v1.",
+  "docs_url": "https://developers.forem.com/api/v1",
+  "base_url": "https://dev.to",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DEV_TO_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional DEV API key, generated at dev.to/settings/extensions under 'DEV API Keys'; sent in the api-key header. Public reads work without it."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "api-key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "The public endpoints listed here need no key; a key is needed for writes and for the authenticated user's own data, which are not listed.",
+    "Paging is page (from 1) and per_page (1 to 1000; default 30, tags default 10).",
+    "Dates and date-times are RFC 3339."
+  ],
+  "sites": [
+    "dev.to"
+  ],
+  "sources": [
+    "https://developers.forem.com/api/v1",
+    "https://github.com/forem/forem/blob/main/swagger/v1/api_v1.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "dev-to.articles.list",
+      "name": "List published articles",
+      "summary": "Published articles, by default featured and ordered by popularity; filter by tag, tags, user or organization, state or top-N days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/articles",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1 (default 1)."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 1000 (default 30)."
+        },
+        "tag": {
+          "in": "query",
+          "type": "string",
+          "description": "Articles with this tag, by popularity. Combines with top.",
+          "example": "discuss"
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Articles with any of these comma-separated tags, by popularity.",
+          "example": "javascript, css"
+        },
+        "tags_exclude": {
+          "in": "query",
+          "type": "string",
+          "description": "Articles with none of these comma-separated tags.",
+          "example": "node, java"
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "Articles of this user or organization, newest first. With state=all, 1000 items are returned instead of 30.",
+          "example": "ben"
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "fresh or rising articles; all with username.",
+          "enum": [
+            "fresh",
+            "rising",
+            "all"
+          ]
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most popular articles published in the last N days. Combines with tag.",
+          "example": 2
+        },
+        "collection_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles of this series (collection), oldest first."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    },
+    {
+      "id": "dev-to.articles.search",
+      "name": "Search articles",
+      "summary": "Articles whose title, tags or body match a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/articles/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search term, matched against titles, tags and body."
+        },
+        "top": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only articles published in the last N days."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1 (default 1)."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    },
+    {
+      "id": "dev-to.articles.latest",
+      "name": "List latest articles",
+      "summary": "Published articles, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/articles/latest",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1 (default 1)."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 1000 (default 30)."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    },
+    {
+      "id": "dev-to.articles.get",
+      "name": "Get an article by id",
+      "summary": "One published article with its HTML and markdown body, tags and author.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/articles/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Numeric article id."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    },
+    {
+      "id": "dev-to.articles.by_path",
+      "name": "Get an article by URL path",
+      "summary": "One published article from its dev.to/{username}/{slug} URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/articles/{username}/{slug}",
+      "params": {
+        "username": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Author or organization username."
+        },
+        "slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Article slug, e.g. my-first-post-1234."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    },
+    {
+      "id": "dev-to.comments.list",
+      "name": "List comments of an article",
+      "summary": "Comments of an article or podcast episode as a threaded tree.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/comments",
+      "params": {
+        "a_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Article id whose comments to return.",
+          "example": "321"
+        },
+        "p_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Podcast episode id whose comments to return."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of top-level comments."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 1000 (default 30)."
+        }
+      },
+      "notes": [
+        "Give either a_id or p_id. Replies are nested under their parent comment."
+      ],
+      "job": "social.comments",
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    },
+    {
+      "id": "dev-to.users.get",
+      "name": "Get a user",
+      "summary": "A user's profile by numeric id or username.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/users/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Numeric user id or username.",
+          "example": "ben"
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    },
+    {
+      "id": "dev-to.tags.list",
+      "name": "List tags",
+      "summary": "Tags ordered by popularity, or one tag by exact name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tags",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1 (default 1)."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 1000 (default 10)."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Return only the tag with this exact name (case-insensitive); empty list if none.",
+          "example": "javascript"
+        }
+      },
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    },
+    {
+      "id": "dev-to.organizations.articles",
+      "name": "List an organization's articles",
+      "summary": "Articles published by an organization, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/organizations/{organization_id_or_username}/articles",
+      "params": {
+        "organization_id_or_username": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organization numeric id or username."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1 (default 1)."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 1000 (default 30)."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.forem.com/api/v1",
+      "verified": {
+        "docs": "https://developers.forem.com/api/v1"
+      }
+    }
+  ]
+}

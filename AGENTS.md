@@ -289,8 +289,11 @@ src/web_router/
 ├── exceptions_vendors.py VendorNotFoundError and VendorWriteRefusedError, apart on the
 │                       terms exceptions_budget.py is
 ├── vendors/            call_vendor's vendor-blind code: schema.py (the catalog file's
-│                       models), catalog.py, credentials.py, plan.py (inputs placed),
-│                       caller.py (credentials placed, sent, masked), types.py
+│                       models, with schema_base.py, schema_auth.py and
+│                       schema_endpoint.py), catalog.py, credentials.py, tokens.py
+│                       (OAuth tokens), masking.py, plan.py (inputs placed),
+│                       values.py (credentials resolved), caller.py (sent),
+│                       response.py (the answer, masked), types.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
 │   ├── methods.py      the library method behind each provider-picking tool: its
@@ -1237,20 +1240,40 @@ it is a format change to discuss first, not a branch in `caller.py`.
 2. Accuracy beats coverage. An endpoint goes in only when its method, path
    and inputs are known; an undocumented parameter is left out. The rules
    that hold for providers hold here: never invent a value, never drop one.
-3. `kind: write` for anything that changes the user's data or account,
-   sends something to other people, or deletes; every DELETE, PUT and PATCH.
-   A read over POST says so in its notes. A write is what `allow_writes`
-   gates, so a write marked `read` is a safety bug.
+3. Read or write. Sort every call into one of four kinds:
+   1. a pure read;
+   2. a metered read, or one that starts a temporary job: still `read`,
+      and its first note says it starts a billed job;
+   3. a read with an input that writes (saves to a list or table, writes
+      a shared cache): leave that input out, or make the call a write;
+   4. a write: anything that changes the user's data or account, sends
+      something to other people, or deletes; every DELETE, PUT and PATCH.
+
+   The shipped catalog holds kinds 1 and 2 only; `vendor_request` and a
+   user's own catalog directory carry writes. A read over POST says so in
+   its notes. A write is what `allow_writes` gates, so a write marked
+   `read` is a safety bug. A callback or webhook URL input is left out
+   too: it sends the answer to an address the caller picks, and the planner
+   refuses a webhook or callback key inside an object input. A call that
+   returns what an AI engine answered is a read when what comes back is data
+   with its sources; the test is what the call returns, not whether it takes a
+   prompt. A raw model call is not shipped. A parameter
+   whose `enum` has one value is a constant (Majestic's `cmd`): any other
+   value is refused, so a read cannot be pointed at a write command.
 4. `base_url` is https. A part of the host that varies (region, data
    centre) is a setting with an exhaustive `choices` list -- the format
    refuses one without, because a free-form host could carry the credential
    anywhere.
-5. Credentials: the variable names the vendor's own docs use, or the one
+5. Category: the shelf in `VENDOR_CATEGORY_DESCRIPTIONS` (`constants_vendors.py`) whose
+   line describes what the vendor holds. There is no catch-all: a vendor that fits no shelf
+   needs a new one, with its description, which `VENDORS.md` prints under its heading. The
+   `custom` shelf is for a user's own catalog directory and is never used by a shipped file.
+6. Credentials: the variable names the vendor's own docs use, or the one
    `.env.example` already uses for that vendor, else `<VENDOR>_API_KEY`. Two
    vendors never share a variable (a test checks).
-6. Notes are what a caller gets wrong without being told: units, paging,
+7. Notes are what a caller gets wrong without being told: units, paging,
    credits per call, async job flows.
-7. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
+8. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
    section) and `uv run pytest tests/vendors`, which loads every shipped
    file. Add a line to `CHANGELOG.md`.
 
@@ -1336,7 +1359,7 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    open-release sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test that opens, asks and releases, and
    asks the backend afterwards through `tests/providers/_browser_live.py`.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the browser support tables in `docs/browser.mdx` and `CHANGELOG.md`.
 
 ## Adding a browse provider
 
@@ -1376,7 +1399,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>_browse.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the browse support table in `docs/browser.mdx` and `CHANGELOG.md`.
 
 ## Adding a search provider
 

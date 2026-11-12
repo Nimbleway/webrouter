@@ -1,0 +1,692 @@
+{
+  "vendor": "dataforseo",
+  "name": "DataForSEO",
+  "category": "seo",
+  "summary": "DataForSEO APIs: live and queued Google SERPs, keyword data, DataForSEO Labs and backlinks, billed per task in USD.",
+  "docs_url": "https://docs.dataforseo.com/v3/",
+  "pricing_url": "https://dataforseo.com/pricing",
+  "base_url": "https://api.dataforseo.com",
+  "auth": {
+    "credentials": {
+      "login": {
+        "env": [
+          "DATAFORSEO_LOGIN"
+        ],
+        "description": "your DataForSEO API login (from the API Access page of your DataForSEO dashboard)"
+      },
+      "password": {
+        "env": [
+          "DATAFORSEO_PASSWORD"
+        ],
+        "description": "your DataForSEO API password (from the API Access page of your DataForSEO dashboard; not your web login password)"
+      }
+    },
+    "basic": {
+      "username": "{login}",
+      "password": "{password}"
+    }
+  },
+  "notes": [
+    "Every POST takes a JSON ARRAY of task objects, e.g. [{\"keyword\": \"...\", \"location_code\": 2840, \"language_code\": \"en\"}]; the params below describe one task object. Live calls accept one task per call.",
+    "Billing is prepaid in USD per task (the cost field of each answer); minimum top-up is $50 and new accounts get $1 trial credit. Prices vary by endpoint and mode: Google organic SERP is $0.0006 per SERP (standard queue), $0.0012 (priority) or $0.002 (live).",
+    "Live endpoints answer in one call (about 6 seconds for SERP); the queue pattern is task_post, then tasks_ready, then task_get. Results are kept 30 days.",
+    "Answers wrap a tasks array; check each task's status_code and status_message as well as the HTTP status.",
+    "Most calls need a location and a language; give either the code or the full name of each. Valid values come from each product's locations and languages endpoints.",
+    "pingback_url and postback_url are left out: each sends the result to an address the caller picks; poll tasks_ready instead."
+  ],
+  "sources": [
+    "https://docs.dataforseo.com/v3/",
+    "https://docs.dataforseo.com/v3/appendix/user_data/",
+    "https://docs.dataforseo.com/v3/serp/google/organic/live/advanced/",
+    "https://docs.dataforseo.com/v3/serp/google/organic/task_post/",
+    "https://docs.dataforseo.com/v3/serp/google/organic/task_get/advanced/",
+    "https://docs.dataforseo.com/v3/keywords_data/google_ads/search_volume/live/",
+    "https://docs.dataforseo.com/v3/dataforseo_labs/google/keyword_ideas/live/",
+    "https://docs.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live/",
+    "https://docs.dataforseo.com/v3/dataforseo_labs/google/domain_rank_overview/live/",
+    "https://docs.dataforseo.com/v3/backlinks/summary/live/",
+    "https://dataforseo.com/pricing"
+  ],
+  "endpoints": [
+    {
+      "id": "dataforseo.account.user_data",
+      "name": "Get account data",
+      "summary": "API usage, prices, spending and other account details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/appendix/user_data",
+      "notes": [
+        "Free. Returned prices are the base cost per call; paid add-on parameters are not included."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.dataforseo.com/v3/appendix/user_data/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/appendix/user_data/"
+      }
+    },
+    {
+      "id": "dataforseo.serp.google_organic",
+      "name": "Live Google organic SERP",
+      "summary": "Full Google results page (organic, features, ads) for a keyword, location and language, returned in the same call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/serp/google/organic/live/advanced",
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The keyword, up to 700 characters. Operators like site: or intitle: multiply the charge by 5.",
+          "example": "best crm software"
+        },
+        "location_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full location name, such as London,England,United Kingdom. Use this or location_code.",
+          "example": "United States"
+        },
+        "location_code": {
+          "in": "body",
+          "type": "integer",
+          "description": "Location code, such as 2840 for the United States. Use this or location_name.",
+          "example": 2840
+        },
+        "language_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full language name, such as English. Use this or language_code."
+        },
+        "language_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Language code, such as en. Use this or language_name.",
+          "example": "en"
+        },
+        "depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to parse, default 10, maximum 200. Billed per 10 results."
+        },
+        "device": {
+          "in": "body",
+          "type": "string",
+          "description": "desktop (default) or mobile.",
+          "enum": [
+            "desktop",
+            "mobile"
+          ]
+        },
+        "os": {
+          "in": "body",
+          "type": "string",
+          "description": "Device OS: windows or macos for desktop, android or ios for mobile."
+        },
+        "search_param": {
+          "in": "body",
+          "type": "string",
+          "description": "Extra Google query parameters, appended to the search."
+        },
+        "se_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Search engine domain, such as google.co.uk; chosen from location and language if unset."
+        },
+        "load_async_ai_overview": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true loads AI overviews that appear asynchronously."
+        },
+        "tag": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own task label (up to 255 characters), echoed back in the result."
+        }
+      },
+      "notes": [
+        "Cost: $0.002 per SERP of up to 10 results in live mode; depth above 10 adds charges. Each call carries one task.",
+        "Needs one of location_name, location_code or location_coordinate, plus a language.",
+        "The body is sent as a one-task JSON array, as DataForSEO requires; one call is one task."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://docs.dataforseo.com/v3/serp/google/organic/live/advanced/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/serp/google/organic/live/advanced/"
+      },
+      "body_array": true
+    },
+    {
+      "id": "dataforseo.serp.google_organic_task_post",
+      "name": "Queue a Google organic SERP task",
+      "summary": "Queue a Google organic SERP task; collect it later by id. Cheaper than live.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/serp/google/organic/task_post",
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The keyword, up to 700 characters.",
+          "example": "best crm software"
+        },
+        "location_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full location name, such as London,England,United Kingdom. Use this or location_code.",
+          "example": "United States"
+        },
+        "location_code": {
+          "in": "body",
+          "type": "integer",
+          "description": "Location code, such as 2840 for the United States. Use this or location_name.",
+          "example": 2840
+        },
+        "language_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full language name, such as English. Use this or language_code."
+        },
+        "language_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Language code, such as en. Use this or language_name.",
+          "example": "en"
+        },
+        "depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to parse, default 10, maximum 700."
+        },
+        "device": {
+          "in": "body",
+          "type": "string",
+          "description": "desktop (default) or mobile.",
+          "enum": [
+            "desktop",
+            "mobile"
+          ]
+        },
+        "priority": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 normal (default) or 2 high.",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "tag": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own task label (up to 255 characters), echoed back in the result."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "The call returns a task id. Fetch results with dataforseo.serp.google_organic_task_get, or list finished ids with the tasks_ready endpoint.",
+        "Cost: $0.0006 per SERP in the standard queue (about 5 minutes) or $0.0012 in the priority queue (about 1 minute).",
+        "The body is sent as a one-task JSON array, as DataForSEO requires; one call is one task."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://docs.dataforseo.com/v3/serp/google/organic/task_post/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/serp/google/organic/task_post/"
+      },
+      "body_array": true
+    },
+    {
+      "id": "dataforseo.serp.google_organic_task_get",
+      "name": "Get a queued SERP task",
+      "summary": "Results of a task queued with the Google organic task_post call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/serp/google/organic/task_get/advanced/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Task id (UUID) from task_post.",
+          "example": "00000000-0000-0000-0000-000000000000"
+        }
+      },
+      "notes": [
+        "Free: you are charged only for posting the task. Results stay available for 30 days."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.dataforseo.com/v3/serp/google/organic/task_get/advanced/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/serp/google/organic/task_get/advanced/"
+      }
+    },
+    {
+      "id": "dataforseo.keywords.google_ads_volume",
+      "name": "Google Ads search volume",
+      "summary": "Monthly search volume, CPC, competition and bid ranges for up to 1,000 keywords from Google Ads data.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/keywords_data/google_ads/search_volume/live",
+      "params": {
+        "keywords": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 1,000 keywords, each at most 80 characters and 10 words; lowercased by the API.",
+          "example": [
+            "buy laptop",
+            "cheap laptops"
+          ]
+        },
+        "location_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full location name, such as London,England,United Kingdom. Use this or location_code.",
+          "example": "United States"
+        },
+        "location_code": {
+          "in": "body",
+          "type": "integer",
+          "description": "Location code, such as 2840 for the United States. Use this or location_name.",
+          "example": 2840
+        },
+        "location_coordinate": {
+          "in": "body",
+          "type": "string",
+          "description": "GPS as latitude,longitude; data is for the country it falls in."
+        },
+        "language_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full language name, such as English. Use this or language_code."
+        },
+        "language_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Language code, such as en. Use this or language_name.",
+          "example": "en"
+        },
+        "search_partners": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include Google search partners. Default false."
+        },
+        "date_from": {
+          "in": "body",
+          "type": "string",
+          "description": "Start date, yyyy-mm-dd; at most 4 years back. Default: past 12 months."
+        },
+        "date_to": {
+          "in": "body",
+          "type": "string",
+          "description": "End date, yyyy-mm-dd; not later than last month. Default: yesterday."
+        },
+        "include_adult_keywords": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include adult keywords. Default false."
+        },
+        "sort_by": {
+          "in": "body",
+          "type": "string",
+          "description": "relevance (default), search_volume, competition_index, low_top_of_page_bid or high_top_of_page_bid; descending."
+        },
+        "tag": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own task label (up to 255 characters), echoed back in the result."
+        }
+      },
+      "notes": [
+        "Google Ads groups similar keywords into combined volumes; send close variants in separate calls to separate their volume. No location means worldwide data.",
+        "The body is sent as a one-task JSON array, as DataForSEO requires; one call is one task."
+      ],
+      "job": "keywords.volume",
+      "docs_url": "https://docs.dataforseo.com/v3/keywords_data/google_ads/search_volume/live/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/keywords_data/google_ads/search_volume/live/"
+      },
+      "body_array": true
+    },
+    {
+      "id": "dataforseo.labs.keyword_ideas",
+      "name": "Keyword ideas (Labs)",
+      "summary": "Keyword ideas for seed keywords from DataForSEO Labs, with volume, difficulty and optional SERP data.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/dataforseo_labs/google/keyword_ideas/live",
+      "params": {
+        "keywords": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Seed keywords.",
+          "example": [
+            "phone",
+            "watch"
+          ]
+        },
+        "location_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full location name, such as London,England,United Kingdom. Use this or location_code.",
+          "example": "United States"
+        },
+        "location_code": {
+          "in": "body",
+          "type": "integer",
+          "description": "Location code, such as 2840 for the United States. Use this or location_name.",
+          "example": 2840
+        },
+        "language_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full language name, such as English. Use this or language_code."
+        },
+        "language_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Language code, such as en. Use this or language_name.",
+          "example": "en"
+        },
+        "closely_variants": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Search mode: true narrows to close variants."
+        },
+        "ignore_synonyms": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Drop highly similar keywords."
+        },
+        "include_serp_info": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add SERP data for each keyword."
+        },
+        "include_clickstream_data": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add clickstream-based metrics; doubles the request price."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum keywords returned."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Offset into the results."
+        },
+        "offset_token": {
+          "in": "body",
+          "type": "string",
+          "description": "Token for the next page of a previous answer."
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "description": "Result filters, as DataForSEO filter expressions (see the docs page)."
+        },
+        "order_by": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort rules, such as [\"keyword_data.keyword_info.search_volume,desc\"]."
+        },
+        "tag": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own task label (up to 255 characters), echoed back in the result."
+        }
+      },
+      "notes": [
+        "Billed per task plus per item returned; see the pricing page. include_clickstream_data doubles the price.",
+        "The body is sent as a one-task JSON array, as DataForSEO requires; one call is one task."
+      ],
+      "job": "keywords.ideas",
+      "docs_url": "https://docs.dataforseo.com/v3/dataforseo_labs/google/keyword_ideas/live/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/dataforseo_labs/google/keyword_ideas/live/"
+      },
+      "body_array": true
+    },
+    {
+      "id": "dataforseo.labs.ranked_keywords",
+      "name": "Keywords a domain ranks for (Labs)",
+      "summary": "Keywords a domain or page ranks for in Google, with positions, volume and SERP elements.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/dataforseo_labs/google/ranked_keywords/live",
+      "params": {
+        "target": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Domain name or page URL.",
+          "example": "dataforseo.com"
+        },
+        "location_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full location name, such as London,England,United Kingdom. Use this or location_code.",
+          "example": "United States"
+        },
+        "location_code": {
+          "in": "body",
+          "type": "integer",
+          "description": "Location code, such as 2840 for the United States. Use this or location_name.",
+          "example": 2840
+        },
+        "language_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full language name, such as English. Use this or language_code."
+        },
+        "language_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Language code, such as en. Use this or language_name.",
+          "example": "en"
+        },
+        "ignore_synonyms": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Drop highly similar keywords."
+        },
+        "item_types": {
+          "in": "body",
+          "type": "array",
+          "description": "SERP item types to include."
+        },
+        "include_clickstream_data": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add clickstream-based metrics; doubles the request price."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum keywords returned."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Offset into the results."
+        },
+        "load_rank_absolute": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the rank distribution by absolute rank."
+        },
+        "historical_serp_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "Data collection mode for historical SERPs."
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "description": "Result filters, as DataForSEO filter expressions (see the docs page)."
+        },
+        "order_by": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort rules, such as [\"keyword_data.keyword_info.search_volume,desc\"]."
+        },
+        "tag": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own task label (up to 255 characters), echoed back in the result."
+        }
+      },
+      "notes": [
+        "Billed per task plus per item returned; see the pricing page.",
+        "The body is sent as a one-task JSON array, as DataForSEO requires; one call is one task."
+      ],
+      "job": "domain.keywords",
+      "docs_url": "https://docs.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live/"
+      },
+      "body_array": true
+    },
+    {
+      "id": "dataforseo.labs.domain_rank_overview",
+      "name": "Domain rank overview (Labs)",
+      "summary": "Organic and paid ranking totals for a domain in a location and language.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/dataforseo_labs/google/domain_rank_overview/live",
+      "params": {
+        "target": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The domain.",
+          "example": "dataforseo.com"
+        },
+        "location_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full location name, such as London,England,United Kingdom. Use this or location_code.",
+          "example": "United States"
+        },
+        "location_code": {
+          "in": "body",
+          "type": "integer",
+          "description": "Location code, such as 2840 for the United States. Use this or location_name.",
+          "example": 2840
+        },
+        "language_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full language name, such as English. Use this or language_code."
+        },
+        "language_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Language code, such as en. Use this or language_name.",
+          "example": "en"
+        },
+        "ignore_synonyms": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Drop highly similar keywords."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results for the domain."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Offset into the results."
+        },
+        "tag": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own task label (up to 255 characters), echoed back in the result."
+        }
+      },
+      "notes": [
+        "Billed per task; see the pricing page.",
+        "The body is sent as a one-task JSON array, as DataForSEO requires; one call is one task."
+      ],
+      "job": "domain.rank",
+      "docs_url": "https://docs.dataforseo.com/v3/dataforseo_labs/google/domain_rank_overview/live/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/dataforseo_labs/google/domain_rank_overview/live/"
+      },
+      "body_array": true
+    },
+    {
+      "id": "dataforseo.backlinks.summary",
+      "name": "Backlinks summary",
+      "summary": "Backlink and referring-domain totals and rank for a domain, subdomain or page.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/backlinks/summary/live",
+      "params": {
+        "target": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Domain, subdomain or webpage.",
+          "example": "dataforseo.com"
+        },
+        "include_subdomains": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include subdomains of the target."
+        },
+        "include_indirect_links": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include indirect links."
+        },
+        "exclude_internal_backlinks": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Exclude internal backlinks from subdomains."
+        },
+        "internal_list_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum elements within internal arrays."
+        },
+        "backlinks_status_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Which backlinks to return and count (see the docs page for values)."
+        },
+        "backlinks_filters": {
+          "in": "body",
+          "type": "array",
+          "description": "Filter the target's backlinks."
+        },
+        "rank_scale": {
+          "in": "body",
+          "type": "string",
+          "description": "Scale used for the rank, domain_from_rank and page_from_rank values (see the docs page)."
+        },
+        "tag": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own task label (up to 255 characters), echoed back in the result."
+        }
+      },
+      "notes": [
+        "Backlinks API access is billed per task; see the pricing page.",
+        "The body is sent as a one-task JSON array, as DataForSEO requires; one call is one task."
+      ],
+      "job": "backlinks.summary",
+      "docs_url": "https://docs.dataforseo.com/v3/backlinks/summary/live/",
+      "verified": {
+        "docs": "https://docs.dataforseo.com/v3/backlinks/summary/live/"
+      },
+      "body_array": true
+    }
+  ],
+  "curated": "2026-11-08"
+}

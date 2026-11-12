@@ -42,8 +42,8 @@ ExtractFormat = Literal["markdown", "html", "text"]
 
 Backends do not all offer all three: one that cannot produce the format you
 asked for raises :class:`~web_router.exceptions.UnsupportedFormatError` rather
-than returning a different one under the same name. See the format table in
-README.md.
+than returning a different one under the same name. See the format table at
+https://docs.webrouter.net/extract#formats
 """
 
 

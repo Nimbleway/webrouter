@@ -1,0 +1,110 @@
+{
+  "vendor": "data-cms",
+  "name": "CMS Data (data.cms.gov)",
+  "category": "health",
+  "summary": "Medicare and Medicaid datasets published by the US Centers for Medicare & Medicaid Services: the open-data catalog, and rows of any API-enabled dataset with keyword search, filters, sorting and column selection.",
+  "docs_url": "https://data.cms.gov/api-docs",
+  "base_url": "https://data.cms.gov",
+  "notes": [
+    "Free and keyless. A custom User-Agent with your organization, application and contact email is optional.",
+    "Find a dataset's id in the catalog (data.json): each datasetSeries @id is a data URL that always points to the latest release; each dataset (one release) lists its distributions, with the API accessURL and CSV/ZIP downloadURL.",
+    "Rows come 1,000 per request by default, up to 5,000 with size; page with offset, and read the total from dataset.stats first. For a whole dataset, downloading the CSV is faster.",
+    "All values are strings. Filters use the JSON:API filter syntax, e.g. filter[COLUMN]=value for equality; complex conditions (operators =, <>, >, >=, <, <=, STARTS_WITH, CONTAINS, ENDS_WITH, IN, NOT IN, BETWEEN, IS NULL ...) are sent as filter[...] keys in a raw call.",
+    "URLs are limited to 8,192 characters. On 429 slow down; on 5xx retry with randomized back-off."
+  ],
+  "sources": [
+    "https://data.cms.gov/api-docs",
+    "https://data.cms.gov/sites/default/files/2026-09/e5bb2f9f-313c-4943-8705-69bc21b8ec42/api-faq-1-7.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "data-cms.catalog",
+      "name": "Get the dataset catalog",
+      "summary": "The DCAT-US v3.0 catalog of every dataset and dataset series, with titles, time periods, API and download URLs, and data dictionaries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data.json",
+      "params": {},
+      "notes": [
+        "A large single document: filter it locally by title."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://data.cms.gov/api-docs",
+      "verified": {
+        "docs": "https://data.cms.gov/sites/default/files/2026-09/e5bb2f9f-313c-4943-8705-69bc21b8ec42/api-faq-1-7.txt"
+      }
+    },
+    {
+      "id": "data-cms.dataset.rows",
+      "name": "Query a dataset's rows",
+      "summary": "Rows of one dataset as JSON, with keyword search across all columns, equality filters, sorting, column selection and paging.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data-api/v1/dataset/{dataset_id}/data",
+      "params": {
+        "dataset_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The dataset (or dataset series) id from the catalog.",
+          "example": "9887a515-7552-4693-bf58-735c77af46d7"
+        },
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Match these words in any column.",
+          "example": "alex"
+        },
+        "column": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return.",
+          "example": "NPI,FIRST_NAME,LAST_NAME"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Column to sort by; prefix - for descending.",
+          "example": "-NPI"
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return, up to 5000; 1000 by default."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip."
+        }
+      },
+      "job": "datasets.query",
+      "docs_url": "https://data.cms.gov/api-docs",
+      "verified": {
+        "docs": "https://data.cms.gov/sites/default/files/2026-09/e5bb2f9f-313c-4943-8705-69bc21b8ec42/api-faq-1-7.txt"
+      }
+    },
+    {
+      "id": "data-cms.dataset.stats",
+      "name": "Count a dataset's rows",
+      "summary": "Row counts of one dataset (total_rows), to plan paging.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data-api/v1/dataset/{dataset_id}/data/stats",
+      "params": {
+        "dataset_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The dataset id."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://data.cms.gov/api-docs",
+      "verified": {
+        "docs": "https://data.cms.gov/sites/default/files/2026-09/e5bb2f9f-313c-4943-8705-69bc21b8ec42/api-faq-1-7.txt"
+      }
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "vendor": "tinyfish",
+  "name": "TinyFish",
+  "category": "scraping",
+  "summary": "Hosted browser-agent automation and deep research from TinyFish.",
+  "docs_url": "https://docs.tinyfish.ai/",
+  "pricing_url": "https://www.tinyfish.ai/pricing",
+  "base_url": "https://agent.tinyfish.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TINYFISH_API_KEY"
+        ],
+        "description": "a TinyFish API key (docs.tinyfish.ai > API Keys page)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is the X-API-Key header.",
+    "This entry covers the agent host (agent.tinyfish.ai). TinyFish's Search and Fetch APIs live on separate hosts (api.search.tinyfish.ai, api.fetch.tinyfish.ai), which a single base_url cannot reach, so they are not in this entry.",
+    "Automation runs can use vault credentials and browser profiles; those options are not exposed here.",
+    "Monitors, datasets, browser sessions and vault endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://docs.tinyfish.ai/llms.txt",
+    "https://docs.tinyfish.ai/api-reference/automation/run-browser-automation-synchronously.md",
+    "https://docs.tinyfish.ai/api-reference/start-research-asynchronously.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "tinyfish.runs.get",
+      "name": "Get an automation run",
+      "summary": "Status, result and optional screenshots of one run.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/runs/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Run id."
+        },
+        "screenshots": {
+          "in": "query",
+          "type": "string",
+          "description": "Screenshot delivery; default url.",
+          "enum": [
+            "base64",
+            "url",
+            "none"
+          ]
+        },
+        "html": {
+          "in": "query",
+          "type": "string",
+          "description": "HTML snapshot delivery; default url.",
+          "enum": [
+            "url",
+            "none"
+          ]
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.tinyfish.ai/api-reference/runs/get-run-by-id.md",
+      "verified": {
+        "docs": "https://docs.tinyfish.ai/api-reference/runs/get-run-by-id.md"
+      }
+    },
+    {
+      "id": "tinyfish.research.start",
+      "name": "Start a research run",
+      "summary": "Search, evaluate sources and write a cited report, asynchronously.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/automation/run-research-async",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The research question.",
+          "example": "Compare long-duration energy storage approaches"
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "Research depth; deep is the default.",
+          "enum": [
+            "deep",
+            "max"
+          ]
+        },
+        "output_language": {
+          "in": "body",
+          "type": "string",
+          "description": "BCP 47 language tag for the report."
+        },
+        "domain_filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Domain preferences, each list at most 150 entries."
+        },
+        "prior_run_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Seed from a completed run's report and evidence."
+        },
+        "session_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Continue a research session; not with prior_run_id."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Async: poll research.get."
+      ],
+      "job": "research.start",
+      "docs_url": "https://docs.tinyfish.ai/api-reference/start-research-asynchronously.md",
+      "verified": {
+        "docs": "https://docs.tinyfish.ai/api-reference/start-research-asynchronously.md"
+      }
+    },
+    {
+      "id": "tinyfish.research.get",
+      "name": "Get a research run",
+      "summary": "A saved research run with its plan, evidence and report.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/research-run/{research_run_id}",
+      "params": {
+        "research_run_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Research run id."
+        }
+      },
+      "job": "research.status",
+      "docs_url": "https://docs.tinyfish.ai/api-reference/get-research-run-by-id.md",
+      "verified": {
+        "docs": "https://docs.tinyfish.ai/api-reference/get-research-run-by-id.md"
+      }
+    },
+    {
+      "id": "tinyfish.wallet.get",
+      "name": "Get the wallet",
+      "summary": "Balance, auto-reload settings and rates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/wallet",
+      "job": "account.usage",
+      "docs_url": "https://docs.tinyfish.ai/api-reference/wallet/get-wallet.md",
+      "verified": {
+        "docs": "https://docs.tinyfish.ai/api-reference/wallet/get-wallet.md"
+      }
+    }
+  ]
+}

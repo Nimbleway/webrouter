@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from web_router import AsyncWebRouter, WebRouter
-from web_router.constants_vendors import DATA_API_SEARCH_LIMIT, DATA_APIS_ONLY_PROVIDER
+from web_router.constants_data_api import DATA_API_SEARCH_LIMIT, DATA_APIS_ONLY_PROVIDER
 
 DATADOG = {"datadog": {"api_key": "dd-api", "app_key": "dd-app"}}
 

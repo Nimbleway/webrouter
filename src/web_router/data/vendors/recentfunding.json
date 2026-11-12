@@ -1,0 +1,499 @@
+{
+  "vendor": "recentfunding",
+  "name": "Recent Funding",
+  "category": "company-data",
+  "summary": "Recently funded startups with sourced round amounts, investors, founders, acquisitions and new VC funds.",
+  "docs_url": "https://recentfunding.com/docs/",
+  "pricing_url": "https://recentfunding.com/pricing/",
+  "base_url": "https://recentfunding.com/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "RECENTFUNDING_API_KEY"
+        ],
+        "description": "A Recent Funding API key (rf_live_..., free from recentfunding.com/dashboard/). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Free keys: 10 requests a day, data at least 14 days old, no stealth companies (asking for one is 403 plan_required). Pay as you go is $0.10 a call; Pro and Max are monthly quotas. X-RateLimit-* headers report what is left.",
+    "Paging is limit + offset; list answers give next_offset (null on the last page).",
+    "Unknown query parameters are refused with 400.",
+    "Every amount links to its source (e.g. raise_source_url); an amount with no source is not shown.",
+    "The docs ask callers to send X-On-Behalf-Of naming who they fetch for; this entry does not send it."
+  ],
+  "sources": [
+    "https://recentfunding.com/llms.txt",
+    "https://recentfunding.com/docs/",
+    "https://recentfunding.com/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "recentfunding.companies.list",
+      "name": "List or search funded companies",
+      "summary": "Active startups with their latest round, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 100, max 2000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip; use the previous next_offset."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words that must all appear (name, industry, description, city, investors)."
+        },
+        "stage": {
+          "in": "query",
+          "type": "string",
+          "description": "pre-seed, seed, series-a, series-b+, stealth or unknown."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Industry slug, e.g. ai-agents, infra-devtools, defi."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "HQ city, exact; comma-separate a metro."
+        },
+        "crypto": {
+          "in": "query",
+          "type": "string",
+          "description": "true for crypto only, false to exclude.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "accelerator": {
+          "in": "query",
+          "type": "string",
+          "description": "Accelerator key (yc, techstars, antler, ...) or any."
+        },
+        "min_raise": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum latest-round amount in USD, digits only.",
+          "example": "5000000"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Default newest.",
+          "enum": [
+            "newest",
+            "oldest",
+            "raise",
+            "announced",
+            "name",
+            "team_size",
+            "days_early"
+          ]
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-companies",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-companies"
+      }
+    },
+    {
+      "id": "recentfunding.companies.get",
+      "name": "Get a company and its rounds",
+      "summary": "One company with every funding round, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{slug}",
+      "params": {
+        "slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company slug from a list answer.",
+          "example": "shepherd"
+        }
+      },
+      "job": "company.funding",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-companies-slug",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-companies-slug"
+      }
+    },
+    {
+      "id": "recentfunding.rounds.list",
+      "name": "List recent funding rounds",
+      "summary": "Rounds with a known amount, most recently announced first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rounds",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 100, max 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip; use the previous next_offset."
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only rounds announced on or after this date.",
+          "example": "2026-09-01"
+        },
+        "stage": {
+          "in": "query",
+          "type": "string",
+          "description": "pre-seed, seed, series-a, series-b+ or unknown."
+        },
+        "min_amount": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum amount in USD, digits only."
+        },
+        "crypto": {
+          "in": "query",
+          "type": "string",
+          "description": "true for crypto only, false to exclude.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "job": "company.funding",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-rounds",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-rounds"
+      }
+    },
+    {
+      "id": "recentfunding.investors.list",
+      "name": "List or search investors",
+      "summary": "Investors ranked by deals in the last 12 months (default).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/investors",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 100, max 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip; use the previous next_offset."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Investor name words."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Default deals_12m.",
+          "enum": [
+            "deals_12m",
+            "companies",
+            "capital",
+            "recent"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Default funds (all when q is set).",
+          "enum": [
+            "funds",
+            "angels",
+            "corporates",
+            "accelerators",
+            "all"
+          ]
+        },
+        "active": {
+          "in": "query",
+          "type": "string",
+          "description": "1: only investors with a deal in the last 90 days.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        }
+      },
+      "job": "investors.search",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-investors",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-investors"
+      }
+    },
+    {
+      "id": "recentfunding.investors.get",
+      "name": "Get an investor and its portfolio",
+      "summary": "Portfolio, top categories, stage split and co-investors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/investors/{slug}",
+      "params": {
+        "slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Investor slug from recentfunding.investors.list."
+        }
+      },
+      "job": "company.investments",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-investors-slug",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-investors-slug"
+      }
+    },
+    {
+      "id": "recentfunding.founders.list",
+      "name": "List founders and people",
+      "summary": "People at active companies with role, links and the company's latest round.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/founders",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 100, max 2000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip; use the previous next_offset."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words over person name, company and role."
+        },
+        "role": {
+          "in": "query",
+          "type": "string",
+          "description": "Role at the company.",
+          "enum": [
+            "all",
+            "founder",
+            "ceo",
+            "cto"
+          ]
+        },
+        "stage": {
+          "in": "query",
+          "type": "string",
+          "description": "Stage of the company's latest round.",
+          "enum": [
+            "pre-seed",
+            "seed",
+            "series-a",
+            "series-b+"
+          ]
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Company category key, e.g. ai-agents."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "HQ country slug, e.g. united-states."
+        },
+        "raised": {
+          "in": "query",
+          "type": "integer",
+          "description": "Company's latest round within this many days."
+        },
+        "serial": {
+          "in": "query",
+          "type": "string",
+          "description": "true: only people at two or more companies.",
+          "enum": [
+            "true",
+            "false",
+            "1",
+            "0"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Default newest.",
+          "enum": [
+            "newest",
+            "raised",
+            "name",
+            "latest_raise",
+            "profile"
+          ]
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-founders",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-founders"
+      }
+    },
+    {
+      "id": "recentfunding.acquisitions.list",
+      "name": "List recent acquisitions",
+      "summary": "Acquisitions, newest first; a price only with its source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/acquisitions",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 100, max 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip; use the previous next_offset."
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only deals announced on or after this date."
+        },
+        "scope": {
+          "in": "query",
+          "type": "string",
+          "description": "startups: only acquired venture-backed companies.",
+          "enum": [
+            "all",
+            "startups"
+          ]
+        },
+        "buyer": {
+          "in": "query",
+          "type": "string",
+          "description": "pe: only private equity buyers.",
+          "enum": [
+            "any",
+            "pe"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words in the acquirer's or target's name."
+        }
+      },
+      "job": "company.acquisitions",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-acquisitions",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-acquisitions"
+      }
+    },
+    {
+      "id": "recentfunding.funds.list",
+      "name": "List new VC funds",
+      "summary": "New venture funds, newest first, with sourced sizes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/funds",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 100, max 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip; use the previous next_offset."
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only funds announced on or after this date."
+        },
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only funds announced in this year."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words in the fund name, firm or location."
+        }
+      },
+      "job": "company.funds",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-funds",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-funds"
+      }
+    },
+    {
+      "id": "recentfunding.contacts.get",
+      "name": "Get a company's contacts",
+      "summary": "Founders and decision makers with mailbox-checked work emails, plus the company's published inboxes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{slug}/contacts",
+      "params": {
+        "slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company slug."
+        }
+      },
+      "notes": [
+        "Quota: Pro 50 companies a month, Max 100, free keys 3 in total; then $1 per company from a pay-as-you-go balance (402 contacts_quota without one). The same company again within 30 days is free.",
+        "A company nobody looked up yet can take up to a minute; allow a 120 s timeout."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://recentfunding.com/docs/#contacts",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#contacts"
+      }
+    },
+    {
+      "id": "recentfunding.usage",
+      "name": "Get key usage",
+      "summary": "Today's requests against the limit and the last 30 days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "notes": [
+        "Free: not counted against the allowance."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://recentfunding.com/docs/#get-api-v1-usage",
+      "verified": {
+        "docs": "https://recentfunding.com/docs/#get-api-v1-usage"
+      }
+    }
+  ]
+}

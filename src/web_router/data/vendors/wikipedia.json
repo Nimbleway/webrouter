@@ -1,0 +1,451 @@
+{
+  "vendor": "wikipedia",
+  "name": "Wikipedia",
+  "category": "search",
+  "summary": "Keyless Wikipedia search, plain-text article extracts, page source and HTML, revision history, language links and file info through the MediaWiki APIs.",
+  "docs_url": "https://www.mediawiki.org/wiki/API:Main_page",
+  "base_url": "https://{language}.wikipedia.org",
+  "settings": {
+    "language": {
+      "env": [
+        "WIKIPEDIA_LANGUAGE"
+      ],
+      "default": "en",
+      "choices": [
+        "en",
+        "de",
+        "fr",
+        "es",
+        "it",
+        "ja",
+        "ru",
+        "pt",
+        "zh",
+        "pl",
+        "nl",
+        "ar",
+        "sv",
+        "uk",
+        "fa",
+        "he",
+        "ko",
+        "id",
+        "tr",
+        "vi",
+        "cs",
+        "fi",
+        "no",
+        "hu",
+        "ro",
+        "simple"
+      ],
+      "description": "Which language edition to call (the subdomain)."
+    },
+    "user_agent": {
+      "env": [
+        "WIKIPEDIA_USER_AGENT"
+      ],
+      "default": "WebRouter (+https://github.com/Nimbleway/webrouter)",
+      "description": "A descriptive User-Agent with contact details, e.g. 'MyAgent/1.0 (you@example.com)'; clients without one may be IP-blocked; the default names WebRouter, so set your own with contact details for heavy use."
+    }
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Keyless, but Wikimedia requires an informative User-Agent with contact information; set WIKIPEDIA_USER_AGENT.",
+    "No fixed read limit: send requests one at a time, batch titles with | where a call accepts several, and back off on a ratelimited error.",
+    "Action API calls (/w/api.php) need action and format=json; the REST calls (/w/rest.php/v1) answer JSON already."
+  ],
+  "sites": [
+    "wikipedia.org"
+  ],
+  "sources": [
+    "https://www.mediawiki.org/wiki/API:Search",
+    "https://www.mediawiki.org/wiki/Extension:TextExtracts",
+    "https://www.mediawiki.org/wiki/API:REST_API/Reference",
+    "https://www.mediawiki.org/wiki/API:Etiquette"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "wikipedia.search",
+      "name": "Search articles",
+      "summary": "Pages matching a full-text query, with snippets, word counts and total hits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/api.php",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be query.",
+          "example": "query",
+          "enum": [
+            "query"
+          ]
+        },
+        "list": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be search.",
+          "example": "search",
+          "enum": [
+            "search"
+          ]
+        },
+        "srsearch": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search string.",
+          "example": "large language model"
+        },
+        "srlimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Results per call, 1 to 500 or max, default 10."
+        },
+        "sroffset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset for continuing, default 0."
+        },
+        "srnamespace": {
+          "in": "query",
+          "type": "string",
+          "description": "Namespaces, default 0 (articles); * for all."
+        },
+        "srwhat": {
+          "in": "query",
+          "type": "string",
+          "description": "nearmatch, text or title.",
+          "enum": [
+            "nearmatch",
+            "text",
+            "title"
+          ]
+        },
+        "srprop": {
+          "in": "query",
+          "type": "string",
+          "description": "|-separated properties: size, wordcount, timestamp, snippet, titlesnippet, redirecttitle."
+        },
+        "srinfo": {
+          "in": "query",
+          "type": "string",
+          "description": "|-separated metadata: totalhits, suggestion, rewrittenquery."
+        },
+        "srsort": {
+          "in": "query",
+          "type": "string",
+          "description": "relevance (default), last_edit_desc, create_timestamp_desc, random and others."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json"
+          ]
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://www.mediawiki.org/wiki/API:Search",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/API:Search"
+      }
+    },
+    {
+      "id": "wikipedia.extracts",
+      "name": "Get article text extracts",
+      "summary": "Plain-text or limited-HTML extracts of one or more pages, whole or intro only.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/api.php",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be query.",
+          "example": "query",
+          "enum": [
+            "query"
+          ]
+        },
+        "prop": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be extracts.",
+          "example": "extracts",
+          "enum": [
+            "extracts"
+          ]
+        },
+        "titles": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Page titles, |-separated.",
+          "example": "Earth"
+        },
+        "explaintext": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Set (any value) for plain text instead of HTML.",
+          "example": true
+        },
+        "exintro": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Set for only the content before the first section."
+        },
+        "exchars": {
+          "in": "query",
+          "type": "integer",
+          "description": "Approximate characters to return, 1 to 1,200."
+        },
+        "exsentences": {
+          "in": "query",
+          "type": "integer",
+          "description": "Sentences to return, 1 to 10."
+        },
+        "exlimit": {
+          "in": "query",
+          "type": "string",
+          "description": "Extracts to return, 1 to 20 or max; more than one only with exintro."
+        },
+        "exsectionformat": {
+          "in": "query",
+          "type": "string",
+          "description": "Section headings in plain text: wiki (default), plain or raw.",
+          "enum": [
+            "wiki",
+            "plain",
+            "raw"
+          ]
+        },
+        "excontinue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Continue value from a previous response."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json"
+          ]
+        }
+      },
+      "job": "web.extract",
+      "docs_url": "https://www.mediawiki.org/wiki/Extension:TextExtracts",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/Extension:TextExtracts"
+      }
+    },
+    {
+      "id": "wikipedia.pages.search",
+      "name": "Search pages (REST)",
+      "summary": "Pages matching a search query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/rest.php/v1/search/page",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search terms.",
+          "example": "earth"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1 to 100, default 50."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://www.mediawiki.org/wiki/API:REST_API/Reference",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/API:REST_API/Reference"
+      }
+    },
+    {
+      "id": "wikipedia.titles.suggest",
+      "name": "Autocomplete page titles",
+      "summary": "Pages whose titles start with the given text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/rest.php/v1/search/title",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Title prefix.",
+          "example": "ear"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1 to 100, default 50."
+        }
+      },
+      "job": "web.suggest",
+      "docs_url": "https://www.mediawiki.org/wiki/API:REST_API/Reference",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/API:REST_API/Reference"
+      }
+    },
+    {
+      "id": "wikipedia.pages.source",
+      "name": "Get page source",
+      "summary": "Latest revision of a page with its wikitext source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/rest.php/v1/page/{title}",
+      "params": {
+        "title": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Page title, spaces as underscores; encode a subpage slash as %2F.",
+          "example": "Earth"
+        }
+      },
+      "job": "web.extract",
+      "docs_url": "https://www.mediawiki.org/wiki/API:REST_API/Reference",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/API:REST_API/Reference"
+      }
+    },
+    {
+      "id": "wikipedia.pages.html",
+      "name": "Get page HTML",
+      "summary": "Rendered HTML of the latest revision of a page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/rest.php/v1/page/{title}/html",
+      "params": {
+        "title": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Page title, spaces as underscores; encode a subpage slash as %2F.",
+          "example": "Earth"
+        },
+        "redirect": {
+          "in": "query",
+          "type": "string",
+          "description": "no to not follow redirects.",
+          "enum": [
+            "no"
+          ]
+        }
+      },
+      "notes": [
+        "Returns text/html, not JSON."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://www.mediawiki.org/wiki/API:REST_API/Reference",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/API:REST_API/Reference"
+      }
+    },
+    {
+      "id": "wikipedia.pages.history",
+      "name": "Get page history",
+      "summary": "Revisions of a page in segments of 20, with links to older and newer segments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/rest.php/v1/page/{title}/history",
+      "params": {
+        "title": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Page title, spaces as underscores; encode a subpage slash as %2F.",
+          "example": "Earth"
+        },
+        "older_than": {
+          "in": "query",
+          "type": "integer",
+          "description": "Revisions older than this revision id."
+        },
+        "newer_than": {
+          "in": "query",
+          "type": "integer",
+          "description": "Revisions newer than this revision id."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Only one kind: reverted, anonymous, bot or minor.",
+          "enum": [
+            "reverted",
+            "anonymous",
+            "bot",
+            "minor"
+          ]
+        }
+      },
+      "job": "web.history",
+      "docs_url": "https://www.mediawiki.org/wiki/API:REST_API/Reference",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/API:REST_API/Reference"
+      }
+    },
+    {
+      "id": "wikipedia.pages.languages",
+      "name": "Get page in other languages",
+      "summary": "The same article's titles in other language editions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/rest.php/v1/page/{title}/links/language",
+      "params": {
+        "title": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Page title, spaces as underscores; encode a subpage slash as %2F.",
+          "example": "Earth"
+        }
+      },
+      "job": "web.links",
+      "docs_url": "https://www.mediawiki.org/wiki/API:REST_API/Reference",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/API:REST_API/Reference"
+      }
+    },
+    {
+      "id": "wikipedia.files.get",
+      "name": "Get file info",
+      "summary": "Download URLs and sizes (original, preferred, thumbnail) of a media file.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/w/rest.php/v1/file/{title}",
+      "params": {
+        "title": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "File page title, with the File: prefix.",
+          "example": "File:The_Blue_Marble.jpg"
+        }
+      },
+      "job": "media.get",
+      "docs_url": "https://www.mediawiki.org/wiki/API:REST_API/Reference",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/API:REST_API/Reference"
+      }
+    }
+  ]
+}
