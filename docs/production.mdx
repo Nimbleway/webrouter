@@ -34,8 +34,10 @@ router.search("nvidia q3 earnings", timeout=5)
 router.extract(urls, timeout=10)
 ```
 
-- The call waits at most that many seconds. Each HTTP request is clamped to the
-  time left, so nothing returns late.
+- The call waits at most that many seconds. The built-in backends clamp each
+  HTTP request to the time left, so they do not return late; a custom backend
+  that blocks past it returns late on the sync router, and is cancelled at the
+  deadline on the async one.
 - `auto` starts a backend only while time is left, and passes over one whose
   measured p90 latency would not fit before calling it.
 - An extract keeps every page that came back in time. A page still loading at

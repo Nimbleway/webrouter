@@ -98,9 +98,10 @@ class SyncCore(_CoreLookup, SyncRouted):
         are sent with each fetch; a backend without saved profiles refuses it.
 
         ``timeout`` caps the seconds the call waits, as ``Budget(time_limit_s=...)``
-        does: each vendor call is cut off when it runs out, the pages that came
-        back in time are returned and the rest are failures; when none came
-        back it raises :class:`~web_router.DeadlineExceededError`.
+        does: each vendor call is held to the time left (the built-in backends
+        clamp every request to it), the pages that came back in time are
+        returned and the rest are failures; when none came back it raises
+        :class:`~web_router.DeadlineExceededError`.
         """
         request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
