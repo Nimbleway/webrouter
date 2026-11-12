@@ -85,7 +85,8 @@ def wait_and_read(provider: BrightDataLiveDataProvider, request: LiveDataRequest
     the call's deadline if sooner, polling every ``poll_seconds``. Every
     failure past the 202 names the snapshot: a poll or the read that fails, a
     snapshot that failed or was canceled, and a wait that ran out. A ready
-    snapshot whose inputs all failed raises as a synchronous run would. The wait
+    snapshot whose inputs all failed raises as a synchronous run would, with
+    the snapshot's id kept on it. The wait
     is checked before each poll, so a 202 that leaves no time raises with the
     snapshot's id rather than sending a poll the caller's deadline cuts off.
     The records are read under the caller's deadline and the provider's
@@ -103,7 +104,7 @@ def wait_and_read(provider: BrightDataLiveDataProvider, request: LiveDataRequest
     with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
         read = provider._client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
         payload = provider._decoded(read)
-    return to_response(provider.name, request, read.status_code, payload)
+    return _records(provider.name, request, snapshot.job_id, read.status_code, payload)
 
 
 async def await_and_read(
@@ -121,9 +122,26 @@ async def await_and_read(
     with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
         read = await provider._async_client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
         payload = provider._decoded(read)
-    return to_response(provider.name, request, read.status_code, payload)
+    return _records(provider.name, request, snapshot.job_id, read.status_code, payload)
 
 
 def _waiting(provider: BrightDataLiveDataProvider, request: LiveDataRequest, response: Any) -> SnapshotWait:
     found = snapshot_id(provider.name, request, provider._decoded(response))
     return SnapshotWait(provider.name, request, found, wait_until(provider.wait_seconds), provider.poll_seconds)
+
+
+def _records(provider: str, request: LiveDataRequest, job_id: str, status: int, payload: Any) -> LiveDataResponse:
+    """Build the response from a ready snapshot's records, keeping the snapshot's id on any failure.
+
+    The message stays the synchronous run's own ("every input failed ..."),
+    not the failed-read one, but the error is a
+    :class:`~web_router.exceptions_live_data.LiveDataJobError`, so the billed
+    snapshot can still be looked up.
+    """
+    try:
+        return to_response(provider, request, status, payload)
+    except LiveDataJobError:
+        raise
+    except ProviderError as exc:
+        message = str(exc).removeprefix(f"[{provider}] ")
+        raise LiveDataJobError(provider, message, job_id=job_id, original=exc) from exc
