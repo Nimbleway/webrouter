@@ -25,6 +25,7 @@ README_NAMES = {
     "You.com": "you",
     "Keenable": "keenable",
     "DeepSeek": "deepseek",
+    "Seltz": "seltz",
     "AgentCore": "agentcore",
 }
 

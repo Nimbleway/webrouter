@@ -118,6 +118,7 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.KEENABLE` | `keenable` | [Keenable](https://docs.keenable.ai) | direct HTTP; keyless with `allow_keyless=True` (rate-limited per IP) | `max_results`, `search_depth` (`lite`, `fast`), `include_domains` (one), `recency`, `effort` |
 | `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Search](https://api-docs.deepseek.com/guides/search) | direct HTTP | `max_results` (at most 50), `search_depth` (`lite`, `deep`), `include_domains`, `exclude_domains`, `locale`, `recency`, the last four sent inside the query, which must fit 128 characters |
 | `Provider.AGENTCORE` | `agentcore` | [AWS AgentCore Web Search](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html), through your own AgentCore Gateway ([setup](docs/agentcore-setup.md)) | MCP over HTTP, SigV4 via `botocore` (`[aws]`) | `max_results` (at most 25), `include_domains`, `exclude_domains`, `recency` (connector 1.2.0 or later). An end date is AgentCore's own `provider_options={"filters": {"publishedDateFilter": {"to": ...}}}`. Queries up to 200 characters. AWS's terms: show each result's citation, and do not store results in bulk |
+| `Provider.SELTZ` | `seltz` | [Seltz Search](https://docs.seltz.ai/api-reference/search) | direct HTTP | `max_results`, `include_domains`, `exclude_domains`, `recency`. Results carry a URL, a date and the document body, but no title or score |
 | `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | all but `effort` |
 | `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp), its `web_search_advanced_exa` tool | direct HTTP, **no key** | all but `locale` |
 | `Provider.PARALLEL_MCP` | `parallel-mcp` | [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/quickstart) | direct HTTP, **no key** | `max_results` (applied to the response: the tool ignores a count) |
@@ -328,7 +329,7 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore |
+| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Seltz |
 | `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
@@ -338,7 +339,7 @@ accuracy to tell apart are ordered by cost, then speed.
 [`benchmarks/providers/`](benchmarks/providers/README.md#the-default-auto-orders-make-chains)
 explains the method, and how close the top backends are. Every
 key you hold comes before the free tier — so a key you hold only for research,
-Perplexity's say, serves your plain searches too. Keenable, DeepSeek and AgentCore have
+Perplexity's say, serves your plain searches too. Keenable, DeepSeek, AgentCore and Seltz have
 no rows in those results, so they come after the keyless tier until a scan places them: with a gateway set up, a plain
 `WebRouter().search()` is still served by a keyless member first, so name `Provider.AGENTCORE` to reach it. For extract, the backends that
 joined later come after the keyless tier, so holding one more key never moves a
