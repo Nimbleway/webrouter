@@ -41,8 +41,8 @@ BRIGHTDATA_ID_PREFIX: Final = "gd_"
 """The collection method a scraper is described by when it has one: inputs keyed by the page's URL."""
 
 MSG_BRIGHTDATA_PENDING: Final = (
-    "Bright Data is still scraping {source!r} after {seconds:.0f} s; nothing is lost. Fetch the records "
-    "later from snapshot {job_id!r}: GET /datasets/v3/snapshot/{job_id}?format=json"
+    "Bright Data is still scraping {source!r}; waited {seconds:.0f} s for snapshot {job_id!r} and nothing is lost. "
+    "Fetch the records later: GET /datasets/v3/snapshot/{job_id}?format=json"
 )
 
 MSG_BRIGHTDATA_NOT_READY: Final = "Bright Data has no records for {source!r} yet: the scrape is still running"
