@@ -120,6 +120,13 @@ def test_a_numeric_score_is_kept_and_a_result_without_a_link_is_dropped(provider
     assert (result.url, result.score, result.description, result.content) == ("https://e.com", 0.5, "", "")
 
 
+@pytest.mark.parametrize("score", [True, float("nan"), float("inf"), "0.9"])
+def test_a_score_that_is_not_a_finite_number_is_dropped(provider: KeirolabsProvider, score: object) -> None:
+    payload = {"results": [{"title": "T", "url": "https://e.com", "snippet": "s", "score": score}]}
+    (result,) = provider._to_response(SearchRequest(query="q"), payload).results
+    assert result.score is None
+
+
 @pytest.mark.integration
 def test_live_search_returns_results() -> None:
     if not os.environ.get("KEIROLABS_API_KEY"):
