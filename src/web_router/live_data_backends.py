@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from web_router.constants_live_data import (
-    LIVE_DATA_ENV_BY_PROVIDER,
+from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
+from web_router.constants_live_data_any import (
     MSG_LIVE_DATA_EVERY_BACKEND_FAILED,
     MSG_LIVE_DATA_NO_BACKEND,
     MSG_LIVE_DATA_OTHER_BACKEND,

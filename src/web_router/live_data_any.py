@@ -26,11 +26,8 @@ from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
-from web_router.constants_live_data import (
-    LIVE_DATA_EVERY_BACKEND,
-    LIVE_DATA_SEARCH_PAGE,
-    MSG_LIVE_DATA_EVERY_BACKEND_FAILED,
-)
+from web_router.constants_live_data import LIVE_DATA_SEARCH_PAGE
+from web_router.constants_live_data_any import LIVE_DATA_EVERY_BACKEND, MSG_LIVE_DATA_EVERY_BACKEND_FAILED
 from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
 from web_router.live_data_backends import usable_backends_or_raise
 from web_router.live_data_catalogue import check_page
