@@ -39,7 +39,7 @@ from web_router.types import (
     ExtractResponse,
 )
 
-_MAPPED_DATA_FIELDS = frozenset({"url", "title", "publishedTime", "httpStatus", *JINA_BODY_FIELDS.values()})
+_MAPPED_DATA_FIELDS = frozenset({"url", "title", "publishedTime", "httpStatus", "warning", *JINA_BODY_FIELDS.values()})
 
 
 class JinaExtractProvider(HttpExtractProvider):
@@ -94,6 +94,7 @@ class JinaExtractProvider(HttpExtractProvider):
             format=body_format,
             status_code=data.get("httpStatus"),
             published_date=data.get("publishedTime"),
+            warnings=[str(data["warning"])] if data.get("warning") else [],
             extra={k: v for k, v in data.items() if k not in _MAPPED_DATA_FIELDS},
         )
         return ExtractResponse(provider=self.name, documents=[document], raw=[payload])

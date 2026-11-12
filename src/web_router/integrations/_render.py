@@ -17,7 +17,7 @@ from web_router.constants import (
     INTEGRATION_RESULT_CHARS,
     INTEGRATION_TRUNCATION_MARKER,
 )
-from web_router.types import Citation, ExtractResponse, SearchResponse
+from web_router.types import Citation, ExtractedDocument, ExtractResponse, SearchResponse
 from web_router.types_answer import AnswerResponse
 
 
@@ -42,13 +42,19 @@ def render_search(response: SearchResponse, result_chars: int = INTEGRATION_RESU
 def render_extract(response: ExtractResponse, document_chars: int = INTEGRATION_DOCUMENT_CHARS) -> str:
     """An extract response, each page cut to ``document_chars``; failures whole, since they are short and matter."""
     payload = {
-        "documents": [
-            {"url": document.url, "title": document.title, "content": cut_to_budget(document.content, document_chars)}
-            for document in response.documents
-        ],
+        "documents": [_document(document, document_chars) for document in response.documents],
         "failures": [{"url": failure.url, "error": failure.error} for failure in response.failures],
     }
     return json.dumps(payload, indent=INTEGRATION_JSON_INDENT, ensure_ascii=False, default=str)
+
+
+def _document(document: ExtractedDocument, document_chars: int) -> dict[str, Any]:
+    """One page: its status, so a model can tell a page from an error, and any warning about it."""
+    row: dict[str, Any] = {"url": document.url, "title": document.title, "status_code": document.status_code}
+    if document.warnings:
+        row["warnings"] = document.warnings
+    row["content"] = cut_to_budget(document.content, document_chars)
+    return row
 
 
 def render_answer(response: AnswerResponse, result_chars: int = INTEGRATION_RESULT_CHARS) -> str:

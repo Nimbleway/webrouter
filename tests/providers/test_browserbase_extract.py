@@ -30,6 +30,7 @@ from tests.providers._browserbase_fetch import (
 )
 from web_router import WebRouter
 from web_router.constants_browserbase import BROWSERBASE_API_KEY_HEADER, BROWSERBASE_BASE_URL
+from web_router.exceptions import ProviderError
 from web_router.types import ExtractRequest
 
 COOKIE_ECHO = "https://httpbin.org/cookies"
@@ -78,16 +79,13 @@ def test_the_fetched_page_is_normalized(fetch: Fetch) -> None:
     assert "authorization" not in fetch.headers[0]
 
 
-def test_what_the_target_answered_is_reported_not_judged(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An expired login comes back as the target's 401: Fetch answered, so it is a document that says so."""
+def test_what_the_target_answered_with_an_error_status_is_a_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An expired login comes back as the target's 401: not the page asked for, so the call raises naming it."""
     monkeypatch.setenv("BROWSERBASE_API_KEY", KEY)
     api = Fetch({**FETCHED, "statusCode": 401, "content": "Sign in"})
 
-    response = provider(api).extract(ExtractRequest(urls=[URL], profile="ctx-stale"))
-
-    assert response.failures == []
-    assert response.documents[0].status_code == 401
-    assert response.documents[0].content == "Sign in"
+    with pytest.raises(ProviderError, match="401"):
+        provider(api).extract(ExtractRequest(urls=[URL], profile="ctx-stale"))
 
 
 def test_every_url_is_its_own_fetch(fetch: Fetch) -> None:

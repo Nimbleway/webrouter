@@ -2780,7 +2780,7 @@ MSG_BROWSER_LEAKED = (
     "context manager, or call release() on it."
 )
 
-MSG_EXTRACT_BAD_STATUS = "the backend fetched nothing and reported status {status!r}"
+MSG_EXTRACT_BAD_STATUS = "the page came back with status {status!r}"
 
 MSG_EXTRACT_UNSUCCESSFUL = "the backend reported the fetch as unsuccessful and gave no reason"
 
