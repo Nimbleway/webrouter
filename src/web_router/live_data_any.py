@@ -249,11 +249,21 @@ def _in_turn(lists: Iterable[list[LiveDataSource]]) -> Iterable[LiveDataSource]:
 
 
 def _keyed_in_code(router: _LiveDataLookup, name: str) -> bool:
-    """Whether ``provider_config`` hands built-in backend ``name`` a key or a client."""
+    """Whether ``provider_config`` hands built-in backend ``name`` a key or a client.
+
+    The plain settings are read first, without importing the backend; its own
+    ``key_argument`` only after, and a backend whose SDK is missing has none
+    to read, so it was never a candidate.
+    """
     config = router._config_for(name)
+    if any(config.get(setting) for setting in _KEY_SETTINGS):
+        return True
+    try:
+        provider_class = get_live_data_provider_class(name)
+    except ProviderNotInstalledError:
+        return False
     # Oxylabs names its Web API key `web_api_key`, as `api_key` there is extract's password.
-    settings = (*_KEY_SETTINGS, getattr(get_live_data_provider_class(name), "key_argument", "api_key"))
-    return any(config.get(setting) for setting in settings)
+    return bool(config.get(getattr(provider_class, "key_argument", "api_key")))
 
 
 def _name_of(provider: str | Provider | LiveDataProvider) -> str:
