@@ -214,6 +214,18 @@ requests a second.
 | `:content` | `deepseek:content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 <!-- /prices -->
 
+### Octen
+
+Per call ([pricing](https://docs.octen.ai/overview/pricing)): Web Search lists at $5 per 1k, currently
+$1. Full content, which `search_depth` `fast` and `deep` turn on, adds $0.50 per 1k results. New accounts get $5
+of balance, and a payment method is required to use the API.
+
+<!-- prices: method=search provider=octen -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `octen` | default (highlights, no `full_content`) | Titles, URLs, dates and a query-relevant highlight per result | $1 per 1k; 80% off the $5 list price; full content $0.50 per 1k results on top | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the

@@ -1,0 +1,128 @@
+{
+  "provider": "octen",
+  "method": "search",
+  "class": "web_router.providers.octen.OctenProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.octen.ai",
+    "paths": {
+      "search_path": "/search"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "OCTEN_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.count": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "refused": "UnsupportedParameterError"
+      },
+      "fast": {
+        "body.full_content.enable": true
+      },
+      "deep": {
+        "body.full_content.enable": true,
+        "body.full_content.max_tokens": 100000
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "locale": {
+      "sample": {
+        "body.language": [
+          "en"
+        ]
+      }
+    },
+    "recency": {
+      "day": {
+        "body.time_range": "day"
+      },
+      "week": {
+        "body.time_range": "week"
+      },
+      "month": {
+        "body.time_range": "month"
+      },
+      "year": {
+        "body.time_range": "year"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort"
+  ],
+  "source": [
+    "https://docs.octen.ai/api-reference/search"
+  ],
+  "verified": {
+    "max_results": "docs: https://docs.octen.ai/api-reference/search",
+    "search_depth": "docs: https://docs.octen.ai/api-reference/search",
+    "include_domains": "docs: https://docs.octen.ai/api-reference/search",
+    "exclude_domains": "docs: https://docs.octen.ai/api-reference/search",
+    "locale": "docs: https://docs.octen.ai/api-reference/search",
+    "recency": "docs: https://docs.octen.ai/api-reference/search"
+  },
+  "vendor_options": {
+    "include_text": {
+      "status": "passthrough",
+      "note": "Up to 5 strings that must appear in the page text."
+    },
+    "exclude_text": {
+      "status": "passthrough",
+      "note": "Up to 5 strings that must not appear in the page text."
+    },
+    "time_basis": {
+      "status": "passthrough",
+      "note": "auto, published or crawled: which time field the time filters read."
+    },
+    "start_time": {
+      "status": "passthrough",
+      "note": "ISO 8601 start of a time window; takes precedence over time_range."
+    },
+    "end_time": {
+      "status": "passthrough",
+      "note": "ISO 8601 end of a time window."
+    },
+    "highlight": {
+      "status": "passthrough",
+      "note": "enable and max_tokens (100-20,000) for the query-relevant highlight, on at 512 tokens by default."
+    },
+    "format": {
+      "status": "passthrough",
+      "note": "markdown or text, for highlights."
+    },
+    "safesearch": {
+      "status": "passthrough",
+      "note": "off or strict."
+    },
+    "include_images": {
+      "status": "passthrough",
+      "note": "Whether results carry cover and inline images."
+    }
+  }
+}
