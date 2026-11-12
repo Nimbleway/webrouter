@@ -161,10 +161,9 @@ class HandleStore:
 def shape_search(response: SearchResponse, handle: str, *, budget: int) -> dict[str, Any]:
     """A search response, cut to fit.
 
-    ``description`` is dropped on purpose: the library defines ``content`` as
-    the fullest text available and falls back to the description when there is
-    no body, so carrying both would spend half the budget saying the same thing
-    twice.
+    ``description`` is dropped on purpose: the library defines ``content`` as the fullest text available and falls
+    back to the description when there is no body, so carrying both would spend half the budget saying it twice.
+    Matching data APIs ride along only when there are some, each cut to a few short fields.
     """
     results = [
         {
@@ -185,6 +184,7 @@ def shape_search(response: SearchResponse, handle: str, *, budget: int) -> dict[
         "answer": answer,
         "result_count": len(response.results),
         "results": results,
+        **({"data_apis": [match.brief() for match in response.data_apis]} if response.data_apis else {}),
     }
     return _fit(payload, results, ("content",), handle=handle, budget=budget, shortened=answer != response.answer)
 

@@ -166,7 +166,7 @@ def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, mon
     search = set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     research = set(_tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"])
     keyless = set().union(*(get_provider_class(name).supported_parameters for name, _ in AUTO_KEYLESS))
-    assert search == {"query", "provider", *keyless}
+    assert search == {"query", "provider", "data_apis", "data_apis_only", "configured_only", *keyless}
     assert {"include_domains", "exclude_domains", "records"}.isdisjoint(research)
 
     # A backend that maps it brings it back, for the model to name through `provider`.

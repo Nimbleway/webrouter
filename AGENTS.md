@@ -71,7 +71,9 @@ has no keyless tier, because every task bills.
 `vendor`, `vendor_endpoint`, `find_vendor_endpoints` to find what to call) is
 not an eighth method of interchangeable backends. It reaches one vendor's own
 API with the user's credentials -- their Google Ads, their Datadog -- and
-returns the vendor's answer untouched. The vendors are data, not classes: one
+returns the vendor's answer untouched. `search` lists the read endpoints that
+match its query in `data_apis` -- locally, never calling one -- and only
+`call_vendor` runs one. The vendors are data, not classes: one
 JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
 `web_router/vendors/`. See "Adding a vendor" below.
 
@@ -113,6 +115,8 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_search.py    search(), mixed into both routers: the web results, plus the data APIs
+│                       that match, from data_api_discovery.py (types_data_api.py's DataApiMatch)
 ├── client_live_data.py live_data(), live_data_sources(), live_data_source() and the
 │                       deprecated template names, mixed into both routers
 ├── live_data_search.py live_data_sources(query=...): NativeSourceSearch for vendors that
