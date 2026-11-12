@@ -154,6 +154,26 @@ async def test_a_ready_snapshot_whose_inputs_all_failed_raises_as_a_synchronous_
 
 
 @pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+async def test_a_snapshot_ready_late_in_the_wait_is_read_with_the_providers_timeout(asynchronous: bool) -> None:
+    given: list[float] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/datasets/v3/scrape":
+            return httpx.Response(202, json={"snapshot_id": "sd_abc"})
+        if request.url.path == "/datasets/v3/progress/sd_abc":
+            time.sleep(0.2)
+            return httpx.Response(200, json={"status": "ready"})
+        given.append(request.extensions["timeout"]["read"])
+        return httpx.Response(200, json=[{"title": "late"}])
+
+    provider, _ = _waiting(respond, wait=0.3)
+    request = LiveDataRequest(source=DATASET, inputs={"url": URL})
+    response = await provider.arun(request) if asynchronous else provider.run(request)
+    assert response.records == [{"title": "late"}]
+    assert given == [provider._client_kwargs["timeout"]]
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
 async def test_a_call_deadline_ends_the_wait_with_the_snapshots_id(asynchronous: bool) -> None:
     """The scrape is billed: a wait cut short by the caller's deadline still says which snapshot to read later."""
     provider, api = _waiting(_slow_scrape("running"), wait=300.0)

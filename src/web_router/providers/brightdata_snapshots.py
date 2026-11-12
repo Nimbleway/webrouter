@@ -88,6 +88,9 @@ def wait_and_read(provider: BrightDataLiveDataProvider, request: LiveDataRequest
     snapshot whose inputs all failed raises as a synchronous run would. The wait
     is checked before each poll, so a 202 that leaves no time raises with the
     snapshot's id rather than sending a poll the caller's deadline cuts off.
+    The records are read under the caller's deadline and the provider's
+    timeout, not what is left of the wait, which a snapshot ready late leaves
+    almost none of.
     """
     snapshot = _waiting(provider, request, response)
     with job_deadline(snapshot.until):
@@ -97,10 +100,10 @@ def wait_and_read(provider: BrightDataLiveDataProvider, request: LiveDataRequest
                 if snapshot.done(provider._send("GET", snapshot.path)):
                     break
             time.sleep(snapshot.pause())
-        with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
-            read = provider._client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
-            payload = provider._decoded(read)
-        return to_response(provider.name, request, read.status_code, payload)
+    with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
+        read = provider._client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
+        payload = provider._decoded(read)
+    return to_response(provider.name, request, read.status_code, payload)
 
 
 async def await_and_read(
@@ -115,10 +118,10 @@ async def await_and_read(
                 if snapshot.done(await provider._asend("GET", snapshot.path)):
                     break
             await asyncio.sleep(snapshot.pause())
-        with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
-            read = await provider._async_client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
-            payload = provider._decoded(read)
-        return to_response(provider.name, request, read.status_code, payload)
+    with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
+        read = await provider._async_client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
+        payload = provider._decoded(read)
+    return to_response(provider.name, request, read.status_code, payload)
 
 
 def _waiting(provider: BrightDataLiveDataProvider, request: LiveDataRequest, response: Any) -> SnapshotWait:
