@@ -8,6 +8,7 @@ a document carrying a warning.
 
 from __future__ import annotations
 
+import html
 from collections.abc import Iterable
 from http import HTTPStatus
 
@@ -20,6 +21,7 @@ from web_router.constants_extract import (
     EXTRACT_LOGIN_URL_PARTS,
     EXTRACT_NEAR_EMPTY_CHARS,
     EXTRACT_WALL_MAX_CHARS,
+    HTML_TITLE,
     MSG_EXTRACT_CHALLENGE,
     MSG_EXTRACT_LOGIN_WALL,
     MSG_EXTRACT_NEAR_EMPTY,
@@ -51,9 +53,10 @@ def not_the_page(document: ExtractedDocument) -> str | None:
     status = document.status_code
     if status is not None and status >= HTTPStatus.BAD_REQUEST:
         return MSG_EXTRACT_BAD_STATUS.format(status=status)
-    if EXTRACT_CHALLENGE_TITLE.search(document.title):
+    title = _title(document)
+    if EXTRACT_CHALLENGE_TITLE.search(title):
         return MSG_EXTRACT_CHALLENGE
-    if EXTRACT_LOGIN_TITLE.search(document.title) or any(part in document.url for part in EXTRACT_LOGIN_URL_PARTS):
+    if EXTRACT_LOGIN_TITLE.search(title) or any(part in document.url for part in EXTRACT_LOGIN_URL_PARTS):
         return MSG_EXTRACT_LOGIN_WALL
     if len(document.content) >= EXTRACT_WALL_MAX_CHARS:
         return None
@@ -63,6 +66,14 @@ def not_the_page(document: ExtractedDocument) -> str | None:
     if any(marker in text for marker in EXTRACT_LOGIN_MARKERS):
         return MSG_EXTRACT_LOGIN_WALL
     return None
+
+
+def _title(document: ExtractedDocument) -> str:
+    """The page's title: the backend's, else the ``<title>`` of an HTML body, since some backends set none for HTML."""
+    if document.title or document.format != "html":
+        return document.title
+    found = HTML_TITLE.search(document.content)
+    return html.unescape(found.group(1)).strip() if found else ""
 
 
 def near_empty(document: ExtractedDocument) -> bool:

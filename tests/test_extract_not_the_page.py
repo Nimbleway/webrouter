@@ -47,6 +47,10 @@ def _screened(**fields: Any) -> tuple[list[ExtractedDocument], list[str]]:
             MSG_EXTRACT_LOGIN_WALL,
         ),
         ({"url": "https://www.linkedin.com/authwall?trk=x", "content": ARTICLE}, MSG_EXTRACT_LOGIN_WALL),
+        (
+            {"format": "html", "content": f"<html><title>Just a moment&#8230;</title>{ARTICLE}</html>"},
+            MSG_EXTRACT_CHALLENGE,
+        ),
     ],
 )
 def test_a_challenge_or_login_page_is_a_failure_saying_which(fields: dict[str, Any], reason: str) -> None:

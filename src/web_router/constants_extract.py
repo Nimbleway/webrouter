@@ -79,3 +79,9 @@ EXTRACT_LOGIN_MARKERS: Final = (
 
 EXTRACT_LOGIN_URL_PARTS: Final = ("/authwall",)
 """Parts of the URL a login wall redirects to, whatever the page's length: LinkedIn's lands on ``/authwall``."""
+
+HTML_TITLE: Final = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+"""An HTML body's ``<title>``, read when a backend returns HTML with no title of its own.
+
+Markers in the body are not read on a long HTML page: a protected site's own pages carry the challenge scripts too.
+"""
