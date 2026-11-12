@@ -22,6 +22,7 @@ from __future__ import annotations
 import re
 
 from web_router.constants_routing import (
+    RULES_DEFINITION_PATTERN,
     RULES_REASON_NO_URL,
     RULES_REASON_RESEARCH,
     RULES_REASON_URL,
@@ -31,6 +32,7 @@ from web_router.constants_routing import (
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 
 _RESEARCH = re.compile(RULES_RESEARCH_PATTERN, re.IGNORECASE)
+_DEFINITION = re.compile(RULES_DEFINITION_PATTERN, re.IGNORECASE)
 
 
 def rules(req: RouteRequest) -> RouteDecision:
@@ -40,7 +42,7 @@ def rules(req: RouteRequest) -> RouteDecision:
     """
     if req.urls:
         return RouteDecision(tools=["extract"], reason=RULES_REASON_URL)
-    if _RESEARCH.search(req.prompt):
+    if _RESEARCH.search(req.prompt) and not _DEFINITION.match(req.prompt):
         return RouteDecision(tools=["research", "search"], reason=RULES_REASON_RESEARCH)
     return RouteDecision(tools=["search"], reason=RULES_REASON_NO_URL)
 
