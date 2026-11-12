@@ -16,6 +16,7 @@ import pytest
 from tests._live_data_paged import PagedProvider
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
+from web_router.providers._deadline import call_deadline, current_deadline
 from web_router.registry import register_live_data_provider, unregister_live_data_provider
 from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
 
@@ -68,3 +69,48 @@ def test_the_async_router_reads_a_capped_backend_page_by_page(capped: None) -> N
         return page.names
 
     assert asyncio.run(scenario()) == [f"c{index}" for index in range(150, 160)]
+
+
+# -- the caller's time limit reaches every backend -----------------------------
+
+
+class RecordingProvider(PagedProvider):
+    """Records whether a deadline was in force each time it was asked for a page."""
+
+    saw_deadline: ClassVar[list[bool]] = []
+
+    def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+        RecordingProvider.saw_deadline.append(current_deadline() is not None)
+        return super()._list(limit=limit, offset=offset)
+
+
+class RecorderA(RecordingProvider):
+    name = "rec_a"
+
+
+class RecorderB(RecordingProvider):
+    name = "rec_b"
+
+
+@pytest.fixture
+def recorders() -> Iterator[list[bool]]:
+    seen: list[bool] = []
+    RecordingProvider.saw_deadline = seen
+    register_live_data_provider("rec_a", RecorderA)
+    register_live_data_provider("rec_b", RecorderB)
+    yield seen
+    unregister_live_data_provider("rec_a")
+    unregister_live_data_provider("rec_b")
+
+
+def test_the_callers_deadline_reaches_every_backend_on_the_sync_path(recorders: list[bool]) -> None:
+    router = WebRouter()
+
+    with call_deadline(5):
+        router.live_data_sources(provider="rec_a", limit=2)
+    assert recorders == [True]
+
+    recorders.clear()
+    with call_deadline(5):
+        router.live_data_sources(limit=2)
+    assert recorders == [True, True]

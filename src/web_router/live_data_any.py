@@ -20,6 +20,7 @@ page raises only when every backend failed. Kept out of
 from __future__ import annotations
 
 import asyncio
+import contextvars
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
@@ -122,7 +123,11 @@ def search_every_backend(
     want = None if limit is None else (offset or 0) + limit
     answers: dict[str, LiveDataSourcePage | BaseException] = {}
     with ThreadPoolExecutor(max_workers=len(backends)) as pool:
-        futures = {backend.name: pool.submit(_ask, backend, query, want) for backend in backends}
+        # Each worker runs in a copy of this context, so the caller's deadline reaches every backend.
+        futures = {
+            backend.name: pool.submit(contextvars.copy_context().run, _ask, backend, query, want)
+            for backend in backends
+        }
     for name, future in futures.items():
         error = future.exception()
         answers[name] = error if error is not None else future.result()
