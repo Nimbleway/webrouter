@@ -214,6 +214,18 @@ requests a second.
 | `:content` | `deepseek:content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 <!-- /prices -->
 
+### Seltz
+
+Per search, however many documents it returns ([pricing](https://docs.seltz.ai/pricing)): $5 per 1k on
+the Pro tier, which Seltz uses unless `tier` says otherwise, and $3 per 1k on Base. New accounts get $20
+of credit.
+
+<!-- prices: method=search provider=seltz -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `seltz` | default (`tier=pro`) | URLs, dates and the document body per result; no titles | $5 per 1k; Pro tier, the default; $3 per 1k with `tier=base` | [docs.seltz.ai](https://docs.seltz.ai/pricing) | 2026-11-12 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the

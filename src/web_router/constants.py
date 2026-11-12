@@ -69,6 +69,7 @@ PROVIDER_EXA = Provider.EXA.value
 PROVIDER_PARALLEL = Provider.PARALLEL.value
 PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
+PROVIDER_SELTZ = Provider.SELTZ.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
@@ -157,6 +158,7 @@ ENV_EXA_API_KEY = "EXA_API_KEY"
 ENV_PARALLEL_API_KEY = "PARALLEL_API_KEY"
 ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
+ENV_SELTZ_API_KEY = "SELTZ_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
@@ -184,6 +186,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_PARALLEL: ENV_PARALLEL_API_KEY,
     PROVIDER_PERPLEXITY: ENV_PERPLEXITY_API_KEY,
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
+    PROVIDER_SELTZ: ENV_SELTZ_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
@@ -225,10 +228,9 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each extract provider needs, all of them; ``()`` means none.
 
-A tuple rather than a single name because two backends need more than a key:
-Oxylabs authenticates with a username and password, and Bright Data needs the
-zone that routes the request beside its token. ``jina`` needs nothing -- a key
-only raises its rate limit -- and ``auto`` needs whatever its chain does.
+A tuple rather than a single name because two backends need more than a key: Oxylabs authenticates with a
+username and password, and Bright Data needs the zone that routes the request beside its token. ``jina`` needs
+nothing -- a key only raises its rate limit -- and ``auto`` needs whatever its chain does.
 """
 
 RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -573,14 +575,12 @@ AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
 )
 """Tried when no credential is available, in order. Unmeasured, hand-ordered: never ranked by ``make chains``.
 
-Ordered rather than random on purpose: a router that picks a different backend
-each run returns different result counts and content lengths for the same
-query, and a bug reported against it cannot be reproduced. The chain still
-gives what random was reaching for -- if one anonymous tier is rate-limited,
-the next one answers. Exa's and Parallel's MCP servers joined last (2026-10-01),
-so a keyless call reaches them only when Tavily and You.com fail, and none that
-was being served moves. Their order between them is not yet backed by a scan.
-Keenable's ``/public`` endpoint joined after them (2026-10-13) on the same terms.
+Ordered rather than random on purpose: a router that picks a different backend each run returns different result
+counts and content lengths for the same query, and a bug reported against it cannot be reproduced. The chain
+still gives what random was reaching for -- if one anonymous tier is rate-limited, the next one answers. Exa's
+and Parallel's MCP servers joined last (2026-10-01), so a keyless call reaches them only when Tavily and You.com
+fail, and none that was being served moves. Their order between them is not yet backed by a scan. Keenable's
+``/public`` endpoint joined after them (2026-10-13) on the same terms.
 """
 
 AUTO_SUPPORTED_PARAMETERS = NORMALIZED_PARAMETERS
