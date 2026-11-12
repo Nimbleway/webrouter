@@ -65,7 +65,7 @@ def max_response_chars() -> int:
         return MCP_MAX_RESPONSE_CHARS
 
 
-def render(payload: dict[str, Any]) -> str:
+def render(payload: Any) -> str:
     """Serialize a shaped result the way the tool returns it.
 
     The same function the budget is measured against, so the cap counts the
@@ -74,17 +74,18 @@ def render(payload: dict[str, Any]) -> str:
     return json.dumps(payload, separators=MCP_JSON_SEPARATORS, ensure_ascii=False, default=str)
 
 
-def compact(row: dict[str, Any]) -> dict[str, Any]:
+def compact(row: dict[str, Any], *, whole: tuple[str, ...] = ()) -> dict[str, Any]:
     """``row`` without the keys that say nothing -- ``None``, ``""`` and ``[]`` -- which every turn would pay for.
 
     One level deep, on the rows this module builds: never inside ``structured``
-    or a backend's payload, where an empty value is the caller's or the vendor's own.
+    or a backend's payload, where an empty value is the caller's or the vendor's own;
+    a key in ``whole`` -- ``structured`` -- is left out only when ``None``, since ``[]`` can be its answer.
     """
-    return {key: value for key, value in row.items() if not _empty(value)}
-
-
-def _empty(value: Any) -> bool:
-    return value is None or (isinstance(value, (str, list)) and value in MCP_EMPTY_VALUES)
+    return {
+        key: value
+        for key, value in row.items()
+        if value is not None and (key in whole or value not in MCP_EMPTY_VALUES)
+    }
 
 
 def truncate(text: str, limit: int) -> str:
@@ -246,7 +247,8 @@ def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> d
             "answer": answer,
             "structured": response.structured,
             "citations": citations,
-        }
+        },
+        whole=("structured",),
     )
     shortened = answer != response.answer
     return _fit(payload, citations, ("snippet",), handle=handle, budget=budget, shortened=shortened, main=False)
@@ -277,7 +279,8 @@ def shape_browse(response: BrowseResponse, handle: str, *, budget: int) -> dict[
             "recording_url": response.recording_url,
             "step_count": len(response.steps),
             "steps": steps,
-        }
+        },
+        whole=("structured",),
     )
     # Redacted before fitting, so the budget is measured on what is sent.
     payload, count = redact(payload)

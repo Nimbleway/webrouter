@@ -168,8 +168,7 @@ class WebRouterTools:
         self.budget = ConnectionBudget(self.routing.ceiling)
         self._router_factory = router_factory or self.routing.build
         self.router = router if router is not None else self._router_factory()
-        # Routers load_env replaced: still serving every browser session and
-        # job they started, and closed with the rest in aclose().
+        # Routers load_env replaced: still serving the sessions and jobs they started; closed in aclose().
         self._retired: list[AsyncWebRouter] = []
         self._tools_changed = False
         self.store = store if store is not None else HandleStore()
@@ -204,6 +203,7 @@ class WebRouterTools:
                 MCP_TOOL_BROWSER_CLOSE: self._browser_close,
             }
         )
+        self.served = frozenset(self._handlers)  # the tools listed and callable here: the allowlist's, or all
 
     def list_tools(self) -> list[Tool]:
         """Every tool this install can serve, with an input schema built from what it is configured for.

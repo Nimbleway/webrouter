@@ -23,6 +23,11 @@ MCP_TOOLS_SEPARATOR = ","
 MCP_MSG_TOOLS_UNKNOWN = "%s names no tool this server has, so it was ignored: %s. Its tools: %s."
 """Logged at startup for each allowlist entry that matches nothing: a typo should not pass in silence."""
 
+MCP_MSG_PLAN_NOT_SERVED = (
+    "web_run planned {tool}, which {env_var} leaves off this server, so nothing was run. Call a tool it serves."
+)
+"""``web_run`` refusing to run a method the allowlist excludes: the allowlist is not bypassed by routing."""
+
 MCP_JSON_SEPARATORS = (",", ":")
 """How a result is serialized: compact, since every space is a token the model pays for and never reads."""
 

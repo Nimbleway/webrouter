@@ -15,14 +15,17 @@ import jsonschema
 import pytest
 
 from mcp import Client
+from tests.mcp.conftest import URL, outcome, routed
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_TOOL_ANSWER, MCP_TOOL_EXTRACT, MCP_TOOL_FETCH_RAW, MCP_TOOL_SEARCH
+from web_router.constants_mcp import MCP_TOOL_WEB_RUN
 from web_router.constants_mcp_context import ENV_MCP_TOOLS, MCP_OUTPUT_SCHEMAS
 from web_router.mcp import allowlist
 from web_router.mcp.env_credentials import credential_variables
 from web_router.mcp.server import build_server, call_tool
-from web_router.mcp.shaping import render
+from web_router.mcp.shaping import render, shape_research
 from web_router.mcp.tools import WebRouterTools
+from web_router.types import ResearchResponse
 
 TOOL_LIST_BUDGET = 26_000
 """Bytes of compact JSON the whole tool list may take with every backend configured -- about 6.5k tokens.
@@ -136,3 +139,20 @@ async def test_answer_keeps_its_own_arguments_from_the_library(tools: WebRouterT
 async def test_resource_templates_list_is_empty_not_method_not_found(tools: WebRouterTools) -> None:
     async with Client(build_server(tools)) as client:
         assert (await client.list_resource_templates()).resource_templates == []
+
+
+async def test_web_run_will_not_run_a_method_the_allowlist_leaves_out(
+    members: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(ENV_MCP_TOOLS, f"{MCP_TOOL_WEB_RUN},{MCP_TOOL_SEARCH}")
+
+    failed, text = await outcome(routed(), MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
+
+    assert failed and f"web_run planned {MCP_TOOL_EXTRACT}" in text and ENV_MCP_TOOLS in text
+    assert members == [], "nothing was run"
+
+
+def test_an_empty_structured_answer_is_kept() -> None:
+    response = ResearchResponse(provider="fake", query="q", structured=[], answer=None)
+
+    assert shape_research(response, "research-0001", budget=4000)["structured"] == []
