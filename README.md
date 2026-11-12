@@ -1799,3 +1799,5 @@ WebRouter is licensed under the [Apache License 2.0](LICENSE).
 
 The SimpleQA grader prompt vendored at `src/web_router/evals/prompts/` keeps
 its own MIT license, in `LICENSE-simple-evals` beside it.
+
+<!-- mcp-name: io.github.Nimbleway/webrouter -->

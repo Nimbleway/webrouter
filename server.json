@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Nimbleway/webrouter",
+  "title": "WebRouter",
+  "description": "Search, extract, answer, research and browse the web through one interface, across many providers",
+  "websiteUrl": "https://docs.webrouter.net",
+  "repository": {
+    "url": "https://github.com/Nimbleway/webrouter",
+    "source": "github"
+  },
+  "version": "0.12.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "webrouter",
+      "version": "0.12.0",
+      "runtimeHint": "uvx",
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "--from",
+          "value": "webrouter[mcp]==0.12.0"
+        },
+        {
+          "type": "positional",
+          "value": "web-router-mcp"
+        }
+      ],
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
