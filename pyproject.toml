@@ -151,10 +151,12 @@ aws = [
 remote = [
     "httpx>=0.27",
 ]
-all = ["webrouter[search,extract,research,answer,browser,aws,remote,vendors]"]
+# Every method and the MCP server. Not `evals` or `langchain`: each pulls in a
+# large SDK that only some callers need, so they are named on their own.
+all = ["webrouter[search,extract,research,answer,browser,aws,remote,vendors,mcp]"]
 
 [project.scripts]
-web-router-mcp = "web_router.mcp.server:main"
+web-router-mcp = "web_router.mcp_cli:main"
 
 [project.urls]
 Repository = "https://github.com/Nimbleway/webrouter"

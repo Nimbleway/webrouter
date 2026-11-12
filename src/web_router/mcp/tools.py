@@ -253,7 +253,7 @@ class WebRouterTools:
 
     def instructions(self) -> str:
         """The server's instructions, saying what the model can do about it when no key reached the server."""
-        return MCP_SERVER_INSTRUCTIONS + ("" if self.keyed() else MCP_MSG_INSTRUCTIONS_NO_KEYS)
+        return self.env.noted(MCP_SERVER_INSTRUCTIONS + ("" if self.keyed() else MCP_MSG_INSTRUCTIONS_NO_KEYS))
 
     def tools_changed(self) -> bool:
         """Whether the tool list changed since this was last asked -- true once, so the client is told once."""

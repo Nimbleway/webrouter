@@ -62,6 +62,7 @@ from web_router.constants import (
     MCP_USER_CONFIG_ROOT_DEFAULT,
 )
 from web_router.constants_mcp import MCP_MSG_ENV_MISSING, MCP_MSG_ENV_UNREADABLE
+from web_router.constants_mcp_env import MCP_MSG_ENV_FOREIGN, MCP_MSG_INSTRUCTIONS_FOREIGN_ENV
 from web_router.mcp.env_credentials import EnvLoad, apply_credentials, credential_variables
 
 
@@ -151,9 +152,39 @@ class EnvSources:
         self.runtime.append(applied)
         return applied
 
+    def foreign(self) -> list[Path]:
+        """The remembered files loaded at startup that lie outside the working directory: keys from another project."""
+        # Resolved, so a link inside the project to a file elsewhere still counts as elsewhere.
+        here = Path.cwd().resolve()
+        return [
+            lookup.path
+            for lookup in self.searched
+            if lookup.source == MCP_ENV_SOURCE_REMEMBERED
+            and lookup.status == MCP_ENV_STATUS_USED
+            and not lookup.path.resolve().is_relative_to(here)
+        ]
+
+    def noted(self, instructions: str) -> str:
+        """The server's ``instructions``, with a warning added when :meth:`foreign` found a file."""
+        foreign = self.foreign()
+        return instructions + (
+            MCP_MSG_INSTRUCTIONS_FOREIGN_ENV.format(paths=", ".join(map(str, foreign))) if foreign else ""
+        )
+
     def report(self) -> dict[str, Any]:
-        """The ``env`` object of the capabilities resource: places, files and variable names -- never a value."""
+        """The ``env`` object of the capabilities resource: places, files and variable names -- never a value.
+
+        A remembered file from another directory leads it as a ``warning``, so a
+        model reading the resource sees it before anything else.
+        """
+        warning = {}
+        if foreign := self.foreign():
+            paths = ", ".join(str(path) for path in foreign)
+            warning["warning"] = MCP_MSG_ENV_FOREIGN.format(
+                paths=paths, pointer=user_config_dir() / MCP_ENV_POINTER_FILE
+            )
         return {
+            **warning,
             "searched": [_lookup_report(lookup) for lookup in self.searched],
             # Each variable a file set at startup, and the file it came from.
             "loaded": {name: str(load.path) for load in self.startup for name in load.loaded},

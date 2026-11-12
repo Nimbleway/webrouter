@@ -40,6 +40,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+- `pip install "webrouter[all]"` now installs the MCP server too: `all` includes the `mcp` extra (still not `evals` or `langchain`). Before, `web-router-mcp` from an `all` install crashed on start with `No module named 'mcp'`; an install without the extra now prints the `pip install "webrouter[mcp]"` line and exits 1. Importing `HttpSearchProvider` or `HttpExtractProvider` without `httpx` names the `search` extra, and a missing provider dependency names its `pip install` line as well as the clone's `uv sync`.
+- MCP: `readOnlyHint` now means safe to run unasked, so a tool that bills is not read-only. `answer` and `live_data` lose the hint (and gain "(billed)" in their titles); `search` and `extract` keep it only while no paid backend is configured for them, since `auto` tries a keyed backend first. A client that auto-approves read-only tools now asks before a billed call. The `search` description no longer says to "call it freely".
+- MCP: a `.env` remembered by `load_env(remember=true)` that lies outside the server's working directory -- keys from another checkout -- is still loaded, but now leads the capabilities resource's `env` with a `warning` naming the file and the record to delete, and the server instructions say billed backends are live.
 - Asking a method for a built-in provider that does not serve it (`extract(provider="brave")`) now says "Provider 'brave' does not serve this method" and lists the ones that do, instead of calling a real provider unknown. A name nothing registers is still "Unknown provider".
 - A deadline error no longer ends in two periods when the last failure it quotes ends in one.
 - The MCP server's unknown-handle message names the live data tools, not the `templates` and `template` tools it no longer has.
