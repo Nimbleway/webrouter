@@ -14,32 +14,33 @@ used here for identification only.
 
 ## Which provider serves which method
 
-| Provider | Search | Extract | Answer | Research | Browser session | Browse |
-| --- | --- | --- | --- | --- | --- | --- |
-| [AWS AgentCore](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html) | ✓ |  |  |  |  |  |
-| [Anchor](https://anchorbrowser.io) |  |  |  |  | ✓ |  |
-| [Brave](https://brave.com/search/api/) | ✓ |  | ✓ |  |  |  |
-| [Bright Data](https://brightdata.com) |  | ✓ |  |  |  |  |
-| [Browser Use](https://browser-use.com) |  |  |  |  |  | ✓ |
-| [Browserbase](https://www.browserbase.com) |  | ✓ |  |  | ✓ | ✓ |
-| [DeepSeek](https://api-docs.deepseek.com) | ✓ | ✓ |  |  |  |  |
-| [Exa](https://exa.ai) | ✓ keyless | ✓ | ✓ |  |  |  |
-| [Firecrawl](https://firecrawl.dev) |  | ✓ keyless |  |  |  |  |
-| [Hyperbrowser](https://hyperbrowser.ai) |  |  |  |  | ✓ |  |
-| [Jina Reader](https://jina.ai/reader) |  | ✓ keyless |  |  |  |  |
-| [Keenable](https://docs.keenable.ai) | ✓ keyless | ✓ keyless |  |  |  |  |
-| [Kernel](https://kernel.sh) |  |  |  |  | ✓ |  |
-| [Linkup](https://www.linkup.so) | ✓ | ✓ | ✓ | ✓ |  |  |
-| [Local Chromium](https://www.chromium.org) |  |  |  |  | ✓ keyless |  |
-| [Nimble](https://nimbleway.com) | ✓ | ✓ |  | ✓ |  |  |
-| [Oxylabs](https://oxylabs.io) |  | ✓ |  |  |  |  |
-| [Parallel](https://parallel.ai) | ✓ keyless |  | ✓ | ✓ |  |  |
-| [Perplexity](https://docs.perplexity.ai) | ✓ |  | ✓ | ✓ |  |  |
-| [Skyvern](https://skyvern.com) |  |  |  |  |  | ✓ |
-| [Steel](https://steel.dev) |  |  |  |  | ✓ |  |
-| [Tavily](https://tavily.com) | ✓ keyless | ✓ keyless |  |  |  |  |
-| [WebIQ](https://webiq.microsoft.ai) | ✓ | ✓ |  |  |  |  |
-| [You.com](https://you.com/platform) | ✓ keyless |  | ✓ | ✓ |  |  |
+| Provider | Search | Extract | Live data | Answer | Research | Browser session | Browse |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [AWS AgentCore](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway-target-connector-web-search-tool.html) | ✓ |  |  |  |  |  |  |
+| [Anchor](https://anchorbrowser.io) |  |  |  |  |  | ✓ |  |
+| [Apify](https://apify.com) |  |  | ✓ |  |  |  |  |
+| [Brave](https://brave.com/search/api/) | ✓ |  |  | ✓ |  |  |  |
+| [Bright Data](https://brightdata.com) |  | ✓ | ✓ |  |  |  |  |
+| [Browser Use](https://browser-use.com) |  |  |  |  |  |  | ✓ |
+| [Browserbase](https://www.browserbase.com) |  | ✓ |  |  |  | ✓ | ✓ |
+| [DeepSeek](https://api-docs.deepseek.com) | ✓ | ✓ |  |  |  |  |  |
+| [Exa](https://exa.ai) | ✓ keyless | ✓ |  | ✓ |  |  |  |
+| [Firecrawl](https://firecrawl.dev) |  | ✓ keyless |  |  |  |  |  |
+| [Hyperbrowser](https://hyperbrowser.ai) |  |  |  |  |  | ✓ |  |
+| [Jina Reader](https://jina.ai/reader) |  | ✓ keyless |  |  |  |  |  |
+| [Keenable](https://docs.keenable.ai) | ✓ keyless | ✓ keyless |  |  |  |  |  |
+| [Kernel](https://kernel.sh) |  |  |  |  |  | ✓ |  |
+| [Linkup](https://www.linkup.so) | ✓ | ✓ |  | ✓ | ✓ |  |  |
+| [Local Chromium](https://www.chromium.org) |  |  |  |  |  | ✓ keyless |  |
+| [Nimble](https://nimbleway.com) | ✓ | ✓ | ✓ |  | ✓ |  |  |
+| [Oxylabs](https://oxylabs.io) |  | ✓ | ✓ |  |  |  |  |
+| [Parallel](https://parallel.ai) | ✓ keyless |  |  | ✓ | ✓ |  |  |
+| [Perplexity](https://docs.perplexity.ai) | ✓ |  |  | ✓ | ✓ |  |  |
+| [Skyvern](https://skyvern.com) |  |  |  |  |  |  | ✓ |
+| [Steel](https://steel.dev) |  |  |  |  |  | ✓ |  |
+| [Tavily](https://tavily.com) | ✓ keyless | ✓ keyless |  |  |  |  |  |
+| [WebIQ](https://webiq.microsoft.ai) | ✓ | ✓ |  |  |  |  |  |
+| [You.com](https://you.com/platform) | ✓ keyless |  |  | ✓ | ✓ |  |  |
 
 **✓** the provider serves this method, with its key ([Configuration](/configuration) names each variable). **keyless** means it also works with no key, rate-limited. `auto` is the default for every method and picks among the providers you can use.
 
@@ -52,7 +53,7 @@ You can start with no API keys. `auto`, the default for every method, uses the p
 | Search | Tavily, then You.com, Exa and Parallel (their open MCP servers), then Keenable |
 | Extract | Tavily, then Jina Reader, Firecrawl, then Keenable |
 | Browser session | `local` (a Chromium on your machine) |
-| Answer, research, browse | None: every call is billed, so they need a key |
+| Answer, research, browse, live data | None: every call is billed, so they need a key |
 
 - **Rate limits.** Free tiers are rate-limited. When one is throttled, the next in the list answers.
 - **Which one answered.** `response.provider` names the provider that served the call, never `"auto"`.

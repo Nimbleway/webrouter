@@ -14,7 +14,7 @@ Keys are read from the environment, or passed explicitly through
 
 | Provider | Variable | Serves |
 | --- | --- | --- |
-| Nimble | `NIMBLE_API_KEY` | search, extract, research |
+| Nimble | `NIMBLE_API_KEY` | search, extract, research, live data |
 | Tavily | `TAVILY_API_KEY` | search, extract |
 | Exa | `EXA_API_KEY` | search, extract, answer |
 | You.com | `YOU_API_KEY` | search, research, answer |
@@ -31,6 +31,8 @@ Keys are read from the environment, or passed explicitly through
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
 | Oxylabs Web API | `OXYLABS_WEB_API_KEY` | live data |
 | Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
+| Bright Data | `BRIGHTDATA_API_TOKEN` *(the token alone, no zone)* | live data |
+| Apify | `APIFY_TOKEN` | live data |
 | Jina Reader | `JINA_API_KEY` *(optional: raises the rate limit)* | extract |
 | Steel | `STEEL_API_KEY` | open_browser |
 | Browserbase | `BROWSERBASE_API_KEY` | open_browser, browse |

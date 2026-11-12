@@ -63,6 +63,7 @@
         "pages": [
           "search",
           "extract",
+          "live-data",
           "answer",
           "research",
           "browser"

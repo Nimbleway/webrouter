@@ -24,6 +24,7 @@ except WebRouterError as exc:
 | `UnsupportedParameterError` | The provider does not map an option you set | Use `provider_options`, or add the mapping |
 | `UnsupportedFormatError` | The extract or live data backend cannot return the `format` you asked for | Ask for one it can (the message lists them) or name another backend |
 | `LiveDataSourceNotFoundError` | A live data run or description named a source the provider does not have | List the provider's sources with `live_data_sources()` and use the provider's own source name |
+| `LiveDataJobError` | A live data run that the vendor runs as a job (Oxylabs' job-only scrapers) failed or was still running after it was submitted | The run may be billed already: its `job_id` names the job to read later |
 | `MissingParameterError` | The browse backend cannot start without an option you left unset: `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
 | `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost: the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers`; the other rows are unaffected |
