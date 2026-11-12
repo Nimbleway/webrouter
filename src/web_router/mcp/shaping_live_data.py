@@ -32,6 +32,7 @@ def shape_live_data_sources(page: LiveDataSourcePage, handle: str, *, budget: in
         "offset": page.offset,
         "limit": page.limit,
         **({"query": page.query, "search": page.search} if page.query else {}),
+        **({"failures": page.failures} if page.failures else {}),
         "sources": templates,
     }
     # A recorded input is copied whole or not at all, so one larger than its
@@ -162,6 +163,8 @@ def _source_listing_row(template: LiveDataSource) -> dict[str, Any]:
     schema = template.input_schema
     required = schema.get("required") if isinstance(schema, dict) else None
     return {
+        # Each row names its vendor: a page drawn from every backend mixes them, and a run must name it back.
+        "provider": template.provider,
         **_source_row(template),
         "required_inputs": list(required) if isinstance(required, list) else ([] if isinstance(schema, dict) else None),
         "sample_inputs": next(

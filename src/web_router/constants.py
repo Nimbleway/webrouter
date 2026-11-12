@@ -3928,10 +3928,10 @@ backends actually configured there -- see
 MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_SEARCH: ("query",),
     MCP_TOOL_EXTRACT: ("urls",),
-    # `provider` is required here and nowhere else: a template's name belongs to one vendor.
-    MCP_TOOL_LIVE_DATA_SOURCES: (MCP_ARG_PROVIDER,),
-    MCP_TOOL_LIVE_DATA_SOURCE: ("name", MCP_ARG_PROVIDER),
-    MCP_TOOL_LIVE_DATA: ("source", MCP_ARG_PROVIDER),
+    # Not `provider`: unnamed, the listing asks every live data backend and each row names its own.
+    MCP_TOOL_LIVE_DATA_SOURCES: (),
+    MCP_TOOL_LIVE_DATA_SOURCE: ("name",),
+    MCP_TOOL_LIVE_DATA: ("source",),
     # Not `provider`: unnamed, the router's default answers -- `auto`, the configured backends in ranked order.
     MCP_TOOL_ANSWER: ("query",),
     MCP_TOOL_RESEARCH: ("query",),

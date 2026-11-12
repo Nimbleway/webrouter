@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from tests.mcp.conftest import FAKE
-from web_router.constants import ENV_NIMBLE_API_KEY, MCP_RESOURCE_URI, MCP_TOOL_EXTRACT, MCP_TOOL_FETCH_RAW
+from web_router.constants import ENV_NIMBLE_API_KEY, MCP_RESOURCE_URI, MCP_TOOL_FETCH_RAW
 from web_router.constants_live_data import (
     MCP_METHOD_LIVE_DATA,
     MCP_TOOL_LIVE_DATA,
@@ -101,21 +101,28 @@ async def test_live_data_without_the_source_names_it(tools: WebRouterTools) -> N
     assert "'source'" in result.content[0].text
 
 
-async def test_the_live_data_tools_require_the_provider(
-    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A source's name belongs to one vendor, so these three tools alone make `provider` required."""
-    # A key, so the schema has a `provider` to require; with none the tool is dead and lists no provider at all.
-    monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
-    for name, arguments in (
-        (MCP_TOOL_LIVE_DATA_SOURCES, {}),
-        (MCP_TOOL_LIVE_DATA_SOURCE, {"name": "books_pdp"}),
-        (MCP_TOOL_LIVE_DATA, {"source": "books_pdp"}),
-    ):
-        result = await call_tool(tools, name, arguments)
-        assert result.is_error and "'provider'" in result.content[0].text, name
-        assert "provider" in _tool(tools, name).input_schema["required"]
-    assert "provider" not in _tool(tools, MCP_TOOL_EXTRACT).input_schema["required"]
+async def test_the_live_data_tools_take_the_provider_from_each_listed_row(tools: WebRouterTools, no_keys: None) -> None:
+    """Unnamed, the listing asks every backend; each row names its vendor, which a run passes back."""
+    listing = _payload(await call_tool(tools, MCP_TOOL_LIVE_DATA_SOURCES, {"query": "books"}))
+
+    assert listing["provider"] == "auto"
+    row = listing["sources"][0]
+    assert row["provider"] == FAKE and row["name"] == "books_pdp"
+
+    inputs = {"url": "https://example.com/p/1"}
+    shaped = _payload(
+        await call_tool(
+            tools, MCP_TOOL_LIVE_DATA, {"source": row["name"], "inputs": inputs, "provider": row["provider"]}
+        )
+    )
+    assert shaped["provider"] == FAKE and shaped["records"] == [{"title": "Example", "inputs": inputs}]
+
+    # With one backend configured, a bare name can only be that backend's.
+    described = _payload(await call_tool(tools, MCP_TOOL_LIVE_DATA_SOURCE, {"name": "books_pdp"}))
+    assert described["provider"] == FAKE
+
+    for name in (MCP_TOOL_LIVE_DATA_SOURCES, MCP_TOOL_LIVE_DATA_SOURCE, MCP_TOOL_LIVE_DATA):
+        assert "provider" not in _tool(tools, name).input_schema["required"]
 
 
 def test_the_live_data_tools_say_so_when_nothing_can_serve_them(

@@ -189,8 +189,9 @@ conversation.
 
 ### Live data
 
-Four backends serve live data. There is no keyless tier and no `auto`, so the
-provider is required for every call. See the detailed [Live data](#live-data-1)
+Four backends serve live data. There is no keyless tier. Leave `provider` out
+and the search runs on every backend you have a key for; each source it
+returns names its own, so a run never needs one. See the detailed [Live data](#live-data-1)
 guide below.
 
 | Pass | Name | Provider | Credentials | Page formats beside the records |
@@ -443,9 +444,27 @@ A live data source is a vendor's ready-made scraper for one site -- a
 retailer's product page, a maps search, a job board's listing -- that turns
 the site into **records with fixed fields**, fetched for this call, rather
 than page text to read through. Three calls cover a vendor's catalogue: list
-it, describe one, run one. All three name the vendor, because a source's name,
-inputs and fields are the vendor's own; the same site has a different name on
-each.
+it, describe one, run one. A source's name, inputs and fields are the
+vendor's own -- the same site has a different name on each -- but you never
+have to pick the vendor: leave `provider` out and the search runs on every
+backend you have a key for, and each source it returns names its own.
+
+```python
+page = router.live_data_sources(query="amazon product")  # every vendor with a key, asked at once
+source = page.sources[0]
+source.provider  # the vendor that holds it: "nimble", "apify", "brightdata" or "oxylabs"
+page.failures  # each vendor that could not answer, and why; its sources are missing
+
+source = router.live_data_source(source)  # its schemas and samples, from its own vendor
+result = router.live_data(source, source.samples[0].input)  # run it there; no provider named
+```
+
+The merged page takes each vendor's sources in turn, so no one vendor's
+catalogue crowds out the others, and `limit` and `offset` page the merged
+list. Its `provider` is `"auto"`, `total` is counted only when every vendor
+answered with a count, and it raises only when every vendor failed. A run
+takes the `LiveDataSource` whole; a bare name needs `provider`, unless you
+have one live data backend. To work in one vendor's catalogue, name it:
 
 ```python
 page = router.live_data_sources(provider="apify", limit=20)  # one page of the catalogue
