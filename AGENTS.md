@@ -102,6 +102,9 @@ src/web_router/
 │                       types.py stops growing; it imports types, never the reverse
 ├── types_live_data.py  LiveDataRequest/Response + LiveDataSource/SourcePage/Sample:
 │                       live data's contract, apart on the same terms
+├── types_cost.py       elapsed_s, cost_usd and cost_source: the fields every routable
+│                       response carries, as Annotated aliases; imports nothing of ours
+├── types_citation.py   Citation, apart so types.py stops growing; types re-exports it
 ├── types_page.py       PageState/PageSnapshot/Screenshot + PageLoadState/PageFormat:
 │                       what a browser handle's page actions return; imports nothing of ours
 ├── types_benchmark.py BenchmarkRun/Report + ExtractBenchmarkRun/Report: what benchmark()
@@ -190,6 +193,8 @@ src/web_router/
 │   ├── pool_bind.py    which shared budgets are in force here: bind, unbind, current_pool
 │   ├── pool_status.py  BudgetStatus, where a shared budget stands
 │   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
+│   ├── metered.py      elapsed_s and cost_usd on every routed response: the backend's stated
+│   │                   cost, else the pricing rule's estimate
 │   ├── pricing.py      the one cost and p90 rule: price list, floor, provider_options and
 │   │                   results past a row's price unknown, research's p90 from the effort table
 │   ├── invoke.py       router=: the two forms a router takes, called sync or async on
@@ -347,6 +352,8 @@ src/web_router/
     │                   another format (Anchor: JPEG), and reads the size
     ├── nimble.py       search + extract + research, via the nimble-python SDK;
     │                   the shared clients and constructor of the four Nimble classes
+    ├── nimble_citations.py  a research run's citations: trust claims, else its source index's markers
+    ├── _cost.py        a backend's stated cost read from its payload, as `reported`
     ├── nimble_live_data.py  Nimble's templates as live data, on nimble.py's clients
     ├── _http_live_data.py   HttpLiveDataProvider: the base of the three below
     ├── apify.py        live data: Apify Store Actors, run synchronously
@@ -673,11 +680,20 @@ reads to estimate a call's cost before it runs: edit the JSON, never a table,
 and run `make prices`; its prose is hand-written. A price comes only from the
 vendor's own page, cited in `source_url` and dated in `checked`; one the vendor
 does not publish is `unknown` and one billed by tokens is `token_billed`, never
-estimated. The library still never puts a price in a response outside
-`DecisionRecord`, where an estimate says so in `cost_is_estimate`.
+a guessed figure: a `token_billed` row is estimated only at the mean cost per
+call its backend's own responses stated over the benchmark behind the method's
+`auto` order (`data/chains.json`), at its default mode, and is unknown
+otherwise. A price reaches a response in two places, each labelled: the
+`DecisionRecord`, where `cost_is_estimate` says so, and `cost_usd` on every
+search, extract, answer, research and browse response, where `cost_source` is
+`reported` only for a figure the backend's response stated (read by its
+provider through `providers/_cost.py`) and `estimated` for anything made here
+(`routing/metered.py`, by the same rule a budget charges by).
 
 **`constants.py` imports `types.py`, so `types.py` imports nothing of ours**
-but `types_decision`, a leaf that imports nothing of ours either.
+but `types_decision`, a leaf that imports nothing of ours either (as are
+`types_page`, `types_options`, `types_errors`, `types_citation` and
+`types_cost`).
 The import graph is `types` ← `constants` ← `exceptions` ← everything else. A
 model that needs an exception type or a message template cannot live in
 `types.py` — put it in a subpackage's own `types.py` (as `evals/types.py`

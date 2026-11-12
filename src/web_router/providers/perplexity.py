@@ -43,6 +43,7 @@ from web_router.constants_perplexity import (
     PERPLEXITY_ANSWER_DOMAIN_FIELD,
     PERPLEXITY_ANSWER_RECENCY,
     PERPLEXITY_ANSWER_RECENCY_FIELD,
+    PERPLEXITY_COST_PATH,
     PERPLEXITY_LANGUAGE_FIELD,
     PERPLEXITY_LANGUAGE_PATTERN,
     PERPLEXITY_MAX_DOMAINS,
@@ -52,6 +53,7 @@ from web_router.constants_perplexity import (
     PERPLEXITY_SEARCH_TYPE_BY_EFFORT,
     PERPLEXITY_SEARCH_TYPE_FIELD,
 )
+from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpResearchProvider, HttpSearchProvider
 from web_router.providers._search_text import lite_body, refused_domains
 from web_router.providers._utils import build_payload, error_detail, mapped
@@ -216,4 +218,5 @@ class PerplexityResearchProvider(HttpResearchProvider):
             outcome="partial" if payload.get("status") == PERPLEXITY_INCOMPLETE_STATUS else "complete",
             request_id=payload.get("id"),
             raw=[payload],
+            **stated_cost(payload, *PERPLEXITY_COST_PATH),
         )

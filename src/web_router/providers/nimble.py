@@ -49,10 +49,10 @@ from web_router.providers._deadline import current_deadline, research_budget
 from web_router.providers._research_start import aread_or_running, read_or_running
 from web_router.providers._utils import best_text, build_payload, compact, mapped, model_to_dict, resolve_api_key
 from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider, _BaseProvider
+from web_router.providers.nimble_citations import research_citations
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
     RESEARCH_PARAMETERS,
-    Citation,
     ExtractedDocument,
     ExtractFailure,
     ExtractFormat,
@@ -419,7 +419,7 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
             query=request.query,
             answer=content if prose else None,
             structured=None if prose else content,
-            citations=_citations(output.get("trust") or {}, output.get("sources") or []),
+            citations=research_citations(content if prose else None, output),
             # `outcome` keeps its default: nothing Nimble returns reports a run
             # that stopped short of the work it was given.
             request_id=run.get("id"),
@@ -456,53 +456,6 @@ def _sources(request: ResearchRequest) -> dict[str, Any] | None:
 
 def _source_group(domains: list[str] | None) -> list[dict[str, Any]] | None:
     return None if domains is None else [{"title": NIMBLE_RESEARCH_SOURCE_GROUP, "domains": domains}]
-
-
-def _citations(trust: dict[str, Any], sources: list[dict[str, Any]]) -> list[Citation]:
-    """The claims' citations, then every source consulted that none of them cited.
-
-    A claim says what its citations back -- a path into the structured answer,
-    or the callout marker that appears in the prose -- which is what
-    :attr:`Citation.field` carries. The run's bibliography -- ``trust.sources``, or ``output.sources`` for a run
-    without trust (``trust: null``) -- attributes nothing, so what it adds is cited without a field.
-    """
-    citations: list[Citation] = []
-    seen: set[tuple[str, str | None]] = set()
-
-    for claim in trust.get("claims") or []:
-        field = claim.get("path")
-        if field is None and claim.get("callout") is not None:
-            field = str(claim["callout"])
-        for cited in claim.get("citations") or []:
-            url = cited.get("url") or ""
-            if (url, field) in seen:
-                continue
-            seen.add((url, field))
-            excerpts = cited.get("excerpts") or []
-            citations.append(
-                Citation(
-                    url=url,
-                    title=cited.get("title") or "",
-                    snippet=excerpts[0] if excerpts else "",
-                    field=field,
-                    extra=_unmapped(cited),
-                )
-            )
-
-    cited_urls = {citation.url for citation in citations}
-    for source in [*(trust.get("sources") or []), *sources]:
-        url = source.get("url") or ""
-        if not url or url in cited_urls:  # a source with no URL names nothing a reader could open
-            continue
-        cited_urls.add(url)
-        citations.append(Citation(url=url, title=source.get("title") or "", extra=_unmapped(source)))
-
-    return citations
-
-
-def _unmapped(cited: dict[str, Any]) -> dict[str, Any]:
-    """Everything a citation carries beyond the normalized fields, including every excerpt."""
-    return compact({key: value for key, value in cited.items() if key not in ("url", "title")})
 
 
 def _pending(run: dict[str, Any], state: ResearchState) -> ResearchProgress:

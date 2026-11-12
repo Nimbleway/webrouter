@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping
 from contextlib import contextmanager
+from time import monotonic
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
@@ -35,6 +36,7 @@ from web_router.routing.decide import decided
 from web_router.routing.effort_call import Only, named, unrouted, with_record
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
+from web_router.routing.metered import metered
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
 from web_router.routing.route_tools import ALL_TOOLS, checked_route_tools
@@ -158,15 +160,18 @@ class SyncRouted(RouterSetup):
     ) -> _ResponseT:
         """Run ``call``, which calls ``chain``, in ``budget``'s scope.
 
-        A routed call runs in the order the router chose, and its response records how.
+        A routed call runs in the order the router chose, and its response records how. Every response
+        carries what the call took and cost (:func:`~.metered.metered`).
         """
+        started = monotonic()
         request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
-                return logged.settle(with_record(call(request), record or chosen))
+                answered = logged.settle(with_record(call(request), record or chosen))
+        return metered(answered, _TOOL_OF[type(request)], request, started)
 
 
 class AsyncRouted(RouterSetup):
@@ -178,10 +183,12 @@ class AsyncRouted(RouterSetup):
         call: Callable[[_RequestT], Awaitable[_ResponseT]],
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
+        started = monotonic()
         request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
         with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
-                return logged.settle(with_record(await call(request), record or chosen))
+                answered = logged.settle(with_record(await call(request), record or chosen))
+        return metered(answered, _TOOL_OF[type(request)], request, started)

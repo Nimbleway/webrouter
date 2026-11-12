@@ -111,3 +111,5 @@ PERPLEXITY_SEARCH_TYPE_BY_EFFORT: dict[ResearchEffort, str | None] = {
 
 ``people`` is a vertical, not a tier, and stays in ``provider_options``.
 """
+PERPLEXITY_COST_PATH = ("usage", "cost", "total_cost")
+"""Where an Agent API response states its own cost, beside its `currency`."""

@@ -141,3 +141,5 @@ EXA_MCP_TYPE_BY_EFFORT: dict[ResearchEffort, str | None] = {
 
 It has no deep types; ``fast`` and ``instant`` are legacy names for ``lite``.
 """
+EXA_COST_PATH = ("costDollars", "total")
+"""Where an Exa response states its own cost, in US dollars."""

@@ -18,6 +18,8 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from web_router.types_citation import Citation as Citation
+from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
 from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
@@ -251,6 +253,9 @@ class SearchResponse(BaseModel):
     request_id: str | None = None
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
 
     def __len__(self) -> int:
         return len(self.results)
@@ -319,6 +324,9 @@ class ExtractResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
 
     def __len__(self) -> int:
         return len(self.documents)
@@ -393,29 +401,6 @@ RESEARCH_PARAMETERS: frozenset[str] = ResearchRequest.normalized_parameters()
 """Every optional parameter a research provider may declare support for."""
 
 
-class Citation(BaseModel):
-    """A source the answer rests on."""
-
-    # Unknown keys are a provider bug: anything unmapped belongs in `extra`.
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = Field(default="", description="The cited page's title, when the provider returned one.")
-    snippet: str = Field(default="", description="The passage the backend quoted from the page, when it quoted one.")
-    field: str | None = Field(
-        default=None,
-        description=(
-            "Which part of the answer this source backs -- a JSON path into `structured`, or a marker "
-            "in `answer` (`[2]`, or on You.com the whole group that names it, `[[1, 2]]`) -- when the "
-            "backend attributes per field. `None` when it ties the source to no part of it."
-        ),
-    )
-    extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
-    )
-
-
 class ResearchResponse(BaseModel):
     """The result of one research run, tagged with the provider that served it.
 
@@ -446,6 +431,9 @@ class ResearchResponse(BaseModel):
         description="The provider's untouched payloads, one per call the run took.",
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
 
     @property
     def urls(self) -> list[str]:
@@ -748,6 +736,9 @@ class BrowseResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
 
 
 class BrowseProgress(BaseModel):

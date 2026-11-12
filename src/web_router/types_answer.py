@@ -11,6 +11,7 @@ from typing import Annotated, Any, ClassVar
 from pydantic import BaseModel, ConfigDict, Field
 
 from web_router.types import Citation, NormalizedRequest, ResearchOutcome
+from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
 from web_router.types_decision import DECISION_DESCRIPTION, DecisionRecord
 from web_router.types_options import RECENCY_DESCRIPTION
 from web_router.types_options import Recency as Recency
@@ -70,3 +71,6 @@ class AnswerResponse(BaseModel):
         description="The provider's untouched payloads, one per call the answer took.",
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
