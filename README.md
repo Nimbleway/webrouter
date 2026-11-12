@@ -237,7 +237,7 @@ Contributions are welcome, and the most useful one is small: map one more of a
 provider's options, or add a provider.
 
 ```bash
-make setup    # every extra, dev tools and pre-commit hooks
+make install  # every extra, dev tools and pre-commit hooks
 make check    # lint, typecheck and the offline unit tests; no keys needed
 ```
 
