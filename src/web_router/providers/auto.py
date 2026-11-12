@@ -109,6 +109,7 @@ from web_router.providers._chain import (
     _keyed_chain,
     _keyless_after,
     _member_options,
+    _Members,
     _members_and_chain,
     _no_backend,
     _nothing_started,
@@ -184,7 +185,7 @@ class AutoProvider(SearchProvider):
         self.fallback_on_empty = fallback_on_empty
         # Keyed by position, not by name: the same provider can appear twice on different terms -- Tavily keyed, then
         # Tavily keyless.
-        self._members: dict[int, SearchProvider] = {}
+        self._members: _Members[SearchProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -205,12 +206,10 @@ class AutoProvider(SearchProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        name, options = self._chain[position]
+        return self._members.built(
+            position, lambda: create_provider(name, **_member_options(self._members_config, name, options))
+        )
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         failures: dict[str, WebRouterError] = {}
@@ -346,7 +345,7 @@ class AutoExtractProvider(ExtractProvider):
             chain, members_config, AUTO_CHAIN_EXTRACT, self.default_chain
         )
         self.fallback_on_empty = fallback_on_empty
-        self._members: dict[int, ExtractProvider] = {}
+        self._members: _Members[ExtractProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -367,12 +366,10 @@ class AutoExtractProvider(ExtractProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_extract_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_extract_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        name, options = self._chain[position]
+        return self._members.built(
+            position, lambda: create_extract_provider(name, **_member_options(self._members_config, name, options))
+        )
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         delegated = self._delegated(request, urls)
@@ -461,7 +458,7 @@ class AutoResearchProvider(ResearchProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_RESEARCH, self.default_chain
         )
-        self._members: dict[int, ResearchProvider] = {}
+        self._members: _Members[ResearchProvider] = _Members()
         # A run belongs to the backend that accepted it: its id means nothing to the others, so the member that answered
         # is kept and every later poll goes back to it rather than re-entering the chain.
         self._jobs: dict[str, ResearchJob] = {}
@@ -477,12 +474,10 @@ class AutoResearchProvider(ResearchProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_research_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_research_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        name, options = self._chain[position]
+        return self._members.built(
+            position, lambda: create_research_provider(name, **_member_options(self._members_config, name, options))
+        )
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
         eligible = self._eligible(request)
@@ -663,7 +658,7 @@ class AutoBrowseProvider(BrowseProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_BROWSE, self.default_chain
         )
-        self._members: dict[int, BrowseProvider] = {}
+        self._members: _Members[BrowseProvider] = _Members()
         # As for research: a task id means nothing to a backend that did not issue it, so every later poll goes back to
         # the member that took it.
         self._jobs: dict[str, BrowseJob] = {}
@@ -679,12 +674,10 @@ class AutoBrowseProvider(BrowseProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_browse_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_browse_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        name, options = self._chain[position]
+        return self._members.built(
+            position, lambda: create_browse_provider(name, **_member_options(self._members_config, name, options))
+        )
 
     def _start(self, request: BrowseRequest) -> BrowseProgress:
         failures: dict[str, WebRouterError] = {}

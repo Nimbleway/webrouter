@@ -35,6 +35,7 @@ from web_router.providers._chain import (
     _exhausted,
     _keyed_chain,
     _member_options,
+    _Members,
     _members_and_chain,
     _nothing_started,
     _quoted,
@@ -92,7 +93,7 @@ class AutoBrowserProvider(BrowserProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_BROWSER, self.default_chain
         )
-        self._members: dict[int, BrowserProvider] = {}
+        self._members: _Members[BrowserProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -113,12 +114,10 @@ class AutoBrowserProvider(BrowserProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_browser_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_browser_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        name, options = self._chain[position]
+        return self._members.built(
+            position, lambda: create_browser_provider(name, **_member_options(self._members_config, name, options))
+        )
 
     def _opened(self, request: BrowserRequest) -> BrowserHandle:
         failures: dict[str, WebRouterError] = {}

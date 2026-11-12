@@ -1,4 +1,4 @@
-"""A provider shared across threads builds each of its HTTP clients once.
+"""A provider shared across threads builds each of its HTTP clients, and each ``auto`` member, once.
 
 Clients are built on first use. Without a lock, threads making that first call
 together each built one; only the last was kept, so ``close()`` left the others'
@@ -16,7 +16,9 @@ from typing import Any, ClassVar
 import httpx
 import pytest
 
+from web_router import registry
 from web_router.providers._http import HttpSearchProvider
+from web_router.providers.auto import AutoProvider
 from web_router.types import SearchRequest, SearchResponse
 from web_router.vendors.caller import VendorCaller
 
@@ -88,3 +90,22 @@ def test_threads_sharing_a_vendor_caller_build_one_client_of_each_kind(built: li
     _together(caller._aclient)
     assert sorted(built) == ["async", "sync"]
     caller.close()
+
+
+def test_threads_sharing_an_auto_provider_build_each_member_once(
+    built: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"results": []}))
+    members: list[str] = []
+
+    def create(name: str, **options: Any) -> _Keyless:
+        members.append(name)
+        time.sleep(0.02)
+        return _Keyless(transport=transport)
+
+    monkeypatch.setattr(registry, "create_provider", create)
+    auto = AutoProvider(chain=["tavily"], fallback_on_empty=False)
+    _together(lambda: auto.search(SearchRequest(query="q")))
+    assert members == ["tavily"]
+    assert built == ["sync"]
+    auto.close()
