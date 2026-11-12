@@ -27,8 +27,8 @@ RULES_RESEARCH_PATTERN = (
     r"|market\s+(?:research|analysis|landscape)|compet(?:itive|itor)\s+(?:analysis|landscape)"
     r"|analy[sz]e\s+(?:the\s+)?(?:market|competition|competitors|industry)"
     r"|comprehensive\s+(?:report|analysis|overview|review|comparison|guide))\b"
-    r"|\b(?:write|prepare|produce|draft|create|give)\s+(?:me\s+)?an?\s+(?:[\w-]+\s+){0,3}?(?:report|analysis|briefing)\b"
-    r"|\bcompare\b.{1,200}?\b(?:and|vs\.?|versus|with|to|against)\b"
+    r"|\b(?:write|prepare|produce|draft|create|give)\s+(?:me\s+)?an?\s+(?:(?:detailed|full|short|brief|thorough|in-depth|investor|market|industry)\s+)*(?:report|analysis|briefing)\b"
+    r"|\bcompare\b.{1,200}?\b(?:and|vs\.?|versus)\b"
 )
 """What the rules router reads as a request for research, case-insensitive: phrases, not single words.
 
@@ -37,7 +37,7 @@ cheap call the caller can follow with research, so a question that only says why
 English only: a prompt in another language is searched."""
 
 RULES_DEFINITION_PATTERN = (
-    r"^\W*(?:what\s+(?:is|are|was|were|'s)|define|definition\s+of|meaning\s+of"
+    r"^\W*(?:what(?:\s+(?:is|are|was|were)|['\u2019]s)|define|definition\s+of|meaning\s+of"
     r"|how\s+(?:do|can|could|should|would)\s+(?:i|you|we)|how\s+to)\b"
 )
 """A prompt asking what something is or how to do something, which the rules router searches even when it names

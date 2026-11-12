@@ -15,6 +15,8 @@ from web_router.routing.registry import available_routers
 from web_router.routing.rules import RulesRouter, rules
 
 RESEARCH = [
+    "Write me a report on EV battery supply chains",
+    "Compare Python and Rust for web servers",
     "Compare the iPhone 16 and Pixel 9 cameras",
     "compare postgres vs mysql for analytics",
     "Research the best CRMs for startups",
@@ -38,11 +40,8 @@ SEARCH = [
     "How does a heat pump work?",
     "Why is the sky blue?",
     "How did Napoleon die?",
-    "Find the population of Tokyo",
-    "Is there any vegan restaurant near me?",
     "list of US presidents",
     "Which teams won the Stanley Cup in the 1990s?",
-    "Track my package 1Z999",
     "Write a poem about cats",
     "Open source alternatives to Slack",
     "Sign in to my bank and download statements",
@@ -57,7 +56,14 @@ SEARCH = [
     "what is a research report",
     "reporters near me",
     "compare",
-    "Is Node.js single threaded?",
+    "Give me a weather report for Paris",
+    "give me a traffic report",
+    "create a bug report template",
+    "Compare flights to Tokyo",
+    "compare prices with free shipping",
+    "compare hotels to stay in near the Louvre",
+    "What's market research?",
+    "What\u2019s a competitive analysis?",
     "Quel est le prix du bitcoin ?",
     "",
 ]
