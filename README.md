@@ -692,6 +692,19 @@ vendor name, so most web searches list none. `data_apis=False` leaves them out,
 `provider` is `"data-apis"`); it refuses every web option but `max_results`,
 which then caps the matches.
 
+An extract does the same per page, by site: each document in
+`response.documents` lists, under `data_apis`, the read endpoints of the data
+APIs whose catalog entry names that page's site in its `sites` (subdomains
+included), those whose words the URL's path holds first, at most three:
+
+```python
+page = router.extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ").documents[0]
+page.data_apis[0].data_api  # the data API that serves youtube.com, when the catalog has one
+```
+
+The same `data_apis=False` and `configured_only=True` apply, and the MCP
+`extract` tool adds `data_apis` to a page only when it has matches.
+
 ### Search depth
 
 Three levels, each defined by size, mapped onto each backend's own knobs. A

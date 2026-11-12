@@ -34,12 +34,14 @@ from web_router.constants_vendors import (
     MSG_VENDOR_CATALOG_PATH_UNUSED,
     MSG_VENDOR_CATALOG_SCHEME,
     MSG_VENDOR_CATALOG_SETTING_CHOICES,
+    MSG_VENDOR_CATALOG_SITE,
     MSG_VENDOR_CATALOG_UNKNOWN_REF,
     MSG_VENDOR_OAUTH_LITERAL,
     VENDOR_CATEGORIES,
     VENDOR_ENDPOINT_ID_PATTERN,
     VENDOR_ENV_PATTERN,
     VENDOR_ID_PATTERN,
+    VENDOR_SITE_PATTERN,
 )
 
 ACCESS_TOKEN = "access_token"
@@ -277,11 +279,23 @@ class Vendor(_Strict):
         default_factory=dict, description="Sent on every call: an API-version pin, say. Templates allowed."
     )
     notes: list[str] = Field(default_factory=list)
+    sites: list[str] = Field(
+        default_factory=list,
+        description="Websites whose data this API serves, as bare hosts ('youtube.com'); subdomains match too.",
+    )
     sources: list[str] = Field(min_length=1, description="The vendor pages this file was written from.")
     curated: str = Field(description="ISO date the file was last checked against the vendor's docs.")
     endpoints: list[VendorEndpoint] = Field(default_factory=list)
 
     _check_one_line = field_validator("name", "summary", "docs_url", "pricing_url")(_one_line)
+
+    @field_validator("sites")
+    @classmethod
+    def _sites(cls, value: list[str]) -> list[str]:
+        for site in value:
+            if not re.match(VENDOR_SITE_PATTERN, site):
+                raise ValueError(MSG_VENDOR_CATALOG_SITE.format(site=site))
+        return value
 
     @field_validator("category")
     @classmethod

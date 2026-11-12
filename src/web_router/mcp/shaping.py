@@ -1,9 +1,8 @@
 """Turning a library response into something a context window can hold.
 
-This is the one place the MCP layer is allowed to differ from the library. The
-library's rule is that nothing is thrown away -- full page bodies, and the
-backend's untouched payload under ``raw``. Inside a model's context that rule
-stops being a virtue: a single deep search can be larger than the window it is
+This is the one place the MCP layer is allowed to differ from the library. The library's rule is that
+nothing is thrown away -- full page bodies, and the backend's untouched payload under ``raw``. Inside a
+model's context that rule stops being a virtue: a single deep search can be larger than the window it is
 being read in.
 
 So a shaped result keeps the fields a reader acts on, cuts long text at a word
@@ -12,9 +11,9 @@ itself that it was shortened and which handle gets the rest. Nothing is lost --
 the whole payload stays in the session's :class:`HandleStore` until it is
 evicted, and ``fetch_raw`` hands it back verbatim.
 
-Browse is the one exception to "verbatim". A task payload can carry the URL of
-the session the agent ran in, and some backends put a key in it, so a browse
-result -- shaped or raw -- goes through :func:`redact` before it leaves.
+Browse is the one exception to "verbatim". A task payload can carry the URL of the session the agent
+ran in, and some backends put a key in it, so a browse result -- shaped or raw -- goes through
+:func:`redact` before it leaves.
 """
 
 from __future__ import annotations
@@ -198,6 +197,7 @@ def shape_extract(response: ExtractResponse, handle: str, *, budget: int) -> dic
             "format": document.format,
             "status_code": document.status_code,
             "content": document.content,
+            **({"data_apis": [match.brief() for match in document.data_apis]} if document.data_apis else {}),
         }
         for document in response.documents
     ]

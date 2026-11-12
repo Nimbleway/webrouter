@@ -46,6 +46,9 @@ DATA_APIS_ONLY_PROVIDER: Final = "data-apis"
 MSG_DATA_APIS_ONLY_CONFLICT: Final = (
     "search(data_apis_only=True) calls no web backend, so it does not take {names}; drop them, or search the web."
 )
+DATA_API_EXTRACT_LIMIT: Final = 3
+"""Data APIs :meth:`~web_router.WebRouter.extract` lists for each page whose site a catalog entry serves."""
+
 MSG_DATA_APIS_ONLY_OFF: Final = "search(data_apis_only=True) needs data_apis=True: it lists data APIs and nothing else."
 
 VENDOR_FIND_STOP_WORDS: Final = frozenset(
@@ -114,6 +117,11 @@ VENDOR_ENDPOINT_ID_PATTERN: Final = r"^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9_.-]*$
 """``<vendor>.<job>``: the vendor slug, a dot, then dot-separated lowercase words."""
 
 VENDOR_ENV_PATTERN: Final = r"^[A-Z][A-Z0-9_]*$"
+
+VENDOR_SITE_PATTERN: Final = r"^[a-z0-9-]+(\.[a-z0-9-]+)+$"
+"""A website a data API serves, as a bare lowercase host: ``youtube.com``, never a URL or a path."""
+
+MSG_VENDOR_CATALOG_SITE: Final = "site {site!r} is not a bare lowercase host such as 'youtube.com'"
 
 VENDOR_CATEGORIES: Final = (
     "advertising",
