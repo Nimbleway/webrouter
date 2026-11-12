@@ -337,6 +337,7 @@ src/web_router/
     │                   operators, and the domain lists a backend refuses
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
     │                   that holds a provider's call to it
+    ├── _job_wait.py    waiting on a vendor's job (Oxylabs' jobs, Bright Data's snapshots); every error names it
     ├── _clamp.py       a transport's own timeout, clamped to the deadline's time left
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
@@ -348,10 +349,11 @@ src/web_router/
     ├── _http_live_data.py   HttpLiveDataProvider: the base of the three below
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
+    ├── brightdata_snapshots.py  waiting on the snapshot of a scrape that outlasted the synchronous window
     ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
     ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
     ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
-    ├── oxylabs_jobs.py          waiting on a job-only scraper; every error after the submit names the job
+    ├── oxylabs_jobs.py          an Oxylabs job: its id, where it is read, and when it is done
     ├── oxylabs_response.py      a scrape's answer as a live data response
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
     ├── tavily_extract.py  extract, and the SDK clients, key and timeout both classes share

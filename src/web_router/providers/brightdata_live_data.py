@@ -64,10 +64,10 @@ from web_router.constants_live_data_vendors import (
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._deadline import job_deadline
 from web_router.providers._http_live_data import HttpLiveDataProvider
+from web_router.providers._job_wait import wait_until
 from web_router.providers.brightdata_names import Scraper, plain_name, scrapers, slug
 from web_router.providers.brightdata_shapes import described, listed, to_response
 from web_router.providers.brightdata_snapshots import SnapshotWait, snapshot_id
-from web_router.providers.oxylabs_jobs import wait_until
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,

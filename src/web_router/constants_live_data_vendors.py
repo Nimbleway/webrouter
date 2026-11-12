@@ -95,9 +95,6 @@ OXYLABS_JOB_POLL_SECONDS: Final = 5.0
 OXYLABS_JOB_WAIT_SECONDS: Final = 300.0
 """How often, and how long, a run of an async-only scraper (``chatgpt``, ``gemini``...) waits for its job."""
 
-OXYLABS_JOB_DEADLINE_MARGIN: Final = 0.5
-"""Seconds a job's wait stops before the call's own deadline, so the job's error, naming it, is what is raised."""
-
 OXYLABS_JOB_DONE: Final = "done"
 OXYLABS_JOB_FAULTED: Final = "faulted"
 
