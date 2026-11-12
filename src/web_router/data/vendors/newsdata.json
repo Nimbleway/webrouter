@@ -1,0 +1,762 @@
+{
+  "vendor": "newsdata",
+  "name": "NewsData.io",
+  "category": "search",
+  "summary": "Worldwide news API: latest and archived articles with country, category, language, domain and sentiment filters, plus crypto and market news, sources and article counts.",
+  "docs_url": "https://newsdata.io/documentation",
+  "pricing_url": "https://newsdata.io/pricing",
+  "base_url": "https://newsdata.io/api/1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "NEWSDATA_API_KEY"
+        ],
+        "description": "a NewsData.io API key (newsdata.io dashboard). Sent in the X-ACCESS-KEY header; an apikey query parameter also works."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-ACCESS-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits per call: latest, crypto, market and sources 1; archive 5; count endpoints 50. Cost does not depend on size; 4xx/5xx answers are free.",
+    "Free plan: 200 credits a day, 10 articles per request, 30 requests per 15 minutes, articles delayed 12 hours, last 48 hours only, no archive. Paid plans: 1800 credits per 15 minutes.",
+    "Paging is a cursor: send the response's nextPage back as page with the same other parameters; stop when it is null.",
+    "Multi-value filters are comma-separated; include and exclude versions of one filter cannot be combined."
+  ],
+  "sources": [
+    "https://newsdata.io/documentation",
+    "https://newsdata.io/openapi.json",
+    "https://newsdata.io/documentation/latest-news-api",
+    "https://newsdata.io/documentation/crypto-news-api",
+    "https://newsdata.io/documentation/news-count-api",
+    "https://newsdata.io/llms-full.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "newsdata.latest",
+      "name": "Search latest news",
+      "summary": "Articles from the past 48 hours, newest first by default.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/latest",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, content, URL and metadata; AND/OR/NOT and quotes supported. Max 512 characters. Not with qInTitle or qInMeta."
+        },
+        "qInTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in the title only (max 512). Not with q or qInMeta."
+        },
+        "qInMeta": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, URL and meta tags (max 512). Not with q or qInTitle."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes (5 on Free/Basic, 10 on higher plans). Not with excludecountry."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated category codes, e.g. business,technology (5 on Free/Basic). Not with excludecategory."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated language codes (5 on Free/Basic). Not with excludelanguage."
+        },
+        "domainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains, e.g. nytimes.com,bbc.com (5 on Free/Basic)."
+        },
+        "excludedomainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to exclude."
+        },
+        "prioritydomain": {
+          "in": "query",
+          "type": "string",
+          "description": "Only top (top 10%), medium (30%) or low (50%) ranked sources.",
+          "enum": [
+            "top",
+            "medium",
+            "low"
+          ]
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated article_id values (up to 50)."
+        },
+        "sentiment": {
+          "in": "query",
+          "type": "string",
+          "description": "Sentiment filter (paid feature).",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ]
+        },
+        "full_content": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 only articles with full_content, 0 only without.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "removeduplicate": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 drops articles NewsData judges duplicates.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles per page: 1 to 10 on Free, 1 to 50 on paid plans."
+        },
+        "page": {
+          "in": "query",
+          "type": "string",
+          "description": "Next page: the nextPage value from the previous answer (a page number with relevancy, source or fetched_at sort)."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Default pubdatedesc. relevancy needs a q parameter; relevancy, source and fetched_at reach the first 10,000 results only.",
+          "enum": [
+            "pubdatedesc",
+            "pubdateasc",
+            "relevancy",
+            "source",
+            "fetched_at"
+          ]
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "string",
+          "description": "Last N hours (1-48) or minutes (e.g. 15m, up to 2880m)."
+        },
+        "excludecountry": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes to exclude."
+        },
+        "excludecategory": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated categories to exclude."
+        },
+        "excludelanguage": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated languages to exclude."
+        },
+        "datatype": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: news, blog, multimedia, forum, pressrelease, review, research, opinion, analysis, podcast."
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "news.search",
+      "docs_url": "https://newsdata.io/documentation/latest-news-api",
+      "verified": {
+        "docs": "https://newsdata.io/documentation/latest-news-api"
+      }
+    },
+    {
+      "id": "newsdata.archive",
+      "name": "Search the news archive",
+      "summary": "Past articles over a date range (paid plans only).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/archive",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, content, URL and metadata; AND/OR/NOT and quotes supported. Max 512 characters. Not with qInTitle or qInMeta."
+        },
+        "qInTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in the title only (max 512). Not with q or qInMeta."
+        },
+        "qInMeta": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, URL and meta tags (max 512). Not with q or qInTitle."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes (5 on Free/Basic, 10 on higher plans). Not with excludecountry."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated category codes, e.g. business,technology (5 on Free/Basic). Not with excludecategory."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated language codes (5 on Free/Basic). Not with excludelanguage."
+        },
+        "domainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains, e.g. nytimes.com,bbc.com (5 on Free/Basic)."
+        },
+        "excludedomainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to exclude."
+        },
+        "prioritydomain": {
+          "in": "query",
+          "type": "string",
+          "description": "Only top (top 10%), medium (30%) or low (50%) ranked sources.",
+          "enum": [
+            "top",
+            "medium",
+            "low"
+          ]
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated article_id values (up to 50)."
+        },
+        "sentiment": {
+          "in": "query",
+          "type": "string",
+          "description": "Sentiment filter (paid feature).",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ]
+        },
+        "full_content": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 only articles with full_content, 0 only without.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "removeduplicate": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 drops articles NewsData judges duplicates.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles per page: 1 to 10 on Free, 1 to 50 on paid plans."
+        },
+        "page": {
+          "in": "query",
+          "type": "string",
+          "description": "Next page: the nextPage value from the previous answer (a page number with relevancy, source or fetched_at sort)."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Default pubdatedesc. relevancy needs a q parameter; relevancy, source and fetched_at reach the first 10,000 results only.",
+          "enum": [
+            "pubdatedesc",
+            "pubdateasc",
+            "relevancy",
+            "source",
+            "fetched_at"
+          ]
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, UTC. Limited by plan history."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, UTC."
+        }
+      },
+      "notes": [
+        "5 credits per call. Free plan answers 403. History: Basic 6 months, Professional 2 years, Corporate 10 years.",
+        "Needs at least one of q, qInTitle, qInMeta, country, category, language, domainurl, prioritydomain, id, url, image, video, full_content. No timeframe here."
+      ],
+      "job": "news.search",
+      "docs_url": "https://newsdata.io/openapi.json",
+      "verified": {
+        "docs": "https://newsdata.io/openapi.json"
+      }
+    },
+    {
+      "id": "newsdata.crypto",
+      "name": "Search crypto news",
+      "summary": "Cryptocurrency news, filterable by coin.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crypto",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, content, URL and metadata; AND/OR/NOT and quotes supported. Max 512 characters. Not with qInTitle or qInMeta."
+        },
+        "qInTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in the title only (max 512). Not with q or qInMeta."
+        },
+        "qInMeta": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, URL and meta tags (max 512). Not with q or qInTitle."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated language codes (5 on Free/Basic). Not with excludelanguage."
+        },
+        "domainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains, e.g. nytimes.com,bbc.com (5 on Free/Basic)."
+        },
+        "excludedomainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to exclude."
+        },
+        "prioritydomain": {
+          "in": "query",
+          "type": "string",
+          "description": "Only top (top 10%), medium (30%) or low (50%) ranked sources.",
+          "enum": [
+            "top",
+            "medium",
+            "low"
+          ]
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated article_id values (up to 50)."
+        },
+        "sentiment": {
+          "in": "query",
+          "type": "string",
+          "description": "Sentiment filter (paid feature).",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ]
+        },
+        "full_content": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 only articles with full_content, 0 only without.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "removeduplicate": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 drops articles NewsData judges duplicates.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles per page: 1 to 10 on Free, 1 to 50 on paid plans."
+        },
+        "page": {
+          "in": "query",
+          "type": "string",
+          "description": "Next page: the nextPage value from the previous answer (a page number with relevancy, source or fetched_at sort)."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Default pubdatedesc. relevancy needs a q parameter; relevancy, source and fetched_at reach the first 10,000 results only.",
+          "enum": [
+            "pubdatedesc",
+            "pubdateasc",
+            "relevancy",
+            "source",
+            "fetched_at"
+          ]
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "string",
+          "description": "Last N hours (1-48) or minutes (e.g. 15m, up to 2880m)."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, UTC. Limited by plan history."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, UTC."
+        },
+        "coin": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated coin symbols, e.g. btc,eth (5 on Free/Basic)."
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "news.search",
+      "docs_url": "https://newsdata.io/documentation/crypto-news-api",
+      "verified": {
+        "docs": "https://newsdata.io/documentation/crypto-news-api"
+      }
+    },
+    {
+      "id": "newsdata.market",
+      "name": "Search financial-market news",
+      "summary": "Market and stock news tagged with ticker symbols.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/market",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, content, URL and metadata; AND/OR/NOT and quotes supported. Max 512 characters. Not with qInTitle or qInMeta."
+        },
+        "qInTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in the title only (max 512). Not with q or qInMeta."
+        },
+        "qInMeta": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, URL and meta tags (max 512). Not with q or qInTitle."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes (5 on Free/Basic, 10 on higher plans). Not with excludecountry."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated language codes (5 on Free/Basic). Not with excludelanguage."
+        },
+        "domainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains, e.g. nytimes.com,bbc.com (5 on Free/Basic)."
+        },
+        "excludedomainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to exclude."
+        },
+        "prioritydomain": {
+          "in": "query",
+          "type": "string",
+          "description": "Only top (top 10%), medium (30%) or low (50%) ranked sources.",
+          "enum": [
+            "top",
+            "medium",
+            "low"
+          ]
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated article_id values (up to 50)."
+        },
+        "sentiment": {
+          "in": "query",
+          "type": "string",
+          "description": "Sentiment filter (paid feature).",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ]
+        },
+        "full_content": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 only articles with full_content, 0 only without.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "removeduplicate": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 drops articles NewsData judges duplicates.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles per page: 1 to 10 on Free, 1 to 50 on paid plans."
+        },
+        "page": {
+          "in": "query",
+          "type": "string",
+          "description": "Next page: the nextPage value from the previous answer (a page number with relevancy, source or fetched_at sort)."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Default pubdatedesc. relevancy needs a q parameter; relevancy, source and fetched_at reach the first 10,000 results only.",
+          "enum": [
+            "pubdatedesc",
+            "pubdateasc",
+            "relevancy",
+            "source",
+            "fetched_at"
+          ]
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "string",
+          "description": "Last N hours (1-48) or minutes (e.g. 15m, up to 2880m)."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From date, YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, UTC. Limited by plan history."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "To date, YYYY-MM-DD or YYYY-MM-DD HH:MM:SS, UTC."
+        },
+        "market_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated market symbol IDs (up to the plan's filter limit, default 5)."
+        }
+      },
+      "notes": [
+        "1 credit per call. Free plan: last 7 days, 12-hour delay, no from_date, to_date or timeframe. Paid: from_date/to_date or timeframe, not both; default last 48 hours."
+      ],
+      "job": "news.search",
+      "docs_url": "https://newsdata.io/openapi.json",
+      "verified": {
+        "docs": "https://newsdata.io/openapi.json"
+      }
+    },
+    {
+      "id": "newsdata.sources",
+      "name": "List news sources",
+      "summary": "Up to 100 sources matching filters, in random order, not paginated.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sources",
+      "params": {
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category code."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code."
+        },
+        "domainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain to look up."
+        },
+        "prioritydomain": {
+          "in": "query",
+          "type": "string",
+          "description": "Source rank.",
+          "enum": [
+            "top",
+            "medium",
+            "low"
+          ]
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "news.search",
+      "docs_url": "https://newsdata.io/openapi.json",
+      "verified": {
+        "docs": "https://newsdata.io/openapi.json"
+      }
+    },
+    {
+      "id": "newsdata.count",
+      "name": "Count matching articles",
+      "summary": "Number of archive articles matching filters over a date range, in total or per day or hour.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/count",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, content, URL and metadata; AND/OR/NOT and quotes supported. Max 512 characters. Not with qInTitle or qInMeta."
+        },
+        "qInTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in the title only (max 512). Not with q or qInMeta."
+        },
+        "qInMeta": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in title, URL and meta tags (max 512). Not with q or qInTitle."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes (5 on Free/Basic, 10 on higher plans). Not with excludecountry."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated category codes, e.g. business,technology (5 on Free/Basic). Not with excludecategory."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated language codes (5 on Free/Basic). Not with excludelanguage."
+        },
+        "domainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains, e.g. nytimes.com,bbc.com (5 on Free/Basic)."
+        },
+        "excludedomainurl": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to exclude."
+        },
+        "prioritydomain": {
+          "in": "query",
+          "type": "string",
+          "description": "Only top (top 10%), medium (30%) or low (50%) ranked sources.",
+          "enum": [
+            "top",
+            "medium",
+            "low"
+          ]
+        },
+        "sentiment": {
+          "in": "query",
+          "type": "string",
+          "description": "Sentiment filter (paid feature).",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ]
+        },
+        "full_content": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 only articles with full_content, 0 only without.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "removeduplicate": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 drops articles NewsData judges duplicates.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start, YYYY-MM-DD or YYYY-MM-DD HH:MM:SS."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End, YYYY-MM-DD or YYYY-MM-DD HH:MM:SS."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "all (default) total, or a day or hour breakdown.",
+          "enum": [
+            "all",
+            "day",
+            "hour"
+          ]
+        }
+      },
+      "notes": [
+        "50 credits per call; Basic plan and above. /crypto/count and /market/count do the same for those feeds."
+      ],
+      "job": "news.search",
+      "docs_url": "https://newsdata.io/documentation/news-count-api",
+      "verified": {
+        "docs": "https://newsdata.io/documentation/news-count-api"
+      }
+    }
+  ]
+}

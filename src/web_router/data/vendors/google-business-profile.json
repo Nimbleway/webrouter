@@ -1,0 +1,183 @@
+{
+  "vendor": "google-business-profile",
+  "name": "Google Business Profile",
+  "category": "maps",
+  "summary": "Your Google Business Profile locations and their customer reviews.",
+  "docs_url": "https://developers.google.com/my-business",
+  "base_url": "https://mybusiness.googleapis.com/v4",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "GOOGLE_BUSINESS_PROFILE_CLIENT_ID"
+        ],
+        "description": "the OAuth client id of a Google Cloud OAuth app with the Business Profile APIs enabled (Google Cloud console > APIs & Services > Credentials)"
+      },
+      "client_secret": {
+        "env": [
+          "GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET"
+        ],
+        "description": "that OAuth app's client secret"
+      },
+      "refresh_token": {
+        "env": [
+          "GOOGLE_BUSINESS_PROFILE_REFRESH_TOKEN"
+        ],
+        "description": "a refresh token minted with that OAuth app for the scope https://www.googleapis.com/auth/business.manage"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: only locations the signed-in Google user manages. Google gates access: the project must be approved for the Business Profile APIs first.",
+    "This file uses the v4 API for locations and reviews. Finding the account id is done by a different Google service (the Account Management API, mybusinessaccountmanagement.googleapis.com/v1/accounts) that this catalog does not cover; the id is also in the Business Profile manager URL.",
+    "Lists page with pageToken/nextPageToken.",
+    "Replies are public: they appear under the review on Google."
+  ],
+  "sources": [
+    "https://developers.google.com/my-business/reference/rest",
+    "https://developers.google.com/my-business/reference/rest/v4/accounts.locations/list",
+    "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/list",
+    "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/updateReply"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "google-business-profile.locations.list",
+      "name": "List an account's locations",
+      "summary": "Business locations in an account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/locations",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Business Profile account id, digits.",
+          "example": "1234567890"
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 100; default 100."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict which locations are returned."
+        },
+        "orderBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated sort fields, locationName and storeCode; append ' desc' to reverse."
+        }
+      },
+      "notes": [
+        "The v4 locations list is documented with a narrow field set; v4 field reads may be limited compared with Google's newer Business Information API."
+      ],
+      "job": "business.locations.list",
+      "docs_url": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations/list",
+      "verified": {
+        "docs": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations/list"
+      }
+    },
+    {
+      "id": "google-business-profile.reviews.list",
+      "name": "List a location's reviews",
+      "summary": "Customer reviews of a location with rating, text and any reply.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/locations/{location_id}/reviews",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Business Profile account id, digits.",
+          "example": "1234567890"
+        },
+        "location_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Location id, digits.",
+          "example": "9876543210"
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "At most 50 per page."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        },
+        "orderBy": {
+          "in": "query",
+          "type": "string",
+          "description": "rating, rating desc or updateTime desc (default)."
+        }
+      },
+      "job": "business.reviews.list",
+      "docs_url": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/list",
+      "verified": {
+        "docs": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/list"
+      }
+    },
+    {
+      "id": "google-business-profile.reviews.get",
+      "name": "Get one review",
+      "summary": "One review of a location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/locations/{location_id}/reviews/{review_id}",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Business Profile account id, digits.",
+          "example": "1234567890"
+        },
+        "location_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Location id, digits.",
+          "example": "9876543210"
+        },
+        "review_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Review id, from a reviews list."
+        }
+      },
+      "job": "business.reviews.get",
+      "docs_url": "https://developers.google.com/my-business/reference/rest/v4/accounts.locations.reviews/get",
+      "verified": {
+        "docs": "https://developers.google.com/my-business/reference/rest"
+      }
+    }
+  ]
+}

@@ -1,0 +1,299 @@
+{
+  "vendor": "worldbank",
+  "name": "World Bank Indicators API",
+  "category": "finance",
+  "summary": "World Bank development indicators (GDP, population, poverty, health, education...) for every country and aggregate, by year.",
+  "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/topics/125589",
+  "base_url": "https://api.worldbank.org/v2",
+  "auth": {
+    "inject": [
+      {
+        "in": "query",
+        "name": "format",
+        "value": "json"
+      }
+    ]
+  },
+  "notes": [
+    "Free and keyless. Every call here carries format=json; without it the API answers in XML.",
+    "A JSON answer is a two-item array: paging metadata (page, pages, per_page, total), then the rows. Page with page and per_page (default 50).",
+    "Join several countries or indicators with ';' (up to 60 indicators; several indicators need source). Results cannot be sorted.",
+    "Limits: 1,500 characters between slashes and 4,000 per URL.",
+    "The paging metadata of a data call carries lastupdated, the date the source was last refreshed."
+  ],
+  "sources": [
+    "https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures",
+    "https://datahelpdesk.worldbank.org/knowledgebase/articles/898599-indicator-api-queries",
+    "https://datahelpdesk.worldbank.org/knowledgebase/articles/898590-country-api-queries",
+    "https://datahelpdesk.worldbank.org/knowledgebase/articles/898611-topic-api-queries",
+    "https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "worldbank.indicator.data",
+      "name": "Get indicator values for countries",
+      "summary": "Values of one or more indicators for one or more countries, by year (or month/quarter).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/country/{country}/indicator/{indicator}",
+      "params": {
+        "country": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "ISO2 or ISO3 country code, an aggregate code, 'all', or several joined with ';'.",
+          "example": "br"
+        },
+        "indicator": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Indicator code, or up to 60 joined with ';' (then source is required).",
+          "example": "NY.GDP.MKTP.CD"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "A year, or a range with ':' (2000:2010); monthly 2012M01:2012M08, quarterly and YTD:2013 forms also work.",
+          "example": "2000:2010"
+        },
+        "mrv": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only the N most recent values."
+        },
+        "mrnev": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only the N most recent non-empty values."
+        },
+        "gapfill": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "Y",
+            "N"
+          ],
+          "description": "With mrv, back-fill missing values."
+        },
+        "frequency": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "Q",
+            "M",
+            "Y"
+          ],
+          "description": "Quarterly, monthly or yearly; works with mrv."
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Source (database) id; required when asking for several indicators.",
+          "example": "2"
+        },
+        "footnote": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "y"
+          ],
+          "description": "y adds footnote details."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 50."
+        }
+      },
+      "notes": [
+        "Example: country br, indicator NY.GDP.MKTP.CD, date 2006 gives Brazil's 2006 GDP in current US$."
+      ],
+      "job": "economy.series.get",
+      "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures",
+      "verified": {
+        "docs": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures"
+      }
+    },
+    {
+      "id": "worldbank.indicators.list",
+      "name": "List indicators",
+      "summary": "Every indicator with its code, name, source, topics and definition; filter by topic or source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/indicator",
+      "params": {
+        "topic": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only indicators under this topic id.",
+          "example": 5
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Only indicators in this source id."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 50."
+        }
+      },
+      "job": "economy.series.search",
+      "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898599-indicator-api-queries",
+      "verified": {
+        "docs": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898599-indicator-api-queries"
+      }
+    },
+    {
+      "id": "worldbank.indicator.get",
+      "name": "Get an indicator",
+      "summary": "Name, unit, source, topics and definition of one indicator code.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/indicator/{indicator}",
+      "params": {
+        "indicator": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Indicator code.",
+          "example": "NY.GDP.MKTP.CD"
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Source id, when the code exists in several.",
+          "example": "11"
+        }
+      },
+      "job": "economy.series.metadata",
+      "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898599-indicator-api-queries",
+      "verified": {
+        "docs": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898599-indicator-api-queries"
+      }
+    },
+    {
+      "id": "worldbank.countries.list",
+      "name": "List countries",
+      "summary": "Countries and aggregates with region, income level and lending type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/country",
+      "params": {
+        "incomeLevel": {
+          "in": "query",
+          "type": "string",
+          "description": "Only countries at this income level id.",
+          "example": "LIC"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 50."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures",
+      "verified": {
+        "docs": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures"
+      }
+    },
+    {
+      "id": "worldbank.country.get",
+      "name": "Get a country",
+      "summary": "One country (or several joined with ';') by ISO code.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/country/{country}",
+      "params": {
+        "country": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "ISO2 or ISO3 code.",
+          "example": "br"
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898590-country-api-queries",
+      "verified": {
+        "docs": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898590-country-api-queries"
+      }
+    },
+    {
+      "id": "worldbank.topics.list",
+      "name": "List topics",
+      "summary": "The topics (Education, Health, ...) indicators are grouped under, with ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/topic",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 50."
+        }
+      },
+      "job": "economy.datasets.list",
+      "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898611-topic-api-queries",
+      "verified": {
+        "docs": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898611-topic-api-queries"
+      }
+    },
+    {
+      "id": "worldbank.topic.indicators",
+      "name": "List a topic's indicators",
+      "summary": "Indicators under one topic id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/topic/{topic_id}/indicator",
+      "params": {
+        "topic_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Topic id.",
+          "example": "5"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 50."
+        }
+      },
+      "job": "economy.series.search",
+      "docs_url": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898611-topic-api-queries",
+      "verified": {
+        "docs": "https://datahelpdesk.worldbank.org/knowledgebase/articles/898611-topic-api-queries"
+      }
+    }
+  ]
+}

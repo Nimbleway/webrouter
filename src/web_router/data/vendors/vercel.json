@@ -1,0 +1,404 @@
+{
+  "vendor": "vercel",
+  "name": "Vercel",
+  "category": "developer",
+  "summary": "Read a Vercel account: deployments and their build events and runtime logs, projects, domains, teams and the current user.",
+  "docs_url": "https://vercel.com/docs/rest-api",
+  "base_url": "https://api.vercel.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "VERCEL_ACCESS_TOKEN",
+          "VERCEL_TOKEN"
+        ],
+        "description": "A Vercel access token, sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Calls act on the token's own account unless teamId or slug names a team.",
+    "Timestamps are JavaScript milliseconds. List calls return pagination.next, the timestamp (or, for projects, continuation token) to request the next page with; projects take it as from.",
+    "Build events and runtime logs can stream (application/stream+json); for events, leave follow unset to get a finite JSON array.",
+    "Only reads are named here; deploy, delete and settings changes are left out."
+  ],
+  "sources": [
+    "https://vercel.com/docs/rest-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "vercel.deployments.list",
+      "name": "List deployments",
+      "summary": "Deployments of the user or team, filterable by project, environment, state, branch or commit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v7/deployments",
+      "params": {
+        "projectId": {
+          "in": "query",
+          "type": "string",
+          "description": "Project id or name."
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Environment, e.g. production or preview."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated states: BUILDING, ERROR, INITIALIZING, QUEUED, READY, CANCELED, BLOCKED.",
+          "example": "ERROR"
+        },
+        "branch": {
+          "in": "query",
+          "type": "string",
+          "description": "Git branch name."
+        },
+        "sha": {
+          "in": "query",
+          "type": "string",
+          "description": "Git commit SHA."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most deployments to return."
+        },
+        "since": {
+          "in": "query",
+          "type": "integer",
+          "description": "Created after this timestamp (ms)."
+        },
+        "until": {
+          "in": "query",
+          "type": "integer",
+          "description": "Created before this timestamp (ms); use pagination.next to page."
+        },
+        "teamId": {
+          "in": "query",
+          "type": "string",
+          "description": "Team id to act on behalf of."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Team slug to act on behalf of."
+        }
+      },
+      "job": "deployments.list",
+      "docs_url": "https://vercel.com/docs/rest-api/deployments/list-deployments",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/deployments/list-deployments"
+      }
+    },
+    {
+      "id": "vercel.deployments.get",
+      "name": "Get a deployment",
+      "summary": "One deployment by id or hostname, with state, errors, build and git details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v13/deployments/{idOrUrl}",
+      "params": {
+        "idOrUrl": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Deployment id (dpl_...) or hostname."
+        },
+        "withGitRepoInfo": {
+          "in": "query",
+          "type": "string",
+          "description": "true to include gitSource (commit SHA, branch, repo).",
+          "example": "true"
+        },
+        "teamId": {
+          "in": "query",
+          "type": "string",
+          "description": "Team id to act on behalf of."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Team slug to act on behalf of."
+        }
+      },
+      "job": "deployments.get",
+      "docs_url": "https://vercel.com/docs/rest-api/deployments/get-a-deployment-by-id-or-url",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/deployments/get-a-deployment-by-id-or-url"
+      }
+    },
+    {
+      "id": "vercel.deployments.events",
+      "name": "Get build logs",
+      "summary": "Build events (stdout, stderr, commands, state changes) of a deployment.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/deployments/{idOrUrl}/events",
+      "params": {
+        "idOrUrl": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Deployment id or hostname."
+        },
+        "direction": {
+          "in": "query",
+          "type": "string",
+          "description": "forward (default) or backward by time.",
+          "enum": [
+            "forward",
+            "backward"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most events; -1 for all."
+        },
+        "since": {
+          "in": "query",
+          "type": "integer",
+          "description": "From this timestamp."
+        },
+        "until": {
+          "in": "query",
+          "type": "integer",
+          "description": "Up to this timestamp."
+        },
+        "follow": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 streams live events; leave unset for a finite list.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "teamId": {
+          "in": "query",
+          "type": "string",
+          "description": "Team id to act on behalf of."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Team slug to act on behalf of."
+        }
+      },
+      "job": "logs.search",
+      "docs_url": "https://vercel.com/docs/rest-api/deployments/get-deployment-events",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/deployments/get-deployment-events"
+      }
+    },
+    {
+      "id": "vercel.deployments.runtime-logs",
+      "name": "Get runtime logs",
+      "summary": "Request and function logs of a deployment, as a stream of JSON lines.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/projects/{projectId}/deployments/{deploymentId}/runtime-logs",
+      "params": {
+        "projectId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id or name."
+        },
+        "deploymentId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Deployment id or hostname."
+        },
+        "teamId": {
+          "in": "query",
+          "type": "string",
+          "description": "Team id to act on behalf of."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Team slug to act on behalf of."
+        }
+      },
+      "notes": [
+        "Responds with application/stream+json: one JSON object per line."
+      ],
+      "job": "logs.search",
+      "docs_url": "https://vercel.com/docs/rest-api/logs/get-logs-for-a-deployment",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/logs/get-logs-for-a-deployment"
+      }
+    },
+    {
+      "id": "vercel.projects.list",
+      "name": "List projects",
+      "summary": "Projects of the user or team, searchable by name or repository.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v10/projects",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Name search, up to 100 characters."
+        },
+        "repo": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by connected repository."
+        },
+        "limit": {
+          "in": "query",
+          "type": "string",
+          "description": "Most projects to return."
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated after this timestamp or continuation token (pagination.next)."
+        },
+        "teamId": {
+          "in": "query",
+          "type": "string",
+          "description": "Team id to act on behalf of."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Team slug to act on behalf of."
+        }
+      },
+      "job": "projects.list",
+      "docs_url": "https://vercel.com/docs/rest-api/projects/retrieve-a-list-of-projects",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/projects/retrieve-a-list-of-projects"
+      }
+    },
+    {
+      "id": "vercel.projects.get",
+      "name": "Get a project",
+      "summary": "One project by id or name, with settings, link and latest deployments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v9/projects/{idOrName}",
+      "params": {
+        "idOrName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project id or name."
+        },
+        "teamId": {
+          "in": "query",
+          "type": "string",
+          "description": "Team id to act on behalf of."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Team slug to act on behalf of."
+        }
+      },
+      "job": "projects.get",
+      "docs_url": "https://vercel.com/docs/rest-api/projects/find-a-project-by-id-or-name",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/projects/find-a-project-by-id-or-name"
+      }
+    },
+    {
+      "id": "vercel.domains.list",
+      "name": "List domains",
+      "summary": "Domains registered to the user or team (20 by default).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v5/domains",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most domains to return."
+        },
+        "since": {
+          "in": "query",
+          "type": "integer",
+          "description": "Created after this timestamp (ms)."
+        },
+        "until": {
+          "in": "query",
+          "type": "integer",
+          "description": "Created before this timestamp (ms)."
+        },
+        "teamId": {
+          "in": "query",
+          "type": "string",
+          "description": "Team id to act on behalf of."
+        },
+        "slug": {
+          "in": "query",
+          "type": "string",
+          "description": "Team slug to act on behalf of."
+        }
+      },
+      "job": "domains.list",
+      "docs_url": "https://vercel.com/docs/rest-api/domains/list-all-the-domains",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/domains/list-all-the-domains"
+      }
+    },
+    {
+      "id": "vercel.teams.list",
+      "name": "List teams",
+      "summary": "Teams the token's user belongs to, with their ids and slugs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/teams",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most teams to return."
+        },
+        "since": {
+          "in": "query",
+          "type": "integer",
+          "description": "Created since this timestamp (ms)."
+        },
+        "until": {
+          "in": "query",
+          "type": "integer",
+          "description": "Created until this timestamp (ms)."
+        }
+      },
+      "job": "account.teams",
+      "docs_url": "https://vercel.com/docs/rest-api/teams/list-all-teams",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/teams/list-all-teams"
+      }
+    },
+    {
+      "id": "vercel.user.get",
+      "name": "Get the current user",
+      "summary": "Information on the user the token belongs to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/user",
+      "job": "account.validate",
+      "docs_url": "https://vercel.com/docs/rest-api/user/get-the-user",
+      "verified": {
+        "docs": "https://vercel.com/docs/rest-api/user/get-the-user"
+      }
+    }
+  ]
+}

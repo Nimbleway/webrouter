@@ -1,0 +1,233 @@
+{
+  "vendor": "arcgis",
+  "name": "ArcGIS Online",
+  "category": "maps",
+  "summary": "Search ArcGIS Online's public content (feature layers, map services, web maps, datasets) and read an item's metadata and data.",
+  "docs_url": "https://developers.arcgis.com/rest/users-groups-and-items/search/",
+  "base_url": "https://www.arcgis.com/sharing/rest",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "ARCGIS_API_KEY"
+        ],
+        "required": false,
+        "description": "optional ArcGIS access token or API key, for items not shared publicly"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "token",
+        "value": "{token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "The token is only for restricted content; results include only the items the caller may access, so without one they are public items.",
+    "Every call answers HTML unless f=json.",
+    "An item's url field points to its own service (often on a different, per-organization server); querying that layer is outside this entry.",
+    "Paging is 1-based: start and num (max 100); follow nextStart. total is exact up to 10,000."
+  ],
+  "sources": [
+    "https://developers.arcgis.com/rest/users-groups-and-items/search/",
+    "https://developers.arcgis.com/rest/users-groups-and-items/item/",
+    "https://developers.arcgis.com/rest/users-groups-and-items/item-data/",
+    "https://developers.arcgis.com/rest/users-groups-and-items/group-search/",
+    "https://developers.arcgis.com/rest/users-groups-and-items/common-parameters/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "arcgis.items.search",
+      "name": "Search items",
+      "summary": "Public maps, layers, apps and files matching a query, area or category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search query in ArcGIS search syntax. One of q, bbox or categories is required.",
+          "example": "wildfire"
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minx,miny,maxx,maxy in WGS84; matches items whose extent overlaps.",
+          "example": "-125,32,-114,42"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact field match, field:\"value\"."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated full category paths, up to eight."
+        },
+        "sortField": {
+          "in": "query",
+          "type": "string",
+          "description": "title, created, type, owner, modified, avgrating, numratings, numcomments or numviews."
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (default) or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based index of the first result."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 10, max 100.",
+          "example": 20
+        },
+        "countFields": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to three of type, access, contentstatus, group, categories, to get aggregations."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json, pjson or html (default html, so pass json).",
+          "example": "json"
+        }
+      },
+      "job": "datasets.search",
+      "docs_url": "https://developers.arcgis.com/rest/users-groups-and-items/search/",
+      "verified": {
+        "docs": "https://developers.arcgis.com/rest/users-groups-and-items/search/"
+      }
+    },
+    {
+      "id": "arcgis.items.get",
+      "name": "Get an item",
+      "summary": "An item's metadata: title, type, owner, extent, access, tags and its service url.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/content/items/{itemId}",
+      "params": {
+        "itemId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "32-character item id."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json, pjson or html (default html, so pass json).",
+          "example": "json"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://developers.arcgis.com/rest/users-groups-and-items/item/",
+      "verified": {
+        "docs": "https://developers.arcgis.com/rest/users-groups-and-items/item/"
+      }
+    },
+    {
+      "id": "arcgis.items.data",
+      "name": "Get an item's data",
+      "summary": "The item's data section: a web map's JSON, or the uploaded file itself.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/content/items/{itemId}/data",
+      "params": {
+        "itemId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "32-character item id."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "Package items only: zip or unchanged.",
+          "enum": [
+            "zip",
+            "unchanged"
+          ]
+        }
+      },
+      "notes": [
+        "Returns the file with its own content type, so it may be binary."
+      ],
+      "job": "datasets.search",
+      "docs_url": "https://developers.arcgis.com/rest/users-groups-and-items/item-data/",
+      "verified": {
+        "docs": "https://developers.arcgis.com/rest/users-groups-and-items/item-data/"
+      }
+    },
+    {
+      "id": "arcgis.groups.search",
+      "name": "Search groups",
+      "summary": "Groups (curated collections of items) matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/community/groups",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search query.",
+          "example": "living atlas"
+        },
+        "sortField": {
+          "in": "query",
+          "type": "string",
+          "description": "title, owner, created or modified.",
+          "enum": [
+            "title",
+            "owner",
+            "created",
+            "modified"
+          ]
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (default) or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based index of the first result."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 10, max 100."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json, pjson or html (default html, so pass json).",
+          "example": "json"
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://developers.arcgis.com/rest/users-groups-and-items/group-search/",
+      "verified": {
+        "docs": "https://developers.arcgis.com/rest/users-groups-and-items/group-search/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,353 @@
+{
+  "vendor": "slack",
+  "name": "Slack",
+  "category": "messaging",
+  "summary": "Your Slack workspace: channels, history, threads and users, and message search.",
+  "docs_url": "https://docs.slack.dev/reference/methods/",
+  "base_url": "https://slack.com/api",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "SLACK_BOT_TOKEN"
+        ],
+        "description": "a Slack bot token (xoxb-...) from your Slack app's OAuth & Permissions page (api.slack.com/apps); a user token (xoxp-...) also works and is required for search.messages"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Slack answers HTTP 200 even on failure: check the ok field, and read error when it is false (not_in_channel, missing_scope, channel_not_found...).",
+    "A bot only reads channels it is a member of, and only with the scopes the app was granted; the error names the missing scope.",
+    "Ids, not names: channels are C..., users U.... Message ts values are strings like 1700000000.000100 and identify a message.",
+    "Lists page by cursor: pass response_metadata.next_cursor back as cursor. Set limit; Slack recommends at most 200.",
+    "Rate limits are per method (tiers 1 to 4, about 1 to 100 or more calls a minute); a 429 carries Retry-After."
+  ],
+  "sources": [
+    "https://docs.slack.dev/reference/methods/conversations.list",
+    "https://docs.slack.dev/reference/methods/conversations.history",
+    "https://docs.slack.dev/reference/methods/conversations.replies",
+    "https://docs.slack.dev/reference/methods/conversations.info",
+    "https://docs.slack.dev/reference/methods/users.list",
+    "https://docs.slack.dev/reference/methods/users.info",
+    "https://docs.slack.dev/reference/methods/search.messages",
+    "https://docs.slack.dev/reference/methods/chat.postMessage",
+    "https://docs.slack.dev/reference/methods/reactions.add"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "slack.conversations.list",
+      "name": "List channels",
+      "summary": "Channels (and optionally private channels and DMs) in the workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/conversations.list",
+      "params": {
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: public_channel (default), private_channel, mpim, im."
+        },
+        "exclude_archived": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out archived channels; default false."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Under 1000; default 100."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous answer's response_metadata; omit for the first page."
+        },
+        "team_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Needed for org-wide tokens."
+        }
+      },
+      "notes": [
+        "Tier 2 rate limit."
+      ],
+      "job": "messaging.channels.list",
+      "docs_url": "https://docs.slack.dev/reference/methods/conversations.list",
+      "verified": {
+        "docs": "https://docs.slack.dev/reference/methods/conversations.list"
+      }
+    },
+    {
+      "id": "slack.conversations.info",
+      "name": "Get a channel",
+      "summary": "Details of one conversation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/conversations.info",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Conversation (channel) id, e.g. C0123456789."
+        },
+        "include_num_members": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the member count."
+        },
+        "include_locale": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the locale."
+        }
+      },
+      "job": "messaging.channels.get",
+      "docs_url": "https://docs.slack.dev/reference/methods/conversations.info",
+      "verified": {
+        "docs": "https://docs.slack.dev/reference/methods/conversations.info"
+      }
+    },
+    {
+      "id": "slack.conversations.history",
+      "name": "Read channel messages",
+      "summary": "Messages in a conversation, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/conversations.history",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Conversation (channel) id, e.g. C0123456789."
+        },
+        "oldest": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages after this Unix timestamp."
+        },
+        "latest": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages before this Unix timestamp."
+        },
+        "inclusive": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include messages exactly at oldest or latest."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Up to 999; default 100."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous answer's response_metadata; omit for the first page."
+        },
+        "include_all_metadata": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return all message metadata."
+        }
+      },
+      "notes": [
+        "Replies inside threads are not included: use slack.conversations.replies."
+      ],
+      "job": "messaging.messages.list",
+      "docs_url": "https://docs.slack.dev/reference/methods/conversations.history",
+      "verified": {
+        "docs": "https://docs.slack.dev/reference/methods/conversations.history"
+      }
+    },
+    {
+      "id": "slack.conversations.replies",
+      "name": "Read a thread",
+      "summary": "A thread's parent message and its replies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/conversations.replies",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Conversation (channel) id, e.g. C0123456789."
+        },
+        "ts": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ts of the thread's parent message.",
+          "example": "1700000000.000100"
+        },
+        "oldest": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages after this Unix timestamp."
+        },
+        "latest": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages before this Unix timestamp."
+        },
+        "inclusive": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include messages exactly at oldest or latest."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 1000; Slack recommends at most 200."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous answer's response_metadata; omit for the first page."
+        }
+      },
+      "job": "messaging.thread.read",
+      "docs_url": "https://docs.slack.dev/reference/methods/conversations.replies",
+      "verified": {
+        "docs": "https://docs.slack.dev/reference/methods/conversations.replies"
+      }
+    },
+    {
+      "id": "slack.users.list",
+      "name": "List workspace members",
+      "summary": "Members with profile, name and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users.list",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Slack recommends at most 200; required below 1000 to page."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous answer's response_metadata; omit for the first page."
+        },
+        "include_locale": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include each user's locale."
+        },
+        "team_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Needed for org-level tokens."
+        }
+      },
+      "notes": [
+        "Emails appear only with the users:read.email scope."
+      ],
+      "job": "messaging.users.list",
+      "docs_url": "https://docs.slack.dev/reference/methods/users.list",
+      "verified": {
+        "docs": "https://docs.slack.dev/reference/methods/users.list"
+      }
+    },
+    {
+      "id": "slack.users.info",
+      "name": "Get one user",
+      "summary": "Profile and status of a user by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users.info",
+      "params": {
+        "user": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "User id, e.g. U0123456789."
+        },
+        "include_locale": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the locale."
+        }
+      },
+      "job": "messaging.users.get",
+      "docs_url": "https://docs.slack.dev/reference/methods/users.info",
+      "verified": {
+        "docs": "https://docs.slack.dev/reference/methods/users.info"
+      }
+    },
+    {
+      "id": "slack.search.messages",
+      "name": "Search messages",
+      "summary": "Messages matching a query across the workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search.messages",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query; supports Slack modifiers like in:#channel from:@user."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 20, at most 100."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; default 1, at most 100."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor paging: send * first, then next_cursor."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "score or timestamp.",
+          "enum": [
+            "score",
+            "timestamp"
+          ]
+        },
+        "sort_dir": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "highlight": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add highlight markers."
+        }
+      },
+      "notes": [
+        "Needs a USER token with search:read; a bot token is refused. Slack lists this method as legacy in favour of its Real-time Search API."
+      ],
+      "job": "messaging.messages.search",
+      "docs_url": "https://docs.slack.dev/reference/methods/search.messages",
+      "verified": {
+        "docs": "https://docs.slack.dev/reference/methods/search.messages"
+      }
+    }
+  ]
+}

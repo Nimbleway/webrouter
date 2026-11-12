@@ -30,6 +30,29 @@ when you switch providers. `search_depth` is how much text comes back per
 result; `effort` is how hard the backend looks. The exact field each backend
 sends is in its `contracts/search/<name>.json`.
 
+## Data APIs that match the search
+
+A search also lists the data APIs whose catalog entries match the query — a
+vendor's own API, such as Datadog's monitors or Google Ads' reports (see
+[Vendor data](https://github.com/Nimbleway/webrouter#vendor-data)) — under `response.data_apis`, beside the web
+results:
+
+```python
+response = router.search("datadog monitors")
+response.data_apis[0].endpoint  # 'datadog.monitors.list', the name call_vendor takes
+response.data_apis[0].configured  # False until its credentials are set
+response.data_apis[0].missing  # the variable to set for each one that is not
+```
+
+Matching reads the local catalog, so it costs nothing and calls nothing; a match
+is never run, and calling it stays `call_vendor()`'s. Only read endpoints are
+listed, at most three, and only on a query word in an endpoint's id, job or
+vendor name, so most web searches list none. `data_apis=False` leaves them out,
+`configured_only=True` keeps the ones you hold credentials for, and
+`data_apis_only=True` lists them alone and calls no web backend (its
+`provider` is `"data-apis"`); it refuses every web option but `max_results`,
+which then caps the matches.
+
 ## Search depth
 
 Three levels, each defined by size, mapped onto each backend's own knobs. A
@@ -98,3 +121,21 @@ date gets today (UTC) minus 1, 7, 30 or 365 days.
 | DeepSeek | `after:YYYY-MM-DD` in the query |
 
 WebIQ and Parallel MCP do not map it.
+
+## Values a backend refuses
+
+Each of these raises `UnsupportedParameterError` before anything is sent. A
+query too long for its operators raises `ProviderError` instead. `auto` moves
+on to the next eligible backend.
+
+| Backend | Refused |
+| --- | --- |
+| You.com, You.com MCP | A `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once |
+| Brave | A `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
+| Tavily | A `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
+| Parallel | A `country` off its 37 codes; both domain lists at once; more than 200 domains |
+| Perplexity | Both domain lists at once; more than 20 domains; a `locale` that is not a bare two-letter language (`en`, not `en-US`) |
+| WebIQ | A `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
+| Keenable | More than one `include_domains` entry |
+| DeepSeek | A query past 128 characters with its operators |
+| Brave, WebIQ, DeepSeek, You.com MCP | A domain filter that is not a host name, optionally with a path, because it goes into the query as `site:`. For You.com MCP, this applies only to `include_domains`; `exclude_domains` is a tool argument |

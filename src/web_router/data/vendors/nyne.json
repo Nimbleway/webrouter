@@ -1,0 +1,424 @@
+{
+  "vendor": "nyne",
+  "name": "Nyne.ai",
+  "category": "enrichment",
+  "summary": "People and company intelligence: person enrichment and search with contacts and social profiles, company enrichment, search, employees and funding.",
+  "docs_url": "https://api.nyne.ai/documentation",
+  "base_url": "https://api.nyne.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "NYNE_API_KEY"
+        ],
+        "description": "A Nyne.ai API key (dashboard, API keys). Sent in the X-API-Key header."
+      },
+      "api_secret": {
+        "env": [
+          "NYNE_API_SECRET"
+        ],
+        "description": "The secret shown once when the key was created. Sent in the X-API-Secret header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      },
+      {
+        "in": "header",
+        "name": "X-API-Secret",
+        "value": "{api_secret}"
+      }
+    ]
+  },
+  "notes": [
+    "Most endpoints are asynchronous: POST answers 202 with data.request_id; GET the same path with ?request_id= until status is completed (or data.completed is true).",
+    "Rate limits per key: 100 requests a minute and 1,000 an hour, plus a monthly request quota (429 monthly_limit_exceeded).",
+    "A key is entitled per product (enrichment, search, newsfeed); a missing product answers 403 subscription_required.",
+    "Credits are checked before work starts (402 insufficient_credits) and deducted only on a meaningful result; empty results are free. Workspace prices may differ from the documented defaults.",
+    "Email and phone finders, deep research, newsfeed, employees, funding and the other person/company endpoints are documented but not in this entry."
+  ],
+  "sources": [
+    "https://api.nyne.ai/llms.txt",
+    "https://api.nyne.ai/documentation/authentication.md",
+    "https://api.nyne.ai/documentation/async.md",
+    "https://api.nyne.ai/documentation/credits.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nyne.usage.get",
+      "name": "Get credit usage",
+      "summary": "Credits consumed, allocation, remaining balance and per-API breakdown for a billing period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "params": {
+        "month": {
+          "in": "query",
+          "type": "integer",
+          "description": "Month 1-12; send with year. Omit both for the active billing period."
+        },
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Year 2020-2030; send with month."
+        }
+      },
+      "notes": [
+        "Free and synchronous."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api.nyne.ai/documentation/account/usage",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/account/usage.md"
+      }
+    },
+    {
+      "id": "nyne.person.enrich",
+      "name": "Start a person enrichment",
+      "summary": "Full person profile (contact details, work history, social profiles, education, location) from an email, phone, profile URL or name.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/enrichment",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address.",
+          "example": "jane.doe@acme.com"
+        },
+        "phone": {
+          "in": "body",
+          "type": "string",
+          "description": "US 10-digit or E.164 phone number."
+        },
+        "social_media_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Profile URL, e.g. LinkedIn."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name; at least one of email, phone, social_media_url or name is required."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Employer, to aid matching."
+        },
+        "city": {
+          "in": "body",
+          "type": "string",
+          "description": "City, to disambiguate a name lookup."
+        },
+        "newsfeed": {
+          "in": "body",
+          "type": "array",
+          "description": "Social sources to also pull, e.g. [\"linkedin\",\"github\"], or the string \"all\"."
+        },
+        "lite_enrich": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Cheaper reduced field set."
+        },
+        "probability_score": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add a high/medium/low match probability."
+        },
+        "required_fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields the result must contain to count as a match."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "A read over POST, asynchronous: answers 202 with a request_id; poll nyne.person.enrich_result.",
+        "6 credits (3 with lite_enrich), charged only when usable data comes back."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.nyne.ai/documentation/person/enrichment",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/person/enrichment.md"
+      }
+    },
+    {
+      "id": "nyne.person.enrich_result",
+      "name": "Get a person enrichment result",
+      "summary": "Status and result of a person enrichment request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/enrichment",
+      "params": {
+        "request_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The request_id the submit returned."
+        }
+      },
+      "notes": [
+        "Poll about once a second until status is completed; polls are free but count toward rate limits."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://api.nyne.ai/documentation/person/enrichment",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/person/enrichment.md"
+      }
+    },
+    {
+      "id": "nyne.person.search",
+      "name": "Start a people search",
+      "summary": "People matching a natural-language query and/or structured filters, optionally with emails and phones.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language description, max 1000 characters; a string, never an object.",
+          "example": "Marketing directors at fintech startups in Austin"
+        },
+        "custom_filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Structured filters: locations, titles, companies, universities, degrees, specialization_categories, industries, keywords, languages (see docs).",
+          "example": {
+            "companies": [
+              "acme.com"
+            ]
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1-100, default 10."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "0-indexed start; offset + limit at most 10000."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor of a previous page; send alone to submit the next page."
+        },
+        "request_id": {
+          "in": "body",
+          "type": "string",
+          "description": "An existing search, re-sent with a new offset/limit for another page."
+        },
+        "show_emails": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include verified emails (+6 credits per result)."
+        },
+        "show_phone_numbers": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include phone numbers (+6 credits per result)."
+        },
+        "require_emails": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only people with a verified email."
+        },
+        "require_phone_numbers": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only people with a phone number."
+        },
+        "insights": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Attach why-matched evidence (+1 credit per result)."
+        },
+        "profile_scoring": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add a 1-5 fit score (+1 credit per result)."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "A read over POST, asynchronous. The POST prepares one page and returns page metadata, not rows; read the rows with nyne.person.search_result using the same request_id, offset and limit.",
+        "1 credit per result returned, plus surcharges per result: +1 with custom_filters, +6 for email data, +6 for phone data. Do not re-POST as a status check: it can bill another page."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.nyne.ai/documentation/person/search",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/person/search.md"
+      }
+    },
+    {
+      "id": "nyne.person.search_result",
+      "name": "Get a people search page",
+      "summary": "Rows of one page of a people search, once data.completed is true.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/search",
+      "params": {
+        "request_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The request_id the submit returned."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "The page's offset, as the submit returned it; defaults to 0."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "The page's limit, as the submit returned it."
+        }
+      },
+      "notes": [
+        "Keep polling while data.completed is false; completed, exhausted and stale are all terminal success. has_more and next_cursor say whether another page exists. Polling is free."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://api.nyne.ai/documentation/person/search",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/person/search.md"
+      }
+    },
+    {
+      "id": "nyne.company.enrich",
+      "name": "Start a company enrichment",
+      "summary": "Firmographic profile (industry, headcount, locations, funding, web presence, emails, phones) from a domain, email, phone or company social URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/enrichment",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company website domain.",
+          "example": "tesla.com"
+        },
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "A company email address."
+        },
+        "phone": {
+          "in": "body",
+          "type": "string",
+          "description": "A company phone number."
+        },
+        "social_media_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Company social profile URL, e.g. LinkedIn."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "A read over POST, asynchronous: poll nyne.company.enrich_result. Charged once, only on a meaningful result; a 404 means no match and no charge."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api.nyne.ai/documentation/company/enrichment",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/company/enrichment.md"
+      }
+    },
+    {
+      "id": "nyne.company.enrich_result",
+      "name": "Get a company enrichment result",
+      "summary": "Status and result of a company enrichment request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/enrichment",
+      "params": {
+        "request_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The request_id the submit returned."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://api.nyne.ai/documentation/company/enrichment",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/company/enrichment.md"
+      }
+    },
+    {
+      "id": "nyne.company.search",
+      "name": "Start a company search",
+      "summary": "Companies matching a natural-language query about industry, location, size, funding, investors or technologies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language company search.",
+          "example": "pre-seed AI infrastructure startups in California with fewer than 50 employees"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Companies to return, 1-50, default 10."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "0-indexed start; use next_offset from the previous completed page."
+        },
+        "profile_scoring": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add a 1-5 relevance score."
+        },
+        "insights": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add query-fit evidence."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "A read over POST, asynchronous: poll nyne.company.search_result. 1 credit per company returned.",
+        "Next page: POST the same query with offset = next_offset."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.nyne.ai/documentation/company/search",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/company/search.md"
+      }
+    },
+    {
+      "id": "nyne.company.search_result",
+      "name": "Get a company search result",
+      "summary": "Status and stored page of a company search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/search",
+      "params": {
+        "request_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The request_id the submit returned."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://api.nyne.ai/documentation/company/search",
+      "verified": {
+        "docs": "https://api.nyne.ai/documentation/company/search.md"
+      }
+    }
+  ]
+}

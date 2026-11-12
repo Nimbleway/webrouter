@@ -1,0 +1,445 @@
+{
+  "vendor": "openfda",
+  "name": "openFDA",
+  "category": "health",
+  "summary": "US Food and Drug Administration public data: drug, device and food adverse events, recalls, drug labels, NDC directory, approvals and 510(k) clearances.",
+  "docs_url": "https://open.fda.gov/apis/",
+  "base_url": "https://api.fda.gov",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENFDA_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional free openFDA API key (open.fda.gov/apis/authentication). Sent as the api_key query parameter; raises the daily limit."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Keyless works: 240 requests per minute and 1,000 per day per IP. With a key: 240 per minute and 120,000 per day per key.",
+    "Every endpoint takes the same search, sort, count, limit and skip parameters; field names differ per dataset (see each endpoint's searchable fields page).",
+    "skip+limit paging stops at about 26,000 hits. Beyond that, sort without skip and follow the Link header's rel=\"Next\" URL (search_after) until it disappears.",
+    "count returns value/term counts instead of records; use the .exact field variant to count whole phrases rather than single words."
+  ],
+  "sources": [
+    "https://open.fda.gov/apis/",
+    "https://open.fda.gov/apis/authentication/",
+    "https://open.fda.gov/apis/query-parameters/",
+    "https://open.fda.gov/apis/query-syntax/",
+    "https://open.fda.gov/apis/paging/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "openfda.drug.events",
+      "name": "Search drug adverse event reports",
+      "summary": "Drug adverse event reports: patient, drugs taken and reactions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/drug/event.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields.",
+          "example": "patient.reaction.reactionmeddrapt:\"fatigue\""
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases.",
+          "example": "patient.reaction.reactionmeddrapt.exact"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "health.adverse_events",
+      "docs_url": "https://open.fda.gov/apis/drug/event/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/drug/event/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.drug.labels",
+      "name": "Search drug labels",
+      "summary": "Drug product labeling: indications, warnings, dosage and more for prescription and OTC drugs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/drug/label.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "health.drugs",
+      "docs_url": "https://open.fda.gov/apis/drug/label/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/drug/label/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.drug.ndc",
+      "name": "Search the NDC directory",
+      "summary": "National Drug Code directory: products, packages, labelers and active ingredients.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/drug/ndc.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "health.drugs",
+      "docs_url": "https://open.fda.gov/apis/drug/ndc/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/drug/ndc/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.drug.approvals",
+      "name": "Search Drugs@FDA",
+      "summary": "FDA-approved drug products with applications, submissions and approval history.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/drug/drugsfda.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "health.drugs",
+      "docs_url": "https://open.fda.gov/apis/drug/drugsfda/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/drug/drugsfda/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.drug.recalls",
+      "name": "Search drug recall enforcement reports",
+      "summary": "Drug recalls: product, reason, classification, firm and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/drug/enforcement.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "recalls.search",
+      "docs_url": "https://open.fda.gov/apis/drug/enforcement/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/drug/enforcement/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.device.events",
+      "name": "Search device adverse event reports",
+      "summary": "Medical device adverse event reports.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/device/event.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "health.adverse_events",
+      "docs_url": "https://open.fda.gov/apis/device/event/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/device/event/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.device.clearances",
+      "name": "Search 510(k) clearances",
+      "summary": "Premarket notification (510(k)) clearance decisions for medical devices.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/device/510k.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "health.devices",
+      "docs_url": "https://open.fda.gov/apis/device/510k/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/device/510k/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.device.recalls",
+      "name": "Search device recalls",
+      "summary": "Medical device recalls.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/device/recall.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "recalls.search",
+      "docs_url": "https://open.fda.gov/apis/device/recall/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/device/recall/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.food.recalls",
+      "name": "Search food recall enforcement reports",
+      "summary": "Food product recalls: product, reason, classification, firm and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/food/enforcement.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "recalls.search",
+      "docs_url": "https://open.fda.gov/apis/food/enforcement/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/food/enforcement/how-to-use-the-endpoint/"
+      }
+    },
+    {
+      "id": "openfda.food.events",
+      "name": "Search CAERS reports",
+      "summary": "Food, dietary supplement and cosmetic adverse event reports.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/food/event.json",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "field:term clauses; +AND+ requires both, a space or + between clauses means either. No field searches all fields."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "field:asc or field:desc."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "Field whose unique values to count (top 1000); add .exact to count whole phrases."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return; at most 1000."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, for paging; at most 25000."
+        }
+      },
+      "job": "health.adverse_events",
+      "docs_url": "https://open.fda.gov/apis/food/event/how-to-use-the-endpoint/",
+      "verified": {
+        "docs": "https://open.fda.gov/apis/food/event/how-to-use-the-endpoint/"
+      }
+    }
+  ]
+}

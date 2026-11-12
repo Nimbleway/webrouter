@@ -1,0 +1,602 @@
+{
+  "vendor": "tomba",
+  "name": "Tomba",
+  "category": "enrichment",
+  "summary": "Find, verify and enrich professional emails, phone numbers and company data by domain, name, LinkedIn URL or article.",
+  "docs_url": "https://docs.tomba.io/api",
+  "pricing_url": "https://tomba.io/pricing",
+  "base_url": "https://api.tomba.io/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TOMBA_API_KEY"
+        ],
+        "description": "A Tomba API key (app.tomba.io/api)."
+      },
+      "secret_key": {
+        "env": [
+          "TOMBA_SECRET_KEY"
+        ],
+        "description": "The matching Tomba API secret (app.tomba.io/api)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Tomba-Key",
+        "value": "{api_key}"
+      },
+      {
+        "in": "header",
+        "name": "X-Tomba-Secret",
+        "value": "{secret_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Both the key and the secret are needed on every call.",
+    "Credits are separate pools (search, verification, email count, sources); you are charged only on HTTP 200 with a qualifying result, and an identical repeat inside the usage window is free.",
+    "Not found is usually HTTP 200 with a null email or an errors object; check errors before reading data.",
+    "Set client timeouts of at least 180 seconds; lookups run live.",
+    "Bulk jobs, scrape campaigns, leads, lead lists, API key management and flag endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://docs.tomba.io/openapi.md",
+    "https://docs.tomba.io/usage-and-quotas.md",
+    "https://docs.tomba.io/api/finder",
+    "https://docs.tomba.io/api/verifier",
+    "https://docs.tomba.io/api/phone",
+    "https://docs.tomba.io/api/domain",
+    "https://docs.tomba.io/api/enrichment"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "tomba.account.get",
+      "name": "Get account and credit usage",
+      "summary": "Plan, allowances (available and used) and the usage window.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/me",
+      "notes": [
+        "Free. Remaining balance is available minus used. The answer includes your API secret; do not log it."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.tomba.io/openapi.md",
+      "verified": {
+        "docs": "https://docs.tomba.io/openapi.md"
+      }
+    },
+    {
+      "id": "tomba.domain.search",
+      "name": "Search emails at a domain",
+      "summary": "Company behind a domain and one page of its known addresses with names, titles and verification.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain-search",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain.",
+          "example": "stripe.com"
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name (3 to 75 characters); used if no domain."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Addresses per page: 1, 5, 10, 20, 50, 100, 150, 200 and larger values. Default 10."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "department": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated departments such as engineering,sales."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "all, personal or generic.",
+          "enum": [
+            "all",
+            "personal",
+            "generic"
+          ]
+        },
+        "enrich_mobile": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
+        }
+      },
+      "notes": [
+        "Send domain or company.",
+        "Costs 1 search credit per 10 of the requested limit (rounded up), plus 5 per returned address with phone data; charged when at least one address is returned. Free plan outside a workspace fails above limit 10.",
+        "Set a client timeout of at least 180 seconds."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.tomba.io/api/finder",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/finder"
+      }
+    },
+    {
+      "id": "tomba.email.find",
+      "name": "Find a person's email",
+      "summary": "Email from a name and a company domain or name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email-finder",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain; wins over company.",
+          "example": "stripe.com"
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name (3 to 75 characters)."
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "full_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name, used when first and last are not both sent."
+        },
+        "enrich_mobile": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
+        }
+      },
+      "notes": [
+        "Send domain or company, and first_name+last_name or full_name.",
+        "1 search credit (6 with phone data), charged when an address is returned with a status other than unknown. No address found answers 200 with data.email null."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.tomba.io/api/finder",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/finder"
+      }
+    },
+    {
+      "id": "tomba.email.find_by_linkedin",
+      "name": "Find an email from a LinkedIn URL",
+      "summary": "Professional email for a profile.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkedin",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/jane-doe"
+        },
+        "enrich_mobile": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
+        },
+        "full": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return up to two stored addresses as an array; no phone_data."
+        }
+      },
+      "notes": [
+        "1 search credit (6 with phone data), charged when an address is returned; with full=true, 1 per address plus 5 per phone."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.tomba.io/api/finder",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/finder"
+      }
+    },
+    {
+      "id": "tomba.email.find_by_article",
+      "name": "Find an article author's email",
+      "summary": "Reads an article and finds its author's email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/author-finder",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Article URL."
+        }
+      },
+      "notes": [
+        "1 search credit, charged when an address is returned."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.tomba.io/api/finder",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/finder"
+      }
+    },
+    {
+      "id": "tomba.email.verify",
+      "name": "Verify an email address",
+      "summary": "Whether an address can receive mail.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email-verifier",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email to verify."
+        },
+        "enrich_mobile": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
+        }
+      },
+      "notes": [
+        "1 verification credit, plus 5 per phone number returned with enrich_mobile; charged unless the status is disposable or unknown."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://docs.tomba.io/api/verifier",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/verifier"
+      }
+    },
+    {
+      "id": "tomba.email.count",
+      "name": "Count known emails for a domain",
+      "summary": "Counts by type, department and seniority.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email-count",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company domain."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "all, personal or generic.",
+          "enum": [
+            "all",
+            "personal",
+            "generic"
+          ]
+        }
+      },
+      "notes": [
+        "1 email-count credit on every call."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.tomba.io/api/finder",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/finder"
+      }
+    },
+    {
+      "id": "tomba.email.enrich",
+      "name": "Enrich an email address",
+      "summary": "Person details for an email in Tomba's format.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enrich",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email to enrich."
+        },
+        "enrich_mobile": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add phone numbers in phone_data at extra credit cost (5 per number)."
+        }
+      },
+      "notes": [
+        "1 search credit (6 with phone data), charged when an address is returned with a status other than unknown."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.tomba.io/api/finder",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/finder"
+      }
+    },
+    {
+      "id": "tomba.phone.find",
+      "name": "Find phone numbers",
+      "summary": "Phones from an email, a company domain or a LinkedIn URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/phone-finder",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Person's email."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain, for the company's number."
+        },
+        "linkedin": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL."
+        },
+        "full": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return every number found as an array."
+        }
+      },
+      "notes": [
+        "Send at least one of email, domain, linkedin.",
+        "5 search credits, or 1 if the request includes domain; charged when a valid number is returned."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://docs.tomba.io/api/phone",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/phone"
+      }
+    },
+    {
+      "id": "tomba.phone.validate",
+      "name": "Validate a phone number",
+      "summary": "Validity, formats, line type, carrier and region.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/phone-validator",
+      "params": {
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Number, preferably international (encode + as %2B)."
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code for numbers without a prefix."
+        }
+      },
+      "notes": [
+        "1 search credit on every successful response."
+      ],
+      "docs_url": "https://docs.tomba.io/api/phone",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/phone"
+      }
+    },
+    {
+      "id": "tomba.company.enrich",
+      "name": "Enrich a company from a domain",
+      "summary": "Company profile in Clearbit's format.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/find",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "stripe.com"
+        }
+      },
+      "notes": [
+        "1 search credit when a company is returned. No match answers 200 with an errors object instead of data."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.tomba.io/api/enrichment",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/enrichment"
+      }
+    },
+    {
+      "id": "tomba.person.enrich",
+      "name": "Enrich a person from an email",
+      "summary": "Person profile in Clearbit's format.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/people/find",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email address."
+        }
+      },
+      "notes": [
+        "1 search credit when a person is returned. No match answers 200 with an errors object instead of data."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.tomba.io/api/enrichment",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/enrichment"
+      }
+    },
+    {
+      "id": "tomba.combined.enrich",
+      "name": "Enrich a person and their company",
+      "summary": "Person and company in one call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/combined/find",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Email address."
+        }
+      },
+      "notes": [
+        "2 search credits when a person is returned."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.tomba.io/api/enrichment",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/enrichment"
+      }
+    },
+    {
+      "id": "tomba.company.technologies",
+      "name": "Get a domain's technologies",
+      "summary": "Technologies detected on a website.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/technology",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company domain."
+        }
+      },
+      "notes": [
+        "Not charged but needs a positive search balance. Unseen domains are detected live except on the Free plan."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://docs.tomba.io/api/domain",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/domain"
+      }
+    },
+    {
+      "id": "tomba.company.similar",
+      "name": "Find similar companies",
+      "summary": "Competitors and similar companies, 25 per page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/similar",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name (3 to 75 characters); wins if Tomba knows the company."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only sets the credit cost; page size is always 25. Values 10, 20, 50, 100, 150, 200, 250."
+        }
+      },
+      "notes": [
+        "1 search credit per 10 of the requested limit (rounded up), when results are returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.tomba.io/api/domain",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/domain"
+      }
+    },
+    {
+      "id": "tomba.company.search",
+      "name": "Search companies by filters or text",
+      "summary": "Company database search, 50 per page; a natural-language query generates the filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/reveal/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language description, 8 to 100 characters. Filters are generated from it and any filters you send are ignored."
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Structured filters (company, founded, size, revenue and more), each with include/exclude lists. Reuse meta.filters from a query answer for later pages."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1; 50 companies per page."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 search credit per request that returns a company. Fixed rate limit rather than plan limits."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.tomba.io/openapi.md",
+      "verified": {
+        "docs": "https://docs.tomba.io/openapi.md"
+      }
+    },
+    {
+      "id": "tomba.domain.status",
+      "name": "Check whether a domain is webmail or disposable",
+      "summary": "No key needed, not charged.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain-status",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain to check; a URL is accepted."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email whose domain to check."
+        }
+      },
+      "notes": [
+        "Free and not rate-limited. The answer is a flat object, not wrapped in data."
+      ],
+      "docs_url": "https://docs.tomba.io/api/domain",
+      "verified": {
+        "docs": "https://docs.tomba.io/api/domain"
+      }
+    }
+  ]
+}

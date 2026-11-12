@@ -1,0 +1,137 @@
+{
+  "vendor": "lever",
+  "name": "Lever Postings",
+  "category": "company-data",
+  "summary": "A company's published Lever job postings, filterable by location, team, department and commitment, keyless.",
+  "docs_url": "https://github.com/lever/postings-api",
+  "base_url": "https://{host}/v0/postings",
+  "settings": {
+    "host": {
+      "env": [
+        "LEVER_POSTINGS_HOST"
+      ],
+      "default": "api.lever.co",
+      "choices": [
+        "api.lever.co",
+        "api.eu.lever.co"
+      ],
+      "description": "api.eu.lever.co for companies whose Lever account is hosted in the EU; a site on the wrong host returns not found."
+    }
+  },
+  "notes": [
+    "Keyless for reading published postings. Applying to a posting (POST with an API key, rate limited to 2 per second) is not in this entry.",
+    "Each call is scoped to one company's site; there is no cross-company search.",
+    "Filter values (location, commitment, team, department) are case-sensitive and must match the posting exactly."
+  ],
+  "sources": [
+    "https://github.com/lever/postings-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "lever.postings.list",
+      "name": "List job postings",
+      "summary": "A company's published postings with text, categories (team, department, location, commitment), lists and apply URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{site}",
+      "params": {
+        "site": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company's Lever site name: the slug in jobs.lever.co/<site>.",
+          "example": "leverdemo"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Output mode: json, html or iframe; json for data. Wins over the Accept header.",
+          "example": "json"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Skip this many results from the start."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Return at most this many results."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by location; case-sensitive."
+        },
+        "commitment": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by commitment (e.g. Full-time); case-sensitive."
+        },
+        "team": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by team; case-sensitive."
+        },
+        "department": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by department; case-sensitive."
+        },
+        "level": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by level."
+        },
+        "group": {
+          "in": "query",
+          "type": "string",
+          "description": "Group results by this category.",
+          "enum": [
+            "location",
+            "commitment",
+            "team"
+          ]
+        }
+      },
+      "notes": [
+        "Pass mode=json; without it the format follows the Accept header.",
+        "A filter may repeat to OR values; this catalog sends one value per parameter."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://github.com/lever/postings-api",
+      "verified": {
+        "docs": "https://github.com/lever/postings-api"
+      }
+    },
+    {
+      "id": "lever.postings.get",
+      "name": "Get a job posting",
+      "summary": "One posting by id, as JSON.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{site}/{posting_id}",
+      "params": {
+        "site": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company's Lever site name: the slug in jobs.lever.co/<site>.",
+          "example": "leverdemo"
+        },
+        "posting_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The posting id from the list."
+        }
+      },
+      "job": "jobs.posting.get",
+      "docs_url": "https://github.com/lever/postings-api",
+      "verified": {
+        "docs": "https://github.com/lever/postings-api"
+      }
+    }
+  ]
+}

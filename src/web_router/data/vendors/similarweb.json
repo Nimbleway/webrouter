@@ -1,0 +1,469 @@
+{
+  "vendor": "similarweb",
+  "name": "Similarweb",
+  "category": "analytics",
+  "summary": "Estimated website traffic and engagement, marketing channel mix, referrals, country split, global rank, similar sites and search keywords for any domain.",
+  "docs_url": "https://developers.similarweb.com/docs/similarweb-web-traffic-api",
+  "pricing_url": "https://www.similarweb.com/corp/pricing/",
+  "base_url": "https://api.similarweb.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SIMILARWEB_API_KEY"
+        ],
+        "description": "a Similarweb API key (pro.similarweb.com, Settings > Account > API; admins generate keys and must activate them)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Calls spend data credits: roughly domains x endpoint price x granularity x country filters x months x results. Keep date ranges, countries and limit small; check the balance with similarweb.capabilities.",
+    "Dates are months (YYYY-MM); historical data goes back up to 37 months depending on the subscription. Daily granularity and mtd depend on the plan too.",
+    "A key that was created but not activated answers 'Invalid API key'. Country filters you can use are listed by similarweb.capabilities.",
+    "v4 endpoints page with limit, offset, sort and asc; v1 endpoints return the whole series."
+  ],
+  "sources": [
+    "https://developers.similarweb.com/docs/authentication",
+    "https://developers.similarweb.com/docs/check-capabilities",
+    "https://developers.similarweb.com/docs/data-credits-unpublished-whats-new-in-v40",
+    "https://developers.similarweb.com/reference/visits",
+    "https://developers.similarweb.com/reference/traffic-sources-overview",
+    "https://developers.similarweb.com/reference/referrals-desktop",
+    "https://developers.similarweb.com/reference/geography-total",
+    "https://developers.similarweb.com/reference/global-rank",
+    "https://developers.similarweb.com/reference/similar-sites",
+    "https://developers.similarweb.com/reference/website-analysis-keywords"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "similarweb.capabilities",
+      "name": "Check account capabilities and credits",
+      "summary": "Remaining data credits, available country filters and accessible history for the account. Costs no credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/capabilities",
+      "job": "account.usage",
+      "docs_url": "https://developers.similarweb.com/docs/check-capabilities",
+      "verified": {
+        "docs": "https://developers.similarweb.com/docs/check-capabilities"
+      }
+    },
+    {
+      "id": "similarweb.traffic.visits",
+      "name": "Total visits over time",
+      "summary": "Estimated desktop plus mobile web visits to a domain per day, week or month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/website/{domain_name}/total-traffic-and-engagement/visits",
+      "params": {
+        "domain_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The domain, without www.",
+          "example": "amazon.com"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start month, YYYY-MM.",
+          "example": "2026-07"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End month, YYYY-MM.",
+          "example": "2026-09"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "2-letter ISO country code, or world.",
+          "example": "world"
+        },
+        "granularity": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Granularity of the series.",
+          "example": "monthly",
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly"
+          ]
+        },
+        "main_domain_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for the main domain only; false (default) includes subdomains."
+        },
+        "mtd": {
+          "in": "query",
+          "type": "boolean",
+          "description": "End at the latest available day (month to date); needs daily granularity."
+        },
+        "engaged_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Count engaged visits only."
+        }
+      },
+      "job": "domain.overview.history",
+      "docs_url": "https://developers.similarweb.com/reference/visits",
+      "verified": {
+        "docs": "https://developers.similarweb.com/reference/visits"
+      }
+    },
+    {
+      "id": "similarweb.traffic.channels",
+      "name": "Visits by marketing channel (desktop)",
+      "summary": "Desktop visits split across organic search, paid search, direct, display, email, referrals and social.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/website/{domain_name}/traffic-sources/overview-share",
+      "params": {
+        "domain_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The domain, without www.",
+          "example": "amazon.com"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start month, YYYY-MM.",
+          "example": "2026-07"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End month, YYYY-MM.",
+          "example": "2026-09"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "2-letter ISO country code, or world.",
+          "example": "world"
+        },
+        "granularity": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Granularity of the series.",
+          "example": "monthly",
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly"
+          ]
+        },
+        "main_domain_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for the main domain only; false (default) includes subdomains."
+        }
+      },
+      "docs_url": "https://developers.similarweb.com/reference/traffic-sources-overview",
+      "verified": {
+        "docs": "https://developers.similarweb.com/reference/traffic-sources-overview"
+      }
+    },
+    {
+      "id": "similarweb.traffic.referrals",
+      "name": "Referring websites (desktop)",
+      "summary": "Sites sending referral traffic to a domain, with traffic share and change.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/website/{domain_name}/traffic-sources/referrals",
+      "params": {
+        "domain_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The domain, without www.",
+          "example": "amazon.com"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start month, YYYY-MM.",
+          "example": "2026-07"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End month, YYYY-MM.",
+          "example": "2026-09"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "2-letter ISO country code, or world.",
+          "example": "world"
+        },
+        "main_domain_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for the main domain only; false (default) includes subdomains."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return; default 100. Credits scale with results."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Metric to order by."
+        },
+        "asc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true ascending, false descending."
+        }
+      },
+      "job": "backlinks.refdomains",
+      "docs_url": "https://developers.similarweb.com/reference/referrals-desktop",
+      "verified": {
+        "docs": "https://developers.similarweb.com/reference/referrals-desktop"
+      }
+    },
+    {
+      "id": "similarweb.traffic.geography",
+      "name": "Traffic by country",
+      "summary": "Traffic share, visits, pages per visit, visit duration, bounce rate and rank per country (desktop plus mobile).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/website/{domain_name}/geo/total-traffic-by-country",
+      "params": {
+        "domain_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The domain, without www.",
+          "example": "amazon.com"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start month, YYYY-MM.",
+          "example": "2026-07"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End month, YYYY-MM.",
+          "example": "2026-09"
+        },
+        "main_domain_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for the main domain only; false (default) includes subdomains."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return; default 100. Credits scale with results."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Metric to order by."
+        },
+        "asc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true ascending, false descending."
+        }
+      },
+      "docs_url": "https://developers.similarweb.com/reference/geography-total",
+      "verified": {
+        "docs": "https://developers.similarweb.com/reference/geography-total"
+      }
+    },
+    {
+      "id": "similarweb.rank.global",
+      "name": "Global rank over time",
+      "summary": "Similarweb's global rank for a domain per month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/website/{domain_name}/global-rank/global-rank",
+      "params": {
+        "domain_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The domain, without www.",
+          "example": "amazon.com"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start month, YYYY-MM.",
+          "example": "2026-07"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End month, YYYY-MM.",
+          "example": "2026-09"
+        },
+        "main_domain_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for the main domain only; false (default) includes subdomains."
+        }
+      },
+      "job": "domain.rank",
+      "docs_url": "https://developers.similarweb.com/reference/global-rank",
+      "verified": {
+        "docs": "https://developers.similarweb.com/reference/global-rank"
+      }
+    },
+    {
+      "id": "similarweb.similar_sites",
+      "name": "Similar sites",
+      "summary": "Up to 40 sites most similar to a domain, with similarity scores.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/website/{domain_name}/similar-sites/similarsites",
+      "params": {
+        "domain_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The domain, without www.",
+          "example": "amazon.com"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "json or xml.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "At most 40."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer"
+        }
+      },
+      "job": "domain.competitors",
+      "docs_url": "https://developers.similarweb.com/reference/similar-sites",
+      "verified": {
+        "docs": "https://developers.similarweb.com/reference/similar-sites"
+      }
+    },
+    {
+      "id": "similarweb.keywords.website",
+      "name": "Keywords driving search traffic",
+      "summary": "The search keywords sending clicks to a domain, by organic or paid, branded or not, desktop or mobile.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/website-analysis/keywords",
+      "params": {
+        "url": {
+          "in": "query",
+          "wire_name": "URL",
+          "type": "string",
+          "required": true,
+          "description": "The domain, without www.",
+          "example": "cnn.com"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start month, YYYY-MM.",
+          "example": "2026-07"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End month, YYYY-MM.",
+          "example": "2026-09"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "2-letter ISO country code, or world.",
+          "example": "world"
+        },
+        "traffic_source": {
+          "in": "query",
+          "type": "string",
+          "description": "Default All.",
+          "enum": [
+            "Organic",
+            "Paid",
+            "All"
+          ]
+        },
+        "web_source": {
+          "in": "query",
+          "type": "string",
+          "description": "Default Total.",
+          "enum": [
+            "Desktop",
+            "MobileWeb",
+            "Total"
+          ]
+        },
+        "branded_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Default All.",
+          "enum": [
+            "Branded",
+            "NonBranded",
+            "All"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer"
+        }
+      },
+      "job": "domain.keywords",
+      "docs_url": "https://developers.similarweb.com/reference/website-analysis-keywords",
+      "verified": {
+        "docs": "https://developers.similarweb.com/reference/website-analysis-keywords"
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "vendor": "gnomad",
+  "name": "gnomAD (Genome Aggregation Database)",
+  "category": "science",
+  "summary": "Population allele frequencies of human genetic variants and per-gene constraint metrics from the Broad Institute's gnomAD, through the GraphQL API behind its browser.",
+  "docs_url": "https://gnomad.broadinstitute.org/downloads#api",
+  "base_url": "https://gnomad.broadinstitute.org",
+  "notes": [
+    "Keyless. GraphQL only: one POST taking query and variables.",
+    "Rate limit: 10 requests per IP address per 60 seconds. Batch several lookups into one query, and use the bulk downloads for large-scale work.",
+    "Root fields include gene(gene_id or gene_symbol, reference_genome), variant(variantId or rsid, dataset), region(chrom, start, stop, reference_genome), transcript, clinvar_variant, structural_variant, gene_search and variant_search.",
+    "reference_genome is GRCh37 or GRCh38; dataset names a gnomAD release (e.g. gnomad_r4)."
+  ],
+  "sources": [
+    "https://gnomad.broadinstitute.org/downloads#api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "gnomad.graphql",
+      "name": "Run a GraphQL query",
+      "summary": "Any query over genes, variants, regions and transcripts: allele frequencies, constraint, ClinVar links.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "GraphQL query.",
+          "example": "{ gene(gene_symbol: \"PCSK9\", reference_genome: GRCh38) { gene_id symbol } }"
+        },
+        "variables": {
+          "in": "body",
+          "type": "object",
+          "description": "Values for the query's variables."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "science.variants.query",
+      "docs_url": "https://gnomad.broadinstitute.org/downloads#api",
+      "verified": {
+        "docs": "https://gnomad.broadinstitute.org/downloads#api"
+      }
+    }
+  ]
+}

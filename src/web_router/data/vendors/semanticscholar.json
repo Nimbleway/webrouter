@@ -1,0 +1,547 @@
+{
+  "vendor": "semanticscholar",
+  "name": "Semantic Scholar",
+  "category": "science",
+  "summary": "Academic Graph API from Ai2: paper and author search, paper details, citations, references and full-text snippet search.",
+  "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+  "base_url": "https://api.semanticscholar.org/graph/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SEMANTIC_SCHOLAR_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional Semantic Scholar API key, requested at semanticscholar.org/product/api and sent by email; sent in the x-api-key header (case-sensitive)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Most endpoints work keyless, but keyless traffic shares one pool of 1,000 requests per second across all unauthenticated users, so 429s are common; a new key starts at 1 request per second on all endpoints.",
+    "Without fields, responses carry only paperId and title (or authorId and name).",
+    "Papers have two IDs: paperId (string) and corpusId (integer, used by the datasets)."
+  ],
+  "sources": [
+    "https://api.semanticscholar.org/api-docs/graph",
+    "https://api.semanticscholar.org/graph/v1/swagger.json",
+    "https://www.semanticscholar.org/product/api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "semanticscholar.paper.search",
+      "name": "Search papers by relevance",
+      "summary": "Relevance-ranked papers for a plain-text query, with filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/paper/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Plain-text query; no special syntax, and hyphenated terms match nothing (use spaces).",
+          "required": true,
+          "example": "generative ai"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; without it only paperId and title come back. Dot for subfields, e.g. authors.name.",
+          "example": "title,year,authors,citationCount,abstract"
+        },
+        "publicationTypes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: Review, JournalArticle, CaseReport, ClinicalTrial, Conference, Dataset, Editorial, LettersAndComments, MetaAnalysis, News, Study, Book, BookSection."
+        },
+        "openAccessPdf": {
+          "in": "query",
+          "type": "string",
+          "description": "Present (no value) to keep only papers with a public PDF."
+        },
+        "minCitationCount": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum citation count."
+        },
+        "publicationDateOrYear": {
+          "in": "query",
+          "type": "string",
+          "description": "<start>:<end> range of YYYY-MM-DD dates; either end optional, prefixes like 2020-06 allowed."
+        },
+        "year": {
+          "in": "query",
+          "type": "string",
+          "description": "Year or range: 2019, 2016-2020, 2010-, -2015."
+        },
+        "venue": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated venue names or ISO4 abbreviations."
+        },
+        "fieldsOfStudy": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields of study, e.g. Computer Science,Medicine."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start position, default 0."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 100, max 100."
+        }
+      },
+      "job": "scholar.search",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      },
+      "notes": [
+        "Returns at most 1,000 relevance-ranked results in total and 10 MB per response; use paper.search.bulk for more."
+      ]
+    },
+    {
+      "id": "semanticscholar.paper.search.bulk",
+      "name": "Bulk search papers",
+      "summary": "Papers matching a boolean query over title and abstract, sortable, paged by token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/paper/search/bulk",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Matched against title and abstract; supports + (AND), | (OR), - (NOT), quotes, * prefix, parentheses, ~N.",
+          "required": true
+        },
+        "token": {
+          "in": "query",
+          "type": "string",
+          "description": "Continuation token from the previous response."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields; nested citations/references are not available here."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "paperId, publicationDate or citationCount, as field:asc or field:desc; default paperId:asc."
+        },
+        "publicationTypes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: Review, JournalArticle, CaseReport, ClinicalTrial, Conference, Dataset, Editorial, LettersAndComments, MetaAnalysis, News, Study, Book, BookSection."
+        },
+        "openAccessPdf": {
+          "in": "query",
+          "type": "string",
+          "description": "Present (no value) to keep only papers with a public PDF."
+        },
+        "minCitationCount": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum citation count."
+        },
+        "publicationDateOrYear": {
+          "in": "query",
+          "type": "string",
+          "description": "<start>:<end> range of YYYY-MM-DD dates; either end optional, prefixes like 2020-06 allowed."
+        },
+        "year": {
+          "in": "query",
+          "type": "string",
+          "description": "Year or range: 2019, 2016-2020, 2010-, -2015."
+        },
+        "venue": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated venue names or ISO4 abbreviations."
+        },
+        "fieldsOfStudy": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields of study, e.g. Computer Science,Medicine."
+        }
+      },
+      "job": "scholar.search",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      },
+      "notes": [
+        "Paging is by the token each response returns, not offset. Up to 10,000,000 papers can be fetched this way."
+      ]
+    },
+    {
+      "id": "semanticscholar.paper.match",
+      "name": "Find a paper by title",
+      "summary": "The single paper whose title best matches the query, with a match score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/paper/search/match",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Paper title.",
+          "required": true
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; without it only paperId and title come back. Dot for subfields, e.g. authors.name.",
+          "example": "title,year,authors,citationCount,abstract"
+        },
+        "publicationTypes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: Review, JournalArticle, CaseReport, ClinicalTrial, Conference, Dataset, Editorial, LettersAndComments, MetaAnalysis, News, Study, Book, BookSection."
+        },
+        "openAccessPdf": {
+          "in": "query",
+          "type": "string",
+          "description": "Present (no value) to keep only papers with a public PDF."
+        },
+        "minCitationCount": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum citation count."
+        },
+        "publicationDateOrYear": {
+          "in": "query",
+          "type": "string",
+          "description": "<start>:<end> range of YYYY-MM-DD dates; either end optional, prefixes like 2020-06 allowed."
+        },
+        "year": {
+          "in": "query",
+          "type": "string",
+          "description": "Year or range: 2019, 2016-2020, 2010-, -2015."
+        },
+        "venue": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated venue names or ISO4 abbreviations."
+        },
+        "fieldsOfStudy": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields of study, e.g. Computer Science,Medicine."
+        }
+      },
+      "job": "scholar.paper",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      },
+      "notes": [
+        "Returns 404 'Title match not found' when nothing matches."
+      ]
+    },
+    {
+      "id": "semanticscholar.paper.get",
+      "name": "Get paper details",
+      "summary": "One paper by S2 ID, DOI, arXiv ID, PubMed ID or URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/paper/{paper_id}",
+      "params": {
+        "paper_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Paper ID: S2 sha, CorpusId:<id>, DOI:<doi>, ARXIV:<id>, PMID:<id>, URL:<url> and others.",
+          "example": "DOI:10.18653/v1/N18-3011"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; without it only paperId and title come back. Dot for subfields, e.g. authors.name.",
+          "example": "title,year,authors,citationCount,abstract"
+        }
+      },
+      "job": "scholar.paper",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      }
+    },
+    {
+      "id": "semanticscholar.paper.batch",
+      "name": "Get many papers at once",
+      "summary": "Details for up to 500 paper IDs in one call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/paper/batch",
+      "params": {
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; without it only paperId and title come back. Dot for subfields, e.g. authors.name.",
+          "example": "title,year,authors,citationCount,abstract"
+        },
+        "ids": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Paper IDs, any supported form; at most 500."
+        }
+      },
+      "job": "scholar.paper",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      },
+      "notes": [
+        "A read over POST. fields is a query parameter, not a body field. At most 500 IDs, 10 MB and 9,999 citations per response."
+      ]
+    },
+    {
+      "id": "semanticscholar.paper.citations",
+      "name": "List a paper's citations",
+      "summary": "Papers that cite this paper, with citation contexts on request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/paper/{paper_id}/citations",
+      "params": {
+        "paper_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Paper ID: S2 sha, CorpusId:<id>, DOI:<doi>, ARXIV:<id>, PMID:<id>, URL:<url> and others."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields of the citing paper plus contexts and isInfluential."
+        },
+        "publicationDateOrYear": {
+          "in": "query",
+          "type": "string",
+          "description": "<start>:<end> range of YYYY-MM-DD dates; either end optional, prefixes like 2020-06 allowed."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start position, default 0."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 100, max 1000."
+        }
+      },
+      "job": "scholar.citations",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      }
+    },
+    {
+      "id": "semanticscholar.paper.references",
+      "name": "List a paper's references",
+      "summary": "Papers this paper cites.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/paper/{paper_id}/references",
+      "params": {
+        "paper_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Paper ID: S2 sha, CorpusId:<id>, DOI:<doi>, ARXIV:<id>, PMID:<id>, URL:<url> and others."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields of the cited paper plus contexts and isInfluential."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start position, default 0."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 100, max 1000."
+        }
+      },
+      "job": "scholar.references",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      }
+    },
+    {
+      "id": "semanticscholar.author.search",
+      "name": "Search authors by name",
+      "summary": "Authors matching a name, with optional paper lists.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/author/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Plain-text name; no special syntax.",
+          "required": true,
+          "example": "adam smith"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields, e.g. name,affiliations,hIndex,papers; without it only authorId and name."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start position, default 0."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 100, max 1000."
+        }
+      },
+      "job": "scholar.authors.search",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      },
+      "notes": [
+        "Asking for papers fields returns every paper of every author; set a small limit."
+      ]
+    },
+    {
+      "id": "semanticscholar.author.papers",
+      "name": "List an author's papers",
+      "summary": "Papers by an author, in batches.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/author/{author_id}/papers",
+      "params": {
+        "author_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Semantic Scholar author ID.",
+          "example": "1741101"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return; without it only paperId and title come back. Dot for subfields, e.g. authors.name.",
+          "example": "title,year,authors,citationCount,abstract"
+        },
+        "publicationDateOrYear": {
+          "in": "query",
+          "type": "string",
+          "description": "<start>:<end> range of YYYY-MM-DD dates; either end optional, prefixes like 2020-06 allowed."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Start position, default 0."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 100, max 1000."
+        }
+      },
+      "job": "scholar.author.papers",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      },
+      "notes": [
+        "Only the most recent 10,000 citations/references per paper come back; use paper.citations for the full set."
+      ]
+    },
+    {
+      "id": "semanticscholar.snippet.search",
+      "name": "Search text snippets in papers",
+      "summary": "About-500-word passages from titles, abstracts and body text that best match a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/snippet/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Plain-text query; no special syntax.",
+          "required": true
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Which snippet fields to return, e.g. snippet.text,snippet.snippetKind."
+        },
+        "paperIds": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated paper IDs (about 100 max) to search within."
+        },
+        "authors": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated author names (fuzzy, all must match)."
+        },
+        "minCitationCount": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum citation count."
+        },
+        "insertedBefore": {
+          "in": "query",
+          "type": "string",
+          "description": "Only papers indexed before this date: YYYY-MM-DD, YYYY-MM or YYYY."
+        },
+        "publicationDateOrYear": {
+          "in": "query",
+          "type": "string",
+          "description": "<start>:<end> range of YYYY-MM-DD dates; either end optional, prefixes like 2020-06 allowed."
+        },
+        "year": {
+          "in": "query",
+          "type": "string",
+          "description": "Year or range: 2019, 2016-2020, 2010-, -2015."
+        },
+        "venue": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated venue names or ISO4 abbreviations."
+        },
+        "fieldsOfStudy": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields of study, e.g. Computer Science,Medicine."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 10, max 1000."
+        }
+      },
+      "job": "scholar.snippets",
+      "docs_url": "https://api.semanticscholar.org/api-docs/graph",
+      "verified": {
+        "docs": "https://api.semanticscholar.org/graph/v1/swagger.json"
+      }
+    }
+  ]
+}

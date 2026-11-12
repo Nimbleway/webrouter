@@ -1,0 +1,229 @@
+{
+  "vendor": "gdelt",
+  "name": "GDELT Project",
+  "category": "search",
+  "summary": "Free search over worldwide online news monitored by GDELT: article lists and coverage-volume, tone, language and source-country timelines.",
+  "docs_url": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
+  "base_url": "https://api.gdeltproject.org/api/v2",
+  "notes": [
+    "Keyless and free. The service asks for at most one request every 5 seconds and answers 429 otherwise.",
+    "The DOC API searches the last 3 months of coverage by default.",
+    "The GEO 2.0 API at /geo/geo answered 404 when this entry was written, so it is left out.",
+    "Output defaults to HTML: pass format=json for data.",
+    "All operators go inside the query parameter."
+  ],
+  "sources": [
+    "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "gdelt.doc.articles",
+      "name": "Search news articles",
+      "summary": "Matching news articles (URL, title, date, domain, language, source country, image) from GDELT's monitored coverage.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/doc/doc",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keywords and \"quoted phrases\", (a OR b) blocks (not nested), -term to exclude, and operators domain:, domainis:, sourcecountry:, sourcelang:, theme:, tone>N / tone<N, near:, repeat:.",
+          "example": "\"climate change\" sourcelang:english"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default HTML. Use json (or csv).",
+          "enum": [
+            "html",
+            "csv",
+            "rss",
+            "rssarchive",
+            "json",
+            "jsonp",
+            "jsonfeed"
+          ]
+        },
+        "timespan": {
+          "in": "query",
+          "type": "string",
+          "description": "Window back from now: number plus min, h, d, w or m (minimum 15 minutes), e.g. 1w."
+        },
+        "startdatetime": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYYMMDDHHMMSS, within the last 3 months."
+        },
+        "enddatetime": {
+          "in": "query",
+          "type": "string",
+          "description": "End, YYYYMMDDHHMMSS, within the last 3 months."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "artlist for a list of articles; artgallery for a visual list.",
+          "enum": [
+            "artlist",
+            "artgallery"
+          ]
+        },
+        "maxrecords": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles to return, default 75, max 250."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "hybridrel (default relevance), datedesc, dateasc, tonedesc, toneasc.",
+          "enum": [
+            "hybridrel",
+            "datedesc",
+            "dateasc",
+            "tonedesc",
+            "toneasc"
+          ]
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
+      "verified": {
+        "docs": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/"
+      }
+    },
+    {
+      "id": "gdelt.doc.timeline",
+      "name": "Chart news coverage over time",
+      "summary": "Coverage volume, tone, language or source-country breakdown over time for a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/doc/doc",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keywords and \"quoted phrases\", (a OR b) blocks (not nested), -term to exclude, and operators domain:, domainis:, sourcecountry:, sourcelang:, theme:, tone>N / tone<N, near:, repeat:.",
+          "example": "\"climate change\" sourcelang:english"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default HTML. Use json (or csv).",
+          "enum": [
+            "html",
+            "csv",
+            "rss",
+            "rssarchive",
+            "json",
+            "jsonp",
+            "jsonfeed"
+          ]
+        },
+        "timespan": {
+          "in": "query",
+          "type": "string",
+          "description": "Window back from now: number plus min, h, d, w or m (minimum 15 minutes), e.g. 1w."
+        },
+        "startdatetime": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYYMMDDHHMMSS, within the last 3 months."
+        },
+        "enddatetime": {
+          "in": "query",
+          "type": "string",
+          "description": "End, YYYYMMDDHHMMSS, within the last 3 months."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "timelinevol (share of coverage), timelinevolraw (article counts), timelinevolinfo (with top articles), timelinetone, timelinelang, timelinesourcecountry.",
+          "enum": [
+            "timelinevol",
+            "timelinevolraw",
+            "timelinevolinfo",
+            "timelinetone",
+            "timelinelang",
+            "timelinesourcecountry"
+          ]
+        },
+        "timelinesmooth": {
+          "in": "query",
+          "type": "integer",
+          "description": "Moving-average smoothing over N time steps, max 30."
+        }
+      },
+      "job": "trends.query",
+      "docs_url": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
+      "verified": {
+        "docs": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/"
+      }
+    },
+    {
+      "id": "gdelt.doc.tonechart",
+      "name": "Get the tone distribution of coverage",
+      "summary": "Histogram of matching articles by emotional tone, with top articles per bin.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/doc/doc",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keywords and \"quoted phrases\", (a OR b) blocks (not nested), -term to exclude, and operators domain:, domainis:, sourcecountry:, sourcelang:, theme:, tone>N / tone<N, near:, repeat:.",
+          "example": "\"climate change\" sourcelang:english"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default HTML. Use json (or csv).",
+          "enum": [
+            "html",
+            "csv",
+            "rss",
+            "rssarchive",
+            "json",
+            "jsonp",
+            "jsonfeed"
+          ]
+        },
+        "timespan": {
+          "in": "query",
+          "type": "string",
+          "description": "Window back from now: number plus min, h, d, w or m (minimum 15 minutes), e.g. 1w."
+        },
+        "startdatetime": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYYMMDDHHMMSS, within the last 3 months."
+        },
+        "enddatetime": {
+          "in": "query",
+          "type": "string",
+          "description": "End, YYYYMMDDHHMMSS, within the last 3 months."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "tonechart.",
+          "enum": [
+            "tonechart"
+          ]
+        }
+      },
+      "job": "trends.query",
+      "docs_url": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
+      "verified": {
+        "docs": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/"
+      }
+    }
+  ]
+}

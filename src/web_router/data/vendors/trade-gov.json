@@ -1,0 +1,131 @@
+{
+  "vendor": "trade-gov",
+  "name": "Consolidated Screening List (trade.gov)",
+  "category": "company-data",
+  "summary": "US export screening: one search over the Commerce, State and Treasury restricted-party lists (SDN, Entity List, Denied Persons, ITAR Debarred and more), from the International Trade Administration.",
+  "docs_url": "https://developer.trade.gov/",
+  "base_url": "https://data.trade.gov/consolidated_screening_list/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TRADE_GOV_API_KEY"
+        ],
+        "description": "A free ITA subscription key (developer.trade.gov: sign up, subscribe to the Data Services Platform APIs product, copy the primary key from your Profile). Sent in the subscription-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "subscription-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Only active entries are in the API; for historical research use each list's own source.",
+    "A match is a prompt for due diligence, not a determination; check the entry's source list and its notes.",
+    "Paging: size up to 50, offset at most 1000, so narrow with sources, types or countries for broad queries."
+  ],
+  "sources": [
+    "https://developer.trade.gov/",
+    "https://developer.trade.gov/api-details#api=consolidated-screening-list"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "trade-gov.screening.search",
+      "name": "Search the screening lists",
+      "summary": "Restricted parties matching a name, address or country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Matched against name and alt_names.",
+          "example": "Water"
+        },
+        "fuzzy_name": {
+          "in": "query",
+          "type": "string",
+          "description": "true for fuzzy matching on name; ignores common words like co, corp, inc, ltd, llc.",
+          "enum": [
+            "true"
+          ]
+        },
+        "sources": {
+          "in": "query",
+          "type": "string",
+          "description": "List abbreviations, comma-separated: CAP, CMIC, DPL, DTC, EL, FSE, ISN, MBS, MEU, PLC, SDN, SSI, UVL.",
+          "example": "SDN"
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Entry type: Aircraft, Entity, Individual or Vessel."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-2 country codes, comma-separated; matches country, nationality or citizenship.",
+          "example": "IR"
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Matched against the address field."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "Matched against the city field."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Matched against the state field."
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Matched against the postal code field."
+        },
+        "full_address": {
+          "in": "query",
+          "type": "string",
+          "description": "Matched against address, city, state and postal code together; overrides those four."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset of the first result; at most 1000."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return; at most 50."
+        }
+      },
+      "job": "sanctions.search",
+      "docs_url": "https://developer.trade.gov/api-details#api=consolidated-screening-list",
+      "verified": {
+        "docs": "https://developer.trade.gov/api-details#api=consolidated-screening-list"
+      }
+    },
+    {
+      "id": "trade-gov.screening.sources",
+      "name": "List screening list sources",
+      "summary": "The source lists the feed covers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sources",
+      "job": "sanctions.sources",
+      "docs_url": "https://developer.trade.gov/api-details#api=consolidated-screening-list",
+      "verified": {
+        "docs": "https://developer.trade.gov/api-details#api=consolidated-screening-list"
+      }
+    }
+  ]
+}

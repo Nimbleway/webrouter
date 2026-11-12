@@ -1,0 +1,338 @@
+{
+  "vendor": "weatherapi",
+  "name": "WeatherAPI.com",
+  "category": "environment",
+  "summary": "Worldwide current weather, forecasts up to 14 days, historical weather back to 2010, long-range future weather, alerts, marine and astronomy data, plus location search.",
+  "docs_url": "https://www.weatherapi.com/docs/",
+  "pricing_url": "https://www.weatherapi.com/pricing.aspx",
+  "base_url": "https://api.weatherapi.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "WEATHERAPI_API_KEY"
+        ],
+        "description": "A WeatherAPI.com API key (account dashboard). Sent as the key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Plan gates: forecast is 3-14 days depending on plan; future.json (14-300 days ahead) is Pro+; history end_dt ranges are Pro+; minutely rain is Starter+; alerts are limited on Free.",
+    "Dates are yyyy-MM-dd; unixdt/unixend_dt are the Unix-timestamp alternatives (never send both forms)."
+  ],
+  "sources": [
+    "https://www.weatherapi.com/docs/",
+    "https://www.weatherapi.com/docs/request-parameters/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "weatherapi.current",
+      "name": "Get current weather",
+      "summary": "Current conditions for a location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/current.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        },
+        "lang": {
+          "in": "query",
+          "description": "Language code for condition text, e.g. fr."
+        },
+        "pollen": {
+          "in": "query",
+          "description": "Include pollen data.",
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "current_fields": {
+          "in": "query",
+          "description": "Comma-separated fields to keep, e.g. temp_c,wind_mph."
+        }
+      },
+      "job": "weather.current",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    },
+    {
+      "id": "weatherapi.forecast",
+      "name": "Get a forecast",
+      "summary": "Daily and hourly forecast up to 14 days, with optional alerts and air quality.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/forecast.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        },
+        "days": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-14 (capped by plan); omitted returns today only.",
+          "example": 3
+        },
+        "dt": {
+          "in": "query",
+          "description": "One date within the next 14 days, yyyy-MM-dd."
+        },
+        "hour": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only this hour, 0-23."
+        },
+        "alerts": {
+          "in": "query",
+          "description": "Include weather alerts.",
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "aqi": {
+          "in": "query",
+          "description": "Include air quality.",
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "pollen": {
+          "in": "query",
+          "description": "Include pollen data.",
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "lang": {
+          "in": "query",
+          "description": "Language code for condition text, e.g. fr."
+        }
+      },
+      "job": "weather.forecast",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    },
+    {
+      "id": "weatherapi.history",
+      "name": "Get historical weather",
+      "summary": "Daily and hourly observed weather for a past date (2010-01-01 on).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/history.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        },
+        "dt": {
+          "in": "query",
+          "required": true,
+          "description": "Date, yyyy-MM-dd, on or after 2010-01-01.",
+          "example": "2025-01-15"
+        },
+        "end_dt": {
+          "in": "query",
+          "description": "End date, after dt and at most 30 days later; Pro+ only."
+        },
+        "hour": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only this hour, 0-23."
+        },
+        "lang": {
+          "in": "query",
+          "description": "Language code for condition text, e.g. fr."
+        }
+      },
+      "notes": [
+        "How far back a plan reaches varies; older dates need a higher plan."
+      ],
+      "job": "weather.history",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    },
+    {
+      "id": "weatherapi.future",
+      "name": "Get long-range future weather",
+      "summary": "3-hourly weather 14 to 300 days ahead.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/future.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        },
+        "dt": {
+          "in": "query",
+          "required": true,
+          "description": "Date 14-300 days from today, yyyy-MM-dd."
+        },
+        "lang": {
+          "in": "query",
+          "description": "Language code for condition text, e.g. fr."
+        }
+      },
+      "notes": [
+        "Pro+ plan only."
+      ],
+      "job": "weather.forecast",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    },
+    {
+      "id": "weatherapi.search",
+      "name": "Search locations",
+      "summary": "Matching cities and towns with ids, coordinates and country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        }
+      },
+      "notes": [
+        "Pass a result's id as q=id:<id> to other calls."
+      ],
+      "job": "weather.location",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    },
+    {
+      "id": "weatherapi.alerts",
+      "name": "Get weather alerts",
+      "summary": "Government weather alerts for a location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/alerts.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        }
+      },
+      "notes": [
+        "Limited on the Free plan."
+      ],
+      "job": "weather.alerts",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    },
+    {
+      "id": "weatherapi.marine",
+      "name": "Get a marine forecast",
+      "summary": "Marine weather forecast for up to 7 days, with tides on Pro+.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/marine.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        },
+        "days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Days of forecast, 1-7."
+        },
+        "tides": {
+          "in": "query",
+          "description": "Include tide data (Pro+).",
+          "enum": [
+            "yes",
+            "no"
+          ]
+        }
+      },
+      "job": "weather.marine",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    },
+    {
+      "id": "weatherapi.astronomy",
+      "name": "Get astronomy data",
+      "summary": "Sun and moon times and moon phase for a location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/astronomy.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        }
+      },
+      "job": "weather.astronomy",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    },
+    {
+      "id": "weatherapi.timezone",
+      "name": "Get a location's time zone",
+      "summary": "Time zone id and local time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/timezone.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Location: city name, 'lat,lon' decimals, US zip, UK or Canada postcode, metar:<code>, iata:<code>, auto:ip, an IP address, or id:<id> from search.",
+          "example": "London"
+        }
+      },
+      "job": "reference.timezone",
+      "docs_url": "https://www.weatherapi.com/docs/",
+      "verified": {
+        "docs": "https://www.weatherapi.com/docs/request-parameters/"
+      }
+    }
+  ]
+}
