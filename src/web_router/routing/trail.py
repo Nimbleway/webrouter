@@ -1,6 +1,6 @@
 """One routed call's hop trail: every candidate it moved past, in the order it happened.
 
-Experimental. The :class:`~web_router.routing.ledger.Ledger` keeps one and
+The :class:`~web_router.routing.ledger.Ledger` keeps one and
 writes it into the decision record's ``hops``: a skip with the budget's
 reason, a failure by its status or error class, an empty answer with none.
 """

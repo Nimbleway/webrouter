@@ -127,10 +127,12 @@ from web_router.routing import (
     RouterLike,
     ToolName,
 )
+from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider import Decider, DeciderQuestion, DeciderReply
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.pool_status import BudgetStatus
 from web_router.routing.registry import available_routers, register_router, unregister_router
+from web_router.spend import SpendEntry, SpendLog, SpendRow, SpendSink, spend_report
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -167,6 +169,7 @@ from web_router.types import (
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
+from web_router.types_cost import CostSource
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionMember, DecisionRecord
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
@@ -221,6 +224,7 @@ __all__ = [
     "Citation",
     "CompositeDecision",
     "ConfigurationError",
+    "CostSource",
     "DeadlineExceededError",
     "Decider",
     "DeciderQuestion",
@@ -282,6 +286,10 @@ __all__ = [
     "SearchRequest",
     "SearchResponse",
     "SearchResult",
+    "SpendEntry",
+    "SpendLog",
+    "SpendRow",
+    "SpendSink",
     "StaleElementError",
     "StealthLevel",
     "ToolName",
@@ -305,6 +313,7 @@ __all__ = [
     "available_providers",
     "available_research_providers",
     "available_routers",
+    "cheapest_first",
     "configured_answer_providers",
     "configured_browse_providers",
     "configured_browser_providers",
@@ -320,6 +329,7 @@ __all__ = [
     "register_provider",
     "register_research_provider",
     "register_router",
+    "spend_report",
     "unregister_answer_provider",
     "unregister_browse_provider",
     "unregister_browser_provider",

@@ -1,6 +1,6 @@
 """A job's start held to a shared budget: ``submit_research`` and ``submit_browse`` as the routers run them.
 
-Experimental. A job's start is what bills, so inside ``wr.budget(...)`` it is
+A job's start is what bills, so inside ``wr.budget(...)`` it is
 reserved like any other attempt, and research with no effort set runs at the
 one the budget maps, as :mod:`web_router.routing.routed` maps it for
 ``research()``.

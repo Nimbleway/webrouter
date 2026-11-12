@@ -1,6 +1,6 @@
 """Pricing and prefiltering one method's members, for :mod:`web_router.routing.candidates`.
 
-Experimental. Each member is priced and timed by :mod:`.pricing`'s rule, the one
+Each member is priced and timed by :mod:`.pricing`'s rule, the one
 the budget's ledger charges by, and dropped, with why, when the budget leaves
 it out. A member whose price or p90 is unknown, that is keyless, that carries
 ``provider_options`` or whose place route-eval did not rank is unmeasured.

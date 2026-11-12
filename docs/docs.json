@@ -73,6 +73,7 @@
         "group": "Agents and routing",
         "pages": [
           "integrations",
+          "budgets",
           "smart-routing"
         ]
       },

@@ -129,6 +129,10 @@ src/web_router/
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
 ├── client_budget.py    budget(), mixed into both routers
+├── client_spend.py     log_spend(): where a router writes each answered call, mixed in with budget()
+├── spend.py            SpendEntry, SpendLog (a JSON-lines file), SpendRow and spend_report():
+│                       the spend log and its report by day, backend and method
+├── spend_record.py     the entry a router writes after each call, and a failing sink only warned about
 ├── client_config.py    config_for(): the constructor kwargs provider_config gives each
 │                       backend, a delegating one's members included
 ├── client_scope.py     the BudgetScope / AsyncBudgetScope budget() returns
@@ -265,7 +269,10 @@ src/web_router/
 │   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
 │   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
 │   │                   check before dispatch (no DNS, no redirects)
-│   └── rules.py        rules(): the built-in keyless router, URL to extract, else search
+│   ├── rules.py        rules(): the built-in keyless router, URL to extract, else search
+│   ├── cheapest.py     cheapest_first(): the built-in router ordering every call by estimated cost, $0 first
+│   └── cost_order.py   auto's order under a cost cap with no router: cheapest first within each
+│                       accuracy tier of the default order (search and answer)
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
 ├── constants_mcp.py    the MCP server's instructions, and its routing tools' names, schemas,

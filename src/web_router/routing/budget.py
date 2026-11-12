@@ -1,6 +1,6 @@
 """Holding a call to its :class:`~web_router.Budget`.
 
-Experimental. Every method that takes ``budget=`` runs inside
+Every method that takes ``budget=`` runs inside
 :func:`budget_scope`. With no budget the scope sets nothing and the call runs
 exactly as it would without one. With a budget:
 
