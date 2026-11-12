@@ -33,6 +33,7 @@ LOG_HOP_OK: Final = "auto %s: %s answered in %.3fs%s"
 LOG_HOP_FAILED: Final = "auto %s: %s failed (%s, status %s) in %.3fs%s"
 LOG_HOP_COOLING: Final = "auto %s: %s skipped, cooling down for %.1fs more"
 LOG_COOLDOWN_SET: Final = "%s cools down for %.1fs after a %s"
+LOG_WARMUP_FAILED: Final = "warmup: %s could not build its client (%s); its first call will try again"
 LOG_HOST_SUFFIX: Final = " for %s"
 LOG_MORE_HOSTS: Final = "%s and %d more"
 

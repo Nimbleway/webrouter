@@ -2,8 +2,11 @@
 
 One map per router, keyed by backend name and shared by every method and
 thread the router serves, so a burst of calls pays one throttled round trip
-per backend rather than one each. Only ``auto`` reads it: a backend the caller
-names is still called, and what it answers still moves its cooldown.
+per backend rather than one each. ``auto``'s hops read it and set it; a
+backend the caller names with ``provider=`` is called whatever its cooldown,
+and a throttle it answers starts one, so ``auto`` passes it over afterwards.
+Two members of one chain that share a backend's name -- the same backend on
+different options -- share its cooldown: they are normally one account.
 """
 
 from __future__ import annotations
@@ -37,8 +40,23 @@ class Cooldowns:
     def note(self, provider: str, exc: BaseException) -> None:
         """Start ``provider``'s cooldown when ``exc`` is a throttle: its ``Retry-After``, else the status's default."""
         seconds, status = _cooldown_of(exc)
-        if seconds is None:
-            return
+        if seconds is not None:
+            self._start(provider, seconds, status)
+
+    def note_answer(self, provider: str, response: object) -> None:
+        """Start ``provider``'s cooldown when an answer it gave reports a URL it was throttled on.
+
+        A one-URL-per-call extract folds a 429 on one URL into an answer that read
+        the others; the backend is throttled all the same. No ``Retry-After``
+        survives into a failure, so the status's default applies.
+        """
+        statuses = [getattr(failure, "status_code", None) for failure in getattr(response, "failures", None) or ()]
+        throttled = [status for status in statuses if status in COOLDOWN_STATUSES]
+        if throttled:
+            status = max(throttled, key=lambda code: COOLDOWN_DEFAULT_S[code])
+            self._start(provider, COOLDOWN_DEFAULT_S[status], status)
+
+    def _start(self, provider: str, seconds: float, status: int | None) -> None:
         until = time.monotonic() + seconds
         with self._lock:
             current = self._until.get(provider)

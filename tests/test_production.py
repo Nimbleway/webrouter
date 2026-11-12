@@ -124,3 +124,23 @@ def test_warmup_builds_each_auto_member_and_its_client_without_calling_it() -> N
     assert warmed[:2] == ["fake", "broken"]
     assert set(search._members) == {0, 1}, "both members built"
     assert search._members[1].__class__ is _Broken
+
+
+class _NoClient(FakeProvider):
+    name = "noclient"
+
+    @property
+    def _client(self) -> Any:
+        raise RuntimeError("no TLS here")
+
+
+def test_warmup_leaves_out_a_backend_whose_client_fails_to_build(caplog: pytest.LogCaptureFixture) -> None:
+    register_provider("noclient", _NoClient)
+    caplog.set_level(logging.INFO, logger="web_router")
+    try:
+        with WebRouter(provider_config={"auto": {"chain": ["noclient", "fake"]}}) as router:
+            warmed = router.warmup()
+    finally:
+        unregister_provider("noclient")
+    assert "noclient" not in warmed and "fake" in warmed
+    assert any("noclient could not build its client (RuntimeError)" in r.getMessage() for r in caplog.records)

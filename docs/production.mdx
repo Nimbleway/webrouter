@@ -143,7 +143,10 @@ minutes.
   This is another reason to share one router.
 - A backend passed over shows in the call's failures as a `rate_limit` error
   with `retry_after` set to the seconds left, and in `decision.hops`.
-- A backend you name with `provider=` is still called while it cools down.
+- A backend you name with `provider=` is still called while it cools down, and
+  a 429 or 402 it answers starts its cooldown for later `auto` calls.
+- An extract that read some URLs but was throttled on others starts the
+  backend's cooldown too, for the status's default.
 - When every backend `auto` would try is cooling down, the call fails at once
   with `AllProvidersFailedError`, each failure carrying its `retry_after`.
 

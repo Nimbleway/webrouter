@@ -7,12 +7,17 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.conftest import FakeProvider
+from tests.conftest import FakeExtractProvider, FakeProvider
 from web_router import AllProvidersFailedError, AsyncWebRouter, ProviderError, WebRouter
 from web_router.providers import _cooldown
 from web_router.providers._cooldown import Cooldowns
-from web_router.registry import register_provider, unregister_provider
-from web_router.types import SearchRequest, SearchResponse
+from web_router.registry import (
+    register_extract_provider,
+    register_provider,
+    unregister_extract_provider,
+    unregister_provider,
+)
+from web_router.types import ExtractRequest, ExtractResponse, SearchRequest, SearchResponse
 
 
 def _throttle(status: int, retry_after: str | None = None) -> ProviderError:
@@ -125,3 +130,39 @@ def test_each_router_keeps_its_own_cooldowns() -> None:
         one.search("q")
         two.search("q")
     assert _Throttled.calls == 2
+
+
+def test_a_named_backends_throttle_starts_its_cooldown_for_auto() -> None:
+    with _router() as router:
+        with pytest.raises(ProviderError):
+            router.search("q", provider="throttled")
+        assert router.search("q").provider == "backup"
+    assert _Throttled.calls == 1, "auto passed over the backend the named call found throttled"
+
+
+class _HalfThrottled(FakeExtractProvider):
+    """One URL per call: the second URL is throttled, the first is read."""
+
+    name = "halfthrottled"
+    calls = 0
+
+    def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        type(self).calls += 1
+        if urls == ["https://b.example/"]:
+            raise _throttle(429)
+        return self._respond(request, urls)
+
+
+def test_an_extract_throttled_on_some_urls_still_starts_the_cooldown() -> None:
+    register_extract_provider("halfthrottled", _HalfThrottled)
+    register_extract_provider("pages", FakeExtractProvider)
+    _HalfThrottled.calls = 0
+    try:
+        with WebRouter(provider_config={"auto": {"chain": ["halfthrottled", "pages"]}}) as router:
+            first = router.extract(["https://a.example/", "https://b.example/"])
+            second = router.extract("https://c.example/")
+    finally:
+        unregister_extract_provider("halfthrottled")
+        unregister_extract_provider("pages")
+    assert first.provider == "halfthrottled" and second.provider == "fake"
+    assert _HalfThrottled.calls == 2, "the second extract skipped the backend throttled on one URL"

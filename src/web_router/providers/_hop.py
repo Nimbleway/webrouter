@@ -45,6 +45,7 @@ def hop(tool: str, provider: str, call: Callable[[_RequestT], _ResultT], request
     except Exception as exc:
         _failed(tool, provider, exc, started, request)
         raise
+    _answered(provider, response)
     logger.debug(LOG_HOP_OK, tool, provider, time.monotonic() - started, _hosts(request))
     return response
 
@@ -65,8 +66,15 @@ async def ahop(
         raise
     if flight is not None:
         flight.member = None
+    _answered(provider, response)
     logger.debug(LOG_HOP_OK, tool, provider, time.monotonic() - started, _hosts(request))
     return response
+
+
+def _answered(provider: str, response: object) -> None:
+    runtime = current_runtime()
+    if runtime is not None:
+        runtime.cooldowns.note_answer(provider, response)
 
 
 def _refuse_cooling(tool: str, provider: str) -> None:

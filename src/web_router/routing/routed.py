@@ -27,7 +27,7 @@ from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_invoke import ROUTER_URL_POLICY_ATTR
-from web_router.providers._runtime import Runtime, lent
+from web_router.providers._runtime import Runtime, lent, noting
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
@@ -170,7 +170,7 @@ class SyncRouted(RouterSetup):
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with _logged(scope, route) as logged:
+            with _logged(scope, route) as logged, noting(self._runtime, chain):
                 return logged.settle(with_record(call(request), record or chosen))
 
 
@@ -188,5 +188,5 @@ class AsyncRouted(RouterSetup):
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with _logged(scope, route) as logged:
+            with _logged(scope, route) as logged, noting(self._runtime, chain):
                 return logged.settle(with_record(await call(request), record or chosen))

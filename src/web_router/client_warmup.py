@@ -12,14 +12,17 @@ here -- a missing extra, a missing key -- is left out, as ``auto`` would leave i
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterator
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from web_router.constants_production import LOG_WARMUP_FAILED
 from web_router.exceptions import WebRouterError
 
 if TYPE_CHECKING:
     from web_router.providers.base import ExtractProvider, SearchProvider
+
+logger = logging.getLogger(__name__)
 
 
 class _Warmup:
@@ -33,15 +36,20 @@ class _Warmup:
         def get_extract_provider(self, name: Any = None) -> ExtractProvider: ...
 
     def warmup(self) -> list[str]:
-        """Build the search and extract backends a first call would, with their clients; return their names.
+        """Build the search and extract backends a first call would, with their clients; return the names built.
+
+        A backend whose client cannot be built is left out of the list and logged at INFO.
 
         Call it once at startup, before the router serves requests. Safe to call again: what is built is reused.
         """
         warmed: list[str] = []
         for lookup in (self.get_provider, self.get_extract_provider):
             for backend in _backends(lookup):
-                with suppress(Exception):  # a client that cannot be built now fails the call that needs it, as before
+                try:
                     getattr(backend, self._client_attribute, None)
+                except Exception as exc:  # a client that cannot be built now fails the call that needs it, as before
+                    logger.info(LOG_WARMUP_FAILED, backend.name, type(exc).__name__)
+                    continue
                 warmed.append(backend.name)
         return list(dict.fromkeys(warmed))
 

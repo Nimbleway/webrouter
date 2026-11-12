@@ -119,6 +119,20 @@ def lent(runtime: Runtime | None) -> AbstractContextManager[None]:
     return nullcontext() if runtime is None else running(runtime)
 
 
+@contextmanager
+def noting(runtime: Runtime | None, backend: object) -> Iterator[None]:
+    """Start a named backend's cooldown when its call is throttled; ``auto``'s members are noted by their hops."""
+    name = getattr(backend, "name", None)
+    if runtime is None or not isinstance(name, str) or name in DELEGATING_PROVIDERS:
+        yield
+        return
+    try:
+        yield
+    except Exception as exc:
+        runtime.cooldowns.note(name, exc)
+        raise
+
+
 def current_runtime() -> Runtime | None:
     """The runtime of the router whose call is in flight, or ``None`` outside any router."""
     return _RUNTIME.get()
