@@ -32,32 +32,42 @@ from web_router.types import ExtractedDocument, ExtractFailure
 from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_UPSTREAM, TARGET_GONE_STATUSES
 
 
-def _failure(document: ExtractedDocument, reason: str) -> ExtractFailure:
+def _failure(document: ExtractedDocument, reason: str, asked: str | None = None) -> ExtractFailure:
     """A page that is not the one asked for, as a failure: the site's own "gone" is ``target``, else ``upstream``.
 
     A 404 or 410 is the site saying the page is not there, and every backend
     would read the same; a challenge, a login wall or a 5xx is what this
-    backend met, and another may get past it.
+    backend met, and another may get past it. A 404 reached by a redirect from
+    ``asked`` is the landing page's, so it stays ``upstream``.
     """
     status = document.status_code
-    kind = ERROR_KIND_TARGET if status in TARGET_GONE_STATUSES else ERROR_KIND_UPSTREAM
-    return ExtractFailure(url=document.url, error=reason, kind=kind, status_code=status)
+    # A redirect that landed on an error page says nothing certain about the URL asked for: another backend may read it.
+    redirected = asked is not None and asked.rstrip("/") != document.url.rstrip("/")
+    gone = status in TARGET_GONE_STATUSES and not redirected
+    kind = ERROR_KIND_TARGET if gone else ERROR_KIND_UPSTREAM
+    return ExtractFailure(url=asked or document.url, error=reason, kind=kind, status_code=status)
 
 
-def split_error_pages(documents: Iterable[ExtractedDocument]) -> tuple[list[ExtractedDocument], list[ExtractFailure]]:
+def split_error_pages(
+    documents: Iterable[ExtractedDocument], asked: str | None = None
+) -> tuple[list[ExtractedDocument], list[ExtractFailure]]:
     """The documents worth returning, and each page that is not the one asked for as a failure saying why.
 
     A page with a 4xx or 5xx status fails whatever it says: a site's "not
     found" page read as content is the error the caller most needs to see. A
     near-empty page is kept, with :data:`MSG_EXTRACT_NEAR_EMPTY` in its
     ``warnings``, since some real answers are that short.
+
+    ``asked`` is the one URL the call carried, when it carried one: a failure is
+    named by it rather than by where a redirect landed, so the caller sees the
+    address they asked for and ``auto`` retries that address.
     """
     kept: list[ExtractedDocument] = []
     failed: list[ExtractFailure] = []
     for document in documents:
         reason = not_the_page(document)
         if reason is not None:
-            failed.append(_failure(document, reason))
+            failed.append(_failure(document, reason, asked))
         else:
             kept.append(_warned(document))
     return kept, failed

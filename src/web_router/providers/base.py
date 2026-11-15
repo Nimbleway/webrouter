@@ -397,7 +397,7 @@ class _Collected:
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
-        documents, error_pages = split_error_pages(response.documents)
+        documents, error_pages = split_error_pages(response.documents, urls[0] if len(urls) == 1 else None)
         self.documents.extend(documents)
         self.failures.extend([*response.failures, *error_pages])
         self.reported += len(response.failures) + len(error_pages)
