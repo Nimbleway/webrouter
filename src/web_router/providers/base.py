@@ -612,11 +612,9 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     a provider implements only how its API starts a run and how it reports one:
     :meth:`_start` and :meth:`_fetch`, plus their async counterparts.
 
-    A method built on this -- :class:`ResearchProvider` is one -- names its
-    request, progress and response types, implements :meth:`submit` and
-    :meth:`asubmit` to hand back its own :class:`Job`, says in
-    :meth:`_timed_out` what giving up on a run raises, and may put its own
-    words on the two messages below.
+    A method built on this -- :class:`ResearchProvider` is one -- names its request, progress and response types,
+    implements :meth:`submit` and :meth:`asubmit` to hand back its own :class:`Job`, says in :meth:`_timed_out` what
+    giving up on a run raises, and may put its own words on the two messages below.
 
     A backend that answers inside the request that started it implements
     :meth:`_start` alone, returns a ``completed`` progress from it, and sets
@@ -794,12 +792,10 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
 class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     """A run in progress, and the handle you wait on.
 
-    Polling backs off as the run goes on, so a job that takes an hour is not
-    asked about two thousand times, and :meth:`result` can be called more than
-    once -- the answer is kept once it arrives rather than re-fetched. Each
-    method subclasses this for its own name, and sets the class attributes
-    below where its runs call for a different wait: :class:`ResearchJob` is
-    one.
+    Polling backs off as the run goes on, so a job that takes an hour is not asked about two thousand times, and
+    :meth:`result` can be called more than once -- the answer is kept once it arrives rather than re-fetched. Each
+    method subclasses this for its own name, and sets the class attributes below where its runs call for a different
+    wait: :class:`ResearchJob` is one.
     """
 
     default_timeout: ClassVar[float | None] = JOB_TIMEOUT
@@ -817,8 +813,7 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     decision: Any = None
     """The answer's ``decision``: under a budget, the effort it mapped and what it charged the start."""
 
-    stamp: Callable[[Any], Any] | None = None
-    """Applied once to the finished answer: how a router puts what the run took and cost on it (``metered``)."""
+    stamp: Callable[[Any], Any] | None = None  # applied once to the finished answer: what the run took and cost
 
     def __init__(
         self,
@@ -897,17 +892,15 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     def _wait_until(self, deadline: float | None, timeout: float | None) -> _ResponseT:
         """Poll until the run finishes or ``deadline`` passes.
 
-        The deadline is checked before each poll as well as before each sleep.
-        A run that finished while nobody was looking -- which is every run a
-        synchronous backend serves -- is answered even when the budget is
-        already spent: it has been paid for, and throwing the answer away to
-        report a timeout would be the one outcome nobody wants.
+        The deadline is checked before each poll as well as before each sleep. A run that finished while nobody was
+        looking -- which is every run a synchronous backend serves -- is answered even when the budget is already
+        spent: it has been paid for, and throwing the answer away to report a timeout would be the one outcome nobody
+        wants.
 
-        A poll that timed out past the deadline, or that the deadline cut off, raises the method's timeout,
-        with the failure as its cause and the job id the caller needs to come back to a run still going,
-        and billing; any other failure, an auth error or an unrecognized status, is raised as it is. Every
-        call inside the run is clamped to what the caller has left, so a status request that stalls fails
-        exactly as the deadline arrives.
+        A poll that timed out past the deadline, or that the deadline cut off, raises the method's timeout, with the
+        failure as its cause and the job id the caller needs to come back to a run still going, and billing; any other
+        failure, an auth error or an unrecognized status, is raised as it is. Every call inside the run is clamped to
+        what the caller has left, so a status request that stalls fails exactly as the deadline arrives.
         """
         for delay in self._poll_delays():
             try:
@@ -975,9 +968,8 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         if self.decision is not None and cast(Any, response).decision is not self.decision:  # copied once, then kept
             response = cast(Any, response).model_copy(update={"decision": self.decision})
             self._progress = cast(Any, progress).model_copy(update={"response": response})
-        if self.stamp is not None:  # once: a job's answer is kept, and asking again must not move its clock
-            response = self.stamp(response)
-            self.stamp = None
+        if self.stamp is not None:  # once: asking again must not move the clock
+            response, self.stamp = self.stamp(response), None
             self._progress = cast(Any, progress).model_copy(update={"response": response})
         return response
 
