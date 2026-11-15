@@ -397,7 +397,7 @@ class _Collected:
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
-        documents, error_pages = split_error_pages(response.documents)
+        documents, error_pages = split_error_pages(response.documents, urls[0] if len(urls) == 1 else None)
         self.documents.extend(documents)
         self.failures.extend([*response.failures, *error_pages])
         self.reported += len(response.failures) + len(error_pages)
@@ -474,9 +474,9 @@ class _Collected:
         if late and len(late) == len(self.errors) and not self.reported:
             # Every URL ran out of time; one that failed for a reason of its own keeps the summary below, naming each.
             return DeadlineExceededError(self.provider, late[0].seconds)
-        original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
+        original = ExtractFailure.shared_original(failures, [error for _, error in self.errors])
         message = MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail)
-        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.shared_kind(failures))
+        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.batch_kind(failures))
 
 
 class LiveDataProvider(TemplateMethods, _BaseProvider):

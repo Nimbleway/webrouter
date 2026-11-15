@@ -18,14 +18,12 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from web_router.constants_nimble import NIMBLE_INDEX_ENTRY, NIMBLE_INDEX_HEADING, NIMBLE_MARKER
 from web_router.providers._utils import compact
 from web_router.types import Citation
 
-_INDEX_HEADING = re.compile(r"^[ \t#*_]*source index[*_]*:?[*_]*[ \t]*$", re.IGNORECASE | re.MULTILINE)
-"""The line the prose's own source list starts after, as Nimble writes it: ``Source index:``."""
-
-_INDEX_ENTRY = re.compile(r"^[ \t]*(?:[-*][ \t]*)?\[(\d+)\][^\n]*?(https?://[^\s)\]>]+)", re.MULTILINE)
-"""One line of that list: its number, then the first URL on the line."""
+_ITEM_START = re.compile(r"^[ \t]*(?:[-*]|\d+[.)])[ \t]+")
+"""A line that opens a list item, which starts a passage of its own."""
 
 ANSWER_PASSAGES = "answer_passages"
 """The ``extra`` key holding the prose's paragraphs that cite a source, for a run without trust."""
@@ -84,13 +82,14 @@ def _index_markers(answer: str) -> dict[str, tuple[str, list[str]]]:
 
     A URL the prose never cites by that marker is left out: a list entry alone attributes nothing.
     """
-    heading = _INDEX_HEADING.search(answer)
+    heading = NIMBLE_INDEX_HEADING.search(answer)
     if heading is None:
         return {}
     body, index = answer[: heading.start()], answer[heading.end() :]
     markers: dict[str, tuple[str, list[str]]] = {}
-    for number, url in _INDEX_ENTRY.findall(index):
-        marker = f"[{number}]"
+    for number, url in NIMBLE_INDEX_ENTRY.findall(index):
+        url = url.rstrip(".,;:")  # punctuation after a URL closes the sentence, not the address
+        marker = NIMBLE_MARKER.format(number=number)
         passages = _citing(body, marker)
         if passages and url not in markers:
             markers[url] = (marker, passages)
@@ -104,11 +103,27 @@ def _citing(body: str, marker: str) -> list[str]:
     would cut an initial or an abbreviation in two.
     """
     found: list[str] = []
-    for line in body.splitlines():
-        passage = line.strip().removeprefix("- ").removeprefix("* ").strip()
+    for passage in _passages(body):
         if marker in passage and passage not in found:
             found.append(passage)
     return found
+
+
+def _passages(body: str) -> list[str]:
+    """``body``'s paragraphs and list items, each joined onto one line, a list item without its bullet.
+
+    A claim the prose wraps across lines stays whole: a passage ends at a blank line or where a list item starts.
+    """
+    passages: list[list[str]] = []
+    for line in body.splitlines():
+        text = line.strip()
+        if not text:
+            passages.append([])
+        elif _ITEM_START.match(line) or not passages:
+            passages.append([text.removeprefix("- ").removeprefix("* ")])
+        else:
+            passages[-1].append(text)
+    return [" ".join(lines) for lines in passages if lines]
 
 
 def _unmapped(cited: dict[str, Any]) -> dict[str, Any]:

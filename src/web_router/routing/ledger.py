@@ -163,6 +163,11 @@ class Ledger:
         with self._lock:
             self.trail.fail(candidate_id(tool, provider), error_code(exc))
 
+    def contributed(self, tool: str, provider: str) -> None:
+        """Note that ``provider`` read part of the answer though another member's response carries it."""
+        with self._lock:
+            self.trail.answered(candidate_id(tool, provider))
+
     def _answered(self, provider: str | None, empty: bool) -> int | None:
         """The attempt whose response the call returned, ``provider``'s.
 

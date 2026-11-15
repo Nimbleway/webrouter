@@ -34,9 +34,9 @@ RETRYABLE_KINDS: Final = frozenset({"rate_limit", "timeout", "upstream"})
 """The kinds a later retry, of the same backend or another, may get past."""
 
 CHAIN_STOPPING_KINDS: Final = frozenset({"local", "target"})
+"""The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
 RETRY_AFTER_HEADER: Final = "retry-after"
 _CAUSE_DEPTH: Final = 4
-"""The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
 
 KIND_BY_STATUS: Final[dict[int, ProviderErrorKind]] = {
     400: "bad_request",
@@ -76,6 +76,9 @@ ERROR_KIND_LOCAL: Final[ProviderErrorKind] = "local"
 ERROR_KIND_TARGET: Final[ProviderErrorKind] = "target"
 ERROR_KIND_UPSTREAM: Final[ProviderErrorKind] = "upstream"
 ERROR_KIND_TIMEOUT: Final[ProviderErrorKind] = "timeout"
+ERROR_KIND_NOT_FOUND: Final[ProviderErrorKind] = "not_found"
+_RECOVERABLE_FIRST: Final[tuple[ProviderErrorKind, ...]] = (ERROR_KIND_UPSTREAM, ERROR_KIND_TIMEOUT, "rate_limit")
+"""The kinds a mixed batch takes, most recoverable first: another backend may read what these failed."""
 
 
 @dataclass(frozen=True)
@@ -85,10 +88,6 @@ class ErrorFacts:
     kind: ProviderErrorKind
     status_code: int | None = None
     retry_after: float | None = None
-
-    @property
-    def retryable(self) -> bool:
-        return is_retryable(self.kind)
 
 
 def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
@@ -205,13 +204,10 @@ class ExtractFailure(BaseModel):
     @model_validator(mode="after")
     def _kind_from_error(self) -> ExtractFailure:
         if self.kind is None:
-            by_status = KIND_BY_STATUS.get(self.status_code) if self.status_code is not None else None
-            if self.status_code in TARGET_GONE_STATUSES:
-                self.kind = ERROR_KIND_TARGET
-            elif by_status in ("auth", "rate_limit"):
-                self.kind = by_status  # a refused key or a throttle, whatever the warning text says
-            else:
-                self.kind = classify(None, self.error).kind
+            # The status here is the page's, not the backend's answer about the key: a site's own 403 is no refused
+            # key, so only "gone" is read from it. A backend's own 401 or 429 arrives through from_error with its kind.
+            gone = self.status_code in TARGET_GONE_STATUSES
+            self.kind = ERROR_KIND_TARGET if gone else classify(None, self.error).kind
         return self
 
     @staticmethod
@@ -219,6 +215,23 @@ class ExtractFailure(BaseModel):
         """The kind every URL failed with, when they agree, so a call that read none of them reports it."""
         kinds = {failure.kind for failure in failures}
         return kinds.pop() if len(kinds) == 1 else None
+
+    @staticmethod
+    def shared_original(failures: Sequence[ExtractFailure], errors: Sequence[BaseException]) -> BaseException | None:
+        """The first call's own exception, when every URL failed with one status; else none, so no status misleads."""
+        if len({failure.status_code for failure in failures}) > 1:
+            return None
+        originals = (getattr(error, "original", None) for error in errors)
+        return next((original for original in originals if original is not None), None)
+
+    @staticmethod
+    def batch_kind(failures: Sequence[ExtractFailure]) -> ProviderErrorKind:
+        """A batch's kind: the shared one, else the most recoverable present, so one dead URL never stops the rest."""
+        shared = ExtractFailure.shared_kind(failures)
+        if shared is not None:
+            return shared
+        kinds = {failure.kind for failure in failures}
+        return next((kind for kind in _RECOVERABLE_FIRST if kind in kinds), ERROR_KIND_UPSTREAM)
 
     @classmethod
     def from_error(cls, url: str, error: BaseException) -> ExtractFailure:

@@ -148,3 +148,26 @@ def test_with_no_member_left_the_partial_answer_is_returned(registered: list[str
 
     assert [failure.url for failure in response.failures] == [GITHUB]
     assert response.failures[0].error == "[only] HTTP 403", "nothing else was tried, so nothing else to say"
+
+
+def test_a_redirected_error_page_is_retried_and_reported_under_the_url_asked_for(registered: list[str]) -> None:
+    """A per-URL backend echoes where a redirect landed; the failure, and so the retry, names the URL asked for."""
+    landed = "https://docs.example.org/404"
+
+    class Redirecting(_member("first")):  # type: ignore[misc]
+        batches_urls = False
+
+        def _respond(self, urls: list[str]) -> ExtractResponse:
+            if urls != [GITHUB]:
+                return super()._respond(urls)
+            return ExtractResponse(provider="first", documents=[ExtractedDocument(url=landed, status_code=404)])
+
+    second = _member("second", refuses=frozenset({GITHUB}))
+    auto = _chain(registered, Redirecting, second)
+    try:
+        response = auto.extract(ExtractRequest(urls=[DOCS, GITHUB]))
+    finally:
+        auto.close()
+
+    assert second.calls == [[GITHUB]]
+    assert [failure.url for failure in response.failures] == [GITHUB]

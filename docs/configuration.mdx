@@ -51,7 +51,7 @@ Keys are read from the environment, or passed explicitly through
 A key set once serves every method of a provider that has several. See
 [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example). The library reads the environment only; the
 MCP server is the one place a `.env` is read for you; see
-[docs/mcp.md](https://github.com/Nimbleway/webrouter/blob/main/docs/mcp.md#then-add-whichever-keys-you-have).
+[the MCP guide](/mcp#then-add-whichever-keys-you-have).
 `configured_providers()` and
 `configured_extract_providers()` (and `configured_research_providers()`,
 `configured_browser_providers()` and `configured_browse_providers()`) report
@@ -122,6 +122,10 @@ unannounced — and never closes it. Its credential is the one used: an
 Other options passed beside it, such as `timeout`, apply to a copy that shares
 its connection pool, and research keeps the client's own timeouts, clamping
 only the read limit to the run's budget.
+
+One `WebRouter` may be shared across threads, such as the workers of a
+`ThreadPoolExecutor`: each provider builds its HTTP client once and every
+thread reuses it, and `close()` shuts it.
 
 ## Which providers can I actually use?
 

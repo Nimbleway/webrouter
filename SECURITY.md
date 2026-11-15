@@ -43,7 +43,7 @@ paths only. `load_env(remember=true)` records the path, never a copy of the
 keys. What this does not prevent: a model steered by a page it read could call
 `load_env` on a file someone planted on the machine, adding a key for a backend
 you hold none for, and later calls through `auto` could then run on that
-account. See [docs/mcp.md](docs/mcp.md#loading-keys-mid-conversation-load_env).
+account. See [the MCP guide](https://docs.webrouter.net/mcp#loading-keys-mid-conversation-load_env).
 
 ### Redirects are not followed
 

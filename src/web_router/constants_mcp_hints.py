@@ -4,13 +4,15 @@ from __future__ import annotations
 
 MCP_TOOL_HINTS: dict[str, tuple[str, bool, bool, bool, bool]] = {
     # name: (title, read-only, destructive, idempotent, open world), as MCP's ToolAnnotations reads them.
-    # Read-only means it changes nothing the user owns, not that it is free: a billed lookup is read-only.
+    # Read-only means safe to run without asking: it changes nothing the user owns and bills nothing. A tool
+    # that bills every call is not read-only, so a client that auto-approves read-only tools asks first.
+    # search and extract are read-only only while no paid backend is configured: see schema.tool_annotations.
     "search": ("Search the web", True, False, True, True),
     "extract": ("Read pages by URL", True, False, True, True),
     "live_data_sources": ("List live data sources", True, False, True, True),
     "live_data_source": ("Describe a live data source", True, False, True, True),
-    "live_data": ("Run a live data source", True, False, True, True),
-    "answer": ("Answer a question", True, False, True, True),
+    "live_data": ("Run a live data source (billed)", False, False, False, True),
+    "answer": ("Answer a question (billed)", False, False, False, True),
     "research": ("Start a research run (billed)", False, False, False, True),
     "research_status": ("Poll a research run", True, False, True, False),
     "browse": ("Start a browser-agent task (billed)", False, True, False, True),

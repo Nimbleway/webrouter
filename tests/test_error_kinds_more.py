@@ -10,13 +10,19 @@ from web_router.providers._error_pages import near_empty
 from web_router.types import ExtractedDocument, ExtractFailure
 
 
-@pytest.mark.parametrize(("status", "kind"), [(401, "auth"), (429, "rate_limit")])
-def test_a_status_alone_sets_the_kind_of_a_failed_page(status: int, kind: str) -> None:
-    assert ExtractFailure(url="https://a.test", error="failed", status_code=status).kind == kind
+@pytest.mark.parametrize("status", [401, 403, 429])
+def test_a_page_status_alone_is_no_refused_key(status: int) -> None:
+    """On a failed page the status is the site's: a site's own 403 says nothing about the backend's key."""
+    assert ExtractFailure(url="https://a.test", error="failed", status_code=status).kind not in ("auth", "rate_limit")
+
+
+def test_the_backends_own_refusal_keeps_its_kind() -> None:
+    refused = ProviderError("nimble", "refused", kind="auth")
+    assert ExtractFailure.from_error("https://a.test", refused).kind == "auth"
 
 
 def test_urls_that_agree_on_a_kind_share_it() -> None:
-    failures = [ExtractFailure(url=f"https://{n}.test", error="x", status_code=429) for n in "ab"]
+    failures = [ExtractFailure(url=f"https://{n}.test", error="x", kind="rate_limit") for n in "ab"]
     assert ExtractFailure.shared_kind(failures) == "rate_limit"
     assert ExtractFailure.shared_kind([*failures, ExtractFailure(url="c", error="x", status_code=404)]) is None
 
