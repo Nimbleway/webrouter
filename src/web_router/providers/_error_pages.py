@@ -9,6 +9,7 @@ a document carrying a warning.
 from __future__ import annotations
 
 import html
+import re
 from collections.abc import Iterable
 from http import HTTPStatus
 from urllib.parse import urlsplit
@@ -67,19 +68,26 @@ def not_the_page(document: ExtractedDocument) -> str | None:
     status = document.status_code
     if status is not None and status >= HTTPStatus.BAD_REQUEST:
         return MSG_EXTRACT_BAD_STATUS.format(status=status)
-    title = _title(document)
-    if EXTRACT_CHALLENGE_TITLE.search(title):
-        return MSG_EXTRACT_CHALLENGE
-    if EXTRACT_LOGIN_TITLE.search(title) or urlsplit(document.url).path.startswith(EXTRACT_LOGIN_URL_PARTS):
+    if _is_login_path(urlsplit(document.url).path):
         return MSG_EXTRACT_LOGIN_WALL
     if len(document.content) >= EXTRACT_WALL_MAX_CHARS:
         return None
+    title = _title(document)
+    if EXTRACT_CHALLENGE_TITLE.search(title):
+        return MSG_EXTRACT_CHALLENGE
+    if EXTRACT_LOGIN_TITLE.search(title):
+        return MSG_EXTRACT_LOGIN_WALL
     text = document.content.casefold()
     if any(marker in text for marker in EXTRACT_CHALLENGE_MARKERS):
         return MSG_EXTRACT_CHALLENGE
     if any(marker in text for marker in EXTRACT_LOGIN_MARKERS):
         return MSG_EXTRACT_LOGIN_WALL
     return None
+
+
+def _is_login_path(path: str) -> bool:
+    """Whether ``path`` is a login route itself or sits under one, not merely a longer name sharing its start."""
+    return any(path == part or path.startswith(f"{part}/") for part in EXTRACT_LOGIN_URL_PARTS)
 
 
 def _title(document: ExtractedDocument) -> str:
@@ -90,9 +98,15 @@ def _title(document: ExtractedDocument) -> str:
     return html.unescape(found.group(1)).strip() if found else ""
 
 
+HTML_NON_TEXT = re.compile(r"<(script|style)\b.*?</\1>|<[^>]*>", re.IGNORECASE | re.DOTALL)
+
+
 def near_empty(document: ExtractedDocument) -> bool:
     """Some text, but under :data:`EXTRACT_NEAR_EMPTY_CHARS` characters of it: a shell more often than a page."""
-    return 0 < len(document.content.strip()) < EXTRACT_NEAR_EMPTY_CHARS
+    content = document.content
+    if document.format == "html":
+        content = html.unescape(HTML_NON_TEXT.sub(" ", content))
+    return 0 < len(content.strip()) < EXTRACT_NEAR_EMPTY_CHARS
 
 
 def _warned(document: ExtractedDocument) -> ExtractedDocument:

@@ -30,7 +30,7 @@ import os
 import time
 from typing import Any, ClassVar
 
-from web_router.constants import ENV_OXYLABS_USERNAME, PROVIDER_OXYLABS
+from web_router.constants import ENV_OXYLABS_PASSWORD, ENV_OXYLABS_USERNAME, PROVIDER_OXYLABS
 from web_router.constants_live_data_vendors import (
     ENV_OXYLABS_WEB_API_KEY,
     MSG_OXYLABS_JOB_RESULT_FAILED,
@@ -98,7 +98,9 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
             )
         except ConfigurationError as exc:
             # The extract credentials are set, so the caller believes Oxylabs is configured: say they are another set.
-            if not (username or os.environ.get(ENV_OXYLABS_USERNAME)):
+            has_username = username or os.environ.get(ENV_OXYLABS_USERNAME)
+            has_password = kwargs.get("api_key") or os.environ.get(ENV_OXYLABS_PASSWORD)
+            if not (has_username and has_password):
                 raise
             raise ConfigurationError(f"{exc}{MSG_OXYLABS_TWO_CREDENTIALS}") from None
         super().__init__(**kwargs)

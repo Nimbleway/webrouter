@@ -153,8 +153,14 @@ def test_oxylabs_live_data_says_the_extract_credentials_are_another_set(monkeypa
     from web_router.providers.oxylabs_live_data import OxylabsLiveDataProvider
 
     monkeypatch.delenv(ENV_OXYLABS_WEB_API_KEY, raising=False)
+    monkeypatch.delenv("OXYLABS_PASSWORD", raising=False)
     monkeypatch.setenv(ENV_OXYLABS_USERNAME, "realtime-user")
 
+    with pytest.raises(ConfigurationError) as username_only:
+        OxylabsLiveDataProvider()
+    assert "separate credential" not in str(username_only.value), "the Realtime password is not set"
+
+    monkeypatch.setenv("OXYLABS_PASSWORD", "realtime-password")
     with pytest.raises(ConfigurationError, match="separate credential"):
         OxylabsLiveDataProvider()
 

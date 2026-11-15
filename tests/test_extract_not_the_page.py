@@ -34,13 +34,13 @@ def _screened(**fields: Any) -> tuple[list[ExtractedDocument], list[str]]:
 @pytest.mark.parametrize(
     ("fields", "reason"),
     [
-        ({"title": "Just a moment...", "content": ARTICLE}, MSG_EXTRACT_CHALLENGE),
+        ({"title": "Just a moment...", "content": "Enable JavaScript and cookies to continue."}, MSG_EXTRACT_CHALLENGE),
         ({"title": "Attention Required! | Cloudflare"}, MSG_EXTRACT_CHALLENGE),
         (
             {"content": "Checking your browser before accessing example.com."},
             MSG_EXTRACT_CHALLENGE,
         ),
-        ({"title": "Sign In | LinkedIn", "content": ARTICLE}, MSG_EXTRACT_LOGIN_WALL),
+        ({"title": "Sign In | LinkedIn", "content": "Welcome back."}, MSG_EXTRACT_LOGIN_WALL),
         ({"title": "LinkedIn Login, Sign in | LinkedIn"}, MSG_EXTRACT_LOGIN_WALL),
         (
             {"content": "Join LinkedIn. Sign in to view the full profile of this member."},
@@ -48,7 +48,7 @@ def _screened(**fields: Any) -> tuple[list[ExtractedDocument], list[str]]:
         ),
         ({"url": "https://www.linkedin.com/authwall?trk=x", "content": ARTICLE}, MSG_EXTRACT_LOGIN_WALL),
         (
-            {"format": "html", "content": f"<html><title>Just a moment&#8230;</title>{ARTICLE}</html>"},
+            {"format": "html", "content": "<html><title>Just a moment&#8230;</title>Please wait.</html>"},
             MSG_EXTRACT_CHALLENGE,
         ),
     ],
@@ -63,6 +63,10 @@ def test_a_challenge_or_login_page_is_a_failure_saying_which(fields: dict[str, A
     "fields",
     [
         {"title": "Sign in with Apple: a guide", "content": ARTICLE},
+        {"title": "CAPTCHA - Wikipedia", "content": ARTICLE},
+        {"title": "Access Denied - Wikipedia", "content": ARTICLE},
+        {"title": "Login - Wikipedia", "content": ARTICLE},
+        {"title": "Social Login - Auth0 Docs", "content": ARTICLE},
         {"url": "https://blog.example.com/posts?ref=/authwall", "content": ARTICLE},
         {"title": "Cloudflare challenges explained", "content": ARTICLE + "verify you are human"},
         {
