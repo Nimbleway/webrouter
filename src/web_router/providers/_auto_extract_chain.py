@@ -127,16 +127,20 @@ def _also_failed(response: ExtractResponse, exc: WebRouterError) -> ExtractRespo
 def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
     """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons.
 
-    A blank page ``retried`` held as its answer was not read: its URL stays failed.
+    A blank page ``retried`` held as its answer was not read: its URL stays failed, as does one ``retried``
+    named neither way -- under a redirect's address, say -- so no URL asked for drops out of the answer.
     """
     blank = MSG_EXTRACT_RETRY_BLANK.format(provider=retried.provider)
     read = [document for document in retried.documents if document.content.strip()]
     again = {document.url: blank for document in retried.documents if not document.content.strip()}
     again |= {failure.url: failure.error for failure in retried.failures}
+    found = {document.url for document in read}
     failures = [
         ExtractFailure(url=failure.url, error=f"{failure.error}; then {again[failure.url]}")
-        for failure in first.failures
         if failure.url in again
+        else failure
+        for failure in first.failures
+        if failure.url in again or failure.url not in found
     ]
     known = {failure.url for failure in first.failures}
     failures.extend(failure for failure in retried.failures if failure.url not in known)

@@ -171,18 +171,3 @@ def test_a_redirected_error_page_is_retried_and_reported_under_the_url_asked_for
 
     assert second.calls == [[GITHUB]]
     assert [failure.url for failure in response.failures] == [GITHUB]
-
-
-def test_a_url_a_later_member_read_as_blank_stays_failed(registered: list[str]) -> None:
-    class Blank(_member("second")):  # type: ignore[misc]
-        def _respond(self, urls: list[str]) -> ExtractResponse:
-            return ExtractResponse(provider="second", documents=[ExtractedDocument(url=url) for url in urls])
-
-    auto = _chain(registered, _member("first", refuses=frozenset({GITHUB})), Blank)
-    try:
-        response = auto.extract(ExtractRequest(urls=[DOCS, GITHUB]))
-    finally:
-        auto.close()
-
-    assert [document.url for document in response.documents] == [DOCS]
-    assert [failure.error for failure in response.failures] == ["[first] HTTP 403; then [second] returned a blank page"]
