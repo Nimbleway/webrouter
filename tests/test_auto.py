@@ -344,7 +344,7 @@ def test_auto_declares_every_option_some_member_maps() -> None:
 def test_every_search_backend_is_a_member(monkeypatch: pytest.MonkeyPatch) -> None:
     """Each keyed backend joins, in the order make chains generated, ranked ones ahead of the keyless tier."""
     for env_var in _EVERY_SEARCH_KEY:
-        monkeypatch.setenv(env_var, "test-key")
+        monkeypatch.setenv(env_var, "https://proxy.test" if env_var == "LITELLM_PROXY_API_BASE" else "test-key")
 
     chain = [name for name, _ in AutoProvider.default_chain()]
 

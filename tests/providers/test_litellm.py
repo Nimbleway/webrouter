@@ -100,28 +100,33 @@ def test_without_a_proxy_url_nothing_is_sent(monkeypatch: pytest.MonkeyPatch) ->
     assert seen == []
 
 
+def _only(monkeypatch: pytest.MonkeyPatch, env: dict[str, str]) -> None:
+    for name in ("LITELLM_PROXY_API_KEY", "LITELLM_PROXY_API_BASE"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+
+
+KEY, URL = {"LITELLM_PROXY_API_KEY": "sk-test"}, {"LITELLM_PROXY_API_BASE": PROXY}
+UNSAFE = {"LITELLM_PROXY_API_BASE": "http://proxy.example.com"}
+
+
 @pytest.mark.parametrize(
-    ("key", "url", "listed"), [("sk-test", None, False), (None, PROXY, False), ("sk-test", PROXY, True)]
+    ("env", "listed"), [(KEY, False), (URL, False), ({**KEY, **UNSAFE}, False), ({**KEY, **URL}, True)]
 )
-def test_they_are_configured_only_with_both_the_key_and_the_url(
-    monkeypatch: pytest.MonkeyPatch, key: str | None, url: str | None, listed: bool
+def test_they_are_configured_only_with_the_key_and_a_safe_url(
+    monkeypatch: pytest.MonkeyPatch, env: dict[str, str], listed: bool
 ) -> None:
-    """The key alone is often set already for LiteLLM's model calls; without the URL every search would fail."""
-    for name, value in (("LITELLM_PROXY_API_KEY", key), ("LITELLM_PROXY_API_BASE", url)):
-        if value is None:
-            monkeypatch.delenv(name, raising=False)
-        else:
-            monkeypatch.setenv(name, value)
+    """The key alone is often set already for LiteLLM's model calls; without a usable URL every search would fail."""
+    _only(monkeypatch, env)
     names = {"exa-litellm", "tavily-litellm", "parallel-litellm"}
-    assert (names & set(configured_providers()) == names) is listed
-    assert listed or not names & set(configured_providers())
+    assert names & set(configured_providers()) == (names if listed else set())
 
 
 @pytest.mark.parametrize("name", ["exa-litellm", "tavily-litellm", "parallel-litellm"])
 def test_auto_counts_a_proxy_url_passed_in_code(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
-    """The key in the environment and the URL in ``provider_config``: as ``agentcore``'s gateway URL counts."""
-    monkeypatch.setenv("LITELLM_PROXY_API_KEY", "sk-test")
-    monkeypatch.delenv("LITELLM_PROXY_API_BASE", raising=False)
+    """The key in the environment and the URL in ``provider_config``, as ``agentcore``'s gateway URL counts."""
+    _only(monkeypatch, KEY)
     with WebRouter(provider_config={name: {"base_url": PROXY}}) as router:
         assert name in router.get_provider("auto").members  # type: ignore[attr-defined]
 
@@ -129,9 +134,9 @@ def test_auto_counts_a_proxy_url_passed_in_code(monkeypatch: pytest.MonkeyPatch,
 @pytest.mark.parametrize(
     ("env", "config", "joins"),
     [
-        ({"LITELLM_PROXY_API_BASE": PROXY}, {"api_key": "sk-test"}, True),
+        (URL, {"api_key": "sk-test"}, True),
         ({}, {"base_url": PROXY}, False),
-        ({"LITELLM_PROXY_API_KEY": "sk-test"}, {"base_url": "http://proxy.example.com"}, False),
+        (KEY, {"base_url": "http://proxy.example.com"}, False),
         ({}, {"api_key": "sk-test"}, False),
     ],
 )
@@ -139,10 +144,7 @@ def test_auto_takes_a_proxy_only_when_it_can_start(
     monkeypatch: pytest.MonkeyPatch, env: dict[str, str], config: dict[str, str], joins: bool
 ) -> None:
     """``auto`` charges a member's estimate before building it: no key, or an unsafe URL, must not join."""
-    for name in ("LITELLM_PROXY_API_KEY", "LITELLM_PROXY_API_BASE"):
-        monkeypatch.delenv(name, raising=False)
-    for name, value in env.items():
-        monkeypatch.setenv(name, value)
+    _only(monkeypatch, env)
     with WebRouter(provider_config={"exa-litellm": config}) as router:
         assert ("exa-litellm" in router.get_provider("auto").members) is joins  # type: ignore[attr-defined]
 
