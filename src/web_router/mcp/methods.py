@@ -18,6 +18,7 @@ from web_router.constants import (
     DELEGATING_PROVIDERS,
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
+    MCP_ARG_PROVIDER,
     MCP_METHOD_BROWSER,
     MCP_TOOL_ANSWER,
     MCP_TOOL_BROWSE,
@@ -34,6 +35,7 @@ from web_router.constants_live_data import (
     MCP_TOOL_LIVE_DATA_SOURCE,
     MCP_TOOL_LIVE_DATA_SOURCES,
 )
+from web_router.live_data_backends import custom_live_data_backends
 from web_router.mcp.env_credentials import env_names
 from web_router.providers.base import _BaseProvider
 from web_router.registry import (
@@ -135,6 +137,19 @@ tools share one method.
 
 EACH_METHOD: tuple[Method, ...] = tuple({method.key: method for method in METHODS.values()}.values())
 """Every method once, in the order the capabilities resource lists them."""
+
+
+def unconfigured_live_data(tool: str, arguments: Mapping[str, Any]) -> Method | None:
+    """``tool``'s method when it is a live data tool called without ``provider`` and no backend can serve it.
+
+    The schema then offers no ``provider``, and a call without one would ask
+    every backend and find none, so the tool says what would add one instead.
+    A custom backend registered in code counts as one that can.
+    """
+    method = METHODS.get(tool)
+    if method is None or method.key != MCP_METHOD_LIVE_DATA or arguments.get(MCP_ARG_PROVIDER) is not None:
+        return None
+    return None if method.configured() or custom_live_data_backends() else method
 
 
 def configured() -> dict[str, list[str]]:
