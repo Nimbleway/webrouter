@@ -124,7 +124,9 @@ def test_a_line_left_unfinished_is_skipped_and_the_rest_read(tmp_path: Path, cap
     log = SpendLog(tmp_path / "spend.jsonl")
     log.record(_entry(1, "fake", "search", 0.01))
     with (tmp_path / "spend.jsonl").open("a", encoding="utf-8") as file:
-        file.write('{"at": "2026-11-02T12:00')
+        file.write('{"at": "2026-11-02T12:00", "provider": "\u00e9')
+    with (tmp_path / "spend.jsonl").open("ab") as raw:
+        raw.write("é".encode()[:1])  # half a two-byte character, as an interrupted write leaves it
     log.record(_entry(3, "next", "search", 0.02))
     with caplog.at_level(logging.WARNING, logger="web_router"):
         assert [entry.provider for entry in log.entries()] == ["fake", "next"], "the next entry is not joined to it"

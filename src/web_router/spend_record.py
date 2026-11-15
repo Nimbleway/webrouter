@@ -41,4 +41,4 @@ def log_spent(sink: SpendSink | None, response: BaseModel, method: str) -> None:
     try:
         sink.record(spend_entry(response, method))
     except Exception as exc:  # a broken log must never cost the caller the answer it paid for
-        logger.warning(MSG_SPEND_SINK_FAILED, type(sink).__name__, type(exc).__name__, exc)
+        logger.warning(MSG_SPEND_SINK_FAILED, type(sink).__name__, type(exc).__name__, exc, exc_info=True)

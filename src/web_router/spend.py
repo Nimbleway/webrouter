@@ -107,7 +107,8 @@ class SpendLog:
         if not self.path.exists():
             return []
         with self._lock:
-            lines = self.path.read_text(encoding="utf-8").splitlines()
+            # "replace": a character an interrupted write cut in half fails its own line, not the whole file
+            lines = self.path.read_text(encoding="utf-8", errors="replace").splitlines()
         read = [entry for line in lines if line.strip() and (entry := _parsed(line)) is not None]
         return [entry for entry in read if since is None or entry.day >= since]
 
