@@ -77,3 +77,7 @@ def test_an_exa_search_reports_its_cost_dollars(monkeypatch: pytest.MonkeyPatch)
     payload = {"results": [], "costDollars": {"total": 0.007, "search": {"neural": 0.007}}}
     response = ExaProvider()._to_response(SearchRequest(query="q"), payload)
     assert (response.cost_usd, response.cost_source) == (0.007, "reported")
+
+
+def test_an_integer_too_large_for_a_float_states_nothing() -> None:
+    assert stated_cost({"cost": 10**400}, "cost") == {}

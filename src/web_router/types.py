@@ -98,7 +98,8 @@ class Provider(str, Enum):
     AUTO = "auto"
     MAX = "max"
 
-    # A str-mixin enum otherwise renders as "Provider.NIMBLE" in f-strings, error messages and `raw` payloads.
+    # A str-mixin enum otherwise renders as "Provider.NIMBLE" in f-strings and
+    # str(), which would reach users through error messages and `raw` payloads.
     __str__ = str.__str__
 
 
@@ -618,7 +619,8 @@ class BrowserSession(BaseModel):
     raw: dict[str, Any] | None = Field(
         default=None,
         repr=False,
-        # Out of model_dump() too, not just repr: a session serialized into a log would carry the key-bearing URL.
+        # Out of model_dump() too, not just repr: a session serialized into a
+        # log or an API response would otherwise carry the key-bearing URL.
         exclude=True,
         description="The provider's untouched response payload. Read it as an attribute; it is never serialized.",
     )
@@ -659,7 +661,8 @@ class BrowseRequest(NormalizedRequest):
     ] = None
     allowed_domains: Annotated[
         list[Annotated[str, Field(min_length=1)]] | None,
-        # An empty list reads as "no domain allowed" to one backend and "no restriction" to another: refused.
+        # An empty list would read as "no domain allowed" to one backend and
+        # "no restriction" to another, so it is refused rather than guessed at.
         Field(default=None, min_length=1, description="Keep the agent on these domains."),
     ] = None
 
@@ -739,25 +742,3 @@ class BrowseResponse(BaseModel):
     elapsed_s: ElapsedSeconds = None
     cost_usd: CostUsd = None
     cost_source: CostSourceField = None
-
-
-class BrowseProgress(BaseModel):
-    """Where one browse task stands, and its answer once it has one."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    job_id: str = Field(description="The backend's id for this task, which is what a later poll is keyed on.")
-    state: JobState
-    response: BrowseResponse | None = Field(
-        default=None,
-        description="The answer. Set exactly when `state` is 'completed'.",
-    )
-    detail: str | None = Field(
-        default=None,
-        description="Whatever the backend said about this state -- an error message, a progress note.",
-    )
-
-    @property
-    def is_terminal(self) -> bool:
-        """Whether this task has stopped, one way or another."""
-        return self.state not in ("queued", "running")

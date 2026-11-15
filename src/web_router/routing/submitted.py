@@ -46,7 +46,7 @@ def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedReque
     with budget_scope(None, tool, backend, request, router) as scope:
         job = backend.submit(request)
         job.decision = _charged(scope, record, job.provider)
-    job.stamp = partial(metered, tool=tool, request=request, started=started)
+    job.meter(partial(metered, tool=tool, request=request, started=started))
     return job
 
 
@@ -57,7 +57,7 @@ async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: Normali
     with budget_scope(None, tool, backend, request, router) as scope:
         job = await backend.asubmit(request)
         job.decision = _charged(scope, record, job.provider)
-    job.stamp = partial(metered, tool=tool, request=request, started=started)
+    job.meter(partial(metered, tool=tool, request=request, started=started))
     return job
 
 

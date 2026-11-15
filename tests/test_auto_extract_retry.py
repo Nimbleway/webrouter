@@ -15,6 +15,7 @@ from web_router.types import ExtractedDocument, ExtractFailure, ExtractRequest, 
 
 DOCS = "https://docs.example.org/authors/"
 GITHUB = "https://github.com/psf/requests/blob/main/AUTHORS.rst"
+NEWS = "https://news.example.org/story"
 TEXT = "A page with enough text in it to count as the page that was asked for, not a shell."
 
 
@@ -79,6 +80,25 @@ def test_a_url_the_first_member_failed_is_read_by_the_next(registered: list[str]
     assert second.calls == [[GITHUB]], "only the failed URL goes on"
     assert response.provider == "first", "the response names the member that answered first"
     assert response.raw == [{"from": "first"}, {"from": "second"}]
+
+
+def test_a_url_two_members_failed_is_read_by_the_third(registered: list[str]) -> None:
+    first = _member("first", refuses=frozenset({GITHUB, NEWS}))
+    second = _member("second", refuses=frozenset({GITHUB}))
+    third = _member("third")
+    auto = _chain(registered, first, second, third)
+    try:
+        response = auto.extract(ExtractRequest(urls=[DOCS, GITHUB, NEWS]))
+    finally:
+        auto.close()
+
+    assert [document.url for document in response.documents] == [DOCS, GITHUB, NEWS]
+    assert response.documents[1].content.startswith("third:")
+    assert response.documents[2].content.startswith("second:")
+    assert response.failures == []
+    assert second.calls == [[GITHUB, NEWS]], "the second pass is the URLs the first failed"
+    assert third.calls == [[GITHUB]], "the third pass is only what the second failed"
+    assert response.provider == "first"
 
 
 async def test_the_async_call_retries_the_same_way(registered: list[str]) -> None:

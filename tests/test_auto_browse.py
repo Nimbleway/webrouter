@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 import pytest
 
-from web_router import AsyncWebRouter, WebRouter
+from web_router import AsyncWebRouter, BrowseProgress, WebRouter
 from web_router.constants import (
     AUTO_BROWSE_PREFERRED,
     BROWSE_ENV_BY_PROVIDER,
@@ -28,7 +28,7 @@ from web_router.registry import (
     register_browse_provider,
     unregister_browse_provider,
 )
-from web_router.types import BrowseProgress, BrowseRequest
+from web_router.types import BrowseRequest
 
 TASK = BrowseRequest(task="find the cheapest flight")
 

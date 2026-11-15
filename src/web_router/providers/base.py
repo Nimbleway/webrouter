@@ -91,7 +91,6 @@ from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_win
 from web_router.providers._error_pages import split_error_pages
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.types import (
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -112,6 +111,7 @@ from web_router.types import (
     SearchResponse,
     StealthLevel,
 )
+from web_router.types_browse import BrowseProgress
 from web_router.types_live_data import LiveDataRequest, LiveDataResponse, LiveDataSource, LiveDataSourcePage
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
@@ -605,10 +605,9 @@ _ProgressT = TypeVar("_ProgressT", bound=JobProgress[Any])
 class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     """Base class for a method that is a *job* rather than a call.
 
-    The backend accepts the work, carries on with it for somewhere between a
-    minute and an hour, and answers when it is done. That shape is owned here
-    -- starting a run, backing off while it is polled, timing out, cancelling,
-    and turning a finished run into an answer or the reason there is none -- so
+    The backend accepts the work, carries on with it for somewhere between a minute and an hour, and answers when it
+    is done. That shape is owned here -- starting a run, backing off while it is polled, timing out, cancelling, and
+    turning a finished run into an answer or the reason there is none -- so
     a provider implements only how its API starts a run and how it reports one:
     :meth:`_start` and :meth:`_fetch`, plus their async counterparts.
 
@@ -616,32 +615,27 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     implements :meth:`submit` and :meth:`asubmit` to hand back its own :class:`Job`, says in :meth:`_timed_out` what
     giving up on a run raises, and may put its own words on the two messages below.
 
-    A backend that answers inside the request that started it implements
-    :meth:`_start` alone, returns a ``completed`` progress from it, and sets
-    :attr:`resumable` to ``False``.
+    A backend that answers inside the request that started it implements :meth:`_start` alone, returns a ``completed``
+    progress from it, and sets :attr:`resumable` to ``False``.
 
-    One thing the types do not hold: ``_ProgressT`` is bound to
-    ``JobProgress[Any]``, so mypy does not check that a progress's
-    ``response`` is a ``_ResponseT``. A method whose progress model carries
-    some other response type type-checks anyway, and it is the method's
-    progress model -- :class:`~web_router.ResearchProgress` typing ``response``
-    as :class:`~web_router.ResearchResponse` -- that keeps the two in step.
+    One thing the types do not hold: ``_ProgressT`` is bound to ``JobProgress[Any]``, so mypy does not check that a
+    progress's ``response`` is a ``_ResponseT``. A method whose progress model carries some other response type
+    type-checks anyway, and it is the method's progress model -- :class:`~web_router.ResearchProgress` typing
+    ``response`` as :class:`~web_router.ResearchResponse` -- that keeps the two in step.
     """
 
     resumable: ClassVar[bool] = True
     """Whether a run can be polled after the call that started it returned.
 
-    ``False`` for a backend that does the whole run inside one request, which
-    has no id to come back to. Waiting for the answer works either way; only
-    handing the job around afterwards needs this.
+    ``False`` for a backend that does the whole run inside one request, which has no id to come back to. Waiting for
+    the answer works either way; only handing the job around afterwards needs this.
     """
 
     _failed_message: ClassVar[str] = MSG_JOB_FAILED
     """How a wrapped backend failure reads, with the original as ``{error}``.
 
-    Defaulted rather than required, so a method that forgets to name its own
-    still reports the backend's failure instead of an ``AttributeError`` from
-    inside the error path.
+    Defaulted rather than required, so a method that forgets to name its own still reports the backend's failure
+    instead of an ``AttributeError`` from inside the error path.
     """
 
     _not_resumable_message: ClassVar[str] = MSG_JOB_NOT_RESUMABLE
@@ -665,9 +659,8 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     def _fetch(self, request: _RequestT, job_id: str) -> _ProgressT:
         """Report where a started run is now, with the answer once it has one.
 
-        The default refuses, which is right for a backend that has no run to
-        come back to. Any backend whose :attr:`resumable` is ``True`` overrides
-        this.
+        The default refuses, which is right for a backend that has no run to come back to. Any backend whose
+        :attr:`resumable` is ``True`` overrides this.
         """
         raise ProviderError(self.name, self._not_resumable_message.format(provider=self.name))
 
@@ -751,9 +744,8 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     def state_of(self, reported: str, states: Mapping[str, JobState]) -> JobState:
         """Translate a backend's own run status through its table.
 
-        A status the table does not list raises rather than being passed
-        through: an unrecognized state is a backend that has changed under us,
-        and treating it as "still running" would poll a finished job forever.
+        A status the table does not list raises rather than being passed through: an unrecognized state is a backend
+        that has changed under us, and treating it as "still running" would poll a finished job forever.
         """
         return _translate_state(self.name, reported, states, MSG_JOB_UNKNOWN_STATE)
 
@@ -853,13 +845,13 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     def status(self) -> _ProgressT:
         """Ask the backend where the run is now; a finished run is not asked again, and its last progress stands."""
         if not self._progress.is_terminal:
-            self._progress = self._provider.poll(self._request, self.job_id)
+            self._progress = self._stamped(self._provider.poll(self._request, self.job_id))
         return self._progress
 
     async def astatus(self) -> _ProgressT:
         """Async counterpart of :meth:`status`."""
         if not self._progress.is_terminal:
-            self._progress = await self._provider.apoll(self._request, self.job_id)
+            self._progress = self._stamped(await self._provider.apoll(self._request, self.job_id))
         return self._progress
 
     def result(self, *, timeout: float | _Default | None = _Default.TIMEOUT) -> _ResponseT:
@@ -968,10 +960,18 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
         if self.decision is not None and cast(Any, response).decision is not self.decision:  # copied once, then kept
             response = cast(Any, response).model_copy(update={"decision": self.decision})
             self._progress = cast(Any, progress).model_copy(update={"response": response})
-        if self.stamp is not None:  # once: asking again must not move the clock
-            response, self.stamp = self.stamp(response), None
-            self._progress = cast(Any, progress).model_copy(update={"response": response})
         return response
+
+    def meter(self, stamp: Callable[[Any], Any]) -> None:
+        """Put ``stamp`` on the answer once, as soon as the run has one: now, or when a poll first sees it."""
+        self.stamp = stamp
+        self._progress = self._stamped(self._progress)
+
+    def _stamped(self, progress: _ProgressT) -> _ProgressT:
+        if self.stamp is None or progress.response is None:
+            return progress
+        response, self.stamp = self.stamp(progress.response), None  # once: asking again must not move the clock
+        return cast(_ProgressT, cast(Any, progress).model_copy(update={"response": response}))
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__} provider={self.provider!r} job_id={self.job_id!r} state={self.state!r}>"
@@ -980,16 +980,13 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
 class ResearchProvider(JobProvider[ResearchRequest, ResearchProgress, ResearchResponse]):
     """Base class for an agentic research backend.
 
-    Research is a *job* rather than a call: the backend accepts the question,
-    works on it for somewhere between a minute and an hour, and answers when it
-    is done. That shape is owned by :class:`JobProvider`, so a provider
-    implements only how its API starts a run and how it reports one --
-    :meth:`_start` and :meth:`_fetch`, plus their async counterparts -- and
-    every backend then waits, times out and reports the same way.
+    Research is a *job* rather than a call: the backend accepts the question, works on it for somewhere between a
+    minute and an hour, and answers when it is done. That shape is owned by :class:`JobProvider`, so a provider
+    implements only how its API starts a run and how it reports one -- :meth:`_start` and :meth:`_fetch`, plus their
+    async counterparts -- and every backend then waits, times out and reports the same way.
 
-    A backend that answers inside the request that started it -- Perplexity's
-    deep research model is one -- implements :meth:`_start` alone, returns a
-    ``completed`` progress from it, and sets :attr:`resumable` to ``False``.
+    A backend that answers inside the request that started it -- Perplexity's deep research model is one -- implements
+    :meth:`_start` alone, returns a ``completed`` progress from it, and sets :attr:`resumable` to ``False``.
     """
 
     _failed_message = MSG_RESEARCH_FAILED
@@ -1026,14 +1023,12 @@ class ResearchProvider(JobProvider[ResearchRequest, ResearchProgress, ResearchRe
     def validate(self, request: ResearchRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map.
 
-        ``output_schema`` and ``records`` are ordinary options here rather than
-        special cases: a backend with no structured output simply does not
-        declare ``output_schema``, and asking it for one says so in the same
+        ``output_schema`` and ``records`` are ordinary options here rather than special cases: a backend with no
+        structured output simply does not declare ``output_schema``, and asking it for one says so in the same
         sentence a backend that cannot geo-target a search does.
 
-        Then the backend's own conditions, through :meth:`missing_parameters` and
-        :meth:`refused_values`: an option it maps only alongside another, or at
-        some values. Raised before a run starts, so nothing is billed for it.
+        Then the backend's own conditions, through :meth:`missing_parameters` and :meth:`refused_values`: an option it
+        maps only alongside another, or at some values. Raised before a run starts, so nothing is billed for it.
         """
         self._reject_unmapped(request)
         self._check_conditions(request)

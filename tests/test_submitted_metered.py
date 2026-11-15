@@ -32,3 +32,9 @@ def test_a_submitted_job_answers_with_its_time_and_cost() -> None:
 def test_asking_again_keeps_the_first_clock() -> None:
     job = WebRouter().submit_research("q", provider="nimble")
     assert job.result().elapsed_s == job.result().elapsed_s
+
+
+def test_a_polled_answer_carries_its_time_too() -> None:
+    job = WebRouter().submit_research("q", provider="nimble", effort="low")
+    assert job.status().response is not None and job.status().response.elapsed_s is not None
+    assert job.progress.response is not None and job.progress.response.elapsed_s == job.result().elapsed_s
