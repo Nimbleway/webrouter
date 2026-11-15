@@ -1,6 +1,6 @@
 """One budgeted call's ledger: whether each attempt fits what is left, and what the call spent.
 
-Experimental. :func:`~web_router.routing.budget.budget_scope` keeps one per
+:func:`~web_router.routing.budget.budget_scope` keeps one per
 call and asks :meth:`Ledger.admit` before every attempt, ``auto``'s members
 and a named backend alike.
 

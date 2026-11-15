@@ -14,7 +14,7 @@ import pytest
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 
 ROOT = Path(__file__).resolve().parent.parent
-GUIDES = (ROOT / "skills" / "web-router" / "SKILL.md", ROOT / "docs" / "agent-prompt.md")
+GUIDES = (ROOT / "skills" / "web-router" / "SKILL.md", ROOT / "docs" / "agent-prompt.mdx")
 
 UNNAMED: dict[str, str] = {}
 """Tools a guide may leave out, each with why. Empty: every tool is worth a line."""

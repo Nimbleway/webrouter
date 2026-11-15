@@ -1,6 +1,6 @@
 """Routing: the contract between web-router and a router that picks a call's method and backends.
 
-Experimental: every name here may change before 1.0.
+Experimental: every name here may change before 1.0, except :class:`Budget`, which is stable.
 
 A router is the caller's code. web-router shows it a :class:`RouteRequest` --
 the prompt, the (tool, provider) candidates that could serve it with their

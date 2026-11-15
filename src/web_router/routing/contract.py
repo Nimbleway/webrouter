@@ -1,6 +1,7 @@
 """The router contract's types: what a router is shown, and what it may answer.
 
-Experimental: every name here may change before 1.0.
+:class:`Budget` is stable; the router's types -- :class:`Candidate`, :class:`RouteRequest`,
+:class:`RouteDecision` and :class:`Plan` -- are experimental and may change before 1.0.
 """
 
 from __future__ import annotations
@@ -91,7 +92,7 @@ class Candidate:
     """The backend that would serve it, by registry name."""
 
     est_cost_usd: float | None = None
-    """Its estimated cost in US dollars, at list price. ``None`` when unknown or billed by tokens."""
+    """Its estimated cost in US dollars, at list price, or a token-billed backend's measured mean; ``None`` unknown."""
 
     est_latency_s: float | None = None
     """Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured."""

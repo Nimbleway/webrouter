@@ -1,6 +1,5 @@
 """The price list's fixed values: where it ships, how a unit divides, its messages, and how PRICING.md shows it.
 
-Experimental: :mod:`web_router.prices` is new and its shape may change before 1.0.
 Kept apart from :mod:`web_router.constants`, so that file stops growing.
 """
 

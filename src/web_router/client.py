@@ -289,7 +289,7 @@ class WebRouter(
 
     Build one per process and share it across threads; close it (or use it as a context manager) when done.
 
-    ``budget=`` caps one call and :meth:`budget` several (experimental): see :mod:`web_router.routing.budget`.
+    ``budget=`` caps one call and :meth:`budget` several: see :mod:`web_router.routing.budget`.
     """
 
     def __init__(

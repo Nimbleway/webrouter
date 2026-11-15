@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping
 from contextlib import contextmanager
+from time import monotonic
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
@@ -33,16 +34,19 @@ from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
+from web_router.routing.cost_order import cost_route
 from web_router.routing.decide import decided
 from web_router.routing.effort_call import Only, named, unrouted, with_record
 from web_router.routing.in_loop import warn_if_in_loop
 from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
+from web_router.routing.metered import metered
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
 from web_router.routing.route_tools import ALL_TOOLS, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
+from web_router.spend_record import SpendSinkHolder
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
@@ -53,7 +57,7 @@ _TOOL_OF: dict[type[NormalizedRequest], ToolName] = {cls: tool for tool, cls in 
 """The tool a request is for, read from its type."""
 
 
-class RouterSetup(RouterOwner):
+class RouterSetup(RouterOwner, SpendSinkHolder):
     """The attached router and the tools it is consulted on, shared by both routers."""
 
     _router: AttachedRouter | None = None
@@ -123,10 +127,13 @@ class RouterSetup(RouterOwner):
         routed: tuple[RouteRequest, CandidateSet] | None,
         outcome: RouterOutcome | None,
     ) -> tuple[CallRoute | None, _RequestT, DecisionRecord | None]:
-        """The order in force, the request and the record: the router's merged, or with none the budget's effort."""
+        """The order in force, the request and the record: the router's merged, else the budget's effort and order."""
         if routed is None or outcome is None:
             request, mapped = unrouted(chain, request, budget)
-            return None, request, mapped
+            route, ordered = cost_route(chain, _TOOL_OF[type(request)], request, budget)
+            if ordered is not None:
+                mapped = ordered if mapped is None else mapped.model_copy(update={"merged": ordered.merged})
+            return route, request, mapped
         return self._merged(routed, outcome, request)
 
     def _merged(
@@ -163,16 +170,19 @@ class SyncRouted(RouterSetup):
     ) -> _ResponseT:
         """Run ``call``, which calls ``chain``, in ``budget``'s scope.
 
-        A routed call runs in the order the router chose, and its response records how.
+        A routed call runs in the order the router chose, and its response records how. Every response
+        carries what the call took and cost (:func:`~.metered.metered`).
         """
-        warn_if_in_loop(_TOOL_OF[type(request)])
+        started, tool = monotonic(), _TOOL_OF[type(request)]
+        warn_if_in_loop(tool)
         request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
-        with lent(self._runtime), budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
+        with lent(self._runtime), budget_scope(budget, tool, chain, request, self) as scope:
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged, noting(self._runtime, chain) as noted:
-                return logged.settle(with_record(noted(call(request)), record or chosen))
+                answered = logged.settle(with_record(noted(call(request)), record or chosen))
+        return self._spent(metered(answered, tool, request, started), tool)
 
 
 class AsyncRouted(RouterSetup):
@@ -184,10 +194,12 @@ class AsyncRouted(RouterSetup):
         call: Callable[[_RequestT], Awaitable[_ResponseT]],
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
+        started, tool = monotonic(), _TOOL_OF[type(request)]
         request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
-        with lent(self._runtime), budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
+        with lent(self._runtime), budget_scope(budget, tool, chain, request, self) as scope:
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged, noting(self._runtime, chain) as noted:
-                return logged.settle(with_record(noted(await call(request)), record or chosen))
+                answered = logged.settle(with_record(noted(await call(request)), record or chosen))
+        return self._spent(metered(answered, tool, request, started), tool)

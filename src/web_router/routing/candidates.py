@@ -1,6 +1,6 @@
 """The candidates a call offers a router: every (tool, provider) web-router can serve it with.
 
-Experimental. :func:`build_candidates` reads each method's ``auto`` -- the
+:func:`build_candidates` reads each method's ``auto`` -- the
 chain it would try, a configured ``chain`` included -- and keeps the members
 its ``_eligible`` keeps, read by :mod:`web_router.routing.eligible`: only those
 that map every option the request sets, so a candidate is never one the call

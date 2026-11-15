@@ -1,4 +1,8 @@
-# The web-router MCP server
+---
+title: "MCP server"
+description: "Run web-router as a self-hosted stdio MCP server for Claude Code, Claude Desktop, Cursor, Codex and any MCP client: install, keys, tools, browser guards, routing and budgets."
+icon: "server"
+---
 
 A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
 Desktop, Cursor, anything that speaks MCP — the methods this package
@@ -124,7 +128,7 @@ carry the keys themselves too — `"TAVILY_API_KEY": "tvly-..."` — and a varia
 the client exports always keeps its value over any file's.
 
 Whichever file it is, only the provider credentials listed in
-[`.env.example`](../.env.example) are taken from it. A switch such as
+[`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) are taken from it. A switch such as
 `WEB_ROUTER_MCP_ALLOW_FILE_URLS` or `CHROME_PATH` in a file is ignored, because
 a server registered at user scope starts in any workspace and that workspace's
 file is not whoever runs the server; `${...}` is not expanded, so a file cannot
