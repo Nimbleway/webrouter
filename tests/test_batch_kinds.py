@@ -73,3 +73,12 @@ def test_a_retry_reads_by_the_exact_url_asked_for() -> None:
     lone = ExtractResponse(provider="one", failures=[ExtractFailure(url=page, error="down")])
     rewritten = ExtractResponse(provider="two", documents=[ExtractedDocument(url=slashed, content="hi")])
     assert _merged(lone, rewritten, [page]).failures == []
+
+
+@pytest.mark.parametrize("provider", ["apify", "brightdata", "oxylabs"])
+def test_an_unknown_live_data_source_is_not_found_and_not_retried(provider: str) -> None:
+    from web_router.exceptions_live_data import LiveDataSourceNotFoundError
+
+    error = LiveDataSourceNotFoundError(provider, "no-such-source")
+    assert error.kind == "not_found"
+    assert error.retryable is False

@@ -76,6 +76,7 @@ ERROR_KIND_LOCAL: Final[ProviderErrorKind] = "local"
 ERROR_KIND_TARGET: Final[ProviderErrorKind] = "target"
 ERROR_KIND_UPSTREAM: Final[ProviderErrorKind] = "upstream"
 ERROR_KIND_TIMEOUT: Final[ProviderErrorKind] = "timeout"
+ERROR_KIND_NOT_FOUND: Final[ProviderErrorKind] = "not_found"
 _RECOVERABLE_FIRST: Final[tuple[ProviderErrorKind, ...]] = (ERROR_KIND_UPSTREAM, ERROR_KIND_TIMEOUT, "rate_limit")
 """The kinds a mixed batch takes, most recoverable first: another backend may read what these failed."""
 
