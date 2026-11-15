@@ -53,10 +53,10 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.constants_browse import BUILTIN_BROWSE_PROVIDERS, BUILTIN_BROWSER_PROVIDERS
+from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as _SEARCH_SETTINGS
 from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
 from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
-from web_router.providers._litellm import can_start
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:
@@ -245,13 +245,13 @@ def configured_providers() -> list[str]:
     This reads environment variables only. A key passed as ``provider_config``
     is invisible here, and a key that is present may still be rejected by the
     service -- so treat this as "worth trying", not as a guarantee, and let the
-    provider itself raise when a credential is actually missing or bad. A LiteLLM proxy provider is reported
-    only with its key and a proxy URL safe to send that key to.
+    provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside
+    its credential -- a LiteLLM proxy's URL -- is reported only when it has both.
     """
     return sorted(
         name
         for name, env_var in ENV_BY_PROVIDER.items()
-        if (env_var is None or _is_set(env_var)) and can_start(name, {})
+        if (env_var is None or _is_set(env_var)) and all(map(_is_set, _SEARCH_SETTINGS.get(name, ())))
     )
 
 

@@ -10,11 +10,7 @@ import os
 from collections.abc import Mapping
 from typing import Any
 
-from web_router.constants_litellm import (
-    ENV_LITELLM_PROXY_API_BASE,
-    ENV_LITELLM_PROXY_API_KEY,
-    LITELLM_SEARCH_SETTINGS_BY_PROVIDER,
-)
+from web_router.constants_litellm import ENV_LITELLM_PROXY_API_BASE, ENV_LITELLM_PROXY_API_KEY
 from web_router.exceptions import ConfigurationError
 from web_router.routing.remote_url import checked_url
 
@@ -37,9 +33,3 @@ def ready_in_code(config: Mapping[str, Any]) -> bool:
     key = config.get("api_key") or (os.environ.get(ENV_LITELLM_PROXY_API_KEY) or "").strip()
     url = config.get("base_url") or os.environ.get(ENV_LITELLM_PROXY_API_BASE) or ""
     return bool(key and isinstance(url, str) and url.strip() and safe_proxy_url(url.strip()))
-
-
-def can_start(name: str, config: Mapping[str, Any]) -> bool:
-    """``False`` only for a LiteLLM search provider that ``config`` and the environment leave without a key or a
-    safe proxy URL; every other backend is left to its own rule."""
-    return name not in LITELLM_SEARCH_SETTINGS_BY_PROVIDER or ready_in_code(config)
