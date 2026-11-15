@@ -54,5 +54,5 @@ def test_the_hint_is_added_once_through_pickling(project: Path) -> None:
 
 
 def test_no_hint_from_an_oversized_dotenv(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("web_router._dotenv.DOTENV_MAX_BYTES", 8)
+    monkeypatch.setattr("web_router._dotenv.MCP_ENV_FILE_MAX_BYTES", 8)
     assert dotenv_hint(f"Set the {KEY} environment variable.") == ""

@@ -3,6 +3,7 @@
 The library reads the process environment only (the MCP server loads a ``.env`` into it; nothing else does).
 Agents and people alike put keys in a ``.env`` and then read "No API key" as a broken setup. When the
 variable an error names is set in the nearest ``.env`` but missing from the environment, the error says so.
+The file is parsed by hand because python-dotenv is only in the ``mcp`` extra.
 """
 
 from __future__ import annotations
@@ -11,7 +12,8 @@ import os
 import re
 from pathlib import Path
 
-from web_router.constants_dotenv import DOTENV_FILENAME, DOTENV_MAX_BYTES, MSG_DOTENV_NOT_READ, MSG_DOTENV_PREFIX
+from web_router.constants import MCP_ENV_FILE_MAX_BYTES
+from web_router.constants_dotenv import DOTENV_FILENAME, MSG_DOTENV_NOT_READ, MSG_DOTENV_PREFIX
 
 _ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
 _VARIABLE = re.compile(r"\b[A-Z][A-Z0-9_]*\b")
@@ -41,7 +43,7 @@ def _value(raw: str) -> str:
 def _set_in(path: Path) -> set[str]:
     """The variables ``path`` gives a non-empty value; an unreadable or oversized file sets none."""
     try:
-        if path.stat().st_size > DOTENV_MAX_BYTES:
+        if path.stat().st_size > MCP_ENV_FILE_MAX_BYTES:
             return set()
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
@@ -60,3 +62,10 @@ def dotenv_hint(message: str, start: Path | None = None) -> str:
     unread = _set_in(path) - {name for name, value in os.environ.items() if value.strip()}
     named = next((name for name in _VARIABLE.findall(message) if name in unread), None)
     return "" if named is None else MSG_DOTENV_NOT_READ.format(path=path, env_var=named)
+
+
+def with_dotenv_hint(args: tuple[object, ...]) -> tuple[object, ...]:
+    """``args`` with the hint appended when they are a single message string."""
+    if len(args) == 1 and isinstance(args[0], str):
+        return (args[0] + dotenv_hint(args[0]),)
+    return args

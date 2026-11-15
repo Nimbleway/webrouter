@@ -8,9 +8,6 @@ from __future__ import annotations
 DOTENV_FILENAME = ".env"
 """The file the hint looks for, in the working directory and then each parent."""
 
-DOTENV_MAX_BYTES = 1 << 20
-"""A ``.env`` larger than this is not read for the hint: no key file is that big."""
-
 MSG_DOTENV_PREFIX = " A .env exists at "
 """How the hint starts, and how an error already carrying it is told apart (an unpickled one)."""
 
