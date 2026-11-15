@@ -37,9 +37,9 @@ Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra ti
 ...
 ```
 
-With `provider` unset, `auto` tries the answer backends you hold keys for in
-ranked order and passes over one that fails or answers with nothing; each one it
-tries bills. To pin one, name it: `router.answer(q, provider="linkup")`.
+On a router built with no default, `provider` unset runs `auto`: it tries the
+answer backends you hold keys for in ranked order and passes over one that fails
+or answers with nothing; each one it tries bills. To pin one, name it: `router.answer(q, provider="linkup")`.
 Which one: they score alike on accuracy (see [the answer comparison](/providers#answer)), so pick
 on what you need -- Linkup had the lowest median latency in that scan (0.9 s); Perplexity, You.com
 and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
