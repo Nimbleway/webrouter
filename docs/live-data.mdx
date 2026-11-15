@@ -65,7 +65,7 @@ result = router.live_data(
 
 | Backend | Key | A source is named | Inputs |
 | --- | --- | --- | --- |
-| [Nimble](https://docs.nimbleway.com/api-reference/extract/extract-templates) (`nimble`) | `NIMBLE_API_KEY` | the Extract Template's name, `walmart_pdp` | the template's own (`product_id`, `url`…) |
+| [Nimble](https://docs.nimbleway.com/api-reference/extract-templates-api/run-extract-template) (`nimble`) | `NIMBLE_API_KEY` | the Extract Template's name, `walmart_pdp` | the template's own (`product_id`, `url`…) |
 | [Apify](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) (`apify`) | `APIFY_TOKEN` | the Actor, `username~name` (or `username/name`) | the Actor's input, sent untouched |
 | [Bright Data](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) (`brightdata`) | `BRIGHTDATA_API_TOKEN` | the dataset id `gd_l7q7dkf244hwjntr0`, or the scraper's name, `amazon_products` | one input object, `{"url": ...}` or `{"keyword": ...}` |
 | [Oxylabs](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) (`oxylabs`) | `OXYLABS_WEB_API_KEY` | the scraper's path, `amazon/product` | the scraper's own (`query` or `url`, plus `domain`, `locale`…) |
