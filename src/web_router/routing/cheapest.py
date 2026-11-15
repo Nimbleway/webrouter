@@ -30,15 +30,10 @@ def cheapest_first(req: RouteRequest) -> RouteDecision:
     for candidate in req.candidates:
         by_tool[candidate.tool].append(candidate)
     providers = {
-        tool: [candidate.provider for candidate in sorted(candidates, key=_price_key)]
+        tool: [candidate.provider for candidate in sorted(candidates, key=lambda c: cost_key(c.est_cost_usd))]
         for tool, candidates in by_tool.items()
     }
     return RouteDecision(providers=providers, reason=CHEAPEST_REASON)
-
-
-def _price_key(candidate: Candidate) -> tuple[bool, float]:
-    """Known prices first, cheapest first; ``sorted`` is stable, so equal prices keep the offered order."""
-    return cost_key(candidate.est_cost_usd)
 
 
 def cheapest_router() -> RouterLike:

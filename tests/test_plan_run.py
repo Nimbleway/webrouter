@@ -118,8 +118,9 @@ def test_run_writes_the_spend_log(called: list[str]) -> None:
     entries: list[SpendEntry] = []
     wr = _wr(router=chooser("search"))
     wr.log_spend(type("Kept", (), {"record": lambda _self, entry: entries.append(entry)})())
-    wr.run(PROMPT)
+    response = wr.run(PROMPT)
     assert [(entry.method, entry.provider) for entry in entries] == [("search", "third")]
+    assert response.elapsed_s is not None and entries[0].elapsed_s == response.elapsed_s, "metered as any call is"
 
 
 async def test_async_run_writes_the_spend_log(called: list[str]) -> None:

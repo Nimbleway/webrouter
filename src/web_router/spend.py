@@ -20,16 +20,17 @@ A sink that raises does not fail the call: the router logs a warning on the
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from collections.abc import Iterable, Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Literal, Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from web_router.constants_cost import COST_REPORTED
-from web_router.constants_spend import MSG_SPEND_REPORT_KEY, SPEND_REPORT_KEYS
+from web_router.constants_spend import MSG_SPEND_LINE_SKIPPED, MSG_SPEND_REPORT_KEY, SPEND_REPORT_KEYS
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.types_cost import CostSource
 
@@ -105,12 +106,21 @@ class SpendLog:
             return []
         with self._lock:
             lines = self.path.read_text(encoding="utf-8").splitlines()
-        read = [SpendEntry.model_validate(json.loads(line)) for line in lines if line.strip()]
+        read = [entry for line in lines if line.strip() and (entry := _parsed(line)) is not None]
         return [entry for entry in read if since is None or entry.day >= since]
 
     def report(self, by: Sequence[SpendKey] = DEFAULT_KEYS, since: date | None = None) -> list[SpendRow]:
         """The log summed by ``by``, as :func:`spend_report` sums it."""
         return spend_report(self.entries(since), by)
+
+
+def _parsed(line: str) -> SpendEntry | None:
+    """The entry one log line holds; ``None``, with a warning, for a line an interrupted write left unfinished."""
+    try:
+        return SpendEntry.model_validate(json.loads(line))
+    except (ValueError, ValidationError):
+        logging.getLogger("web_router").warning(MSG_SPEND_LINE_SKIPPED, line)
+        return None
 
 
 def spend_report(entries: Iterable[SpendEntry], by: Sequence[SpendKey] = DEFAULT_KEYS) -> list[SpendRow]:

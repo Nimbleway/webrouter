@@ -118,3 +118,13 @@ def test_a_file_log_reads_back_from_a_day_on(tmp_path: Path) -> None:
     for entry in (_entry(1, "exa", "answer", 0.005), _entry(3, "exa", "answer", 0.005)):
         log.record(entry)
     assert [row.key["day"] for row in log.report(by=["day"], since=date(2026, 11, 2))] == ["2026-11-03"]
+
+
+def test_a_line_left_unfinished_is_skipped_and_the_rest_read(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    log = SpendLog(tmp_path / "spend.jsonl")
+    log.record(_entry(1, "fake", "search", 0.01))
+    with (tmp_path / "spend.jsonl").open("a", encoding="utf-8") as file:
+        file.write('{"at": "2026-11-02T12:00')
+    with caplog.at_level(logging.WARNING, logger="web_router"):
+        assert [entry.provider for entry in log.entries()] == ["fake"]
+    assert "not a whole entry" in caplog.text
