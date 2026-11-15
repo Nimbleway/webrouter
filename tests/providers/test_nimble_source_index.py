@@ -85,3 +85,9 @@ def test_a_claim_wrapped_across_lines_keeps_its_whole_passage() -> None:
     answer = f"{prose}Source index:\n\n- [1] Summary — {SUMMARY}\n"
     (cited,) = [c for c in research_citations(answer, {"sources": SOURCES[:1]}) if c.url == SUMMARY]
     assert cited.extra[ANSWER_PASSAGES] == ["A fact based on source [1].", "an item that wraps [1]"]
+
+
+def test_punctuation_after_an_index_url_is_not_part_of_it() -> None:
+    answer = f"A fact [1].\n\nSource index:\n\n- [1] Summary — {SUMMARY}.\n"
+    (cited,) = [c for c in research_citations(answer, {"sources": SOURCES[:1]}) if c.url == SUMMARY]
+    assert cited.field == "[1]"

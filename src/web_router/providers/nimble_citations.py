@@ -88,6 +88,7 @@ def _index_markers(answer: str) -> dict[str, tuple[str, list[str]]]:
     body, index = answer[: heading.start()], answer[heading.end() :]
     markers: dict[str, tuple[str, list[str]]] = {}
     for number, url in NIMBLE_INDEX_ENTRY.findall(index):
+        url = url.rstrip(".,;:")  # punctuation after a URL closes the sentence, not the address
         marker = NIMBLE_MARKER.format(number=number)
         passages = _citing(body, marker)
         if passages and url not in markers:
