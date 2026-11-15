@@ -40,12 +40,11 @@ from web_router.providers._chain import (
     _empty_answer,
     _held_or_raise,
     _keyed_chain,
-    _member_options,
-    _Members,
     _members_and_chain,
     _quoted,
 )
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers._members import _Members
 from web_router.providers.answer import AnswerProvider
 from web_router.routing.attempts import admitted, failed, in_call_order, noted
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
@@ -119,10 +118,7 @@ class AutoAnswerProvider(AnswerProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry_answer import create_answer_provider
 
-        name, options = self._chain[position]
-        return self._members.built(
-            position, lambda: create_answer_provider(name, **_member_options(self._members_config, name, options))
-        )
+        return self._members.member(position, self._chain, self._members_config, create_answer_provider)
 
     def _answer(self, request: AnswerRequest) -> AnswerResponse:
         failures: dict[str, WebRouterError] = {}

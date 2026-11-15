@@ -108,8 +108,6 @@ from web_router.providers._chain import (
     _held_or_raise,
     _keyed_chain,
     _keyless_after,
-    _member_options,
-    _Members,
     _members_and_chain,
     _no_backend,
     _nothing_started,
@@ -117,6 +115,7 @@ from web_router.providers._chain import (
     _valued,
 )
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers._members import _Members
 from web_router.providers.auto_browser import AutoBrowserProvider as AutoBrowserProvider
 from web_router.providers.base import (
     BrowseJob,
@@ -206,10 +205,7 @@ class AutoProvider(SearchProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_provider
 
-        name, options = self._chain[position]
-        return self._members.built(
-            position, lambda: create_provider(name, **_member_options(self._members_config, name, options))
-        )
+        return self._members.member(position, self._chain, self._members_config, create_provider)
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         failures: dict[str, WebRouterError] = {}
@@ -366,10 +362,7 @@ class AutoExtractProvider(ExtractProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_extract_provider
 
-        name, options = self._chain[position]
-        return self._members.built(
-            position, lambda: create_extract_provider(name, **_member_options(self._members_config, name, options))
-        )
+        return self._members.member(position, self._chain, self._members_config, create_extract_provider)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         delegated = self._delegated(request, urls)
@@ -474,10 +467,7 @@ class AutoResearchProvider(ResearchProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_research_provider
 
-        name, options = self._chain[position]
-        return self._members.built(
-            position, lambda: create_research_provider(name, **_member_options(self._members_config, name, options))
-        )
+        return self._members.member(position, self._chain, self._members_config, create_research_provider)
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
         eligible = self._eligible(request)
@@ -674,10 +664,7 @@ class AutoBrowseProvider(BrowseProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_browse_provider
 
-        name, options = self._chain[position]
-        return self._members.built(
-            position, lambda: create_browse_provider(name, **_member_options(self._members_config, name, options))
-        )
+        return self._members.member(position, self._chain, self._members_config, create_browse_provider)
 
     def _start(self, request: BrowseRequest) -> BrowseProgress:
         failures: dict[str, WebRouterError] = {}
