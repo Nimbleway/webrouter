@@ -97,8 +97,10 @@ class SpendLog:
         line = entry.model_dump_json() + "\n"
         with self._lock:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            with self.path.open("a", encoding="utf-8") as file:
-                file.write(line)
+            with self.path.open("a+b") as file:
+                if file.seek(0, 2) and (file.seek(-1, 2), file.read(1))[1] != b"\n":
+                    line = "\n" + line  # a write cut short left the last line open: never join the next one to it
+                file.write(line.encode("utf-8"))
 
     def entries(self, since: date | None = None) -> list[SpendEntry]:
         """Every entry, oldest first; from ``since`` (a UTC day) on when it is set. A missing file has none."""
