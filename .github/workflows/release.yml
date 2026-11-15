@@ -76,6 +76,11 @@ jobs:
           fi
           echo "Building webrouter $version"
 
+      - name: server.json must name this version
+        # Checked before PyPI, since the registry job after it lists server.json
+        # as it is on this tag.
+        run: scripts/check_server_json.sh "$TAG"
+
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: false
@@ -165,3 +170,13 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+  mcp-registry:
+    # Once PyPI has the release, list it in the MCP Registry.
+    needs: publish
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/mcp-registry.yml
+    with:
+      tag: ${{ inputs.tag }}
