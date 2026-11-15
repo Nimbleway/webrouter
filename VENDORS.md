@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-363 vendors, 2675 endpoints.
+363 vendors, 2674 endpoints.
 
 ### advertising
 
@@ -279,7 +279,7 @@ Web, news and archive search.
 | [Seltz](https://docs.seltz.ai/) `seltz` | Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports. | 7 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
 | [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
-| [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 9 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
+| [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 8 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
 | [Wikipedia](https://www.mediawiki.org/wiki/API:Main_page) `wikipedia` | Keyless Wikipedia search, plain-text article extracts, page source and HTML, revision history, language links and file info through the MediaWiki APIs. | 9 read | none | none | docs 2026-11-09 |
 
 ### scraping

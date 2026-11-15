@@ -13,10 +13,12 @@ from datetime import date
 import httpx
 import pytest
 
+from web_router.constants_valyu import VALYU_SEARCH_PATH
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers._clock import pinned_today
 from web_router.providers.valyu import ValyuProvider
 from web_router.types import SearchRequest
+from web_router.vendors.catalog import builtin_catalog
 
 DOCUMENTED = {
     "success": True,
@@ -156,3 +158,8 @@ def test_live_search_returns_web_results() -> None:
     response = ValyuProvider().search(SearchRequest(query="python asyncio tutorial", max_results=3))
     assert 0 < len(response.results) <= 3
     assert all(result.url.startswith("http") for result in response.results)
+
+
+def test_the_vendor_catalog_leaves_web_search_to_the_backend() -> None:
+    endpoints = builtin_catalog().vendor("valyu").endpoints
+    assert all(endpoint.path != VALYU_SEARCH_PATH for endpoint in endpoints)
