@@ -40,8 +40,8 @@ holding it ends:
     ...     tree = browser.snapshot().tree
 """
 
-from web_router import _logging as _logging  # installs the package logger's NullHandler; see docs/production.mdx
 from web_router import _exports_registry
+from web_router import _logging as _logging  # installs the package logger's NullHandler; see docs/production.mdx
 from web_router import live_data_compat as _live_data_compat
 from web_router._exports_registry import *  # noqa: F403  (the registry's names, in its __all__)
 from web_router._version import __version__

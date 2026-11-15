@@ -19,8 +19,7 @@ budget's research effort -- and recorded on the response's ``decision``.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Collection, Iterator, Mapping
-from contextlib import contextmanager
+from collections.abc import Awaitable, Callable, Collection, Mapping
 from time import monotonic
 from typing import Any, TypeVar
 
@@ -30,8 +29,8 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_invoke import ROUTER_URL_POLICY_ATTR
 from web_router.providers._cooldown import noting
 from web_router.providers._runtime import Runtime, lent
-from web_router.routing.attempts import CallRoute, in_route
-from web_router.routing.budget import BudgetedCall, budget_scope, recorded
+from web_router.routing.attempts import CallRoute
+from web_router.routing.budget import budget_scope
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
 from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.cost_order import cost_route
@@ -43,6 +42,7 @@ from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.metered import metered
 from web_router.routing.pool import limited
 from web_router.routing.record import prompt_of
+from web_router.routing.route_scope import logged_route
 from web_router.routing.route_tools import ALL_TOOLS, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
@@ -150,16 +150,6 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         return CallRoute(order={out.tool: out.providers}), request, out.record
 
 
-@contextmanager
-def _logged(scope: BudgetedCall[Any], route: CallRoute | None) -> Iterator[BudgetedCall[Any]]:
-    """``route`` in force beside the budget's hook, and a ledger logging its attempts; nothing for an unrouted call."""
-    if route is None:
-        yield scope
-        return
-    with recorded(scope) as logged, in_route(route):
-        yield logged
-
-
 class SyncRouted(RouterSetup):
     def _routed(
         self,
@@ -180,7 +170,7 @@ class SyncRouted(RouterSetup):
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with _logged(scope, route) as logged, noting(self._runtime, chain) as noted:
+            with logged_route(scope, route) as logged, noting(self._runtime, chain) as noted:
                 answered = logged.settle(with_record(noted(call(request)), record or chosen))
         return self._spent(metered(answered, tool, request, started), tool)
 
@@ -200,6 +190,6 @@ class AsyncRouted(RouterSetup):
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with _logged(scope, route) as logged, noting(self._runtime, chain) as noted:
+            with logged_route(scope, route) as logged, noting(self._runtime, chain) as noted:
                 answered = logged.settle(with_record(noted(await call(request)), record or chosen))
         return self._spent(metered(answered, tool, request, started), tool)
