@@ -242,8 +242,8 @@ runs, with the names it takes.
 
 `search` offers an option only when a backend reachable from here maps it, and
 `search_depth` only at the levels one serves, as `browser_open` narrows
-`stealth`. With no key the keyless tier between them (You.com MCP, Exa MCP,
-Tavily keyless, Keenable) maps every search option. The tool's description
+`stealth`. With no key the keyless tier between them (Nimble keyless, You.com
+MCP, Exa MCP, Tavily keyless, Keenable) maps every search option. The tool's description
 tells the model that `search_depth` is how much text comes back per result and
 `effort` how hard the backend looks, and that higher effort costs more and
 takes longer, so it leaves `effort` unset unless needed.

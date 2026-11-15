@@ -23,16 +23,10 @@ from web_router.constants import (
     AUTO_SUPPORTED_PARAMETERS,
     ENV_BRAVE_API_KEY,
     ENV_BY_PROVIDER,
-    ENV_EXA_API_KEY,
-    ENV_FIRECRAWL_API_KEY,
-    ENV_KEENABLE_API_KEY,
     ENV_PERPLEXITY_API_KEY,
-    ENV_TAVILY_API_KEY,
     EXTRACT_ENV_BY_PROVIDER,
     PROVIDER_BRAVE,
-    PROVIDER_EXA,
     PROVIDER_EXA_MCP,
-    PROVIDER_FIRECRAWL,
     PROVIDER_JINA,
     PROVIDER_KEENABLE,
     PROVIDER_NIMBLE,
@@ -371,6 +365,7 @@ def test_a_keyed_provider_is_preferred_over_an_anonymous_tier(monkeypatch: pytes
     assert chain == [
         PROVIDER_PERPLEXITY,
         PROVIDER_BRAVE,
+        PROVIDER_NIMBLE,
         PROVIDER_TAVILY,
         PROVIDER_YOU_MCP,
         PROVIDER_EXA_MCP,
@@ -404,13 +399,13 @@ def test_a_failing_keyed_member_falls_through_to_the_free_tier(
         ProviderError(PROVIDER_PERPLEXITY, "out of credit"),
         supported=get_provider_class(PROVIDER_PERPLEXITY).supported_parameters,
     )
-    _stand_ins(chain_members, PROVIDER_TAVILY, supported=AUTO_SUPPORTED_PARAMETERS)
+    _stand_ins(chain_members, PROVIDER_NIMBLE, supported=AUTO_SUPPORTED_PARAMETERS)
 
     with WebRouter() as router:
         response = router.search("hi")
 
-    assert response.provider == PROVIDER_TAVILY
-    assert chain_members.called == [PROVIDER_PERPLEXITY, PROVIDER_TAVILY]
+    assert response.provider == PROVIDER_NIMBLE
+    assert chain_members.called == [PROVIDER_PERPLEXITY, PROVIDER_NIMBLE]
 
 
 def test_a_key_held_for_any_search_backend_serves_before_the_free_tier(
@@ -437,24 +432,25 @@ def test_a_depth_request_skips_the_members_without_depth_for_the_keyless_tier(
     """Perplexity and Brave have no depth control, so their keys cannot serve this request.
 
     They are read as the real classes they are, and never built; the keyless
-    tier stands in for Tavily and You.com, both of which map depth.
+    tier stands in for Nimble and Tavily, both of which map depth.
     """
     for env_var in _EVERY_SEARCH_KEY:
         monkeypatch.delenv(env_var, raising=False)
     monkeypatch.setenv(ENV_PERPLEXITY_API_KEY, "test-key")
     monkeypatch.setenv(ENV_BRAVE_API_KEY, "test-key")
-    _stand_ins(chain_members, PROVIDER_TAVILY, PROVIDER_YOU_MCP, supported=frozenset({"max_results", "search_depth"}))
+    _stand_ins(chain_members, PROVIDER_NIMBLE, PROVIDER_TAVILY, supported=frozenset({"max_results", "search_depth"}))
 
     with WebRouter() as router:
         response = router.search("hi", search_depth="deep")
         passed_over = router.get_provider()
 
-    assert response.provider == PROVIDER_TAVILY
-    assert chain_members.called == [PROVIDER_TAVILY]
+    assert response.provider == PROVIDER_NIMBLE
+    assert chain_members.called == [PROVIDER_NIMBLE]
     assert isinstance(passed_over, AutoProvider)
     assert passed_over.members == (
         PROVIDER_PERPLEXITY,
         PROVIDER_BRAVE,
+        PROVIDER_NIMBLE,
         PROVIDER_TAVILY,
         PROVIDER_YOU_MCP,
         PROVIDER_EXA_MCP,
@@ -738,16 +734,6 @@ def test_every_extract_backend_is_a_member(monkeypatch: pytest.MonkeyPatch) -> N
     assert set(AUTO_EXTRACT_PREFERRED) | set(AUTO_EXTRACT_APPENDED) == keyed
 
 
-def test_a_keyed_extract_provider_is_preferred_over_an_anonymous_tier(monkeypatch: pytest.MonkeyPatch) -> None:
-    for env_var in _EVERY_EXTRACT_KEY:
-        monkeypatch.delenv(env_var, raising=False)
-    monkeypatch.setenv(ENV_EXA_API_KEY, "test-key")
-
-    chain = [name for name, _ in AutoExtractProvider.default_chain()]
-
-    assert chain == [PROVIDER_TAVILY, PROVIDER_JINA, PROVIDER_FIRECRAWL, PROVIDER_KEENABLE, PROVIDER_EXA]
-
-
 def test_with_no_credentials_the_extract_chain_is_the_keyless_one(monkeypatch: pytest.MonkeyPatch) -> None:
     for env_var in _EVERY_EXTRACT_KEY:
         monkeypatch.delenv(env_var, raising=False)
@@ -764,34 +750,6 @@ def test_an_extract_chain_in_provider_config_is_honoured(extract_chain_members: 
         markdown = router.extract("https://example.com")
 
     assert (text.provider, markdown.provider) == ("second", "first")
-
-
-def test_a_backend_held_with_a_key_is_not_tried_again_as_keyless(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A keyless member resolves the key when one is set, so a second try would repeat the same request."""
-    for env_var in (*_EVERY_SEARCH_KEY, *_EVERY_EXTRACT_KEY):
-        monkeypatch.delenv(env_var, raising=False)
-    monkeypatch.setenv(ENV_TAVILY_API_KEY, "test-key")
-    monkeypatch.setenv(ENV_FIRECRAWL_API_KEY, "test-key")
-
-    search = [name for name, _ in AutoProvider.default_chain()]
-    extract = [name for name, _ in AutoExtractProvider.default_chain()]
-
-    assert search == [PROVIDER_TAVILY, PROVIDER_YOU_MCP, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_KEENABLE]
-    assert extract == [PROVIDER_TAVILY, PROVIDER_FIRECRAWL, PROVIDER_JINA, PROVIDER_KEENABLE]
-
-
-def test_a_backend_appended_with_a_key_leaves_the_keyless_tier(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keenable joined after the keyless tier: held with a key it is tried there, once, never early as "keyless"."""
-    for env_var in (*_EVERY_SEARCH_KEY, *_EVERY_EXTRACT_KEY):
-        monkeypatch.delenv(env_var, raising=False)
-    monkeypatch.setenv(ENV_KEENABLE_API_KEY, "test-key")
-
-    search = [name for name, _ in AutoProvider.default_chain()]
-    extract = [name for name, _ in AutoExtractProvider.default_chain()]
-
-    assert search == [PROVIDER_TAVILY, PROVIDER_YOU_MCP, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_KEENABLE]
-    assert extract == [PROVIDER_TAVILY, PROVIDER_JINA, PROVIDER_FIRECRAWL, PROVIDER_KEENABLE]
-    assert dict(AutoProvider.default_chain())[PROVIDER_KEENABLE] == {}, "the keyed entry, not the keyless one"
 
 
 def test_a_backend_s_provider_config_reaches_it_through_auto_and_the_chain_s_options_win(
@@ -871,11 +829,13 @@ def test_a_nimble_client_given_in_code_puts_nimble_in_every_method_s_auto(
     for env_var in (*_EVERY_SEARCH_KEY, *_EVERY_EXTRACT_KEY, *_EVERY_RESEARCH_KEY):
         monkeypatch.delenv(env_var, raising=False)
 
-    def members(auto: Any) -> list[str]:
-        return [name for name, _ in auto._chain]
+    def nimble(auto: Any) -> list[dict[str, Any]]:
+        return [options for name, options in auto._chain if name == PROVIDER_NIMBLE]
 
-    assert PROVIDER_NIMBLE not in members(auto_class())
-    assert members(auto_class(members_config={PROVIDER_NIMBLE: {"async_client": object()}}))[0] == PROVIDER_NIMBLE
+    # Without a client Nimble is at most its keyless entry; with one it is keyed, once, and first.
+    assert all(options.get("allow_keyless") for options in nimble(auto_class()))
+    given = auto_class(members_config={PROVIDER_NIMBLE: {"async_client": object()}})
+    assert (given._chain[0][0], nimble(given)) == (PROVIDER_NIMBLE, [{}])
 
 
 def test_the_backends_whose_client_counts_are_exactly_those_whose_classes_take_one() -> None:

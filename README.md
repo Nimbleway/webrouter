@@ -136,7 +136,7 @@ which ones this environment can use.
 
 | Pass | Name | Provider | Credentials | Formats |
 | --- | --- | --- | --- | --- |
-| `Provider.NIMBLE` | `nimble` | [Nimble Extract](https://docs.nimbleway.com/api-reference/extract/extract) | `NIMBLE_API_KEY` | `markdown`, `html` |
+| `Provider.NIMBLE` | `nimble` | [Nimble Extract](https://docs.nimbleway.com/api-reference/extract/extract) | `NIMBLE_API_KEY`, or keyless with `allow_keyless=True` (capped per caller per day) | `markdown`, `html` |
 | `Provider.TAVILY` | `tavily` | [Tavily Extract](https://tavily.com) | `TAVILY_API_KEY` *(keyless only through `auto`)* | `markdown`, `text` |
 | `Provider.EXA` | `exa` | [Exa Contents](https://exa.ai) | `EXA_API_KEY` | `text` |
 | `Provider.LINKUP` | `linkup` | [Linkup Fetch](https://docs.linkup.so) | `LINKUP_API_KEY` | `markdown`, `html` |
@@ -328,8 +328,8 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore |
-| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
+| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Nimble keyless, Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore |
+| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Nimble keyless, Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's keyed order is generated, not hand-written: `make chains` ranks the
@@ -354,7 +354,7 @@ class, which costs no credential and sends nothing. A member that does not map
 an option you set, or refuses the value (a `search_depth` level it lacks, a
 country off its list), is passed over for that call: ask for
 `search_depth="deep"` with keys for only Perplexity and Brave, neither of which
-returns whole pages, and the search goes to the keyless tier, where Exa MCP does.
+returns whole pages, and the search goes to the keyless tier, where Nimble does.
 The keyless tier between them maps every search option. When no member is left
 it raises, naming what each one lacked, rather than running the query without
 the option:
