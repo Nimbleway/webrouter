@@ -30,6 +30,7 @@ MSG_INVALID_TIMEOUT: Final = "timeout takes a finite number of seconds, 0 or mor
 MSG_INVALID_MAX_CONCURRENCY: Final = "max_concurrency must be a whole number of 1 or more, or None; got {value!r}"
 
 LOG_HOP_OK: Final = "auto %s: %s answered in %.3fs%s"
+LOG_HOP_CANCELLED: Final = "cancelled"
 LOG_HOP_CUT_OFF: Final = "cut off at the deadline"
 LOG_HOP_FAILED: Final = "auto %s: %s failed (%s, status %s) in %.3fs%s"
 LOG_HOP_COOLING: Final = "auto %s: %s skipped, cooling down for %.1fs more"

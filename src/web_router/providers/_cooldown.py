@@ -68,12 +68,13 @@ class Cooldowns:
             self._start(provider, COOLDOWN_DEFAULT_S[status], status)
 
     def _start(self, provider: str, seconds: float, status: int | None) -> None:
-        until = time.monotonic() + seconds
+        now = time.monotonic()
         with self._lock:
             current = self._until.get(provider)
-            if current is None or current[0] < until:
-                self._until[provider] = (until, status)
-        logger.info(LOG_COOLDOWN_SET, provider, seconds, status or _RATE_LIMIT)
+            if current is None or current[0] < now + seconds:
+                self._until[provider] = (now + seconds, status)
+            until, status = self._until[provider]  # a longer cooldown already running is kept, and logged as such
+        logger.info(LOG_COOLDOWN_SET, provider, until - now, status or _RATE_LIMIT)
 
     def remaining(self, provider: str) -> tuple[float, int | None] | None:
         """Seconds left on ``provider``'s cooldown and the status that set it; ``None`` once it has run out."""
@@ -125,7 +126,7 @@ def noting(runtime: Runtime | None, backend: object) -> Iterator[Callable[[_T], 
     """
     name = getattr(backend, "name", None)
     if runtime is None or not isinstance(name, str) or name in DELEGATING_PROVIDERS:
-        yield _unchanged
+        yield lambda response: response
         return
 
     def answered(response: _T) -> _T:
@@ -137,7 +138,3 @@ def noting(runtime: Runtime | None, backend: object) -> Iterator[Callable[[_T], 
     except Exception as exc:
         runtime.cooldowns.note(name, exc)
         raise
-
-
-def _unchanged(response: _T) -> _T:
-    return response

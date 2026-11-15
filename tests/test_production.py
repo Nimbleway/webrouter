@@ -118,6 +118,17 @@ async def test_a_member_cut_off_by_the_async_deadline_is_logged(caplog: pytest.L
     assert any("hangs failed (cut off at the deadline" in hop for hop in hops)
 
 
+async def test_a_member_the_caller_cancels_is_logged_as_cancelled(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="web_router")
+    async with AsyncWebRouter(provider_config={"auto": {"chain": ["hangs"]}}) as router:
+        task = asyncio.create_task(router.search("q", timeout=30))
+        await asyncio.sleep(0.1)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    assert "hangs failed (cancelled" in caplog.text
+
+
 def test_tavily_builds_neither_client_until_a_call_needs_one() -> None:
     provider = TavilyProvider(api_key="test-key")
     assert provider._clients._sync is None and provider._clients._async is None

@@ -22,6 +22,7 @@ from typing import Any, TypeVar
 
 from web_router._urls import host_of
 from web_router.constants_production import (
+    LOG_HOP_CANCELLED,
     LOG_HOP_COOLING,
     LOG_HOP_CUT_OFF,
     LOG_HOP_FAILED,
@@ -29,6 +30,7 @@ from web_router.constants_production import (
     LOG_HOST_SUFFIX,
     LOG_MORE_HOSTS,
 )
+from web_router.providers._deadline import current_deadline
 from web_router.providers._in_flight import in_flight
 from web_router.providers._runtime import current_runtime
 
@@ -66,8 +68,10 @@ async def ahop(
     except Exception as exc:
         _failed(tool, provider, exc, started, request)
         raise
-    except asyncio.CancelledError:  # the deadline cut the member off; its error names it, the log says so too
-        logger.info(LOG_HOP_FAILED, tool, provider, LOG_HOP_CUT_OFF, None, time.monotonic() - started, _hosts(request))
+    except asyncio.CancelledError:  # cut off: by the deadline when it has passed, else by whoever cancelled the call
+        deadline = current_deadline()
+        cause = LOG_HOP_CUT_OFF if deadline is not None and deadline.left() <= 0 else LOG_HOP_CANCELLED
+        logger.info(LOG_HOP_FAILED, tool, provider, cause, None, time.monotonic() - started, _hosts(request))
         raise
     if flight is not None:
         flight.member = None

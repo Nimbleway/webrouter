@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, ClassVar
 
 import pytest
@@ -51,9 +52,11 @@ def test_a_throttle_on_any_url_cools_the_backend_when_every_url_fails(first: int
     assert _Mixed.calls == calls
 
 
-def test_a_shorter_throttle_does_not_shorten_a_running_cooldown() -> None:
+def test_a_shorter_throttle_does_not_shorten_a_running_cooldown(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="web_router")
     cooldowns = Cooldowns()
     cooldowns.note("a", _throttle(429, "30"))
     cooldowns.note("a", _throttle(429, "5"))
     left = cooldowns.remaining("a")
     assert left is not None and left[0] > 25
+    assert "cools down for 5.0s" not in caplog.text, "the log names the cooldown still running"
