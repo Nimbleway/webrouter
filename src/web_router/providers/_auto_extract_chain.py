@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
+from web_router.constants_extract import MSG_EXTRACT_RETRY_BLANK
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
@@ -124,8 +125,14 @@ def _also_failed(response: ExtractResponse, exc: WebRouterError) -> ExtractRespo
 
 
 def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
-    """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons."""
-    again = {failure.url: failure.error for failure in retried.failures}
+    """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons.
+
+    A blank page ``retried`` held as its answer was not read: its URL stays failed.
+    """
+    blank = MSG_EXTRACT_RETRY_BLANK.format(provider=retried.provider)
+    read = [document for document in retried.documents if document.content.strip()]
+    again = {document.url: blank for document in retried.documents if not document.content.strip()}
+    again |= {failure.url: failure.error for failure in retried.failures}
     failures = [
         ExtractFailure(url=failure.url, error=f"{failure.error}; then {again[failure.url]}")
         for failure in first.failures
@@ -134,9 +141,7 @@ def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -
     known = {failure.url for failure in first.failures}
     failures.extend(failure for failure in retried.failures if failure.url not in known)
     position = {url: index for index, url in enumerate(urls)}
-    documents = sorted(
-        [*first.documents, *retried.documents], key=lambda document: position.get(document.url, len(urls))
-    )
+    documents = sorted([*first.documents, *read], key=lambda document: position.get(document.url, len(urls)))
     return first.model_copy(
         update={
             "documents": documents,
