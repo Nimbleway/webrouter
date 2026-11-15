@@ -118,7 +118,9 @@
         "limit": {
           "in": "body",
           "type": "integer",
-          "description": "Most pages to crawl; default 10000."
+          "required": true,
+          "description": "Most pages to crawl; required, since unset crawls up to 10,000 pages, each billed.",
+          "example": 10
         },
         "includePaths": {
           "in": "body",
