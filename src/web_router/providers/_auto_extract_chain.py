@@ -20,7 +20,7 @@ from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers.base import ExtractProvider
-from web_router.routing.attempts import admitted, failed
+from web_router.routing.attempts import admitted, contributed, failed
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse
 
 _Order = list[tuple[int, str]]
@@ -42,6 +42,8 @@ def extract_down_chain(
             retried, rest = _first_answer(name, fallback_on_empty, request, member, rest, retry)
         except WebRouterError as exc:
             return _also_failed(response, exc)
+        if retried.documents:
+            contributed("extract", retried.provider)
         response = _merged(response, retried, urls)
     return response
 
@@ -61,6 +63,8 @@ async def aextract_down_chain(
             retried, rest = await _afirst_answer(name, fallback_on_empty, request, member, rest, retry)
         except WebRouterError as exc:
             return _also_failed(response, exc)
+        if retried.documents:
+            contributed("extract", retried.provider)
         response = _merged(response, retried, urls)
     return response
 

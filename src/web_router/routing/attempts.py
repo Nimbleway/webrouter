@@ -45,6 +45,9 @@ AttemptHook = Callable[[Attempt], bool]
 FailureHook = Callable[[ToolName, str, BaseException], None]
 """Called when a member fails and ``auto`` moves on: the method, the member's name, and the failure."""
 
+AnswerHook = Callable[[ToolName, str], None]
+"""Called when a member read part of a call's answer though another's response carries it: the method, the name."""
+
 
 @dataclass(frozen=True, kw_only=True)
 class CallRoute:
@@ -59,6 +62,9 @@ class CallRoute:
 
     on_failure: FailureHook | None = None
     """Called when a member fails and the chain moves on. ``None`` notes nothing."""
+
+    on_answer: AnswerHook | None = None
+    """Called when a member ``auto`` retried a batch's failed URLs on read some of them. ``None`` notes nothing."""
 
 
 _ROUTE: ContextVar[CallRoute | None] = ContextVar("web_router_call_route", default=None)
@@ -123,3 +129,10 @@ def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
     route = _ROUTE.get()
     if route is not None and route.on_failure is not None:
         route.on_failure(tool, provider, exc)
+
+
+def contributed(tool: ToolName, provider: str) -> None:
+    """Tell the call's answer hook, if any, that ``provider`` read part of an answer another member's carries."""
+    route = _ROUTE.get()
+    if route is not None and route.on_answer is not None:
+        route.on_answer(tool, provider)
