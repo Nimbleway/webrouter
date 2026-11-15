@@ -12,7 +12,7 @@ import html
 import re
 from collections.abc import Iterable
 from http import HTTPStatus
-from urllib.parse import urldefrag, urlsplit
+from urllib.parse import urldefrag, urlsplit, urlunsplit
 
 from web_router.constants import MSG_EXTRACT_BAD_STATUS
 from web_router.constants_extract import (
@@ -49,8 +49,9 @@ def _failure(document: ExtractedDocument, reason: str, asked: str | None = None)
 
 
 def _bare(url: str) -> str:
-    """``url`` without its fragment or trailing slash, which a backend may drop when it echoes what it fetched."""
-    return urldefrag(url).url.rstrip("/")
+    """``url`` as a backend may echo what it fetched: scheme and host lower-cased, no fragment, no trailing slash."""
+    parts = urlsplit(urldefrag(url).url)
+    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, ""))
 
 
 def split_error_pages(
