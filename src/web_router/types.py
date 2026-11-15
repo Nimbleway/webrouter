@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from importlib import import_module
 from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
@@ -22,6 +23,7 @@ from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
+from web_router.types_errors import ExtractFailure as ExtractFailure
 from web_router.types_options import RECENCY_DESCRIPTION, SEARCH_DEPTH_DESCRIPTION, SEARCH_EFFORT_DESCRIPTION
 from web_router.types_options import Recency as Recency
 from web_router.types_options import ResearchEffort as ResearchEffort
@@ -280,19 +282,13 @@ class ExtractedDocument(BaseModel):
     )
     status_code: int | None = Field(default=None, description="The fetched page's HTTP status, when reported.")
     published_date: str | None = None
+    warnings: list[str] = Field(
+        default_factory=list, description="What looked off about a page that came back, such as a near-empty body."
+    )
     extra: dict[str, Any] = Field(
         default_factory=dict,
         description="Provider-specific fields with no normalized equivalent.",
     )
-
-
-class ExtractFailure(BaseModel):
-    """A URL the provider could not fetch, and why."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    error: str
 
 
 class ExtractResponse(BaseModel):
@@ -335,15 +331,14 @@ class ExtractResponse(BaseModel):
         return [document.url for document in self.documents]
 
 
-_BENCHMARK_MODELS = frozenset({"BenchmarkRun", "BenchmarkReport", "ExtractBenchmarkRun", "ExtractBenchmarkReport"})
+_MOVED = {"BrowseProgress": "browse"} | dict.fromkeys(("BenchmarkRun", "BenchmarkReport"), "benchmark")
+_MOVED |= dict.fromkeys(("ExtractBenchmarkRun", "ExtractBenchmarkReport"), "benchmark")
 
 
 def __getattr__(name: str) -> Any:
-    """The benchmark models' old path: ``types_benchmark`` imports this module, so it cannot be imported at the top."""
-    if name in _BENCHMARK_MODELS:
-        from web_router import types_benchmark
-
-        return getattr(types_benchmark, name)
+    """A moved model's old path: its ``types_*`` module imports this one, so it cannot be imported at the top."""
+    if name in _MOVED:
+        return getattr(import_module(f"web_router.types_{_MOVED[name]}"), name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -756,25 +751,3 @@ class BrowseResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
-
-
-class BrowseProgress(BaseModel):
-    """Where one browse task stands, and its answer once it has one."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    job_id: str = Field(description="The backend's id for this task, which is what a later poll is keyed on.")
-    state: JobState
-    response: BrowseResponse | None = Field(
-        default=None,
-        description="The answer. Set exactly when `state` is 'completed'.",
-    )
-    detail: str | None = Field(
-        default=None,
-        description="Whatever the backend said about this state -- an error message, a progress note.",
-    )
-
-    @property
-    def is_terminal(self) -> bool:
-        """Whether this task has stopped, one way or another."""
-        return self.state not in ("queued", "running")

@@ -91,7 +91,6 @@ from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_win
 from web_router.providers._error_pages import split_error_pages
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.types import (
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -112,6 +111,7 @@ from web_router.types import (
     SearchResponse,
     StealthLevel,
 )
+from web_router.types_browse import BrowseProgress
 from web_router.types_live_data import LiveDataRequest, LiveDataResponse, LiveDataSource, LiveDataSourcePage
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
@@ -397,7 +397,7 @@ class _Collected:
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
-        documents, error_pages = split_error_pages(response.documents)
+        documents, error_pages = split_error_pages(response.documents, urls[0] if len(urls) == 1 else None)
         self.documents.extend(documents)
         self.failures.extend([*response.failures, *error_pages])
         self.reported += len(response.failures) + len(error_pages)
@@ -426,7 +426,7 @@ class _Collected:
     def fail(self, urls: list[str], error: ProviderError | DeadlineExceededError) -> None:
         """Record a call that raised as a failure against each URL it carried."""
         self.errors.append((urls, error))
-        self.failures.extend(ExtractFailure(url=url, error=str(error)) for url in urls)
+        self.failures.extend(ExtractFailure.from_error(url, error) for url in urls)
 
     def resolved(self) -> ExtractResponse:
         # Not `if self.failures`: an empty answer is the one outcome a caller cannot tell from a page with no text.
@@ -472,11 +472,11 @@ class _Collected:
         detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
         late = [error for _, error in self.errors if isinstance(error, DeadlineExceededError)]
         if late and len(late) == len(self.errors) and not self.reported:
-            # Every URL that failed ran out of time. One that failed for a reason of its own -- a call that raised, or a
-            # URL a backend reported in its answer -- keeps the summary below, which names each.
+            # Every URL ran out of time; one that failed for a reason of its own keeps the summary below, naming each.
             return DeadlineExceededError(self.provider, late[0].seconds)
-        original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
-        return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
+        original = ExtractFailure.shared_original(failures, [error for _, error in self.errors])
+        message = MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail)
+        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.batch_kind(failures))
 
 
 class LiveDataProvider(TemplateMethods, _BaseProvider):

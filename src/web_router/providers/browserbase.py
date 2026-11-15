@@ -86,7 +86,6 @@ from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpBrowseProvider, HttpBrowserProvider, ReleaseMethod
 from web_router.providers._utils import build_browser_payload, build_payload
 from web_router.types import (
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -95,6 +94,7 @@ from web_router.types import (
     JobState,
     StealthLevel,
 )
+from web_router.types_browse import BrowseProgress
 
 _TIMESTAMP: TypeAdapter[datetime] = TypeAdapter(datetime)
 

@@ -15,6 +15,7 @@ def test_types_imports_nothing_of_ours() -> None:
 
     import web_router.types as types_module
     import web_router.types_decision as decision_module
+    import web_router.types_errors as errors_module
     import web_router.types_options as options_module
     import web_router.types_page as page_module
 
@@ -31,9 +32,14 @@ def test_types_imports_nothing_of_ours() -> None:
             and id(node) not in skipped
         ]
 
-    leaves = {"web_router.types_decision", "web_router.types_page", "web_router.types_options"}
+    leaves = {
+        "web_router.types_decision",
+        "web_router.types_page",
+        "web_router.types_options",
+        "web_router.types_errors",
+    }
     assert set(ours(types_module)) == leaves
-    assert ours(decision_module) == ours(page_module) == ours(options_module) == []
+    assert ours(decision_module) == ours(page_module) == ours(options_module) == ours(errors_module) == []
 
 
 def test_the_record_and_page_types_import_from_types_as_from_the_package() -> None:

@@ -69,6 +69,7 @@ from web_router.exceptions import (
 )
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotFoundError
+from web_router.exceptions_typed import AllProvidersFailedError, InvalidParameterError
 from web_router.exceptions_vendors import VendorNotFoundError, VendorWriteRefusedError
 from web_router.live_data_search import NativeSourceSearch
 from web_router.providers.answer import AnswerProvider
@@ -137,7 +138,6 @@ from web_router.types import (
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
     BrowseOutcome,
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -166,6 +166,7 @@ from web_router.types import (
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
+from web_router.types_browse import BrowseProgress
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionMember, DecisionRecord
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
@@ -187,6 +188,7 @@ __all__ = [
     "LIVE_DATA_PARAMETERS",
     "NORMALIZED_PARAMETERS",
     "RESEARCH_PARAMETERS",
+    "AllProvidersFailedError",
     "AnswerProvider",
     "AnswerRequest",
     "AnswerResponse",
@@ -237,6 +239,7 @@ __all__ = [
     "ExtractRequest",
     "ExtractResponse",
     "ExtractedDocument",
+    "InvalidParameterError",
     "LiveDataJobError",
     "LiveDataProvider",
     "LiveDataRequest",

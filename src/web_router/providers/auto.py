@@ -100,10 +100,10 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers._auto_extract import extract_eligible
+from web_router.providers._auto_extract_chain import _Walk, aextract_down_chain, extract_down_chain
 from web_router.providers._chain import (
     _RECOVERABLE,
     _ChainSpec,
-    _empty_extract,
     _empty_search,
     _held_or_raise,
     _keyed_chain,
@@ -128,7 +128,6 @@ from web_router.providers.base import (
 from web_router.routing.attempts import admitted, failed, in_call_order
 from web_router.types import (
     EXTRACT_PARAMETERS,
-    BrowseProgress,
     BrowseRequest,
     ExtractFormat,
     ExtractRequest,
@@ -138,6 +137,7 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
 )
+from web_router.types_browse import BrowseProgress
 
 
 class AutoProvider(SearchProvider):
@@ -364,47 +364,15 @@ class AutoExtractProvider(ExtractProvider):
 
         return self._members.member(position, self._chain, self._members_config, create_extract_provider)
 
+    def _walk(self, request: ExtractRequest) -> _Walk:
+        return _Walk(self.name, self.fallback_on_empty, self._member, in_call_order("extract", self._eligible(request)))
+
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        delegated = self._delegated(request, urls)
-        failures: dict[str, WebRouterError] = {}
-        held: ExtractResponse | None = None
-        for position, provider_name in in_call_order("extract", self._eligible(request)):
-            if (late := _late_answer(held, self.name, failures)) is not None:
-                return late
-            if not admitted("extract", provider_name, delegated):
-                continue
-            try:
-                response = self._member(position).extract(delegated)
-            except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name, "extract")
-            except _RECOVERABLE as exc:
-                failed(failures, "extract", provider_name, exc)
-                continue
-            if not (self.fallback_on_empty and _empty_extract(response)):
-                return response
-            held = response if held is None else held
-        return _held_or_raise(held, self.name, failures)
+        """The first answer, with each URL it failed tried on the members after it; see :mod:`._auto_extract_chain`."""
+        return extract_down_chain(self._walk(request), self._delegated(request, urls), urls)
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        delegated = self._delegated(request, urls)
-        failures: dict[str, WebRouterError] = {}
-        held: ExtractResponse | None = None
-        for position, provider_name in in_call_order("extract", self._eligible(request)):
-            if (late := _late_answer(held, self.name, failures)) is not None:
-                return late
-            if not admitted("extract", provider_name, delegated):
-                continue
-            try:
-                response = await self._member(position).aextract(delegated)
-            except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name, "extract")
-            except _RECOVERABLE as exc:
-                failed(failures, "extract", provider_name, exc)
-                continue
-            if not (self.fallback_on_empty and _empty_extract(response)):
-                return response
-            held = response if held is None else held
-        return _held_or_raise(held, self.name, failures)
+        return await aextract_down_chain(self._walk(request), self._delegated(request, urls), urls)
 
     def _eligible(self, request: ExtractRequest) -> list[tuple[int, str]]:
         """The chain members that return the format and map every other option set; see :func:`extract_eligible`."""

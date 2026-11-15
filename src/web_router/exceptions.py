@@ -34,6 +34,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from web_router._dotenv import with_dotenv_hint
 from web_router.constants import (
     MSG_BENCHMARK_TIMEOUT,
     MSG_BROWSE_TIMEOUT,
@@ -53,7 +54,12 @@ from web_router.constants import (
     MSG_UNSUPPORTED_PARAMETERS_ADVICE,
     MSG_UNSUPPORTED_VALUES,
 )
+from web_router.constants_errors import MSG_REUSED_LOOP
 from web_router.constants_invoke import MSG_ROUTER_FAILED
+from web_router.types import Provider
+from web_router.types_errors import classify, is_retryable, reused_loop
+
+_BUILTIN_NAMES = frozenset(provider.value for provider in Provider)
 
 
 def describe(exc: BaseException) -> str:
@@ -71,6 +77,9 @@ class WebRouterError(Exception):
 
 class ConfigurationError(WebRouterError):
     """The router or a provider was configured incorrectly."""
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*with_dotenv_hint(args))
 
     @classmethod
     def missing_api_key(cls, provider: str, env_var: str) -> ConfigurationError:
@@ -272,13 +281,24 @@ class ProviderError(WebRouterError):
     """A provider failed while serving a request.
 
     The original SDK or HTTP exception is available as :attr:`original` and as
-    ``__cause__``.
+    ``__cause__``. :attr:`kind`, :attr:`status_code`, :attr:`retryable` and
+    :attr:`retry_after` say what kind of failure it was, read from that exception
+    and the message, so a caller can branch without parsing text.
     """
 
-    def __init__(self, provider: str, message: str, *, original: BaseException | None = None) -> None:
+    def __init__(
+        self, provider: str, message: str, *, original: BaseException | None = None, kind: str | None = None
+    ) -> None:
+        if reused_loop(original):
+            message += MSG_REUSED_LOOP
         super().__init__(f"[{provider}] {message}")
         self.provider = provider
         self.original = original
+        facts = classify(original, message)
+        self.kind = kind or facts.kind
+        self.status_code = facts.status_code
+        self.retryable = is_retryable(self.kind)
+        self.retry_after = facts.retry_after
 
 
 class BrowserActionError(WebRouterError):
