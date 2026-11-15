@@ -25,7 +25,7 @@ from web_router.providers._hop import ahop, hop
 from web_router.providers.base import ExtractProvider
 from web_router.routing.attempts import admitted, contributed, failed
 from web_router.types import ExtractRequest, ExtractResponse
-from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET
+from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET, ERROR_KIND_TIMEOUT
 
 _Order = list[tuple[int, str]]
 
@@ -52,7 +52,7 @@ def extract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[str]) ->
             if getattr(exc, "kind", None) == ERROR_KIND_LOCAL:
                 raise
             return _also_failed(response, exc)
-        if retried.documents:
+        if not _empty_extract(retried):
             contributed("extract", retried.provider)
         response = _merged(response, retried, urls)
     return response
@@ -68,7 +68,7 @@ async def aextract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[s
             if getattr(exc, "kind", None) == ERROR_KIND_LOCAL:
                 raise
             return _also_failed(response, exc)
-        if retried.documents:
+        if not _empty_extract(retried):
             contributed("extract", retried.provider)
         response = _merged(response, retried, urls)
     return response
@@ -128,7 +128,13 @@ def _failed_urls(response: ExtractResponse) -> list[str]:
 def _also_failed(response: ExtractResponse, exc: WebRouterError) -> ExtractResponse:
     """``response`` with why no later member read its retried URLs added to each one's reason, its kind the latest."""
     retried = set(_failed_urls(response))
-    latest = {"kind": getattr(exc, "kind", None), "status_code": getattr(exc, "status_code", None)}
+    kind = ERROR_KIND_TIMEOUT if isinstance(exc, DeadlineExceededError) else getattr(exc, "kind", None)
+    # Only what the later failure knows replaces the earlier: a deadline carries no status of its own.
+    latest = {
+        field: value
+        for field, value in (("kind", kind), ("status_code", getattr(exc, "status_code", None)))
+        if value is not None
+    }
     failures = [
         failure.model_copy(update={"error": f"{failure.error}; then {exc}", **latest})
         if failure.url in retried
@@ -144,27 +150,37 @@ def _same(url: str) -> str:
     return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, ""))
 
 
+def _asked(url: str, urls: list[str]) -> set[str]:
+    """The requested URLs ``url`` stands for: itself when asked for exactly, else those a backend rewrote into it."""
+    if url in urls:
+        return {url}
+    # A rewrite that could be either of two URLs asked for proves neither was read.
+    matches = {asked for asked in urls if _same(asked) == _same(url)}
+    return matches if len(matches) == 1 else set()
+
+
 def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
     """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons."""
-    again = {_same(failure.url): failure for failure in retried.failures}
-    read = {_same(document.url) for document in retried.documents}
+    sent = [failure.url for failure in first.failures]  # only these went on the retry
+    again = {asked: failure for failure in retried.failures for asked in _asked(failure.url, sent) or {failure.url}}
+    read = {asked for document in retried.documents for asked in _asked(document.url, sent)}
     # A URL the retry read is no failure; one it failed too keeps both reasons; one never retried (a page
     # that is gone) keeps its own.
     failures = [
         failure.model_copy(
             update={
-                "error": f"{failure.error}; then {again[_same(failure.url)].error}",
-                "kind": again[_same(failure.url)].kind,
-                "status_code": again[_same(failure.url)].status_code,
+                "error": f"{failure.error}; then {again[failure.url].error}",
+                "kind": again[failure.url].kind,
+                "status_code": again[failure.url].status_code,
             }
         )
-        if _same(failure.url) in again
+        if failure.url in again
         else failure
         for failure in first.failures
-        if _same(failure.url) not in read
+        if failure.url not in read
     ]
-    known = {_same(failure.url) for failure in first.failures}
-    failures.extend(failure for failure in retried.failures if _same(failure.url) not in known)
+    known = {failure.url for failure in first.failures}
+    failures.extend(failure for failure in retried.failures if not (_asked(failure.url, sent) & known))
     position = {url: index for index, url in enumerate(urls)}
     documents = sorted(
         [*first.documents, *retried.documents], key=lambda document: position.get(document.url, len(urls))
