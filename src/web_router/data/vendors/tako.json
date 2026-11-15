@@ -1,0 +1,389 @@
+{
+  "vendor": "tako",
+  "name": "Tako",
+  "category": "search",
+  "summary": "Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents.",
+  "docs_url": "https://docs.tako.com/",
+  "pricing_url": "https://tako.com/pricing",
+  "base_url": "https://tako.com/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TAKO_API_KEY"
+        ],
+        "description": "A Tako API key (tako.com/console/api-keys). Sent in the X-API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Prepaid credits; calls return HTTP 402 when the balance runs out. Data graph calls cost $1 per 1,000 requests (docs overview).",
+    "Typical data flow: graph.search to resolve an entity or metric id, graph.related to find its metrics, then search or contents for the data.",
+    "Monitors and notification channels are experimental and not in this entry."
+  ],
+  "sources": [
+    "https://docs.tako.com/",
+    "https://docs.tako.com/llms.txt",
+    "https://docs.tako.com/api-reference/openapi.yaml",
+    "https://docs.tako.com/documentation/additional-resources/credits-and-billing.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "tako.search",
+      "name": "Search knowledge cards",
+      "summary": "Tako data cards (charts with sourced data) and optional web results for a query, without LLM synthesis.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language query.",
+          "required": true,
+          "example": "Nvidia revenue vs AMD revenue"
+        },
+        "effort": {
+          "in": "body",
+          "type": "string",
+          "description": "fast, instant or deep; deep costs more.",
+          "enum": [
+            "fast",
+            "instant",
+            "deep"
+          ]
+        },
+        "sources": {
+          "in": "body",
+          "type": "object",
+          "description": "Per-source settings: an index is searched only if its key is present (data, web). Omitted searches data and web."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country, default US."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "BCP-47 locale, default en-US."
+        },
+        "include_related": {
+          "in": "body",
+          "type": "integer",
+          "description": "Return up to this many follow-up query suggestions (1 to 20)."
+        }
+      },
+      "job": "web.search",
+      "docs_url": "https://docs.tako.com/api-reference/search-v3.md",
+      "verified": {
+        "docs": "https://docs.tako.com/api-reference/openapi.yaml"
+      },
+      "notes": [
+        "A read over POST."
+      ]
+    },
+    {
+      "id": "tako.answer",
+      "name": "Answer a question with sources",
+      "summary": "An LLM-written answer over Tako cards and web results, with its sources.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/answer",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language question.",
+          "required": true
+        },
+        "effort": {
+          "in": "body",
+          "type": "string",
+          "description": "fast, instant or deep; also selects the synthesis model.",
+          "enum": [
+            "fast",
+            "instant",
+            "deep"
+          ]
+        },
+        "sources": {
+          "in": "body",
+          "type": "object",
+          "description": "Per-source settings: an index is searched only if its key is present (data, web). Omitted searches data and web."
+        },
+        "country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country, default US."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "BCP-47 locale, default en-US."
+        },
+        "output_schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema for structured output; needs effort fast or deep."
+        }
+      },
+      "job": "web.answer",
+      "docs_url": "https://docs.tako.com/api-reference/answer.md",
+      "verified": {
+        "docs": "https://docs.tako.com/api-reference/openapi.yaml"
+      },
+      "notes": [
+        "A read over POST. Returns 3 web results when sources.web.count is not set."
+      ]
+    },
+    {
+      "id": "tako.contents",
+      "name": "Download a result's data or text",
+      "summary": "A card's underlying data (CSV or JSON) or a web page's extracted text, as a link or inline.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/contents",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "A TakoCard.webpage_url or WebResult.url.",
+          "required": true
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "url returns a short-lived download link; inline returns the content in the body.",
+          "example": "inline",
+          "enum": [
+            "url",
+            "inline"
+          ]
+        },
+        "content_format": {
+          "in": "body",
+          "type": "string",
+          "description": "For card data: csv, json_records, json_compact or card_json.",
+          "enum": [
+            "csv",
+            "json_records",
+            "json_compact",
+            "card_json"
+          ]
+        },
+        "max_rows": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cap on card rows exported and priced."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Card rows to skip, default 0."
+        },
+        "max_chars": {
+          "in": "body",
+          "type": "integer",
+          "description": "Character cap on web page text, default 1,000,000."
+        },
+        "quote_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only the export price; free, nothing fetched."
+        }
+      },
+      "job": "web.extract",
+      "docs_url": "https://docs.tako.com/api-reference/contents.md",
+      "verified": {
+        "docs": "https://docs.tako.com/api-reference/openapi.yaml"
+      },
+      "notes": [
+        "Billed (credits-and-billing page): a card export $0.001 flat plus per-row charges from $0.01 per 1,000 rows; web page text $0.001 per page. quote_only=true prices it first for free. premium=true reveals and bills premium columns and is left out here."
+      ]
+    },
+    {
+      "id": "tako.graph.search",
+      "name": "Search the data graph",
+      "summary": "Metrics and entities in Tako's data graph matching a name, with their opaque ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/graph/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text.",
+          "required": true,
+          "example": "apple"
+        },
+        "types": {
+          "in": "query",
+          "type": "array",
+          "description": "Facets to include (repeatable): metric, entity; default both."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max results, default 20, max 50."
+        },
+        "label": {
+          "in": "query",
+          "type": "string",
+          "description": "Prefer results with this NER label (a boost, not a filter)."
+        },
+        "infer_label": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Let Tako infer the label from q; ignored when label is set."
+        }
+      },
+      "job": "datasets.search",
+      "docs_url": "https://docs.tako.com/api-reference/graph-search.md",
+      "verified": {
+        "docs": "https://docs.tako.com/api-reference/openapi.yaml"
+      }
+    },
+    {
+      "id": "tako.graph.related",
+      "name": "List a graph node's related nodes",
+      "summary": "Relations, metrics, entities and similar nodes connected to a node, paged per relation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/graph/related",
+      "params": {
+        "node_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque node id from graph search or a card.",
+          "required": true
+        },
+        "relation": {
+          "in": "query",
+          "type": "string",
+          "description": "Relation key to page, e.g. metrics, rel:competes_with; read keys from the overview."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Case-insensitive substring filter on related node names."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 50, max 100."
+        },
+        "max_per_relation": {
+          "in": "query",
+          "type": "integer",
+          "description": "Nodes counted per relation, default 250, max 2000."
+        }
+      },
+      "job": "datasets.related",
+      "docs_url": "https://docs.tako.com/api-reference/graph-related.md",
+      "verified": {
+        "docs": "https://docs.tako.com/api-reference/openapi.yaml"
+      }
+    },
+    {
+      "id": "tako.graph.node",
+      "name": "Get a graph node",
+      "summary": "A node's name, type, aliases and description by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/graph/node/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Opaque public node id."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://docs.tako.com/api-reference/graph-node.md",
+      "verified": {
+        "docs": "https://docs.tako.com/api-reference/openapi.yaml"
+      }
+    },
+    {
+      "id": "tako.agent.answer.start",
+      "name": "Start an answer agent run",
+      "summary": "Dispatches an answer agent on a request; returns 202 with a run.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/agent/answer/runs",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language request.",
+          "required": true
+        },
+        "thread_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Existing thread to continue; omit for a new one."
+        },
+        "effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Effort for a new thread (default medium); fixed for the life of the thread."
+        },
+        "source_indexes": {
+          "in": "body",
+          "type": "array",
+          "description": "data, web, or both (the default on a new thread)."
+        },
+        "locale": {
+          "in": "body",
+          "type": "string",
+          "description": "BCP-47 locale, default en-US."
+        }
+      },
+      "job": "research.start",
+      "docs_url": "https://docs.tako.com/api-reference/agent-dispatch.md",
+      "verified": {
+        "docs": "https://docs.tako.com/api-reference/openapi.yaml"
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Asynchronous: poll tako.agent.answer.get until status is completed or failed. Runs that use per-unit priced sources (web traffic, SEO) add a charge."
+      ]
+    },
+    {
+      "id": "tako.agent.answer.get",
+      "name": "Poll an answer agent run",
+      "summary": "A run's state, with result once completed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/agent/answer/runs/{run_id}",
+      "params": {
+        "run_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Run id from the dispatch response."
+        }
+      },
+      "job": "research.result",
+      "docs_url": "https://docs.tako.com/api-reference/agent-poll.md",
+      "verified": {
+        "docs": "https://docs.tako.com/api-reference/openapi.yaml"
+      }
+    }
+  ]
+}

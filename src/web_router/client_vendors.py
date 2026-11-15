@@ -19,16 +19,16 @@ import threading
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Self
 
-from web_router.constants_vendors import EXTRA_VENDORS
+from web_router.constants_vendors import EXTRA_VENDORS, VENDOR_FIND_LIMIT
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.vendors.catalog import get_catalog
 from web_router.vendors.credentials import CredentialSource, credential_source, summarize
+from web_router.vendors.plan import endpoint_plan, raw_plan
 from web_router.vendors.schema import Vendor, VendorEndpoint
 from web_router.vendors.types import VendorResponse, VendorSummary
 
 if TYPE_CHECKING:
     from web_router.vendors.caller import VendorCaller
-    from web_router.vendors.plan import _Plan
 
 VendorCredentials = CredentialSource | Mapping[str, Mapping[str, str]] | None
 """``vendor_credentials=``: a source, or ``{vendor: {name: value}}`` read before the environment."""
@@ -106,35 +106,9 @@ class _VendorLookup:
 
         ``kind='read'`` leaves out every endpoint that changes data.
         """
-        from web_router.constants_vendors import VENDOR_FIND_LIMIT
-
         return get_catalog().find(
             query, vendor=vendor, category=category, kind=kind, limit=VENDOR_FIND_LIMIT if limit is None else limit
         )
-
-    @staticmethod
-    def _endpoint_plan(endpoint: str, params: Mapping[str, Any] | None) -> _Plan:
-        """The request ``call_vendor`` sends, built once for both routers."""
-        from web_router.vendors.plan import plan_endpoint
-
-        found = get_catalog().endpoint(endpoint)
-        return plan_endpoint(get_catalog().vendor(found.vendor), found, dict(params or {}))
-
-    @staticmethod
-    def _raw_plan(
-        vendor: str,
-        method: str,
-        path: str,
-        *,
-        query: Mapping[str, Any] | Sequence[tuple[str, Any]] | None,
-        body: Any,
-        headers: Mapping[str, str] | None,
-        host: str | None,
-    ) -> _Plan:
-        """The request ``vendor_request`` sends, built once for both routers."""
-        from web_router.vendors.plan import plan_raw
-
-        return plan_raw(get_catalog().vendor(vendor), method, path, query=query, body=body, headers=headers, host=host)
 
 
 class SyncVendors(_VendorLookup):
@@ -157,7 +131,7 @@ class SyncVendors(_VendorLookup):
         An HTTP error raises :class:`~web_router.ProviderError` with every
         credential masked out of the vendor's message.
         """
-        return self._caller().send(self._endpoint_plan(endpoint, params), allow_writes=allow_writes)
+        return self._caller().send(endpoint_plan(endpoint, params), allow_writes=allow_writes)
 
     def vendor_request(
         self,
@@ -180,7 +154,7 @@ class SyncVendors(_VendorLookup):
         since nothing here can tell which. ``host`` picks one of the vendor's
         other named API hosts (its catalog entry lists them under ``hosts``).
         """
-        plan = self._raw_plan(vendor, method, path, query=query, body=body, headers=headers, host=host)
+        plan = raw_plan(vendor, method, path, query=query, body=body, headers=headers, host=host)
         return self._caller().send(plan, allow_writes=allow_writes)
 
     def _close_vendors(self) -> None:
@@ -197,7 +171,7 @@ class AsyncVendors(_VendorLookup):
         allow_writes: bool = False,
     ) -> VendorResponse:
         """Call one catalog endpoint and return the vendor's answer, untouched. As on the sync router."""
-        return await self._caller().asend(self._endpoint_plan(endpoint, params), allow_writes=allow_writes)
+        return await self._caller().asend(endpoint_plan(endpoint, params), allow_writes=allow_writes)
 
     async def vendor_request(
         self,
@@ -212,7 +186,7 @@ class AsyncVendors(_VendorLookup):
         allow_writes: bool = False,
     ) -> VendorResponse:
         """Call any path on ``vendor``'s API with its credentials. As on the sync router."""
-        plan = self._raw_plan(vendor, method, path, query=query, body=body, headers=headers, host=host)
+        plan = raw_plan(vendor, method, path, query=query, body=body, headers=headers, host=host)
         return await self._caller().asend(plan, allow_writes=allow_writes)
 
     async def _aclose_vendors(self) -> None:

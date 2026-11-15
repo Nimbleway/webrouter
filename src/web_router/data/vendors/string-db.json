@@ -1,0 +1,390 @@
+{
+  "vendor": "string-db",
+  "name": "STRING",
+  "category": "science",
+  "summary": "Protein-protein interaction networks and functional enrichment for thousands of organisms: identifier mapping, networks, interaction partners, enrichment, annotations and homology.",
+  "docs_url": "https://string-db.org/help/api/",
+  "base_url": "https://string-db.org/api",
+  "notes": [
+    "Keyless. Paths carry the output format first: /api/{format}/{method}.",
+    "STRING asks for one call at a time with about a second between calls, and for bulk work to download its files instead.",
+    "Map names to STRING ids with ids.map first; calls with resolved ids are faster and unambiguous. When no identifier resolves STRING answers 404.",
+    "string-db.org is the current development release; production code should pin a version host such as version-12-5.string-db.org (the version method reports it).",
+    "Multiple identifiers are newline-separated (%0d in a GET); very long lists exceed GET URL limits."
+  ],
+  "sources": [
+    "https://string-db.org/help/api/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "string-db.ids.map",
+      "name": "Map identifiers to STRING ids",
+      "summary": "Resolve protein names or accessions to STRING ids with their preferred names.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{format}/get_string_ids",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Output format: tsv, tsv-no-header, json or xml.",
+          "example": "json"
+        },
+        "identifiers": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Protein names, synonyms, UniProt accessions or STRING ids; several are separated by a newline (%0d).",
+          "example": "TP53"
+        },
+        "species": {
+          "in": "query",
+          "type": "integer",
+          "description": "NCBI/STRING taxon id, e.g. 9606 for human.",
+          "example": 9606
+        },
+        "echo_query": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to add the input identifier as a column.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "caller_identity": {
+          "in": "query",
+          "type": "string",
+          "description": "Name of your tool or site, which STRING asks callers to send.",
+          "example": "my-agent"
+        }
+      },
+      "job": "bio.proteins.search",
+      "docs_url": "https://string-db.org/help/api/",
+      "verified": {
+        "docs": "https://string-db.org/help/api/"
+      }
+    },
+    {
+      "id": "string-db.network.get",
+      "name": "Get an interaction network",
+      "summary": "Interactions among the given proteins, with per-channel evidence scores.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{format}/network",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Output format: tsv, tsv-no-header, json or xml, or psi-mi, psi-mi-tab, image, highres_image, svg.",
+          "example": "json"
+        },
+        "identifiers": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Protein names, synonyms, UniProt accessions or STRING ids; several are separated by a newline (%0d).",
+          "example": "TP53"
+        },
+        "species": {
+          "in": "query",
+          "type": "integer",
+          "description": "NCBI/STRING taxon id; required for networks of more than 10 proteins.",
+          "example": 9606
+        },
+        "required_score": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum combined interaction score, 0-1000; the default depends on the network.",
+          "example": 700
+        },
+        "network_type": {
+          "in": "query",
+          "type": "string",
+          "description": "functional (default), physical or regulatory.",
+          "enum": [
+            "functional",
+            "physical",
+            "regulatory"
+          ]
+        },
+        "add_nodes": {
+          "in": "query",
+          "type": "integer",
+          "description": "Add this many partner proteins, most confident first (10 automatically for a single protein)."
+        },
+        "show_query_node_labels": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to use your submitted names as preferredName.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "caller_identity": {
+          "in": "query",
+          "type": "string",
+          "description": "Name of your tool or site, which STRING asks callers to send.",
+          "example": "my-agent"
+        }
+      },
+      "job": "bio.interactions",
+      "docs_url": "https://string-db.org/help/api/",
+      "verified": {
+        "docs": "https://string-db.org/help/api/"
+      }
+    },
+    {
+      "id": "string-db.partners.list",
+      "name": "List interaction partners",
+      "summary": "Every partner of each given protein, most confident first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{format}/interaction_partners",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Output format: tsv, tsv-no-header, json or xml, or psi-mi, psi-mi-tab.",
+          "example": "json"
+        },
+        "identifiers": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Protein names, synonyms, UniProt accessions or STRING ids; several are separated by a newline (%0d).",
+          "example": "TP53"
+        },
+        "species": {
+          "in": "query",
+          "type": "integer",
+          "description": "NCBI/STRING taxon id, e.g. 9606 for human.",
+          "example": 9606
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most partners returned per protein.",
+          "example": 10
+        },
+        "required_score": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum combined interaction score, 0-1000; the default depends on the network.",
+          "example": 700
+        },
+        "network_type": {
+          "in": "query",
+          "type": "string",
+          "description": "functional (default), physical or regulatory.",
+          "enum": [
+            "functional",
+            "physical",
+            "regulatory"
+          ]
+        },
+        "caller_identity": {
+          "in": "query",
+          "type": "string",
+          "description": "Name of your tool or site, which STRING asks callers to send.",
+          "example": "my-agent"
+        }
+      },
+      "job": "bio.interactions",
+      "docs_url": "https://string-db.org/help/api/",
+      "verified": {
+        "docs": "https://string-db.org/help/api/"
+      }
+    },
+    {
+      "id": "string-db.enrichment.get",
+      "name": "Run functional enrichment",
+      "summary": "GO, KEGG, Pfam and other term enrichment of a protein set, with FDR.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{format}/enrichment",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Output format: tsv, tsv-no-header, json or xml.",
+          "example": "json"
+        },
+        "identifiers": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Protein names, synonyms, UniProt accessions or STRING ids; several are separated by a newline (%0d).",
+          "example": "TP53"
+        },
+        "species": {
+          "in": "query",
+          "type": "integer",
+          "description": "NCBI/STRING taxon id, e.g. 9606 for human.",
+          "example": 9606
+        },
+        "background_string_identifiers": {
+          "in": "query",
+          "type": "string",
+          "description": "A custom background proteome as STRING ids, newline-separated."
+        },
+        "add_scores": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to add strength and signal to each term.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "max_fdr": {
+          "in": "query",
+          "type": "number",
+          "description": "Keep terms with FDR at or below this, (0, 1]."
+        },
+        "min_gene_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum input genes per term."
+        },
+        "caller_identity": {
+          "in": "query",
+          "type": "string",
+          "description": "Name of your tool or site, which STRING asks callers to send.",
+          "example": "my-agent"
+        }
+      },
+      "job": "bio.enrichment",
+      "docs_url": "https://string-db.org/help/api/",
+      "verified": {
+        "docs": "https://string-db.org/help/api/"
+      }
+    },
+    {
+      "id": "string-db.annotations.get",
+      "name": "Get functional annotations",
+      "summary": "Every term each protein is annotated with (GO, Pfam, InterPro, Reactome and more).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{format}/functional_annotation",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Output format: tsv, tsv-no-header, json or xml.",
+          "example": "json"
+        },
+        "identifiers": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Protein names, synonyms, UniProt accessions or STRING ids; several are separated by a newline (%0d).",
+          "example": "TP53"
+        },
+        "species": {
+          "in": "query",
+          "type": "integer",
+          "description": "NCBI/STRING taxon id, e.g. 9606 for human.",
+          "example": 9606
+        },
+        "allow_pubmed": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to include PubMed annotations.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "only_pubmed": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to return only PubMed annotations.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "caller_identity": {
+          "in": "query",
+          "type": "string",
+          "description": "Name of your tool or site, which STRING asks callers to send.",
+          "example": "my-agent"
+        }
+      },
+      "notes": [
+        "KEGG annotations are not returned by this method."
+      ],
+      "job": "bio.proteins.get",
+      "docs_url": "https://string-db.org/help/api/",
+      "verified": {
+        "docs": "https://string-db.org/help/api/"
+      }
+    },
+    {
+      "id": "string-db.homology.get",
+      "name": "Get homology scores",
+      "summary": "Pairwise similarity bit-scores among the given proteins.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{format}/homology",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Output format: tsv, tsv-no-header, json or xml.",
+          "example": "json"
+        },
+        "identifiers": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Protein names, synonyms, UniProt accessions or STRING ids; several are separated by a newline (%0d).",
+          "example": "TP53"
+        },
+        "species": {
+          "in": "query",
+          "type": "integer",
+          "description": "NCBI/STRING taxon id, e.g. 9606 for human.",
+          "example": 9606
+        },
+        "caller_identity": {
+          "in": "query",
+          "type": "string",
+          "description": "Name of your tool or site, which STRING asks callers to send.",
+          "example": "my-agent"
+        }
+      },
+      "notes": [
+        "Only pairs with a bit-score of 50 or more are stored and reported."
+      ],
+      "job": "bio.homology",
+      "docs_url": "https://string-db.org/help/api/",
+      "verified": {
+        "docs": "https://string-db.org/help/api/"
+      }
+    },
+    {
+      "id": "string-db.version.get",
+      "name": "Get the STRING version",
+      "summary": "Current version and its stable, version-pinned address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/json/version",
+      "params": {},
+      "job": "index.metadata",
+      "docs_url": "https://string-db.org/help/api/",
+      "verified": {
+        "docs": "https://string-db.org/help/api/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,366 @@
+{
+  "vendor": "joinmassive",
+  "name": "Massive (Web Render)",
+  "category": "scraping",
+  "summary": "Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations.",
+  "docs_url": "https://docs.joinmassive.com/web-render/overview.md",
+  "pricing_url": "https://docs.joinmassive.com/web-render/pricing.md",
+  "base_url": "https://render.joinmassive.com",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "MASSIVE_TOKEN"
+        ],
+        "description": "A Massive Web Render API token (dashboard.joinmassive.com). Sent as Authorization: Bearer. Not the Polygon.io/Massive market-data key."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "This is Massive the proxy network (joinmassive.com), not Polygon.io, which is now also branded Massive and is the polygon vendor.",
+    "Prepaid credits, charged only on success: browser and search 1, AI 5, usage reports and account calls free. difficulty medium (2x) or high (6x) and speed ridiculous (2x) multiply the price.",
+    "Every call is a GET with query parameters. Live calls usually take seconds but can run up to 3 minutes; mode=async returns an id to read back later with the same endpoint and id=.",
+    "A 503 means the service is scaling up; keep the traffic and expect it to clear within a minute.",
+    "Residential and ISP proxies and the reseller API are not in this entry."
+  ],
+  "sources": [
+    "https://docs.joinmassive.com/web-render/overview.md",
+    "https://docs.joinmassive.com/web-render/pricing.md",
+    "https://docs.joinmassive.com/web-render/search.md",
+    "https://docs.joinmassive.com/web-render/scheduling.md",
+    "https://docs.joinmassive.com/web-render/reference/browser.md",
+    "https://docs.joinmassive.com/web-render/reference/search.md",
+    "https://docs.joinmassive.com/web-render/reference/ai.md",
+    "https://docs.joinmassive.com/web-render/reference/user.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "joinmassive.browser",
+      "name": "Render a page",
+      "summary": "A page's rendered HTML, raw HTML or Markdown through an unblocking browser, or a queued render's result.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/browser",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "The id an async call returned; when given every other parameter is ignored. Either id or url is required."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "The page to browse.",
+          "example": "https://example.com"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format. Default rendered.",
+          "enum": [
+            "rendered",
+            "raw",
+            "markdown"
+          ]
+        },
+        "difficulty": {
+          "in": "query",
+          "type": "string",
+          "description": "Pool to access the URL from. Default low.",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "speed": {
+          "in": "query",
+          "type": "string",
+          "description": "light (default) or ridiculous, about 30% faster at 2x the credits.",
+          "enum": [
+            "light",
+            "ridiculous"
+          ]
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "A device name to emulate, from GET /browser/devices."
+        },
+        "captcha": {
+          "in": "query",
+          "type": "string",
+          "description": "What to do with a captcha: solved (default), ignored, or rejected (answer 403).",
+          "enum": [
+            "solved",
+            "ignored",
+            "rejected"
+          ]
+        },
+        "readiness": {
+          "in": "query",
+          "type": "string",
+          "description": "Page event to wait for before the snapshot. Default load.",
+          "enum": [
+            "load",
+            "domcontentloaded"
+          ]
+        },
+        "delay": {
+          "in": "query",
+          "type": "number",
+          "description": "Extra seconds to wait before the snapshot."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter ISO country code; random by default."
+        },
+        "subdivision": {
+          "in": "query",
+          "type": "string",
+          "description": "Second part of an ISO first-level subdivision code (e.g. CA for US-CA); needs country."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City name as commonly spelled (case sensitive for now); needs country."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "sync (default) or async, which returns {id} at once; read the result later by calling again with id.",
+          "enum": [
+            "sync",
+            "async"
+          ]
+        },
+        "expiration": {
+          "in": "query",
+          "type": "integer",
+          "description": "Days before a cached result counts as expired; 0 disables the cache. Default 1."
+        }
+      },
+      "job": "web.extract",
+      "docs_url": "https://docs.joinmassive.com/web-render/reference/browser.md",
+      "verified": {
+        "docs": "https://docs.joinmassive.com/web-render/reference/browser.md"
+      }
+    },
+    {
+      "id": "joinmassive.search",
+      "name": "Get Google results pages",
+      "summary": "Live Google results pages, organic and paid, as rendered HTML, or a queued search's result.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "The id an async call returned; when given every other parameter is ignored. Either id or terms is required."
+        },
+        "terms": {
+          "in": "query",
+          "type": "string",
+          "description": "Words or a quoted phrase, up to 255 characters.",
+          "example": "vpn comparison"
+        },
+        "serps": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results pages to fetch, 1-10. Default 1."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 0-100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Initial results to skip, 0-100."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language to search in: name, ISO code or Google code."
+        },
+        "display": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface display language."
+        },
+        "uule": {
+          "in": "query",
+          "type": "string",
+          "description": "Google UULE string to emulate a location."
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "A device name to emulate, from GET /search/devices."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "A full Google results URL to fetch instead; overrides the other search parameters."
+        },
+        "awaiting": {
+          "in": "query",
+          "type": "string",
+          "description": "Lazy features to wait for: ai (AI overview, up to 1 minute), answers (People also ask), ads.",
+          "enum": [
+            "ai",
+            "answers",
+            "ads"
+          ]
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter ISO country code; random by default."
+        },
+        "subdivision": {
+          "in": "query",
+          "type": "string",
+          "description": "Second part of an ISO first-level subdivision code (e.g. CA for US-CA); needs country."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City name as commonly spelled (case sensitive for now); needs country."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "sync (default) or async, which returns {id} at once; read the result later by calling again with id.",
+          "enum": [
+            "sync",
+            "async"
+          ]
+        },
+        "expiration": {
+          "in": "query",
+          "type": "integer",
+          "description": "Days before a cached result counts as expired; 0 disables the cache. Default 1."
+        }
+      },
+      "notes": [
+        "Returns HTML, not JSON: several pages are separated by an empty line. Parse it yourself."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://docs.joinmassive.com/web-render/reference/search.md",
+      "verified": {
+        "docs": "https://docs.joinmassive.com/web-render/reference/search.md"
+      }
+    },
+    {
+      "id": "joinmassive.ai",
+      "name": "Ask an AI assistant",
+      "summary": "What ChatGPT, Gemini, Perplexity or Google's AI Overview answers a prompt, as JSON, or a queued conversation's result.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ai",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "The id an async call returned; when given every other parameter is ignored. Either id or prompt is required."
+        },
+        "prompt": {
+          "in": "query",
+          "type": "string",
+          "description": "The question or instruction.",
+          "example": "Summarize the latest research on prolonged fasting."
+        },
+        "model": {
+          "in": "query",
+          "type": "string",
+          "description": "Assistant to ask. Default chatgpt.",
+          "enum": [
+            "chatgpt",
+            "gemini",
+            "perplexity",
+            "aio"
+          ]
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format. Default json.",
+          "enum": [
+            "json",
+            "rendered"
+          ]
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "A device name to emulate, from GET /ai/devices."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter ISO country code; random by default."
+        },
+        "subdivision": {
+          "in": "query",
+          "type": "string",
+          "description": "Second part of an ISO first-level subdivision code (e.g. CA for US-CA); needs country."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City name as commonly spelled (case sensitive for now); needs country."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "sync (default) or async, which returns {id} at once; read the result later by calling again with id.",
+          "enum": [
+            "sync",
+            "async"
+          ]
+        },
+        "expiration": {
+          "in": "query",
+          "type": "integer",
+          "description": "Days before a cached result counts as expired; 0 disables the cache. Default 1."
+        }
+      },
+      "notes": [
+        "5 credits per successful call; prefer mode=async for long answers."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://docs.joinmassive.com/web-render/reference/ai.md",
+      "verified": {
+        "docs": "https://docs.joinmassive.com/web-render/reference/ai.md"
+      }
+    },
+    {
+      "id": "joinmassive.user",
+      "name": "Get credit balance",
+      "summary": "The account's email and remaining credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.joinmassive.com/web-render/reference/user.md",
+      "verified": {
+        "docs": "https://docs.joinmassive.com/web-render/reference/user.md"
+      }
+    }
+  ]
+}

@@ -1,0 +1,415 @@
+{
+  "vendor": "polygon",
+  "name": "Polygon.io (Massive)",
+  "category": "finance",
+  "summary": "US stock bars, snapshots, trades, reference data, dividends and news from Polygon.io, now branded Massive.",
+  "docs_url": "https://polygon.io/docs/rest/stocks/aggregates",
+  "pricing_url": "https://polygon.io/pricing",
+  "base_url": "https://api.polygon.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "POLYGON_API_KEY"
+        ],
+        "description": "a Polygon.io (Massive) API key (polygon.io/dashboard/api-keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apiKey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Polygon.io now operates as Massive; this entry uses the api.polygon.io host named in the vendor's OpenAPI file, with the same keys.",
+    "Data coverage, delay and rate limits depend on the plan; an endpoint outside your plan is refused.",
+    "Timestamps are epoch milliseconds; dates are YYYY-MM-DD.",
+    "List endpoints page with a next_url field; request it as given and add the apiKey.",
+    "The same API also covers options, forex, crypto and indices; only US stocks are listed here."
+  ],
+  "sources": [
+    "https://polygon.io/docs/rest/stocks/aggregates",
+    "https://api.polygon.io/openapi"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "polygon.stocks.aggregates",
+      "name": "Get stock aggregate bars",
+      "summary": "OHLCV bars for a ticker over a date range at a chosen bar size.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/aggs/ticker/{stocksTicker}/range/{multiplier}/{timespan}/{from}/{to}",
+      "params": {
+        "stocksTicker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Case-sensitive ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "multiplier": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Bar size multiplier, e.g. 1.",
+          "example": 1
+        },
+        "timespan": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Bar unit: second, minute, hour, day, week, month, quarter or year.",
+          "example": "day"
+        },
+        "from": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Window start: YYYY-MM-DD or a millisecond timestamp.",
+          "example": "2026-10-01"
+        },
+        "to": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Window end: YYYY-MM-DD or a millisecond timestamp.",
+          "example": "2026-11-01"
+        },
+        "adjusted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Adjust for splits; default true."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc by timestamp.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Base aggregates queried, max 50000."
+        }
+      },
+      "notes": [
+        "Bar timestamps t are epoch milliseconds.",
+        "Long ranges truncate at limit; follow next_url in the response (add your apiKey to it)."
+      ],
+      "job": "market.history",
+      "docs_url": "https://polygon.io/docs/rest/stocks/aggregates",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/aggregates"
+      }
+    },
+    {
+      "id": "polygon.stocks.previous_close",
+      "name": "Get the previous day's bar",
+      "summary": "Open, high, low, close and volume of the previous trading day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/aggs/ticker/{stocksTicker}/prev",
+      "params": {
+        "stocksTicker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Case-sensitive ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "adjusted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Adjust for splits; default true."
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://polygon.io/docs/rest/stocks/previous-day-bar",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/previous-day-bar"
+      }
+    },
+    {
+      "id": "polygon.stocks.open_close",
+      "name": "Get a day's open and close",
+      "summary": "Open, close, high, low, volume and pre/after-market prices for one date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/open-close/{stocksTicker}/{date}",
+      "params": {
+        "stocksTicker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Case-sensitive ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "date": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Date, YYYY-MM-DD.",
+          "example": "2026-11-06"
+        },
+        "adjusted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Adjust for splits; default true."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://polygon.io/docs/rest/stocks/daily-ticker-summary",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/daily-ticker-summary"
+      }
+    },
+    {
+      "id": "polygon.stocks.snapshot",
+      "name": "Get a ticker snapshot",
+      "summary": "Latest trade and quote plus today's and yesterday's bars for one stock.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/snapshot/locale/us/markets/stocks/tickers/{stocksTicker}",
+      "params": {
+        "stocksTicker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Case-sensitive ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        }
+      },
+      "notes": [
+        "Snapshot data is cleared at 3:30 AM EST and refills from about 4 AM EST as exchanges report."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://polygon.io/docs/rest/stocks/single-ticker-snapshot",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/single-ticker-snapshot"
+      }
+    },
+    {
+      "id": "polygon.stocks.last_trade",
+      "name": "Get the last trade",
+      "summary": "Most recent trade for a stock.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/last/trade/{stocksTicker}",
+      "params": {
+        "stocksTicker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Case-sensitive ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        }
+      },
+      "notes": [
+        "Data access depends on your plan."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://polygon.io/docs/rest/stocks/last-trade",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/last-trade"
+      }
+    },
+    {
+      "id": "polygon.reference.tickers",
+      "name": "List tickers",
+      "summary": "Search and filter tickers across asset classes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/reference/tickers",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search terms in ticker or company name."
+        },
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact ticker."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker type, e.g. CS for common stock."
+        },
+        "market": {
+          "in": "query",
+          "type": "string",
+          "description": "Market: stocks, crypto, fx, otc, indices."
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Primary exchange MIC."
+        },
+        "active": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only actively traded; default true."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Tickers available on this date, YYYY-MM-DD."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Cursor-paginated: follow next_url in the response."
+      ],
+      "docs_url": "https://polygon.io/docs/rest/stocks/tickers",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/tickers"
+      }
+    },
+    {
+      "id": "polygon.reference.ticker_details",
+      "name": "Get ticker details",
+      "summary": "Company name, description, market cap, exchange, SIC code, share counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/reference/tickers/{ticker}",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Case-sensitive ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Details as of this date, YYYY-MM-DD."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://polygon.io/docs/rest/stocks/ticker-overview",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/ticker-overview"
+      }
+    },
+    {
+      "id": "polygon.reference.news",
+      "name": "Get ticker news",
+      "summary": "News articles with publisher, tickers and sentiment insights.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/reference/news",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker the news mentions."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 10, max 1000."
+        },
+        "published_utc_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Published on or after, date or ISO time.",
+          "wire_name": "published_utc.gte"
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://polygon.io/docs/rest/stocks/news",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/news"
+      }
+    },
+    {
+      "id": "polygon.reference.dividends",
+      "name": "List dividends",
+      "summary": "Dividend history and upcoming dividends.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/reference/dividends",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker."
+        },
+        "ex_dividend_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Ex-dividend date, YYYY-MM-DD."
+        },
+        "frequency": {
+          "in": "query",
+          "type": "integer",
+          "description": "Payments per year: 0 one-time, 1, 2, 4, 12 and others."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 10, max 1000."
+        }
+      },
+      "docs_url": "https://polygon.io/docs/rest/stocks/dividends",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/dividends"
+      }
+    },
+    {
+      "id": "polygon.market.status",
+      "name": "Get market status",
+      "summary": "Whether US exchanges and currency markets are open now.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/marketstatus/now",
+      "docs_url": "https://polygon.io/docs/rest/stocks/market-status",
+      "verified": {
+        "docs": "https://polygon.io/docs/rest/stocks/market-status"
+      }
+    }
+  ]
+}

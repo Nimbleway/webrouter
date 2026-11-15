@@ -1,0 +1,269 @@
+{
+  "vendor": "resend",
+  "name": "Resend",
+  "category": "messaging",
+  "summary": "Transactional email: sent and received emails, delivery metrics, domains, request logs and usage.",
+  "docs_url": "https://resend.com/docs/api-reference/introduction.md",
+  "pricing_url": "https://resend.com/pricing",
+  "base_url": "https://api.resend.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "RESEND_API_KEY"
+        ],
+        "description": "A Resend API key (re_...) from resend.com/api-keys. A sending-access key can only send; reads need full access."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit: 10 requests per second per team, across all keys; a 429 carries retry-after.",
+    "Lists page by cursor: pass the last item's id as after (or the first's as before), never both.",
+    "Email quotas are daily and monthly per plan; GET /usage shows them."
+  ],
+  "sources": [
+    "https://resend.com/docs/api-reference/introduction.md",
+    "https://resend.com/docs/api-reference/rate-limit.md",
+    "https://github.com/resend/resend-openapi"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "resend.emails.list",
+      "name": "List sent emails",
+      "summary": "Emails sent by the team, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/emails",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 100."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: items after this id."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: items before this id."
+        }
+      },
+      "docs_url": "https://resend.com/docs/api-reference/emails/list-emails.md",
+      "verified": {
+        "docs": "https://resend.com/docs/api-reference/emails/list-emails.md"
+      }
+    },
+    {
+      "id": "resend.emails.get",
+      "name": "Get a sent email",
+      "summary": "One sent email with its status (last_event).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/emails/{email_id}",
+      "params": {
+        "email_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The email id."
+        }
+      },
+      "docs_url": "https://resend.com/docs/api-reference/emails/retrieve-email.md",
+      "verified": {
+        "docs": "https://resend.com/docs/api-reference/emails/retrieve-email.md"
+      }
+    },
+    {
+      "id": "resend.emails.received.list",
+      "name": "List received emails",
+      "summary": "Inbound emails to the team's receiving domains.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/emails/receiving",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum items."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: emails after this id; not with before."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: emails before this id; not with after."
+        }
+      },
+      "job": "messaging.messages.list",
+      "docs_url": "https://resend.com/docs/api-reference/emails/list-received-emails.md",
+      "verified": {
+        "docs": "https://resend.com/docs/api-reference/emails/list-received-emails.md"
+      }
+    },
+    {
+      "id": "resend.emails.received.get",
+      "name": "Get a received email",
+      "summary": "One inbound email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/emails/receiving/{email_id}",
+      "params": {
+        "email_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The received email id."
+        }
+      },
+      "docs_url": "https://resend.com/docs/api-reference/emails/retrieve-received-email.md",
+      "verified": {
+        "docs": "https://resend.com/docs/api-reference/emails/retrieve-received-email.md"
+      }
+    },
+    {
+      "id": "resend.emails.metrics",
+      "name": "Get email metrics",
+      "summary": "Delivered, bounced, complained and other counts over a date range, optionally broken down.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/emails/metrics",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 start; defaults to 6 days before end_date."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 end; defaults to now."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA timezone for period buckets, default UTC."
+        },
+        "granularity": {
+          "in": "query",
+          "type": "string",
+          "description": "Bucket size when period is a dimension.",
+          "enum": [
+            "hourly",
+            "daily",
+            "weekly",
+            "monthly"
+          ]
+        },
+        "metrics": {
+          "in": "query",
+          "type": "array",
+          "description": "Metrics to include (received, delivered, bounced, complained...); all by default."
+        },
+        "dimensions": {
+          "in": "query",
+          "type": "array",
+          "description": "Breakdown: period, domain, email or broadcast; none gives a single totals row."
+        },
+        "domain_id": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these sending domain ids, up to 100."
+        }
+      },
+      "notes": [
+        "With no dimensions the answer is only a totals row, with no data series."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://resend.com/docs/api-reference/emails/get-metrics.md",
+      "verified": {
+        "docs": "https://resend.com/docs/api-reference/emails/get-metrics.md"
+      }
+    },
+    {
+      "id": "resend.domains.list",
+      "name": "List domains",
+      "summary": "Sending domains and their verification status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domains",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 100."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: items after this id."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: items before this id."
+        }
+      },
+      "docs_url": "https://resend.com/docs/api-reference/domains/list-domains.md",
+      "verified": {
+        "docs": "https://resend.com/docs/api-reference/domains/list-domains.md"
+      }
+    },
+    {
+      "id": "resend.logs.list",
+      "name": "List API request logs",
+      "summary": "The team's API requests with status codes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/logs",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 100."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: items after this id."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor: items before this id."
+        }
+      },
+      "job": "logs.search",
+      "docs_url": "https://resend.com/docs/api-reference/logs/list-logs.md",
+      "verified": {
+        "docs": "https://resend.com/docs/api-reference/logs/list-logs.md"
+      }
+    },
+    {
+      "id": "resend.usage.get",
+      "name": "Get usage and plan limits",
+      "summary": "Current usage against the plan's quotas.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "job": "account.usage",
+      "docs_url": "https://resend.com/docs/api-reference/rate-limit.md",
+      "verified": {
+        "docs": "https://github.com/resend/resend-openapi"
+      }
+    }
+  ]
+}

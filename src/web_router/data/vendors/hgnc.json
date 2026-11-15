@@ -1,0 +1,118 @@
+{
+  "vendor": "hgnc",
+  "name": "HGNC (HUGO Gene Nomenclature Committee)",
+  "category": "science",
+  "summary": "Approved human gene symbols and names, with aliases, previous symbols and cross-references (Ensembl, Entrez, UniProt, OMIM), plus VGNC symbols for other vertebrates.",
+  "docs_url": "https://www.genenames.org/help/rest/",
+  "base_url": "https://rest.genenames.org",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "notes": [
+    "Keyless. The Accept header picks the format: application/json is sent here; without it the service answers XML.",
+    "At most 10 requests per second; heavier clients get 403 and may have their IP blocked.",
+    "search returns only hgnc_id, symbol and score per hit; follow up with fetch for the full record.",
+    "Search terms take * and ? wildcards and AND/OR/NOT between field:term pairs (e.g. symbol:ZNF* AND status:Approved). fetch takes no wildcards and one term.",
+    "Prefix a path with /vgnc (e.g. /vgnc/search/symbol/BRCA2) for non-human vertebrate genes; not modelled as separate endpoints here."
+  ],
+  "sources": [
+    "https://www.genenames.org/help/rest/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "hgnc.info",
+      "name": "Get service info and fields",
+      "summary": "Last update time, record count, and the searchable and stored fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/info",
+      "params": {},
+      "job": "index.metadata",
+      "docs_url": "https://www.genenames.org/help/rest/",
+      "verified": {
+        "docs": "https://www.genenames.org/help/rest/"
+      }
+    },
+    {
+      "id": "hgnc.genes.search",
+      "name": "Search genes by a field",
+      "summary": "Genes whose field matches a term, with hgnc_id, symbol and score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/{field}/{term}",
+      "params": {
+        "field": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A searchable field, e.g. symbol, alias_symbol, prev_symbol, name, entrez_id, ensembl_gene_id, uniprot_ids, location, status.",
+          "example": "symbol"
+        },
+        "term": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Search term; * and ? wildcards allowed; phrases in URL-encoded double quotes.",
+          "example": "ZNF*"
+        }
+      },
+      "job": "science.genes.search",
+      "docs_url": "https://www.genenames.org/help/rest/",
+      "verified": {
+        "docs": "https://www.genenames.org/help/rest/"
+      }
+    },
+    {
+      "id": "hgnc.genes.search_all",
+      "name": "Search genes across all fields",
+      "summary": "Genes matching a term in any searchable field, or a boolean field:term query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/{query}",
+      "params": {
+        "query": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A term, or field:term pairs joined by AND, OR, NOT.",
+          "example": "symbol:ZNF* AND status:Approved"
+        }
+      },
+      "job": "science.genes.search",
+      "docs_url": "https://www.genenames.org/help/rest/",
+      "verified": {
+        "docs": "https://www.genenames.org/help/rest/"
+      }
+    },
+    {
+      "id": "hgnc.genes.fetch",
+      "name": "Fetch full gene records",
+      "summary": "Every stored field (names, aliases, locus, gene groups, cross-references) of the genes matching one exact value.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fetch/{field}/{term}",
+      "params": {
+        "field": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A searchable field, e.g. symbol, hgnc_id, entrez_id, ensembl_gene_id, prev_symbol, alias_symbol.",
+          "example": "symbol"
+        },
+        "term": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Exact value; no wildcards.",
+          "example": "ZNF3"
+        }
+      },
+      "job": "science.genes.get",
+      "docs_url": "https://www.genenames.org/help/rest/",
+      "verified": {
+        "docs": "https://www.genenames.org/help/rest/"
+      }
+    }
+  ]
+}

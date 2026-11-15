@@ -1,0 +1,181 @@
+{
+  "vendor": "google-search-console",
+  "name": "Google Search Console",
+  "category": "seo",
+  "summary": "Your Search Console properties: search performance (clicks, impressions, CTR, position by query, page, country, device and date) and sitemaps.",
+  "docs_url": "https://developers.google.com/webmaster-tools/v1/api_reference_index",
+  "base_url": "https://www.googleapis.com/webmasters/v3",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "GOOGLE_SEARCH_CONSOLE_CLIENT_ID"
+        ],
+        "description": "the OAuth client id of a Google Cloud OAuth app with the Search Console API enabled (Google Cloud console > APIs & Services > Credentials)"
+      },
+      "client_secret": {
+        "env": [
+          "GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET"
+        ],
+        "description": "that OAuth app's client secret"
+      },
+      "refresh_token": {
+        "env": [
+          "GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN"
+        ],
+        "description": "a refresh token minted with that OAuth app for the scope https://www.googleapis.com/auth/webmasters.readonly (reads) or https://www.googleapis.com/auth/webmasters (to submit sitemaps)"
+      }
+    },
+    "oauth2": {
+      "grant": "refresh_token",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "refresh_token": "{refresh_token}"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: only properties the signed-in Google user has in Search Console.",
+    "The siteUrl path segment must be percent-encoded ('sc-domain%3Aexample.com', 'https%3A%2F%2Fwww.example.com%2F').",
+    "Dates are Pacific Time. Results come back sorted by clicks, or by date when grouped by date; the API returns top rows, not every row.",
+    "Search analytics pages with startRow; at most 25,000 rows per call."
+  ],
+  "sources": [
+    "https://developers.google.com/webmaster-tools/v1/api_reference_index",
+    "https://developers.google.com/webmaster-tools/v1/searchanalytics/query",
+    "https://developers.google.com/webmaster-tools/v1/sites/list",
+    "https://developers.google.com/webmaster-tools/v1/sitemaps/list",
+    "https://developers.google.com/webmaster-tools/v1/sitemaps/submit"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "google-search-console.sites.list",
+      "name": "List Search Console properties",
+      "summary": "Every property the user has and their permission level.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sites",
+      "job": "search_console.sites",
+      "docs_url": "https://developers.google.com/webmaster-tools/v1/sites/list",
+      "verified": {
+        "docs": "https://developers.google.com/webmaster-tools/v1/sites/list"
+      }
+    },
+    {
+      "id": "google-search-console.search_analytics.query",
+      "name": "Query search performance",
+      "summary": "Clicks, impressions, CTR and average position grouped by dimensions over a date range.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/sites/{siteUrl}/searchAnalytics/query",
+      "params": {
+        "siteUrl": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The property exactly as Search Console shows it: 'https://www.example.com/' (trailing slash) or 'sc-domain:example.com'. URL-encode it in the path.",
+          "example": "sc-domain:example.com"
+        },
+        "startDate": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD, Pacific Time, inclusive.",
+          "example": "2026-10-01"
+        },
+        "endDate": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "YYYY-MM-DD, Pacific Time, inclusive.",
+          "example": "2026-10-31"
+        },
+        "dimensions": {
+          "in": "body",
+          "type": "array",
+          "description": "Group by, in order: country, device, page, query, searchAppearance, date, hour. Omit for one total row.",
+          "example": [
+            "query",
+            "page"
+          ]
+        },
+        "type": {
+          "in": "body",
+          "type": "string",
+          "description": "web (default), image, video, news, discover or googleNews."
+        },
+        "dimensionFilterGroups": {
+          "in": "body",
+          "type": "array",
+          "description": "[{groupType: 'and', filters: [{dimension, operator, expression}]}]. Operators: contains, equals, notContains, notEquals, includingRegex, excludingRegex."
+        },
+        "aggregationType": {
+          "in": "body",
+          "type": "string",
+          "description": "auto (default), byPage, byProperty or byNewsShowcasePanel."
+        },
+        "rowLimit": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 to 25000; default 1000.",
+          "example": 1000
+        },
+        "startRow": {
+          "in": "body",
+          "type": "integer",
+          "description": "Zero-based first row, for paging.",
+          "example": 0
+        },
+        "dataState": {
+          "in": "body",
+          "type": "string",
+          "description": "final (default), all (includes fresh partial data) or hourly_all (use with the hour dimension)."
+        }
+      },
+      "notes": [
+        "A read over POST. country values are ISO 3166-1 alpha-3 codes; device is DESKTOP, MOBILE or TABLET.",
+        "Fresh days can be partial: dataState 'all' includes them."
+      ],
+      "job": "search_console.query",
+      "docs_url": "https://developers.google.com/webmaster-tools/v1/searchanalytics/query",
+      "verified": {
+        "docs": "https://developers.google.com/webmaster-tools/v1/searchanalytics/query"
+      }
+    },
+    {
+      "id": "google-search-console.sitemaps.list",
+      "name": "List a property's sitemaps",
+      "summary": "Sitemaps submitted for a property with their status and errors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sites/{siteUrl}/sitemaps",
+      "params": {
+        "siteUrl": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The property exactly as Search Console shows it: 'https://www.example.com/' (trailing slash) or 'sc-domain:example.com'. URL-encode it in the path.",
+          "example": "sc-domain:example.com"
+        },
+        "sitemapIndex": {
+          "in": "query",
+          "type": "string",
+          "description": "URL of a sitemap index to list the sitemaps inside it."
+        }
+      },
+      "job": "search_console.sitemaps",
+      "docs_url": "https://developers.google.com/webmaster-tools/v1/sitemaps/list",
+      "verified": {
+        "docs": "https://developers.google.com/webmaster-tools/v1/sitemaps/list"
+      }
+    }
+  ]
+}

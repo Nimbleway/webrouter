@@ -1,0 +1,182 @@
+{
+  "vendor": "npm",
+  "name": "npm registry",
+  "category": "developer",
+  "summary": "Public npm registry: package metadata, single versions, full-text package search, and daily download counts.",
+  "docs_url": "https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md",
+  "base_url": "https://registry.npmjs.org",
+  "hosts": {
+    "downloads": "https://api.npmjs.org"
+  },
+  "notes": [
+    "Keyless for public packages.",
+    "Download counts start on 2015-01-10. A bulk (comma-separated) query takes up to 128 unscoped packages and at most 365 days; other queries span at most 18 months."
+  ],
+  "sources": [
+    "https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md",
+    "https://github.com/npm/registry/blob/main/docs/download-counts.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "npm.packages.search",
+      "name": "Search packages",
+      "summary": "Packages matching a text query, with ranking scores.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/-/v1/search",
+      "params": {
+        "text": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text query; supports qualifiers author:, maintainer:, scope:, keywords:, not:unstable, not:insecure, is:unstable, is:insecure, boost-exact:false.",
+          "example": "http client"
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, default 20, max 250."
+        },
+        "from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset of the first result."
+        },
+        "quality": {
+          "in": "query",
+          "type": "number",
+          "description": "Weight of quality in ranking, 0 to 1."
+        },
+        "popularity": {
+          "in": "query",
+          "type": "number",
+          "description": "Weight of popularity in ranking, 0 to 1."
+        },
+        "maintenance": {
+          "in": "query",
+          "type": "number",
+          "description": "Weight of maintenance in ranking, 0 to 1."
+        }
+      },
+      "notes": [
+        "The three weights are normalised into a unit vector."
+      ],
+      "job": "packages.search",
+      "docs_url": "https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md",
+      "verified": {
+        "docs": "https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md"
+      }
+    },
+    {
+      "id": "npm.packages.get",
+      "name": "Get a package",
+      "summary": "The package document: every version, dist-tags, maintainers, times and readme.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{package}",
+      "params": {
+        "package": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name.",
+          "example": "react"
+        }
+      },
+      "job": "packages.get",
+      "docs_url": "https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md",
+      "verified": {
+        "docs": "https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md"
+      }
+    },
+    {
+      "id": "npm.packages.version",
+      "name": "Get one package version",
+      "summary": "The manifest of one version (dependencies, dist tarball, integrity).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{package}/{version}",
+      "params": {
+        "package": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name.",
+          "example": "react"
+        },
+        "version": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Exact version, or latest.",
+          "example": "latest"
+        }
+      },
+      "job": "packages.get",
+      "docs_url": "https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md",
+      "verified": {
+        "docs": "https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md"
+      }
+    },
+    {
+      "id": "npm.downloads.point",
+      "name": "Get total downloads for a period",
+      "summary": "Total downloads of one package (or comma-separated packages) over a period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/downloads/point/{period}/{package}",
+      "params": {
+        "period": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "last-day, last-week, last-month, last-year, a date (2023-02-01) or a range start:end (2023-02-01:2023-02-08).",
+          "example": "last-week"
+        },
+        "package": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name, or up to 128 comma-separated unscoped names.",
+          "example": "react"
+        }
+      },
+      "job": "packages.downloads",
+      "host": "downloads",
+      "docs_url": "https://github.com/npm/registry/blob/main/docs/download-counts.md",
+      "verified": {
+        "docs": "https://github.com/npm/registry/blob/main/docs/download-counts.md"
+      }
+    },
+    {
+      "id": "npm.downloads.range",
+      "name": "Get daily downloads for a period",
+      "summary": "Downloads per day of one package (or comma-separated packages) over a period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/downloads/range/{period}/{package}",
+      "params": {
+        "period": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "last-day, last-week, last-month, last-year, a date or a range start:end.",
+          "example": "last-month"
+        },
+        "package": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name, or up to 128 comma-separated unscoped names.",
+          "example": "react"
+        }
+      },
+      "job": "packages.downloads",
+      "host": "downloads",
+      "docs_url": "https://github.com/npm/registry/blob/main/docs/download-counts.md",
+      "verified": {
+        "docs": "https://github.com/npm/registry/blob/main/docs/download-counts.md"
+      }
+    }
+  ]
+}

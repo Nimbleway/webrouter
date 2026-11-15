@@ -1,0 +1,283 @@
+{
+  "vendor": "steam",
+  "name": "Steam Web API",
+  "category": "commerce",
+  "summary": "Every Steam app id, game news, live player counts, achievement stats and public player profiles.",
+  "docs_url": "https://steamcommunity.com/dev",
+  "base_url": "https://api.steampowered.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "STEAM_API_KEY"
+        ],
+        "required": false,
+        "description": "A Steam Web API key (steamcommunity.com/dev/apikey), sent as the key query parameter. News, player counts and achievement percentages work without it."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Using the API means accepting the Steam API Terms of Use. Responses are JSON by default (format=xml or vdf also work).",
+    "This is the public host api.steampowered.com; partner.steam-api.com is for publisher keys only.",
+    "There is no documented store-page (price, description) endpoint; apps.list gives ids, names and price_change_number."
+  ],
+  "sources": [
+    "https://steamcommunity.com/dev",
+    "https://partner.steamgames.com/doc/webapi_overview",
+    "https://partner.steamgames.com/doc/webapi/IStoreService",
+    "https://partner.steamgames.com/doc/webapi/ISteamNews",
+    "https://partner.steamgames.com/doc/webapi/ISteamUserStats",
+    "https://partner.steamgames.com/doc/webapi/ISteamUser"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "steam.apps.list",
+      "name": "List apps",
+      "summary": "Every Steam app id with name, last_modified and price_change_number, paged by app id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/IStoreService/GetAppList/v1/",
+      "params": {
+        "include_games": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include games (on by default)."
+        },
+        "include_dlc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include DLC."
+        },
+        "include_software": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include software."
+        },
+        "include_videos": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include videos and series."
+        },
+        "include_hardware": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include hardware."
+        },
+        "if_modified_since": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only items changed since this Unix timestamp."
+        },
+        "have_description_language": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items with a description in this language."
+        },
+        "last_appid": {
+          "in": "query",
+          "type": "integer",
+          "description": "Paging: the last appid of the previous page."
+        },
+        "max_results": {
+          "in": "query",
+          "type": "integer",
+          "description": "Per page, default 10,000, max 50,000."
+        }
+      },
+      "notes": [
+        "Needs a key. Returns only games unless the include_ flags add other types."
+      ],
+      "job": "apps.search",
+      "credentials": [
+        "api_key"
+      ],
+      "docs_url": "https://partner.steamgames.com/doc/webapi/IStoreService",
+      "verified": {
+        "docs": "https://partner.steamgames.com/doc/webapi/IStoreService"
+      }
+    },
+    {
+      "id": "steam.news.list",
+      "name": "Get news for a game",
+      "summary": "Recent news posts of an app.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ISteamNews/GetNewsForApp/v2/",
+      "params": {
+        "appid": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "App id.",
+          "example": 440
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Posts to return, default 20."
+        },
+        "maxlength": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max content length; 0 for full content."
+        },
+        "enddate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only posts before this Unix timestamp."
+        },
+        "feeds": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated feed names."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+      "verified": {
+        "docs": "https://partner.steamgames.com/doc/webapi/ISteamNews"
+      }
+    },
+    {
+      "id": "steam.players.current",
+      "name": "Get current player count",
+      "summary": "How many players are in a game right now.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ISteamUserStats/GetNumberOfCurrentPlayers/v1/",
+      "params": {
+        "appid": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "App id.",
+          "example": 730
+        }
+      },
+      "job": "apps.stats",
+      "docs_url": "https://partner.steamgames.com/doc/webapi/ISteamUserStats",
+      "verified": {
+        "docs": "https://partner.steamgames.com/doc/webapi/ISteamUserStats"
+      }
+    },
+    {
+      "id": "steam.achievements.global",
+      "name": "Get global achievement percentages",
+      "summary": "Share of players who unlocked each achievement of a game.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/",
+      "params": {
+        "gameid": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "App id.",
+          "example": 440
+        }
+      },
+      "job": "apps.stats",
+      "docs_url": "https://partner.steamgames.com/doc/webapi/ISteamUserStats",
+      "verified": {
+        "docs": "https://partner.steamgames.com/doc/webapi/ISteamUserStats"
+      }
+    },
+    {
+      "id": "steam.game.schema",
+      "name": "Get a game's stats schema",
+      "summary": "Names and display names of a game's achievements and stats.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ISteamUserStats/GetSchemaForGame/v2/",
+      "params": {
+        "appid": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "App id.",
+          "example": 440
+        },
+        "l": {
+          "in": "query",
+          "type": "string",
+          "description": "Language for display names."
+        }
+      },
+      "job": "apps.product",
+      "credentials": [
+        "api_key"
+      ],
+      "docs_url": "https://partner.steamgames.com/doc/webapi/ISteamUserStats",
+      "verified": {
+        "docs": "https://partner.steamgames.com/doc/webapi/ISteamUserStats"
+      }
+    },
+    {
+      "id": "steam.players.get",
+      "name": "Get player profiles",
+      "summary": "Public profile summaries of up to 100 Steam users.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ISteamUser/GetPlayerSummaries/v2/",
+      "params": {
+        "steamids": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated 64-bit SteamIDs, max 100."
+        }
+      },
+      "job": "social.profile",
+      "credentials": [
+        "api_key"
+      ],
+      "docs_url": "https://partner.steamgames.com/doc/webapi/ISteamUser",
+      "verified": {
+        "docs": "https://partner.steamgames.com/doc/webapi/ISteamUser"
+      }
+    },
+    {
+      "id": "steam.vanity.resolve",
+      "name": "Resolve a vanity URL",
+      "summary": "The SteamID behind a custom profile or group URL name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ISteamUser/ResolveVanityURL/v1/",
+      "params": {
+        "vanityurl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The custom URL name."
+        },
+        "url_type": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 profile (default), 2 group, 3 official game group.",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "job": "social.profile",
+      "credentials": [
+        "api_key"
+      ],
+      "docs_url": "https://partner.steamgames.com/doc/webapi/ISteamUser",
+      "verified": {
+        "docs": "https://partner.steamgames.com/doc/webapi/ISteamUser"
+      }
+    }
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "vendor": "defillama",
+  "name": "DefiLlama",
+  "category": "finance",
+  "summary": "DeFi protocol and chain TVL, token prices by contract, stablecoin supply, yield pools, DEX volumes and protocol fees, keyless.",
+  "docs_url": "https://api-docs.defillama.com/",
+  "base_url": "https://api.llama.fi",
+  "hosts": {
+    "coins": "https://coins.llama.fi",
+    "stablecoins": "https://stablecoins.llama.fi",
+    "yields": "https://yields.llama.fi"
+  },
+  "notes": [
+    "The free API is keyless. The paid Pro API (pro-api.llama.fi, key placed in the URL path) is not covered by this entry.",
+    "Protocols are addressed by slug (aave, uniswap) and chains by name (Ethereum); get them from defillama.protocols and defillama.chains.",
+    "Tokens for price calls are {chain}:{address} or coingecko:{id}, comma-separated: ethereum:0xdF57...,coingecko:ethereum.",
+    "Timestamps are UNIX seconds. TVL and volumes are in USD.",
+    "/protocols, /pools and the overview endpoints return the whole set and are large; pass excludeTotalDataChart=true and excludeTotalDataChartBreakdown=true on overviews to shrink them."
+  ],
+  "sources": [
+    "https://api-docs.defillama.com/",
+    "https://api-docs.defillama.com/llms-free.txt",
+    "https://api-docs.defillama.com/llms-pro.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "defillama.protocols",
+      "name": "List protocols with TVL",
+      "summary": "Every protocol with category, chains, current TVL and 1d/7d change.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/protocols",
+      "job": "market.fundamentals",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.protocol",
+      "name": "Get protocol TVL history",
+      "summary": "Historical TVL of a protocol with breakdowns by token and chain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/protocol/{protocol}",
+      "params": {
+        "protocol": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Protocol slug.",
+          "example": "aave"
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.chains",
+      "name": "List chains with TVL",
+      "summary": "Current TVL of every chain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/chains",
+      "job": "market.fundamentals",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.chain_tvl_history",
+      "name": "Get chain TVL history",
+      "summary": "Historical TVL of one chain (excluding liquid staking and double counting).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/historicalChainTvl/{chain}",
+      "params": {
+        "chain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name.",
+          "example": "Ethereum"
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.prices.current",
+      "name": "Get current token prices",
+      "summary": "Current prices of tokens by contract address or CoinGecko id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/prices/current/{coins}",
+      "host": "coins",
+      "params": {
+        "coins": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated {chain}:{address} or coingecko:{id}.",
+          "example": "coingecko:ethereum,ethereum:0xdF574c24545E5FfEcb9a659c229253D4111d87e1"
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.prices.historical",
+      "name": "Get token prices at a time",
+      "summary": "Token prices at a past UNIX timestamp.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/prices/historical/{timestamp}/{coins}",
+      "host": "coins",
+      "params": {
+        "timestamp": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "UNIX timestamp, seconds.",
+          "example": 1648680149
+        },
+        "coins": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated {chain}:{address} or coingecko:{id}.",
+          "example": "coingecko:ethereum"
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.prices.chart",
+      "name": "Get token price chart",
+      "summary": "Token prices at regular intervals.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/chart/{coins}",
+      "host": "coins",
+      "params": {
+        "coins": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated {chain}:{address} or coingecko:{id}.",
+          "example": "coingecko:ethereum"
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "UNIX timestamp of the earliest point."
+        },
+        "end": {
+          "in": "query",
+          "type": "integer",
+          "description": "UNIX timestamp of the latest point."
+        },
+        "span": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of points; default 0.",
+          "example": 10
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "Time between points; default 24 hours.",
+          "example": "2d"
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.stablecoins",
+      "name": "List stablecoins",
+      "summary": "Every stablecoin with circulating amounts, optionally with current prices.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stablecoins",
+      "host": "stablecoins",
+      "params": {
+        "includePrices": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include current prices."
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.yields.pools",
+      "name": "List yield pools",
+      "summary": "Latest APY, TVL and predictions for every yield pool.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pools",
+      "host": "yields",
+      "notes": [
+        "Very large response (all pools)."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    },
+    {
+      "id": "defillama.fees.summary",
+      "name": "Get protocol fees and revenue",
+      "summary": "A protocol's fees or revenue totals with historical data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/summary/fees/{protocol}",
+      "params": {
+        "protocol": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Protocol slug.",
+          "example": "uniswap"
+        },
+        "dataType": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "dailyFees",
+            "dailyRevenue",
+            "dailyHoldersRevenue"
+          ],
+          "description": "Default dailyFees."
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://api-docs.defillama.com/",
+      "verified": {
+        "docs": "https://api-docs.defillama.com/llms-free.txt"
+      }
+    }
+  ]
+}

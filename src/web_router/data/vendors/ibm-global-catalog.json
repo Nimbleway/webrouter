@@ -1,0 +1,245 @@
+{
+  "vendor": "ibm-global-catalog",
+  "name": "IBM Cloud Global Catalog",
+  "category": "developer",
+  "summary": "IBM Cloud's catalog of services, plans and deployments with their public pricing, from the Global Catalog API.",
+  "docs_url": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog",
+  "base_url": "https://globalcatalog.cloud.ibm.com/api/v1",
+  "notes": [
+    "This entry sends no credentials: getting an entry, its children and its pricing work unauthenticated for publicly available services. Private or account-scoped entries need an IAM token, which this entry does not mint.",
+    "Entries form a tree: services have child plans, and plans have child deployments. Walk down with entry.children and price a plan with pricing.get or pricing.deployments.",
+    "include=_ (or complete=true) returns every property; by default only basic properties come back. include=metadata.pricing narrows to pricing metadata."
+  ],
+  "sources": [
+    "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog",
+    "https://github.com/IBM/platform-services-go-sdk/blob/main/globalcatalogv1/global_catalog_v1.go"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ibm-global-catalog.entries.search",
+      "name": "Search catalog entries",
+      "summary": "Catalog entries matching keywords and filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords matching name, display name or description, plus filters such as kind:, tag:, rc:true|false, iam:true|false, active:true|false, geo:, price:.",
+          "example": "kind:service rc:true"
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "'_' for every property, or a colon-separated list such as metadata.ui:metadata.pricing."
+        },
+        "descending": {
+          "in": "query",
+          "type": "string",
+          "description": "true to sort descending."
+        },
+        "languages": {
+          "in": "query",
+          "type": "string",
+          "description": "Language codes such as en-us, or * for all."
+        },
+        "complete": {
+          "in": "query",
+          "type": "string",
+          "description": "true for all fields in all languages."
+        },
+        "_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first item."
+        },
+        "_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most items per answer."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Field to sort by.",
+          "wire_name": "sort-by"
+        }
+      },
+      "notes": [
+        "The docs say permissions determine what this call shows, and do not say it works without a token; expect only public entries, or a refusal, unauthenticated."
+      ],
+      "job": "pricing.services",
+      "docs_url": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog",
+      "verified": {
+        "docs": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog"
+      }
+    },
+    {
+      "id": "ibm-global-catalog.entry.get",
+      "name": "Get a catalog entry",
+      "summary": "One service, plan or deployment entry by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Catalog entry id."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "'_' for every property, or a colon-separated list of metadata fields."
+        },
+        "languages": {
+          "in": "query",
+          "type": "string",
+          "description": "Language codes such as en-us, or * for all."
+        },
+        "complete": {
+          "in": "query",
+          "type": "string",
+          "description": "true for all fields in all languages."
+        },
+        "depth": {
+          "in": "query",
+          "type": "integer",
+          "description": "Depth of child entries to include."
+        }
+      },
+      "job": "pricing.services",
+      "docs_url": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog",
+      "verified": {
+        "docs": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog"
+      }
+    },
+    {
+      "id": "ibm-global-catalog.entry.children",
+      "name": "List an entry's children of one kind",
+      "summary": "Child entries of a kind (e.g. the plans of a service, the deployments of a plan).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{id}/{kind}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Parent entry id."
+        },
+        "kind": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Child kind.",
+          "example": "plan"
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "'*' for every property, or a colon-separated list of metadata fields."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search filter (offset form only)."
+        },
+        "descending": {
+          "in": "query",
+          "type": "string",
+          "description": "true to sort descending (offset form only)."
+        },
+        "languages": {
+          "in": "query",
+          "type": "string",
+          "description": "Language codes such as en-us, or * for all."
+        },
+        "complete": {
+          "in": "query",
+          "type": "string",
+          "description": "true for all fields in all languages."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Page token (token form; not with _offset)."
+        },
+        "_offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first item."
+        },
+        "_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most items per answer."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Field to sort by (offset form only).",
+          "wire_name": "sort-by"
+        }
+      },
+      "notes": [
+        "When children exceed the allowed total, page with the token form (start) instead of _offset; q, sort-by and descending do not work in token form."
+      ],
+      "job": "pricing.skus",
+      "docs_url": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog",
+      "verified": {
+        "docs": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog"
+      }
+    },
+    {
+      "id": "ibm-global-catalog.pricing.get",
+      "name": "Get pricing of an entry",
+      "summary": "Pricing of a plan or deployment entry.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{id}/pricing",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Catalog entry id."
+        },
+        "deployment_region": {
+          "in": "query",
+          "type": "string",
+          "description": "For a global deployment, one region from the answer's deployment_regions list."
+        }
+      },
+      "job": "pricing.skus",
+      "docs_url": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog",
+      "verified": {
+        "docs": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog"
+      }
+    },
+    {
+      "id": "ibm-global-catalog.pricing.deployments",
+      "name": "Get pricing of a plan's deployments",
+      "summary": "One pricing per visible child deployment of a plan.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{id}/pricing/deployment",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Plan entry id."
+        }
+      },
+      "job": "pricing.skus",
+      "docs_url": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog",
+      "verified": {
+        "docs": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog"
+      }
+    }
+  ]
+}

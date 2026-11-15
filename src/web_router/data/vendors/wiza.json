@@ -1,0 +1,205 @@
+{
+  "vendor": "wiza",
+  "name": "Wiza",
+  "category": "enrichment",
+  "summary": "Reveal emails and phones from profile URLs or names, enrich companies, and search prospects.",
+  "docs_url": "https://docs.wiza.co/",
+  "pricing_url": "https://wiza.co/pricing",
+  "base_url": "https://wiza.co/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "WIZA_API_KEY"
+        ],
+        "description": "A Wiza API key (Wiza account > API; see the Generate an API Key page). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Reveals are asynchronous: start, then poll the get endpoint.",
+    "Credits are prepaid and deducted only when data comes back.",
+    "The legacy list endpoints (create list, get list contacts, prospect lists) and the location and technology autocomplete lookups are not in this entry."
+  ],
+  "sources": [
+    "https://docs.wiza.co/llms.txt",
+    "https://docs.wiza.co/using-the-api/credit-deduction-behavior.md",
+    "https://docs.wiza.co/api-reference/individual-reveals/start-individual-reveal.md",
+    "https://docs.wiza.co/api-reference/individual-reveals/get-individual-reveal.md",
+    "https://docs.wiza.co/api-reference/credits/get-credits.md",
+    "https://docs.wiza.co/api-reference/company-enrichment/company-enrichment.md",
+    "https://docs.wiza.co/api-reference/prospect/prospect-search.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "wiza.account.credits",
+      "name": "Get credit balance",
+      "summary": "Email, phone, export and API credits left.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/meta/credits",
+      "notes": [
+        "email_credits and phone_credits can be the string \"unlimited\"."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.wiza.co/api-reference/credits/get-credits.md",
+      "verified": {
+        "docs": "https://docs.wiza.co/api-reference/credits/get-credits.md"
+      }
+    },
+    {
+      "id": "wiza.reveal.start",
+      "name": "Start an individual reveal",
+      "summary": "Enrich one contact from a profile URL, a name plus company or domain, or an email. Returns an id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/individual_reveals",
+      "params": {
+        "individual_reveal": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "One of: {profile_url}; {full_name, company or domain, optional profile_url, email}; {email}.",
+          "example": {
+            "profile_url": "https://www.linkedin.com/in/example"
+          }
+        },
+        "enrichment_level": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "How much to reveal.",
+          "enum": [
+            "none",
+            "partial",
+            "phone",
+            "full"
+          ]
+        },
+        "email_options": {
+          "in": "body",
+          "type": "object",
+          "description": "{accept_work, accept_personal} booleans; all emails returned when omitted."
+        },
+        "reveal_options": {
+          "in": "body",
+          "type": "object",
+          "description": "{fair_key}: spreads throughput across sub-groups."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Starts a job that only produces data (it does spend credits). Poll wiza.reveal.get with data.id until is_complete; status goes queued, resolving, finished or failed. A 429 means the queue is full.",
+        "Credits are charged only for data returned: profile matched 1 API credit, valid email 2, phone 5 (full is phones plus emails, each when returned). The credit-behavior page names the levels none, email, phone and full while this reference lists none, partial, phone and full."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.wiza.co/api-reference/individual-reveals/start-individual-reveal.md",
+      "verified": {
+        "docs": "https://docs.wiza.co/api-reference/individual-reveals/start-individual-reveal.md"
+      }
+    },
+    {
+      "id": "wiza.reveal.get",
+      "name": "Get an individual reveal",
+      "summary": "Status and results of a reveal.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/individual_reveals/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Reveal id from reveal.start."
+        }
+      },
+      "notes": [
+        "data.credits shows the credits used. 404 when the id is unknown."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.wiza.co/api-reference/individual-reveals/get-individual-reveal.md",
+      "verified": {
+        "docs": "https://docs.wiza.co/api-reference/individual-reveals/get-individual-reveal.md"
+      }
+    },
+    {
+      "id": "wiza.company.enrich",
+      "name": "Enrich a company",
+      "summary": "Company data by name, domain or LinkedIn id or slug (at least one).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company_enrichments",
+      "params": {
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name.",
+          "example": "Wiza"
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain.",
+          "example": "wiza.co"
+        },
+        "company_linkedin_id": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn company id."
+        },
+        "company_linkedin_slug": {
+          "in": "body",
+          "type": "string",
+          "description": "Slug from the LinkedIn company URL."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed.",
+        "2 API credits per request, charged only when company data is found."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.wiza.co/api-reference/company-enrichment/company-enrichment.md",
+      "verified": {
+        "docs": "https://docs.wiza.co/api-reference/company-enrichment/company-enrichment.md"
+      }
+    },
+    {
+      "id": "wiza.prospects.search",
+      "name": "Search prospects",
+      "summary": "People matching person and company filters; returns up to 30 profiles per call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/prospects/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filter object. Person: first_name, last_name, job_title [{v, s: i|e}], job_title_level, job_role, location [{v, b, s}], skill, school, years_of_experience_min/max, last_role_change. Company: job_company, company_industry, company_size, company_type, revenue, technologies, funding_stage, year_founded_start/end and more. Enum values are listed in the docs."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Profiles to return, default 0, max 30. 0 returns just counts."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing in your account is changed.",
+        "Billed in API credits only for profiles returned; the docs give no per-profile rate. Included location and radius filters are OR-ed."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.wiza.co/api-reference/prospect/prospect-search.md",
+      "verified": {
+        "docs": "https://docs.wiza.co/api-reference/prospect/prospect-search.md"
+      }
+    }
+  ]
+}

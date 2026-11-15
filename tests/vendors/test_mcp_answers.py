@@ -9,7 +9,7 @@ import pytest
 
 from tests.vendors.conftest import Recorder
 from web_router import AsyncWebRouter
-from web_router.constants_vendors import MCP_TOOL_CALL_VENDOR, MCP_TOOL_VENDOR_ENDPOINT, MCP_TOOL_VENDORS
+from web_router.constants_vendors_mcp import MCP_TOOL_CALL_VENDOR, MCP_TOOL_VENDOR_ENDPOINT, MCP_TOOL_VENDORS
 from web_router.mcp.tools import WebRouterTools
 from web_router.vendors.caller import VendorCaller
 
@@ -141,7 +141,7 @@ def _ads(request: httpx.Request) -> httpx.Response:
 
 @pytest.mark.parametrize(("server_allows", "call_allows"), [(False, True), (True, False), (False, False)])
 async def test_a_catalog_write_needs_the_server_flag_and_the_calls(
-    monkeypatch: pytest.MonkeyPatch, server_allows: bool, call_allows: bool
+    monkeypatch: pytest.MonkeyPatch, ads_with_a_write: None, server_allows: bool, call_allows: bool
 ) -> None:
     from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
     from web_router.exceptions_vendors import VendorWriteRefusedError
@@ -160,7 +160,7 @@ async def test_a_catalog_write_needs_the_server_flag_and_the_calls(
     assert recorder.requests == []
 
 
-async def test_a_catalog_write_goes_through_with_both(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_a_catalog_write_goes_through_with_both(monkeypatch: pytest.MonkeyPatch, ads_with_a_write: None) -> None:
     from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
 
     monkeypatch.setenv(VENDOR_ENV_ALLOW_WRITES, "1")

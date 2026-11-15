@@ -1,0 +1,349 @@
+{
+  "vendor": "builtwith",
+  "name": "BuiltWith",
+  "category": "company-data",
+  "summary": "Website technology profiling: the tech stack and metadata of a domain, sites using a technology, related sites and domains for a company name.",
+  "docs_url": "https://api.builtwith.com",
+  "base_url": "https://api.builtwith.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BUILTWITH_API_KEY"
+        ],
+        "description": "A BuiltWith API key (builtwith.com > API). Sent as 'Authorization: API <key>'; the KEY query parameter also works but leaks into logs."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "API {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: 1 per domain on Domain, Relationships (per domain across its pages for 10 minutes), Company to URL, Keywords, Redirects and Trust; Free, Trends, WhoAmI and Usage cost nothing. Lists needs a subscription. X-API-CREDITS-* response headers show the balance.",
+    "Rate limit: 8 concurrent requests and 10 per second; over it returns 429.",
+    "Paths carry the format: these entries use api.json. Well-formed errors come back in an Errors array; treat any non-200 as an error too.",
+    "Technology names use dashes for spaces (AB-Tasty). Check a name for free with the Trends API before spending credits on Lists."
+  ],
+  "sources": [
+    "https://api.builtwith.com/llms-full.txt",
+    "https://api.builtwith.com/domain-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "builtwith.domain.lookup",
+      "name": "Get a domain's technologies",
+      "summary": "Technologies on a domain (current and historic, with first and last detected dates), spend history, and company metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v26/api.json",
+      "params": {
+        "LOOKUP": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain; up to 16 comma-separated.",
+          "example": "builtwith.com"
+        },
+        "LIVEONLY": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: only technologies considered live.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "HIDETEXT": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: drop description, link, tag and category fields.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "HIDEDL": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: drop description and link fields.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "NOMETA": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: no company metadata (address, names); faster.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "NOPII": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: remove people names and emails.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "NOATTR": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: no attributes data; faster.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "TRUST": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: add Trust data, one more credit.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "FDRANGE": {
+          "in": "query",
+          "type": "string",
+          "description": "First-detected date range, YYYY-MM-DD|YYYY-MM-DD."
+        },
+        "LDRANGE": {
+          "in": "query",
+          "type": "string",
+          "description": "Last-detected date range, YYYY-MM-DD|YYYY-MM-DD."
+        }
+      },
+      "notes": [
+        "1 credit per domain looked up."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://api.builtwith.com/domain-api",
+      "verified": {
+        "docs": "https://api.builtwith.com/domain-api"
+      }
+    },
+    {
+      "id": "builtwith.domain.free",
+      "name": "Get a domain's technology summary",
+      "summary": "Free: counts and update ranges per technology group for a domain, without the technology names.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/free1/api.json",
+      "params": {
+        "LOOKUP": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain.",
+          "example": "builtwith.com"
+        }
+      },
+      "job": "company.technologies",
+      "docs_url": "https://api.builtwith.com/llms-full.txt",
+      "verified": {
+        "docs": "https://api.builtwith.com/llms-full.txt"
+      }
+    },
+    {
+      "id": "builtwith.lists.get",
+      "name": "List sites using a technology",
+      "summary": "Sites using a technology, filterable by country, co-used technologies, spend, revenue, employees and traffic rank.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lists13/api.json",
+      "params": {
+        "TECH": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Technology name with dashes for spaces.",
+          "example": "Shopify"
+        },
+        "OTHERTECHS": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated technologies the sites must also use, up to 16."
+        },
+        "META": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: include names, titles, socials, addresses, emails, phones and ranks.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "COUNTRY": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 codes (UK for the United Kingdom), comma-separated.",
+          "example": "US"
+        },
+        "OFFSET": {
+          "in": "query",
+          "type": "string",
+          "description": "The NextOffset value from the previous page; END means done."
+        },
+        "SINCE": {
+          "in": "query",
+          "type": "string",
+          "description": "Live since a date or phrase such as '30 Days Ago'."
+        },
+        "ALL": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: include historical sites; not with SINCE.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "SPEND": {
+          "in": "query",
+          "type": "string",
+          "description": "Monthly tech spend filter as number|operator (EQ, LT, LTE, GT, GTE), e.g. 100|GT."
+        },
+        "REVENUE": {
+          "in": "query",
+          "type": "string",
+          "description": "Estimated eCommerce revenue filter, number|operator."
+        },
+        "EMPLOYEES": {
+          "in": "query",
+          "type": "string",
+          "description": "Employee count filter, number|operator."
+        }
+      },
+      "notes": [
+        "Needs a Lists subscription. Page with OFFSET=NextOffset until it is END."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://api.builtwith.com/llms-full.txt",
+      "verified": {
+        "docs": "https://api.builtwith.com/llms-full.txt"
+      }
+    },
+    {
+      "id": "builtwith.relationships.get",
+      "name": "Find related sites",
+      "summary": "Domains sharing identifiers with a domain (analytics and tag ids, hosting, ownership signals).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rv5/api.json",
+      "params": {
+        "LOOKUP": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One domain."
+        },
+        "PAGE": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1; follow next_page while more_results is true (up to 1000 matches a page)."
+        },
+        "IP": {
+          "in": "query",
+          "type": "string",
+          "description": "yes: include IP identifiers.",
+          "enum": [
+            "yes"
+          ]
+        }
+      },
+      "notes": [
+        "Keep LOOKUP and IP unchanged while paging. 1 credit per domain across all pages while the 10-minute cache holds."
+      ],
+      "job": "company.links",
+      "docs_url": "https://api.builtwith.com/llms-full.txt",
+      "verified": {
+        "docs": "https://api.builtwith.com/llms-full.txt"
+      }
+    },
+    {
+      "id": "builtwith.company.to_url",
+      "name": "Find a company's domains",
+      "summary": "Domains for a company name, with spend, country and social links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ctu3/api.json",
+      "params": {
+        "COMPANY": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company name.",
+          "example": "Shopify"
+        }
+      },
+      "notes": [
+        "1 credit per lookup."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.builtwith.com/llms-full.txt",
+      "verified": {
+        "docs": "https://api.builtwith.com/llms-full.txt"
+      }
+    },
+    {
+      "id": "builtwith.trends.get",
+      "name": "Get a technology's metadata",
+      "summary": "Free: a technology's canonical name, tag, categories, description and trends link; also validates a TECH name (error code -8 when unknown).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/trends/v6/api.json",
+      "params": {
+        "TECH": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Technology name.",
+          "example": "Shopify"
+        }
+      },
+      "job": "trends.query",
+      "docs_url": "https://api.builtwith.com/llms-full.txt",
+      "verified": {
+        "docs": "https://api.builtwith.com/llms-full.txt"
+      }
+    },
+    {
+      "id": "builtwith.keywords.get",
+      "name": "Get a domain's keywords",
+      "summary": "Keywords found on a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/kw2/api.json",
+      "params": {
+        "LOOKUP": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain."
+        }
+      },
+      "notes": [
+        "1 credit per lookup."
+      ],
+      "job": "domain.keywords",
+      "docs_url": "https://api.builtwith.com/llms-full.txt",
+      "verified": {
+        "docs": "https://api.builtwith.com/llms-full.txt"
+      }
+    },
+    {
+      "id": "builtwith.usage.get",
+      "name": "Get credit balance",
+      "summary": "Credits used, purchased and remaining; free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usagev2/api.json",
+      "job": "account.usage",
+      "docs_url": "https://api.builtwith.com/llms-full.txt",
+      "verified": {
+        "docs": "https://api.builtwith.com/llms-full.txt"
+      }
+    }
+  ]
+}

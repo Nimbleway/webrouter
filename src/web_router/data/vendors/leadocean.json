@@ -1,0 +1,666 @@
+{
+  "vendor": "leadocean",
+  "name": "LeadOcean",
+  "category": "enrichment",
+  "summary": "B2B people and company search, person and company enrichment, work and personal email, phone and reverse lookups, and bulk CSV exports.",
+  "docs_url": "https://leadocean.io/docs",
+  "base_url": "https://api.leadocean.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LEADOCEAN_API_KEY"
+        ],
+        "description": "a LeadOcean API key with the search and enrich scopes (create one in your LeadOcean account)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Usage is counted in records, not requests: one person or company returned is one record, a search page of 25 rows costs 25, each enrichment or contact lookup costs 1 even when nothing is found. Add count=true to a search for the total in meta.total, capped at 100,000.",
+    "Keys have scopes, search and enrich; a missing scope answers 403 rather than an empty result.",
+    "Array filters in query strings are comma-separated; wrapping a value in [brackets] makes a keyword an exact match.",
+    "Search pages with meta.nextCursor (pass it back unchanged as cursor); one search pages through at most 10,000 rows by default.",
+    "Email status verified means LeadOcean itself sent to the address; catch_all_valid is a confirmed mailbox on a catch-all domain; untested is a supplier's word only. A search row carries has_email, email_status and email_type so you can check before spending a record.",
+    "Bulk export flow: leadocean.exports.create reserves records and returns an export id; poll leadocean.exports.get until it is done (409 from the download while running), then fetch leadocean.exports.download for the CSV, available for 7 days. Cap 50,000 rows per export.",
+    "Every response carries X-RateLimit-Limit and X-Quota-State headers; a 429 gives Retry-After."
+  ],
+  "sources": [
+    "https://leadocean.io/docs",
+    "https://api.leadocean.io/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "leadocean.person.work_email",
+      "name": "Get a person's current work email",
+      "summary": "One verified-or-catch-all work email at the person's current employer, or data null.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/people/email/work",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "A personal LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/jane-doe-example"
+        },
+        "contact_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The id a people-search row carries at meta.source_ids.person_id; send one of contact_id or person_id."
+        },
+        "person_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The original name of contact_id."
+        }
+      },
+      "notes": [
+        "Costs 1 record per call, found or not. data null means none that qualify, not that no work email exists."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.person.personal_email",
+      "name": "Get a person's personal emails",
+      "summary": "Every personal address held that is not known to be bad, as a list.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/people/email/personal",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "A personal LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/jane-doe-example"
+        },
+        "contact_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The id a people-search row carries at meta.source_ids.person_id; send one of contact_id or person_id."
+        },
+        "person_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The original name of contact_id."
+        }
+      },
+      "notes": [
+        "Costs 1 record. Personal addresses are never verified by LeadOcean."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.person.phone",
+      "name": "Get a person's phone numbers",
+      "summary": "Every number held, best first, each with a type (mobile, direct, office).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/people/phone",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "A personal LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/jane-doe-example"
+        },
+        "contact_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The id a people-search row carries at meta.source_ids.person_id; send one of contact_id or person_id."
+        },
+        "person_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The original name of contact_id."
+        }
+      },
+      "notes": [
+        "Costs 1 record. No do-not-call flag is published, so absence of one is not clearance."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.person.reverse",
+      "name": "Find who holds an email or phone",
+      "summary": "The person behind an email address or phone number, plus its type, status and check date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/people/reverse",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "An address to look up; send this or phone, never both."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "A number in any common format; send this or email."
+        }
+      },
+      "notes": [
+        "Costs 1 record. For the full profile call leadocean.person.enrich."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.person.enrich",
+      "name": "Enrich one person",
+      "summary": "A full profile for one person, by exactly one identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/enrich",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email address."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "Phone number, any human format."
+        },
+        "person_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The id a people-search row carries at meta.source_ids.person_id."
+        },
+        "reveal_email": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include every email and phone held; at no extra charge. Default true when looked up by email, else false."
+        }
+      },
+      "notes": [
+        "Send exactly one identifier. Costs 1 record whether or not it finds anything."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.people.search",
+      "name": "Search people",
+      "summary": "People matching profile and company filters, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/people/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text over name, title, headline, summary, skills and company name."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Job title keywords; [brackets] for exact. Comma-separated."
+        },
+        "excludeTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Job titles to exclude. Comma-separated."
+        },
+        "seniority": {
+          "in": "query",
+          "type": "string",
+          "description": "LeadOcean seniority band. Comma-separated."
+        },
+        "jobFunction": {
+          "in": "query",
+          "type": "string",
+          "description": "Department or function of the current role. Comma-separated."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country where the person is located. Comma-separated."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City keywords. Comma-separated."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domains the person works at. Comma-separated."
+        },
+        "companyName": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name phrases; [brackets] for exact. Comma-separated."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Company industry. Comma-separated."
+        },
+        "employeeRange": {
+          "in": "query",
+          "type": "string",
+          "description": "Company headcount bracket. Comma-separated."
+        },
+        "minEmployees": {
+          "in": "query",
+          "type": "integer",
+          "description": "Company headcount lower bound."
+        },
+        "maxEmployees": {
+          "in": "query",
+          "type": "integer",
+          "description": "Company headcount upper bound."
+        },
+        "hqCountry": {
+          "in": "query",
+          "type": "string",
+          "description": "Company headquarters country. Comma-separated."
+        },
+        "technologies": {
+          "in": "query",
+          "type": "string",
+          "description": "Technologies detected on the company website. Comma-separated."
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords in the person's own profile. Comma-separated."
+        },
+        "emailStatus": {
+          "in": "query",
+          "type": "string",
+          "description": "Email deliverability status. Comma-separated."
+        },
+        "hasEmail": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only people with (or, false, without) a known email."
+        },
+        "hasPhone": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only people with (or without) a known phone."
+        },
+        "reachable": {
+          "in": "query",
+          "type": "string",
+          "description": "Holding an email or phone; strict also requires a verified, catch_all_valid or catch_all email.",
+          "enum": [
+            "strict"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return the exact total in meta.total."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "meta.nextCursor from the previous page, unchanged."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, 1 to 100."
+        }
+      },
+      "notes": [
+        "Each person returned is one record. A subset of the filters is listed here; the OpenAPI file has many more (exclusions, funding, SIC and NAICS, facets, fields)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.company.enrich",
+      "name": "Look up one company",
+      "summary": "A company profile by domain or LinkedIn URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/enrich",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain.",
+          "example": "example.com"
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL."
+        }
+      },
+      "notes": [
+        "Send one of domain or linkedin_url. Costs 1 record."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.companies.search",
+      "name": "Search companies",
+      "summary": "Companies matching name, industry, size, revenue, funding, location and technology filters, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text over company name and description."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name phrases; [brackets] for exact. Comma-separated."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website domains. Comma-separated."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Company industry. Comma-separated."
+        },
+        "employeeRange": {
+          "in": "query",
+          "type": "string",
+          "description": "Headcount bracket. Comma-separated."
+        },
+        "minEmployees": {
+          "in": "query",
+          "type": "integer",
+          "description": "Headcount lower bound."
+        },
+        "maxEmployees": {
+          "in": "query",
+          "type": "integer",
+          "description": "Headcount upper bound."
+        },
+        "minRevenue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Annual revenue floor, USD."
+        },
+        "maxRevenue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Annual revenue ceiling, USD."
+        },
+        "minFunding": {
+          "in": "query",
+          "type": "integer",
+          "description": "Total funding floor, USD."
+        },
+        "maxFunding": {
+          "in": "query",
+          "type": "integer",
+          "description": "Total funding ceiling, USD."
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Phrases across description, specialties, tags and name. Comma-separated."
+        },
+        "hqCountry": {
+          "in": "query",
+          "type": "string",
+          "description": "Headquarters country. Comma-separated."
+        },
+        "hqState": {
+          "in": "query",
+          "type": "string",
+          "description": "Headquarters state or region. Comma-separated."
+        },
+        "hqCity": {
+          "in": "query",
+          "type": "string",
+          "description": "Headquarters city keywords. Comma-separated."
+        },
+        "technologies": {
+          "in": "query",
+          "type": "string",
+          "description": "Detected technologies. Comma-separated."
+        },
+        "hasMailableContacts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Companies with at least one person whose best email is verified, catch_all_valid or catch_all."
+        },
+        "count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return the exact total in meta.total."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "meta.nextCursor from the previous page, unchanged."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, 1 to 100."
+        }
+      },
+      "notes": [
+        "Each company returned is one record. A subset of the filters is listed here."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.company.people",
+      "name": "List the people held at a company",
+      "summary": "Thin person records at a company domain, paged; contact points are not included.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{domain}/people",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "example.com"
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "meta.nextCursor from the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page."
+        }
+      },
+      "notes": [
+        "One record billed per person returned. Enrich a person for email or phone."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.exports.create",
+      "name": "Start a bulk CSV export of people",
+      "summary": "Starts an async export of people matching a filter set, up to 50,000 rows.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/exports",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "A people search filter set: every /v1/people/search filter except cursor, limit, count and facets."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Rows to export; at most 50,000."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "A name for the export."
+        },
+        "columns": {
+          "in": "body",
+          "type": "array",
+          "description": "Column ids from /v1/exports/columns, in order. Omit to use a preset."
+        },
+        "preset": {
+          "in": "body",
+          "type": "string",
+          "description": "A named column set; full is the default.",
+          "enum": [
+            "search",
+            "full"
+          ]
+        },
+        "reveal": {
+          "in": "body",
+          "type": "string",
+          "description": "What to reveal; derived from the columns when omitted.",
+          "enum": [
+            "none",
+            "email",
+            "email_phone"
+          ]
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "It reserves up to limit records at once and bills each row written. Poll leadocean.exports.get, then fetch leadocean.exports.download."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.exports.get",
+      "name": "Get an export's status",
+      "summary": "Status and progress of one export, with a signed download link when ready.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/exports/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The export id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.exports.download",
+      "name": "Download an export as CSV",
+      "summary": "The finished file as text/csv.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/exports/{id}/download",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The export id."
+        }
+      },
+      "notes": [
+        "409 while the export is still running; 410 once the file has expired (kept 7 days)."
+      ],
+      "job": "jobs.results",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.account.get",
+      "name": "Get account, plan and records left",
+      "summary": "Plan, records left, subscription state, export windows and rate.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/account",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    },
+    {
+      "id": "leadocean.account.usage",
+      "name": "Get records used this month",
+      "summary": "Records used this month, plan and per-day totals.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/usage",
+      "job": "account.usage",
+      "docs_url": "https://api.leadocean.io/openapi.json",
+      "verified": {
+        "docs": "https://api.leadocean.io/openapi.json"
+      }
+    }
+  ]
+}

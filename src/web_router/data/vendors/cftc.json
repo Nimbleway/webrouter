@@ -1,0 +1,302 @@
+{
+  "vendor": "cftc",
+  "name": "US CFTC Commitments of Traders",
+  "category": "finance",
+  "summary": "Weekly Commitments of Traders futures and options positioning (Legacy, Disaggregated, TFF, Supplemental) from the CFTC Public Reporting Environment.",
+  "docs_url": "https://www.cftc.gov/MarketReports/CommitmentsofTraders/ExplanatoryNotes/index.htm",
+  "base_url": "https://publicreporting.cftc.gov",
+  "auth": {
+    "credentials": {
+      "app_token": {
+        "env": [
+          "CFTC_API_KEY"
+        ],
+        "required": false,
+        "description": "optional Socrata application token for publicreporting.cftc.gov; without one, calls share a per-IP pool and may get 429s. Sent in the X-App-Token header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-App-Token",
+        "value": "{app_token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Free and keyless. The portal is a Socrata site: each dataset is queried with SoQL parameters ($where, $select, $order, $limit, $offset, $q).",
+    "Common columns: report_date_as_yyyy_mm_dd (the as-of date of the positions), market_and_exchange_names, contract_market_name, cftc_contract_market_code, commodity_name, open_interest_all; the position columns differ by report.",
+    "Values come back as JSON strings, numbers included.",
+    "Default $limit is 1,000 rows; add an $order when paging with $offset.",
+    "Each report family has a futures-only and a futures-and-options-combined dataset; pick the dataset id in the path."
+  ],
+  "sources": [
+    "https://www.cftc.gov/MarketReports/CommitmentsofTraders/ExplanatoryNotes/index.htm",
+    "https://publicreporting.cftc.gov/",
+    "https://dev.socrata.com/docs/app-tokens.html",
+    "https://dev.socrata.com/docs/queries/limit.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "cftc.cot.legacy",
+      "name": "Query the Commitments of Traders Legacy report",
+      "summary": "Positions split into commercial, non-commercial and non-reportable traders, by exchange. One row per contract market per weekly report.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/resource/{dataset}.json",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset id: 6dca-aqww = futures only; jun7-fc8e = futures and options combined.",
+          "example": "6dca-aqww",
+          "enum": [
+            "6dca-aqww",
+            "jun7-fc8e"
+          ]
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$where",
+          "description": "SoQL filter. Strings in single quotes; dates as ISO timestamps.",
+          "example": "commodity_name='GOLD' AND report_date_as_yyyy_mm_dd >= '2025-01-01T00:00:00'"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$select",
+          "description": "Comma-separated columns to return, or aggregates like count(*).",
+          "example": "report_date_as_yyyy_mm_dd,market_and_exchange_names,open_interest_all"
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$order",
+          "description": "Sort, e.g. 'report_date_as_yyyy_mm_dd DESC'. Set one whenever paging, so pages are stable.",
+          "example": "report_date_as_yyyy_mm_dd DESC"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$q",
+          "description": "Full-text search across the row's text columns."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$limit",
+          "description": "Rows per call; default 1,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$offset",
+          "description": "Rows to skip, for paging."
+        }
+      },
+      "job": "market.positioning",
+      "docs_url": "https://publicreporting.cftc.gov/",
+      "verified": {
+        "docs": "https://publicreporting.cftc.gov/"
+      }
+    },
+    {
+      "id": "cftc.cot.disaggregated",
+      "name": "Query the Commitments of Traders Disaggregated report",
+      "summary": "Agriculture and natural-resource contracts split into producer/merchant, swap dealer, managed money and other reportables. One row per contract market per weekly report.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/resource/{dataset}.json",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset id: 72hh-3qpy = futures only; kh3c-gbw2 = futures and options combined.",
+          "example": "72hh-3qpy",
+          "enum": [
+            "72hh-3qpy",
+            "kh3c-gbw2"
+          ]
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$where",
+          "description": "SoQL filter. Strings in single quotes; dates as ISO timestamps.",
+          "example": "commodity_name='GOLD' AND report_date_as_yyyy_mm_dd >= '2025-01-01T00:00:00'"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$select",
+          "description": "Comma-separated columns to return, or aggregates like count(*).",
+          "example": "report_date_as_yyyy_mm_dd,market_and_exchange_names,open_interest_all"
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$order",
+          "description": "Sort, e.g. 'report_date_as_yyyy_mm_dd DESC'. Set one whenever paging, so pages are stable.",
+          "example": "report_date_as_yyyy_mm_dd DESC"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$q",
+          "description": "Full-text search across the row's text columns."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$limit",
+          "description": "Rows per call; default 1,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$offset",
+          "description": "Rows to skip, for paging."
+        }
+      },
+      "job": "market.positioning",
+      "docs_url": "https://publicreporting.cftc.gov/",
+      "verified": {
+        "docs": "https://publicreporting.cftc.gov/"
+      }
+    },
+    {
+      "id": "cftc.cot.tff",
+      "name": "Query the Commitments of Traders Traders in Financial Futures report",
+      "summary": "Financial contracts split into dealer, asset manager, leveraged funds and other reportables. One row per contract market per weekly report.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/resource/{dataset}.json",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset id: gpe5-46if = futures only; yw9f-hn96 = futures and options combined.",
+          "example": "gpe5-46if",
+          "enum": [
+            "gpe5-46if",
+            "yw9f-hn96"
+          ]
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$where",
+          "description": "SoQL filter. Strings in single quotes; dates as ISO timestamps.",
+          "example": "commodity_name='GOLD' AND report_date_as_yyyy_mm_dd >= '2025-01-01T00:00:00'"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$select",
+          "description": "Comma-separated columns to return, or aggregates like count(*).",
+          "example": "report_date_as_yyyy_mm_dd,market_and_exchange_names,open_interest_all"
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$order",
+          "description": "Sort, e.g. 'report_date_as_yyyy_mm_dd DESC'. Set one whenever paging, so pages are stable.",
+          "example": "report_date_as_yyyy_mm_dd DESC"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$q",
+          "description": "Full-text search across the row's text columns."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$limit",
+          "description": "Rows per call; default 1,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$offset",
+          "description": "Rows to skip, for paging."
+        }
+      },
+      "job": "market.positioning",
+      "docs_url": "https://publicreporting.cftc.gov/",
+      "verified": {
+        "docs": "https://publicreporting.cftc.gov/"
+      }
+    },
+    {
+      "id": "cftc.cot.supplemental",
+      "name": "Query the Commitments of Traders Supplemental (CIT) report",
+      "summary": "Index-trader positions for 13 agricultural contracts, futures and options combined.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/resource/{dataset}.json",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset id: 4zgm-a668 = Supplemental (Commodity Index Traders), combined futures and options.",
+          "example": "4zgm-a668",
+          "enum": [
+            "4zgm-a668"
+          ]
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$where",
+          "description": "SoQL filter. Strings in single quotes; dates as ISO timestamps.",
+          "example": "commodity_name='GOLD' AND report_date_as_yyyy_mm_dd >= '2025-01-01T00:00:00'"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$select",
+          "description": "Comma-separated columns to return, or aggregates like count(*).",
+          "example": "report_date_as_yyyy_mm_dd,market_and_exchange_names,open_interest_all"
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$order",
+          "description": "Sort, e.g. 'report_date_as_yyyy_mm_dd DESC'. Set one whenever paging, so pages are stable.",
+          "example": "report_date_as_yyyy_mm_dd DESC"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "$q",
+          "description": "Full-text search across the row's text columns."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$limit",
+          "description": "Rows per call; default 1,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "$offset",
+          "description": "Rows to skip, for paging."
+        }
+      },
+      "job": "market.positioning",
+      "docs_url": "https://publicreporting.cftc.gov/",
+      "verified": {
+        "docs": "https://publicreporting.cftc.gov/"
+      }
+    }
+  ]
+}

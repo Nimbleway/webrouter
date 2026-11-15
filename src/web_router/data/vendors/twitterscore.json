@@ -1,0 +1,306 @@
+{
+  "vendor": "twitterscore",
+  "name": "TwitterScore",
+  "category": "social",
+  "summary": "Influence scores for X (Twitter) accounts, mostly crypto: score history, smart followers by category and tag, mentions and trending accounts.",
+  "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+  "pricing_url": "https://twitterscore.io/api/prices",
+  "base_url": "https://twitterscore.io/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TWITTERSCORE_API_KEY"
+        ],
+        "description": "A TwitterScore API key, sent as the api_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The docs give each call only as a URL with a query string (no method is stated); they are plain GETs.",
+    "Any call that takes an account accepts either username or twitter_id.",
+    "Request limits depend on the subscription plan; twitterscore.limits reports what is left."
+  ],
+  "sources": [
+    "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "twitterscore.score.get",
+      "name": "Get an account's TwitterScore",
+      "summary": "Username, X id and TwitterScore for one account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get_twitter_score",
+      "params": {
+        "twitter_id": {
+          "in": "query",
+          "type": "string",
+          "description": "X account id (from get_twitter_score); either this or username."
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "X username; either this or twitter_id."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.score.bulk",
+      "name": "Check scores in bulk",
+      "summary": "Id, username, URL and score for several accounts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/bulk_scores_check",
+      "params": {
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "X ids to check."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size (the docs' example uses 50)."
+        }
+      },
+      "notes": [
+        "The docs do not state how several ids are separated in ids."
+      ],
+      "job": "social.profile",
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.account.info",
+      "name": "Get account info",
+      "summary": "Username, name, bio, follower count and avatar link.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get_twitter_info",
+      "params": {
+        "twitter_id": {
+          "in": "query",
+          "type": "string",
+          "description": "X account id (from get_twitter_score); either this or username."
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "X username; either this or twitter_id."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.score.diff",
+      "name": "Get score change",
+      "summary": "How much the score changed over the last week and month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get_twitter_scores_diff",
+      "params": {
+        "twitter_id": {
+          "in": "query",
+          "type": "string",
+          "description": "X account id (from get_twitter_score); either this or username."
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "X username; either this or twitter_id."
+        }
+      },
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.followers.history",
+      "name": "Get follower count history",
+      "summary": "Follower count per day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/followers_count_history",
+      "params": {
+        "twitter_id": {
+          "in": "query",
+          "type": "string",
+          "description": "X account id (from get_twitter_score); either this or username."
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "X username; either this or twitter_id."
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "Window: 3, 7, 30, 180, 360 days or all; default 30 days."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, for period=all."
+        }
+      },
+      "notes": [
+        "The docs list 3/7/30/180/360/all days but their own example sends period=1w; check the answer for the window used."
+      ],
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.followers.list",
+      "name": "List followers sorted by score",
+      "summary": "An account's followers, highest TwitterScore first, optionally filtered.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get_followers",
+      "params": {
+        "twitter_id": {
+          "in": "query",
+          "type": "string",
+          "description": "X account id (from get_twitter_score); either this or username."
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "X username; either this or twitter_id."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page."
+        },
+        "category_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only followers in this category (ids from get_categories)."
+        },
+        "tag_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only followers with this tag (ids from get_tags)."
+        },
+        "tag_category_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only followers in this tag category."
+        }
+      },
+      "job": "social.followers",
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.followers.by_category",
+      "name": "Count followers per category",
+      "summary": "Number of an account's followers in each category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get_categorized_followers_count",
+      "params": {
+        "twitter_id": {
+          "in": "query",
+          "type": "string",
+          "description": "X account id (from get_twitter_score); either this or username."
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "X username; either this or twitter_id."
+        }
+      },
+      "job": "social.followers",
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.mentions.feed",
+      "name": "Get an account's smart mentions feed",
+      "summary": "Paginated tweets mentioning the account, with engagement and author scores.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get_mentions_feed",
+      "params": {
+        "twitter_id": {
+          "in": "query",
+          "type": "string",
+          "description": "X account id (from get_twitter_score); either this or username."
+        },
+        "username": {
+          "in": "query",
+          "type": "string",
+          "description": "X username; either this or twitter_id."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.trending",
+      "name": "Get trending accounts",
+      "summary": "Accounts trending over the selected period with follower and score deltas.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get_trending",
+      "notes": [
+        "The period (3, 7 or 30 days) is selectable but its parameter name is not documented, so the default applies."
+      ],
+      "job": "social.search",
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    },
+    {
+      "id": "twitterscore.limits",
+      "name": "Check API limits",
+      "summary": "Usage stats of the API subscription.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/limits",
+      "job": "account.usage",
+      "docs_url": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation",
+      "verified": {
+        "docs": "https://twitterscore.gitbook.io/twitterscore/developers/api-documentation"
+      }
+    }
+  ]
+}

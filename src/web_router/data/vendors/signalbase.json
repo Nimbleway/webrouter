@@ -1,0 +1,974 @@
+{
+  "vendor": "signalbase",
+  "name": "Signalbase",
+  "category": "company-data",
+  "summary": "Funding, acquisition, hiring and job-change signals, investors, companies and people.",
+  "docs_url": "https://docs.trysignalbase.com",
+  "pricing_url": "https://www.trysignalbase.com/pricing",
+  "base_url": "https://www.trysignalbase.com/api/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SIGNALBASE_API_KEY"
+        ],
+        "description": "A Signalbase API key (ff_live_..., from trysignalbase.com/workspace/api). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Responses report creditsUsed and creditsRemaining; count=true on any search returns only the total and is free.",
+    "Paging is page + limit (max 100 per page).",
+    "List filters are comma-separated strings, except categories, which is pipe-separated.",
+    "company_domain and company_linkedin_url are strict: no match gives an empty result, never a fuzzy one. Prefer them over company_name.",
+    "No email addresses or phone numbers are returned; job-change person names are GDPR-masked (first name and last initial).",
+    "Webhooks, monitors and CSV enrichment are not in this entry."
+  ],
+  "sources": [
+    "https://docs.trysignalbase.com",
+    "https://docs.trysignalbase.com/index.md",
+    "https://docs.trysignalbase.com/api-reference/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "signalbase.funding.search",
+      "name": "Search funding rounds",
+      "summary": "Companies that raised, with round type, amount and investors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/signals/funding",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 20, max 100."
+        },
+        "dateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "From this date, YYYY-MM-DD.",
+          "example": "2026-10-01"
+        },
+        "dateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to this date, YYYY-MM-DD."
+        },
+        "date_preset": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative date range; wins over dateFrom/dateTo.",
+          "enum": [
+            "today",
+            "yesterday",
+            "last_7d",
+            "last_14d",
+            "last_30d",
+            "last_60d",
+            "last_90d",
+            "last_6m",
+            "last_1y",
+            "last_2y",
+            "this_week",
+            "this_month",
+            "this_quarter",
+            "this_year",
+            "last_week",
+            "last_month",
+            "last_quarter",
+            "last_year"
+          ]
+        },
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website domain, strict match (no fuzzy fallback).",
+          "example": "novartis.com"
+        },
+        "company_linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL, strict match."
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, partial match."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes."
+        },
+        "exclude_countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country names or codes to exclude."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Pipe-separated company categories."
+        },
+        "round": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated round types, e.g. Series A (case-insensitive exact; an unknown value is a 400)."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name or industry keywords."
+        },
+        "investor_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Investor name, partial match."
+        },
+        "amount_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum amount, whole units of the deal currency (not cents)."
+        },
+        "amount_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum amount, whole units of the deal currency."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 4217 currency of the deal; most are USD.",
+          "enum": [
+            "USD",
+            "EUR",
+            "GBP",
+            "CHF",
+            "JPY",
+            "INR",
+            "CAD",
+            "AUD",
+            "SEK",
+            "CNY",
+            "NZD",
+            "KRW",
+            "SGD",
+            "DKK",
+            "BRL"
+          ]
+        },
+        "employee_count_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employee count."
+        },
+        "employee_count_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employee count."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, default occurred_at.",
+          "enum": [
+            "occurred_at",
+            "discovered_at",
+            "amount",
+            "employee_count",
+            "founded_year"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "\"true\" returns only totalCount with no rows, and charges no credits.",
+          "enum": [
+            "true"
+          ]
+        }
+      },
+      "job": "company.funding",
+      "docs_url": "https://docs.trysignalbase.com/api-reference/funding-signals/endpoint/get",
+      "verified": {
+        "docs": "https://docs.trysignalbase.com/api-reference/funding-signals/endpoint/get"
+      }
+    },
+    {
+      "id": "signalbase.acquisitions.search",
+      "name": "Search acquisitions",
+      "summary": "Acquisition events with acquired and acquiring company and amount.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/signals/acquisitions",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 20, max 100."
+        },
+        "dateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "From this date, YYYY-MM-DD.",
+          "example": "2026-10-01"
+        },
+        "dateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to this date, YYYY-MM-DD."
+        },
+        "date_preset": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative date range; wins over dateFrom/dateTo.",
+          "enum": [
+            "today",
+            "yesterday",
+            "last_7d",
+            "last_14d",
+            "last_30d",
+            "last_60d",
+            "last_90d",
+            "last_6m",
+            "last_1y",
+            "last_2y",
+            "this_week",
+            "this_month",
+            "this_quarter",
+            "this_year",
+            "last_week",
+            "last_month",
+            "last_quarter",
+            "last_year"
+          ]
+        },
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website domain, strict match (no fuzzy fallback).",
+          "example": "novartis.com"
+        },
+        "company_linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL, strict match."
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, partial match."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes of the acquired company."
+        },
+        "acquiring_company": {
+          "in": "query",
+          "type": "string",
+          "description": "Acquirer name, partial match."
+        },
+        "acquirer_countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes of the acquirer's HQ."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name or industry keywords."
+        },
+        "amount_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum amount in whole USD."
+        },
+        "amount_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum amount in whole USD."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Default occurred_at.",
+          "enum": [
+            "occurred_at",
+            "discovered_at",
+            "amount",
+            "employee_count"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "\"true\" returns only totalCount with no rows, and charges no credits.",
+          "enum": [
+            "true"
+          ]
+        }
+      },
+      "job": "company.acquisitions",
+      "docs_url": "https://docs.trysignalbase.com/api-reference/acquisition-signals/introduction",
+      "verified": {
+        "docs": "https://docs.trysignalbase.com/api-reference/acquisition-signals/introduction"
+      }
+    },
+    {
+      "id": "signalbase.job_changes.search",
+      "name": "Search job changes",
+      "summary": "People who changed jobs: new role, company and source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/signals/job-changes",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 20, max 100."
+        },
+        "dateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "From this date, YYYY-MM-DD.",
+          "example": "2026-10-01"
+        },
+        "dateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to this date, YYYY-MM-DD."
+        },
+        "date_preset": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative date range; wins over dateFrom/dateTo.",
+          "enum": [
+            "today",
+            "yesterday",
+            "last_7d",
+            "last_14d",
+            "last_30d",
+            "last_60d",
+            "last_90d",
+            "last_6m",
+            "last_1y",
+            "last_2y",
+            "this_week",
+            "this_month",
+            "this_quarter",
+            "this_year",
+            "last_week",
+            "last_month",
+            "last_quarter",
+            "last_year"
+          ]
+        },
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website domain, strict match (no fuzzy fallback).",
+          "example": "novartis.com"
+        },
+        "company_linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL, strict match."
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, partial match."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text over company, industry, person, role and location."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes (person country or company HQ)."
+        },
+        "new_role": {
+          "in": "query",
+          "type": "string",
+          "description": "New role or title, partial match."
+        },
+        "positions": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated positions, e.g. ceo,cto,vp of engineering."
+        },
+        "departments": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated departments, e.g. sales,engineering."
+        },
+        "seniorities": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated seniorities: founder, c_level, vp, director, head, lead, manager."
+        },
+        "personLinkedinUrl": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact LinkedIn profile URL of the person."
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Signal source.",
+          "enum": [
+            "linkedin",
+            "press_release",
+            "other"
+          ]
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Default occurred_at.",
+          "enum": [
+            "occurred_at",
+            "discovered_at",
+            "person_name",
+            "company_name"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "\"true\" returns only totalCount with no rows, and charges no credits.",
+          "enum": [
+            "true"
+          ]
+        }
+      },
+      "job": "people.job_changes",
+      "docs_url": "https://docs.trysignalbase.com/api-reference/job-change-signals/introduction",
+      "verified": {
+        "docs": "https://docs.trysignalbase.com/api-reference/job-change-signals/introduction"
+      }
+    },
+    {
+      "id": "signalbase.hiring.search",
+      "name": "Search hiring signals",
+      "summary": "Open job postings with company, location, team size and applicants.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/signals/hiring",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 20, max 100."
+        },
+        "dateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "From this date, YYYY-MM-DD.",
+          "example": "2026-10-01"
+        },
+        "dateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to this date, YYYY-MM-DD."
+        },
+        "date_preset": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative date range; wins over dateFrom/dateTo.",
+          "enum": [
+            "today",
+            "yesterday",
+            "last_7d",
+            "last_14d",
+            "last_30d",
+            "last_60d",
+            "last_90d",
+            "last_6m",
+            "last_1y",
+            "last_2y",
+            "this_week",
+            "this_month",
+            "this_quarter",
+            "this_year",
+            "last_week",
+            "last_month",
+            "last_quarter",
+            "last_year"
+          ]
+        },
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website domain, strict match (no fuzzy fallback).",
+          "example": "novartis.com"
+        },
+        "company_linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL, strict match."
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, partial match."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text over company, industry, title and location."
+        },
+        "description": {
+          "in": "query",
+          "type": "string",
+          "description": "Whole-word keyword search over the job description only."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes (job country or company HQ)."
+        },
+        "job_countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes of the job location only."
+        },
+        "states": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated US state codes."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City, free text."
+        },
+        "positions": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated positions."
+        },
+        "departments": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated departments."
+        },
+        "seniorities": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated seniorities."
+        },
+        "team_size": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ranges: 1-10, 11-50, 51-200, 201-1000, 1000-plus."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Default created_at.",
+          "enum": [
+            "date_posted",
+            "created_at",
+            "title",
+            "company_name",
+            "location"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "\"true\" returns only totalCount with no rows, and charges no credits.",
+          "enum": [
+            "true"
+          ]
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://docs.trysignalbase.com/api-reference/hiring-signals/introduction",
+      "verified": {
+        "docs": "https://docs.trysignalbase.com/api-reference/hiring-signals/introduction"
+      }
+    },
+    {
+      "id": "signalbase.investors.search",
+      "name": "Search investors",
+      "summary": "VCs, angels, PE, corporate investors, accelerators and other investors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/signals/investors",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 20, max 100."
+        },
+        "dateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "From this date, YYYY-MM-DD.",
+          "example": "2026-10-01"
+        },
+        "dateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to this date, YYYY-MM-DD."
+        },
+        "date_preset": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative date range; wins over dateFrom/dateTo.",
+          "enum": [
+            "today",
+            "yesterday",
+            "last_7d",
+            "last_14d",
+            "last_30d",
+            "last_60d",
+            "last_90d",
+            "last_6m",
+            "last_1y",
+            "last_2y",
+            "this_week",
+            "this_month",
+            "this_quarter",
+            "this_year",
+            "last_week",
+            "last_month",
+            "last_quarter",
+            "last_year"
+          ]
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text over investor name and type."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated investor types: vc, angel, pe, corporate, government, accelerator, family_office, hedge_fund, crowdfunding."
+        },
+        "headquarters": {
+          "in": "query",
+          "type": "string",
+          "description": "Headquarters location, partial match."
+        },
+        "ticket_size_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum ticket size in USD."
+        },
+        "ticket_size_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum ticket size in USD."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Default created_at.",
+          "enum": [
+            "name",
+            "created_at",
+            "ticket_size_min",
+            "ticket_size_max"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "\"true\" returns only totalCount with no rows, and charges no credits.",
+          "enum": [
+            "true"
+          ]
+        }
+      },
+      "notes": [
+        "dateFrom/dateTo filter on when the investor record was created, not on deal dates."
+      ],
+      "job": "investors.search",
+      "docs_url": "https://docs.trysignalbase.com/api-reference/investors/introduction",
+      "verified": {
+        "docs": "https://docs.trysignalbase.com/api-reference/investors/introduction"
+      }
+    },
+    {
+      "id": "signalbase.companies.search",
+      "name": "Search or resolve companies",
+      "summary": "Company profiles with industry, headcount and location, independent of signals.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 20, max 100."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text over name, industry, description, keywords and specialties."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolve one company by website domain (exact).",
+          "example": "stripe.com"
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolve one company by LinkedIn URL (exact)."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated exact industry names."
+        },
+        "employee_count_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employee count."
+        },
+        "employee_count_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employee count."
+        },
+        "founded_year_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum founded year."
+        },
+        "founded_year_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum founded year."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Default name.",
+          "enum": [
+            "name",
+            "employee_count",
+            "founded_year",
+            "created_at"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "\"true\" returns only totalCount with no rows, and charges no credits.",
+          "enum": [
+            "true"
+          ]
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://docs.trysignalbase.com/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.trysignalbase.com/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "signalbase.people.search",
+      "name": "Search people",
+      "summary": "People by title, function, seniority, geography or company, each with their latest matching signal.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/people",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 100, max 100."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Title or comma-separated titles, word-boundary match.",
+          "example": "CTO,VP of Engineering"
+        },
+        "function": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: marketing, sales, engineering, product, design, operations, finance, people, data, customer_success, growth, legal."
+        },
+        "seniority": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: founder, c_level, vp, director, head, lead, manager."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-2 code(s), company or person country."
+        },
+        "company_size": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated bands: 1-10, 11-50, 51-100, 101-250, 251-500, 501-1000, 1000-plus."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Industry name(s), case-insensitive exact."
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolve one person by LinkedIn profile URL."
+        },
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "People at this company domain (exact)."
+        },
+        "company_linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "People at this company LinkedIn URL (exact)."
+        },
+        "signal_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: funding_round, acquisition, job_change."
+        },
+        "signal_date_range": {
+          "in": "query",
+          "type": "string",
+          "description": "Lookback for the matched signal, e.g. 30d, 6m, 2y; default 12m."
+        },
+        "count": {
+          "in": "query",
+          "type": "string",
+          "description": "\"true\" returns only totalCount with no rows, and charges no credits.",
+          "enum": [
+            "true"
+          ]
+        }
+      },
+      "notes": [
+        "Only current employees: include_former=true is refused with 400."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.trysignalbase.com/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.trysignalbase.com/api-reference/openapi.json"
+      }
+    }
+  ]
+}

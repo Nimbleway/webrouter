@@ -1,0 +1,617 @@
+{
+  "vendor": "corpoapi",
+  "name": "Corpo API",
+  "category": "company-data",
+  "summary": "Official company-register lookups by jurisdiction: profiles, officers, charges, insolvency, shareholders, financials, ownership and VAT checks.",
+  "docs_url": "https://docs.corpoapi.com",
+  "pricing_url": "https://corpoapi.com",
+  "base_url": "https://api.corpoapi.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CORPOAPI_API_KEY"
+        ],
+        "description": "a Corpo API key (ck_live_..., or ck_test_... which is never billed) from the dashboard at https://corpoapi.com/app"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit per key: free 5/s and 100/min, paying 50/s and 2,000/min; 429 carries Retry-After.",
+    "List endpoints page by opaque cursor (limit 1-100, default 20): send pagination.next_cursor back as cursor with the same filters.",
+    "Coverage differs by country: a 409 means the register does not publish that block. Check corpoapi.coverage.get.",
+    "Failed responses are not billed."
+  ],
+  "sources": [
+    "https://docs.corpoapi.com/llms.txt",
+    "https://docs.corpoapi.com/llms-full.md",
+    "https://docs.corpoapi.com/authentication.md",
+    "https://docs.corpoapi.com/rate-limits.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "corpoapi.company.search",
+      "name": "Search company registers",
+      "summary": "Find companies in one official register by name or registration number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A company name, or a registration number or identifier; at least 2 characters.",
+          "example": "Volvo"
+        },
+        "jurisdiction": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The one jurisdiction to search (e.g. se, gb, us-de).",
+          "example": "se"
+        },
+        "status": {
+          "in": "query",
+          "type": "array",
+          "description": "Restrict to normalised statuses such as active or dissolved; repeat or comma-separate."
+        },
+        "legal_form": {
+          "in": "query",
+          "type": "array",
+          "description": "Restrict to register legal-form codes, e.g. AB-ORGFO."
+        },
+        "active_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Shortcut for status=active; excludes dissolved and struck-off companies."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 1 to 100 (default 20)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque cursor from pagination.next_cursor of the previous page; send it with the same filters."
+        }
+      },
+      "notes": [
+        "One jurisdiction per request. Paging is by cursor: send pagination.next_cursor back as cursor.",
+        "Returns ranked identification fields; fetch the full record with corpoapi.company.get."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.corpoapi.com/endpoints/searchcompanies",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/searchcompanies"
+      }
+    },
+    {
+      "id": "corpoapi.company.get",
+      "name": "Get a company profile",
+      "summary": "One consistent company profile from the official register.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        },
+        "include": {
+          "in": "query",
+          "type": "array",
+          "description": "Blocks to include: identifiers, activity, other_names, legal_form, links, lei. Defaults to all."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.corpoapi.com/endpoints/getcompany",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/getcompany"
+      }
+    },
+    {
+      "id": "corpoapi.company.officers",
+      "name": "List company officers",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/officers",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        },
+        "current": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return only current officers (default true)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 1 to 100 (default 20)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque cursor from pagination.next_cursor of the previous page; send it with the same filters."
+        }
+      },
+      "notes": [
+        "Answers 409 for jurisdictions that do not publish officers."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listofficers",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listofficers"
+      }
+    },
+    {
+      "id": "corpoapi.company.charges",
+      "name": "List company charges",
+      "summary": "Registered charges over the company assets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/charges",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 1 to 100 (default 20)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque cursor from pagination.next_cursor of the previous page; send it with the same filters."
+        }
+      },
+      "notes": [
+        "Answers 409 for jurisdictions that do not publish charges."
+      ],
+      "job": "company.charges",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listcharges",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listcharges"
+      }
+    },
+    {
+      "id": "corpoapi.company.insolvency",
+      "name": "List company insolvency events",
+      "summary": "Insolvency and liquidation filings, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/insolvency",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 1 to 100 (default 20)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque cursor from pagination.next_cursor of the previous page; send it with the same filters."
+        }
+      },
+      "notes": [
+        "Answers 409 for jurisdictions that do not publish insolvency events."
+      ],
+      "job": "company.insolvency",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listinsolvency",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listinsolvency"
+      }
+    },
+    {
+      "id": "corpoapi.company.disqualifications",
+      "name": "List officer disqualifications",
+      "summary": "Disqualifications naming an officer of the company, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/disqualifications",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 1 to 100 (default 20)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque cursor from pagination.next_cursor of the previous page; send it with the same filters."
+        }
+      },
+      "job": "company.disqualifications",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listdisqualifications",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listdisqualifications"
+      }
+    },
+    {
+      "id": "corpoapi.company.shareholders",
+      "name": "List shareholders and declared UBOs",
+      "summary": "Direct shareholders and declared ultimate beneficial owners.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/shareholders",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        }
+      },
+      "job": "company.shareholders",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listshareholders",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listshareholders"
+      }
+    },
+    {
+      "id": "corpoapi.company.documents",
+      "name": "List company documents",
+      "summary": "Filings and documents held in the register.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/documents",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 1 to 100 (default 20)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque cursor from pagination.next_cursor of the previous page; send it with the same filters."
+        }
+      },
+      "job": "company.documents",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listdocuments",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listdocuments"
+      }
+    },
+    {
+      "id": "corpoapi.company.financials",
+      "name": "List financial statements",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/financials",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Statements per page, 1 to 50 (default 10)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Opaque cursor from pagination.next_cursor of the previous page; send it with the same filters."
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listfinancials",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listfinancials"
+      }
+    },
+    {
+      "id": "corpoapi.company.ownership",
+      "name": "Walk the ownership graph and calculate UBOs",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/ownership",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        },
+        "max_depth": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum hops upstream, 1 to 10 (default 5)."
+        },
+        "max_nodes": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum distinct companies expanded, 1 to 500 (default 100)."
+        }
+      },
+      "job": "company.ownership",
+      "docs_url": "https://docs.corpoapi.com/endpoints/getownership",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/getownership"
+      }
+    },
+    {
+      "id": "corpoapi.company.links",
+      "name": "List a company's links",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/companies/{jurisdiction}/{company_number}/links",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company number or any identifier the register publishes. Percent-encode reserved characters such as /.",
+          "example": "5560295197"
+        }
+      },
+      "job": "company.links",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listcompanylinks",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listcompanylinks"
+      }
+    },
+    {
+      "id": "corpoapi.company.verify",
+      "name": "Verify a company against the register",
+      "summary": "Resolve one company and compare supplied claims with register data.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/verify",
+      "params": {
+        "jurisdiction": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code.",
+          "example": "se"
+        },
+        "company_number": {
+          "in": "body",
+          "type": "string",
+          "description": "Preferred identifier; any identifier the register publishes."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Used when company_number is absent; must resolve to exactly one company."
+        },
+        "expected": {
+          "in": "body",
+          "type": "object",
+          "description": "Claims to compare: {legal_name, status (active or any), address_postcode, address_line1, vat_number, officer_names (max 20)}.",
+          "example": {
+            "legal_name": "Volvo Business Services Aktiebolag"
+          }
+        },
+        "reference": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own reference, max 200 characters."
+        },
+        "Idempotency-Key": {
+          "in": "header",
+          "type": "string",
+          "description": "Same key within 24 h returns the stored response and is never billed twice."
+        }
+      },
+      "notes": [
+        "A read over POST: it changes nothing. Result is verified, partial, mismatch, not_found or ambiguous.",
+        "With no expected claims, verified only means a company was found. One paid call (USD 0.05) when found; repeats for the same company on the same UTC day are free."
+      ],
+      "job": "company.verify",
+      "docs_url": "https://docs.corpoapi.com/endpoints/verifycompany",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/verifycompany"
+      }
+    },
+    {
+      "id": "corpoapi.vat.check",
+      "name": "Check an EU VAT number",
+      "summary": "Validates a VAT number against the European Commission register.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/vat/{vat_number}",
+      "params": {
+        "vat_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "VAT number with country prefix.",
+          "example": "FR40303265045"
+        }
+      },
+      "job": "company.vat",
+      "docs_url": "https://docs.corpoapi.com/endpoints/checkvat",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/checkvat"
+      }
+    },
+    {
+      "id": "corpoapi.coverage.list",
+      "name": "List coverage",
+      "summary": "Countries and fields available.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/coverage",
+      "job": "coverage.list",
+      "docs_url": "https://docs.corpoapi.com/endpoints/listcoverage",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/listcoverage"
+      }
+    },
+    {
+      "id": "corpoapi.coverage.get",
+      "name": "Get coverage for a jurisdiction",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/coverage/{jurisdiction}",
+      "params": {
+        "jurisdiction": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code, ISO 3166-1 alpha-2 such as se or gb, or a subdivision such as us-de.",
+          "example": "se"
+        }
+      },
+      "job": "coverage.list",
+      "docs_url": "https://docs.corpoapi.com/endpoints/getjurisdictioncoverage",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/getjurisdictioncoverage"
+      }
+    },
+    {
+      "id": "corpoapi.account.usage",
+      "name": "Usage and charges for the account",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/usage",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date (YYYY-MM-DD); default first day of the current month UTC."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date (YYYY-MM-DD); default today UTC."
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Grouping.",
+          "enum": [
+            "day",
+            "endpoint"
+          ]
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.corpoapi.com/endpoints/getusage",
+      "verified": {
+        "docs": "https://docs.corpoapi.com/endpoints/getusage"
+      }
+    }
+  ]
+}

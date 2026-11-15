@@ -1,0 +1,67 @@
+{
+  "vendor": "azure-retail-prices",
+  "name": "Azure Retail Prices",
+  "category": "developer",
+  "summary": "Keyless Microsoft retail (pay-as-you-go, reservation, savings plan) prices for every Azure service, SKU and region.",
+  "docs_url": "https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices",
+  "base_url": "https://prices.azure.com",
+  "notes": [
+    "Keyless. Up to 1,000 records per response; follow NextPageLink (it carries $skip) until it is null.",
+    "Filter values are case-sensitive from api-version 2023-01-01-preview: serviceName eq 'Virtual Machines' works, 'virtual machines' does not.",
+    "USD prices are Microsoft's retail prices; other currencies are for reference only.",
+    "Savings-plan prices appear only with api-version=2023-01-01-preview."
+  ],
+  "sources": [
+    "https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "azure-retail-prices.prices.list",
+      "name": "List retail prices",
+      "summary": "Price records (retailPrice, unitOfMeasure, armSkuName, region, type) matching an OData filter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/retail/prices",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "OData filter on armRegionName, Location, meterId, meterName, productid, skuId, productName, skuName, serviceName, serviceId, serviceFamily, priceType or armSkuName.",
+          "example": "serviceName eq 'Virtual Machines' and armRegionName eq 'westeurope'",
+          "wire_name": "$filter"
+        },
+        "api_version": {
+          "in": "query",
+          "type": "string",
+          "description": "API version; 2023-01-01-preview adds savings-plan prices.",
+          "example": "2023-01-01-preview",
+          "wire_name": "api-version"
+        },
+        "currencyCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency, quoted, e.g. 'EUR'. Default USD.",
+          "example": "'EUR'"
+        },
+        "meterRegion": {
+          "in": "query",
+          "type": "string",
+          "description": "'primary' to return only primary meter prices (api-version 2021-10-01 and later).",
+          "example": "'primary'"
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, as used in NextPageLink.",
+          "wire_name": "$skip"
+        }
+      },
+      "job": "prices.list",
+      "docs_url": "https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices"
+      }
+    }
+  ]
+}

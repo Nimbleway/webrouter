@@ -1,0 +1,1417 @@
+{
+  "vendor": "financialdatasets",
+  "name": "Financial Datasets",
+  "category": "finance",
+  "summary": "US public-company prices, financial statements, metrics, SEC filings, insider and institutional holdings, and macro series.",
+  "docs_url": "https://docs.financialdatasets.ai/introduction",
+  "pricing_url": "https://financialdatasets.ai",
+  "base_url": "https://api.financialdatasets.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FINANCIAL_DATASETS_API_KEY"
+        ],
+        "description": "a Financial Datasets API key (financialdatasets.ai dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Dates are YYYY-MM-DD. period is annual, quarterly or ttm.",
+    "List endpoints page by cursor: each response carries next_page_url until the last page; limit is the total across pages, not a page size (pages hold up to 10).",
+    "Insufficient credit answers 402; some endpoints (webhooks, a few feeds) need higher plans.",
+    "Non-US fundamentals: set market to UK or FR, or pass an isin."
+  ],
+  "sources": [
+    "https://docs.financialdatasets.ai/quickstart.md",
+    "https://docs.financialdatasets.ai/guides/pagination.md",
+    "https://docs.financialdatasets.ai/api/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "financialdatasets.prices.history",
+      "name": "Get historical stock prices",
+      "summary": "End-of-day open, high, low, close and volume for a US ticker.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/prices",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Bar size.",
+          "example": "day",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start, YYYY-MM-DD.",
+          "example": "2026-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End, YYYY-MM-DD.",
+          "example": "2026-11-01"
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.financialdatasets.ai/api/prices/historical.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/prices/historical.md"
+      }
+    },
+    {
+      "id": "financialdatasets.prices.snapshot",
+      "name": "Get the latest stock price",
+      "summary": "Latest price with day change and day change percent.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/prices/snapshot",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://docs.financialdatasets.ai/api/prices/snapshot.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/prices/snapshot.md"
+      }
+    },
+    {
+      "id": "financialdatasets.prices.market_snapshot",
+      "name": "Get a snapshot of the whole US market",
+      "summary": "Latest price and day change of every actively traded US stock.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/prices/snapshot/market",
+      "notes": [
+        "Very large response."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://docs.financialdatasets.ai/api/prices/market-snapshot.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/prices/market-snapshot.md"
+      }
+    },
+    {
+      "id": "financialdatasets.financials.income_statements",
+      "name": "Get income statements",
+      "summary": "Income statements, annual, quarterly or trailing twelve months.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/financials/income-statements",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; required unless cik or isin is given.",
+          "example": "AAPL"
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Reporting period.",
+          "example": "annual",
+          "enum": [
+            "annual",
+            "quarterly",
+            "ttm"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum records in total across all pages; each page holds up to 10."
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC Central Index Key, instead of ticker."
+        },
+        "market": {
+          "in": "query",
+          "type": "string",
+          "description": "US (default), UK or FR.",
+          "enum": [
+            "US",
+            "UK",
+            "FR"
+          ]
+        },
+        "isin": {
+          "in": "query",
+          "type": "string",
+          "description": "ISIN of a non-US listing, instead of ticker."
+        },
+        "report_period_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or after, YYYY-MM-DD."
+        },
+        "report_period_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or before, YYYY-MM-DD."
+        },
+        "filing_date_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC filing date on or after, YYYY-MM-DD."
+        },
+        "filing_date_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC filing date on or before, YYYY-MM-DD; use for point-in-time work."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.financialdatasets.ai/api/financials/income-statements.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/financials/income-statements.md"
+      }
+    },
+    {
+      "id": "financialdatasets.financials.balance_sheets",
+      "name": "Get balance sheets",
+      "summary": "Balance sheets, annual, quarterly or trailing twelve months.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/financials/balance-sheets",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; required unless cik or isin is given.",
+          "example": "AAPL"
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Reporting period.",
+          "example": "annual",
+          "enum": [
+            "annual",
+            "quarterly",
+            "ttm"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum records in total across all pages; each page holds up to 10."
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC Central Index Key, instead of ticker."
+        },
+        "market": {
+          "in": "query",
+          "type": "string",
+          "description": "US (default), UK or FR.",
+          "enum": [
+            "US",
+            "UK",
+            "FR"
+          ]
+        },
+        "isin": {
+          "in": "query",
+          "type": "string",
+          "description": "ISIN of a non-US listing, instead of ticker."
+        },
+        "report_period_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or after, YYYY-MM-DD."
+        },
+        "report_period_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or before, YYYY-MM-DD."
+        },
+        "filing_date_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC filing date on or after, YYYY-MM-DD."
+        },
+        "filing_date_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC filing date on or before, YYYY-MM-DD; use for point-in-time work."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.financialdatasets.ai/api/financials/balance-sheets.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/financials/balance-sheets.md"
+      }
+    },
+    {
+      "id": "financialdatasets.financials.cash_flow_statements",
+      "name": "Get cash flow statements",
+      "summary": "Cash flow statements, annual, quarterly or trailing twelve months.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/financials/cash-flow-statements",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; required unless cik or isin is given.",
+          "example": "AAPL"
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Reporting period.",
+          "example": "annual",
+          "enum": [
+            "annual",
+            "quarterly",
+            "ttm"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum records in total across all pages; each page holds up to 10."
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC Central Index Key, instead of ticker."
+        },
+        "market": {
+          "in": "query",
+          "type": "string",
+          "description": "US (default), UK or FR.",
+          "enum": [
+            "US",
+            "UK",
+            "FR"
+          ]
+        },
+        "isin": {
+          "in": "query",
+          "type": "string",
+          "description": "ISIN of a non-US listing, instead of ticker."
+        },
+        "report_period_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or after, YYYY-MM-DD."
+        },
+        "report_period_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or before, YYYY-MM-DD."
+        },
+        "filing_date_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC filing date on or after, YYYY-MM-DD."
+        },
+        "filing_date_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC filing date on or before, YYYY-MM-DD; use for point-in-time work."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.financialdatasets.ai/api/financials/cash-flow-statements.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/financials/cash-flow-statements.md"
+      }
+    },
+    {
+      "id": "financialdatasets.financials.all",
+      "name": "Get all financial statements",
+      "summary": "Income statement, balance sheet and cash flow statement together.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/financials",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; required unless cik or isin is given.",
+          "example": "AAPL"
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Reporting period.",
+          "example": "annual",
+          "enum": [
+            "annual",
+            "quarterly",
+            "ttm"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum records in total across all pages; each page holds up to 10."
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC Central Index Key, instead of ticker."
+        },
+        "market": {
+          "in": "query",
+          "type": "string",
+          "description": "US (default), UK or FR.",
+          "enum": [
+            "US",
+            "UK",
+            "FR"
+          ]
+        },
+        "isin": {
+          "in": "query",
+          "type": "string",
+          "description": "ISIN of a non-US listing, instead of ticker."
+        },
+        "report_period_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or after, YYYY-MM-DD."
+        },
+        "report_period_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or before, YYYY-MM-DD."
+        },
+        "filing_date_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC filing date on or after, YYYY-MM-DD."
+        },
+        "filing_date_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC filing date on or before, YYYY-MM-DD; use for point-in-time work."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.financialdatasets.ai/api/financials/all-financial-statements.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/financials/all-financial-statements.md"
+      }
+    },
+    {
+      "id": "financialdatasets.metrics.history",
+      "name": "Get historical financial metrics",
+      "summary": "Ratios and metrics (market cap, P/E, margins, returns) per period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/financial-metrics",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; required unless cik is given.",
+          "example": "AAPL"
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Reporting period.",
+          "example": "annual",
+          "enum": [
+            "annual",
+            "quarterly",
+            "ttm"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum records in total across all pages; each page holds up to 10."
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "market": {
+          "in": "query",
+          "type": "string",
+          "description": "US (default), UK or FR.",
+          "enum": [
+            "US",
+            "UK",
+            "FR"
+          ]
+        },
+        "report_period_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or after, YYYY-MM-DD."
+        },
+        "report_period_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Report period on or before, YYYY-MM-DD."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.financialdatasets.ai/api/financial-metrics/historical.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/financial-metrics/historical.md"
+      }
+    },
+    {
+      "id": "financialdatasets.metrics.snapshot",
+      "name": "Get current financial metrics",
+      "summary": "Current ratios and metrics of a stock, including market cap and valuation multiples.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/financial-metrics/snapshot",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker; or use cik.",
+          "example": "AAPL"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK instead of ticker."
+        },
+        "market": {
+          "in": "query",
+          "type": "string",
+          "description": "US (default), UK or FR.",
+          "enum": [
+            "US",
+            "UK",
+            "FR"
+          ]
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.financialdatasets.ai/api/financial-metrics/snapshot.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/financial-metrics/snapshot.md"
+      }
+    },
+    {
+      "id": "financialdatasets.company.facts",
+      "name": "Get company facts",
+      "summary": "Name, CIK, sector, industry, exchange and basics for a company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/facts",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker.",
+          "example": "AAPL"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.financialdatasets.ai/api/company/facts/ticker.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/company/facts/ticker.md"
+      }
+    },
+    {
+      "id": "financialdatasets.earnings.get",
+      "name": "Get earnings releases",
+      "summary": "Revenue, EPS, margins and cash flow from each earnings release, newest report periods first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/earnings",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of most recent report periods."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.financialdatasets.ai/api/earnings.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/earnings.md"
+      }
+    },
+    {
+      "id": "financialdatasets.news.get",
+      "name": "Get news",
+      "summary": "Recent news for a ticker; omit ticker for broad market news.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/news",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles to return, default 5, max 10."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.financialdatasets.ai/api/news/company.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/news/company.md"
+      }
+    },
+    {
+      "id": "financialdatasets.insider.trades",
+      "name": "Get insider trades",
+      "summary": "SEC Form 4 trades by officers, directors and large owners.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/insider-trades",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Total transactions to return, default 10."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by insider name."
+        },
+        "transaction_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter, e.g. Open market sale."
+        },
+        "filing_date_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Filed on or after, YYYY-MM-DD."
+        },
+        "filing_date_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Filed on or before, YYYY-MM-DD."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/insider-trades.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/insider-trades.md"
+      }
+    },
+    {
+      "id": "financialdatasets.institutional.holdings",
+      "name": "Get 13F institutional holdings",
+      "summary": "Either the holders of a ticker or the whole 13F portfolio of one filer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/institutional-holdings",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Held security; exclusive with filer_cik.",
+          "example": "AAPL"
+        },
+        "filer_cik": {
+          "in": "query",
+          "type": "string",
+          "description": "10-digit zero-padded CIK of the filer; exclusive with ticker."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Total rows, default 10."
+        },
+        "report_period": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact report period, YYYY-MM-DD."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Send exactly one of ticker and filer_cik.",
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/institutional-holdings/ticker.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/institutional-holdings/ticker.md"
+      }
+    },
+    {
+      "id": "financialdatasets.ownership.beneficial",
+      "name": "Get beneficial ownership (13D and 13G)",
+      "summary": "Holders of more than 5 percent of a company, activist (13D) or passive (13G).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/beneficial-ownership",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Subject company; exclusive with filer_cik.",
+          "example": "AAPL"
+        },
+        "filer_cik": {
+          "in": "query",
+          "type": "string",
+          "description": "The owner's SEC CIK."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "activist (13D) or passive (13G).",
+          "enum": [
+            "activist",
+            "passive"
+          ]
+        },
+        "history": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return each stake's full amendment history."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Total rows, default 10."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/beneficial-ownership.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/beneficial-ownership.md"
+      }
+    },
+    {
+      "id": "financialdatasets.filings.list",
+      "name": "List SEC filings",
+      "summary": "Filings (10-K, 10-Q, 8-K and more) for a ticker or CIK.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/filings",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "SEC CIK."
+        },
+        "filing_type": {
+          "in": "query",
+          "type": "array",
+          "description": "One or more filing types; repeat the parameter."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Total filings, default 10."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/filings/ticker.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/filings/ticker.md"
+      }
+    },
+    {
+      "id": "financialdatasets.filings.items",
+      "name": "Get text of SEC filing items",
+      "summary": "Raw text of a section such as Item 1A Risk Factors of a 10-K, 10-Q or 8-K.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/filings/items",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "filing_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Filing type, e.g. 10-K.",
+          "example": "10-K"
+        },
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Filing year.",
+          "example": 2025
+        },
+        "quarter": {
+          "in": "query",
+          "type": "integer",
+          "description": "Quarter, for a 10-Q."
+        },
+        "item": {
+          "in": "query",
+          "type": "string",
+          "description": "The item to return, e.g. Item-1A."
+        },
+        "accession_number": {
+          "in": "query",
+          "type": "string",
+          "description": "Accession number, for an 8-K."
+        },
+        "include_exhibits": {
+          "in": "query",
+          "type": "boolean",
+          "description": "8-K only: include exhibit text."
+        }
+      },
+      "notes": [
+        "The response can be 202 Accepted with a request_id: read the result with financialdatasets.filings.items_result."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/filings/items.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/filings/items.md"
+      }
+    },
+    {
+      "id": "financialdatasets.filings.items_result",
+      "name": "Get the result of an accepted filing items request",
+      "summary": "Fetches the items once the request that answered 202 is done.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/filings/items/requests/{request_id}",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "request_id from the 202 response of financialdatasets.filings.items."
+        }
+      },
+      "notes": [
+        "Polls the request started by financialdatasets.filings.items."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.financialdatasets.ai/api/filings/items.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/filings/items.md"
+      }
+    },
+    {
+      "id": "financialdatasets.kpi.guidance",
+      "name": "Get earnings guidance",
+      "summary": "Forward guidance from earnings releases, such as revenue and EPS outlook ranges.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/kpi/guidance",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "metric_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter to one metric."
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "quarterly or annual."
+        },
+        "report_period_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "On or after, YYYY-MM-DD."
+        },
+        "report_period_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "On or before, YYYY-MM-DD."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Periods to return, in total."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/kpi/guidance.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/kpi/guidance.md"
+      }
+    },
+    {
+      "id": "financialdatasets.etf.holdings",
+      "name": "Get ETF holdings or the ETFs holding a stock",
+      "summary": "Holdings and weights of a fund by ticker, or the funds holding a stock by holding.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/index-funds",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Fund ticker, e.g. SPY; exclusive with holding."
+        },
+        "holding": {
+          "in": "query",
+          "type": "string",
+          "description": "Stock ticker to find funds holding it; exclusive with ticker."
+        },
+        "as_of": {
+          "in": "query",
+          "type": "string",
+          "description": "With ticker: composition on or before this date, YYYY-MM-DD."
+        },
+        "asset_class": {
+          "in": "query",
+          "type": "string",
+          "description": "With ticker: equity or bond.",
+          "enum": [
+            "equity",
+            "bond"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Total rows, default 50."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to skip."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Send exactly one of ticker and holding."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/index-funds/ticker.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/index-funds/ticker.md"
+      }
+    },
+    {
+      "id": "financialdatasets.ipos.list",
+      "name": "List IPO filings",
+      "summary": "S-1, F-1 and 424B filings since July 2026.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ipos",
+      "params": {
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Proposed ticker."
+        },
+        "cik": {
+          "in": "query",
+          "type": "string",
+          "description": "Filer CIK."
+        },
+        "classification": {
+          "in": "query",
+          "type": "string",
+          "description": "Filing classification, e.g. ipo."
+        },
+        "filing_date_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "On or after, YYYY-MM-DD."
+        },
+        "filing_date_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "On or before, YYYY-MM-DD."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Total rows, default 10."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/ipos.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/ipos.md"
+      }
+    },
+    {
+      "id": "financialdatasets.macro.interest_rates",
+      "name": "Get central bank interest rates",
+      "summary": "Daily policy rate of a central bank.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/macro/interest-rates",
+      "params": {
+        "bank": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Central bank code, e.g. FED, ECB, BOJ.",
+          "example": "FED"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From, YYYY-MM-DD; default five years before end_date."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "To, YYYY-MM-DD; default today."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/macro/interest-rates/historical.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/macro/interest-rates/historical.md"
+      }
+    },
+    {
+      "id": "financialdatasets.macro.interest_rates_snapshot",
+      "name": "Get current central bank rates",
+      "summary": "Newest policy rate of the covered central banks, or one bank.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/macro/interest-rates/snapshot",
+      "params": {
+        "bank": {
+          "in": "query",
+          "type": "string",
+          "description": "Central bank code; omit for all."
+        }
+      },
+      "docs_url": "https://docs.financialdatasets.ai/api/macro/interest-rates/snapshot.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/macro/interest-rates/snapshot.md"
+      }
+    },
+    {
+      "id": "financialdatasets.macro.yield_curve",
+      "name": "Get the Treasury yield curve",
+      "summary": "Daily US Treasury par yield curve since 1990, 14 tenors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/macro/yield-curve",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From, YYYY-MM-DD; default one year before end_date."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "To, YYYY-MM-DD; default today."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/macro/yield-curve/historical.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/macro/yield-curve/historical.md"
+      }
+    },
+    {
+      "id": "financialdatasets.macro.inflation",
+      "name": "Get CPI and PCE inflation",
+      "summary": "Monthly US inflation series.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/macro/inflation",
+      "params": {
+        "series": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Series id such as cpi_all_sa or pce_core_sa (_sa seasonally adjusted, _nsa not).",
+          "example": "cpi_all_sa"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "First month, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Last month, YYYY-MM-DD."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent.",
+        "List valid series ids at GET /macro/inflation/series."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/macro/inflation/historical.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/macro/inflation/historical.md"
+      }
+    },
+    {
+      "id": "financialdatasets.macro.labor",
+      "name": "Get US labor market series",
+      "summary": "Payrolls, unemployment rate, claims and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/macro/labor",
+      "params": {
+        "series": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Series id such as payrolls_sa or unemployment_rate.",
+          "example": "payrolls_sa"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "First period, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Last period, YYYY-MM-DD."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from a previous next_page_url; when sent, other parameters are ignored."
+        }
+      },
+      "notes": [
+        "Paginated: follow next_page_url exactly as given until it is absent.",
+        "List valid series ids at GET /macro/labor/series."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/macro/labor/historical.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/macro/labor/historical.md"
+      }
+    },
+    {
+      "id": "financialdatasets.screener.search",
+      "name": "Screen stocks by financials",
+      "summary": "Filter US stocks by revenue, P/E, margins, debt, growth, sector and industry.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/financials/search/screener",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Filter objects to apply."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "currency": {
+          "in": "body",
+          "type": "string",
+          "description": "Currency of the values; default USD."
+        },
+        "order_by": {
+          "in": "body",
+          "type": "object",
+          "description": "Sort applied before the limit."
+        },
+        "as_of": {
+          "in": "body",
+          "type": "string",
+          "description": "Point-in-time screen for backtests, YYYY-MM-DD."
+        }
+      },
+      "notes": [
+        "A read over POST: it only retrieves data."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/api/financials/search-screener.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/financials/search-screener.md"
+      }
+    },
+    {
+      "id": "financialdatasets.line_items.search",
+      "name": "Pull chosen financial line items",
+      "summary": "Selected line items (revenue, net income, free cash flow...) for several tickers.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/financials/search/line-items",
+      "params": {
+        "line_items": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Line item names to fetch.",
+          "example": [
+            "revenue",
+            "net_income"
+          ]
+        },
+        "tickers": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Tickers.",
+          "example": [
+            "AAPL"
+          ]
+        },
+        "period": {
+          "in": "body",
+          "type": "string",
+          "description": "Reporting period.",
+          "enum": [
+            "annual",
+            "quarterly",
+            "ttm"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        }
+      },
+      "notes": [
+        "A read over POST: it only retrieves data."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.financialdatasets.ai/api/financials/search-line-items.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/api/financials/search-line-items.md"
+      }
+    },
+    {
+      "id": "financialdatasets.search.ask",
+      "name": "Ask a question about a public company",
+      "summary": "Plain-English question answered from what the company reported, with citations.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "One question, 1 to 300 characters.",
+          "example": "What did Apple guide for gross margin?"
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Constraints on which documents are searched."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return; each is one document."
+        }
+      },
+      "notes": [
+        "A read over POST: it only retrieves data."
+      ],
+      "docs_url": "https://docs.financialdatasets.ai/search/introduction.md",
+      "verified": {
+        "docs": "https://docs.financialdatasets.ai/search/introduction.md"
+      }
+    }
+  ]
+}

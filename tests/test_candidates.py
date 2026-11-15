@@ -27,9 +27,11 @@ def keys(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
 def test_keyless_providers_are_search_and_extract_candidates_with_no_key(keys: pytest.MonkeyPatch) -> None:
     found = build_candidates(WebRouter(), default_requests("q", ["https://a.test"]))
     assert ids(found, "search") == [
-        "search:tavily", "search:you-mcp", "search:exa-mcp", "search:parallel-mcp", "search:keenable",
+        "search:nimble", "search:tavily", "search:you-mcp", "search:exa-mcp", "search:parallel-mcp", "search:keenable",
     ]  # fmt: skip
-    assert ids(found, "extract") == ["extract:tavily", "extract:jina", "extract:firecrawl", "extract:keenable"]
+    assert ids(found, "extract") == [
+        "extract:nimble", "extract:tavily", "extract:jina", "extract:firecrawl", "extract:keenable",
+    ]  # fmt: skip
     # Answer, research and browse have no keyless tier.
     assert {c.tool for c in found.candidates} == {"search", "extract"}
     # The keyless tier is hand-ordered: none of it is backed by route-eval, keyed Tavily's rank included.

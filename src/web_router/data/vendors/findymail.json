@@ -1,0 +1,315 @@
+{
+  "vendor": "findymail",
+  "name": "Findymail",
+  "category": "enrichment",
+  "summary": "Find and verify emails and phones from names, domains or LinkedIn profiles, and look up companies and employees.",
+  "docs_url": "https://app.findymail.com/docs/",
+  "pricing_url": "https://www.findymail.com/pricing",
+  "base_url": "https://app.findymail.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FINDYMAIL_API_KEY"
+        ],
+        "description": "A Findymail API token (app.findymail.com/user/api-tokens)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: finder 1 per hit and free on a miss; verifier 1 per check; phone 10 per hit.",
+    "Most endpoints limit simultaneous requests (Individual 25, Team 50, Scale 150) and answer 429 beyond that.",
+    "Intellimatch, lookalike, signals monitors, exclusion lists and the deprecated domain search are left out."
+  ],
+  "sources": [
+    "https://app.findymail.com/docs/"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "findymail.credits.get",
+      "name": "Get remaining credits",
+      "summary": "Credit balance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/credits",
+      "notes": [
+        "Credit-based plans get 402 when the balance is too low; usage-based plans are not billed in credits."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.email.verify",
+      "name": "Verify an email address",
+      "summary": "Deliverability check for one email.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/verify",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email to verify."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 verifier credit per verification, whatever the result."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.email.find_by_name",
+      "name": "Find an email from a name and domain",
+      "summary": "Email of a named person at a company domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search/name",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Person's full name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company domain or name.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 finder credit when an email is found; free otherwise."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.email.find_by_linkedin",
+      "name": "Find an email from a LinkedIn profile",
+      "summary": "Email for a LinkedIn profile URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search/business-profile",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 finder credit when an email is found; free otherwise."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.phone.find",
+      "name": "Find a phone number from a LinkedIn profile",
+      "summary": "Phone for a LinkedIn profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search/phone",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "10 credits when a phone is found; free otherwise. No results for EU citizens."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.person.reverse_email",
+      "name": "Find a profile from an email",
+      "summary": "Reverse email lookup.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search/reverse-email",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email address."
+        },
+        "with_profile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also retrieve profile data."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 credit when a profile is found, plus 1 if with_profile retrieves data; free if none."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.company.find",
+      "name": "Find a company",
+      "summary": "Company data by LinkedIn URL, domain or name (at least one).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search/company",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Company LinkedIn URL."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 credit when found; free otherwise."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.company.employees",
+      "name": "Find employees by job title",
+      "summary": "Employees of a company website matching job titles. No email is returned.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search/employees",
+      "params": {
+        "website": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company website."
+        },
+        "job_titles": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 10 titles."
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Employees per title, max 3, default 1."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 credit per employee returned; free if none. Use email.find_by_name or find_by_linkedin to get an email."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.technologies.search",
+      "name": "Search technology names",
+      "summary": "Look up technology names; up to 25 results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/technologies/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text."
+        }
+      },
+      "notes": [
+        "Free. Limited to 10 requests per minute."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.lists.list",
+      "name": "List contact lists",
+      "summary": "The user's Findymail contact lists.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/lists",
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    },
+    {
+      "id": "findymail.contacts.get",
+      "name": "Get saved contacts",
+      "summary": "Contacts in a list; id 0 means all contacts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/contacts/get/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "description": "List id; 0 for all contacts."
+        }
+      },
+      "docs_url": "https://app.findymail.com/docs/",
+      "verified": {
+        "docs": "https://app.findymail.com/docs/"
+      }
+    }
+  ]
+}

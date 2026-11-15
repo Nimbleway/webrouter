@@ -1,0 +1,587 @@
+{
+  "vendor": "cloro",
+  "name": "cloro",
+  "category": "seo",
+  "summary": "Structured answers and sources from ChatGPT, Gemini, Perplexity, Google AI Mode, Bing AI Mode, Google Search and Google News, by country.",
+  "docs_url": "https://cloro.dev/docs/api-reference/introduction",
+  "pricing_url": "https://cloro.dev/docs/guides/providers",
+  "base_url": "https://api.cloro.dev",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CLORO_API_KEY"
+        ],
+        "description": "a cloro API key (dashboard.cloro.dev/api-keys); one key grants every endpoint"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "cloro runs real browser sessions against each AI engine, so calls take longer than a normal API; use the async endpoints for volume.",
+    "Credits per call: ChatGPT 5, Gemini 4, Perplexity 4, AI Mode 4, Bing AI Mode 4, Google Search 3, Google News 3, product panel 1; sync /v1/monitor/* calls add +2 on top, async calls do not. Read X-Credits-Charged on a sync answer for the exact charge.",
+    "Answers are wrapped as {success, result}; result holds the text, sources and provider-specific blocks.",
+    "Country is required on most endpoints and there is no default. List supported codes with cloro.meta.countries."
+  ],
+  "sources": [
+    "https://cloro.dev/docs/api-reference/introduction.md",
+    "https://cloro.dev/docs/guides/providers.md",
+    "https://cloro.dev/docs/api-reference/openapi.json",
+    "https://cloro.dev/docs/api-reference/endpoint/monitor-chatgpt.md",
+    "https://cloro.dev/docs/api-reference/endpoint/monitor-google.md",
+    "https://cloro.dev/docs/api-reference/endpoint/create-async-task.md",
+    "https://cloro.dev/docs/api-reference/endpoint/get-credits.md"
+  ],
+  "endpoints": [
+    {
+      "id": "cloro.chatgpt.monitor",
+      "name": "Ask ChatGPT",
+      "summary": "ChatGPT's answer to a prompt with cited sources, shopping cards, entities and optionally ads, from a chosen country.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/monitor/chatgpt",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The prompt, or an array of up to 5 prompts for a multi-turn chat (then result is an array).",
+          "example": "What are the best running shoes for flat feet?"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "ISO 3166-1 alpha-2 country code to run from.",
+          "example": "US"
+        },
+        "state": {
+          "in": "body",
+          "type": "string",
+          "description": "US state code for sub-country targeting, such as CA; only with country US. Costs +2 credits."
+        },
+        "include": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional flags for extra response data, such as {\"markdown\": true}. Each provider's flags are listed on its docs page."
+        },
+        "legacy": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Ask for ChatGPT's legacy desktop interface; best-effort and temporary."
+        },
+        "disableWebSearch": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Do not force web search; ChatGPT then usually answers without sources."
+        }
+      },
+      "notes": [
+        "A read over POST: cloro runs a real browser session against the AI engine and returns the answer; nothing on your account changes except credits.",
+        "Costs 5 credits base, +2 once for any of rawResponse, searchQueries, ads or shopping, +1 per extra prompt, plus the +2 sync surcharge."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/monitor-chatgpt.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/monitor-chatgpt.md"
+      }
+    },
+    {
+      "id": "cloro.gemini.monitor",
+      "name": "Ask Gemini",
+      "summary": "Google Gemini's answer text and cited sources for a prompt, from a chosen country.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/monitor/gemini",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The prompt.",
+          "example": "best CRM for startups"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "ISO 3166-1 alpha-2 country code to run from.",
+          "example": "US"
+        },
+        "state": {
+          "in": "body",
+          "type": "string",
+          "description": "US state code for sub-country targeting, such as CA; only with country US. Costs +2 credits."
+        },
+        "include": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional flags for extra response data, such as {\"markdown\": true}. Each provider's flags are listed on its docs page."
+        }
+      },
+      "notes": [
+        "A read over POST: cloro runs a real browser session against the AI engine and returns the answer; nothing on your account changes except credits.",
+        "Costs 4 credits, +2 for state targeting, plus the +2 sync surcharge."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/monitor-gemini.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/monitor-gemini.md"
+      }
+    },
+    {
+      "id": "cloro.perplexity.monitor",
+      "name": "Ask Perplexity",
+      "summary": "Perplexity's answer, sources, shopping cards and media for a prompt, from a chosen country.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/monitor/perplexity",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The prompt.",
+          "example": "best CRM for startups"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "ISO 3166-1 alpha-2 country code to run from.",
+          "example": "US"
+        },
+        "state": {
+          "in": "body",
+          "type": "string",
+          "description": "US state code for sub-country targeting, such as CA; only with country US. Costs +2 credits."
+        },
+        "include": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional flags for extra response data, such as {\"markdown\": true}. Each provider's flags are listed on its docs page."
+        }
+      },
+      "notes": [
+        "A read over POST: cloro runs a real browser session against the AI engine and returns the answer; nothing on your account changes except credits.",
+        "Costs 4 credits, +2 for state targeting, plus the +2 sync surcharge."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/monitor-perplexity.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/monitor-perplexity.md"
+      }
+    },
+    {
+      "id": "cloro.aimode.monitor",
+      "name": "Ask Google AI Mode",
+      "summary": "Google AI Mode's answer, sources and cards for a prompt.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/monitor/aimode",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The prompt.",
+          "example": "best CRM for startups"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country code to run from.",
+          "example": "US"
+        },
+        "gl": {
+          "in": "body",
+          "type": "string",
+          "description": "Alternative to country, using Google's own gl name. Same codes."
+        },
+        "hl": {
+          "in": "body",
+          "type": "string",
+          "description": "Interface language, such as en, de or pt-BR."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Google canonical location, as City,Region,Country."
+        },
+        "uule": {
+          "in": "body",
+          "type": "string",
+          "description": "Pre-encoded UULE location; use instead of location."
+        },
+        "device": {
+          "in": "body",
+          "type": "string",
+          "description": "Device the search runs from.",
+          "enum": [
+            "desktop",
+            "mobile"
+          ]
+        },
+        "include": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional flags for extra response data, such as {\"markdown\": true}. Each provider's flags are listed on its docs page."
+        }
+      },
+      "notes": [
+        "A read over POST: cloro runs a real browser session against the AI engine and returns the answer; nothing on your account changes except credits.",
+        "Costs 4 credits plus the +2 sync surcharge."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/monitor-aimode.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/monitor-aimode.md"
+      }
+    },
+    {
+      "id": "cloro.bing_aimode.monitor",
+      "name": "Ask Bing AI Mode",
+      "summary": "Bing AI Mode's answer text, sources and citation pills for a prompt.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/monitor/bing/aimode",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The prompt; limited to 3,500 characters.",
+          "example": "best CRM for startups"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "ISO 3166-1 alpha-2 country code to run from.",
+          "example": "US"
+        },
+        "state": {
+          "in": "body",
+          "type": "string",
+          "description": "US state code for sub-country targeting, such as CA; only with country US. Costs +2 credits."
+        },
+        "include": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional flags for extra response data, such as {\"markdown\": true}. Each provider's flags are listed on its docs page."
+        }
+      },
+      "notes": [
+        "A read over POST: cloro runs a real browser session against the AI engine and returns the answer; nothing on your account changes except credits.",
+        "Costs 4 credits, +2 for state targeting, plus the +2 sync surcharge."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/monitor-bing-aimode.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/monitor-bing-aimode.md"
+      }
+    },
+    {
+      "id": "cloro.google.search",
+      "name": "Google Search results",
+      "summary": "Google organic results, ads, People Also Ask, related searches, local pack and, optionally, the AI Overview.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/monitor/google",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "The search query, 1-10,000 characters. Needed unless url is set.",
+          "example": "best laptops for programming"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "A full Google web search URL to run instead of query and the targeting fields."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country code to run from.",
+          "example": "US"
+        },
+        "gl": {
+          "in": "body",
+          "type": "string",
+          "description": "Alternative to country, using Google's own gl name. Same codes."
+        },
+        "hl": {
+          "in": "body",
+          "type": "string",
+          "description": "Interface language, such as en, de or pt-BR."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Google canonical location, as City,Region,Country."
+        },
+        "uule": {
+          "in": "body",
+          "type": "string",
+          "description": "Pre-encoded UULE location; use instead of location."
+        },
+        "device": {
+          "in": "body",
+          "type": "string",
+          "description": "Device the search runs from.",
+          "enum": [
+            "desktop",
+            "mobile",
+            "ios",
+            "android"
+          ]
+        },
+        "pages": {
+          "in": "body",
+          "type": "integer",
+          "description": "Result pages to scrape, 1-10. Each page after the first costs +2 credits."
+        },
+        "include": {
+          "in": "body",
+          "type": "object",
+          "description": "Extra data flags: html, aioverview (optionally {\"markdown\": true}) and paaAioverview.",
+          "example": {
+            "aioverview": true
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: cloro runs a real browser session against the AI engine and returns the answer; nothing on your account changes except credits.",
+        "Costs 3 credits base, +2 once for AI Overview, +2 per extra page, plus the +2 sync surcharge. Send country or gl, or a url that has gl; there is no default country.",
+        "Do not pass tbm; use the Google News endpoint."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/monitor-google.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/monitor-google.md"
+      }
+    },
+    {
+      "id": "cloro.google.news",
+      "name": "Google News results",
+      "summary": "News articles from Google News with titles, links, snippets, sources and dates.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/monitor/google/news",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The news query.",
+          "example": "AI regulation"
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country code to run from.",
+          "example": "US"
+        },
+        "gl": {
+          "in": "body",
+          "type": "string",
+          "description": "Alternative to country, using Google's own gl name. Same codes."
+        },
+        "hl": {
+          "in": "body",
+          "type": "string",
+          "description": "Interface language, such as en, de or pt-BR."
+        },
+        "device": {
+          "in": "body",
+          "type": "string",
+          "description": "Device the search runs from.",
+          "enum": [
+            "desktop",
+            "mobile",
+            "ios",
+            "android"
+          ]
+        },
+        "pages": {
+          "in": "body",
+          "type": "integer",
+          "description": "Result pages to scrape, 1-10. Each page after the first costs +2 credits."
+        },
+        "include": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional flags for extra response data, such as {\"markdown\": true}. Each provider's flags are listed on its docs page."
+        }
+      },
+      "notes": [
+        "A read over POST: cloro runs a real browser session against the AI engine and returns the answer; nothing on your account changes except credits.",
+        "Costs 3 credits, +2 per extra page, plus the +2 sync surcharge."
+      ],
+      "job": "news.search",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/monitor-google-news.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/monitor-google-news.md"
+      }
+    },
+    {
+      "id": "cloro.google.product",
+      "name": "Google shopping product panel",
+      "summary": "Merchant offers, specs and reviews for one shopping card product.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/monitor/google/product",
+      "params": {
+        "productResultToken": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The productResultToken from a Google Search or AI Mode shopping card or inline product."
+        }
+      },
+      "notes": [
+        "A read over POST: cloro runs a real browser session against the AI engine and returns the answer; nothing on your account changes except credits.",
+        "Costs 1 credit, only on success."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/google/product.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/google/product.md"
+      }
+    },
+    {
+      "id": "cloro.async.create_task",
+      "name": "Create an async task",
+      "summary": "Queue one provider request to run in the background; returns a task id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/async/task",
+      "params": {
+        "taskType": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The provider to run.",
+          "example": "CHATGPT",
+          "enum": [
+            "AIMODE",
+            "BING_AIMODE",
+            "GOOGLE",
+            "GOOGLE_NEWS",
+            "GOOGLE_PRODUCT",
+            "GEMINI",
+            "CHATGPT",
+            "PERPLEXITY"
+          ]
+        },
+        "payload": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The provider's request body, the same as its sync endpoint (country or gl required).",
+          "example": {
+            "prompt": "What do you know about Acme Corp?",
+            "country": "US"
+          }
+        },
+        "priority": {
+          "in": "body",
+          "type": "integer",
+          "description": "1-10; higher runs first. Default 1."
+        },
+        "idempotencyKey": {
+          "in": "body",
+          "type": "string",
+          "description": "Unique string that stops duplicate tasks."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Poll cloro.async.get_task with the returned id.",
+        "No +2 sync surcharge on async requests, so each is 2 credits cheaper than the sync call."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/create-async-task.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/create-async-task.md"
+      }
+    },
+    {
+      "id": "cloro.async.get_task",
+      "name": "Get an async task",
+      "summary": "State and, once finished, the full result of an async task.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/async/task/{taskId}",
+      "params": {
+        "taskId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The task id."
+        }
+      },
+      "notes": [
+        "The finished task reports creditsCharged."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/get-task-status.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/get-task-status.md"
+      }
+    },
+    {
+      "id": "cloro.account.credits",
+      "name": "Get credit balance",
+      "summary": "Credit balance and billing cycle for your organization.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/credits",
+      "notes": [
+        "The balance is cached and can lag by up to 60 seconds."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/get-credits.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/get-credits.md"
+      }
+    },
+    {
+      "id": "cloro.meta.countries",
+      "name": "List supported countries",
+      "summary": "ISO country codes cloro supports, optionally for one provider.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/countries",
+      "params": {
+        "model": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to one provider's countries.",
+          "enum": [
+            "aimode",
+            "aioverview",
+            "bing_aimode",
+            "chatgpt",
+            "gemini",
+            "google",
+            "perplexity"
+          ]
+        }
+      },
+      "job": "search.locations",
+      "docs_url": "https://cloro.dev/docs/api-reference/endpoint/countries.md",
+      "verified": {
+        "docs": "https://cloro.dev/docs/api-reference/endpoint/countries.md"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

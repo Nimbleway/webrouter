@@ -1,0 +1,252 @@
+{
+  "vendor": "rcsb-pdb",
+  "name": "RCSB Protein Data Bank",
+  "category": "science",
+  "summary": "3D macromolecular structures from the PDB: search entries by text or attributes, then fetch entry, entity, chain, assembly and ligand metadata.",
+  "docs_url": "https://data.rcsb.org/",
+  "base_url": "https://data.rcsb.org",
+  "hosts": {
+    "search": "https://search.rcsb.org"
+  },
+  "notes": [
+    "Keyless. No request-rate limit is published, but batch large requests and cache: data changes in a weekly update.",
+    "Batch and GraphQL lookups take at most 1,000 ids per request.",
+    "Search returns ids only (default the first 10 hits; up to 10,000 per page via request_options.paginate); fetch details from the data endpoints or GraphQL.",
+    "Assemblies are named entry-assembly (4HHB-1), polymer entities entry_entity (4HHB_1)."
+  ],
+  "sources": [
+    "https://data.rcsb.org/",
+    "https://data.rcsb.org/redoc/index.html",
+    "https://search.rcsb.org/index.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "rcsb-pdb.search",
+      "name": "Search structures",
+      "summary": "Ids of entries, entities, assemblies or chemical components matching a full-text, attribute, sequence or structure query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/rcsbsearch/v2/query",
+      "host": "search",
+      "params": {
+        "return_type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "entry",
+            "assembly",
+            "polymer_entity",
+            "non_polymer_entity",
+            "polymer_instance",
+            "mol_definition"
+          ],
+          "example": "entry"
+        },
+        "query": {
+          "in": "body",
+          "type": "object",
+          "description": "Query node: a terminal node {type: terminal, service, parameters} with service text, text_chem, full_text, sequence, seqmotif, structure, strucmotif or chemical; a group node combines nodes with logical_operator AND or OR.",
+          "example": {
+            "type": "terminal",
+            "service": "full_text",
+            "parameters": {
+              "value": "hemoglobin"
+            }
+          }
+        },
+        "request_options": {
+          "in": "body",
+          "type": "object",
+          "description": "Paging (paginate {start, rows}), sort, return_all_hits and other result options."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "science.structures.search",
+      "docs_url": "https://search.rcsb.org/index.html",
+      "verified": {
+        "docs": "https://search.rcsb.org/index.html"
+      }
+    },
+    {
+      "id": "rcsb-pdb.entry.get",
+      "name": "Get a structure entry",
+      "summary": "Title, method, resolution, dates, citation and entity ids of one PDB entry.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rest/v1/core/entry/{entry_id}",
+      "params": {
+        "entry_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "PDB id.",
+          "example": "4HHB"
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://data.rcsb.org/redoc/index.html",
+      "verified": {
+        "docs": "https://data.rcsb.org/redoc/index.html"
+      }
+    },
+    {
+      "id": "rcsb-pdb.polymer_entity.get",
+      "name": "Get a polymer entity",
+      "summary": "One protein or nucleic-acid entity of an entry: sequence, source organism, UniProt and other references.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rest/v1/core/polymer_entity/{entry_id}/{entity_id}",
+      "params": {
+        "entry_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "4HHB"
+        },
+        "entity_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "1"
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://data.rcsb.org/redoc/index.html",
+      "verified": {
+        "docs": "https://data.rcsb.org/redoc/index.html"
+      }
+    },
+    {
+      "id": "rcsb-pdb.assembly.get",
+      "name": "Get a structural assembly",
+      "summary": "One biological assembly of an entry: oligomeric state, symmetry and composition.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rest/v1/core/assembly/{entry_id}/{assembly_id}",
+      "params": {
+        "entry_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "4HHB"
+        },
+        "assembly_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "1"
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://data.rcsb.org/redoc/index.html",
+      "verified": {
+        "docs": "https://data.rcsb.org/redoc/index.html"
+      }
+    },
+    {
+      "id": "rcsb-pdb.chemcomp.get",
+      "name": "Get a chemical component",
+      "summary": "A ligand, small molecule or monomer by its CCD id: formula, weight, descriptors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rest/v1/core/chemcomp/{comp_id}",
+      "params": {
+        "comp_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chemical Component Dictionary id.",
+          "example": "HEM"
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://data.rcsb.org/redoc/index.html",
+      "verified": {
+        "docs": "https://data.rcsb.org/redoc/index.html"
+      }
+    },
+    {
+      "id": "rcsb-pdb.uniprot.get",
+      "name": "Get UniProt annotations of an entity",
+      "summary": "UniProt features and annotations mapped onto one polymer entity.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rest/v1/core/uniprot/{entry_id}/{entity_id}",
+      "params": {
+        "entry_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "4HHB"
+        },
+        "entity_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "1"
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://data.rcsb.org/redoc/index.html",
+      "verified": {
+        "docs": "https://data.rcsb.org/redoc/index.html"
+      }
+    },
+    {
+      "id": "rcsb-pdb.holdings.status",
+      "name": "Get the status of entries",
+      "summary": "Release status (current, unreleased, removed) and status code of a list of PDB ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rest/v1/holdings/status",
+      "params": {
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated PDB ids.",
+          "example": "4HHB,1STP"
+        }
+      },
+      "job": "science.structures.get",
+      "docs_url": "https://data.rcsb.org/redoc/index.html",
+      "verified": {
+        "docs": "https://data.rcsb.org/redoc/index.html"
+      }
+    },
+    {
+      "id": "rcsb-pdb.graphql",
+      "name": "Run a GraphQL query",
+      "summary": "Any combination of entry, entity, assembly and ligand fields for one or many ids in one call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/graphql",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "GraphQL query.",
+          "example": "{ entry(entry_id: \"4HHB\") { struct { title } } }"
+        },
+        "variables": {
+          "in": "body",
+          "type": "object",
+          "description": "Values for the query's variables."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "science.structures.get",
+      "docs_url": "https://data.rcsb.org/",
+      "verified": {
+        "docs": "https://data.rcsb.org/"
+      }
+    }
+  ]
+}

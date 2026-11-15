@@ -1,0 +1,285 @@
+{
+  "vendor": "anymailfinder",
+  "name": "Anymail Finder",
+  "category": "enrichment",
+  "summary": "Find and verify business emails by person, company, decision-maker role or LinkedIn URL, charged only for valid hits.",
+  "docs_url": "https://anymailfinder.com/email-finder-api/docs",
+  "pricing_url": "https://anymailfinder.com/pricing",
+  "base_url": "https://api.anymailfinder.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ANYMAILFINDER_API_KEY"
+        ],
+        "description": "Anymail Finder API key (account API page; click Enable API if hidden). Sent raw, with no Bearer prefix."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "You are charged only when a valid email is returned; not found, blacklisted and (since 2026-10-05) risky results are free. Repeat searches within 30 days are free.",
+    "Searches wait for the answer.",
+    "Bulk and GeoLead jobs are not included here beyond status; credits are charged on first download of results."
+  ],
+  "sources": [
+    "https://anymailfinder.com/email-finder-api/docs",
+    "https://api.anymailfinder.com/openapi.json",
+    "https://anymailfinder.com/email-finder-api/docs/find-person-email",
+    "https://anymailfinder.com/email-finder-api/docs/find-company-email",
+    "https://anymailfinder.com/email-finder-api/docs/find-linkedin-url-email",
+    "https://anymailfinder.com/pricing"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "anymailfinder.account.get",
+      "name": "Get credit balance",
+      "summary": "Remaining credit balance and account email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v5.1/account",
+      "job": "account.usage",
+      "docs_url": "https://anymailfinder.com/email-finder-api/docs",
+      "verified": {
+        "docs": "https://anymailfinder.com/email-finder-api/docs"
+      }
+    },
+    {
+      "id": "anymailfinder.email.find_person",
+      "name": "Find a person's email",
+      "summary": "Find one person's email from a company (domain or name) and their name, or from a LinkedIn URL alone.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v5.1/find-email/person",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain (preferred over company_name).",
+          "example": "microsoft.com"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, used if no domain is given."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "full_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Alternative to first_name plus last_name."
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL; may be sent on its own."
+        }
+      },
+      "notes": [
+        "A read over POST: searches for an email, changes nothing.",
+        "1 credit, charged only when a valid email is found; not found or blacklisted results are free, and repeats within 30 days are free.",
+        "Needs a domain or company_name plus a name, unless linkedin_url is sent alone."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://anymailfinder.com/email-finder-api/docs/find-person-email",
+      "verified": {
+        "docs": "https://anymailfinder.com/email-finder-api/docs/find-person-email"
+      }
+    },
+    {
+      "id": "anymailfinder.email.find_decision_maker",
+      "name": "Find a decision maker's email",
+      "summary": "Find the email of a decision maker at a company by role category.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v5.1/find-email/decision-maker",
+      "params": {
+        "decision_maker_category": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "One or more categories.",
+          "example": [
+            "ceo",
+            "sales"
+          ]
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain (preferred over company_name).",
+          "example": "microsoft.com"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, used if no domain is given."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "2 credits, charged only when a valid email is found; repeats within 30 days are free.",
+        "Categories: ceo, engineering, finance, hr, it, logistics, marketing, operations, buyer, sales."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://anymailfinder.com/email-finder-api/docs/find-decision-maker-email",
+      "verified": {
+        "docs": "https://anymailfinder.com/email-finder-api/docs/find-decision-maker-email"
+      }
+    },
+    {
+      "id": "anymailfinder.email.find_company",
+      "name": "Find a company's emails",
+      "summary": "Up to 20 emails found for a company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v5.1/find-email/company",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain (preferred over company_name).",
+          "example": "microsoft.com"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, used if no domain is given."
+        },
+        "email_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Which kind of address to return.",
+          "enum": [
+            "any",
+            "generic",
+            "personal"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "1 credit per request, charged only when valid emails are found; repeats within 30 days are free."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://anymailfinder.com/email-finder-api/docs/find-company-email",
+      "verified": {
+        "docs": "https://anymailfinder.com/email-finder-api/docs/find-company-email"
+      }
+    },
+    {
+      "id": "anymailfinder.email.find_by_linkedin",
+      "name": "Find an email from a LinkedIn URL",
+      "summary": "Find a person's email from their LinkedIn profile URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v5.1/find-email/linkedin-url",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The LinkedIn profile URL."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "1 credit, charged only when a valid email is found; repeats within 30 days are free."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://anymailfinder.com/email-finder-api/docs/find-linkedin-url-email",
+      "verified": {
+        "docs": "https://anymailfinder.com/email-finder-api/docs/find-linkedin-url-email"
+      }
+    },
+    {
+      "id": "anymailfinder.email.verify",
+      "name": "Verify an email address",
+      "summary": "Check whether an email address is deliverable.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v5.1/verify-email",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The email to validate."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Standalone verification costs 0.2 credits per check (pricing page figure)."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://anymailfinder.com/email-finder-api/docs",
+      "verified": {
+        "docs": "https://anymailfinder.com/email-finder-api/docs"
+      }
+    },
+    {
+      "id": "anymailfinder.person.reverse_lookup",
+      "name": "Look up a person by email",
+      "summary": "Reverse email lookup: who an email address belongs to.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v5.1/reverse-email-lookup",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The email of the person to look up."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://anymailfinder.com/email-finder-api/docs",
+      "verified": {
+        "docs": "https://anymailfinder.com/email-finder-api/docs"
+      }
+    },
+    {
+      "id": "anymailfinder.bulk.get",
+      "name": "Get a bulk search",
+      "summary": "Status and details of a bulk search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v5.1/bulk/{searchId}",
+      "params": {
+        "searchId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Bulk search id."
+        }
+      },
+      "notes": [
+        "Bulk jobs are billed when the results are first downloaded, not when created."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://anymailfinder.com/email-finder-api/docs/bulk",
+      "verified": {
+        "docs": "https://anymailfinder.com/email-finder-api/docs/bulk"
+      }
+    }
+  ]
+}

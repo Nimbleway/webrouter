@@ -1,0 +1,151 @@
+{
+  "vendor": "virustotal",
+  "name": "VirusTotal",
+  "category": "security",
+  "summary": "Threat-intelligence reports on files, URLs, domains and IP addresses: multi-engine antivirus verdicts, reputation and relationships.",
+  "docs_url": "https://docs.virustotal.com/reference/overview",
+  "pricing_url": "https://docs.virustotal.com/reference/public-vs-premium-api",
+  "base_url": "https://www.virustotal.com/api/v3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "VIRUSTOTAL_API_KEY"
+        ],
+        "description": "A VirusTotal API key (sign in > API key). Sent in the x-apikey header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Public (free) API: 4 requests per minute and 500 per day, and it must not be used in commercial products or services or in business workflows that do not contribute new files. Premium keys lift both.",
+    "Everything you submit or query joins the VirusTotal dataset, visible to its community and partners: never send sensitive or personal data (private URLs with tokens, internal hostnames)."
+  ],
+  "sources": [
+    "https://docs.virustotal.com/reference/overview",
+    "https://docs.virustotal.com/reference/authentication",
+    "https://docs.virustotal.com/reference/public-vs-premium-api",
+    "https://docs.virustotal.com/reference/url"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "virustotal.files.get",
+      "name": "Get a file report",
+      "summary": "Antivirus verdicts, file type, names, signatures and reputation for a file hash.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/files/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "SHA-256, SHA-1 or MD5 of the file."
+        }
+      },
+      "notes": [
+        "404 means VirusTotal has never seen the file; nothing is uploaded by this call."
+      ],
+      "job": "security.file.report",
+      "docs_url": "https://docs.virustotal.com/reference/file-info",
+      "verified": {
+        "docs": "https://docs.virustotal.com/reference/file-info"
+      }
+    },
+    {
+      "id": "virustotal.urls.get",
+      "name": "Get a URL report",
+      "summary": "Latest analysis verdicts, categories and reputation for a URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/urls/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "URL identifier: the URL base64url-encoded without '=' padding, or the SHA-256 id VirusTotal returned.",
+          "example": "aHR0cDovL3d3dy5zb21lZG9tYWluLmNvbS90aGlzL2lzL215L3VybA"
+        }
+      },
+      "notes": [
+        "Build the id with base64.urlsafe_b64encode(url.encode()).decode().strip('='); VirusTotal canonicalises it."
+      ],
+      "job": "security.url.report",
+      "docs_url": "https://docs.virustotal.com/reference/url-info",
+      "verified": {
+        "docs": "https://docs.virustotal.com/reference/url-info"
+      }
+    },
+    {
+      "id": "virustotal.analyses.get",
+      "name": "Get an analysis",
+      "summary": "Status and results of a scan submitted with urls.scan (or a file upload).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/analyses/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "Analysis id from the submission."
+        }
+      },
+      "notes": [
+        "Poll until the analysis is complete; mind the 4-per-minute public limit."
+      ],
+      "job": "security.analysis.status",
+      "docs_url": "https://docs.virustotal.com/reference/analysis",
+      "verified": {
+        "docs": "https://docs.virustotal.com/reference/analysis"
+      }
+    },
+    {
+      "id": "virustotal.domains.get",
+      "name": "Get a domain report",
+      "summary": "Security verdicts, categories and reputation of a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domains/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "required": true,
+          "description": "Domain name.",
+          "example": "example.com"
+        }
+      },
+      "job": "security.domain.report",
+      "docs_url": "https://docs.virustotal.com/reference/domain-info",
+      "verified": {
+        "docs": "https://docs.virustotal.com/reference/domain-info"
+      }
+    },
+    {
+      "id": "virustotal.ip.get",
+      "name": "Get an IP address report",
+      "summary": "Security verdicts, network owner and reputation of an IP address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ip_addresses/{ip}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address.",
+          "example": "8.8.8.8"
+        }
+      },
+      "job": "security.ip.report",
+      "docs_url": "https://docs.virustotal.com/reference/ip-info",
+      "verified": {
+        "docs": "https://docs.virustotal.com/reference/ip-info"
+      }
+    }
+  ]
+}

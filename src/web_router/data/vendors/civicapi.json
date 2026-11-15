@@ -1,0 +1,208 @@
+{
+  "vendor": "civicapi",
+  "name": "civicAPI",
+  "category": "government",
+  "summary": "Live and historic election results and race calls for elections around the world, from local races to national ones.",
+  "docs_url": "https://civicapi.org/api-documentation",
+  "base_url": "https://civicapi.org",
+  "notes": [
+    "Keyless and free, including commercial use; non-personal projects must credit civicAPI (link to civicapi.org or name it).",
+    "All times are UTC; election_date in search results is set to 05:00 UTC whatever the local zone."
+  ],
+  "sources": [
+    "https://civicapi.org/api-documentation"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "civicapi.races.search",
+      "name": "Search races",
+      "summary": "Elections (races) by country, province, district, type, date range or name, with top-three candidates, votes, percent reporting and winners.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/race/search",
+      "params": {
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Races on or after this date, YYYY-MM-DD.",
+          "example": "2026-11-03"
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Races on or before this date, YYYY-MM-DD.",
+          "example": "2026-11-03"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Race name; slow, so prefer the other filters."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 code (US); alpha-3 for countries of limited recognition or abolished before the UN.",
+          "example": "US"
+        },
+        "province": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-2 province code, e.g. AL or JP-07."
+        },
+        "district": {
+          "in": "query",
+          "type": "string",
+          "description": "District (county, canton) by full English name."
+        },
+        "election_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Election type."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Races to return; 20 by default, at most 50000."
+        }
+      },
+      "notes": [],
+      "job": "elections.races.search",
+      "docs_url": "https://civicapi.org/api-documentation",
+      "verified": {
+        "docs": "https://civicapi.org/api-documentation"
+      }
+    },
+    {
+      "id": "civicapi.races.get",
+      "name": "Get a race",
+      "summary": "Full results of one race: candidates, votes, percent, winners, registered voters, poll times and per-region results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/race/{raceid}",
+      "params": {
+        "raceid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Race id from races.search."
+        },
+        "data": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "description": "json (default), or csv for an OpenElections-compatible CSV."
+        }
+      },
+      "notes": [
+        "Precinct results are left out unless they are the only data; the docs' precinct flag adds them."
+      ],
+      "job": "elections.races.get",
+      "docs_url": "https://civicapi.org/api-documentation",
+      "verified": {
+        "docs": "https://civicapi.org/api-documentation"
+      }
+    },
+    {
+      "id": "civicapi.races.history.list",
+      "name": "List snapshots of a race",
+      "summary": "Timestamps of the stored snapshots of a race's results, for timelines.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/race/{raceid}/history",
+      "params": {
+        "raceid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Race id from races.search."
+        }
+      },
+      "notes": [
+        "Only races tracked after 2025-10-09 have history."
+      ],
+      "job": "elections.races.history",
+      "docs_url": "https://civicapi.org/api-documentation",
+      "verified": {
+        "docs": "https://civicapi.org/api-documentation"
+      }
+    },
+    {
+      "id": "civicapi.races.history.get",
+      "name": "Get a race as at a snapshot",
+      "summary": "A race's full results as they stood at one snapshot timestamp.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/race/{raceid}/history/{timestamp}",
+      "params": {
+        "raceid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Race id from races.search."
+        },
+        "timestamp": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Snapshot timestamp from races.history.list, YYYY-MM-DDTHH:MM:SS.sssZ (UTC)."
+        }
+      },
+      "notes": [],
+      "job": "elections.races.history",
+      "docs_url": "https://civicapi.org/api-documentation",
+      "verified": {
+        "docs": "https://civicapi.org/api-documentation"
+      }
+    },
+    {
+      "id": "civicapi.dates.list",
+      "name": "List election dates",
+      "summary": "Dates with elections in a year, by month, with race counts, optionally for one country or province.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/getElectionDates",
+      "params": {
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Year, YYYY; the current year by default."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 code."
+        },
+        "province": {
+          "in": "query",
+          "type": "string",
+          "description": "Province code, e.g. AL or JP-06."
+        }
+      },
+      "notes": [],
+      "job": "elections.calendar",
+      "docs_url": "https://civicapi.org/api-documentation",
+      "verified": {
+        "docs": "https://civicapi.org/api-documentation"
+      }
+    },
+    {
+      "id": "civicapi.years.list",
+      "name": "List election years",
+      "summary": "Every year with elections in the database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/getElectionYears",
+      "params": {},
+      "notes": [],
+      "job": "elections.calendar",
+      "docs_url": "https://civicapi.org/api-documentation",
+      "verified": {
+        "docs": "https://civicapi.org/api-documentation"
+      }
+    }
+  ]
+}

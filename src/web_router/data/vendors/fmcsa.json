@@ -1,0 +1,245 @@
+{
+  "vendor": "fmcsa",
+  "name": "FMCSA QCMobile (SAFER carrier data)",
+  "category": "company-data",
+  "summary": "US DOT-registered motor carriers from the Federal Motor Carrier Safety Administration: registration, operating authority, docket numbers, cargo, out-of-service and safety (BASIC) data, by name, DOT number or docket number.",
+  "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+  "base_url": "https://mobile.fmcsa.dot.gov/qc/services",
+  "auth": {
+    "credentials": {
+      "web_key": {
+        "env": [
+          "FMCSA_API_KEY"
+        ],
+        "description": "A QCMobile WebKey: sign in at mobile.fmcsa.dot.gov/QCDevsite with Login.gov, then My WebKeys > Get a new WebKey. Sent as the webKey query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "webKey",
+        "value": "{web_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Look a carrier up by name or docket number first to get its DOT number, then use the per-carrier endpoints.",
+    "A name search returns at most 50 carriers per call; page with start and size."
+  ],
+  "sources": [
+    "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+    "https://mobile.fmcsa.dot.gov/QCDevsite/docs/getStarted",
+    "https://mobile.fmcsa.dot.gov/QCDevsite/docs/apiElements"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fmcsa.carriers.search",
+      "name": "Search carriers by name",
+      "summary": "Carriers whose legal or DBA name matches.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/name/{name}",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Carrier legal or DBA name.",
+          "example": "greyhound"
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset of the first carrier, for paging."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Carriers to return; results are capped at 50."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    },
+    {
+      "id": "fmcsa.carriers.get",
+      "name": "Get a carrier",
+      "summary": "Registration, licensing, insurance and safety details of one carrier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/{dotNumber}",
+      "params": {
+        "dotNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The carrier's US DOT number.",
+          "example": "44110"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    },
+    {
+      "id": "fmcsa.carriers.by_docket",
+      "name": "Find a carrier by docket number",
+      "summary": "The carrier holding a motor carrier docket number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/docket-number/{docketNumber}/",
+      "params": {
+        "docketNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Motor carrier docket number (digits).",
+          "example": "1515"
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    },
+    {
+      "id": "fmcsa.carriers.basics",
+      "name": "Get a carrier's BASIC safety measures",
+      "summary": "BASIC safety performance data of one carrier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/{dotNumber}/basics",
+      "params": {
+        "dotNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The carrier's US DOT number.",
+          "example": "44110"
+        }
+      },
+      "job": "company.verify",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    },
+    {
+      "id": "fmcsa.carriers.authority",
+      "name": "Get a carrier's operating authority",
+      "summary": "Operating authority of one carrier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/{dotNumber}/authority",
+      "params": {
+        "dotNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The carrier's US DOT number.",
+          "example": "44110"
+        }
+      },
+      "job": "company.verify",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    },
+    {
+      "id": "fmcsa.carriers.oos",
+      "name": "Get a carrier's out-of-service status",
+      "summary": "Out-of-service data of one carrier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/{dotNumber}/oos",
+      "params": {
+        "dotNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The carrier's US DOT number.",
+          "example": "44110"
+        }
+      },
+      "job": "company.verify",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    },
+    {
+      "id": "fmcsa.carriers.cargo",
+      "name": "Get a carrier's cargo carried",
+      "summary": "Cargo classes the carrier hauls.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/{dotNumber}/cargo-carried",
+      "params": {
+        "dotNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The carrier's US DOT number.",
+          "example": "44110"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    },
+    {
+      "id": "fmcsa.carriers.operation",
+      "name": "Get a carrier's operation classification",
+      "summary": "Operation classification of one carrier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/{dotNumber}/operation-classification",
+      "params": {
+        "dotNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The carrier's US DOT number.",
+          "example": "44110"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    },
+    {
+      "id": "fmcsa.carriers.dockets",
+      "name": "List a carrier's docket numbers",
+      "summary": "Every docket number linked to a DOT number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carriers/{dotNumber}/docket-numbers",
+      "params": {
+        "dotNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The carrier's US DOT number.",
+          "example": "44110"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi",
+      "verified": {
+        "docs": "https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi"
+      }
+    }
+  ]
+}

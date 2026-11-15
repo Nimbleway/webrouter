@@ -98,3 +98,21 @@ date gets today (UTC) minus 1, 7, 30 or 365 days.
 | DeepSeek | `after:YYYY-MM-DD` in the query |
 
 WebIQ and Parallel MCP do not map it.
+
+## Values a backend refuses
+
+Each of these raises `UnsupportedParameterError` before anything is sent. A
+query too long for its operators raises `ProviderError` instead. `auto` moves
+on to the next eligible backend.
+
+| Backend | Refused |
+| --- | --- |
+| You.com, You.com MCP | A `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once |
+| Brave | A `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
+| Tavily | A `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
+| Parallel | A `country` off its 37 codes; both domain lists at once; more than 200 domains |
+| Perplexity | Both domain lists at once; more than 20 domains; a `locale` that is not a bare two-letter language (`en`, not `en-US`) |
+| WebIQ | A `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
+| Keenable | More than one `include_domains` entry |
+| DeepSeek | A query past 128 characters with its operators |
+| Brave, WebIQ, DeepSeek, You.com MCP | A domain filter that is not a host name, optionally with a path, because it goes into the query as `site:`. For You.com MCP, this applies only to `include_domains`; `exclude_domains` is a tool argument |

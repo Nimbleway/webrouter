@@ -1,0 +1,332 @@
+{
+  "vendor": "pubmed",
+  "name": "PubMed (NCBI E-utilities)",
+  "category": "science",
+  "summary": "NCBI's Entrez E-utilities over PubMed and the other NCBI databases: search, summaries, full records and links between records.",
+  "docs_url": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
+  "base_url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "NCBI_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional NCBI API key (NCBI account > Settings > API Key Management); sent as the api_key query parameter, raising the limit from 3 to 10 requests per second."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Free and keyless. Without a key more than 3 requests per second from one IP gets an error; a key allows 10 per second.",
+    "NCBI asks large jobs to run on weekends or between 9 PM and 5 AM US Eastern on weekdays, and to send tool and email parameters identifying the caller.",
+    "Answers are XML unless retmode=json, which esearch, esummary and einfo support; efetch does not return JSON.",
+    "The usual flow is search (IDs) then summary or fetch with those IDs."
+  ],
+  "sources": [
+    "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
+    "https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "pubmed.search",
+      "name": "Search PubMed",
+      "summary": "PubMed IDs (or another database's UIDs) matching a query, or just the count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/esearch.fcgi",
+      "params": {
+        "db": {
+          "in": "query",
+          "type": "string",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
+          "example": "pubmed"
+        },
+        "term": {
+          "in": "query",
+          "type": "string",
+          "description": "Text query, like a PubMed search string; percent-encode special characters.",
+          "required": true,
+          "example": "crispr"
+        },
+        "retstart": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset of the first ID returned, default 0."
+        },
+        "retmax": {
+          "in": "query",
+          "type": "integer",
+          "description": "IDs returned, default 20, max 100,000."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "PubMed: most recent (default), pub date, relevance, title, author, journal (spaces as +)."
+        },
+        "field": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict the whole term to one search field."
+        },
+        "datetype": {
+          "in": "query",
+          "type": "string",
+          "description": "Date field for the date filters; for PubMed crdt, edat, pdat or mhda."
+        },
+        "reldate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only items dated within the last n days (by datetype)."
+        },
+        "mindate": {
+          "in": "query",
+          "type": "string",
+          "description": "Range start, YYYY/MM/DD, YYYY/MM or YYYY; needs maxdate."
+        },
+        "maxdate": {
+          "in": "query",
+          "type": "string",
+          "description": "Range end, same formats; needs mindate."
+        },
+        "rettype": {
+          "in": "query",
+          "type": "string",
+          "description": "uilist (default) or count.",
+          "enum": [
+            "uilist",
+            "count"
+          ]
+        },
+        "retmode": {
+          "in": "query",
+          "type": "string",
+          "description": "xml (default) or json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        }
+      },
+      "job": "scholar.search",
+      "docs_url": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
+      "verified": {
+        "docs": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html"
+      },
+      "notes": [
+        "Returns IDs only; pass them to pubmed.summary or pubmed.fetch."
+      ]
+    },
+    {
+      "id": "pubmed.summary",
+      "name": "Get document summaries",
+      "summary": "Title, authors, journal, dates and other summary fields for a list of UIDs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/esummary.fcgi",
+      "params": {
+        "db": {
+          "in": "query",
+          "type": "string",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
+          "required": true,
+          "example": "pubmed"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "One UID or a comma-separated list.",
+          "required": true,
+          "example": "39000000"
+        },
+        "retstart": {
+          "in": "query",
+          "type": "integer",
+          "description": "First record, default 1."
+        },
+        "retmax": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records returned, max 10,000."
+        },
+        "retmode": {
+          "in": "query",
+          "type": "string",
+          "description": "xml (default) or json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        }
+      },
+      "job": "scholar.paper",
+      "docs_url": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
+      "verified": {
+        "docs": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html"
+      }
+    },
+    {
+      "id": "pubmed.fetch",
+      "name": "Fetch full records",
+      "summary": "Full records (abstracts, MEDLINE or XML) for a list of UIDs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/efetch.fcgi",
+      "params": {
+        "db": {
+          "in": "query",
+          "type": "string",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
+          "required": true,
+          "example": "pubmed"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "One UID or a comma-separated list.",
+          "required": true
+        },
+        "rettype": {
+          "in": "query",
+          "type": "string",
+          "description": "Record view, e.g. abstract, medline, docsum."
+        },
+        "retmode": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default xml."
+        },
+        "retstart": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset, default 0."
+        },
+        "retmax": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records returned, max 10,000."
+        }
+      },
+      "job": "scholar.paper",
+      "docs_url": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
+      "verified": {
+        "docs": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html"
+      }
+    },
+    {
+      "id": "pubmed.link",
+      "name": "Find linked records",
+      "summary": "Related articles, citing articles or records in other NCBI databases for given UIDs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/elink.fcgi",
+      "params": {
+        "dbfrom": {
+          "in": "query",
+          "type": "string",
+          "description": "Database the input UIDs are from.",
+          "required": true,
+          "example": "pubmed"
+        },
+        "db": {
+          "in": "query",
+          "type": "string",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
+          "example": "pubmed"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "One UID or a comma-separated list.",
+          "required": true
+        },
+        "cmd": {
+          "in": "query",
+          "type": "string",
+          "description": "neighbor (default), neighbor_score, neighbor_history, acheck, ncheck, lcheck, llinks, llinkslib or prlinks."
+        },
+        "linkname": {
+          "in": "query",
+          "type": "string",
+          "description": "One link type, dbfrom_db_subset, e.g. pubmed_pubmed (similar articles)."
+        },
+        "term": {
+          "in": "query",
+          "type": "string",
+          "description": "Entrez query to filter the linked UIDs."
+        },
+        "datetype": {
+          "in": "query",
+          "type": "string",
+          "description": "Date field for the date filters; for PubMed crdt, edat, pdat or mhda."
+        },
+        "reldate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only items dated within the last n days (by datetype)."
+        },
+        "mindate": {
+          "in": "query",
+          "type": "string",
+          "description": "Range start, YYYY/MM/DD, YYYY/MM or YYYY; needs maxdate."
+        },
+        "maxdate": {
+          "in": "query",
+          "type": "string",
+          "description": "Range end, same formats; needs mindate."
+        },
+        "retmode": {
+          "in": "query",
+          "type": "string",
+          "description": "xml (default), or ref to redirect to the provider site."
+        }
+      },
+      "job": "scholar.citations",
+      "docs_url": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
+      "verified": {
+        "docs": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html"
+      }
+    },
+    {
+      "id": "pubmed.info",
+      "name": "Describe databases",
+      "summary": "The list of Entrez databases, or one database's fields, links and record counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/einfo.fcgi",
+      "params": {
+        "db": {
+          "in": "query",
+          "type": "string",
+          "description": "Entrez database, e.g. pubmed, pmc, nlmcatalog, clinvar, gene, or gds (GEO datasets); pubmed.info lists them all.",
+          "example": "pubmed"
+        },
+        "retmode": {
+          "in": "query",
+          "type": "string",
+          "description": "xml (default) or json.",
+          "example": "json",
+          "enum": [
+            "xml",
+            "json"
+          ]
+        }
+      },
+      "job": "reference.databases",
+      "docs_url": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
+      "verified": {
+        "docs": "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html"
+      }
+    }
+  ]
+}

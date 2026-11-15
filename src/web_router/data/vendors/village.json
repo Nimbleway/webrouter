@@ -1,0 +1,583 @@
+{
+  "vendor": "village",
+  "name": "Village",
+  "category": "enrichment",
+  "summary": "Relationship intelligence: warm-introduction paths to people and companies through your network, with people and company enrichment.",
+  "docs_url": "https://docs.village.ai/api-reference/introduction",
+  "pricing_url": "https://village.ai/pricing",
+  "base_url": "https://api.village.ai",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "VILLAGE_API_TOKEN"
+        ],
+        "description": "a Village access token (the token returned by POST /v2/auth/tokens, which you call with your secret key from village.ai/platform > Settings > API Keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Village authenticates with short-lived user tokens: you mint one with POST /v2/auth/tokens (secret-key header plus an external_user_id and email), and it carries an expires_at. Mint it yourself and put it in VILLAGE_API_TOKEN; refresh it when it expires. This entry does not mint tokens, to keep the secret key out of calls.",
+    "Results are about the token's user and their network, not a global database; scope: global widens searches.",
+    "Credit-priced (1 credit = $0.02): searches charge per 10 results plus AI work; cached enrichment costs 0.",
+    "A demo token (demo_token_global) returns anonymized sample data.",
+    "Lists, teams, projects, sequences and webhooks exist but are not listed."
+  ],
+  "sources": [
+    "https://docs.village.ai/llms.txt",
+    "https://docs.village.ai/api-reference/authentication.md",
+    "https://docs.village.ai/api-reference/credits.md",
+    "https://api.village.ai/v2/docs/openapi.json"
+  ],
+  "endpoints": [
+    {
+      "id": "village.user.me",
+      "name": "Get the current user",
+      "summary": "The user the token belongs to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/user/me",
+      "job": "account.usage",
+      "docs_url": "https://docs.village.ai/api-reference/authentication",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/authentication"
+      }
+    },
+    {
+      "id": "village.people.list",
+      "name": "List network contacts",
+      "summary": "Your network contacts ranked by connection strength.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people",
+      "params": {
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, default 25, max 100."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response."
+        },
+        "connection_degrees": {
+          "in": "body",
+          "type": "array",
+          "description": "Connection degrees to include: 1 direct, 2 second-degree, 3 third-degree.",
+          "example": [
+            1,
+            2
+          ]
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Only people at this current-company domain.",
+          "example": "google.com"
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.village.ai/api-reference/people/list-people",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/people/list-people"
+      }
+    },
+    {
+      "id": "village.people.search",
+      "name": "Search people in natural language",
+      "summary": "Find people by a plain-language prompt, in your own network by default or globally.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/search",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "The search text (the field is prompt, not query).",
+          "example": "Find CTOs at SaaS companies in San Francisco"
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Structured filters; multi-value keys take arrays."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page.",
+          "example": 25
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "auto, lookup (direct match), simple (firmographic) or complex (multi-constraint).",
+          "enum": [
+            "auto",
+            "lookup",
+            "simple",
+            "complex"
+          ]
+        },
+        "scope": {
+          "in": "body",
+          "type": "string",
+          "description": "network searches your connections first, global everyone, specific_list a list you pass. Defaults: lookup global, others network.",
+          "enum": [
+            "network",
+            "global",
+            "specific_list"
+          ]
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response."
+        },
+        "include_counts": {
+          "in": "body",
+          "type": "string",
+          "description": "Count scopes to compute on the first page only; adds latency.",
+          "enum": [
+            "global",
+            "network",
+            "all"
+          ]
+        },
+        "list_filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Search inside saved lists: {people_list_id} or {company_list_id}."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Slow: complex searches usually take 20 to 60 seconds; wait rather than retry.",
+        "Costs 3 credits per 10 results plus about 2 credits for the AI work (1 credit = $0.02)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.village.ai/api-reference/people/search-people",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/people/search-people"
+      }
+    },
+    {
+      "id": "village.people.paths",
+      "name": "Get introduction paths to a person",
+      "summary": "Who in your network can introduce you to a person.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/paths",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL.",
+          "example": "https://linkedin.com/in/johndoe"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Generic URL, auto-detected; use instead of linkedin_url."
+        }
+      },
+      "notes": [
+        "A read over POST. Give linkedin_url or url."
+      ],
+      "job": "social.profile",
+      "docs_url": "https://docs.village.ai/api-reference/people/get-person-paths",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/people/get-person-paths"
+      }
+    },
+    {
+      "id": "village.people.enrich",
+      "name": "Enrich a person",
+      "summary": "Detailed professional profile for a LinkedIn URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/enrich",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL.",
+          "example": "https://linkedin.com/in/johndoe"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Generic URL, auto-detected; use instead of linkedin_url."
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "cached_first (default) returns the cached profile if recent, else fetches live (charged only when it fetches); cached_only never fetches live; realtime_only always does.",
+          "enum": [
+            "cached_first",
+            "cached_only",
+            "realtime_only"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Give linkedin_url or url."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.village.ai/api-reference/people/enrich-person",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/people/enrich-person"
+      }
+    },
+    {
+      "id": "village.people.reverse_email",
+      "name": "Look up a person from an email",
+      "summary": "Who an email address belongs to.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/enrich/by-email",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Work or personal email.",
+          "example": "jane.doe@example.com"
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "cached_first (default) returns the cached profile if recent, else fetches live (charged only when it fetches); cached_only never fetches live; realtime_only always does.",
+          "enum": [
+            "cached_first",
+            "cached_only",
+            "realtime_only"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. If Village does not know the address it may look it up live."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.village.ai/api-reference/people/reverse-lookup-by-email",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/people/reverse-lookup-by-email"
+      }
+    },
+    {
+      "id": "village.people.posts",
+      "name": "Get a person's recent LinkedIn posts",
+      "summary": "Recent LinkedIn activity of a person.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/posts",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL.",
+          "example": "https://linkedin.com/in/johndoe",
+          "required": true
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "pagination.cursor from the previous response."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Posts per call, 1 to 50, default 20."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "social.posts",
+      "docs_url": "https://docs.village.ai/api-reference/people/get-person-linkedin-posts",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/people/get-person-linkedin-posts"
+      }
+    },
+    {
+      "id": "village.people.email",
+      "name": "Find a person's email",
+      "summary": "An email address for a person identified by LinkedIn URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/enrich/emails",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile URL.",
+          "example": "https://linkedin.com/in/johndoe"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Generic URL, auto-detected; use instead of linkedin_url."
+        },
+        "search_deeper": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Skip the private-contact tier and query the provider even if Village holds an address; costs a credit when it returns one."
+        }
+      },
+      "notes": [
+        "A read over POST. Give linkedin_url or url."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.village.ai/api-reference/people/get-person-email",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/people/get-person-email"
+      }
+    },
+    {
+      "id": "village.companies.paths",
+      "name": "Get introduction paths to a company",
+      "summary": "People at a company your network can introduce you to.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/paths",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain without www.",
+          "example": "acme.com"
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn company page URL.",
+          "example": "https://linkedin.com/company/acme-corp"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Generic URL, auto-detected."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, default 25, max 50."
+        },
+        "connection_degrees": {
+          "in": "body",
+          "type": "array",
+          "description": "Connection degrees to include: 1 direct, 2 second-degree, 3 third-degree.",
+          "example": [
+            1,
+            2
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Give exactly one of linkedin_url, domain or url (url is auto-detected)."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.village.ai/api-reference/companies/get-company-paths",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/companies/get-company-paths"
+      }
+    },
+    {
+      "id": "village.companies.paths_check",
+      "name": "Check for connections to a company",
+      "summary": "A quick yes or no on whether your network reaches a company, without full details.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/paths/check",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain without www.",
+          "example": "acme.com"
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn company page URL."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Generic URL, auto-detected."
+        }
+      },
+      "notes": [
+        "A read over POST. Give exactly one of linkedin_url, domain or url (url is auto-detected)."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.village.ai/api-reference/companies/check-company-paths",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/companies/check-company-paths"
+      }
+    },
+    {
+      "id": "village.companies.list",
+      "name": "List top-connected companies",
+      "summary": "Companies ranked by the strength of your network there.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies",
+      "params": {
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, default 25, max 100."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response."
+        },
+        "connection_degrees": {
+          "in": "body",
+          "type": "array",
+          "description": "Connection degrees to include: 1 direct, 2 second-degree, 3 third-degree.",
+          "example": [
+            1,
+            2
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.village.ai/api-reference/companies/list-companies",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/companies/list-companies"
+      }
+    },
+    {
+      "id": "village.companies.enrich",
+      "name": "Enrich a company",
+      "summary": "Company details from a domain or LinkedIn URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/enrich",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain without www.",
+          "example": "acme.com"
+        },
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn company page URL."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Generic URL, auto-detected."
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "cached_first (default) returns the cached profile if recent, else fetches live (charged only when it fetches); cached_only never fetches live; realtime_only always does.",
+          "enum": [
+            "cached_first",
+            "cached_only",
+            "realtime_only"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Give exactly one of linkedin_url, domain or url (url is auto-detected)."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.village.ai/api-reference/companies/enrich-company",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/companies/enrich-company"
+      }
+    },
+    {
+      "id": "village.companies.search",
+      "name": "Search companies in natural language",
+      "summary": "Find companies by a plain-language prompt or structured filters, in your network or globally.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/search",
+      "params": {
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "The search text.",
+          "example": "Find B2B SaaS companies with 50-200 employees in California"
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Structured filters, compiled deterministically; send without a prompt."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page.",
+          "example": 25
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "For prompt-only searches: auto, lookup, simple or complex.",
+          "enum": [
+            "auto",
+            "lookup",
+            "simple",
+            "complex"
+          ]
+        },
+        "scope": {
+          "in": "body",
+          "type": "string",
+          "description": "network (connections first) or global.",
+          "enum": [
+            "network",
+            "global"
+          ]
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Opaque cursor from the previous response."
+        },
+        "list_filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Search inside saved lists: {company_list_id} or {people_list_id}."
+        }
+      },
+      "notes": [
+        "A read over POST. The field is prompt, not query.",
+        "Billed in credits (1 credit = $0.02) for results plus AI work."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.village.ai/api-reference/companies/search-companies",
+      "verified": {
+        "docs": "https://docs.village.ai/api-reference/companies/search-companies"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

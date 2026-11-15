@@ -1,0 +1,138 @@
+{
+  "vendor": "dappier",
+  "name": "Dappier",
+  "category": "search",
+  "summary": "Real-time answers from Dappier AI models (live web search, news, stocks) and semantic article recommendations from licensed publisher data models.",
+  "docs_url": "https://docs.dappier.com/quickstart",
+  "pricing_url": "https://platform.dappier.com/marketplace",
+  "base_url": "https://api.dappier.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DAPPIER_API_KEY"
+        ],
+        "description": "a Dappier API key (platform.dappier.com > Settings > Profile > API Keys). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Models are picked by ID from the Dappier Marketplace: AI models start with am_ (real-time search), data models with dm_ (article recommendations). Price depends on the model.",
+    "Both calls are reads over POST.",
+    "Publisher analytics and the ZeroClick-signed variants are in the API but not in this entry."
+  ],
+  "sources": [
+    "https://docs.dappier.com/llms.txt",
+    "https://docs.dappier.com/real-time-data-api",
+    "https://docs.dappier.com/api-reference/endpoint/real-time-search",
+    "https://docs.dappier.com/api-reference/endpoint/ai-recommendations"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "dappier.realtime.query",
+      "name": "Ask a real-time AI model",
+      "summary": "A written answer from a Dappier AI model, e.g. live web search, news, weather or stock data.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/app/aimodel/{ai_model_id}",
+      "params": {
+        "ai_model_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "AI model ID from the marketplace, starting am_. am_01j06ytn18ejftedz6dyhz2b15 is the docs' real-time web search model.",
+          "example": "am_01j06ytn18ejftedz6dyhz2b15"
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The question.",
+          "example": "What is the weather in Austin today?"
+        }
+      },
+      "notes": [
+        "Read over POST. Returns {message}: prose, not a list of sources."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.dappier.com/api-reference/endpoint/real-time-search",
+      "verified": {
+        "docs": "https://docs.dappier.com/api-reference/endpoint/real-time-search"
+      }
+    },
+    {
+      "id": "dappier.recommendations.search",
+      "name": "Get article recommendations",
+      "summary": "Articles from a publisher data model for a query or a page URL: title, summary, URL, site, date, score.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/app/v2/search",
+      "params": {
+        "data_model_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Data model ID from the marketplace, starting dm_."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language query, keyword, or a URL (the page is analysed and used as the query)."
+        },
+        "similarity_top_k": {
+          "in": "body",
+          "type": "integer",
+          "description": "Articles to return, default 9."
+        },
+        "ref": {
+          "in": "body",
+          "type": "string",
+          "description": "Domain where the recommendations will be shown, e.g. dappier.com."
+        },
+        "num_articles_ref": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum articles from the ref domain, default 0."
+        },
+        "search_algorithm": {
+          "in": "body",
+          "type": "string",
+          "description": "semantic (default), most_recent, most_recent_semantic, or trending (last 24 hours).",
+          "enum": [
+            "most_recent",
+            "semantic",
+            "most_recent_semantic",
+            "trending"
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "num_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, default 10."
+        }
+      },
+      "notes": [
+        "Read over POST. source_url is a tracking link; url is the article itself."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.dappier.com/api-reference/endpoint/ai-recommendations",
+      "verified": {
+        "docs": "https://docs.dappier.com/api-reference/endpoint/ai-recommendations"
+      }
+    }
+  ]
+}

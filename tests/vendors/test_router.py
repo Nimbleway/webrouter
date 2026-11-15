@@ -77,7 +77,7 @@ def test_vendor_request_reaches_paths_the_catalog_does_not_name() -> None:
     assert recorder.last.url.params["page[size]"] == "2"
 
 
-def test_google_ads_writes_are_gated_and_reads_pass() -> None:
+def test_google_ads_writes_are_gated_and_reads_pass(ads_with_a_write: None) -> None:
     credentials = {
         "google-ads": {
             "developer_token": "dev",

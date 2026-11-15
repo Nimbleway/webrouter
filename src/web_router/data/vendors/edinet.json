@@ -1,0 +1,113 @@
+{
+  "vendor": "edinet",
+  "name": "EDINET",
+  "category": "finance",
+  "summary": "Japan FSA's EDINET disclosure system: daily lists of securities filings (annual and quarterly reports, large shareholding reports) and the filings themselves as XBRL, PDF or CSV.",
+  "docs_url": "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf",
+  "base_url": "https://api.edinet-fsa.go.jp/api/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EDINET_API_KEY"
+        ],
+        "description": "an EDINET API key, issued free after registering at api.edinet-fsa.go.jp/api/auth/index.aspx?mode=2"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "Subscription-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Two steps: list a day's filings with edinet.documents.list (type=2) to get docID values, then fetch one with edinet.documents.get.",
+    "Filings are listed by file date (the day EDINET processed them), not by company; filter the list yourself by edinetCode (6 characters), secCode (5-digit securities code) or docTypeCode.",
+    "Dates may go back at most 10 years. Today's list updates about every minute from just after 08:30 JST; past dates are refreshed once a day after midnight JST.",
+    "Filer names and document descriptions are in Japanese."
+  ],
+  "sources": [
+    "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf",
+    "https://disclosure2.edinet-fsa.go.jp/weee0010.aspx"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "edinet.documents.list",
+      "name": "List filings for a date",
+      "summary": "Every filing submitted on a file date, with filer, EDINET code, securities code, document type and availability flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/documents.json",
+      "params": {
+        "date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "File date, YYYY-MM-DD, within the last 10 years; weekends and holidays allowed.",
+          "example": "2023-04-01"
+        },
+        "type": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            1,
+            2
+          ],
+          "description": "1 (default) metadata only (counts); 2 the filing list plus metadata.",
+          "example": 2
+        }
+      },
+      "notes": [
+        "Without type=2 only the count and update time come back, not the filings."
+      ],
+      "job": "company.documents",
+      "docs_url": "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf",
+      "verified": {
+        "docs": "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf"
+      }
+    },
+    {
+      "id": "edinet.documents.get",
+      "name": "Download a filing",
+      "summary": "One filing by docID: main document with audit report and XBRL, PDF, attachments, English files, or XBRL converted to CSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/documents/{docID}",
+      "params": {
+        "docID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Document id from edinet.documents.list.",
+          "example": "S1234567"
+        },
+        "type": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "enum": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "description": "1 main document, audit report and XBRL (ZIP); 2 PDF; 3 substitute and attached documents (ZIP); 4 English files (ZIP); 5 XBRL as CSV (ZIP).",
+          "example": 5
+        }
+      },
+      "notes": [
+        "Returns a binary ZIP (application/octet-stream) or PDF, not JSON; errors come back as JSON.",
+        "XBRL (type 1) and CSV (type 5) exist only when the list's xbrlFlag / csvFlag is 1."
+      ],
+      "job": "company.documents",
+      "docs_url": "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf",
+      "verified": {
+        "docs": "https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf"
+      }
+    }
+  ]
+}

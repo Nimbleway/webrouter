@@ -1,0 +1,268 @@
+{
+  "vendor": "opoint",
+  "name": "Opoint",
+  "category": "search",
+  "summary": "Global news monitoring: boolean search over Opoint's news archive, stored-search feeds and SafeFeed firehoses.",
+  "docs_url": "https://api-docs.opoint.com/guides/search",
+  "base_url": "https://api.opoint.com",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "OPOINT_API_KEY"
+        ],
+        "description": "An Opoint API token (from Opoint; trials on request). Sent as 'Authorization: Token <token>'."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Token {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "A commercial API: access, archive depth and add-ons (textrazor, readership) depend on the contract.",
+    "Profiles, tags, tracking and stored-search create/update/delete calls are writes and are not in this entry."
+  ],
+  "sources": [
+    "https://opoint.com/search-api",
+    "https://api-docs.opoint.com/guides/search",
+    "https://api-docs.opoint.com/guides/getting-started-with-searching",
+    "https://api.opoint.com/redoc/",
+    "https://api.opoint.com/schema/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "opoint.search",
+      "name": "Search news articles",
+      "summary": "Articles from Opoint's global news index matching a search term, with the parts you request.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/",
+      "params": {
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format.",
+          "enum": [
+            "json",
+            "jsonl",
+            "xml"
+          ]
+        },
+        "searchterm": {
+          "in": "body",
+          "type": "string",
+          "description": "What to search for: words, phrases, boolean expressions, and filters on language, country, sources and topics (Opoint search syntax).",
+          "example": "spotify"
+        },
+        "params": {
+          "in": "body",
+          "type": "object",
+          "description": "Options: requestedarticles (default 10), groupidentical, main {header, summary, text, matches} (all off by default, so set them for content), oldest/newest (Unix timestamps), context (paging token), textrazor and readership (licensed add-ons).",
+          "example": {
+            "requestedarticles": 10,
+            "groupidentical": 1,
+            "main": {
+              "header": 1,
+              "summary": 1,
+              "text": 1
+            }
+          }
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://api-docs.opoint.com/guides/search",
+      "verified": {
+        "docs": "https://api-docs.opoint.com/guides/search"
+      },
+      "notes": [
+        "A read over POST.",
+        "Paging: send context \"\" with the first search, then repeat the same search with each response's context until it comes back empty.",
+        "Without params.main the articles carry no header, summary or text."
+      ]
+    },
+    {
+      "id": "opoint.storedsearch.list",
+      "name": "List stored searches",
+      "summary": "The user's stored searches.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/storedsearch/",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to return, default 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, default 0."
+        }
+      },
+      "job": "news.monitors.list",
+      "docs_url": "https://api.opoint.com/redoc/",
+      "verified": {
+        "docs": "https://api.opoint.com/schema/"
+      }
+    },
+    {
+      "id": "opoint.storedsearch.feed",
+      "name": "Get new articles from stored searches",
+      "summary": "Articles matched by stored searches in a time window.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/storedsearch/feed/",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Window start, Unix timestamp.",
+          "required": true
+        },
+        "to": {
+          "in": "query",
+          "type": "integer",
+          "description": "Window end, Unix timestamp; omitted means from + interval."
+        },
+        "interval": {
+          "in": "query",
+          "type": "integer",
+          "description": "Window length in seconds, 30 to 1800, default 900; 0 when to is set."
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated stored search IDs; omitted means all active ones."
+        },
+        "num_art": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max articles, default 25000."
+        },
+        "matches": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include highlighted matches."
+        },
+        "topics": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include topic data."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format, default json.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "news.monitors.feed",
+      "docs_url": "https://api.opoint.com/redoc/",
+      "verified": {
+        "docs": "https://api.opoint.com/schema/"
+      }
+    },
+    {
+      "id": "opoint.safefeeds.list",
+      "name": "List SafeFeeds",
+      "summary": "SafeFeeds the account can read, with their ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/safefeeds/",
+      "params": {},
+      "job": "news.feeds.list",
+      "docs_url": "https://api.opoint.com/redoc/",
+      "verified": {
+        "docs": "https://api.opoint.com/schema/"
+      }
+    },
+    {
+      "id": "opoint.safefeeds.feed",
+      "name": "Read articles from a SafeFeed",
+      "summary": "The next batch of articles from a push-style SafeFeed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/safefeeds/{id}/feed/",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "SafeFeed id."
+        },
+        "lastid": {
+          "in": "query",
+          "type": "string",
+          "description": "First id not yet received (SafeFeed reference); ? returns from the highest available id."
+        },
+        "num_art": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max articles per request (SafeFeed reference: 1 to 5000, default 500)."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "job": "news.feeds.read",
+      "docs_url": "https://api.opoint.com/redoc/",
+      "verified": {
+        "docs": "https://api.opoint.com/schema/"
+      }
+    },
+    {
+      "id": "opoint.usage",
+      "name": "Get API usage",
+      "summary": "The account's usage per delivery type over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/customers/self/usage/",
+      "params": {
+        "delivery": {
+          "in": "query",
+          "type": "string",
+          "description": "safefeed, search (default) or storedsearch.",
+          "enum": [
+            "safefeed",
+            "search",
+            "storedsearch"
+          ]
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date YYYY-MM-DD, inclusive; default 14 days ago."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date YYYY-MM-DD, exclusive; default tomorrow."
+        },
+        "only_totals": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Totals only, no per-entity breakdown."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://api.opoint.com/redoc/",
+      "verified": {
+        "docs": "https://api.opoint.com/schema/"
+      }
+    }
+  ]
+}

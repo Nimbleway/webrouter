@@ -1,0 +1,308 @@
+{
+  "vendor": "uniprot",
+  "name": "UniProt",
+  "category": "science",
+  "summary": "The UniProt protein sequence and function knowledgebase (UniProtKB, UniRef, UniParc): query search, entry retrieval and identifier mapping.",
+  "docs_url": "https://www.uniprot.org/help/api",
+  "base_url": "https://rest.uniprot.org",
+  "notes": [
+    "Keyless. Ask for format=json; without it or an Accept header some endpoints answer another format.",
+    "Search pages with a cursor: the next page's full URL is in the Link response header (rel=\"next\"), the total in x-total-results. Use size=500 for speed.",
+    "Query syntax is UniProt's own, e.g. (reviewed:true) AND (organism_id:9606) or gene:BRCA1."
+  ],
+  "sources": [
+    "https://www.uniprot.org/help/api",
+    "https://www.uniprot.org/help/api_queries",
+    "https://www.uniprot.org/help/api_retrieve_entries",
+    "https://www.uniprot.org/help/id_mapping_prog",
+    "https://www.uniprot.org/help/pagination"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "uniprot.entries.search",
+      "name": "Search a UniProt dataset",
+      "summary": "One page of entries matching a query, from UniProtKB or another dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{dataset}/search",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset: uniprotkb, uniref, uniparc, taxonomy, etc.",
+          "example": "uniprotkb"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "UniProt query; empty matches every entry.",
+          "example": "(reviewed:true) AND (organism_id:9606) AND gene:TP53"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json, tsv, fasta, xml, txt, list, gff, obo, rdf or xlsx (not every dataset offers every format).",
+          "example": "json"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated return columns (tsv, xlsx and json only), e.g. accession,gene_names,organism_name.",
+          "example": "accession,gene_names,protein_name"
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page.",
+          "example": 25
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page's Link header."
+        },
+        "includeIsoform": {
+          "in": "query",
+          "type": "boolean",
+          "description": "UniProtKB only: include isoforms."
+        },
+        "compressed": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to gzip the response."
+        }
+      },
+      "job": "bio.proteins.search",
+      "docs_url": "https://www.uniprot.org/help/api_queries",
+      "verified": {
+        "docs": "https://www.uniprot.org/help/api_queries"
+      }
+    },
+    {
+      "id": "uniprot.entries.stream",
+      "name": "Stream all matching entries",
+      "summary": "Every entry matching a query in one response, without paging.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{dataset}/stream",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset: uniprotkb, uniref, uniparc, taxonomy, etc.",
+          "example": "uniprotkb"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "UniProt query.",
+          "example": "(organism_id:2697049) AND (reviewed:true)"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json, tsv, fasta, xml, txt, list, gff, obo, rdf or xlsx (not every dataset offers every format).",
+          "example": "json"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated return columns (tsv, xlsx and json only), e.g. accession,gene_names,organism_name.",
+          "example": "accession,gene_names,protein_name"
+        },
+        "includeIsoform": {
+          "in": "query",
+          "type": "boolean",
+          "description": "UniProtKB only: include isoforms."
+        },
+        "compressed": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to gzip the response."
+        }
+      },
+      "notes": [
+        "Expensive: parallel stream calls get 429; at most 10,000,000 entries. Prefer entries.search pages for large sets."
+      ],
+      "job": "bio.proteins.search",
+      "docs_url": "https://www.uniprot.org/help/api_queries",
+      "verified": {
+        "docs": "https://www.uniprot.org/help/api_queries"
+      }
+    },
+    {
+      "id": "uniprot.entries.get",
+      "name": "Get one entry",
+      "summary": "A single UniProtKB, UniRef or UniParc entry by its identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{dataset}/{id}",
+      "params": {
+        "dataset": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset: uniprotkb, uniref, uniparc, taxonomy, etc.",
+          "example": "uniprotkb"
+        },
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Accession or cluster id, e.g. P12345, UniRef90_P99999, UPI000000001F.",
+          "example": "P12345"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json, tsv, fasta, xml, txt, list, gff, obo, rdf or xlsx (not every dataset offers every format).",
+          "example": "json"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated return columns (tsv, xlsx and json only), e.g. accession,gene_names,organism_name.",
+          "example": "accession,gene_names,protein_name"
+        }
+      },
+      "notes": [
+        "UniRef ids are not stable across releases. A removed entry answers 410."
+      ],
+      "job": "bio.proteins.get",
+      "docs_url": "https://www.uniprot.org/help/api_retrieve_entries",
+      "verified": {
+        "docs": "https://www.uniprot.org/help/api_retrieve_entries"
+      }
+    },
+    {
+      "id": "uniprot.idmapping.run",
+      "name": "Start an ID mapping job",
+      "summary": "Submit identifiers to map from one database to another (e.g. UniProtKB_AC-ID to Ensembl).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/idmapping/run",
+      "params": {
+        "ids": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated identifiers, up to 100,000.",
+          "example": "P21802,P12345"
+        },
+        "from_db": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Source database name, as /configure/idmapping/fields lists it.",
+          "example": "UniProtKB_AC-ID",
+          "wire_name": "from"
+        },
+        "to": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Target database name.",
+          "example": "UniRef90"
+        },
+        "taxId": {
+          "in": "body",
+          "type": "string",
+          "description": "Taxonomy id, for the database pairs that accept one."
+        }
+      },
+      "body_type": "form",
+      "notes": [
+        "A read over POST: it starts a mapping job and returns a jobId. Poll idmapping.status, then fetch idmapping.results."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://www.uniprot.org/help/id_mapping_prog",
+      "verified": {
+        "docs": "https://www.uniprot.org/help/id_mapping_prog"
+      }
+    },
+    {
+      "id": "uniprot.idmapping.status",
+      "name": "Check an ID mapping job",
+      "summary": "jobStatus of a mapping job (FINISHED when ready).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/idmapping/status/{jobId}",
+      "params": {
+        "jobId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The jobId idmapping.run returned."
+        }
+      },
+      "notes": [
+        "A finished job answers 303 with the results URL in the Location header."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://www.uniprot.org/help/id_mapping_prog",
+      "verified": {
+        "docs": "https://www.uniprot.org/help/id_mapping_prog"
+      }
+    },
+    {
+      "id": "uniprot.idmapping.results",
+      "name": "Get ID mapping results",
+      "summary": "One page of from/to pairs of a finished mapping job.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/idmapping/results/{jobId}",
+      "params": {
+        "jobId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The jobId idmapping.run returned."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page.",
+          "example": 500
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous page's Link header."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json, tsv, fasta, xml, txt, list, gff, obo, rdf or xlsx (not every dataset offers every format).",
+          "example": "json"
+        }
+      },
+      "notes": [
+        "Mapped to UniProtKB, UniRef or UniParc, the full entries are at /idmapping/{uniprotkb|uniref|uniparc}/results/{jobId}; /idmapping/stream/{jobId} returns all at once."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://www.uniprot.org/help/id_mapping_prog",
+      "verified": {
+        "docs": "https://www.uniprot.org/help/id_mapping_prog"
+      }
+    },
+    {
+      "id": "uniprot.idmapping.fields",
+      "name": "List mappable databases",
+      "summary": "Every database pair the ID mapping service accepts, with the rules for valid from/to combinations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/configure/idmapping/fields",
+      "params": {},
+      "job": "reference.databases",
+      "docs_url": "https://www.uniprot.org/help/id_mapping_prog",
+      "verified": {
+        "docs": "https://www.uniprot.org/help/id_mapping_prog"
+      }
+    }
+  ]
+}

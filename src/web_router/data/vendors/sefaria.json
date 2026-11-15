@@ -1,0 +1,515 @@
+{
+  "vendor": "sefaria",
+  "name": "Sefaria",
+  "category": "media",
+  "summary": "The Sefaria library of Jewish texts: Tanakh, Talmud, commentaries and more in Hebrew and translation, with links between texts, topics, lexicons, calendars and full-text search.",
+  "docs_url": "https://developers.sefaria.org/docs/welcome",
+  "base_url": "https://www.sefaria.org",
+  "notes": [
+    "Keyless. Texts are addressed by refs (Genesis 1:1, Berakhot 2a); spaces in a ref are URL-encoded in the path.",
+    "Each text version carries its own licence (e.g. CC-BY-SA, public domain); see the version's license field before reuse.",
+    "find-refs is asynchronous: it returns a task_id with HTTP 202, then poll GET /api/async/{task_id} until it holds the result."
+  ],
+  "sources": [
+    "https://developers.sefaria.org/docs/welcome",
+    "https://developers.sefaria.org/reference/get-v3-texts",
+    "https://developers.sefaria.org/reference/get-links",
+    "https://developers.sefaria.org/reference/get-related",
+    "https://developers.sefaria.org/reference/get-name",
+    "https://developers.sefaria.org/reference/post-search-wrapper",
+    "https://developers.sefaria.org/reference/get-calendars",
+    "https://developers.sefaria.org/reference/get-topic-slug",
+    "https://developers.sefaria.org/reference/get-words",
+    "https://developers.sefaria.org/reference/get-v2-index",
+    "https://developers.sefaria.org/reference/post-find-refs"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sefaria.texts.get",
+      "name": "Get a text passage",
+      "summary": "The text of a ref in one or more versions (Hebrew source, translations), with version metadata and licences.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/texts/{tref}",
+      "params": {
+        "tref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A Sefaria ref: a human-readable citation such as Genesis 1:1, Berakhot 2a or Rashi on Genesis 1:1.",
+          "example": "Esther 1.1"
+        },
+        "version": {
+          "in": "query",
+          "type": "string",
+          "description": "A language's full English name (english, hebrew, arabic; not case-sensitive), language|versionTitle for one exact version, or source, translation or primary. May be repeated. Default primary.",
+          "example": "english"
+        },
+        "fill_in_missing_segments": {
+          "in": "query",
+          "type": "string",
+          "description": "1 to fill gaps in a partial version from other versions.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        },
+        "return_format": {
+          "in": "query",
+          "type": "string",
+          "description": "text_only strips footnotes, inline refs and HTML; default keeps them.",
+          "enum": [
+            "default",
+            "wrap_all_entities",
+            "strip_only_footnotes",
+            "text_only"
+          ]
+        }
+      },
+      "job": "texts.get",
+      "docs_url": "https://developers.sefaria.org/reference/get-v3-texts",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/get-v3-texts"
+      }
+    },
+    {
+      "id": "sefaria.links.get",
+      "name": "Get links for a ref",
+      "summary": "Known connections of a ref (commentary, midrash, quotations...) with their categories and optionally their text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/links/{tref}",
+      "params": {
+        "tref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A Sefaria ref: a human-readable citation such as Genesis 1:1, Berakhot 2a or Rashi on Genesis 1:1.",
+          "example": "Obadiah 1.2"
+        },
+        "with_text": {
+          "in": "query",
+          "type": "string",
+          "description": "Include each linked text; default 1.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        },
+        "with_sheet_links": {
+          "in": "query",
+          "type": "string",
+          "description": "Include links to user source sheets; default 0.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Only links whose category exactly matches, e.g. Commentary."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Only links in one of these categories, comma- or pipe-separated.",
+          "example": "Commentary,Midrash"
+        }
+      },
+      "job": "texts.links",
+      "docs_url": "https://developers.sefaria.org/reference/get-links",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/get-links"
+      }
+    },
+    {
+      "id": "sefaria.related.get",
+      "name": "Get everything related to a ref",
+      "summary": "Links, sheets, notes, media, manuscripts and topics for a ref in one call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/related/{tref}",
+      "params": {
+        "tref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A Sefaria ref: a human-readable citation such as Genesis 1:1, Berakhot 2a or Rashi on Genesis 1:1.",
+          "example": "Deuteronomy 1.1"
+        }
+      },
+      "job": "texts.links",
+      "docs_url": "https://developers.sefaria.org/reference/get-related",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/get-related"
+      }
+    },
+    {
+      "id": "sefaria.name.lookup",
+      "name": "Autocomplete a name",
+      "summary": "Refs, book titles, authors, topics and collections matching a string.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/name/{name}",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Text to match.",
+          "example": "Genesis"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return; 0 means no limit."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items of this type.",
+          "enum": [
+            "ref",
+            "Collection",
+            "Topic",
+            "TocCategory",
+            "Term",
+            "User"
+          ]
+        }
+      },
+      "job": "texts.search",
+      "docs_url": "https://developers.sefaria.org/reference/get-name",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/get-name"
+      }
+    },
+    {
+      "id": "sefaria.search",
+      "name": "Search the library",
+      "summary": "Elasticsearch full-text search over library texts or user source sheets.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search-wrapper",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search query.",
+          "example": "love"
+        },
+        "type": {
+          "in": "body",
+          "type": "string",
+          "description": "Index: text (library) or sheet (user source sheets); default text.",
+          "enum": [
+            "text",
+            "sheet"
+          ]
+        },
+        "field": {
+          "in": "body",
+          "type": "string",
+          "description": "Field to query: exact or naive_lemmatizer for text; content for sheets. Default naive_lemmatizer."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return; default 10."
+        },
+        "slop": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum distance between query words; 0 is an exact phrase. Default 10."
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "description": "Filter values (no regex), matched to filter_fields by position; for text, path prefixes such as a category or book."
+        },
+        "filter_fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields the filters apply to; for sheets: collections, topics_en, topics_he."
+        },
+        "aggs": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields to aggregate on, e.g. path for text; group or topics for sheets."
+        },
+        "sort_method": {
+          "in": "body",
+          "type": "string",
+          "description": "sort orders by sort_fields; score multiplies the sort field into the search score. Default score.",
+          "enum": [
+            "sort",
+            "score"
+          ]
+        },
+        "sort_fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields to sort on, e.g. comp_date or pagesheetrank; exactly one when sort_method is score."
+        },
+        "sort_reverse": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Reverse the sort."
+        },
+        "sort_score_missing": {
+          "in": "body",
+          "type": "number",
+          "description": "Value used when a document lacks the sort field."
+        },
+        "source_proj": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true to return the whole document, or field name(s) to project."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "texts.search",
+      "docs_url": "https://developers.sefaria.org/reference/post-search-wrapper",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/post-search-wrapper"
+      }
+    },
+    {
+      "id": "sefaria.calendars.get",
+      "name": "Get the learning schedule for a date",
+      "summary": "Daily and weekly learning (Torah portion, Haftarah, Daf Yomi, ...) for today or a given date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/calendars",
+      "params": {
+        "diaspora": {
+          "in": "query",
+          "type": "string",
+          "description": "1 for the diaspora Torah reading, 0 for Israel.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        },
+        "custom": {
+          "in": "query",
+          "type": "string",
+          "description": "Haftarah custom.",
+          "enum": [
+            "ashkenazi",
+            "sephardi",
+            "edot%20hamizrach"
+          ]
+        },
+        "year": {
+          "in": "query",
+          "type": "number",
+          "description": "Year; year, month and day must all be given, or today is used."
+        },
+        "month": {
+          "in": "query",
+          "type": "number",
+          "description": "Month; with year and day."
+        },
+        "day": {
+          "in": "query",
+          "type": "number",
+          "description": "Day; with year and month."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "IANA timezone name; default the client's.",
+          "example": "America/New_York"
+        }
+      },
+      "job": "texts.calendar",
+      "docs_url": "https://developers.sefaria.org/reference/get-calendars",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/get-calendars"
+      }
+    },
+    {
+      "id": "sefaria.topics.get",
+      "name": "Get a topic",
+      "summary": "A topic's metadata and, optionally, its links to other topics and the refs tagged with it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/topics/{topic_slug}",
+      "params": {
+        "topic_slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Topic slug.",
+          "example": "rosh-hashanah"
+        },
+        "with_links": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to include links to other topics.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "annotate_links": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to add title and display fields to each link.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "group_related": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to group related link types as the site sidebar does.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "with_refs": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to include refs tagged with the topic.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "annotate_time_period": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to include time period data.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "texts.topics",
+      "docs_url": "https://developers.sefaria.org/reference/get-topic-slug",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/get-topic-slug"
+      }
+    },
+    {
+      "id": "sefaria.words.get",
+      "name": "Look up a word in the lexicons",
+      "summary": "Entries from Sefaria's lexicons (dictionaries) matching a word or phrase.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/words/{word}",
+      "params": {
+        "word": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Word or phrase to look up.",
+          "example": "תורה"
+        },
+        "lookup_ref": {
+          "in": "query",
+          "type": "string",
+          "description": "A ref to refine the lookup."
+        },
+        "never_split": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit the lookup to the exact input string."
+        },
+        "always_split": {
+          "in": "query",
+          "type": "string",
+          "description": "1 to also look up substrings.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        },
+        "always_consonants": {
+          "in": "query",
+          "type": "string",
+          "description": "1 to search with and without vowels.",
+          "enum": [
+            "0",
+            "1"
+          ]
+        }
+      },
+      "job": "texts.lexicon",
+      "docs_url": "https://developers.sefaria.org/reference/get-words",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/get-words"
+      }
+    },
+    {
+      "id": "sefaria.index.get",
+      "name": "Get a book's index record",
+      "summary": "The full database record of a work's index: titles, categories and schema.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/raw/index/{index_title}",
+      "params": {
+        "index_title": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Title of a work.",
+          "example": "Genesis"
+        }
+      },
+      "job": "texts.list",
+      "docs_url": "https://developers.sefaria.org/reference/get-v2-index",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/get-v2-index"
+      }
+    },
+    {
+      "id": "sefaria.find_refs",
+      "name": "Find citations in text",
+      "summary": "Starts an async job that identifies Sefaria refs cited in arbitrary text.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/find-refs",
+      "params": {
+        "text": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{body, title}; pass the text in body and '' as title for plain text.",
+          "example": {
+            "title": "",
+            "body": "Genesis 1:1 is a citation and also Mishnah Peah 3-4."
+          }
+        },
+        "lang": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "he or en; default from the text's characters.",
+          "enum": [
+            "he",
+            "en"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Returns a task_id (HTTP 202); poll GET https://www.sefaria.org/api/async/{task_id} for the result."
+      ],
+      "job": "texts.search",
+      "docs_url": "https://developers.sefaria.org/reference/post-find-refs",
+      "verified": {
+        "docs": "https://developers.sefaria.org/reference/post-find-refs"
+      }
+    }
+  ]
+}

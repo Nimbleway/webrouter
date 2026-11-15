@@ -1,0 +1,129 @@
+{
+  "vendor": "osv",
+  "name": "OSV.dev",
+  "category": "security",
+  "summary": "Open source vulnerabilities by package and version, commit hash or ID (GHSA, PYSEC, RUSTSEC, Go, OSS-Fuzz and more) in the OSV format, from Google's free OSV.dev API.",
+  "docs_url": "https://google.github.io/osv.dev/api/",
+  "base_url": "https://api.osv.dev",
+  "notes": [
+    "Keyless and, per the docs, currently without rate limits. Responses over HTTP/1.1 are capped at 32 MiB; HTTP/2 has no cap.",
+    "Queries are reads sent as POST with a JSON body. Values are case-sensitive: ecosystem 'PyPI', not 'pypi'.",
+    "Give the version either in version or in a versioned purl (pkg:pypi/jinja2@3.1.4), never both: that is a 400."
+  ],
+  "sources": [
+    "https://google.github.io/osv.dev/api/",
+    "https://google.github.io/osv.dev/post-v1-query/",
+    "https://google.github.io/osv.dev/post-v1-querybatch/",
+    "https://google.github.io/osv.dev/get-v1-vulns/",
+    "https://osv.dev/docs/osv_service_v1.swagger.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "osv.query",
+      "name": "Find vulnerabilities for a package version or commit",
+      "summary": "Full OSV records affecting one package at one version, or one commit.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/query",
+      "params": {
+        "package": {
+          "in": "body",
+          "type": "object",
+          "description": "The package: {name, ecosystem} (ecosystem names are case-sensitive, e.g. PyPI, npm, Go, Maven, RubyGems, crates.io, GIT) or {purl}. Optional when commit is given.",
+          "example": {
+            "name": "jinja2",
+            "ecosystem": "PyPI"
+          }
+        },
+        "version": {
+          "in": "body",
+          "type": "string",
+          "description": "Version string, fuzzy-matched against upstream versions. Do not combine with commit or a versioned purl.",
+          "example": "3.1.4"
+        },
+        "commit": {
+          "in": "body",
+          "type": "string",
+          "description": "Commit hash to query instead of a version.",
+          "example": "6879efc2c1596d11a6a6ad296f80063b558d5e0f"
+        },
+        "page_token": {
+          "in": "body",
+          "type": "string",
+          "description": "next_page_token from the previous response."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Pages when over 1,000 vulnerabilities or 20 seconds: repeat with page_token until next_page_token is gone."
+      ],
+      "job": "security.vulns.search",
+      "docs_url": "https://google.github.io/osv.dev/post-v1-query/",
+      "verified": {
+        "docs": "https://google.github.io/osv.dev/post-v1-query/"
+      }
+    },
+    {
+      "id": "osv.querybatch",
+      "name": "Find vulnerabilities for many packages at once",
+      "summary": "Vulnerability IDs and modified times for up to 1,000 package versions or commits, in input order.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/querybatch",
+      "params": {
+        "queries": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "List of query objects, each shaped like the query endpoint's body ({package, version} or {commit}, optional page_token).",
+          "example": [
+            {
+              "package": {
+                "purl": "pkg:pypi/mlflow@0.4.0"
+              }
+            },
+            {
+              "package": {
+                "ecosystem": "PyPI",
+                "name": "jinja2"
+              },
+              "version": "2.4.1"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Returns only id and modified per vulnerability; fetch details with vulns.get.",
+        "Per-query next_page_token appears when one query exceeds 1,000 results or the batch exceeds 3,000; re-query just those."
+      ],
+      "job": "security.vulns.search",
+      "docs_url": "https://google.github.io/osv.dev/post-v1-querybatch/",
+      "verified": {
+        "docs": "https://google.github.io/osv.dev/post-v1-querybatch/"
+      }
+    },
+    {
+      "id": "osv.vulns.get",
+      "name": "Get a vulnerability by ID",
+      "summary": "The full OSV record: summary, details, aliases, affected packages and ranges, severity, references.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/vulns/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OSV ID, case-sensitive (GHSA, not ghsa).",
+          "example": "OSV-2020-111"
+        }
+      },
+      "job": "security.vulns.get",
+      "docs_url": "https://google.github.io/osv.dev/get-v1-vulns/",
+      "verified": {
+        "docs": "https://google.github.io/osv.dev/get-v1-vulns/"
+      }
+    }
+  ]
+}

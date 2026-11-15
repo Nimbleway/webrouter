@@ -1,0 +1,419 @@
+{
+  "vendor": "akta",
+  "name": "akta.pro",
+  "category": "company-data",
+  "summary": "Company data, headcount, traffic, jobs, reviews, news signals and generated company lists from akta.pro.",
+  "docs_url": "https://docs.akta.pro",
+  "pricing_url": "https://docs.akta.pro/getting-started/pricing.md",
+  "base_url": "https://api.akta.pro",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AKTA_API_KEY"
+        ],
+        "description": "an akta.pro API key (from the akta.pro playground, https://playground.akta.pro)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Priced in credits: USD 0.05 per credit pay-as-you-go, 0.04 on a subscription. Every response reports credits_consumed.",
+    "Alternative-data endpoints (headcount, traffic, jobs, posts, reviews) need a Subscription or Enterprise plan.",
+    "Call company.search first to get a UUID, or pass a website directly as company."
+  ],
+  "sources": [
+    "https://docs.akta.pro/llms.txt",
+    "https://docs.akta.pro/getting-started/pricing.md",
+    "https://docs.akta.pro/api-reference/company-data.md",
+    "https://docs.akta.pro/api-reference/listgen-api.md",
+    "https://docs.akta.pro/api-reference/news-signals.md",
+    "https://docs.akta.pro/api-reference/supporting-apis/company-search.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "akta.company.search",
+      "name": "Resolve a company by name or website",
+      "summary": "Returns the UUID other endpoints use. Free: consumes no credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company name or website; the input type is detected automatically.",
+          "example": "canva"
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://docs.akta.pro/api-reference/supporting-apis/company-search.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/supporting-apis/company-search.md"
+      }
+    },
+    {
+      "id": "akta.company.enrich",
+      "name": "Get company data sections",
+      "summary": "Firmographics, business model, financial estimates, location, technology and more for one company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/enrichment",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company website (e.g. canva.com) or an akta.pro company UUID from company.search.",
+          "example": "canva.com"
+        },
+        "sections": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated sections to return; all available if omitted. Values: firmographic, business_model, company_assessment, trust_signal, company_hierarchy, digital_presence, financial_estimate, location, management_profile, product_offering, strategic_signal, customer_profile, industry, technology. (funding_detail and mna_and_investment need a subscription or enterprise plan.)"
+        }
+      },
+      "notes": [
+        "Credits are charged per section requested (0.5 to 5 each), so ask only for the sections you need."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.akta.pro/api-reference/company-data.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/company-data.md"
+      }
+    },
+    {
+      "id": "akta.company.headcount",
+      "name": "Get headcount trends",
+      "summary": "LinkedIn-sourced employee count, history, growth rates and function breakdown.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/headcount-trends",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company website (e.g. canva.com) or an akta.pro company UUID from company.search.",
+          "example": "canva.com"
+        }
+      },
+      "notes": [
+        "Subscription and Enterprise plans only; pay-as-you-go answers 403."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.akta.pro/api-reference/alternative-data/headcount-trends.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/alternative-data/headcount-trends.md"
+      }
+    },
+    {
+      "id": "akta.company.traffic",
+      "name": "Get website traffic signals",
+      "summary": "Engagement metrics, monthly visit estimates and traffic by acquisition source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/website-traffic",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company website (e.g. canva.com) or an akta.pro company UUID from company.search.",
+          "example": "canva.com"
+        }
+      },
+      "notes": [
+        "Subscription and Enterprise plans only; pay-as-you-go answers 403."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://docs.akta.pro/api-reference/alternative-data/website-traffic.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/alternative-data/website-traffic.md"
+      }
+    },
+    {
+      "id": "akta.company.jobs",
+      "name": "List a company's job posts",
+      "summary": "Live LinkedIn and Indeed listings with location, salary and key skills.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/jobs",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company website (e.g. canva.com) or an akta.pro company UUID from company.search.",
+          "example": "canva.com"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum number of job listings to return (default 10)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number to skip, for pagination (default 0)."
+        }
+      },
+      "notes": [
+        "Subscription and Enterprise plans only; pay-as-you-go answers 403.",
+        "Pages with limit and offset."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.akta.pro/api-reference/alternative-data/job-posts.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/alternative-data/job-posts.md"
+      }
+    },
+    {
+      "id": "akta.company.social_posts",
+      "name": "List a company's social posts",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/posts",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company website (e.g. canva.com) or an akta.pro company UUID from company.search.",
+          "example": "canva.com"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum number of posts to return (default 10)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number to skip, for pagination (default 0)."
+        }
+      },
+      "notes": [
+        "Subscription and Enterprise plans only; pay-as-you-go answers 403."
+      ],
+      "job": "social.posts",
+      "docs_url": "https://docs.akta.pro/api-reference/alternative-data/social-posts.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/alternative-data/social-posts.md"
+      }
+    },
+    {
+      "id": "akta.company.employee_reviews",
+      "name": "Get employee reviews",
+      "summary": "Overall and dimension-level ratings plus individual reviews.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/employee-reviews",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company website (e.g. canva.com) or an akta.pro company UUID from company.search.",
+          "example": "canva.com"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum reviews to return (default 10, max 100)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number to skip (default 0)."
+        }
+      },
+      "notes": [
+        "Subscription and Enterprise plans only; pay-as-you-go answers 403."
+      ],
+      "job": "company.reviews",
+      "docs_url": "https://docs.akta.pro/api-reference/alternative-data/employee-reviews.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/alternative-data/employee-reviews.md"
+      }
+    },
+    {
+      "id": "akta.industry.search",
+      "name": "Find industry codes",
+      "summary": "Matching industry codes ranked by similarity. Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/industry/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Free-text industry or topic.",
+          "example": "warehouse automation"
+        },
+        "level": {
+          "in": "query",
+          "type": "string",
+          "description": "Taxonomy level or comma-separated levels: l1, l2, l3, l4, all (default l4)."
+        }
+      },
+      "job": "company.industries",
+      "docs_url": "https://docs.akta.pro/api-reference/supporting-apis/industry-search.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/supporting-apis/industry-search.md"
+      }
+    },
+    {
+      "id": "akta.company.list",
+      "name": "Generate a company list",
+      "summary": "Build a targeted company list from filters or a natural-language query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/list/generate/companies/",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language description of target companies. Use either query or filters, not both.",
+          "example": "SaaS companies in the US with Series A funding"
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Structured filters keyed by field path such as firmographic.company_type or location.hq.country (ISO alpha-3 codes); combined with AND. Ranges take {gte, lte}.",
+          "example": {
+            "location.hq.country": [
+              "USA"
+            ],
+            "firmographic.founded_year": {
+              "gte": 2015
+            }
+          }
+        },
+        "sections": {
+          "in": "body",
+          "type": "array",
+          "description": "Extra data sections to enrich each company with."
+        },
+        "sort_by": {
+          "in": "body",
+          "type": "string",
+          "description": "Field to sort by."
+        },
+        "sort_order": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort direction."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum companies to return."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Number to skip, for pagination."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. Pay-as-you-go plans are capped at 20 companies per request and cannot enrich.",
+        "Credits: a base cost plus an extra for natural-language query, a per-company cost and optional per-section costs."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.akta.pro/api-reference/listgen-api.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/listgen-api.md"
+      }
+    },
+    {
+      "id": "akta.news.search",
+      "name": "Search company and industry news",
+      "summary": "News with AI summaries, event types, sentiment and company mentions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/news",
+      "params": {
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Website or company UUID. Not combined with primary_company."
+        },
+        "primary_company": {
+          "in": "query",
+          "type": "string",
+          "description": "Only articles where this company is the primary company."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated industry codes (from industry.search)."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Open-ended topic. Not combined with title.",
+          "example": "Crude oil price developments"
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Search by article title. Not combined with query."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; non-enterprise plans look back at most 6 months."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD; default today."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max articles (default 10, max 100)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number to skip (default 0)."
+        },
+        "unique_article": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True groups similar articles from the same event."
+        },
+        "news_score_list": {
+          "in": "query",
+          "type": "string",
+          "description": "News score tier.",
+          "enum": [
+            "High",
+            "Medium",
+            "Low",
+            "all"
+          ]
+        }
+      },
+      "notes": [
+        "Credits: 0.1 per call plus 0.01 per article."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.akta.pro/api-reference/news-signals.md",
+      "verified": {
+        "docs": "https://docs.akta.pro/api-reference/news-signals.md"
+      }
+    }
+  ]
+}

@@ -1,0 +1,215 @@
+{
+  "vendor": "artificial-analysis",
+  "name": "Artificial Analysis",
+  "category": "ai",
+  "summary": "Independent benchmarks of AI models: intelligence indices, speed, latency and price for LLMs, and Elo arena rankings for image, video, speech and music models.",
+  "docs_url": "https://artificialanalysis.ai/data-api/docs",
+  "pricing_url": "https://artificialanalysis.ai/data-api",
+  "base_url": "https://artificialanalysis.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ARTIFICIAL_ANALYSIS_API_KEY"
+        ],
+        "description": "An Artificial Analysis API key (artificialanalysis.ai > API key management)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Tiers: a Free key reaches only the /free endpoints (a public subset of fields); the other routes are Pro or Commercial and answer 403 to a Free key.",
+    "Quota per fixed 24-hour window starting at the first request: Free 100, Pro 500 requests, shared by every key of the same user or organization. X-RateLimit-Remaining and X-RateLimit-Reset give the state; a 429 carries Retry-After.",
+    "Attribution is required on every tier: credit Artificial Analysis wherever the data is shown.",
+    "Null means not measured or not applicable, never zero. End-to-end response times assume 500 answer tokens unless the field name says otherwise.",
+    "Responses wrap results as {tier, pagination, data}."
+  ],
+  "sources": [
+    "https://artificialanalysis.ai/data-api/docs",
+    "https://artificialanalysis.ai/data-api/docs/reference",
+    "https://artificialanalysis.ai/api/v2/openapi"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "artificial-analysis.language.models_free",
+      "name": "List language model benchmarks (free)",
+      "summary": "Every LLM with headline intelligence, coding and agentic indices, median speed and latency, and input/output price.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/language/models/free",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 1-indexed, default 1."
+        }
+      },
+      "notes": [
+        "Free tier: any key works."
+      ],
+      "job": "ai.benchmarks",
+      "docs_url": "https://artificialanalysis.ai/api/v2/openapi",
+      "verified": {
+        "docs": "https://artificialanalysis.ai/api/v2/openapi"
+      }
+    },
+    {
+      "id": "artificial-analysis.language.models",
+      "name": "List language model benchmarks (Pro)",
+      "summary": "Every LLM with per-benchmark scores, pricing and performance for a chosen workload.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/language/models",
+      "params": {
+        "prompt_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Benchmark workload the performance figures are for.",
+          "enum": [
+            "medium",
+            "long",
+            "100k",
+            "vision_single_image",
+            "medium_parallel"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, 1-indexed, default 1."
+        }
+      },
+      "notes": [
+        "Pro or Commercial key; 403 for Free."
+      ],
+      "job": "ai.benchmarks",
+      "docs_url": "https://artificialanalysis.ai/api/v2/openapi",
+      "verified": {
+        "docs": "https://artificialanalysis.ai/api/v2/openapi"
+      }
+    },
+    {
+      "id": "artificial-analysis.language.model",
+      "name": "Get one language model (Pro)",
+      "summary": "One LLM's full benchmark, pricing and performance detail by slug.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/language/models/{slug}",
+      "params": {
+        "slug": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Model slug, e.g. claude-opus-4-6, from the list endpoints.",
+          "example": "deepseek-v3"
+        },
+        "prompt_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Benchmark workload the performance figures are for.",
+          "enum": [
+            "medium",
+            "long",
+            "100k",
+            "vision_single_image",
+            "medium_parallel"
+          ]
+        }
+      },
+      "notes": [
+        "Pro or Commercial key. The per-provider breakdown is Commercial only."
+      ],
+      "docs_url": "https://artificialanalysis.ai/api/v2/openapi",
+      "verified": {
+        "docs": "https://artificialanalysis.ai/api/v2/openapi"
+      }
+    },
+    {
+      "id": "artificial-analysis.text_to_image.models_free",
+      "name": "Text-to-image arena rankings (free)",
+      "summary": "Elo rankings of text-to-image models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/media/text-to-image/models/free",
+      "notes": [
+        "Free tier: any key works."
+      ],
+      "job": "ai.benchmarks",
+      "docs_url": "https://artificialanalysis.ai/api/v2/openapi",
+      "verified": {
+        "docs": "https://artificialanalysis.ai/api/v2/openapi"
+      }
+    },
+    {
+      "id": "artificial-analysis.text_to_video.models_free",
+      "name": "Text-to-video arena rankings (free)",
+      "summary": "Elo rankings of silent text-to-video models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/media/text-to-video/models/free",
+      "notes": [
+        "Free tier: any key works."
+      ],
+      "job": "ai.benchmarks",
+      "docs_url": "https://artificialanalysis.ai/api/v2/openapi",
+      "verified": {
+        "docs": "https://artificialanalysis.ai/api/v2/openapi"
+      }
+    },
+    {
+      "id": "artificial-analysis.text_to_speech.models_free",
+      "name": "Text-to-speech arena rankings (free)",
+      "summary": "Elo rankings of text-to-speech models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/media/text-to-speech/models/free",
+      "notes": [
+        "Free tier: any key works."
+      ],
+      "job": "ai.benchmarks",
+      "docs_url": "https://artificialanalysis.ai/api/v2/openapi",
+      "verified": {
+        "docs": "https://artificialanalysis.ai/api/v2/openapi"
+      }
+    },
+    {
+      "id": "artificial-analysis.speech_to_text.models_free",
+      "name": "Speech-to-text models (free)",
+      "summary": "Benchmark data for speech-to-text models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/media/speech-to-text/models/free",
+      "notes": [
+        "Free tier: any key works."
+      ],
+      "job": "ai.benchmarks",
+      "docs_url": "https://artificialanalysis.ai/api/v2/openapi",
+      "verified": {
+        "docs": "https://artificialanalysis.ai/api/v2/openapi"
+      }
+    },
+    {
+      "id": "artificial-analysis.image_editing.models_free",
+      "name": "Image-editing arena rankings (free)",
+      "summary": "Elo rankings of image-editing models.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/media/image-editing/models/free",
+      "notes": [
+        "Free tier: any key works."
+      ],
+      "job": "ai.benchmarks",
+      "docs_url": "https://artificialanalysis.ai/api/v2/openapi",
+      "verified": {
+        "docs": "https://artificialanalysis.ai/api/v2/openapi"
+      }
+    }
+  ]
+}

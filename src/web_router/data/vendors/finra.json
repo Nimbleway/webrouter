@@ -1,0 +1,229 @@
+{
+  "vendor": "finra",
+  "name": "FINRA API Platform",
+  "category": "finance",
+  "summary": "FINRA datasets: OTC and ATS equity volume, short interest, Reg SHO, TRACE fixed-income and Treasury aggregates, and registration data, through one query API.",
+  "docs_url": "https://developer.finra.org/docs",
+  "base_url": "https://api.finra.org",
+  "auth": {
+    "credentials": {
+      "client_id": {
+        "env": [
+          "FINRA_CLIENT_ID"
+        ],
+        "description": "API client id from the API Console in FINRA Gateway (an individual account can create a Public credential)."
+      },
+      "client_secret": {
+        "env": [
+          "FINRA_CLIENT_SECRET"
+        ],
+        "description": "The matching API client secret."
+      }
+    },
+    "oauth2": {
+      "grant": "client_credentials",
+      "token_url": "https://ews.fip.finra.org/fip/rest/ews/oauth2/access_token?grant_type=client_credentials",
+      "client_id": "{client_id}",
+      "client_secret": "{client_secret}",
+      "client_auth": "basic"
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {access_token}"
+      }
+    ]
+  },
+  "headers": {
+    "Accept": "application/json"
+  },
+  "notes": [
+    "Without Accept: application/json the platform answers CSV (text/plain); this entry sets it.",
+    "Synchronous calls return at most 5,000 records (default 1,000); offset tops out at 500,000. Throttle: 1,200 requests per minute per IP.",
+    "Use POST datasets.query to filter; GET datasets.get is for small samples. Sorting needs EQUAL compareFilters on the dataset's partition fields (see datasets.metadata).",
+    "Individual accounts are for non-commercial access to public data; credentials carry a monthly data allowance (10 GB on firm credentials)."
+  ],
+  "sources": [
+    "https://developer.finra.org/docs"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "finra.datasets.query",
+      "name": "Query a dataset",
+      "summary": "Records of one dataset, filtered by field comparisons, date ranges and value lists.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/data/group/{group}/name/{name}",
+      "params": {
+        "group": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset group, e.g. otcMarket, fixedIncomeMarket.",
+          "example": "otcMarket"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset name, e.g. weeklySummary, treasuryDailyAggregates.",
+          "example": "weeklySummary"
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Field names to return; all when omitted."
+        },
+        "compareFilters": {
+          "in": "body",
+          "type": "array",
+          "description": "List of {fieldName, fieldValue, compareType}; compareType EQUAL, NOT_EQUAL, GREATER, LESSER, GTE, LTE or BEGINS_WITH.",
+          "example": [
+            {
+              "fieldName": "tierIdentifier",
+              "fieldValue": "T1",
+              "compareType": "EQUAL"
+            }
+          ]
+        },
+        "dateRangeFilters": {
+          "in": "body",
+          "type": "array",
+          "description": "List of {fieldName, startDate, endDate}, dates yyyy-MM-dd, inclusive."
+        },
+        "domainFilters": {
+          "in": "body",
+          "type": "array",
+          "description": "List of {fieldName, values: [...]}."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records to return, default 1,000, max 5,000 synchronous."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records to skip, max 500,000."
+        },
+        "sortFields": {
+          "in": "body",
+          "type": "array",
+          "description": "Field names, prefixed + or - for direction."
+        }
+      },
+      "notes": [
+        "A read sent as POST."
+      ],
+      "job": "datasets.query",
+      "docs_url": "https://developer.finra.org/docs",
+      "verified": {
+        "docs": "https://developer.finra.org/docs"
+      }
+    },
+    {
+      "id": "finra.datasets.get",
+      "name": "Sample a dataset",
+      "summary": "The first records of a dataset, unfiltered.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/group/{group}/name/{name}",
+      "params": {
+        "group": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset group, e.g. otcMarket, fixedIncomeMarket.",
+          "example": "otcMarket"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset name, e.g. weeklySummary, treasuryDailyAggregates.",
+          "example": "weeklySummary"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field names."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, default 1,000."
+        },
+        "sortFields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields, prefixed + or -."
+        }
+      },
+      "job": "datasets.query",
+      "docs_url": "https://developer.finra.org/docs",
+      "verified": {
+        "docs": "https://developer.finra.org/docs"
+      }
+    },
+    {
+      "id": "finra.datasets.metadata",
+      "name": "Describe a dataset",
+      "summary": "Fields with types and descriptions, and the partition fields of a dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/metadata/group/{group}/name/{name}",
+      "params": {
+        "group": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset group, e.g. otcMarket, fixedIncomeMarket.",
+          "example": "otcMarket"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset name, e.g. weeklySummary, treasuryDailyAggregates.",
+          "example": "weeklySummary"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://developer.finra.org/docs",
+      "verified": {
+        "docs": "https://developer.finra.org/docs"
+      }
+    },
+    {
+      "id": "finra.datasets.partitions",
+      "name": "List a dataset's partitions",
+      "summary": "Available partition values (e.g. week start dates) of a dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/partitions/group/{group}/name/{name}",
+      "params": {
+        "group": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset group, e.g. otcMarket, fixedIncomeMarket.",
+          "example": "otcMarket"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset name, e.g. weeklySummary, treasuryDailyAggregates.",
+          "example": "weeklySummary"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://developer.finra.org/docs",
+      "verified": {
+        "docs": "https://developer.finra.org/docs"
+      }
+    }
+  ]
+}

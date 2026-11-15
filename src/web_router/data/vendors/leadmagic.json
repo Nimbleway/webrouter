@@ -1,0 +1,284 @@
+{
+  "vendor": "leadmagic",
+  "name": "LeadMagic",
+  "category": "enrichment",
+  "summary": "Find and validate work emails, personal emails and mobiles from names or profile URLs, and look up profiles and companies.",
+  "docs_url": "https://leadmagic.io/docs/api-reference/email-validation",
+  "pricing_url": "https://leadmagic.io/pricing",
+  "base_url": "https://api.leadmagic.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LEADMAGIC_API_KEY"
+        ],
+        "description": "A LeadMagic API key (app.leadmagic.io > settings). Sent in the X-API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "You pay only for hits: email find 1, profile-to-email 5, personal email 2, mobile 5, profile search 1, company search 1, validation 0.25 for valid or invalid. Misses, 400 and 429 responses are free.",
+    "Finder endpoints share one rolling 60-second rate allowance per organization; wait for Retry-After on a 429.",
+    "Every lookup is a POST with a JSON body.",
+    "The v3 people search and the analytics endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://leadmagic.io/docs/api-reference/email-validation",
+    "https://leadmagic.io/docs/v1/developer-experience",
+    "https://leadmagic.io/docs/api-reference/email-finder",
+    "https://leadmagic.io/docs/api-reference/profile-to-email",
+    "https://leadmagic.io/docs/api-reference/personal-email-finder",
+    "https://leadmagic.io/docs/api-reference/mobile-finder",
+    "https://leadmagic.io/docs/api-reference/profile-search",
+    "https://leadmagic.io/docs/api-reference/company-search"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "leadmagic.credits.get",
+      "name": "Get credit balance",
+      "summary": "Remaining credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/credits",
+      "notes": [
+        "Answers {\"credits\": number}."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://leadmagic.io/docs/v1/developer-experience",
+      "verified": {
+        "docs": "https://leadmagic.io/docs/v1/developer-experience"
+      }
+    },
+    {
+      "id": "leadmagic.email.validate",
+      "name": "Validate an email address",
+      "summary": "Deliverability check.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/email-validation",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email to validate; must be well formed."
+        }
+      },
+      "notes": [
+        "A read over POST: a lookup, nothing is changed.",
+        "valid and invalid results cost 0.25 credit each; unknown is free. 429 and 400 responses are not charged."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://leadmagic.io/docs/api-reference/email-validation",
+      "verified": {
+        "docs": "https://leadmagic.io/docs/api-reference/email-validation"
+      }
+    },
+    {
+      "id": "leadmagic.email.find",
+      "name": "Find a work email",
+      "summary": "Work email from a name and company, or from a profile URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/email-finder",
+      "params": {
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name; required unless full_name is given."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name; required unless full_name is given."
+        },
+        "full_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Alternative to first_name plus last_name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain (preferred)."
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, if no domain."
+        },
+        "profile_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Profile URL or username; can stand in for name and company."
+        },
+        "allow_domain_mismatch": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return and charge for an email on an unrelated domain. Default false."
+        }
+      },
+      "notes": [
+        "A read over POST: a lookup, nothing is changed.",
+        "1 credit only when a valid email is returned. A find on an unrelated domain comes back free as not found (domain_mismatch true) unless allow_domain_mismatch is true. After a timeout or 5xx, check credit history before retrying.",
+        "Needs a name plus a company field, or profile_url alone."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://leadmagic.io/docs/api-reference/email-finder",
+      "verified": {
+        "docs": "https://leadmagic.io/docs/api-reference/email-finder"
+      }
+    },
+    {
+      "id": "leadmagic.email.find_from_profile",
+      "name": "Find a work email from a profile URL",
+      "summary": "Work email for a professional profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/b2b-profile-email",
+      "params": {
+        "profile_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A professional profile URL (/in/{username}) or a bare username. Company, school and showcase pages return 400."
+        }
+      },
+      "notes": [
+        "A read over POST: a lookup, nothing is changed.",
+        "5 credits per email found; free when none. Found emails are validated automatically."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://leadmagic.io/docs/api-reference/profile-to-email",
+      "verified": {
+        "docs": "https://leadmagic.io/docs/api-reference/profile-to-email"
+      }
+    },
+    {
+      "id": "leadmagic.email.find_personal",
+      "name": "Find a personal email",
+      "summary": "Personal email for a professional profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/personal-email-finder",
+      "params": {
+        "profile_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A professional profile URL (/in/{username}) or a bare username. Company, school and showcase pages return 400."
+        }
+      },
+      "notes": [
+        "A read over POST: a lookup, nothing is changed.",
+        "2 credits per personal email found; free otherwise."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://leadmagic.io/docs/api-reference/personal-email-finder",
+      "verified": {
+        "docs": "https://leadmagic.io/docs/api-reference/personal-email-finder"
+      }
+    },
+    {
+      "id": "leadmagic.phone.find",
+      "name": "Find a mobile number",
+      "summary": "Mobile number from a profile URL or an email.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/mobile-finder",
+      "params": {
+        "profile_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Profile URL or username (an alternative to the emails)."
+        },
+        "work_email": {
+          "in": "body",
+          "type": "string",
+          "description": "Professional email; improves the match when sent with profile_url."
+        },
+        "personal_email": {
+          "in": "body",
+          "type": "string",
+          "description": "Personal email, as an alternative identifier."
+        }
+      },
+      "notes": [
+        "A read over POST: a lookup, nothing is changed.",
+        "5 credits per mobile found; free otherwise. Send at least one identifier."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://leadmagic.io/docs/api-reference/mobile-finder",
+      "verified": {
+        "docs": "https://leadmagic.io/docs/api-reference/mobile-finder"
+      }
+    },
+    {
+      "id": "leadmagic.people.profile_search",
+      "name": "Look up a profile",
+      "summary": "Profile data for a professional profile URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/people/profile-search",
+      "params": {
+        "profile_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A professional profile URL (/in/{username}) or a bare username. Company, school and showcase pages return 400."
+        }
+      },
+      "notes": [
+        "A read over POST: a lookup, nothing is changed.",
+        "1 credit when the profile is found; free when not found or not accessible."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://leadmagic.io/docs/api-reference/profile-search",
+      "verified": {
+        "docs": "https://leadmagic.io/docs/api-reference/profile-search"
+      }
+    },
+    {
+      "id": "leadmagic.company.search",
+      "name": "Look up a company",
+      "summary": "Company data by domain, profile URL or name (at least one).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/companies/company-search",
+      "params": {
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company website domain."
+        },
+        "profile_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Company profile URL or slug."
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name; the least precise option."
+        }
+      },
+      "notes": [
+        "A read over POST: a lookup, nothing is changed.",
+        "1 credit per company found; free when not found."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://leadmagic.io/docs/api-reference/company-search",
+      "verified": {
+        "docs": "https://leadmagic.io/docs/api-reference/company-search"
+      }
+    }
+  ]
+}

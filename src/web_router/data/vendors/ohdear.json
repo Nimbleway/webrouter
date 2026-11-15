@@ -1,0 +1,322 @@
+{
+  "vendor": "ohdear",
+  "name": "Oh Dear",
+  "category": "observability",
+  "summary": "Website monitoring: monitors, uptime and downtime, response-time metrics, certificate health, broken links and per-check summaries.",
+  "docs_url": "https://ohdear.app/docs/api/introduction",
+  "pricing_url": "https://ohdear.app/pricing",
+  "base_url": "https://ohdear.app/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OHDEAR_API_KEY"
+        ],
+        "description": "An Oh Dear API token (account > API tokens), shown once. A scoped token only sees its selected monitors."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "Accept": "application/json"
+  },
+  "notes": [
+    "Everything hangs off a numeric monitorId: list monitors first.",
+    "Time filters use YYYYMMDDHHMMSS strings (20261101000000), not ISO dates; the parameter names differ: uptime and downtime take filter[started_at]/filter[ended_at], uptime metrics take filter[start]/filter[end].",
+    "Monitors page with page[number] and page[size] (max 200)."
+  ],
+  "sources": [
+    "https://ohdear.app/docs/api/introduction.md",
+    "https://ohdear.app/docs/api/monitors.md",
+    "https://ohdear.app/docs/api/uptime.md",
+    "https://ohdear.app/docs/api/uptime-metrics.md",
+    "https://ohdear.app/docs/api/certificate-health.md",
+    "https://ohdear.app/docs/api/broken-links-crawled-urls",
+    "https://ohdear.app/docs/api/check-summary.md",
+    "https://ohdear.app/api-docs/ohdear-openapi.yml"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ohdear.me",
+      "name": "Get current user and teams",
+      "summary": "The token's user and their teams.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/me",
+      "job": "account.validate",
+      "docs_url": "https://ohdear.app/docs/api/user-info.md",
+      "verified": {
+        "docs": "https://ohdear.app/docs/api/user-info.md"
+      }
+    },
+    {
+      "id": "ohdear.monitors.list",
+      "name": "List monitors",
+      "summary": "Monitored sites with their checks and latest results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/monitors",
+      "params": {
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1.",
+          "wire_name": "page[number]"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 200, default 200.",
+          "wire_name": "page[size]"
+        }
+      },
+      "job": "monitors.list",
+      "docs_url": "https://ohdear.app/docs/api/monitors.md",
+      "verified": {
+        "docs": "https://ohdear.app/docs/api/monitors.md"
+      }
+    },
+    {
+      "id": "ohdear.monitors.get",
+      "name": "Get a monitor",
+      "summary": "One monitor with its checks and their latest results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/monitors/{monitorId}",
+      "params": {
+        "monitorId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Monitor id, from monitors.list."
+        }
+      },
+      "job": "monitors.get",
+      "docs_url": "https://ohdear.app/docs/api/monitors.md",
+      "verified": {
+        "docs": "https://ohdear.app/docs/api/monitors.md"
+      }
+    },
+    {
+      "id": "ohdear.checks.summary",
+      "name": "Get a check's latest result",
+      "summary": "The latest result of one check type on a monitor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/monitors/{monitorId}/check-summary/{checkType}",
+      "params": {
+        "monitorId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Monitor id, from monitors.list."
+        },
+        "checkType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Check type.",
+          "enum": [
+            "uptime",
+            "performance",
+            "certificate_health",
+            "broken_links",
+            "mixed_content",
+            "lighthouse",
+            "cron",
+            "application_health",
+            "sitemap",
+            "dns",
+            "domain",
+            "ai",
+            "ports",
+            "dns_blocklist"
+          ]
+        }
+      },
+      "docs_url": "https://ohdear.app/docs/api/check-summary.md",
+      "verified": {
+        "docs": "https://ohdear.app/docs/api/check-summary.md"
+      }
+    },
+    {
+      "id": "ohdear.uptime.get",
+      "name": "Get uptime percentages",
+      "summary": "Uptime percentage per hour, day or month over a period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/monitors/{monitorId}/uptime",
+      "params": {
+        "monitorId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Monitor id, from monitors.list."
+        },
+        "started_at": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYYMMDDHHMMSS, UTC.",
+          "wire_name": "filter[started_at]",
+          "example": "20261101000000"
+        },
+        "ended_at": {
+          "in": "query",
+          "type": "string",
+          "description": "End, YYYYMMDDHHMMSS, UTC.",
+          "wire_name": "filter[ended_at]"
+        },
+        "split": {
+          "in": "query",
+          "type": "string",
+          "description": "Granularity.",
+          "enum": [
+            "hour",
+            "day",
+            "month"
+          ]
+        }
+      },
+      "docs_url": "https://ohdear.app/docs/api/uptime.md",
+      "verified": {
+        "docs": "https://ohdear.app/docs/api/uptime.md"
+      }
+    },
+    {
+      "id": "ohdear.downtime.list",
+      "name": "List downtime periods",
+      "summary": "Periods a monitor was down within a range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/monitors/{monitorId}/downtime",
+      "params": {
+        "monitorId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Monitor id, from monitors.list."
+        },
+        "started_at": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYYMMDDHHMMSS, UTC.",
+          "wire_name": "filter[started_at]"
+        },
+        "ended_at": {
+          "in": "query",
+          "type": "string",
+          "description": "End, YYYYMMDDHHMMSS, UTC.",
+          "wire_name": "filter[ended_at]"
+        }
+      },
+      "job": "incidents.list",
+      "docs_url": "https://ohdear.app/docs/api/uptime.md",
+      "verified": {
+        "docs": "https://ohdear.app/api-docs/ohdear-openapi.yml"
+      }
+    },
+    {
+      "id": "ohdear.uptime.http_metrics",
+      "name": "Get HTTP response-time metrics",
+      "summary": "DNS, TCP, TLS and total response times over a period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/monitors/{monitorId}/http-uptime-metrics",
+      "params": {
+        "monitorId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Monitor id, from monitors.list."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYYMMDDHHMMSS, UTC.",
+          "wire_name": "filter[start]"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "End, YYYYMMDDHHMMSS, UTC.",
+          "wire_name": "filter[end]"
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Grouping.",
+          "wire_name": "filter[group_by]",
+          "enum": [
+            "minute",
+            "hour",
+            "day",
+            "week",
+            "month"
+          ]
+        }
+      },
+      "job": "metrics.query",
+      "docs_url": "https://ohdear.app/docs/api/uptime-metrics.md",
+      "verified": {
+        "docs": "https://ohdear.app/docs/api/uptime-metrics.md"
+      }
+    },
+    {
+      "id": "ohdear.certificate_health.get",
+      "name": "Get certificate health",
+      "summary": "TLS certificate details and the checks it passed or failed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/certificate-health/{monitorId}",
+      "params": {
+        "monitorId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Monitor id, from monitors.list."
+        },
+        "run_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "A past run's id instead of the latest."
+        }
+      },
+      "docs_url": "https://ohdear.app/docs/api/certificate-health.md",
+      "verified": {
+        "docs": "https://ohdear.app/docs/api/certificate-health.md"
+      }
+    },
+    {
+      "id": "ohdear.broken_links.list",
+      "name": "Get broken links",
+      "summary": "Broken links found by the latest crawl, with the pages linking to them.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/broken-links/{monitorId}",
+      "params": {
+        "monitorId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Monitor id, from monitors.list."
+        },
+        "run_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "A past run's id instead of the latest."
+        }
+      },
+      "docs_url": "https://ohdear.app/docs/api/broken-links-crawled-urls",
+      "verified": {
+        "docs": "https://ohdear.app/docs/api/broken-links-crawled-urls"
+      }
+    }
+  ]
+}

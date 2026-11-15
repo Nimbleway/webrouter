@@ -1,0 +1,295 @@
+{
+  "vendor": "brandfetch",
+  "name": "Brandfetch",
+  "category": "company-data",
+  "summary": "Brand data by domain, ticker, ISIN or crypto symbol: logos, colors, fonts, descriptions and company facts; plus brand-name search and brand context.",
+  "docs_url": "https://docs.brandfetch.com",
+  "pricing_url": "https://brandfetch.com/developers/pricing",
+  "base_url": "https://api.brandfetch.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BRANDFETCH_API_KEY"
+        ],
+        "description": "A Brandfetch API key (developers dashboard), sent as a Bearer token. Needed for every call except brand search."
+      },
+      "client_id": {
+        "env": [
+          "BRANDFETCH_CLIENT_ID"
+        ],
+        "required": false,
+        "description": "A Brandfetch client id, needed only for the Brand Search API (passed as the c query parameter)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      },
+      {
+        "in": "query",
+        "name": "c",
+        "value": "{client_id}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Quota: one credit per Brand API, Brand Context API or Transaction API request; a 404 also uses a credit, 400 and 204 do not. Logo and image fetches from the returned CDN URLs are free. 429 quota_exceeded when the month's quota is used up.",
+    "Brand search authenticates with a client id (c query parameter) instead of the API key.",
+    "Pass cachedOnly=true to avoid a live index (and a charge) for brands Brandfetch has not seen."
+  ],
+  "sources": [
+    "https://docs.brandfetch.com/reference/brand-api",
+    "https://docs.brandfetch.com/reference/brand-search-api",
+    "https://docs.brandfetch.com/reference/brand-context-api",
+    "https://docs.brandfetch.com/reference/brand-api-batch",
+    "https://docs.brandfetch.com/reference/transaction-api",
+    "https://docs.brandfetch.com/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "brandfetch.brand.get",
+      "name": "Get a brand",
+      "summary": "Name, description, logos, colors, fonts, images, links and company facts for a domain, URL, email, brand id, ticker, ISIN or crypto symbol.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/brands/{identifier}",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain (nike.com), website URL, email address, brand id (id_...), ticker (NKE), ISIN or crypto symbol; resolved in that order.",
+          "example": "nike.com"
+        },
+        "allowNsfw": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Unset: default handling; true: return regardless; false: filter NSFW brands out (404)."
+        },
+        "cachedOnly": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: answer only from the index; an unindexed brand returns 204 and costs nothing."
+        },
+        "palette": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds a palette object."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.brandfetch.com/reference/brand-api",
+      "verified": {
+        "docs": "https://docs.brandfetch.com/reference/brand-api"
+      }
+    },
+    {
+      "id": "brandfetch.brand.by_domain",
+      "name": "Get a brand by domain",
+      "summary": "As brand.get, but the identifier is always read as a domain (no ticker collision).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/brands/domain/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain name.",
+          "example": "nike.com"
+        },
+        "allowNsfw": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Unset: default handling; true: return regardless; false: filter NSFW brands out (404)."
+        },
+        "cachedOnly": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: answer only from the index; an unindexed brand returns 204 and costs nothing."
+        },
+        "palette": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds a palette object."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.brandfetch.com/reference/brand-api-domain",
+      "verified": {
+        "docs": "https://docs.brandfetch.com/reference/brand-api-domain"
+      }
+    },
+    {
+      "id": "brandfetch.brand.by_ticker",
+      "name": "Get a brand by ticker",
+      "summary": "Brand data for a stock or ETF ticker.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/brands/ticker/{ticker}",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Stock or ETF ticker.",
+          "example": "NKE"
+        },
+        "allowNsfw": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Unset: default handling; true: return regardless; false: filter NSFW brands out (404)."
+        },
+        "cachedOnly": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: answer only from the index; an unindexed brand returns 204 and costs nothing."
+        },
+        "palette": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds a palette object."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.brandfetch.com/reference/brand-api-ticker",
+      "verified": {
+        "docs": "https://docs.brandfetch.com/reference/brand-api-ticker"
+      }
+    },
+    {
+      "id": "brandfetch.brands.batch",
+      "name": "Get up to 100 brands",
+      "summary": "One result per identifier, in the order sent, each answered as brand.get would.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/brands/batch",
+      "params": {
+        "identifiers": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 identifiers (domains, URLs, emails, brand ids, tickers, ISINs).",
+          "example": [
+            "nike.com",
+            "adidas.com"
+          ]
+        },
+        "cachedOnly": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Answer from the index alone; unindexed brands come back 204."
+        },
+        "allowNsfw": {
+          "in": "body",
+          "type": "boolean",
+          "description": "As on brand.get."
+        },
+        "palette": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add each brand's palette."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.brandfetch.com/reference/brand-api-batch",
+      "verified": {
+        "docs": "https://docs.brandfetch.com/reference/brand-api-batch"
+      }
+    },
+    {
+      "id": "brandfetch.brands.search",
+      "name": "Search brands by name",
+      "summary": "Brands matching a name, each with its domain, icon and brand id: for autocomplete or resolving a name to a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/search/{name}",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company or brand name.",
+          "example": "nike"
+        }
+      },
+      "notes": [
+        "Needs BRANDFETCH_CLIENT_ID (sent as c); the API key is not used."
+      ],
+      "job": "company.search",
+      "credentials": [
+        "client_id"
+      ],
+      "docs_url": "https://docs.brandfetch.com/reference/brand-search-api",
+      "verified": {
+        "docs": "https://docs.brandfetch.com/reference/brand-search-api"
+      }
+    },
+    {
+      "id": "brandfetch.brand.context",
+      "name": "Get brand context",
+      "summary": "A structured brand narrative for a domain: identity, positioning, products and services, voice, visual style and competitors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/context/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain, a URL on it, or an email address on it.",
+          "example": "brandfetch.com"
+        },
+        "cachedOnly": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: return only an already cached context, without crawling the domain."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.brandfetch.com/reference/brand-context-api",
+      "verified": {
+        "docs": "https://docs.brandfetch.com/reference/brand-context-api"
+      }
+    },
+    {
+      "id": "brandfetch.transaction.lookup",
+      "name": "Identify a merchant from a transaction",
+      "summary": "The brand behind a raw card-transaction label.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/brands/transaction",
+      "params": {
+        "transactionLabel": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The raw transaction text."
+        },
+        "countryCode": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "ISO 3166-1 alpha-2 country where the transaction took place.",
+          "example": "US"
+        }
+      },
+      "notes": [
+        "A read over POST; one credit."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.brandfetch.com/reference/transaction-api",
+      "verified": {
+        "docs": "https://docs.brandfetch.com/reference/transaction-api"
+      }
+    }
+  ]
+}

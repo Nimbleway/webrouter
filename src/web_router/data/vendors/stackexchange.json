@@ -1,0 +1,851 @@
+{
+  "vendor": "stackexchange",
+  "name": "Stack Exchange",
+  "category": "social",
+  "summary": "Questions, answers, users and tags across Stack Overflow and the other Stack Exchange sites, through the Stack Exchange API v2.3.",
+  "docs_url": "https://api.stackexchange.com/docs",
+  "base_url": "https://api.stackexchange.com/2.3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "STACKEXCHANGE_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional request key of an app registered on Stack Apps (or an access token); raises the quota. Sent as 'Authorization: Bearer <key>'."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Every per-site call needs site (e.g. stackoverflow).",
+    "Quota: 10,000 requests a day per IP by default (shared by keyless apps on that IP); without a key or token at most 25 pages are returned. Over 30 requests a second from one IP gets the IP banned for a while.",
+    "When a response carries backoff, wait that many seconds before calling the same method again. Do not repeat an identical request within a minute; responses are cached.",
+    "Responses are always gzip or deflate compressed. Every response is a wrapper with items, has_more and quota_remaining; total only with filter=total or a custom filter.",
+    "Dates are Unix epoch seconds. Bodies are not returned by default: pass filter=withbody."
+  ],
+  "sources": [
+    "https://api.stackexchange.com/docs",
+    "https://api.stackexchange.com/docs/authentication",
+    "https://api.stackexchange.com/docs/throttle",
+    "https://api.stackexchange.com/docs/paging",
+    "https://api.stackexchange.com/docs/filters",
+    "https://api.stackexchange.com/docs/min-max",
+    "https://api.stackexchange.com/docs/compression"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "stackexchange.search.advanced",
+      "name": "Search questions",
+      "summary": "Questions matching free text and filters (tags, title, body, answers, accepted, views...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/advanced",
+      "params": {
+        "site": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Site, as its domain or api_site_parameter (from sites.list).",
+          "example": "stackoverflow"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 0 to 100 (default 30)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return: default, withbody (adds bodies), none, total, or a custom filter id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (default desc).",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "activity",
+            "votes",
+            "creation",
+            "relevance"
+          ]
+        },
+        "fromdate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation date, Unix seconds (inclusive)."
+        },
+        "todate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation date, Unix seconds (inclusive)."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text matched against all question properties."
+        },
+        "accepted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for questions with an accepted answer, false for those without."
+        },
+        "answers": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum number of answers."
+        },
+        "body": {
+          "in": "query",
+          "type": "string",
+          "description": "Text that must appear in the body."
+        },
+        "closed": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for closed questions only, false for open only."
+        },
+        "migrated": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for questions migrated away only, false for the rest."
+        },
+        "notice": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for questions with a post notice only, false for those without."
+        },
+        "nottagged": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated tags none of which may be present; needs another parameter too."
+        },
+        "tagged": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated tags, at least one of which must be present."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Text that must appear in the title."
+        },
+        "user": {
+          "in": "query",
+          "type": "integer",
+          "description": "Id of the user who must own the question."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "A URL that must be contained in the post; may include a wildcard."
+        },
+        "views": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum number of views."
+        },
+        "wiki": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for community wiki questions only, false for the rest."
+        }
+      },
+      "notes": [
+        "Does not accept min or max."
+      ],
+      "job": "social.search",
+      "docs_url": "https://api.stackexchange.com/docs/advanced-search",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/advanced-search"
+      }
+    },
+    {
+      "id": "stackexchange.search.excerpts",
+      "name": "Search with excerpts",
+      "summary": "Questions and answers matching the criteria, each with a highlighted excerpt.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/excerpts",
+      "params": {
+        "site": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Site, as its domain or api_site_parameter (from sites.list).",
+          "example": "stackoverflow"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 0 to 100 (default 30)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return: default, withbody (adds bodies), none, total, or a custom filter id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (default desc).",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "activity",
+            "votes",
+            "creation",
+            "relevance"
+          ]
+        },
+        "fromdate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation date, Unix seconds (inclusive)."
+        },
+        "todate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation date, Unix seconds (inclusive)."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free text matched against all question properties."
+        },
+        "accepted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for questions with an accepted answer, false for those without."
+        },
+        "answers": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum number of answers."
+        },
+        "body": {
+          "in": "query",
+          "type": "string",
+          "description": "Text that must appear in the body."
+        },
+        "closed": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for closed questions only, false for open only."
+        },
+        "migrated": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for questions migrated away only, false for the rest."
+        },
+        "notice": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for questions with a post notice only, false for those without."
+        },
+        "nottagged": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated tags none of which may be present; needs another parameter too."
+        },
+        "tagged": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated tags, at least one of which must be present."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Text that must appear in the title."
+        },
+        "user": {
+          "in": "query",
+          "type": "integer",
+          "description": "Id of the user who must own the question."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "A URL that must be contained in the post; may include a wildcard."
+        },
+        "views": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum number of views."
+        },
+        "wiki": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for community wiki questions only, false for the rest."
+        }
+      },
+      "notes": [
+        "Highlighted terms are wrapped in <span class=\"highlight\">."
+      ],
+      "job": "social.search",
+      "docs_url": "https://api.stackexchange.com/docs/excerpt-search",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/excerpt-search"
+      }
+    },
+    {
+      "id": "stackexchange.similar",
+      "name": "Find similar questions",
+      "summary": "Questions similar to a hypothetical title (and optional tags), like the site's related-questions suggestion.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/similar",
+      "params": {
+        "site": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Site, as its domain or api_site_parameter (from sites.list).",
+          "example": "stackoverflow"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 0 to 100 (default 30)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return: default, withbody (adds bodies), none, total, or a custom filter id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (default desc).",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "activity",
+            "votes",
+            "creation",
+            "relevance"
+          ]
+        },
+        "fromdate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation date, Unix seconds (inclusive)."
+        },
+        "todate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation date, Unix seconds (inclusive)."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Title to find similar questions for."
+        },
+        "tagged": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated preferred tags (a preference, not a requirement)."
+        },
+        "nottagged": {
+          "in": "query",
+          "type": "string",
+          "description": "Semicolon-separated excluded tags."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.stackexchange.com/docs/similar",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/similar"
+      }
+    },
+    {
+      "id": "stackexchange.questions.get",
+      "name": "Get questions by id",
+      "summary": "Questions identified by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/questions/{ids}",
+      "params": {
+        "site": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Site, as its domain or api_site_parameter (from sites.list).",
+          "example": "stackoverflow"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 0 to 100 (default 30)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return: default, withbody (adds bodies), none, total, or a custom filter id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (default desc).",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "activity",
+            "votes",
+            "creation"
+          ]
+        },
+        "fromdate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation date, Unix seconds (inclusive)."
+        },
+        "todate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation date, Unix seconds (inclusive)."
+        },
+        "ids": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Up to 100 question ids, semicolon-separated."
+        },
+        "min": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowest value of the sort field to include (inclusive)."
+        },
+        "max": {
+          "in": "query",
+          "type": "string",
+          "description": "Highest value of the sort field to include (inclusive)."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.stackexchange.com/docs/questions-by-ids",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/questions-by-ids"
+      }
+    },
+    {
+      "id": "stackexchange.questions.answers",
+      "name": "Get answers to questions",
+      "summary": "All answers to the given questions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/questions/{ids}/answers",
+      "params": {
+        "site": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Site, as its domain or api_site_parameter (from sites.list).",
+          "example": "stackoverflow"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 0 to 100 (default 30)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return: default, withbody (adds bodies), none, total, or a custom filter id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (default desc).",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "activity",
+            "creation",
+            "votes"
+          ]
+        },
+        "fromdate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation date, Unix seconds (inclusive)."
+        },
+        "todate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation date, Unix seconds (inclusive)."
+        },
+        "ids": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Up to 100 question ids, semicolon-separated."
+        },
+        "min": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowest value of the sort field to include (inclusive)."
+        },
+        "max": {
+          "in": "query",
+          "type": "string",
+          "description": "Highest value of the sort field to include (inclusive)."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://api.stackexchange.com/docs/answers-on-questions",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/answers-on-questions"
+      }
+    },
+    {
+      "id": "stackexchange.answers.get",
+      "name": "Get answers by id",
+      "summary": "Answers identified by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/answers/{ids}",
+      "params": {
+        "site": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Site, as its domain or api_site_parameter (from sites.list).",
+          "example": "stackoverflow"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 0 to 100 (default 30)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return: default, withbody (adds bodies), none, total, or a custom filter id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (default desc).",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "activity",
+            "creation",
+            "votes"
+          ]
+        },
+        "fromdate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation date, Unix seconds (inclusive)."
+        },
+        "todate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation date, Unix seconds (inclusive)."
+        },
+        "ids": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Up to 100 answer ids, semicolon-separated."
+        },
+        "min": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowest value of the sort field to include (inclusive)."
+        },
+        "max": {
+          "in": "query",
+          "type": "string",
+          "description": "Highest value of the sort field to include (inclusive)."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.stackexchange.com/docs/answers-by-ids",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/answers-by-ids"
+      }
+    },
+    {
+      "id": "stackexchange.users.get",
+      "name": "Get users",
+      "summary": "User profiles by id, or one user by username.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/users/{ids}",
+      "params": {
+        "site": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Site, as its domain or api_site_parameter (from sites.list).",
+          "example": "stackoverflow"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 0 to 100 (default 30)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return: default, withbody (adds bodies), none, total, or a custom filter id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (default desc).",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "reputation",
+            "creation",
+            "name",
+            "modified"
+          ]
+        },
+        "fromdate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation date, Unix seconds (inclusive)."
+        },
+        "todate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation date, Unix seconds (inclusive)."
+        },
+        "ids": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Up to 100 user ids, semicolon-separated, or a single username."
+        },
+        "min": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowest value of the sort field to include (inclusive)."
+        },
+        "max": {
+          "in": "query",
+          "type": "string",
+          "description": "Highest value of the sort field to include (inclusive)."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.stackexchange.com/docs/users-by-ids",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/users-by-ids"
+      }
+    },
+    {
+      "id": "stackexchange.tags.list",
+      "name": "List tags",
+      "summary": "Tags on a site, by popularity by default; filter by substring.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tags",
+      "params": {
+        "site": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Site, as its domain or api_site_parameter (from sites.list).",
+          "example": "stackoverflow"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 0 to 100 (default 30)."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return: default, withbody (adds bodies), none, total, or a custom filter id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction (default desc).",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "popular",
+            "activity",
+            "name"
+          ]
+        },
+        "fromdate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation date, Unix seconds (inclusive)."
+        },
+        "todate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation date, Unix seconds (inclusive)."
+        },
+        "inname": {
+          "in": "query",
+          "type": "string",
+          "description": "Only tags containing this substring.",
+          "example": "own"
+        },
+        "min": {
+          "in": "query",
+          "type": "string",
+          "description": "Lowest value of the sort field to include (inclusive)."
+        },
+        "max": {
+          "in": "query",
+          "type": "string",
+          "description": "Highest value of the sort field to include (inclusive)."
+        }
+      },
+      "docs_url": "https://api.stackexchange.com/docs/tags",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/tags"
+      }
+    },
+    {
+      "id": "stackexchange.sites.list",
+      "name": "List Stack Exchange sites",
+      "summary": "Every site in the network with its api_site_parameter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sites",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; unbounded for this method."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter naming the fields to return."
+        }
+      },
+      "notes": [
+        "Changes rarely: cache for at least a day."
+      ],
+      "docs_url": "https://api.stackexchange.com/docs/sites",
+      "verified": {
+        "docs": "https://api.stackexchange.com/docs/sites"
+      }
+    }
+  ]
+}

@@ -1,0 +1,312 @@
+{
+  "vendor": "shippo",
+  "name": "Shippo",
+  "category": "commerce",
+  "summary": "Multi-carrier shipping: rate quotes across 40+ carriers, purchased labels, package tracking and carrier accounts.",
+  "docs_url": "https://docs.goshippo.com/shippoapi/public-api/",
+  "pricing_url": "https://goshippo.com/pricing",
+  "base_url": "https://api.goshippo.com",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "SHIPPO_API_TOKEN"
+        ],
+        "description": "A Shippo API token (goshippo.com/user/apikeys). shippo_test_ tokens run in test mode: free labels that ship nothing."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "ShippoToken {api_token}"
+      }
+    ]
+  },
+  "headers": {
+    "SHIPPO-API-VERSION": "2018-02-08"
+  },
+  "notes": [
+    "Rate limits are per minute and lower in test mode: about 50 list calls (10 test), 4000 single-object reads (400 test) and 500 creates (50 test) per resource; tracking 500 GETs and 750 POSTs (50 test). Over it answers 429.",
+    "Objects are disposable: to change a shipment or address, create a new one. Shipments, rates and transactions older than 390 days are not returned.",
+    "The flow is create a shipment (returns rates), pick a rate object_id, then create a transaction with it to buy the label.",
+    "Lists page with page and results (max 100)."
+  ],
+  "sources": [
+    "https://docs.goshippo.com/shippoapi/public-api/",
+    "https://docs.goshippo.com/spec/shippoapi/public-api.yaml",
+    "https://docs.goshippo.com/api-concepts/rate-limits.md",
+    "https://docs.goshippo.com/tracking/tracking.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "shippo.tracks.get",
+      "name": "Get a package's tracking status",
+      "summary": "Current status, location, ETA and history for a carrier tracking number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tracks/{Carrier}/{TrackingNumber}",
+      "params": {
+        "Carrier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Carrier token, e.g. usps, ups, fedex (the list is on the Tracking Carriers page)."
+        },
+        "TrackingNumber": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The tracking number."
+        }
+      },
+      "notes": [
+        "Needs a live token for real packages. Free for labels bought on Shippo; other tracking numbers cost per number. In test mode use carrier shippo with SHIPPO_PRE_TRANSIT, SHIPPO_TRANSIT, SHIPPO_DELIVERED, SHIPPO_RETURNED, SHIPPO_FAILURE or SHIPPO_UNKNOWN."
+      ],
+      "job": "shipping.tracking",
+      "docs_url": "https://docs.goshippo.com/api-reference/tracking-status/get-a-tracking-status",
+      "verified": {
+        "docs": "https://docs.goshippo.com/api-reference/tracking-status/get-a-tracking-status"
+      }
+    },
+    {
+      "id": "shippo.shipments.list",
+      "name": "List shipments",
+      "summary": "Shipments created on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shipments",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "results": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 25, max 100."
+        },
+        "object_created_gt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created after this ISO 8601 UTC date-time (no timezone offsets)."
+        },
+        "object_created_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Created at or after this ISO 8601 UTC date-time (no timezone offsets)."
+        },
+        "object_created_lt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created before this ISO 8601 UTC date-time (no timezone offsets)."
+        },
+        "object_created_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Created at or before this ISO 8601 UTC date-time (no timezone offsets)."
+        }
+      },
+      "job": "shipping.shipments.list",
+      "docs_url": "https://docs.goshippo.com/api-reference/shipments/list-all-shipments",
+      "verified": {
+        "docs": "https://docs.goshippo.com/api-reference/shipments/list-all-shipments"
+      }
+    },
+    {
+      "id": "shippo.shipments.get",
+      "name": "Get a shipment",
+      "summary": "One shipment with its addresses, parcels and rates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shipments/{ShipmentId}",
+      "params": {
+        "ShipmentId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Shipment object_id."
+        }
+      },
+      "job": "shipping.shipments.get",
+      "docs_url": "https://docs.goshippo.com/api-reference/shipments/retrieve-a-shipment",
+      "verified": {
+        "docs": "https://docs.goshippo.com/api-reference/shipments/retrieve-a-shipment"
+      }
+    },
+    {
+      "id": "shippo.shipments.rates",
+      "name": "List a shipment's rates",
+      "summary": "Carrier rates (price, carrier and service level) for a shipment.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shipments/{ShipmentId}/rates",
+      "params": {
+        "ShipmentId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Shipment object_id."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "results": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 25, max 100."
+        }
+      },
+      "job": "shipping.rates",
+      "docs_url": "https://docs.goshippo.com/api-reference/rates/retrieve-shipment-rates",
+      "verified": {
+        "docs": "https://docs.goshippo.com/api-reference/rates/retrieve-shipment-rates"
+      }
+    },
+    {
+      "id": "shippo.transactions.list",
+      "name": "List shipping labels",
+      "summary": "Purchased labels (transactions), filterable by status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/transactions",
+      "params": {
+        "rate": {
+          "in": "query",
+          "type": "string",
+          "description": "Only labels for this rate id."
+        },
+        "object_status": {
+          "in": "query",
+          "type": "string",
+          "description": "Label status.",
+          "enum": [
+            "WAITING",
+            "QUEUED",
+            "SUCCESS",
+            "ERROR",
+            "REFUNDED",
+            "REFUNDPENDING",
+            "REFUNDREJECTED"
+          ]
+        },
+        "tracking_status": {
+          "in": "query",
+          "type": "string",
+          "description": "Tracking status.",
+          "enum": [
+            "UNKNOWN",
+            "PRE_TRANSIT",
+            "TRANSIT",
+            "DELIVERED",
+            "RETURNED",
+            "FAILURE"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "results": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 25, max 100."
+        },
+        "object_created_gt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created after this ISO 8601 UTC date-time (no timezone offsets)."
+        },
+        "object_created_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Created at or after this ISO 8601 UTC date-time (no timezone offsets)."
+        },
+        "object_created_lt": {
+          "in": "query",
+          "type": "string",
+          "description": "Created before this ISO 8601 UTC date-time (no timezone offsets)."
+        },
+        "object_created_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Created at or before this ISO 8601 UTC date-time (no timezone offsets)."
+        }
+      },
+      "job": "shipping.labels.list",
+      "docs_url": "https://docs.goshippo.com/api-reference/transactions/list-all-shipping-labels",
+      "verified": {
+        "docs": "https://docs.goshippo.com/api-reference/transactions/list-all-shipping-labels"
+      }
+    },
+    {
+      "id": "shippo.transactions.get",
+      "name": "Get a shipping label",
+      "summary": "One transaction with a fresh label_url and its tracking number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/transactions/{TransactionId}",
+      "params": {
+        "TransactionId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Transaction object_id."
+        }
+      },
+      "notes": [
+        "Each call returns a new label_url with a new expiry; call again when the old one has expired."
+      ],
+      "job": "shipping.labels.get",
+      "docs_url": "https://docs.goshippo.com/api-reference/transactions/retrieve-a-shipping-label",
+      "verified": {
+        "docs": "https://docs.goshippo.com/api-reference/transactions/retrieve-a-shipping-label"
+      }
+    },
+    {
+      "id": "shippo.carrier_accounts.list",
+      "name": "List carrier accounts",
+      "summary": "Carrier accounts connected to the Shippo account, Shippo's own and the user's.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/carrier_accounts",
+      "params": {
+        "service_levels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add each account's service levels."
+        },
+        "carrier": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this carrier token, e.g. usps."
+        },
+        "account_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this carrier account id."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "results": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 5, max 100."
+        }
+      },
+      "job": "shipping.carriers.list",
+      "docs_url": "https://docs.goshippo.com/api-reference/carrier-accounts/list-all-carrier-accounts",
+      "verified": {
+        "docs": "https://docs.goshippo.com/api-reference/carrier-accounts/list-all-carrier-accounts"
+      }
+    }
+  ]
+}

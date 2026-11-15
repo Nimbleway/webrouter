@@ -1,0 +1,48 @@
+{
+  "vendor": "oci-price-list",
+  "name": "Oracle Cloud Infrastructure price list",
+  "category": "developer",
+  "summary": "Public list prices of Oracle Cloud Infrastructure products by part number: display name, billing metric, service category and pay-as-you-go price, with tiers where they apply.",
+  "docs_url": "https://docs.oracle.com/en-us/iaas/Content/Billing/Tasks/signingup_topic-Estimating_Costs.htm",
+  "base_url": "https://apexapps.oracle.com/pls/apex/cetools/api/v1",
+  "notes": [
+    "Free and keyless: list prices, not an account's negotiated rates.",
+    "Prices are per the product's metricName (e.g. OCPU Per Hour, Gigabyte Storage Capacity per Month) in the requested currency. Tiered products carry rangeMin (exclusive), rangeMax (inclusive) and rangeUnit on each price."
+  ],
+  "sources": [
+    "https://docs.oracle.com/en-us/iaas/Content/Billing/Tasks/signingup_topic-Estimating_Costs.htm"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "oci-price-list.products.list",
+      "name": "Get OCI list prices",
+      "summary": "Every OCI product's list price, or one part number's, in a given currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/",
+      "params": {
+        "partNumber": {
+          "in": "query",
+          "type": "string",
+          "description": "A part number (Bxxxxx); every product when omitted.",
+          "example": "B88298"
+        },
+        "currencyCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency of the prices, e.g. USD.",
+          "example": "USD"
+        }
+      },
+      "notes": [
+        "Without partNumber the response holds the whole price list, which is large."
+      ],
+      "job": "cloud.pricing",
+      "docs_url": "https://docs.oracle.com/en-us/iaas/Content/Billing/Tasks/signingup_topic-Estimating_Costs.htm",
+      "verified": {
+        "docs": "https://docs.oracle.com/en-us/iaas/Content/Billing/Tasks/signingup_topic-Estimating_Costs.htm"
+      }
+    }
+  ]
+}

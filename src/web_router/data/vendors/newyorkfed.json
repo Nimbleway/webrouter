@@ -1,0 +1,449 @@
+{
+  "vendor": "newyorkfed",
+  "name": "Federal Reserve Bank of New York Markets Data",
+  "category": "finance",
+  "summary": "US reference rates (SOFR, EFFR, OBFR, TGCR, BGCR), SOMA holdings, repo and reverse repo operations and primary dealer statistics from the New York Fed.",
+  "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+  "base_url": "https://markets.newyorkfed.org",
+  "notes": [
+    "Keyless: no account or API key.",
+    "The response format is part of the path (latest.json, search.csv ...); json is the one to use for agents.",
+    "Dates are yyyy-MM-dd. Search endpoints default startDate to today, so pass a range for history."
+  ],
+  "sources": [
+    "https://markets.newyorkfed.org/static/docs/markets-api.html",
+    "https://markets.newyorkfed.org/static/docs/markets-api.yml"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "newyorkfed.rates.latest",
+      "name": "Get the latest reference rates",
+      "summary": "The latest secured (SOFR, BGCR, TGCR, SOFR averages and index) and unsecured (EFFR, OBFR) rates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/rates/all/latest.{format}",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv",
+            "xlsx"
+          ]
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.rates.search",
+      "name": "Search reference rates",
+      "summary": "Secured and unsecured rates or volumes over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/rates/all/search.{format}",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv",
+            "xlsx"
+          ]
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "First date, inclusive, yyyy-MM-dd; defaults to today."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Last date, inclusive, yyyy-MM-dd."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "rate or volume.",
+          "enum": [
+            "rate",
+            "volume"
+          ]
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.rates.secured.search",
+      "name": "Search one secured rate",
+      "summary": "SOFR, BGCR, TGCR or the SOFR averages and index over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/rates/secured/{ratetype}/search.{format}",
+      "params": {
+        "ratetype": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "sofrai is the SOFR averages and index.",
+          "example": "sofr",
+          "enum": [
+            "all",
+            "tgcr",
+            "bgcr",
+            "sofr",
+            "sofrai"
+          ]
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv",
+            "xlsx"
+          ]
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "First date, inclusive, yyyy-MM-dd; defaults to today."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Last date, inclusive, yyyy-MM-dd."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "rate or volume.",
+          "enum": [
+            "rate",
+            "volume"
+          ]
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.rates.secured.last",
+      "name": "Get the last N of a secured rate",
+      "summary": "The most recent N publications of SOFR, BGCR, TGCR or the SOFR averages and index.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/rates/secured/{ratetype}/last/{number}.{format}",
+      "params": {
+        "ratetype": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "sofr",
+          "enum": [
+            "tgcr",
+            "bgcr",
+            "sofr",
+            "sofrai"
+          ]
+        },
+        "number": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "How many publications.",
+          "example": 10
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv",
+            "xlsx"
+          ]
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.rates.unsecured.search",
+      "name": "Search one unsecured rate",
+      "summary": "EFFR or OBFR rates or volumes over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/rates/unsecured/{ratetype}/search.{format}",
+      "params": {
+        "ratetype": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "effr",
+          "enum": [
+            "all",
+            "effr",
+            "obfr"
+          ]
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv",
+            "xlsx"
+          ]
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "First date, inclusive, yyyy-MM-dd; defaults to today."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Last date, inclusive, yyyy-MM-dd."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "rate or volume.",
+          "enum": [
+            "rate",
+            "volume"
+          ]
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.soma.summary",
+      "name": "Get SOMA holdings summary",
+      "summary": "Totals of the System Open Market Account holdings by security type for each as-of date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/soma/summary.{format}",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ]
+        }
+      },
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.soma.treasury.asof",
+      "name": "Get SOMA Treasury holdings on a date",
+      "summary": "Every Treasury security the SOMA held on one weekly as-of date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/soma/tsy/get/asof/{date}.{format}",
+      "params": {
+        "date": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "As-of date, yyyy-MM-dd; a published SOMA as-of date (list them with /api/soma/asofdates/list.json).",
+          "example": "2025-01-01"
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ]
+        }
+      },
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.soma.asofdates.latest",
+      "name": "Get the latest SOMA as-of date",
+      "summary": "The most recent date SOMA holdings were published for.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/soma/asofdates/latest.{format}",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv"
+          ]
+        }
+      },
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.repo.search",
+      "name": "Search repo and reverse repo operations",
+      "summary": "Results of the Desk's repo and reverse repo operations over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/rp/results/search.{format}",
+      "params": {
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv",
+            "xlsx"
+          ]
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "description": "First date, inclusive, yyyy-MM-dd."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Last date, inclusive, yyyy-MM-dd."
+        },
+        "operationTypes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: Repo, Reverse Repo."
+        },
+        "method": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "multiple",
+            "single",
+            "fixed",
+            "allotment"
+          ]
+        },
+        "securityType": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "mbs",
+            "agency",
+            "tsy",
+            "srf"
+          ]
+        },
+        "term": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "overnight",
+            "term"
+          ]
+        }
+      },
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    },
+    {
+      "id": "newyorkfed.primarydealer.timeseries",
+      "name": "Get primary dealer survey series",
+      "summary": "Primary dealer statistics for one or more time series across all series breaks.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/pd/get/{timeseries}.{format}",
+      "params": {
+        "timeseries": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Time series key ids, several joined with underscores; list them with /api/pd/list/timeseries.json."
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json",
+            "xml",
+            "csv",
+            "xlsx"
+          ]
+        }
+      },
+      "docs_url": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "verified": {
+        "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html"
+      }
+    }
+  ]
+}

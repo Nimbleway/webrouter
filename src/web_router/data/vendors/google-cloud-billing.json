@@ -1,0 +1,112 @@
+{
+  "vendor": "google-cloud-billing",
+  "name": "Google Cloud Billing Catalog",
+  "category": "developer",
+  "summary": "Public list prices of Google Cloud: every service and each service's SKUs with description, regions and pricing tiers, from the Cloud Billing Catalog API.",
+  "docs_url": "https://docs.cloud.google.com/billing/v1/how-tos/catalog-api",
+  "base_url": "https://cloudbilling.googleapis.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GOOGLE_CLOUD_BILLING_API_KEY"
+        ],
+        "description": "a Google Cloud API key from a project with the Cloud Billing API enabled"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Covers the public SKUs and their list prices.",
+    "A price is units plus nanos (billionths): $1.75 is units=1, nanos=750000000. pricingInfo is a chronological timeline of pricingExpression entries.",
+    "Pages hold up to 5,000 items; send nextPageToken back as pageToken until none is returned.",
+    "Prices are in USD unless currencyCode is set; currencyConversionRate in each pricingInfo is the rate from USD that was applied."
+  ],
+  "sources": [
+    "https://docs.cloud.google.com/billing/v1/how-tos/catalog-api",
+    "https://docs.cloud.google.com/billing/docs/reference/rest/v1/services/list",
+    "https://docs.cloud.google.com/billing/docs/reference/rest/v1/services.skus/list"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "google-cloud-billing.services.list",
+      "name": "List Google Cloud services",
+      "summary": "Every public service with its id (services/6F81-5844-456A) and display name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/services",
+      "params": {
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 5000 by default."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken of the previous page."
+        }
+      },
+      "job": "pricing.services",
+      "docs_url": "https://docs.cloud.google.com/billing/docs/reference/rest/v1/services/list",
+      "verified": {
+        "docs": "https://docs.cloud.google.com/billing/docs/reference/rest/v1/services/list"
+      }
+    },
+    {
+      "id": "google-cloud-billing.skus.list",
+      "name": "List a service's SKUs and prices",
+      "summary": "Public SKUs of one service with category, regions and pricing timeline.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/services/{service_id}/skus",
+      "params": {
+        "service_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Service id from services.list, without 'services/'.",
+          "example": "6F81-5844-456A"
+        },
+        "currencyCode": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 4217 currency; USD by default.",
+          "example": "EUR"
+        },
+        "startTime": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339, inclusive, not in the future; with endTime, the range must sit within one calendar month (America/Los_Angeles). Latest prices when unset."
+        },
+        "endTime": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339, exclusive."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 5000 by default."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken of the previous page."
+        }
+      },
+      "job": "pricing.skus",
+      "docs_url": "https://docs.cloud.google.com/billing/docs/reference/rest/v1/services.skus/list",
+      "verified": {
+        "docs": "https://docs.cloud.google.com/billing/docs/reference/rest/v1/services.skus/list"
+      }
+    }
+  ]
+}

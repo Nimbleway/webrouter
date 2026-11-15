@@ -1,0 +1,339 @@
+{
+  "vendor": "usaspending",
+  "name": "USAspending",
+  "category": "government",
+  "summary": "US federal spending: contracts, grants, loans and other awards, who received them, and agency budgets, from the Treasury's free USAspending.gov API.",
+  "docs_url": "https://api.usaspending.gov/docs/endpoints",
+  "base_url": "https://api.usaspending.gov",
+  "notes": [
+    "Keyless and free; no account.",
+    "Most searches are reads over POST with a JSON body; every path ends in a trailing slash, as documented.",
+    "Award searches require filters.award_type_codes (contract types A, B, C, D; assistance types 02-11; IDV types IDV_A to IDV_D) and take filters such as keywords, time_period [{start_date, end_date}] in YYYY-MM-DD, agencies, recipient_search_text, place_of_performance_locations, naics_codes and psc_codes.",
+    "Amounts are US dollars. Paging is limit plus page, with page_metadata.hasNext in the response."
+  ],
+  "sources": [
+    "https://api.usaspending.gov/docs/endpoints",
+    "https://github.com/fedspendingtransparency/usaspending-api/tree/master/usaspending_api/api_contracts/contracts"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "usaspending.awards.search",
+      "name": "Search awards",
+      "summary": "Contracts, grants, loans and other awards matching advanced-search filters, with the fields you ask for.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/search/spending_by_award/",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Advanced filter object; award_type_codes is required.",
+          "example": {
+            "award_type_codes": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ],
+            "keywords": [
+              "cybersecurity"
+            ],
+            "time_period": [
+              {
+                "start_date": "2025-10-01",
+                "end_date": "2026-09-30"
+              }
+            ]
+          }
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Column names to return, e.g. Award ID, Recipient Name, Start Date, End Date, Award Amount, Awarding Agency, Awarding Sub Agency, Award Type.",
+          "example": [
+            "Award ID",
+            "Recipient Name",
+            "Award Amount",
+            "Awarding Agency",
+            "Start Date"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page; 10 when unset."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "sort": {
+          "in": "body",
+          "type": "string",
+          "description": "One of the requested fields to sort by; the first field when unset."
+        },
+        "order": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "desc",
+            "asc"
+          ],
+          "description": "Sort direction; desc by default."
+        },
+        "spending_level": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "awards",
+            "subawards"
+          ],
+          "description": "Search prime awards (default) or subawards."
+        }
+      },
+      "notes": [
+        "A read over POST. The generated_internal_id in each result is the award_id for awards.get."
+      ],
+      "job": "procurement.contracts.search",
+      "docs_url": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/search/spending_by_award.md",
+      "verified": {
+        "docs": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/search/spending_by_award.md"
+      }
+    },
+    {
+      "id": "usaspending.awards.get",
+      "name": "Get an award",
+      "summary": "Full profile of one award: amounts, dates, recipient, agencies, parent award and latest transaction data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/awards/{award_id}/",
+      "params": {
+        "award_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The generated unique award id, or the internal database id.",
+          "example": "CONT_AWD_H907_9700_SPE2DX16D1500_9700"
+        }
+      },
+      "job": "procurement.contracts.get",
+      "docs_url": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/awards/award_id.md",
+      "verified": {
+        "docs": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/awards/award_id.md"
+      }
+    },
+    {
+      "id": "usaspending.spending.by_recipient",
+      "name": "Rank recipients by spending",
+      "summary": "Top recipients by amount for a set of filters, e.g. one agency's or one NAICS code's spending in a period.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/search/spending_by_category/recipient/",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filter object (same filters as the advanced search).",
+          "example": {
+            "time_period": [
+              {
+                "start_date": "2025-10-01",
+                "end_date": "2026-09-30"
+              }
+            ]
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "spending_level": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "transactions",
+            "awards",
+            "subawards"
+          ],
+          "description": "What the totals are summed from; transactions by default."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "procurement.spending.rank",
+      "docs_url": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/search/spending_by_category/recipient.md",
+      "verified": {
+        "docs": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/search/spending_by_category/recipient.md"
+      }
+    },
+    {
+      "id": "usaspending.recipients.list",
+      "name": "List recipients",
+      "summary": "Recipients with their level, UEI, DUNS and total amount, filtered by keyword and award type.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/recipient/",
+      "params": {
+        "keyword": {
+          "in": "body",
+          "type": "string",
+          "description": "Matched against name, UEI or DUNS.",
+          "example": "Lockheed"
+        },
+        "award_type": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "all",
+            "contracts",
+            "grants",
+            "loans",
+            "direct_payments",
+            "other_financial_assistance"
+          ],
+          "description": "Award type; all by default."
+        },
+        "sort": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "name",
+            "duns",
+            "amount"
+          ],
+          "description": "Sort field; amount by default."
+        },
+        "order": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction; desc by default."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, at most 1000; 50 by default."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "notes": [
+        "A read over POST. Each result's id (suffixed -P parent, -C child, -R neither) is the recipient_id for recipients.get."
+      ],
+      "job": "company.search",
+      "docs_url": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/recipient.md",
+      "verified": {
+        "docs": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/recipient.md"
+      }
+    },
+    {
+      "id": "usaspending.recipients.get",
+      "name": "Get a recipient profile",
+      "summary": "Overview of one recipient: names, UEI, DUNS, parent, location, business types and totals for a fiscal year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/recipient/{recipient_id}/",
+      "params": {
+        "recipient_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Recipient id at a level (parent -P, child -C or neither -R).",
+          "example": "45700e3c-05bc-6426-ddc6-5e0ce1664716-C"
+        },
+        "year": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal year, or all for all time, or latest for the last 12 months."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/recipient/recipient_id.md",
+      "verified": {
+        "docs": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/recipient/recipient_id.md"
+      }
+    },
+    {
+      "id": "usaspending.recipients.autocomplete",
+      "name": "Autocomplete a recipient",
+      "summary": "Recipient names, UEIs and DUNS matching a search text.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/autocomplete/recipient/",
+      "params": {
+        "search_text": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text matched against recipient name, UEI and DUNS.",
+          "example": "Holdings"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return, 1-500; 10 by default."
+        },
+        "recipient_levels": {
+          "in": "body",
+          "type": "array",
+          "description": "Recipient levels to keep: C, P or R."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.search",
+      "docs_url": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/autocomplete/recipient.md",
+      "verified": {
+        "docs": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/autocomplete/recipient.md"
+      }
+    },
+    {
+      "id": "usaspending.agencies.list",
+      "name": "List top-tier agencies",
+      "summary": "Every top-tier agency with its budget authority, obligations, outlays and share of the total budget.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/references/toptier_agencies/",
+      "params": {
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "A field of the response to sort by, e.g. percentage_of_total_budget_authority."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction."
+        }
+      },
+      "job": "reference.agencies",
+      "docs_url": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/references/toptier_agencies.md",
+      "verified": {
+        "docs": "https://github.com/fedspendingtransparency/usaspending-api/blob/master/usaspending_api/api_contracts/contracts/v2/references/toptier_agencies.md"
+      }
+    }
+  ]
+}

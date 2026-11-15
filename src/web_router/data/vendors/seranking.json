@@ -1,0 +1,728 @@
+{
+  "vendor": "seranking",
+  "name": "SE Ranking",
+  "category": "seo",
+  "summary": "SE Ranking Data API: domain analysis, keyword research and backlink data.",
+  "docs_url": "https://seranking.com/api/data/",
+  "pricing_url": "https://seranking.com/api/data/getting-started/#plans-and-pricing",
+  "base_url": "https://api.seranking.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SERANKING_API_KEY"
+        ],
+        "description": "an SE Ranking Data API key (API Dashboard > + CREATE API KEY in your SE Ranking account)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Token {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billing is in credits. Each endpoint has a per-request charge, a per-record charge, or both; only 2xx responses are billed. Each endpoint note gives the cost.",
+    "The docs also accept the key as an apikey query parameter; the backlinks pages show it that way, but the getting-started guide recommends the Authorization header for every endpoint.",
+    "Regional keyword databases are chosen by the source country code (us, uk, de ...)."
+  ],
+  "sources": [
+    "https://seranking.com/api/data/getting-started/",
+    "https://seranking.com/api/data/account-system/",
+    "https://seranking.com/api/data/domain-analysis/",
+    "https://seranking.com/api/data/keyword-research/",
+    "https://seranking.com/api/data/backlinks/"
+  ],
+  "endpoints": [
+    {
+      "id": "seranking.account.subscription",
+      "name": "Get subscription and balance",
+      "summary": "Plan status, start and expiry dates and the API credits left for the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/account/subscription",
+      "params": {
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        }
+      },
+      "notes": [
+        "Costs 0 credits."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://seranking.com/api/data/account-system/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/account-system/"
+      }
+    },
+    {
+      "id": "seranking.domain.overview",
+      "name": "Domain overview in one database",
+      "summary": "Organic and paid keyword counts, traffic, traffic value and position distribution for a domain in one regional database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/domain/overview/db",
+      "params": {
+        "source": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Country code of the regional keyword database, such as us, uk or de.",
+          "example": "us"
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to analyze.",
+          "example": "seranking.com"
+        },
+        "with_subdomains": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 (default) includes subdomains; 0 excludes them.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "A specific URL to analyze instead of the domain; domain is then ignored."
+        }
+      },
+      "notes": [
+        "Costs 100 credits per request."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://seranking.com/api/data/domain-analysis/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/domain-analysis/"
+      }
+    },
+    {
+      "id": "seranking.domain.overview_history",
+      "name": "Domain traffic history",
+      "summary": "Month-by-month organic or paid performance for a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/domain/overview/history",
+      "params": {
+        "source": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Country code of the regional keyword database, such as us, uk or de.",
+          "example": "us"
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to analyze.",
+          "example": "seranking.com"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "organic (default) or adv for paid search.",
+          "enum": [
+            "organic",
+            "adv"
+          ]
+        },
+        "with_subdomains": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 (default) includes subdomains; 0 excludes them.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "A specific URL to analyze instead of the domain."
+        }
+      },
+      "notes": [
+        "Costs 100 credits per request."
+      ],
+      "job": "domain.overview.history",
+      "docs_url": "https://seranking.com/api/data/domain-analysis/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/domain-analysis/"
+      }
+    },
+    {
+      "id": "seranking.domain.keywords",
+      "name": "Domain ranking keywords",
+      "summary": "Keywords a domain or URL ranks for, organic or paid, with volume, position, traffic and CPC, optionally for a past month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/domain/keywords",
+      "params": {
+        "source": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Country code of the regional keyword database, such as us, uk or de.",
+          "example": "us"
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain to get rankings for; send this or url (url wins if both).",
+          "example": "booking.com"
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact URL to get rankings for."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "organic (default) or adv.",
+          "enum": [
+            "organic",
+            "adv"
+          ]
+        },
+        "with_subdomains": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true (default) includes subdomains; ignored when url is used."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1.",
+          "example": 1
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 1-1000 (default 100); larger values are capped at 1000.",
+          "example": 100
+        },
+        "order_field": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort key.",
+          "enum": [
+            "traffic",
+            "volume",
+            "position",
+            "cpc",
+            "competition",
+            "kei",
+            "difficulty",
+            "traffic_percent",
+            "price"
+          ]
+        },
+        "order_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction; default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "cols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return; invalid names are dropped silently."
+        },
+        "year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Year of a historical snapshot; send with month."
+        },
+        "month": {
+          "in": "query",
+          "type": "integer",
+          "description": "Month 1-12 of a historical snapshot; send with year."
+        },
+        "pos_change": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords by position change since the last snapshot: up, down, new, lost, diff or same."
+        },
+        "volume_from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum monthly search volume.",
+          "wire_name": "filter[volume][from]"
+        },
+        "volume_to": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum monthly search volume.",
+          "wire_name": "filter[volume][to]"
+        },
+        "position_from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Best ranking position to include.",
+          "wire_name": "filter[position][from]"
+        },
+        "position_to": {
+          "in": "query",
+          "type": "integer",
+          "description": "Worst ranking position to include.",
+          "wire_name": "filter[position][to]"
+        },
+        "difficulty_from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum keyword difficulty, 0-100.",
+          "wire_name": "filter[difficulty][from]"
+        },
+        "difficulty_to": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum keyword difficulty, 0-100.",
+          "wire_name": "filter[difficulty][to]"
+        },
+        "intents": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated intent codes: I informational, N navigational, T transactional, C commercial, L local.",
+          "wire_name": "filter[intents]"
+        }
+      },
+      "notes": [
+        "Costs 100 credits per request.",
+        "Historical responses (year and month sent) use a different schema from current ones. A date older than the retention window returns an empty array."
+      ],
+      "job": "domain.keywords",
+      "docs_url": "https://seranking.com/api/data/domain-analysis/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/domain-analysis/"
+      }
+    },
+    {
+      "id": "seranking.domain.competitors",
+      "name": "Domain competitors",
+      "summary": "Competitor domains for a target, with shared and missing keyword counts, traffic and relevance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/domain/competitors",
+      "params": {
+        "source": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Country code of the regional keyword database, such as us, uk or de.",
+          "example": "us"
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to find competitors for.",
+          "example": "seranking.com"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "organic (default) or adv.",
+          "enum": [
+            "organic",
+            "adv"
+          ]
+        }
+      },
+      "notes": [
+        "Costs 100 credits per request."
+      ],
+      "job": "domain.competitors",
+      "docs_url": "https://seranking.com/api/data/domain-analysis/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/domain-analysis/"
+      }
+    },
+    {
+      "id": "seranking.keywords.related",
+      "name": "Related keywords",
+      "summary": "Keywords topically related to a seed keyword, based on overlapping search result URLs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/keywords/related",
+      "params": {
+        "source": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Country code of the regional keyword database, such as us, uk or de.",
+          "example": "us"
+        },
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Seed keyword.",
+          "example": "avocado"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Keywords per page. Default 100.",
+          "example": 100
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset for paging. Default 0.",
+          "example": 0
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "keyword",
+            "volume",
+            "cpc",
+            "difficulty",
+            "competition"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction; default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "history_trend": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds historical volume trend data."
+        },
+        "volume_from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum monthly volume.",
+          "wire_name": "filter[volume][from]"
+        },
+        "volume_to": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum monthly volume.",
+          "wire_name": "filter[volume][to]"
+        },
+        "difficulty_from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum difficulty, 0-100.",
+          "wire_name": "filter[difficulty][from]"
+        },
+        "difficulty_to": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum difficulty, 0-100.",
+          "wire_name": "filter[difficulty][to]"
+        }
+      },
+      "notes": [
+        "Costs 10 credits per keyword returned."
+      ],
+      "job": "keywords.ideas",
+      "docs_url": "https://seranking.com/api/data/keyword-research/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/keyword-research/"
+      }
+    },
+    {
+      "id": "seranking.keywords.export",
+      "name": "Keyword metrics for a list",
+      "summary": "Volume, CPC, competition, difficulty, intent and trend for up to 5,000 keywords.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/keywords/export",
+      "params": {
+        "source": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Country code of the regional keyword database, such as us, uk or de.",
+          "example": "us"
+        },
+        "keywords": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Keywords to analyze, 1 to 5,000.",
+          "example": [
+            "seo platform",
+            "seranking.com"
+          ]
+        },
+        "sort": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort field; default cpc.",
+          "enum": [
+            "volume",
+            "cpc",
+            "difficulty",
+            "competition"
+          ]
+        },
+        "sort_order": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort direction; default desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "history_from": {
+          "in": "body",
+          "type": "string",
+          "description": "Start month of the history_trend window, YYYY-MM-DD; only works with history_to."
+        },
+        "history_to": {
+          "in": "body",
+          "type": "string",
+          "description": "End month of the history_trend window, YYYY-MM-DD; default the current month."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed; source goes in the query string and the rest in the JSON body.",
+        "Costs 100 credits per request. history_trend covers the latest 12 months unless you set a window."
+      ],
+      "job": "keywords.volume",
+      "docs_url": "https://seranking.com/api/data/keyword-research/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/keyword-research/"
+      }
+    },
+    {
+      "id": "seranking.backlinks.summary",
+      "name": "Backlink summary",
+      "summary": "Backlink, referring domain, subnet and IP counts, top anchors and top TLDs for a target.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/backlinks/summary",
+      "params": {
+        "target": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain, host or URL to analyze.",
+          "example": "seranking.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "What target is: domain (all URLs including subdomains), host (this host only, the default) or url (one URL).",
+          "enum": [
+            "domain",
+            "host",
+            "url"
+          ]
+        }
+      },
+      "notes": [
+        "Costs 100 credits per target. The docs say GET and POST both work and batch up to 100 targets; this entry covers the single-target GET."
+      ],
+      "job": "backlinks.summary",
+      "docs_url": "https://seranking.com/api/data/backlinks/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/backlinks/"
+      }
+    },
+    {
+      "id": "seranking.backlinks.list",
+      "name": "Backlinks",
+      "summary": "Individual backlinks to a target with ranks, anchors and link dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/backlinks/all",
+      "params": {
+        "target": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain, host or URL to analyze.",
+          "example": "seranking.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "What target is: domain (all URLs including subdomains), host (this host only, the default) or url (one URL).",
+          "enum": [
+            "domain",
+            "host",
+            "url"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-10,000. Default 100.",
+          "example": 100
+        },
+        "per_domain": {
+          "in": "query",
+          "type": "integer",
+          "description": "Backlinks per referring domain, 1-100; 1 gives one per domain."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; default date_found.",
+          "enum": [
+            "date_found",
+            "domain_inlink_rank",
+            "inlink_rank"
+          ]
+        },
+        "inlink_rank_from": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum InLink Rank, 0-100."
+        },
+        "inlink_rank_to": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum InLink Rank, 0-100."
+        },
+        "url_from_filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Text the referring page URL must (or must not) contain."
+        },
+        "url_to_filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Text the destination URL must (or must not) contain."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per backlink returned.",
+        "inlink_rank here can lag the live value by up to a month."
+      ],
+      "job": "backlinks.list",
+      "docs_url": "https://seranking.com/api/data/backlinks/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/backlinks/"
+      }
+    },
+    {
+      "id": "seranking.backlinks.refdomains",
+      "name": "Referring domains",
+      "summary": "Domains linking to a target with their ranks and link counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/backlinks/refdomains",
+      "params": {
+        "target": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain, host or URL to analyze.",
+          "example": "seranking.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "What target is: domain (all URLs including subdomains), host (this host only, the default) or url (one URL).",
+          "enum": [
+            "domain",
+            "host",
+            "url"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-10,000. Default 100.",
+          "example": 100
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, such as new_lost_date, domain_inlink_rank or inlink_rank; see the docs page."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per referring domain returned."
+      ],
+      "job": "backlinks.refdomains",
+      "docs_url": "https://seranking.com/api/data/backlinks/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/backlinks/"
+      }
+    },
+    {
+      "id": "seranking.backlinks.anchors",
+      "name": "Backlink anchors",
+      "summary": "Anchor texts used in links to a target, with backlink and referring domain counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/backlinks/anchors",
+      "params": {
+        "target": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Root domain, host or URL to analyze.",
+          "example": "seranking.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "What target is: domain (all URLs including subdomains), host (this host only, the default) or url (one URL).",
+          "enum": [
+            "domain",
+            "host",
+            "url"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-10,000. Default 100.",
+          "example": 100
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, descending; default backlinks.",
+          "enum": [
+            "backlinks",
+            "refdomains"
+          ]
+        }
+      },
+      "notes": [
+        "Costs 1 credit per anchor text returned."
+      ],
+      "job": "backlinks.anchors",
+      "docs_url": "https://seranking.com/api/data/backlinks/",
+      "verified": {
+        "docs": "https://seranking.com/api/data/backlinks/"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

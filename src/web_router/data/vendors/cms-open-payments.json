@@ -1,0 +1,271 @@
+{
+  "vendor": "cms-open-payments",
+  "name": "CMS Open Payments",
+  "category": "health",
+  "summary": "US Open Payments data from CMS: payments and transfers of value from drug and device makers to physicians and teaching hospitals queried through the site's DKAN catalog and datastore API.",
+  "docs_url": "https://openpaymentsdata.cms.gov/about/api",
+  "base_url": "https://openpaymentsdata.cms.gov",
+  "notes": [
+    "Free and keyless.",
+    "New endpoints appear with each data publication: list the current datasets with datasets.list (pass show-reference-ids to get the distribution ids the datastore calls take), then query a dataset by its id and distribution index.",
+    "Page datastore.query with limit and offset. datastore.sql caps a request at 500 records: page it with [LIMIT 500 OFFSET n].",
+    "Responses are JSON by default; CSV is available with format=csv. Under high load queries may get 503 with Retry-After: drop conditions, sorts and offsets, or wait."
+  ],
+  "sources": [
+    "https://openpaymentsdata.cms.gov/about/api",
+    "https://openpaymentsdata.cms.gov/api/1?authentication=false"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "cms-open-payments.datasets.list",
+      "name": "List datasets",
+      "summary": "Metadata of every dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/1/metastore/schemas/dataset/items",
+      "params": {
+        "show_reference_ids": {
+          "in": "query",
+          "type": "boolean",
+          "wire_name": "show-reference-ids",
+          "description": "Include the identifiers of referenced objects, such as distribution ids the datastore endpoints need."
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://openpaymentsdata.cms.gov/about/api",
+      "verified": {
+        "docs": "https://openpaymentsdata.cms.gov/api/1?authentication=false"
+      }
+    },
+    {
+      "id": "cms-open-payments.datasets.get",
+      "name": "Get a dataset",
+      "summary": "One dataset's metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/1/metastore/schemas/dataset/items/{identifier}",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The dataset id."
+        },
+        "show_reference_ids": {
+          "in": "query",
+          "type": "boolean",
+          "wire_name": "show-reference-ids",
+          "description": "Include the identifiers of referenced objects."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://openpaymentsdata.cms.gov/about/api",
+      "verified": {
+        "docs": "https://openpaymentsdata.cms.gov/api/1?authentication=false"
+      }
+    },
+    {
+      "id": "cms-open-payments.datasets.search",
+      "name": "Search datasets",
+      "summary": "Full-text search over the dataset catalog, with facets for theme, keyword and publisher.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/1/search",
+      "params": {
+        "fulltext": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search over indexed metadata fields.",
+          "example": "research payments"
+        },
+        "theme": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter on the theme facet."
+        },
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter on the keyword facet.",
+          "example": "all years"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Property to sort on: description, keyword, modified, publisher__name, temporal, theme, title, search_api_relevance."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "sort-order",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Sort direction."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "page-size",
+          "description": "Results per page; 10 by default."
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://openpaymentsdata.cms.gov/about/api",
+      "verified": {
+        "docs": "https://openpaymentsdata.cms.gov/api/1?authentication=false"
+      }
+    },
+    {
+      "id": "cms-open-payments.datastore.query",
+      "name": "Query a dataset's records",
+      "summary": "Records of one dataset distribution, with conditions, sorts, selected properties and paging, as JSON or CSV.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/1/datastore/query/{dataset_id}/{index}",
+      "params": {
+        "dataset_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The dataset id."
+        },
+        "index": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Index of the distribution in the dataset's distribution array; 0 for the first.",
+          "example": 0
+        },
+        "conditions": {
+          "in": "body",
+          "type": "array",
+          "description": "Conditions, ANDed: objects with property, value and operator (=, <>, <, <=, >, >=, like, between, in, not in, contains, starts with, match; = by default), or groups {groupOperator: and|or, conditions: [...]}.",
+          "example": [
+            {
+              "property": "record_number",
+              "value": 1,
+              "operator": ">"
+            }
+          ]
+        },
+        "properties": {
+          "in": "body",
+          "type": "array",
+          "description": "Columns to return."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort directives: objects with property and order (asc or desc)."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum records to return, at least 1.",
+          "example": 100
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records to skip; 0 by default."
+        },
+        "count": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the total matching count, ignoring limit and offset; true by default."
+        },
+        "results": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the records; set false with count true for a count only."
+        },
+        "schema": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the column schema; true by default."
+        },
+        "keys": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return records as keyed objects (true, default) or arrays of values."
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "description": "Response format; json by default."
+        }
+      },
+      "notes": [
+        "A read over POST: the body is a query, nothing is changed."
+      ],
+      "job": "datasets.query",
+      "docs_url": "https://openpaymentsdata.cms.gov/about/api",
+      "verified": {
+        "docs": "https://openpaymentsdata.cms.gov/api/1?authentication=false"
+      }
+    },
+    {
+      "id": "cms-open-payments.datastore.sql",
+      "name": "Query the datastore with SQL",
+      "summary": "A bracketed SQL-like SELECT over one distribution, e.g. [SELECT a,b FROM <distribution-id>][WHERE c = \"X\"][LIMIT 500 OFFSET 0].",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/1/datastore/sql",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The query; SELECT, WHERE and LIMIT ... OFFSET each in their own brackets, no spaces between selected columns.",
+          "example": "[SELECT * FROM 004e1f11-aa67-5b16-943d-1fe1044b3512][LIMIT 2]"
+        },
+        "show_db_columns": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the database column names (no spaces, possibly truncated), which WHERE and SELECT need."
+        }
+      },
+      "notes": [
+        "FROM takes a distribution id, not a dataset id: get it from datasets.list with show-reference-ids."
+      ],
+      "job": "datasets.query",
+      "docs_url": "https://openpaymentsdata.cms.gov/about/api",
+      "verified": {
+        "docs": "https://openpaymentsdata.cms.gov/api/1?authentication=false"
+      }
+    },
+    {
+      "id": "cms-open-payments.datastore.stats",
+      "name": "Get datastore statistics",
+      "summary": "Row and column counts and the column headers of one datastore resource.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/1/datastore/imports/{identifier}",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A datastore (distribution) id."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://openpaymentsdata.cms.gov/about/api",
+      "verified": {
+        "docs": "https://openpaymentsdata.cms.gov/api/1?authentication=false"
+      }
+    }
+  ]
+}

@@ -1,0 +1,414 @@
+{
+  "vendor": "gtex",
+  "name": "GTEx Portal",
+  "category": "science",
+  "summary": "The Genotype-Tissue Expression project's API: gene expression across human tissues, eQTLs and eGenes, tissue and reference-gene metadata.",
+  "docs_url": "https://gtexportal.org/api/v2/redoc",
+  "base_url": "https://gtexportal.org",
+  "notes": [
+    "Free and keyless.",
+    "Expression and eQTL calls take versioned GENCODE ids (ENSG00000065613.9), not gene symbols: resolve a symbol with reference.gene or genes.search first.",
+    "List parameters (gencodeId, tissueSiteDetailId, variantId) are sent as repeated query keys.",
+    "Paging is 0-based: page=0 is the first page, itemsPerPage defaults to 250. Without datasetId the latest GTEx release is used."
+  ],
+  "sources": [
+    "https://gtexportal.org/api/v2/redoc",
+    "https://gtexportal.org/api/v2/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "gtex.genes.search",
+      "name": "Search genes",
+      "summary": "Genes that partly or fully match a symbol, GENCODE id or Ensembl id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/reference/geneSearch",
+      "params": {
+        "geneId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A gene symbol, GENCODE id or Ensembl id, or part of one.",
+          "example": "BRCA"
+        },
+        "gencodeVersion": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "v47",
+            "v39",
+            "v26",
+            "v19"
+          ],
+          "description": "GENCODE release; v26 by default."
+        },
+        "genomeBuild": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "GRCh38/hg38",
+            "GRCh37/hg19"
+          ],
+          "description": "Genome build; GRCh38/hg38 by default."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based page."
+        },
+        "itemsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 250 by default."
+        }
+      },
+      "job": "reference.genes",
+      "docs_url": "https://gtexportal.org/api/v2/redoc#tag/Reference-Genome-Endpoints/operation/get_gene_search_api_v2_reference_geneSearch_get",
+      "verified": {
+        "docs": "https://gtexportal.org/api/v2/openapi.json"
+      }
+    },
+    {
+      "id": "gtex.reference.gene",
+      "name": "Get reference genes",
+      "summary": "Reference gene records for gene symbols or GENCODE ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/reference/gene",
+      "params": {
+        "geneId": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Gene symbols, versioned or unversioned GENCODE ids.",
+          "example": [
+            "BRCA1"
+          ]
+        },
+        "gencodeVersion": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "v47",
+            "v39",
+            "v26",
+            "v19"
+          ],
+          "description": "GENCODE release; v26 by default."
+        },
+        "genomeBuild": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "GRCh38/hg38",
+            "GRCh37/hg19"
+          ],
+          "description": "Genome build; GRCh38/hg38 by default."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based page."
+        },
+        "itemsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 250 by default."
+        }
+      },
+      "job": "reference.genes",
+      "docs_url": "https://gtexportal.org/api/v2/redoc#tag/Reference-Genome-Endpoints/operation/get_genes_api_v2_reference_gene_get",
+      "verified": {
+        "docs": "https://gtexportal.org/api/v2/openapi.json"
+      }
+    },
+    {
+      "id": "gtex.expression.median",
+      "name": "Get median gene expression by tissue",
+      "summary": "Median expression of genes in each tissue, for one dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/expression/medianGeneExpression",
+      "params": {
+        "gencodeId": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Versioned GENCODE ids.",
+          "example": [
+            "ENSG00000065613.9"
+          ]
+        },
+        "datasetId": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "gtex_v8",
+            "gtex_snrnaseq_pilot",
+            "gtex_v10",
+            "gtex_v11"
+          ],
+          "description": "Dataset; gtex_v10 by default."
+        },
+        "tissueSiteDetailId": {
+          "in": "query",
+          "type": "array",
+          "description": "Tissue ids (GTEx ids such as Adipose_Subcutaneous, or ontology ids); all tissues when omitted."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based page."
+        },
+        "itemsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 250 by default."
+        }
+      },
+      "job": "science.genes.expression",
+      "docs_url": "https://gtexportal.org/api/v2/redoc#tag/Expression-Data-Endpoints/operation/get_median_gene_expression_api_v2_expression_medianGeneExpression_get",
+      "verified": {
+        "docs": "https://gtexportal.org/api/v2/openapi.json"
+      }
+    },
+    {
+      "id": "gtex.expression.samples",
+      "name": "Get sample-level gene expression",
+      "summary": "Normalized expression of genes per sample, by tissue, optionally split by donor sex or age bracket.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/expression/geneExpression",
+      "params": {
+        "gencodeId": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Versioned GENCODE ids."
+        },
+        "datasetId": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "gtex_v8",
+            "gtex_snrnaseq_pilot",
+            "gtex_v10",
+            "gtex_v11",
+            "dgtex_v1"
+          ],
+          "description": "Dataset; gtex_v10 by default."
+        },
+        "tissueSiteDetailId": {
+          "in": "query",
+          "type": "array",
+          "description": "Tissue ids."
+        },
+        "attributeSubset": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "sex",
+            "ageBracket"
+          ],
+          "description": "Donor attribute to subset the data by."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based page."
+        },
+        "itemsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 250 by default."
+        }
+      },
+      "job": "science.genes.expression",
+      "docs_url": "https://gtexportal.org/api/v2/redoc#tag/Expression-Data-Endpoints/operation/get_gene_expression_api_v2_expression_geneExpression_get",
+      "verified": {
+        "docs": "https://gtexportal.org/api/v2/openapi.json"
+      }
+    },
+    {
+      "id": "gtex.expression.top",
+      "name": "List top expressed genes in a tissue",
+      "summary": "Genes with the highest median expression in one tissue, optionally excluding mitochondrial genes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/expression/topExpressedGene",
+      "params": {
+        "tissueSiteDetailId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One tissue id.",
+          "example": "Liver"
+        },
+        "datasetId": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "gtex_v8",
+            "gtex_snrnaseq_pilot",
+            "gtex_v10",
+            "gtex_v11"
+          ],
+          "description": "Dataset; gtex_v10 by default."
+        },
+        "filterMtGene": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Exclude mitochondrial genes; true by default."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based page."
+        },
+        "itemsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 250 by default."
+        }
+      },
+      "job": "science.genes.expression",
+      "docs_url": "https://gtexportal.org/api/v2/redoc#tag/Expression-Data-Endpoints/operation/get_top_expressed_genes_api_v2_expression_topExpressedGene_get",
+      "verified": {
+        "docs": "https://gtexportal.org/api/v2/openapi.json"
+      }
+    },
+    {
+      "id": "gtex.eqtl.single_tissue",
+      "name": "Get significant single-tissue eQTLs",
+      "summary": "Precomputed significant eQTLs, filtered by gene, variant, tissue or dataset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/association/singleTissueEqtl",
+      "params": {
+        "gencodeId": {
+          "in": "query",
+          "type": "array",
+          "description": "Versioned GENCODE ids."
+        },
+        "variantId": {
+          "in": "query",
+          "type": "array",
+          "description": "GTEx variant ids."
+        },
+        "tissueSiteDetailId": {
+          "in": "query",
+          "type": "array",
+          "description": "Tissue ids."
+        },
+        "datasetId": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "gtex_v8",
+            "gtex_snrnaseq_pilot",
+            "gtex_v10",
+            "gtex_v11"
+          ],
+          "description": "Dataset; gtex_v10 by default."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based page."
+        },
+        "itemsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 250 by default."
+        }
+      },
+      "job": "science.genes.associations",
+      "docs_url": "https://gtexportal.org/api/v2/redoc#tag/Static-Association-Endpoints/operation/get_significant_single_tissue_eqtls_api_v2_association_singleTissueEqtl_get",
+      "verified": {
+        "docs": "https://gtexportal.org/api/v2/openapi.json"
+      }
+    },
+    {
+      "id": "gtex.eqtl.egenes",
+      "name": "List eGenes",
+      "summary": "Genes with at least one significant cis-eQTL, with allelic fold change, p-value, threshold and q-value, optionally by tissue.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/association/egene",
+      "params": {
+        "tissueSiteDetailId": {
+          "in": "query",
+          "type": "array",
+          "description": "Tissue ids."
+        },
+        "datasetId": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "gtex_v8",
+            "gtex_snrnaseq_pilot",
+            "gtex_v10",
+            "gtex_v11"
+          ],
+          "description": "Dataset; gtex_v10 by default."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based page."
+        },
+        "itemsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 250 by default."
+        }
+      },
+      "notes": [
+        "log2AllelicFoldChange is the allelic fold change, in log2 scale, of the gene's most significant eQTL."
+      ],
+      "job": "science.genes.associations",
+      "docs_url": "https://gtexportal.org/api/v2/redoc#tag/Static-Association-Endpoints/operation/get_eqtl_genes_api_v2_association_egene_get",
+      "verified": {
+        "docs": "https://gtexportal.org/api/v2/openapi.json"
+      }
+    },
+    {
+      "id": "gtex.tissues.list",
+      "name": "List tissues",
+      "summary": "Every tissue site detail record in a dataset, with the ids other calls take.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/dataset/tissueSiteDetail",
+      "params": {
+        "datasetId": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "gtex_v8",
+            "gtex_snrnaseq_pilot",
+            "gtex_v10",
+            "gtex_v11",
+            "dgtex_v1"
+          ],
+          "description": "Dataset; gtex_v10 by default."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based page."
+        },
+        "itemsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; 250 by default."
+        }
+      },
+      "job": "reference.tissues",
+      "docs_url": "https://gtexportal.org/api/v2/redoc#tag/Datasets-Endpoints/operation/get_tissue_site_detail_api_v2_dataset_tissueSiteDetail_get",
+      "verified": {
+        "docs": "https://gtexportal.org/api/v2/openapi.json"
+      }
+    }
+  ]
+}

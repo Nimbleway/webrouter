@@ -1,0 +1,190 @@
+{
+  "vendor": "itunes-search",
+  "name": "Apple iTunes Search API",
+  "category": "search",
+  "summary": "Search and look up App Store apps, iTunes music, movies, podcasts, audiobooks, TV and Apple Books titles: names, IDs, prices, genres, artwork, previews and store links, keyless.",
+  "docs_url": "https://performance-partners.apple.com/search-api",
+  "base_url": "https://itunes.apple.com",
+  "notes": [
+    "Keyless. Limited to roughly 20 calls per minute (subject to change); cache results, and use Apple's Enterprise Partner Feed for heavy use.",
+    "Answers are JSON with resultCount and results; each result's wrapperType (track, collection, artist) and kind (song, software-package, podcast, ...) say what it is.",
+    "Promotional content (previews, artwork, icons) may only be used to promote the store content, next to a store badge, with previews streamed and never stored."
+  ],
+  "sources": [
+    "https://performance-partners.apple.com/search-api",
+    "https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "itunes-search.search",
+      "name": "Search the iTunes Store, App Store and Apple Books",
+      "summary": "Content matching a term, optionally narrowed to one media type, entity and attribute.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "term": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Text to search for; spaces become +.",
+          "example": "jack johnson"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter ISO 3166-1 alpha-2 store country; default US.",
+          "example": "US"
+        },
+        "media": {
+          "in": "query",
+          "type": "string",
+          "description": "Media type to search; default all.",
+          "example": "software",
+          "enum": [
+            "movie",
+            "podcast",
+            "music",
+            "musicVideo",
+            "audiobook",
+            "shortFilm",
+            "tvShow",
+            "software",
+            "ebook",
+            "all"
+          ]
+        },
+        "entity": {
+          "in": "query",
+          "type": "string",
+          "description": "Result type relative to media, e.g. software, iPadSoftware, desktopSoftware for software; musicArtist, musicTrack, album, song for music; podcast, podcastEpisode for podcast. Default: the media's track entity.",
+          "example": "software"
+        },
+        "attribute": {
+          "in": "query",
+          "type": "string",
+          "description": "Field to match the term against, relative to media, e.g. softwareDeveloper for software, artistTerm or songTerm for music, titleTerm for podcast. Default: all.",
+          "example": "softwareDeveloper"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1 to 200; default 50.",
+          "example": 25
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Result language; default en_us.",
+          "enum": [
+            "en_us",
+            "ja_jp"
+          ]
+        },
+        "version": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result key version; default 2.",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "explicit": {
+          "in": "query",
+          "type": "string",
+          "description": "Include explicit content; default Yes.",
+          "enum": [
+            "Yes",
+            "No"
+          ]
+        }
+      },
+      "notes": [
+        "To search apps, set media=software; entity=iPadSoftware or desktopSoftware for iPad or Mac apps."
+      ],
+      "job": "apps.search",
+      "docs_url": "https://performance-partners.apple.com/search-api",
+      "verified": {
+        "docs": "https://performance-partners.apple.com/search-api"
+      }
+    },
+    {
+      "id": "itunes-search.lookup",
+      "name": "Look up items by ID",
+      "summary": "Items by iTunes ID, AMG ID, UPC/EAN or ISBN, optionally with their related items (an artist's albums, an album's songs).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lookup",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "iTunes ID(s), comma-separated: an app, track, collection or artist ID.",
+          "example": "909253"
+        },
+        "amgArtistId": {
+          "in": "query",
+          "type": "string",
+          "description": "All Music Guide artist ID(s), comma-separated.",
+          "example": "468749,5723"
+        },
+        "amgAlbumId": {
+          "in": "query",
+          "type": "string",
+          "description": "All Music Guide album ID(s), comma-separated."
+        },
+        "amgVideoId": {
+          "in": "query",
+          "type": "string",
+          "description": "All Music Guide video ID."
+        },
+        "upc": {
+          "in": "query",
+          "type": "string",
+          "description": "UPC/EAN of an album or video.",
+          "example": "720642462928"
+        },
+        "isbn": {
+          "in": "query",
+          "type": "string",
+          "description": "13-digit ISBN of a book.",
+          "example": "9780316069359"
+        },
+        "entity": {
+          "in": "query",
+          "type": "string",
+          "description": "Related items to return with each match, e.g. album or song.",
+          "example": "album"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Related items to return per match.",
+          "example": 5
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order of related items; the docs show recent.",
+          "example": "recent"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter store country; default US.",
+          "example": "US"
+        }
+      },
+      "notes": [
+        "ID lookups are faster and give fewer false positives than search. Pass one ID type per call."
+      ],
+      "job": "apps.product",
+      "docs_url": "https://performance-partners.apple.com/search-api",
+      "verified": {
+        "docs": "https://performance-partners.apple.com/search-api"
+      }
+    }
+  ]
+}

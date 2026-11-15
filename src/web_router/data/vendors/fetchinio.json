@@ -1,0 +1,398 @@
+{
+  "vendor": "fetchinio",
+  "name": "Fetchin",
+  "category": "social",
+  "summary": "Professional-network profiles, posts, comments, reactions and company pages as a credit-billed API.",
+  "docs_url": "https://docs.fetchin.io/",
+  "base_url": "https://api.fetchin.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FETCHIN_API_KEY"
+        ],
+        "description": "A Fetchin API key (fetchin.io dashboard > API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-based: a free account gets 1,000 credits once; plans and pay-as-you-go add more. Most calls cost 1 credit, a few cost more (stated per endpoint). account.subscription shows what is left.",
+    "Self-serve plans allow 5 requests per second.",
+    "Paging differs by endpoint: feeds use paginationToken, search uses cursor, comments and reactions use a start offset.",
+    "Accepts profile and post URLs as well as URNs; URNs are more stable."
+  ],
+  "sources": [
+    "https://docs.fetchin.io/",
+    "https://docs.fetchin.io/quickstart.md",
+    "https://docs.fetchin.io/concepts/rate-limits.md",
+    "https://docs.fetchin.io/api-reference/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "fetchinio.account.subscription",
+      "name": "Get plan and credits",
+      "summary": "Plan, remaining credits, per-second rate limit and billing status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/subscription",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "fetchinio.account.usage",
+      "name": "Get credit usage",
+      "summary": "Balance and credits used per endpoint and day over a UTC date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/usage",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "First UTC day, YYYY-MM-DD."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "Last UTC day, YYYY-MM-DD."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "fetchinio.profile.get",
+      "name": "Get a profile",
+      "summary": "Professional profile details by URL or URN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/profile",
+      "params": {
+        "profileUrlOrUrn": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Profile URL, public identifier or URN (URN is most stable)."
+        },
+        "fullProfile": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also read the detailed experience and education pages."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      },
+      "notes": [
+        "1 credit, or 2 with fullProfile=true."
+      ]
+    },
+    {
+      "id": "fetchinio.posts.list",
+      "name": "List a profile's posts",
+      "summary": "Posts of a profile with engagement metrics, paged by paginationToken.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/posts",
+      "params": {
+        "profileUrlOrUrn": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Profile URL, public identifier or URN (URN is most stable)."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; larger values are clamped (100 for most feeds)."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous response, unchanged."
+        },
+        "includeReposts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return reposts without commentary."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "fetchinio.posts.search",
+      "name": "Search posts",
+      "summary": "Public posts by keyword and filters, paged by cursor.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/posts/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Search terms: quoted phrases, AND/OR/NOT, parentheses, hashtags; at most 5 boolean operators."
+        },
+        "sortBy": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "relevance",
+            "date"
+          ]
+        },
+        "postedWithin": {
+          "in": "body",
+          "type": "string",
+          "description": "Keep posts from this window.",
+          "enum": [
+            "24h",
+            "week",
+            "month"
+          ]
+        },
+        "postedAfter": {
+          "in": "body",
+          "type": "string",
+          "description": "ISO-8601 timestamp or epoch milliseconds, at most 365 days back."
+        },
+        "contentType": {
+          "in": "body",
+          "type": "array",
+          "description": "Only posts with one of these attachment kinds."
+        },
+        "authorProfiles": {
+          "in": "body",
+          "type": "array",
+          "description": "Only posts by these people (1-25 profile ids or URLs)."
+        },
+        "authorCompanies": {
+          "in": "body",
+          "type": "array",
+          "description": "Only posts by these company pages (1-10 ids, urns or URLs)."
+        },
+        "mentionsProfiles": {
+          "in": "body",
+          "type": "array"
+        },
+        "mentionsCompanies": {
+          "in": "body",
+          "type": "array"
+        },
+        "authorIndustries": {
+          "in": "body",
+          "type": "array"
+        },
+        "authorJobTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Author's current title, matched as a phrase."
+        },
+        "maxResults": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, max and default 50."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "cursor from the previous response, with the same query and filters."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      },
+      "notes": [
+        "A read over POST: the search terms and filters go in the JSON body.",
+        "Set sortBy explicitly: it has no default."
+      ]
+    },
+    {
+      "id": "fetchinio.post.comments",
+      "name": "List comments on a post",
+      "summary": "Comments with authors and replies; pages by start offset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/post/comments",
+      "params": {
+        "postUrlOrUrn": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Post URL or URN (urn:li:activity:<id>, urn:li:ugcPost:<id>, urn:li:share:<id>)."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "relevance",
+            "recent"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; larger values are clamped (100 for most feeds)."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset of the first item (only on offset-paged endpoints)."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "fetchinio.post.reactions",
+      "name": "List reactions on a post",
+      "summary": "Who reacted, with reaction type and profile; pages by start offset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/post/reactions",
+      "params": {
+        "postUrlOrUrn": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Post URL or URN (urn:li:activity:<id>, urn:li:ugcPost:<id>, urn:li:share:<id>)."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; larger values are clamped (100 for most feeds)."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset of the first item (only on offset-paged endpoints)."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "fetchinio.company.get",
+      "name": "Get a company",
+      "summary": "Company page details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company",
+      "params": {
+        "companyUrlOrUrn": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company page URL, identifier or URN."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      },
+      "notes": [
+        "1 credit."
+      ]
+    },
+    {
+      "id": "fetchinio.company.batch",
+      "name": "Get up to 50 companies",
+      "summary": "One call for many companies; billed only for those found.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/company/batch",
+      "params": {
+        "companies": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "1 to 50 company URLs, identifiers or URNs."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      },
+      "notes": [
+        "A read over POST: the company list goes in the JSON body. Each entry succeeds or errors on its own."
+      ]
+    },
+    {
+      "id": "fetchinio.company.posts",
+      "name": "List a company page's posts",
+      "summary": "Posts of a company page with engagement metrics, paged by paginationToken.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/posts",
+      "params": {
+        "companyUrlOrUrn": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company page URL, identifier or URN."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; larger values are clamped (100 for most feeds)."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "paginationToken from the previous response, unchanged."
+        },
+        "includeReposts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return reposts without commentary."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "top",
+            "recent"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.fetchin.io/api-reference/openapi.json",
+      "verified": {
+        "docs": "https://docs.fetchin.io/api-reference/openapi.json"
+      }
+    }
+  ]
+}

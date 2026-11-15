@@ -1,0 +1,553 @@
+{
+  "vendor": "fdic",
+  "name": "FDIC BankFind Suite",
+  "category": "finance",
+  "summary": "FDIC data on every US insured bank: institutions, branches, quarterly Call Report financials, failures since 1934, structure changes, deposits by branch and yearly industry totals.",
+  "docs_url": "https://api.fdic.gov/banks/docs",
+  "base_url": "https://api.fdic.gov/banks",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FDIC_API_KEY"
+        ],
+        "required": false,
+        "description": "An optional api.fdic.gov key; the FDIC recommends one but does not currently require it."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Keyless today; a key is recommended. The API moved from banks.data.fdic.gov to api.fdic.gov/banks.",
+    "Every field name and filter value is UPPERCASE. Join tables on CERT (the FDIC certificate number).",
+    "Amounts such as DEP are in thousands of dollars (DEP:[50000 TO *] means over $50 million).",
+    "limit defaults to 10 (100 on failures and history) and tops out at 10,000; page with offset. meta.total gives the match count."
+  ],
+  "sources": [
+    "https://api.fdic.gov/banks/docs",
+    "https://api.fdic.gov/banks/docs/swagger.yaml"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fdic.institutions.search",
+      "name": "Search institutions",
+      "summary": "Banks and savings institutions with location, status, assets, deposits and returns.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/institutions",
+      "params": {
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Elasticsearch query-string filter, field names in UPPERCASE, e.g. STALP:IA AND ACTIVE:1, DEP:[50000 TO *], DATEUPDT:[\"2010-01-01\" TO \"2010-12-31\"].",
+          "example": "STALP:IA AND ACTIVE:1"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated UPPERCASE fields to return."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to sort by, default NAME."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASC (default) or DESC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, max 10,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Fuzzy name search, e.g. NAME: Island."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://api.fdic.gov/banks/docs/swagger.yaml",
+      "verified": {
+        "docs": "https://api.fdic.gov/banks/docs/swagger.yaml"
+      }
+    },
+    {
+      "id": "fdic.locations.search",
+      "name": "Search branches",
+      "summary": "Offices and branches of institutions, with addresses and service types.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/locations",
+      "params": {
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Elasticsearch query-string filter, field names in UPPERCASE, e.g. STALP:IA AND ACTIVE:1, DEP:[50000 TO *], DATEUPDT:[\"2010-01-01\" TO \"2010-12-31\"].",
+          "example": "STALP:IA AND ACTIVE:1"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated UPPERCASE fields to return."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to sort by, default NAME."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASC (default) or DESC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, max 10,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://api.fdic.gov/banks/docs/swagger.yaml",
+      "verified": {
+        "docs": "https://api.fdic.gov/banks/docs/swagger.yaml"
+      }
+    },
+    {
+      "id": "fdic.financials.search",
+      "name": "Get quarterly financials",
+      "summary": "Quarterly financial data per institution, by report date (REPDTE).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/financials",
+      "params": {
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Elasticsearch query-string filter, field names in UPPERCASE, e.g. STALP:IA AND ACTIVE:1, DEP:[50000 TO *], DATEUPDT:[\"2010-01-01\" TO \"2010-12-31\"].",
+          "example": "STALP:IA AND ACTIVE:1"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated UPPERCASE fields to return."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to sort by, default REPDTE."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASC (default) or DESC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, max 10,000, or 500 when more than 250 fields are requested."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "agg_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to aggregate by."
+        },
+        "agg_term_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field(s) whose unique terms are counted per aggregation."
+        },
+        "agg_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most aggregated results to show."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "agg_sum_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field(s) summed per aggregation."
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://api.fdic.gov/banks/docs/swagger.yaml",
+      "verified": {
+        "docs": "https://api.fdic.gov/banks/docs/swagger.yaml"
+      }
+    },
+    {
+      "id": "fdic.failures.search",
+      "name": "Search bank failures",
+      "summary": "Failed institutions since 1934 with failure and resolution details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/failures",
+      "params": {
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Elasticsearch query-string filter, field names in UPPERCASE, e.g. STALP:IA AND ACTIVE:1, DEP:[50000 TO *], DATEUPDT:[\"2010-01-01\" TO \"2010-12-31\"].",
+          "example": "STALP:IA AND ACTIVE:1"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated UPPERCASE fields to return."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to sort by, default FAILDATE."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASC (default) or DESC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, max 10,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "agg_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to aggregate by."
+        },
+        "agg_term_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field(s) whose unique terms are counted per aggregation."
+        },
+        "agg_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most aggregated results to show."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "agg_sum_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field(s) summed per aggregation."
+        }
+      },
+      "job": "company.insolvency",
+      "docs_url": "https://api.fdic.gov/banks/docs/swagger.yaml",
+      "verified": {
+        "docs": "https://api.fdic.gov/banks/docs/swagger.yaml"
+      }
+    },
+    {
+      "id": "fdic.history.search",
+      "name": "Search structure changes",
+      "summary": "Mergers, name changes, relocations and other structure events.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/history",
+      "params": {
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Elasticsearch query-string filter, field names in UPPERCASE, e.g. STALP:IA AND ACTIVE:1, DEP:[50000 TO *], DATEUPDT:[\"2010-01-01\" TO \"2010-12-31\"].",
+          "example": "STALP:IA AND ACTIVE:1"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated UPPERCASE fields to return."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to sort by, default PROCDATE."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASC (default) or DESC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, max 10,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Fuzzy name search, e.g. NAME: Island."
+        },
+        "agg_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to aggregate by."
+        },
+        "agg_term_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field(s) whose unique terms are counted per aggregation."
+        },
+        "agg_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most aggregated results to show."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        }
+      },
+      "job": "company.history",
+      "docs_url": "https://api.fdic.gov/banks/docs/swagger.yaml",
+      "verified": {
+        "docs": "https://api.fdic.gov/banks/docs/swagger.yaml"
+      }
+    },
+    {
+      "id": "fdic.summary.search",
+      "name": "Get yearly industry totals",
+      "summary": "Aggregate financial and structure data subtotalled by year, from 1934.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/summary",
+      "params": {
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Elasticsearch query-string filter, field names in UPPERCASE, e.g. STALP:IA AND ACTIVE:1, DEP:[50000 TO *], DATEUPDT:[\"2010-01-01\" TO \"2010-12-31\"].",
+          "example": "STALP:IA AND ACTIVE:1"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated UPPERCASE fields to return."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to sort by, default YEAR."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASC (default) or DESC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, max 10,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "agg_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to aggregate by."
+        },
+        "agg_term_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field(s) whose unique terms are counted per aggregation."
+        },
+        "agg_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most aggregated results to show."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "agg_sum_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field(s) summed per aggregation."
+        }
+      },
+      "job": "market.statistics",
+      "docs_url": "https://api.fdic.gov/banks/docs/swagger.yaml",
+      "verified": {
+        "docs": "https://api.fdic.gov/banks/docs/swagger.yaml"
+      }
+    },
+    {
+      "id": "fdic.sod.search",
+      "name": "Get Summary of Deposits",
+      "summary": "Annual Summary of Deposits data for insured institutions and their offices.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sod",
+      "params": {
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "Elasticsearch query-string filter, field names in UPPERCASE, e.g. STALP:IA AND ACTIVE:1, DEP:[50000 TO *], DATEUPDT:[\"2010-01-01\" TO \"2010-12-31\"].",
+          "example": "STALP:IA AND ACTIVE:1"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated UPPERCASE fields to return."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to sort by, default YEAR."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "ASC (default) or DESC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, max 10,000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        },
+        "agg_by": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field to aggregate by."
+        },
+        "agg_term_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "UPPERCASE field(s) whose unique terms are counted per aggregation."
+        },
+        "agg_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most aggregated results to show."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://api.fdic.gov/banks/docs/swagger.yaml",
+      "verified": {
+        "docs": "https://api.fdic.gov/banks/docs/swagger.yaml"
+      }
+    }
+  ]
+}

@@ -1,0 +1,541 @@
+{
+  "vendor": "crustdata",
+  "name": "Crustdata",
+  "category": "company-data",
+  "summary": "Company and people search, enrichment, job listings and web search from Crustdata's datasets.",
+  "docs_url": "https://docs.crustdata.com",
+  "pricing_url": "https://docs.crustdata.com/general/pricing.md",
+  "base_url": "https://api.crustdata.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CRUSTDATA_API_KEY"
+        ],
+        "description": "a Crustdata API key from the dashboard (https://crustdata.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "x-api-version": "2025-11-01"
+  },
+  "notes": [
+    "Every call carries the pinned x-api-version 2025-11-01 header (set by this catalog).",
+    "Credit-based with per-endpoint rate limits (15 to 45 requests per minute by default). Some live Company and Person endpoints need an enterprise plan; account.credits shows the balance.",
+    "Filters are JSON condition objects {field, type, value} using dot-path fields; discover valid values with company.autocomplete."
+  ],
+  "sources": [
+    "https://docs.crustdata.com/llms.txt",
+    "https://docs.crustdata.com/openapi-specs/2025-11-01/introduction.md",
+    "https://docs.crustdata.com/api-reference/company-apis/search-companies-with-indexed-fields-only.md",
+    "https://docs.crustdata.com/api-reference/company-apis/get-full-company-enrichment.md",
+    "https://docs.crustdata.com/api-reference/person-apis/search-people-using-filters-and-sorting.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "crustdata.company.search",
+      "name": "Search companies",
+      "summary": "Structured filters, a natural-language query, or both.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "A filter condition {field, type, value} or a group {op: and|or, conditions: [...]}; fields use dot paths.",
+          "example": {
+            "field": "basic_info.primary_domain",
+            "type": "=",
+            "value": "hubspot.com"
+          }
+        },
+        "search": {
+          "in": "body",
+          "type": "object",
+          "description": "Ranked natural-language search: {query, mode: hybrid|lexical|semantic}. Needed when filters are omitted.",
+          "example": {
+            "query": "AI infrastructure startups",
+            "mode": "hybrid"
+          }
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous response; keep the other inputs unchanged."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page (default 20; max 1000 filter-only, 100 ranked)."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort directives [{field, order: asc|desc}].",
+          "example": [
+            {
+              "field": "headcount.total",
+              "order": "desc"
+            }
+          ]
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Field groups or dot paths to return, e.g. basic_info, headcount, funding."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data.",
+        "0.03 credits per result plus premium groups (taxonomy 0.1; followers, headcount, funding, hiring 0.2; technographics 1 when filtering).",
+        "Ranked search cursors expire after 20 minutes; sorts apply only to filter-only search. Default rate limit 30 requests per minute."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.crustdata.com/api-reference/company-apis/search-companies-with-indexed-fields-only.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/company-apis/search-companies-with-indexed-fields-only.md"
+      }
+    },
+    {
+      "id": "crustdata.company.identify",
+      "name": "Identify a company",
+      "summary": "Match a company from partial information, ranked by confidence.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/identify",
+      "params": {
+        "names": {
+          "in": "body",
+          "type": "array",
+          "description": "Company names. Give exactly one of names, domains, crustdata_company_ids, professional_network_profile_urls."
+        },
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains.",
+          "example": [
+            "retool.com"
+          ]
+        },
+        "crustdata_company_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Crustdata company IDs."
+        },
+        "professional_network_profile_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Company profile URLs."
+        },
+        "exact_match": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Exact matching; omit to auto-detect."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Field groups to return: crustdata_company_id, basic_info, social_profiles."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data.",
+        "Send exactly one identifier type; one result per identifier. Rate limit 30 per minute."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.crustdata.com/api-reference/company-apis/identify-a-company-from-name-domain-id-or-profile-url.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/company-apis/identify-a-company-from-name-domain-id-or-profile-url.md"
+      }
+    },
+    {
+      "id": "crustdata.company.enrich",
+      "name": "Enrich companies",
+      "summary": "Firmographics, headcount, funding, web traffic, people, news and more.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/enrich",
+      "params": {
+        "names": {
+          "in": "body",
+          "type": "array",
+          "description": "Company names. Give exactly one of names, domains, crustdata_company_ids, professional_network_profile_urls."
+        },
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains.",
+          "example": [
+            "retool.com"
+          ]
+        },
+        "crustdata_company_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Crustdata company IDs."
+        },
+        "professional_network_profile_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Company profile URLs."
+        },
+        "exact_match": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Exact matching; omit to auto-detect."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Field groups to return. Without it only crustdata_company_id and basic_info come back; list headcount, funding, people, hiring and others explicitly."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data.",
+        "No match answers 200 with an empty matches array. Rate limit 15 per minute."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.crustdata.com/api-reference/company-apis/get-full-company-enrichment.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/company-apis/get-full-company-enrichment.md"
+      }
+    },
+    {
+      "id": "crustdata.company.autocomplete",
+      "name": "Autocomplete company filter values",
+      "summary": "Valid filter values with counts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/search/autocomplete",
+      "params": {
+        "field": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search field in dot notation.",
+          "example": "taxonomy.professional_network_industry"
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text to complete; empty returns top values.",
+          "example": "tech"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum suggestions (default 20)."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.crustdata.com/api-reference/company-apis/get-autocomplete-suggestions-for-company-search-fields.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/company-apis/get-autocomplete-suggestions-for-company-search-fields.md"
+      }
+    },
+    {
+      "id": "crustdata.person.search",
+      "name": "Search people",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filter condition {field, type, value} or a group combined with and, or, all_of.",
+          "example": {
+            "field": "experience.employment_details.current.title",
+            "type": "=",
+            "value": "CEO"
+          }
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort directives [{field, order}]."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page (default 20)."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous response; keep the other inputs unchanged."
+        },
+        "post_processing": {
+          "in": "body",
+          "type": "object",
+          "description": "{exclude_profiles, exclude_names}."
+        },
+        "preview": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only basic fields, faster."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Field paths or families to return."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.crustdata.com/api-reference/person-apis/search-people-using-filters-and-sorting.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/person-apis/search-people-using-filters-and-sorting.md"
+      }
+    },
+    {
+      "id": "crustdata.person.enrich",
+      "name": "Enrich person profiles",
+      "summary": "Employment history, education and skills from the cached dataset.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/enrich",
+      "params": {
+        "professional_network_profile_urls": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 25 profile URLs."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Field groups: basic_profile, professional_network, skills, social_handles, experience, education, certifications, honors, dev_platform_profiles, assessment, social_posts, research_profiles."
+        },
+        "preview": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Basic fields only; must be enabled on your account."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data.",
+        "Rate limit 15 per minute."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.crustdata.com/api-reference/person-apis/enrich-person-profiles-from-cached-dataset.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/person-apis/enrich-person-profiles-from-cached-dataset.md"
+      }
+    },
+    {
+      "id": "crustdata.person.contact_enrich",
+      "name": "Enrich person contact data",
+      "summary": "Business emails, personal emails and phone numbers.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/contact/enrich",
+      "params": {
+        "professional_network_profile_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 25 profile URLs. Give this or business_emails, not both."
+        },
+        "business_emails": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 25 business emails."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Contact tiers: contact.business_emails, contact.personal_emails, contact.phone_numbers, contact.phone_numbers_info, contact.websites."
+        },
+        "verified": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only business emails passing a deliverability check now."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.crustdata.com/api-reference/person-apis/enrich-only-person-contact-data-from-cached-dataset.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/person-apis/enrich-only-person-contact-data-from-cached-dataset.md"
+      }
+    },
+    {
+      "id": "crustdata.person.identify",
+      "name": "Identify people",
+      "summary": "Resolve identifiers to people.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/identify",
+      "params": {
+        "professional_network_profile_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 25 profile URLs. 1 credit per match."
+        },
+        "emails": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 25 emails; an unknown address is matched by name at the domain company."
+        },
+        "research_profile_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Google Scholar profile URLs."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data.",
+        "Send exactly one identifier key."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.crustdata.com/api-reference/person-apis/identify-people-from-profile-urls-emails-or-google-scholar-profile-urls.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/person-apis/identify-people-from-profile-urls-emails-or-google-scholar-profile-urls.md"
+      }
+    },
+    {
+      "id": "crustdata.job.search",
+      "name": "Search job listings",
+      "summary": "Job listings with the hiring company firmographics.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/job/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "A filter condition {field, type, value} or a group {op: and|or, conditions: [...]}; fields use dot paths.",
+          "example": {
+            "field": "company.basic_info.company_id",
+            "type": "=",
+            "value": 631394
+          }
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous response; keep the other inputs unchanged."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Listings per page; 0 for aggregations only (default 20)."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort directives [{field, order}]."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Dot paths to return, e.g. job_details.title."
+        },
+        "aggregations": {
+          "in": "body",
+          "type": "array",
+          "description": "Aggregations [{type: count|group_by, field, agg: count, size}]."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.crustdata.com/api-reference/job-apis/search-the-indexed-job-dataset.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/job-apis/search-the-indexed-job-dataset.md"
+      }
+    },
+    {
+      "id": "crustdata.web.search",
+      "name": "Search the web",
+      "kind": "read",
+      "method": "POST",
+      "path": "/web/search/live",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search text; supports site: and filetype:.",
+          "example": "crustdata"
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter country code.",
+          "example": "US"
+        },
+        "sources": {
+          "in": "body",
+          "type": "array",
+          "description": "Sources to query (e.g. news, web); all if omitted."
+        },
+        "site": {
+          "in": "body",
+          "type": "string",
+          "description": "Restrict to a domain."
+        },
+        "start_date": {
+          "in": "body",
+          "type": "integer",
+          "description": "Unix seconds."
+        },
+        "end_date": {
+          "in": "body",
+          "type": "integer",
+          "description": "Unix seconds."
+        },
+        "human_mode": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Use a browser-like retrieval path when blocked."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Result pages to aggregate; above 15 is rejected; above 1 needs exactly one source."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries or looks up data."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.crustdata.com/api-reference/web-apis/web-search.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/web-apis/web-search.md"
+      }
+    },
+    {
+      "id": "crustdata.account.credits",
+      "name": "Get the credit balance",
+      "summary": "Remaining credits and the recurring grant.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/credits",
+      "job": "account.usage",
+      "docs_url": "https://docs.crustdata.com/api-reference/account-apis/get-account-credit-balance.md",
+      "verified": {
+        "docs": "https://docs.crustdata.com/api-reference/account-apis/get-account-credit-balance.md"
+      }
+    }
+  ]
+}

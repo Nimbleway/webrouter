@@ -1,0 +1,274 @@
+{
+  "vendor": "prospeo",
+  "name": "Prospeo",
+  "category": "enrichment",
+  "summary": "Find and verify emails and mobiles, enrich people and companies, and search a B2B people and company database.",
+  "docs_url": "https://prospeo.io/api-docs",
+  "pricing_url": "https://prospeo.io/pricing",
+  "base_url": "https://api.prospeo.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "PROSPEO_API_KEY"
+        ],
+        "description": "A Prospeo API key (Prospeo dashboard > API). Sent in the X-KEY header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Almost every call is a POST with a JSON body; bodies carry the filters or the person to match.",
+    "Charged only on results: 1 credit per email found, 10 per mobile, 1 per search page with results; repeats within 90 days (enrich) or 30 days (search pages) are free.",
+    "Search results never include emails or mobiles; enrich a person to get them."
+  ],
+  "sources": [
+    "https://prospeo.io/api-docs/llms.txt",
+    "https://prospeo.io/api-docs/authentication",
+    "https://prospeo.io/api-docs/enrich-person",
+    "https://prospeo.io/api-docs/bulk-enrich-person",
+    "https://prospeo.io/api-docs/enrich-company",
+    "https://prospeo.io/api-docs/search-person",
+    "https://prospeo.io/api-docs/search-company",
+    "https://prospeo.io/api-docs/search-suggestions",
+    "https://prospeo.io/api-docs/account-information"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "prospeo.account.info",
+      "name": "Get account information",
+      "summary": "Plan, remaining and used credits, renewal date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account-information",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://prospeo.io/api-docs/account-information",
+      "verified": {
+        "docs": "https://prospeo.io/api-docs/account-information"
+      }
+    },
+    {
+      "id": "prospeo.people.enrich",
+      "name": "Enrich a person",
+      "summary": "Match one person and return profile, company and email, optionally a mobile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrich-person",
+      "params": {
+        "only_verified_email": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only records with a verified email. Default false."
+        },
+        "enrich_mobile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Reveal the mobile number if one exists (10 credits)."
+        },
+        "only_verified_mobile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only records with a mobile; also sets enrich_mobile. Default false."
+        },
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Person to match: first_name, last_name, full_name, linkedin_url, email (work), company_name, company_website, company_linkedin_url, person_id (from search). Needs first_name+last_name+a company field, or full_name+a company field, or linkedin_url, or email, or person_id.",
+          "example": {
+            "first_name": "Eva",
+            "last_name": "Kiegler",
+            "company_website": "intercom.com"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 credit per email found (covers person and company data); a mobile adds up to 10 credits per mobile found. No charge when nothing is found, or when the same record is re-enriched within 90 days (free_enrichment in the answer says so)."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://prospeo.io/api-docs/enrich-person",
+      "verified": {
+        "docs": "https://prospeo.io/api-docs/enrich-person"
+      }
+    },
+    {
+      "id": "prospeo.people.bulk_enrich",
+      "name": "Enrich up to 50 people",
+      "summary": "Bulk version of person enrichment.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/bulk-enrich-person",
+      "params": {
+        "only_verified_email": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only records with a verified email. Default false."
+        },
+        "enrich_mobile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Reveal the mobile number if one exists (10 credits)."
+        },
+        "only_verified_mobile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only records with a mobile; also sets enrich_mobile. Default false."
+        },
+        "data": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 50 objects, each with a required identifier (your own alphanumeric string) plus the same matching fields as enrich_person."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "Credits only for matches returned, same rules as people.enrich; total_cost in the answer is the request total. Records that fail the matching rules come back in invalid_datapoints."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://prospeo.io/api-docs/bulk-enrich-person",
+      "verified": {
+        "docs": "https://prospeo.io/api-docs/bulk-enrich-person"
+      }
+    },
+    {
+      "id": "prospeo.company.enrich",
+      "name": "Enrich a company",
+      "summary": "Company profile from a website, LinkedIn URL, name or id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrich-company",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Object with at least one of company_website, company_linkedin_url, company_name (weak on its own), company_id.",
+          "example": {
+            "company_website": "deloitte.com"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 credit per matched company; none when no match or on re-enrichment within 90 days."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://prospeo.io/api-docs/enrich-company",
+      "verified": {
+        "docs": "https://prospeo.io/api-docs/enrich-company"
+      }
+    },
+    {
+      "id": "prospeo.people.search",
+      "name": "Search people",
+      "summary": "Filter people by title, seniority, department, location and company attributes. Emails and mobiles are not returned.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search-person",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filter object. Most keys take include and/or exclude lists: person_seniority, person_department, person_job_title, person_location_search, company_industry, company_headcount_range, company_technology, company_location_search, plus company.names and company.websites (up to 500 each). An exclude-only search is not allowed."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1; 25 results per page."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 credit per request that returns at least one person; a page already paid for in the last 30 days is free (\"free\": true). Max 25,000 results per query.",
+        "Enum filters accept only predefined values; location and job title values must match search_suggestions output exactly."
+      ],
+      "job": "people.search",
+      "docs_url": "https://prospeo.io/api-docs/search-person",
+      "verified": {
+        "docs": "https://prospeo.io/api-docs/search-person"
+      }
+    },
+    {
+      "id": "prospeo.company.search",
+      "name": "Search companies",
+      "summary": "Filter companies; 25 per page.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search-company",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filter object, same style as people.search company filters."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "1 credit per request that returns at least one company; a page already paid for in the last 30 days is free."
+      ],
+      "job": "company.search",
+      "docs_url": "https://prospeo.io/api-docs/search-company",
+      "verified": {
+        "docs": "https://prospeo.io/api-docs/search-company"
+      }
+    },
+    {
+      "id": "prospeo.search.suggestions",
+      "name": "Get valid filter values",
+      "summary": "Valid location, job title, technology, industry, NAICS or SIC strings for search filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search-suggestions",
+      "params": {
+        "location_search": {
+          "in": "body",
+          "type": "string",
+          "description": "Text to match locations (2+ characters). Send exactly one *_search parameter."
+        },
+        "job_title_search": {
+          "in": "body",
+          "type": "string",
+          "description": "Text to match job titles."
+        },
+        "technology_search": {
+          "in": "body",
+          "type": "string",
+          "description": "Text to match technologies."
+        },
+        "industry_search": {
+          "in": "body",
+          "type": "string",
+          "description": "Text to match industries."
+        }
+      },
+      "notes": [
+        "A read over POST: nothing is changed.",
+        "Free. Own rate limit of 15 requests per second. Naics_search, sic_search and company filter lookups also exist; see the docs."
+      ],
+      "job": "people.search",
+      "docs_url": "https://prospeo.io/api-docs/search-suggestions",
+      "verified": {
+        "docs": "https://prospeo.io/api-docs/search-suggestions"
+      }
+    }
+  ]
+}

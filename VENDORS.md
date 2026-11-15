@@ -6,7 +6,9 @@ for. Unlike `search` or `extract`, nothing here is interchangeable or
 normalized: each vendor answers in its own shape, and the router adds the
 credentials, finds the endpoint, and keeps three guarantees (credentials go
 only to the vendor's host, no input is dropped or invented, writes are
-opt-in). See the README's "Vendor data" section for the API.
+opt-in). Every endpoint listed here reads: none sends, publishes, writes or
+generates media, and none is a raw model call, though some return what an AI
+engine answered as data. See the README's "Vendor data" section for the API.
 
 Every entry is written from the vendor's own documentation. **Checked** says
 how: `docs <date>` means the entry was transcribed from the vendor's reference
@@ -17,17 +19,536 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-2 vendors, 21 endpoints.
+363 vendors, 2675 endpoints.
 
 ### advertising
 
+Ad accounts and ad libraries: campaigns, spend, creatives.
+
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
-| [Google Ads](https://developers.google.com/google-ads/api/rest/overview) `google-ads` | Your Google Ads accounts: GAQL reports on campaigns, spend, clicks and conversions, Keyword Planner ideas and volumes, and budget changes. | 6 read, 2 write | OAuth refresh token | `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REFRESH_TOKEN` | docs 2026-11-08 |
+| [Adyntel](https://docs.adyntel.com/) `adyntel` | Competitor ad intelligence: the ads a company runs on Meta, Google, LinkedIn and TikTok, keyword search across ad libraries, and a domain's paid and organic keywords. | 9 read | key in body | `ADYNTEL_API_KEY`, `ADYNTEL_EMAIL` | docs 2026-11-08 |
+| [Foreplay](https://public.api.foreplay.co/docs) `foreplay` | Search a library of Meta, TikTok and other platform ads and brands: creatives, transcripts, brand lookups by name or domain, and running-ad analytics. | 7 read | key in header | `FOREPLAY_API_KEY` | docs 2026-11-09 |
+| [Google Ads](https://developers.google.com/google-ads/api/rest/overview) `google-ads` | Your Google Ads accounts: GAQL reports on campaigns, spend, clicks and conversions, and Keyword Planner ideas and volumes. | 6 read | OAuth refresh token | `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REFRESH_TOKEN` | docs 2026-11-08 |
+| [Meta Ad Library](https://www.facebook.com/ads/library/api/) `meta-ad-library` | Search the public Meta Ad Library: ads running on Facebook, Instagram and other Meta apps by keyword or page, including political and issue ads. | 1 read | key in query | `META_AD_LIBRARY_ACCESS_TOKEN` | docs 2026-11-08 |
+| [Meta Ads (Marketing API)](https://developers.facebook.com/docs/marketing-apis) `meta-ads` | Your Facebook and Instagram ad accounts: account details, campaigns, and performance insights (spend, reach, clicks, conversions) at any level and breakdown. | 3 read | key in query | `META_ADS_ACCESS_TOKEN` | docs 2026-11-08 |
+| [Pinterest Ads](https://developers.pinterest.com/docs/api/v5/) `pinterest-ads` | Your Pinterest ad accounts: list accounts, campaigns, ad groups and ads, and pull analytics for accounts and campaigns. | 6 read | OAuth refresh token | `PINTEREST_APP_ID`, `PINTEREST_APP_SECRET`, `PINTEREST_REFRESH_TOKEN` | docs 2026-11-08 |
+| [Snapchat Ads](https://developers.snap.com/api/marketing-api/Ads-API/authentication) `snapchat-ads` | Your Snapchat ad accounts: organizations, ad accounts, campaigns and ads, plus delivery stats for any of them. | 7 read | OAuth refresh token | `SNAPCHAT_CLIENT_ID`, `SNAPCHAT_CLIENT_SECRET`, `SNAPCHAT_REFRESH_TOKEN` | docs 2026-11-08 |
+| [TikTok Ads (Marketing API)](https://business-api.tiktok.com/portal/docs) `tiktok-ads` | TikTok API for Business: ad accounts, campaigns, ad groups, ads and synchronous performance reports for the advertisers that authorized your app. | 5 read | key in header | `TIKTOK_ADS_ACCESS_TOKEN` | docs 2026-11-09 |
+| [Upspring](https://public-api.upspring.ai/v1/docs/ui) `upspring` | Competitive ad intelligence: live ads across Meta, TikTok, YouTube, Google, LinkedIn and more, broken into creative dimensions, with advertisers graded D to A+ on estimated spend, traffic and sales. | 8 read | key in header | `UPSPRING_API_KEY` | docs 2026-11-09 |
+
+### analytics
+
+Web and product analytics, tag management, CRM and marketing data.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Cloudflare](https://developers.cloudflare.com/api/) `cloudflare` | Zone traffic, firewall and security analytics through Cloudflare's GraphQL Analytics API, plus zones and DNS records from the v4 REST API. | 5 read | key in header | `CLOUDFLARE_API_TOKEN` | docs 2026-11-09 |
+| [Google Analytics 4 (Data API)](https://developers.google.com/analytics/devguides/reporting/data/v1) `google-analytics` | Reports from your Google Analytics 4 properties: users, sessions, events and conversions by any dimension, plus realtime and the dimension/metric catalog. | 3 read | OAuth refresh token | `GOOGLE_ANALYTICS_CLIENT_ID`, `GOOGLE_ANALYTICS_CLIENT_SECRET`, `GOOGLE_ANALYTICS_REFRESH_TOKEN` | docs 2026-11-08 |
+| [Google Tag Manager](https://developers.google.com/tag-platform/tag-manager/api/reference/rest/v2) `google-tag-manager` | Your Tag Manager accounts, containers and workspaces: read tags, triggers and variables. | 7 read | OAuth refresh token | `GOOGLE_TAG_MANAGER_CLIENT_ID`, `GOOGLE_TAG_MANAGER_CLIENT_SECRET`, `GOOGLE_TAG_MANAGER_REFRESH_TOKEN` | docs 2026-11-08 |
+| [HubSpot](https://developers.hubspot.com/docs/api-reference/legacy/crm/understanding-the-crm) `hubspot` | HubSpot CRM records (contacts, companies, deals, tickets), CRM search, deal pipelines and stages, and owners through the CRM v3 API. | 6 read | key in header | `HUBSPOT_ACCESS_TOKEN` | docs 2026-11-09 |
+| [Klaviyo](https://developers.klaviyo.com/en/reference/api_overview) `klaviyo` | Email, SMS and push campaign and flow performance (opens, clicks, conversions, revenue), metrics and their aggregates from a Klaviyo account. | 6 read | key in header | `KLAVIYO_API_KEY` | docs 2026-11-09 |
+| [PostHog](https://posthog.com/docs/api) `posthog` | Product analytics from a PostHog project: SQL (HogQL) queries over events and persons, saved insights and dashboards, persons, events and feature flags. | 9 read | key in header | `POSTHOG_PERSONAL_API_KEY` | docs 2026-11-09 |
+| [Similarweb](https://developers.similarweb.com/docs/similarweb-web-traffic-api) `similarweb` | Estimated website traffic and engagement, marketing channel mix, referrals, country split, global rank, similar sites and search keywords for any domain. | 8 read | key in query | `SIMILARWEB_API_KEY` | docs 2026-11-09 |
+
+### seo
+
+Keywords, rankings, backlinks and search-console data.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Ahrefs](https://docs.ahrefs.com/api/docs/introduction.md) `ahrefs` | Ahrefs API v3: Domain Rating, backlinks, referring domains, organic keywords, top pages and keyword metrics. | 10 read | key in header | `AHREFS_API_KEY` | docs 2026-11-09 |
+| [cloro](https://cloro.dev/docs/api-reference/introduction) `cloro` | Structured answers and sources from ChatGPT, Gemini, Perplexity, Google AI Mode, Bing AI Mode, Google Search and Google News, by country. | 12 read | key in header | `CLORO_API_KEY` | docs 2026-11-08 |
+| [DataForSEO](https://docs.dataforseo.com/v3/) `dataforseo` | DataForSEO APIs: live and queued Google SERPs, keyword data, DataForSEO Labs and backlinks, billed per task in USD. | 9 read | HTTP Basic | `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` | docs 2026-11-08 |
+| [Google Search Console](https://developers.google.com/webmaster-tools/v1/api_reference_index) `google-search-console` | Your Search Console properties: search performance (clicks, impressions, CTR, position by query, page, country, device and date) and sitemaps. | 3 read | OAuth refresh token | `GOOGLE_SEARCH_CONSOLE_CLIENT_ID`, `GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET`, `GOOGLE_SEARCH_CONSOLE_REFRESH_TOKEN` | docs 2026-11-08 |
+| [Keywords Everywhere](https://api.keywordseverywhere.com/docs/#/) `keywordseverywhere` | Keyword search volume, CPC and competition, related and People Also Search For keywords, domain and URL keywords, traffic and backlinks. | 9 read | key in header | `KEYWORDSEVERYWHERE_API_KEY` | docs 2026-11-09 |
+| [Majestic](https://developer-support.majestic.com/api/) `majestic` | Majestic link intelligence: Trust Flow, Citation Flow, backlinks, referring domains, anchors and top pages. | 6 read | key in query | `MAJESTIC_API_KEY` | docs 2026-11-08 |
+| [Moz](https://moz.com/help/links-api) `moz` | Moz Links API: Domain Authority, Page Authority, backlinks, anchor text, linking domains and top pages. | 9 read | key in header | `MOZ_API_TOKEN` | docs 2026-11-08 |
+| [Semrush](https://developer.semrush.com/api/v3/analytics/basic-docs/) `semrush` | Semrush Analytics API: domain overviews, organic and paid keywords, keyword research and backlink reports. | 14 read | key in query | `SEMRUSH_API_KEY` | docs 2026-11-08 |
+| [SE Ranking](https://seranking.com/api/data/) `seranking` | SE Ranking Data API: domain analysis, keyword research and backlink data. | 11 read | key in header | `SERANKING_API_KEY` | docs 2026-11-08 |
+| [Serpstat](https://api-docs.serpstat.com/docs/serpstat-public-api/jenasqbwtxdlr-introduction-to-serpstat-api) `serpstat` | SEO data: domain visibility and organic keywords, competitors, keyword volumes and ideas, stored Google top-100 results and backlink summaries, over a JSON-RPC API. | 8 read | key in query | `SERPSTAT_API_KEY` | docs 2026-11-09 |
+| [SpyFu](https://developer.spyfu.com/) `spyfu` | SpyFu competitive research API: domain stats, organic and paid keywords, competitors, top pages and keyword data. | 8 read | key in query | `SPYFU_API_KEY` | docs 2026-11-08 |
+
+### social
+
+Social networks and communities: profiles, posts, creators.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [AnyAPI](https://getanyapi.com/docs) `anyapi` | One pay-per-call wallet in front of many data sources: social profiles, posts, comments and search across Facebook, Instagram, LinkedIn, TikTok, X and Google. | 31 read | key in header | `ANYAPI_API_KEY` | docs 2026-11-08 |
+| [DEV Community](https://developers.forem.com/api/v1) `dev-to` | Articles, comments, users, tags and organizations on DEV (dev.to), the developer blogging community, through the Forem API v1. | 9 read | key in header | `DEV_TO_API_KEY` | docs 2026-11-09 |
+| [Edges](https://docs.edges.run/v1/api/introduction) `edges` | LinkedIn and Sales Navigator data over REST: extract people, companies and posts, run searches, and find profile or company URLs. | 8 read | key in header | `EDGES_API_KEY` | docs 2026-11-09 |
+| [Facebook Pages (Graph API)](https://developers.facebook.com/docs/pages-api) `facebook` | Facebook Pages you manage through Meta's Graph API: Page details and the Page feed. | 3 read | key in query | `FACEBOOK_ACCESS_TOKEN` | docs 2026-11-08 |
+| [FastMoss](https://developer.fastmoss.com/api/docs/guide/quickStart.html) `fastmoss` | TikTok Shop data: products, shops, creators, videos and rankings, with sales and revenue estimates by region. | 8 read | key in header | `FASTMOSS_API_KEY` | docs 2026-11-09 |
+| [Fetchin](https://docs.fetchin.io/) `fetchinio` | Professional-network profiles, posts, comments, reactions and company pages as a credit-billed API. | 10 read | key in header | `FETCHIN_API_KEY` | docs 2026-11-08 |
+| [HarvestAPI](https://docs.harvestapi.io) `harvestapi` | LinkedIn data without a LinkedIn login: profiles, companies, jobs, posts, comments and reactions, searchable by filters. | 18 read | key in header | `HARVESTAPI_API_KEY` | docs 2026-11-08 |
+| [Influencers Club](https://docs.influencers.club/) `influencersclub` | Creator discovery, similar creators and enrichment (profile, analytics, posts, audience overlap) across social platforms. | 13 read | key in header | `INFLUENCERS_CLUB_API_KEY` | docs 2026-11-08 |
+| [Instagram Graph API](https://developers.facebook.com/docs/instagram-platform/instagram-graph-api) `instagram` | Your Instagram professional account through Meta's Graph API: profile, media, insights, comments and other businesses' public data. | 7 read | key in query | `INSTAGRAM_ACCESS_TOKEN` | docs 2026-11-08 |
+| [Just One API](https://docs.justoneapi.com/en/usage) `justoneapi` | Social and e-commerce data from Chinese and global platforms: Xiaohongshu, Weibo, TikTok, Instagram and YouTube profiles, posts, comments and search. | 20 read | key in query | `JUSTONEAPI_TOKEN` | docs 2026-11-08 |
+| [LinkedIn](https://learn.microsoft.com/en-us/linkedin/) `linkedin` | LinkedIn's official API for the signed-in member: identity, and posts by a member or company page. | 3 read | key in header | `LINKEDIN_ACCESS_TOKEN` | docs 2026-11-08 |
+| [Postiz](https://docs.postiz.com/public-api/introduction) `postiz` | Posts scheduled and published to connected social channels (X, LinkedIn, Instagram, TikTok, YouTube and more), and their analytics. | 6 read | key in header | `POSTIZ_API_KEY` | docs 2026-11-09 |
+| [Scrape Creators](https://docs.scrapecreators.com) `scrapecreators` | Public social media data over one API: TikTok, Instagram, YouTube, X, LinkedIn and Reddit profiles, posts, comments and search. | 26 read | key in header | `SCRAPECREATORS_API_KEY` | docs 2026-11-08 |
+| [SoundCloud](https://developers.soundcloud.com/docs/api/guide) `soundcloud` | SoundCloud's public API: search tracks, playlists and users, resolve soundcloud.com URLs, and read tracks, users, their uploads, followers and related artists. | 10 read | OAuth refresh token | `SOUNDCLOUD_CLIENT_ID`, `SOUNDCLOUD_CLIENT_SECRET` | docs 2026-11-09 |
+| [Stack Exchange](https://api.stackexchange.com/docs) `stackexchange` | Questions, answers, users and tags across Stack Overflow and the other Stack Exchange sites, through the Stack Exchange API v2.3. | 9 read | key in header | `STACKEXCHANGE_API_KEY` | docs 2026-11-09 |
+| [TikHub](https://docs.tikhub.io/) `tikhub` | Public data from TikTok, Instagram, YouTube and X (and many other platforms) over one API: profiles, posts, comments and search. | 20 read | key in header | `TIKHUB_API_KEY` | docs 2026-11-08 |
+| [TikTok Display API](https://developers.tiktok.com/doc/display-api-overview/) `tiktok` | The TikTok Display API: profile and videos of the TikTok user who authorized your app. | 3 read | key in header | `TIKTOK_ACCESS_TOKEN` | docs 2026-11-08 |
+| [TwitterScore](https://twitterscore.gitbook.io/twitterscore/developers/api-documentation) `twitterscore` | Influence scores for X (Twitter) accounts, mostly crypto: score history, smart followers by category and tag, mentions and trending accounts. | 10 read | key in query | `TWITTERSCORE_API_KEY` | docs 2026-11-09 |
+| [X (Twitter) API](https://docs.x.com/x-api) `x` | X API v2: search recent posts, look up users and posts, and read timelines and followers. | 5 read | key in header | `X_BEARER_TOKEN` | docs 2026-11-08 |
+| [YouTube Data API](https://developers.google.com/youtube/v3/docs) `youtube` | Public YouTube data: videos, channels, playlists, comments and search, read with a Google API key. | 6 read | key in query | `YOUTUBE_API_KEY` | docs 2026-11-08 |
+
+### enrichment
+
+People and contact data: emails, phones, profiles.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [AI Ark](https://docs.ai-ark.com) `aiark` | B2B people and company search, verified email and mobile finding, job posts and lookalike company discovery from AI Ark. | 10 read | key in header | `AIARK_API_KEY` | docs 2026-11-08 |
+| [Airscale](https://docs.airscale.io/api-reference/api-overview) `airscale` | Find professional and personal emails and mobile numbers, search people and companies, and extract LinkedIn profiles. | 10 read | key in header | `AIRSCALE_API_KEY` | docs 2026-11-09 |
+| [Anymail Finder](https://anymailfinder.com/email-finder-api/docs) `anymailfinder` | Find and verify business emails by person, company, decision-maker role or LinkedIn URL, charged only for valid hits. | 8 read | key in header | `ANYMAILFINDER_API_KEY` | docs 2026-11-08 |
+| [Apollo.io](https://docs.apollo.io/reference/) `apollo` | Search and enrich B2B people and companies, with email and phone reveal, from Apollo's contact database. | 6 read | key in header | `APOLLO_API_KEY` | docs 2026-11-08 |
+| [BlitzAPI](https://docs.blitz-api.ai) `blitzapi` | B2B people and company search, LinkedIn-based enrichment, verified work emails, phone numbers and job postings from BlitzAPI. | 19 read | key in header | `BLITZ_API_KEY` | docs 2026-11-08 |
+| [Captain Data](https://docs.captaindata.com/v1/introduction) `captaindata` | LinkedIn people and company data: find, search via Sales Navigator queries, enrich profiles, work history, skills and company employees. | 10 read | key in header | `CAPTAINDATA_API_KEY` | docs 2026-11-09 |
+| [Clado](https://docs.clado.ai/api-reference/introduction) `clado` | Natural-language people search over LinkedIn profiles, deep research jobs, profile scraping and email/phone enrichment. | 9 read | key in header | `CLADO_API_KEY` | docs 2026-11-09 |
+| [Clay](https://developers.clay.com/public-api/quickstart) `clay` | Clay's Public API: people and company search, results of saved enrichment routines, and queries over your Clay tables. | 7 read | key in header | `CLAY_PUBLIC_API_KEY` | docs 2026-11-09 |
+| [ContactOut](https://api.contactout.com/) `contactout` | Find work and personal emails and phones from LinkedIn profiles, search people and companies, and verify emails. | 20 read | key in header | `CONTACTOUT_API_KEY` | docs 2026-11-08 |
+| [Datagma](https://datagmaapi.readme.io/reference/getting-started-with-your-api) `datagma` | Find work emails and phones, enrich people and companies, and detect job changes. | 6 read | key in query | `DATAGMA_API_KEY` | docs 2026-11-08 |
+| [Data Legion](https://www.datalegion.ai/docs/api-reference/overview) `datalegion` | Person and company enrichment and SQL-style search over 188M+ person and 71M+ company profiles, with optional contact data. | 7 read | key in header | `DATALEGION_API_KEY` | docs 2026-11-09 |
+| [Dropcontact](https://developer.dropcontact.com/) `dropcontact` | Find and verify professional emails and add company data to contact lists, asynchronously, paying only for verified emails. | 3 read | key in header | `DROPCONTACT_API_KEY` | docs 2026-11-08 |
+| [DropLeads](https://dropleads.readme.io/) `dropleads` | Prime-DB people and company search, verified or simple person enrichment, company enrichment and credit balance. | 11 read | key in header | `DROPLEADS_API_KEY` | docs 2026-11-08 |
+| [Enrich Layer](https://enrichlayer.com/docs) `enrichlayer` | People, company, contact, job and school data: profile enrichment, lookups, search, emails and phone numbers from Enrich Layer. | 24 read | key in header | `ENRICHLAYER_API_KEY` | docs 2026-11-08 |
+| [Enrow](https://docs.enrow.io/api-overview) `enrow` | Find and verify professional emails and find phone numbers, asynchronously, by name, company or LinkedIn URL. | 7 read | key in header | `ENROW_API_KEY` | docs 2026-11-08 |
+| [Findymail](https://app.findymail.com/docs/) `findymail` | Find and verify emails and phones from names, domains or LinkedIn profiles, and look up companies and employees. | 11 read | key in header | `FINDYMAIL_API_KEY` | docs 2026-11-08 |
+| [FullEnrich](https://docs.fullenrich.com/api/v2/general/introduction) `fullenrich` | Waterfall enrichment of work emails, personal emails and mobile phones across 20+ providers, plus people and company search and reverse email lookup. | 10 read | key in header | `FULLENRICH_API_KEY` | docs 2026-11-09 |
+| [GetLeads](https://www.getleads.io/docs/) `getleadsio` | B2B contact and company database with structured search, counts, async CSV exports, and person and company enrichment. | 18 read | key in header | `GETLEADS_API_KEY` | docs 2026-11-08 |
+| [Happenstance](https://developer.happenstance.ai/api-reference/introduction) `happenstance` | Research a person from a description, and search for people across your network, groups and friends' connections. | 9 read | key in header | `HAPPENSTANCE_API_KEY` | docs 2026-11-09 |
+| [Hunter](https://hunter.io/api-documentation/v2) `hunter` | Find and verify professional email addresses by domain or person, and enrich people and companies. | 10 read | key in header | `HUNTER_API_KEY` | docs 2026-11-08 |
+| [Icypeas](https://api-doc.icypeas.com/) `icypeas` | Find and verify professional emails, search a people and company database, and scrape profile and company data. | 16 read | key in header | `ICYPEAS_API_KEY` | docs 2026-11-08 |
+| [LeadMagic](https://leadmagic.io/docs/api-reference/email-validation) `leadmagic` | Find and validate work emails, personal emails and mobiles from names or profile URLs, and look up profiles and companies. | 8 read | key in header | `LEADMAGIC_API_KEY` | docs 2026-11-08 |
+| [LeadOcean](https://leadocean.io/docs) `leadocean` | B2B people and company search, person and company enrichment, work and personal email, phone and reverse lookups, and bulk CSV exports. | 14 read | key in header | `LEADOCEAN_API_KEY` | docs 2026-11-08 |
+| [Leadsforge](https://api.leadsforge.ai/public/swagger/index.html) `leadsforge` | B2B lead search with email, phone and LinkedIn enrichment, lookalike companies, company followers and Google Maps business discovery. | 16 read | key in header | `LEADSFORGE_API_KEY` | docs 2026-11-08 |
+| [Lusha](https://docs.lusha.com/) `lusha` | Search B2B contacts and companies, then reveal emails, phones and firmographics for the ones you pick. | 11 read | key in header | `LUSHA_API_KEY` | docs 2026-11-08 |
+| [MoltSets](https://developer.moltsets.com) `moltsets` | B2B people and company search, email and mobile lookup, email validation and reverse lookups. | 15 read | key in header | `MOLTSETS_API_KEY` | docs 2026-11-08 |
+| [Nyne.ai](https://api.nyne.ai/documentation) `nyne` | People and company intelligence: person enrichment and search with contacts and social profiles, company enrichment, search, employees and funding. | 9 read | key in header | `NYNE_API_KEY`, `NYNE_API_SECRET` | docs 2026-11-09 |
+| [People Data Labs](https://docs.peopledatalabs.com/docs/api-overview) `pdl` | Person and company enrichment, identify and dataset search over PDL's person and company data. | 5 read | key in header | `PDL_API_KEY` | docs 2026-11-08 |
+| [Prospeo](https://prospeo.io/api-docs) `prospeo` | Find and verify emails and mobiles, enrich people and companies, and search a B2B people and company database. | 7 read | key in header | `PROSPEO_API_KEY` | docs 2026-11-08 |
+| [Quick Enrich](https://app.quickenrich.io/docs) `quickenrich` | Work email and phone lookup by LinkedIn URL or name and company, reverse email lookup, domain and contact discovery, and company search. | 8 read | key in header | `QUICKENRICH_API_KEY` | docs 2026-11-08 |
+| [RocketReach](https://docs.rocketreach.co/reference/rocketreach-api) `rocketreach` | Search and look up professionals and companies: work and personal emails, phones, job history and firmographics. | 8 read | key in header | `ROCKETREACH_API_KEY` | docs 2026-11-09 |
+| [Sixtyfour](https://docs.sixtyfour.ai/introduction) `sixtyfour` | Research agents and data for people and companies: enrichment, email and phone finding, reverse lookups and filter search. | 15 read | key in header | `SIXTYFOUR_API_KEY` | docs 2026-11-08 |
+| [Tomba](https://docs.tomba.io/api) `tomba` | Find, verify and enrich professional emails, phone numbers and company data by domain, name, LinkedIn URL or article. | 17 read | key in header | `TOMBA_API_KEY`, `TOMBA_SECRET_KEY` | docs 2026-11-08 |
+| [Village](https://docs.village.ai/api-reference/introduction) `village` | Relationship intelligence: warm-introduction paths to people and companies through your network, with people and company enrichment. | 13 read | key in header | `VILLAGE_API_TOKEN` | docs 2026-11-08 |
+| [Whitepages Pro](https://api.whitepages.com/docs) `whitepages` | US people search, reverse phone lookup and property records (owners, residents, tax and mortgage history). | 7 read | key in header | `WHITEPAGES_API_KEY` | docs 2026-11-09 |
+| [Wiza](https://docs.wiza.co/) `wiza` | Reveal emails and phones from profile URLs or names, enrich companies, and search prospects. | 5 read | key in header | `WIZA_API_KEY` | docs 2026-11-08 |
+| [ZoomInfo](https://docs.gtm.ai/reference/api-overview) `zoominfo` | B2B contact and company search and enrichment, scoops, intent and lookups from ZoomInfo's Data API. | 9 read | OAuth refresh token | `ZOOMINFO_CLIENT_ID`, `ZOOMINFO_CLIENT_SECRET` | docs 2026-11-09 |
+
+### verification
+
+Checking an email, a phone number or an identity.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [BounceBan](https://bounceban.com/public/doc/api.html) `bounceban` | Email verification that also scores catch-all and gateway-protected addresses, with single, bulk-list and account calls. | 9 read | key in header | `BOUNCEBAN_API_KEY` | docs 2026-11-08 |
+| [Didit](https://docs.didit.me/getting-started/introduction) `didit` | Identity verification: KYC/KYB verification sessions and their decisions. | 2 read | key in header | `DIDIT_API_KEY` | docs 2026-11-09 |
+| [Filtrat](https://filtrat.io/v1/docs) `filtrat` | Email verification, work-email finding from a name and domain or a LinkedIn URL, bulk list jobs, and email-to-LinkedIn lookup. | 8 read | key in header | `FILTRAT_API_KEY` | docs 2026-11-08 |
+| [HLR Lookup](https://www.hlrlookup.com/knowledge) `hlrlookup` | Live HLR and mobile number portability lookups: whether a phone number is live, its type, and its original and current network. | 4 read | key in body | `HLRLOOKUP_API_KEY`, `HLRLOOKUP_API_SECRET` | docs 2026-11-09 |
+| [MillionVerifier](https://developer.millionverifier.com/) `millionverifier` | Real-time email verification with a quality grade, result code, role and free-provider flags, and a credit balance check. | 2 read | key in query | `MILLIONVERIFIER_API_KEY` | docs 2026-11-08 |
+| [OrbiSearch](https://github.com/OrbiSearch/orbisearch-api/blob/main/docs/api-reference.md) `orbisearch` | Email verification that resolves catch-all domains, single or in bulk. | 4 read | key in header | `ORBISEARCH_API_KEY` | docs 2026-11-09 |
+| [Scrubby](https://docs.scrubby.io/) `scrubby` | Email validation with instant single checks, queued bulk batches and slower deep verification. | 5 read | key in header | `SCRUBBY_API_KEY` | docs 2026-11-08 |
+| [Trestle](https://docs.trestleiq.com/api-reference) `trestleiq` | Phone validation, caller identification and lead-contact grading (phone, email, address, IP) from Trestle's identity data. | 3 read | key in header | `TRESTLEIQ_API_KEY` | docs 2026-11-08 |
+| [Kitt](https://documenter.getpostman.com/view/479833/2s93m62NHf) `trykitt` | Find and verify work emails in real time, with a credit balance and job lookup. | 5 read | key in header | `TRYKITT_API_KEY` | docs 2026-11-08 |
+| [ZeroBounce](https://www.zerobounce.net/docs/email-validation-api-quickstart) `zerobounce` | Real-time email validation with status, sub-status, domain and activity signals, plus credit and usage checks. | 3 read | key in query | `ZEROBOUNCE_API_KEY` | docs 2026-11-08 |
+
+### company-data
+
+Companies, funding, jobs, technographics and business registries.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [akta.pro](https://docs.akta.pro) `akta` | Company data, headcount, traffic, jobs, reviews, news signals and generated company lists from akta.pro. | 10 read | key in header | `AKTA_API_KEY` | docs 2026-11-08 |
+| [Ashby Job Board](https://developers.ashbyhq.com/docs/public-job-posting-api) `ashby` | A company's public Ashby job board: listed roles with descriptions, location, workplace type and optional compensation. | 1 read | none | none | docs 2026-11-09 |
+| [Aviato](https://docs.data.aviato.co) `aviato` | Company, funding, investor and people data, contact info and search through the Aviato data engine. | 33 read | key in header | `AVIATO_API_KEY` | docs 2026-11-08 |
+| [Context.dev](https://docs.context.dev) `branddev` | Brand and company data, natural-language company and people search, person enrichment, news, plus web scrape, crawl, map and search from Context.dev. | 14 read | key in header | `CONTEXT_DEV_API_KEY` | docs 2026-11-08 |
+| [Brandfetch](https://docs.brandfetch.com) `brandfetch` | Brand data by domain, ticker, ISIN or crypto symbol: logos, colors, fonts, descriptions and company facts; plus brand-name search and brand context. | 7 read | key in header and query | `BRANDFETCH_API_KEY`, `BRANDFETCH_CLIENT_ID` | docs 2026-11-09 |
+| [BuiltWith](https://api.builtwith.com) `builtwith` | Website technology profiling: the tech stack and metadata of a domain, sites using a technology, related sites and domains for a company name. | 8 read | key in header | `BUILTWITH_API_KEY` | docs 2026-11-09 |
+| [CNPJá](https://api.cnpja.com/docs) `cnpja` | Brazilian company registry (CNPJ) data: establishments, companies with partners, Simples Nacional and Receita Federal records, and filtered searches. | 9 read | key in header | `CNPJA_API_KEY` | docs 2026-11-09 |
+| [Companies House](https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference) `companies-house` | The UK company register: company profiles, officers, filing history, persons with significant control, charges and insolvency. | 9 read | HTTP Basic | `COMPANIES_HOUSE_API_KEY` | docs 2026-11-09 |
+| [CompanyEnrich](https://docs.companyenrich.com) `companyenrich` | Company and people search, enrichment, workforce insights, lookalikes and work-email lookup from CompanyEnrich. | 25 read | key in header | `COMPANYENRICH_API_KEY` | docs 2026-11-08 |
+| [Coresignal](https://docs.coresignal.com) `coresignal` | Fresh company, employee and job data from professional-network sources: search for IDs, then collect or enrich records. | 6 read | key in header | `CORESIGNAL_API_KEY` | docs 2026-11-08 |
+| [Corpo API](https://docs.corpoapi.com) `corpoapi` | Official company-register lookups by jurisdiction: profiles, officers, charges, insolvency, shareholders, financials, ownership and VAT checks. | 16 read | key in header | `CORPOAPI_API_KEY` | docs 2026-11-08 |
+| [Crunchbase](https://data.crunchbase.com/docs/using-the-api) `crunchbase` | Company, funding, investor and people data from the Crunchbase REST API (v4): entity lookup, search and autocomplete. | 6 read | key in header | `CRUNCHBASE_API_KEY` | docs 2026-11-08 |
+| [Crustdata](https://docs.crustdata.com) `crustdata` | Company and people search, enrichment, job listings and web search from Crustdata's datasets. | 11 read | key in header | `CRUSTDATA_API_KEY` | docs 2026-11-08 |
+| [Diffbot](https://www.diffbot.com/docs/) `diffbot` | Diffbot Knowledge Graph: search organizations, people and articles with DQL, and enhance records from partial data. | 4 read | key in query | `DIFFBOT_TOKEN` | docs 2026-11-08 |
+| [Extruct AI](https://docs.extruct.ai/api-reference/introduction) `extruct` | Company search by natural-language description, lookalikes of a reference company, company profiles, and async Deep Search and Deep Research tasks. | 9 read | key in header | `EXTRUCT_API_TOKEN` | docs 2026-11-09 |
+| [Fantastic.jobs](https://developer.fantastic.jobs) `fantasticjobs` | A job-postings feed from 58 ATS platforms and LinkedIn, Wellfound and Y Combinator, with AI-derived salary, seniority and remote fields and company details. | 6 read | key in header | `FANTASTICJOBS_API_KEY` | docs 2026-11-09 |
+| [Fiber AI](https://api.fiber.ai/llms.txt) `fiber-ai` | B2B company and people search, LinkedIn live enrichment, and email and phone reveal. | 13 read | key in header | `FIBER_API_KEY` | docs 2026-11-08 |
+| [FMCSA QCMobile (SAFER carrier data)](https://mobile.fmcsa.dot.gov/QCDevsite/docs/qcApi) `fmcsa` | US DOT-registered motor carriers from the Federal Motor Carrier Safety Administration: registration, operating authority, docket numbers, cargo, out-of-service and safety (BASIC) data, by name, DOT number or docket number. | 9 read | key in query | `FMCSA_API_KEY` | docs 2026-11-09 |
+| [Fundable](https://docs.tryfundable.ai/api-reference/introduction) `fundable` | Venture funding data: deals (rounds), startups with their latest round, investor firms and people, by filters or identifier. | 10 read | key in header | `FUNDABLE_API_KEY` | docs 2026-11-09 |
+| [GLEIF](https://documenter.getpostman.com/view/7679680/SVYrrxuU) `gleif` | The Global LEI Index: legal entity records by LEI, name, BIC or ISIN, with direct and ultimate parents and children, keyless. | 9 read | none | none | docs 2026-11-09 |
+| [Greenhouse Job Board](https://docs.greenhouse.io/job-board.html) `greenhouse` | A company's public Greenhouse job board: open roles with descriptions, departments, offices and pay ranges, keyless. | 5 read | none | none | docs 2026-11-09 |
+| [Lever Postings](https://github.com/lever/postings-api) `lever` | A company's published Lever job postings, filterable by location, team, department and commitment, keyless. | 2 read | none | none | docs 2026-11-09 |
+| [Limadata](https://limadata.com/api) `limadata` | Real-time B2B people and company enrichment, database search, contact finding and company job postings. | 4 read | key in header | `LIMADATA_API_KEY` | docs 2026-11-08 |
+| [Ocean.io](https://app.ocean.io/docs) `oceanio` | Lookalike company and people search, company and person enrichment and bulk lookups. | 15 read | key in header | `OCEAN_API_TOKEN` | docs 2026-11-08 |
+| [OpenFunnel](https://docs.openfunnel.dev) `openfunnel` | Find lookalike companies from seeds or a description, companies by the tech in their job posts, and qualify one company against criteria. | 8 read | key in header | `OPENFUNNEL_API_KEY` | docs 2026-11-09 |
+| [Openmart](https://app.openmart.com/api-docs) `openmart` | A local business database: search businesses and brands, with company enrichment from a website. | 5 read | key in header | `OPENMART_API_KEY` | docs 2026-11-08 |
+| [Origami](https://docs.origami.chat/v3/overview) `origami` | Lead lists an AI agent researched from a plain-English brief: read the lists and their rows. | 7 read | key in header | `ORIGAMI_API_KEY` | docs 2026-11-09 |
+| [PredictLeads](https://docs.predictleads.com/v3/api_endpoints) `predictleads` | Company intelligence: job openings, technology detections, news and financing events, connections and more for 120M+ companies. | 26 read | key in header | `PREDICTLEADS_API_KEY`, `PREDICTLEADS_API_TOKEN` | docs 2026-11-08 |
+| [Recent Funding](https://recentfunding.com/docs/) `recentfunding` | Recently funded startups with sourced round amounts, investors, founders, acquisitions and new VC funds. | 10 read | key in header | `RECENTFUNDING_API_KEY` | docs 2026-11-09 |
+| [API Recherche d'entreprises](https://recherche-entreprises.api.gouv.fr/docs/) `recherche-entreprises` | Search French companies, associations and public bodies (SIREN/SIRET) by name, address, directors, location and many labels, from the open Annuaire des Entreprises. | 2 read | none | none | docs 2026-11-09 |
+| [RPVS (Slovak Register of Public Sector Partners)](https://rpvs.gov.sk/opendatav2/swagger/index.html) `rpvs` | Slovakia's Register of Public Sector Partners: companies and persons receiving public money, their beneficial owners, public officials and the authorized persons who verify them, from the Ministry of Justice's open OData API. | 5 read | none | none | docs 2026-11-09 |
+| [Signalbase](https://docs.trysignalbase.com) `signalbase` | Funding, acquisition, hiring and job-change signals, investors, companies and people. | 7 read | key in header | `SIGNALBASE_API_KEY` | docs 2026-11-09 |
+| [SmartRecruiters](https://developers.smartrecruiters.com/docs/posting-api) `smartrecruiters` | Public job postings and departments of companies hiring on SmartRecruiters (Posting API). | 3 read | key in header | `SMARTRECRUITERS_API_KEY` | docs 2026-11-09 |
+| [Sumble](https://docs.sumble.com/api/api) `sumble` | Organization, people, job post and team data: what companies use, who works there and buying signals. | 10 read | key in header | `SUMBLE_API_KEY` | docs 2026-11-08 |
+| [The Companies API](https://www.thecompaniesapi.com/api) `thecompaniesapi` | Company enrichment from a domain, email or social URL, plus segmentation search over millions of companies. | 10 read | key in header | `THECOMPANIESAPI_API_TOKEN` | docs 2026-11-08 |
+| [TheirStack](https://theirstack.com/en/docs/what-is-theirstack) `theirstack` | Job postings and company technographics: search jobs and companies by hiring signals, technologies and firmographics. | 9 read | key in header | `THEIRSTACK_API_KEY` | docs 2026-11-08 |
+| [Consolidated Screening List (trade.gov)](https://developer.trade.gov/) `trade-gov` | US export screening: one search over the Commerce, State and Treasury restricted-party lists (SDN, Entity List, Denied Persons, ITAR Debarred and more), from the International Trade Administration. | 2 read | key in header | `TRADE_GOV_API_KEY` | docs 2026-11-09 |
+| [VOYGR](https://api.voygr.tech/docs) `voygr` | Check that a business exists at an address, enrich place records (hours, contacts, socials, custom fields), and read AI phone calls placed to US businesses. | 8 read | key in header | `VOYGR_API_KEY` | docs 2026-11-09 |
+| [Workable](https://help.workable.com/hc/en-us/articles/115012771647) `workable` | Published jobs, locations and departments from a company's public Workable careers page. | 3 read | none | none | docs 2026-11-09 |
+
+### finance
+
+Markets, crypto, filings and economic statistics.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Alpha Vantage](https://www.alphavantage.co/documentation/) `alphavantage` | Stock, forex and crypto prices, company fundamentals, earnings, market news sentiment and technical indicators. | 10 read | key in query | `ALPHAVANTAGE_API_KEY` | docs 2026-11-09 |
+| [Bank of Canada](https://www.bankofcanada.ca/valet/docs) `bankofcanada` | Bank of Canada Valet API: exchange rates, interest rates and other Bank of Canada statistical series, keyless. | 7 read | none | none | docs 2026-11-09 |
+| [Bank of England](https://www.bankofengland.co.uk/boeapps/database/help.asp) `bankofengland` | Bank of England Statistical Interactive Database: Bank Rate, SONIA, yields, exchange rates and other series by code, as CSV or XML, keyless. | 2 read | none | none | docs 2026-11-09 |
+| [Banco Central do Brasil (SGS)](https://dadosabertos.bcb.gov.br/) `bcb` | Keyless time series from the Central Bank of Brazil's SGS system (Selic, IPCA, exchange rates, credit and thousands more) by series code. | 2 read | none | none | docs 2026-11-09 |
+| [US Bureau of Economic Analysis](https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf) `bea` | BEA economic statistics through one data API; this entry names the dataset discovery calls and the Regional accounts (state, county and metro personal income, employment and GDP). | 5 read | key in query | `BEA_API_KEY` | docs 2026-11-09 |
+| [Benzinga](https://docs.benzinga.com/introduction/introduction) `benzinga` | Benzinga financial news, analyst ratings, consensus price targets, and earnings, guidance and dividend calendars. | 7 read | key in query | `BENZINGA_API_KEY` | docs 2026-11-09 |
+| [Binance](https://developers.binance.com/docs/binance-spot-api-docs/rest-api) `binance` | Binance spot exchange public market data: prices, 24h tickers, order books, trades, candles and symbol rules, keyless. | 8 read | none | none | docs 2026-11-09 |
+| [US Bureau of Labor Statistics](https://www.bls.gov/developers/api_signature_v2.htm) `bls` | US labor and price statistics (CPI, PPI, employment, unemployment, wages) as time series from the BLS Public Data API v2. | 5 read | key in query | `BLS_API_KEY` | docs 2026-11-09 |
+| [US CFTC Commitments of Traders](https://www.cftc.gov/MarketReports/CommitmentsofTraders/ExplanatoryNotes/index.htm) `cftc` | Weekly Commitments of Traders futures and options positioning (Legacy, Disaggregated, TFF, Supplemental) from the CFTC Public Reporting Environment. | 4 read | key in header | `CFTC_API_KEY` | docs 2026-11-09 |
+| [Coinbase Exchange](https://docs.cdp.coinbase.com/exchange/rest-api/rate-limits) `coinbase-exchange` | Public Coinbase Exchange market data: trading pairs, tickers, order books, trades, candles and 24h stats. | 7 read | none | none | docs 2026-11-09 |
+| [CoinGecko](https://docs.coingecko.com/reference/introduction) `coingecko` | Crypto prices, market data, history, OHLC candles and trending coins from CoinGecko. | 11 read | key in header | `COINGECKO_DEMO_API_KEY`, `COINGECKO_PRO_API_KEY` | docs 2026-11-08 |
+| [CoinMarketCap](https://coinmarketcap.com/api/documentation/) `coinmarketcap` | Crypto listings, latest and historical quotes, OHLCV, coin metadata, global market metrics and the Fear and Greed index from CoinMarketCap. | 10 read | key in header | `CMC_PRO_API_KEY` | docs 2026-11-09 |
+| [Commodity Price API](https://commoditypriceapi.com/docs) `commoditypriceapi` | Latest, historical, intraday and time-series prices for metals, oil, agricultural and other commodities. | 8 read | key in header | `COMMODITYPRICEAPI_API_KEY` | docs 2026-11-09 |
+| [DefiLlama](https://api-docs.defillama.com/) `defillama` | DeFi protocol and chain TVL, token prices by contract, stablecoin supply, yield pools, DEX volumes and protocol fees, keyless. | 10 read | none | none | docs 2026-11-09 |
+| [European Central Bank](https://data.ecb.europa.eu/help/api/overview) `ecb` | ECB Data Portal SDMX API: euro reference exchange rates, ECB interest rates, inflation, money and banking statistics, keyless. | 4 read | none | none | docs 2026-11-09 |
+| [EDINET](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf) `edinet` | Japan FSA's EDINET disclosure system: daily lists of securities filings (annual and quarterly reports, large shareholding reports) and the filings themselves as XBRL, PDF or CSV. | 2 read | key in query | `EDINET_API_KEY` | docs 2026-11-09 |
+| [US Energy Information Administration](https://www.eia.gov/opendata/documentation.php) `eia` | US energy statistics (electricity, petroleum, natural gas, coal, prices, production, consumption) from the EIA Open Data API v2. | 8 read | key in query | `EIA_API_KEY` | docs 2026-11-09 |
+| [EODHD](https://eodhd.com/financial-apis/) `eodhd` | End-of-day and delayed prices, ticker search and fundamentals for stocks, ETFs, forex and crypto on global exchanges. | 4 read | key in query | `EODHD_API_TOKEN` | docs 2026-11-08 |
+| [Ethplorer](https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API) `ethplorer` | Ethereum token and wallet data from Ethplorer: token info and prices, wallet balances, token transfers, transactions and top holders. | 8 read | key in query | `ETHPLORER_API_KEY` | docs 2026-11-09 |
+| [Eurostat](https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access) `eurostat` | Eurostat EU statistics (prices and inflation, energy, labour, trade, GDP, population, regions) as JSON-stat or SDMX, keyless. | 4 read | none | none | docs 2026-11-09 |
+| [FDIC BankFind Suite](https://api.fdic.gov/banks/docs) `fdic` | FDIC data on every US insured bank: institutions, branches, quarterly Call Report financials, failures since 1934, structure changes, deposits by branch and yearly industry totals. | 7 read | key in query | `FDIC_API_KEY` | docs 2026-11-09 |
+| [Financial Datasets](https://docs.financialdatasets.ai/introduction) `financialdatasets` | US public-company prices, financial statements, metrics, SEC filings, insider and institutional holdings, and macro series. | 29 read | key in header | `FINANCIAL_DATASETS_API_KEY` | docs 2026-11-08 |
+| [Finnhub](https://finnhub.io/docs/api) `finnhub` | Stock quotes, candles, company profiles, fundamentals, earnings and market news from Finnhub. | 10 read | key in query | `FINNHUB_API_KEY` | docs 2026-11-08 |
+| [FINRA API Platform](https://developer.finra.org/docs) `finra` | FINRA datasets: OTC and ATS equity volume, short interest, Reg SHO, TRACE fixed-income and Treasury aggregates, and registration data, through one query API. | 4 read | OAuth refresh token | `FINRA_CLIENT_ID`, `FINRA_CLIENT_SECRET` | docs 2026-11-09 |
+| [Fiscal.ai](https://docs.fiscal.ai/) `fiscal-ai` | Public company financials from Fiscal.ai: as-reported and standardized statements, ratios, segments and KPIs, stock prices, filings, news and earnings call transcripts for companies in the US, Canada, UK and EU. | 10 read | key in header | `FISCAL_API_KEY` | docs 2026-11-09 |
+| [Financial Modeling Prep](https://site.financialmodelingprep.com/developer/docs) `fmp` | Stock quotes, end-of-day prices, company profiles, financial statements, key metrics, news, earnings calendar and Treasury rates from Financial Modeling Prep (FMP). | 10 read | key in header | `FMP_API_KEY` | docs 2026-11-09 |
+| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/docs/api/fred/) `fred` | US and international economic time series from the Federal Reserve Bank of St. Louis: series search, metadata, observations, categories and release calendars. | 7 read | key in query | `FRED_API_KEY` | docs 2026-11-09 |
+| [Hyperliquid](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint) `hyperliquid` | Market data (mid prices, order books, candles, funding) and public account state from the Hyperliquid exchange's keyless info endpoint. | 7 read | none | none | docs 2026-11-09 |
+| [Kalshi](https://docs.kalshi.com/getting_started/quick_start_market_data) `kalshi` | Public market data from Kalshi, a prediction market exchange: series, events, markets, order books, trades and candlesticks. | 8 read | none | none | docs 2026-11-09 |
+| [Marketstack](https://docs.apilayer.com/marketstack/docs/marketstack-api-v2-v-2-0-0) `marketstack` | Worldwide end-of-day and intraday stock prices, tickers, exchanges, dividends and splits from Marketstack (APILayer). | 9 read | key in query | `MARKETSTACK_API_KEY` | docs 2026-11-08 |
+| [mempool.space](https://mempool.space/docs/api/rest) `mempool-space` | Bitcoin blockchain data from mempool.space's keyless REST API: addresses, transactions, blocks, mempool backlog, fee estimates and BTC prices. | 10 read | none | none | docs 2026-11-09 |
+| [Nasdaq Data Link](https://data.nasdaq.com/tablesapi) `nasdaq-data-link` | Financial, economic and alternative datasets from Nasdaq Data Link through its Tables API: filter rows and columns of any table you can access, and read table metadata. | 2 read | key in query | `NASDAQ_DATA_LINK_API_KEY` | docs 2026-11-09 |
+| [Federal Reserve Bank of New York Markets Data](https://markets.newyorkfed.org/static/docs/markets-api.html) `newyorkfed` | US reference rates (SOFR, EFFR, OBFR, TGCR, BGCR), SOMA holdings, repo and reverse repo operations and primary dealer statistics from the New York Fed. | 10 read | none | none | docs 2026-11-09 |
+| [Polygon.io (Massive)](https://polygon.io/docs/rest/stocks/aggregates) `polygon` | US stock bars, snapshots, trades, reference data, dividends and news from Polygon.io, now branded Massive. | 10 read | key in query | `POLYGON_API_KEY` | docs 2026-11-08 |
+| [Polymarket](https://docs.polymarket.com/) `polymarket` | Public prediction-market data from Polymarket: search, events and markets (Gamma API), order books, prices and price history (CLOB API), trades, holders and open interest (Data API). | 10 read | none | none | docs 2026-11-09 |
+| [SEC API (sec-api.io)](https://sec-api.io/docs) `sec-api` | SEC EDGAR filings as JSON from sec-api.io: filing search, full-text search, insider trades (Forms 3/4/5), 13F institutional holdings, XBRL-to-JSON financials, filing section extraction and ticker/CIK/CUSIP mapping. | 10 read | key in header | `SEC_API_KEY` | docs 2026-11-09 |
+| [SEC EDGAR](https://www.sec.gov/search-filings/edgar-application-programming-interfaces) `sec-edgar` | US public company filing histories and XBRL financial data (company facts, single concepts, cross-company frames) from the SEC's free EDGAR APIs. | 5 read | none | none | docs 2026-11-09 |
+| [Statistics Canada Web Data Service](https://www.statcan.gc.ca/en/developers/wds/user-guide) `statcan` | Statistics Canada tables (cubes) and time series: table lists and metadata, the latest data points of a series, and data by release-date range, from the keyless Web Data Service. | 8 read | none | none | docs 2026-11-09 |
+| [Stripe](https://docs.stripe.com/api) `stripe` | Payments data from a Stripe account: charges, customers, payment intents, invoices, subscriptions and the balance. | 10 read | key in header | `STRIPE_SECRET_KEY` | docs 2026-11-09 |
+| [Tiingo](https://www.tiingo.com/documentation/general/overview) `tiingo` | End-of-day and intraday stock prices, crypto prices and financial news from Tiingo. | 7 read | key in header | `TIINGO_API_KEY` | docs 2026-11-08 |
+| [US Treasury Fiscal Data](https://fiscaldata.treasury.gov/api-documentation/) `treasury-fiscal-data` | US federal finance datasets from the Treasury's keyless Fiscal Data API: public debt, average interest rates on Treasury securities, Treasury reporting exchange rates, Daily and Monthly Treasury Statements. | 5 read | none | none | docs 2026-11-09 |
+| [Twelve Data](https://twelvedata.com/docs) `twelvedata` | Prices, quotes, time series, symbol search and fundamentals for stocks, forex, crypto and ETFs worldwide. | 9 read | key in header | `TWELVEDATA_API_KEY` | docs 2026-11-08 |
+| [UN Comtrade](https://comtradeplus.un.org/ApiDocs) `un-comtrade` | International merchandise and services trade statistics by reporter, partner, commodity and flow from UN Comtrade's keyless public API: preview queries, world shares, data availability and metadata. | 6 read | none | none | docs 2026-11-09 |
+| [World Bank Indicators API](https://datahelpdesk.worldbank.org/knowledgebase/topics/125589) `worldbank` | World Bank development indicators (GDP, population, poverty, health, education...) for every country and aggregate, by year. | 7 read | none | none | docs 2026-11-09 |
+
+### search
+
+Web, news and archive search.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Andi AI Search](https://docs.andiai.com/api-reference/introduction) `andi` | Web search API for agents with adjustable effort, optional full page content, a page fetch/extract endpoint and curated topic news feeds. | 4 read | key in header | `ANDI_API_KEY` | docs 2026-11-09 |
+| [Atly](https://agentic-api.atly.com/v2/docs) `atly` | Review-based place discovery: where to go for an intent (work-friendly, gluten-free, first date) near a location, with reasons. | 5 read | key in header | `ATLY_API_KEY` | docs 2026-11-08 |
+| [BytePlus Searchinfinity](https://docs.byteplus.com/en/docs/searchinfinity/Searchinfinity_available_APIs) `byteplus-search` | Web and image search and static page fetch from BytePlus (ByteDance) Searchinfinity: Flux and Omnira search engines plus a Fetch API. | 3 read | key in header | `BYTEPLUS_SEARCH_API_KEY` | docs 2026-11-09 |
+| [Dappier](https://docs.dappier.com/quickstart) `dappier` | Real-time answers from Dappier AI models (live web search, news, stocks) and semantic article recommendations from licensed publisher data models. | 2 read | key in header | `DAPPIER_API_KEY` | docs 2026-11-09 |
+| [GDELT Project](https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/) `gdelt` | Free search over worldwide online news monitored by GDELT: article lists and coverage-volume, tone, language and source-country timelines. | 3 read | none | none | docs 2026-11-09 |
+| [Hacker News Search (Algolia)](https://hn.algolia.com/api) `hn-algolia` | Full-text search over Hacker News stories, comments, polls and users, plus whole items with their comment trees, from the free HN Search API built on Algolia. | 4 read | none | none | docs 2026-11-09 |
+| [Internet Archive](https://archive.org/developers/) `internet-archive` | Search and item metadata for the Internet Archive's collections (texts, audio, video, software), plus Wayback Machine snapshot lookup and capture history, from its keyless public APIs. | 6 read | none | none | docs 2026-11-09 |
+| [Apple iTunes Search API](https://performance-partners.apple.com/search-api) `itunes-search` | Search and look up App Store apps, iTunes music, movies, podcasts, audiobooks, TV and Apple Books titles: names, IDs, prices, genres, artwork, previews and store links, keyless. | 2 read | none | none | docs 2026-11-09 |
+| [Litescrape](https://litescrape.com/docs) `litescrape` | Low-cost SERP and web-data API: Google, Bing, DuckDuckGo, maps, app stores, review sites and page fetch. | 37 read | key in header | `LITESCRAPE_API_KEY` | docs 2026-11-08 |
+| [Library of Congress loc.gov API](https://www.loc.gov/apis/json-and-yaml/) `loc-gov` | Search and metadata for the Library of Congress's digitized collections (audio recordings, photos, maps, manuscripts, newspapers, books, films...) from the keyless loc.gov JSON API. | 6 read | none | none | docs 2026-11-09 |
+| [NewsAPI.org](https://newsapi.org/docs) `newsapi` | Search news articles from worldwide sources and blogs, top headlines by country, category or source, and the list of sources. | 3 read | key in header | `NEWSAPI_API_KEY` | docs 2026-11-09 |
+| [NewsData.io](https://newsdata.io/documentation) `newsdata` | Worldwide news API: latest and archived articles with country, category, language, domain and sentiment filters, plus crypto and market news, sources and article counts. | 6 read | key in header | `NEWSDATA_API_KEY` | docs 2026-11-09 |
+| [Octen](https://docs.octen.ai/) `octen` | Real-time web, news and broad search plus URL content extraction from Octen. | 4 read | key in header | `OCTEN_API_KEY` | docs 2026-11-08 |
+| [Opoint](https://api-docs.opoint.com/guides/search) `opoint` | Global news monitoring: boolean search over Opoint's news archive, stored-search feeds and SafeFeed firehoses. | 6 read | key in header | `OPOINT_API_KEY` | docs 2026-11-09 |
+| [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
+| [Search1API](https://s1.dev/docs) `search1api` | Web, news and Maps search, page reading, screenshots, extraction and site crawling through one API. | 12 read | key in header | `SEARCH1API_KEY` | docs 2026-11-08 |
+| [Seltz](https://docs.seltz.ai/) `seltz` | Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports. | 7 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
+| [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
+| [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
+| [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 9 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
+| [Wikipedia](https://www.mediawiki.org/wiki/API:Main_page) `wikipedia` | Keyless Wikipedia search, plain-text article extracts, page source and HTML, revision history, language links and file info through the MediaWiki APIs. | 9 read | none | none | docs 2026-11-09 |
+
+### scraping
+
+Fetching, rendering and extracting web pages; hosted browsers.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Apify](https://docs.apify.com/api/v2) `apify` | Apify Actors (ready-made scrapers for Google, LinkedIn, Meta ads, TikTok, Lazada, Weibo and more): search the Store and read Actors, their runs and the datasets they produce. | 11 read | key in header | `APIFY_API_TOKEN` | docs 2026-11-08 |
+| [Crawl4AI Cloud](https://api.crawl4ai.com/docs) `crawl4ai` | Crawl4AI's hosted API: scrape pages to markdown, extract JSON, search the web, Google results as data, direct answers and ready-made site recipes. | 7 read | key in header | `CRAWL4AI_KEY` | docs 2026-11-09 |
+| [Decodo](https://help.decodo.com/docs/web-data-api-introduction.md) `decodo` | Decodo's Web Data API: scrape a page or a supported site's template, Google results, crawl a site up to 10,000 pages, or map its URLs. | 8 read | key in header | `DECODO_API_KEY` | docs 2026-11-09 |
+| [Massive (Web Render)](https://docs.joinmassive.com/web-render/overview.md) `joinmassive` | Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations. | 4 read | key in header | `MASSIVE_TOKEN` | docs 2026-11-09 |
+| [Notte](https://docs.notte.cc/api-reference/authentication.md) `notte` | Notte's API: scrape pages to markdown or structured JSON, and search the web. | 3 read | key in header | `NOTTE_API_KEY` | docs 2026-11-09 |
+| [Olostep](https://docs.olostep.com/) `olostep` | Scrape, crawl, map, search and answer over the web with Olostep's API. | 12 read | key in header | `OLOSTEP_API_KEY` | docs 2026-11-08 |
+| [Outscraper](https://app.outscraper.com/api-docs) `outscraper` | Google Maps places and reviews, Google Search, website contacts, company firmographics and Amazon products from Outscraper's scraping API. | 8 read | key in header | `OUTSCRAPER_API_KEY` | docs 2026-11-09 |
+| [Riveter](https://docs.riveterhq.com/) `riveter` | Riveter's AI web data API: scrape a page, quick web search, one-off research answers, and the results of enrichment runs. | 6 read | key in header | `RIVETER_API_KEY` | docs 2026-11-09 |
+| [ScrapeGraphAI](https://docs.scrapegraphai.com/api-reference/introduction) `scrapegraphai` | AI-powered scrape, extract, search and crawl with natural-language prompts (ScrapeGraphAI v2 API). | 8 read | key in header | `SGAI_API_KEY` | docs 2026-11-08 |
+| [ScreenshotOne](https://screenshotone.com/docs/getting-started/) `screenshotone` | Render a web page, HTML or Markdown to an image or PDF in a real browser, with ad and cookie-banner blocking, element capture and page metadata. | 3 read | key in query | `SCREENSHOTONE_API_KEY` | docs 2026-11-09 |
+| [Spider Cloud](https://spider.cloud/docs/api) `spidercloud` | Spider's crawl, scrape, links, search and screenshot API for AI agents and RAG. | 6 read | key in header | `SPIDER_API_KEY` | docs 2026-11-08 |
+| [Supadata](https://docs.supadata.ai/api-reference/introduction) `supadata` | Transcripts and metadata of YouTube, TikTok, Instagram, X and Facebook videos, YouTube search, AI extraction from video, and web page scraping to Markdown. | 10 read | key in header | `SUPADATA_API_KEY` | docs 2026-11-09 |
+| [TinyFish](https://docs.tinyfish.ai/) `tinyfish` | Hosted browser-agent automation and deep research from TinyFish. | 4 read | key in header | `TINYFISH_API_KEY` | docs 2026-11-08 |
+
+### ai
+
+AI model benchmarks, model hubs and computed answers.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Artificial Analysis](https://artificialanalysis.ai/data-api/docs) `artificial-analysis` | Independent benchmarks of AI models: intelligence indices, speed, latency and price for LLMs, and Elo arena rankings for image, video, speech and music models. | 8 read | key in header | `ARTIFICIAL_ANALYSIS_API_KEY` | docs 2026-11-09 |
+| [Hugging Face Hub](https://huggingface.co/docs/hub/api) `huggingface` | Search the Hugging Face Hub's models, datasets, Spaces and papers, and read paper pages and daily papers. | 7 read | key in header | `HF_TOKEN` | docs 2026-11-09 |
+| [Wolfram|Alpha](https://products.wolframalpha.com/api) `wolframalpha` | Computational answers to natural-language questions (math, science, units, data on places, finance, dates and more): LLM-ready text, one-line answers, structured result pods or a rendered result image. | 4 read | key in query | `WOLFRAM_ALPHA_APPID` | docs 2026-11-09 |
+
+### media
+
+Stock images, video, music, films and texts.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [ambientCG](https://docs.ambientcg.com/api/v3/) `ambientcg` | CC0 PBR materials, HDRIs, decals and 3D models from ambientCG: search assets with their metadata and download links, and list categories and collections. | 3 read | key in header | `AMBIENTCG_API_KEY` | docs 2026-11-09 |
+| [bible-api.com](https://bible-api.com/) `bible-api` | Free, keyless Bible verses by reference, book and chapter listings, and random verses in public-domain translations. | 5 read | none | none | docs 2026-11-09 |
+| [ccMixter](https://ccmixter.org/query-api) `ccmixter` | Creative Commons music, samples and a cappellas from the ccMixter community, through its Query API: search uploads by tags, user, license, remixes and dates. | 1 read | none | none | docs 2026-11-09 |
+| [Discogs](https://www.discogs.com/developers) `discogs` | The Discogs music database (releases, masters, artists, labels, search) and marketplace prices and stats for a release. | 10 read | key in header | `DISCOGS_API_KEY` | docs 2026-11-09 |
+| [Free Use Bible API](https://bible.helloao.org/docs/) `helloao-bible` | Bible text in over 1,000 translations, plus commentaries and datasets (cross references, people, places, events, interlinear words, Strong's lexicon), as free static JSON. | 7 read | none | none | docs 2026-11-09 |
+| [Listen Notes](https://www.listennotes.com/api/docs/) `listennotes` | Podcast search engine API: full-text search of podcasts and episodes, podcast and episode metadata with transcripts, best-of lists, recommendations and genres. | 8 read | key in header | `LISTENNOTES_API_KEY` | docs 2026-11-09 |
+| [Mux](https://www.mux.com/docs/api-reference/) `mux` | Video hosting and streaming (assets, live streams) and Mux Data playback analytics: views, viewers, startup time, rebuffering and quality metrics. | 7 read | HTTP Basic | `MUX_TOKEN_ID`, `MUX_TOKEN_SECRET` | docs 2026-11-09 |
+| [NASA Image and Video Library](https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf) `nasa-images` | Search NASA's public image, video and audio library and get each asset's files, metadata and captions from the free images-api.nasa.gov API. | 5 read | none | none | docs 2026-11-09 |
+| [Openverse](https://api.openverse.org/v1/) `openverse` | Search openly licensed and public-domain images and audio (Creative Commons and similar) with license, creator and attribution for each work. | 7 read | none | none | docs 2026-11-09 |
+| [Pexels](https://www.pexels.com/api/documentation/) `pexels` | Free stock photos and videos: search, curated and popular feeds, single items with download URLs per size, and collections. | 9 read | key in header | `PEXELS_API_KEY` | docs 2026-11-09 |
+| [Poly Haven](https://redocly.github.io/redoc/?url=https://api.polyhaven.com/api-docs/swagger.json&nocors) `polyhaven` | CC0 HDRIs, textures and 3D models from Poly Haven: list and search assets, read an asset's metadata and its downloadable files by resolution and format. | 6 read | none | none | docs 2026-11-09 |
+| [Sefaria](https://developers.sefaria.org/docs/welcome) `sefaria` | The Sefaria library of Jewish texts: Tanakh, Talmud, commentaries and more in Hebrew and translation, with links between texts, topics, lexicons, calendars and full-text search. | 10 read | none | none | docs 2026-11-09 |
+| [Sketchfab](https://docs.sketchfab.com/data-api/v3/index.html) `sketchfab` | Search and read Sketchfab's 3D model library (filters for downloadable, license, face count, PBR, rigging) and get download links for downloadable models. | 7 read | key in header | `SKETCHFAB_API_KEY` | docs 2026-11-09 |
+| [TMDB (The Movie Database)](https://developer.themoviedb.org/docs/getting-started) `tmdb` | Movie, TV series and people metadata: search, details, discovery filters, trending titles and streaming availability. | 9 read | key in query | `TMDB_API_KEY` | docs 2026-11-09 |
+| [Unsplash](https://unsplash.com/documentation) `unsplash` | Search and fetch free high-resolution stock photos, collections and photographers' work. | 7 read | key in header | `UNSPLASH_ACCESS_KEY` | docs 2026-11-09 |
+
+### messaging
+
+Your email, SMS, call and chat history.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [AgentMail](https://docs.agentmail.to/) `agentmail` | Email inboxes for AI agents: list inboxes and read their messages and threads. | 5 read | key in header | `AGENTMAIL_API_KEY` | docs 2026-11-09 |
+| [AgentPhone](https://docs.agentphone.to/api-reference.md) `agentphone` | Phone numbers for AI agents: SMS/iMessage/WhatsApp messages, conversations, voice calls with transcripts, and usage. | 8 read | key in header | `AGENTPHONE_API_KEY` | docs 2026-11-09 |
+| [Resend](https://resend.com/docs/api-reference/introduction.md) `resend` | Transactional email: sent and received emails, delivery metrics, domains, request logs and usage. | 8 read | key in header | `RESEND_API_KEY` | docs 2026-11-09 |
+| [Saperly](https://saperly.com/docs) `saperly` | Phone carrier for AI agents: numbers, SMS, outbound voice calls with transcripts, consent records and usage. | 8 read | key in header | `SAPERLY_API_KEY` | docs 2026-11-09 |
+| [SendGrid](https://www.twilio.com/docs/sendgrid/api-reference/how-to-use-the-sendgrid-v3-api) `sendgrid` | Twilio SendGrid email: delivery statistics, email activity, bounces and spam reports, and credit balance. | 6 read | key in header | `SENDGRID_API_KEY` | docs 2026-11-09 |
+| [Slack](https://docs.slack.dev/reference/methods/) `slack` | Your Slack workspace: channels, history, threads and users, and message search. | 7 read | key in header | `SLACK_BOT_TOKEN` | docs 2026-11-08 |
+| [Telnyx](https://developers.telnyx.com/api-reference) `telnyx` | Telnyx communications: messages, phone numbers, number lookup, available-number search, usage detail records and balance. | 6 read | key in header | `TELNYX_API_KEY` | docs 2026-11-09 |
+| [Twilio](https://www.twilio.com/docs/usage/api) `twilio` | Twilio SMS and voice: messages, calls, phone numbers, usage records, balance and phone number lookup. | 7 read | HTTP Basic | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | docs 2026-11-09 |
+| [Vapi](https://docs.vapi.ai/api-reference) `vapi` | Voice AI agents: calls with transcripts and costs, assistants, phone numbers and call analytics. | 5 read | key in header | `VAPI_API_KEY` | docs 2026-11-09 |
+
+### productivity
+
+Calendars, files and documents.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Google Calendar](https://developers.google.com/workspace/calendar/api/v3/reference) `google-calendar` | Read a Google user's calendars, events and free/busy times through the Google Calendar API v3. | 4 read | OAuth refresh token | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `GOOGLE_CALENDAR_REFRESH_TOKEN` | docs 2026-11-09 |
+| [Google Drive](https://developers.google.com/workspace/drive/api/reference/rest/v3) `google-drive` | Search a Google user's Drive, read file metadata, download files and export Google Docs, Sheets and Slides as text, Markdown, CSV or PDF. | 5 read | OAuth refresh token | `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_CLIENT_SECRET`, `GOOGLE_DRIVE_REFRESH_TOKEN` | docs 2026-11-09 |
+| [Microsoft Graph (Microsoft 365)](https://learn.microsoft.com/en-us/graph/overview) `microsoft-graph` | Microsoft 365 / Entra ID tenant data through Microsoft Graph: users, groups and members, licence subscriptions and assignments, Microsoft 365 activity reports and sign-in logs. | 8 read | OAuth refresh token | `MS_GRAPH_CLIENT_ID`, `MS_GRAPH_CLIENT_SECRET`, `MS_GRAPH_REFRESH_TOKEN` | docs 2026-11-09 |
+
+### commerce
+
+Products, prices, travel, tickets, property and shipping.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Best Buy](https://bestbuyapis.github.io/api-documentation/) `bestbuy` | Best Buy US products: search and details with prices, stores and in-store availability, categories, trending and most-viewed products, and open-box offers. | 9 read | key in query | `BESTBUY_API_KEY` | docs 2026-11-09 |
+| [CarsXE](https://docs.carsxe.com/docs) `carsxe` | Vehicle data: VIN decoding, license plate lookup in 50+ countries, market value, history, recalls, lien and theft checks, and year/make/model search. | 9 read | key in query | `CARSXE_API_KEY` | docs 2026-11-09 |
+| [Duffel](https://duffel.com/docs/api/overview/welcome) `duffel` | Flight search across airlines: offer requests return priced offers for a journey, plus offer details and airport and place lookup. | 6 read | key in header | `DUFFEL_API_KEY` | docs 2026-11-09 |
+| [Keepa](https://github.com/keepacom/api_backend) `keepa` | Amazon product price and sales-rank history, product search, best-seller lists, categories and seller data across 11 Amazon marketplaces. | 8 read | key in query | `KEEPA_API_KEY` | docs 2026-11-09 |
+| [RentCast](https://developers.rentcast.io/reference/introduction) `rentcast` | US property records, automated value and rent estimates with comparables, active sale and rental listings, and ZIP-level market statistics. | 7 read | key in header | `RENTCAST_API_KEY` | docs 2026-11-09 |
+| [Recreation.gov RIDB](https://ridb.recreation.gov/docs) `ridb` | The Recreation Information Database behind Recreation.gov: US federal recreation areas, facilities (campgrounds, trails, ranger stations), campsites, permits, tours, activities and events. | 9 read | key in header | `RIDB_API_KEY` | docs 2026-11-09 |
+| [Service Victoria Servo Saver](https://service.vic.gov.au/find-services/transport-and-driving/servo-saver/help-centre/servo-saver-public-api) `servosaver` | Victoria (Australia) government Fair Fuel open data: every registered service station's fuel prices in cents per litre, plus station, brand and fuel-type reference lists. | 4 read | key in header | `SERVOSAVER_API_KEY` | docs 2026-11-09 |
+| [Shippo](https://docs.goshippo.com/shippoapi/public-api/) `shippo` | Multi-carrier shipping: rate quotes across 40+ carriers, purchased labels, package tracking and carrier accounts. | 7 read | key in header | `SHIPPO_API_TOKEN` | docs 2026-11-09 |
+| [Steam Web API](https://steamcommunity.com/dev) `steam` | Every Steam app id, game news, live player counts, achievement stats and public player profiles. | 7 read | key in query | `STEAM_API_KEY` | docs 2026-11-09 |
+| [Ticketmaster](https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/) `ticketmaster` | Events, attractions (artists, teams, shows) and venues on Ticketmaster, Universe, FrontGate and Ticketmaster Resale, from the Discovery API. | 7 read | key in query | `TICKETMASTER_API_KEY` | docs 2026-11-09 |
+| [WA FuelWatch](https://www.fuelwatch.wa.gov.au/tools/rss) `wafuelwatch` | Western Australian retail fuel prices by suburb, region, brand and fuel type, today's and tomorrow's, from the WA Government's FuelWatch feed. | 1 read | none | none | docs 2026-11-09 |
+
+### maps
+
+Maps, places, routing and geolocation.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Amap (Gaode) Web Service](https://lbs.amap.com/api/webservice/summary) `amap` | China maps from Amap/Gaode: geocoding and reverse geocoding, POI search by keyword, area or id, driving and transit routes, and city weather. | 8 read | key in query | `AMAP_API_KEY` | docs 2026-11-09 |
+| [API Ninjas](https://api-ninjas.com/api) `apininjas` | One key for many small reference-data APIs: WHOIS and DNS, IP geolocation, sanctions screening, earnings call transcripts, geocoding and more. | 8 read | key in header | `APININJAS_API_KEY` | docs 2026-11-09 |
+| [ArcGIS Online](https://developers.arcgis.com/rest/users-groups-and-items/search/) `arcgis` | Search ArcGIS Online's public content (feature layers, map services, web maps, datasets) and read an item's metadata and data. | 4 read | key in query | `ARCGIS_API_KEY` | docs 2026-11-09 |
+| [Foursquare Places API](https://docs.foursquare.com/fsq-developers-places/reference/places-api-overview) `foursquare` | Search 100M+ points of interest by name, category or location, and read a place's details, tips and photos. | 6 read | key in header | `FOURSQUARE_API_KEY` | docs 2026-11-09 |
+| [Google Business Profile](https://developers.google.com/my-business) `google-business-profile` | Your Google Business Profile locations and their customer reviews. | 3 read | OAuth refresh token | `GOOGLE_BUSINESS_PROFILE_CLIENT_ID`, `GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET`, `GOOGLE_BUSINESS_PROFILE_REFRESH_TOKEN` | docs 2026-11-08 |
+| [Google Maps Platform](https://developers.google.com/maps/documentation) `google-maps` | Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups. | 6 read | key in query | `GOOGLE_MAPS_API_KEY` | docs 2026-11-09 |
+| [GraphHopper Directions API](https://docs.graphhopper.com/) `graphhopper` | Routing, distance matrices, isochrones and geocoding on OpenStreetMap data. | 5 read | key in query | `GRAPHHOPPER_API_KEY` | docs 2026-11-09 |
+| [ipapi.is](https://ipapi.is/developers.html) `ipapiis` | IP address intelligence: geolocation, ASN, owning company and abuse contact, and VPN, proxy, Tor, datacenter and crawler detection. | 3 read | key in query | `IPAPI_IS_API_KEY` | docs 2026-11-09 |
+| [IPinfo](https://ipinfo.io/developers/ipinfo-api) `ipinfo` | IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans. | 3 read | key in header | `IPINFO_TOKEN` | docs 2026-11-09 |
+| [Mapbox](https://docs.mapbox.com/api/overview/) `mapbox` | Geocoding, place and POI search, driving/walking/cycling directions, travel-time matrices and isochrones. | 8 read | key in query | `MAPBOX_ACCESS_TOKEN` | docs 2026-11-09 |
+| [Mapillary](https://www.mapillary.com/developer/api-documentation) `mapillary` | Street-level imagery from Meta's Mapillary: find geotagged photos by area, point, sequence or creator, and map features (signs, objects) detected in them. | 6 read | key in header | `MAPILLARY_ACCESS_TOKEN` | docs 2026-11-09 |
+
+### environment
+
+Weather, climate, water and natural hazards.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Environment and Climate Change Canada (GeoMet-OGC-API)](https://eccc-msc.github.io/open-data/msc-geomet/ogc_api_en/) `eccc-geomet` | Canadian weather, climate and water data from ECCC/MSC as OGC API Features: climate stations and daily/monthly observations, hydrometric levels and flows, weather alerts, AQHI and more. | 7 read | none | none | docs 2026-11-09 |
+| [Environment Agency (UK) flood monitoring](https://environment.data.gov.uk/flood-monitoring/doc/reference) `environmentagency` | Live flood warnings and alerts for England, flood areas, and river, sea, groundwater and rainfall readings from Environment Agency monitoring stations. | 7 read | none | none | docs 2026-11-09 |
+| [GDACS](https://www.gdacs.org/gdacsapi/swagger/index.html) `gdacs` | Global Disaster Alert and Coordination System (EC, UN OCHA): alerts and impact data for earthquakes, tropical cyclones, floods, volcanoes, droughts and wildfires worldwide. | 7 read | none | none | docs 2026-11-09 |
+| [NASA POWER](https://power.larc.nasa.gov/docs/services/api/) `nasapower` | Keyless NASA satellite and reanalysis weather, solar radiation and climate data for any point or region: hourly, daily, monthly and long-term climatology since 1981. | 5 read | none | none | docs 2026-11-09 |
+| [NOAA National Hurricane Center](https://www.nhc.noaa.gov/productexamples/) `nhc` | Keyless feeds of active Atlantic and Pacific tropical cyclones: a JSON summary of every active storm with links to its advisories, plus basin and per-storm RSS and GIS feeds. | 4 read | none | none | docs 2026-11-09 |
+| [US National Weather Service](https://www.weather.gov/documentation/services-web-api) `nws` | Official US forecasts (7-day and hourly), active weather alerts and station observations from the National Weather Service API (api.weather.gov). | 7 read | none | none | docs 2026-11-09 |
+| [Open-Meteo](https://open-meteo.com/en/docs) `openmeteo` | Keyless weather forecasts, historical weather since 1940, air quality, marine forecasts and place-name geocoding for any coordinate. | 5 read | none | none | docs 2026-11-09 |
+| [OpenWeather](https://openweathermap.org/api) `openweather` | Current weather, 5-day/3-hour forecasts, One Call current/historical/daily summaries, air pollution and geocoding by coordinates. | 10 read | key in query | `OPENWEATHER_API_KEY` | docs 2026-11-09 |
+| [Precip](https://api-docs.precip.ai/overview) `precip` | Hyper-local observed rainfall, snowfall, soil moisture and soil temperature for any point in the US and Canada from radar and gauges, plus minutely nowcasts and a 10-day hourly forecast. | 9 read | key in header | `PRECIP_API_KEY` | docs 2026-11-09 |
+| [ACIS (NOAA Regional Climate Centers)](https://www.rcc-acis.org/docs_webservices.html) `rcc-acis` | US station and gridded climate data from the NOAA Regional Climate Centers' Applied Climate Information System: station metadata, daily/monthly/annual station data, multi-station data, grids and area metadata. | 5 read | none | none | docs 2026-11-09 |
+| [U.S. Drought Monitor](https://droughtmonitor.unl.edu/DmData/DataDownload/WebServiceInfo.aspx) `usdroughtmonitor` | Weekly U.S. Drought Monitor statistics (area, population and DSCI by drought level D0-D4) for the nation, states, counties, watersheds and other areas. | 3 read | none | none | docs 2026-11-09 |
+| [USGS Earthquake Catalog](https://earthquake.usgs.gov/fdsnws/event/1/) `usgs-earthquake` | The USGS ComCat earthquake catalog over the FDSN event web service: search and count events worldwide by time, area, magnitude and depth, or fetch one event. | 6 read | none | none | docs 2026-11-09 |
+| [USGS Water Data](https://api.waterdata.usgs.gov/docs/) `usgswater` | US stream gauge readings (discharge, gage height, water temperature and more): latest and historical instantaneous values, daily statistics and monitoring-location metadata from the USGS Water Data OGC APIs. | 5 read | key in header | `USGS_API_KEY` | docs 2026-11-09 |
+| [WeatherAPI.com](https://www.weatherapi.com/docs/) `weatherapi` | Worldwide current weather, forecasts up to 14 days, historical weather back to 2010, long-range future weather, alerts, marine and astronomy data, plus location search. | 9 read | key in query | `WEATHERAPI_API_KEY` | docs 2026-11-09 |
+
+### science
+
+Research literature and life-science databases: genes, proteins, compounds.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [AlphaFold Protein Structure Database](https://alphafold.ebi.ac.uk/api-docs) `alphafold` | Predicted protein structures from EMBL-EBI's AlphaFold DB: model file URLs (mmCIF, bCIF, PDB), confidence estimates and AlphaMissense annotations, keyed on UniProt accessions. | 5 read | none | none | docs 2026-11-09 |
+| [arXiv](https://info.arxiv.org/help/api/user-manual.html) `arxiv` | Search and look up arXiv preprints (titles, authors, abstracts, categories, links) through arXiv's free query API. | 1 read | none | none | docs 2026-11-09 |
+| [ChEMBL](https://chembl.gitbook.io/chembl-interface-documentation/web-services/chembl-data-web-services) `chembl` | EMBL-EBI's ChEMBL database of bioactive molecules: molecules and their properties, targets, bioactivity measurements, approved drugs, and substructure and similarity search. | 8 read | none | none | docs 2026-11-09 |
+| [DOI.org](https://www.doi.org/the-identifier/resources/factsheets/doi-resolution-documentation) `doi` | Resolve a DOI to its handle record: the landing-page URL and other registered values, from the DOI Foundation's proxy server. | 1 read | none | none | docs 2026-11-09 |
+| [Europe PMC](https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs) `europepmc` | Search and look up life-science literature (PubMed abstracts, PMC full text, preprints, patents) with citations, references, database cross-links and open-access full text from Europe PMC's free REST API. | 7 read | none | none | docs 2026-11-09 |
+| [gnomAD (Genome Aggregation Database)](https://gnomad.broadinstitute.org/downloads#api) `gnomad` | Population allele frequencies of human genetic variants and per-gene constraint metrics from the Broad Institute's gnomAD, through the GraphQL API behind its browser. | 1 read | none | none | docs 2026-11-09 |
+| [GTEx Portal](https://gtexportal.org/api/v2/redoc) `gtex` | The Genotype-Tissue Expression project's API: gene expression across human tissues, eQTLs and eGenes, tissue and reference-gene metadata. | 8 read | none | none | docs 2026-11-09 |
+| [Harvard Dataverse](https://guides.dataverse.org/en/latest/api/) `harvard-dataverse` | Harvard's public Dataverse repository of research datasets (including collections such as the MIT Election Data and Science Lab's returns): search, dataset and file metadata, collection contents and file downloads. | 6 read | key in header | `HARVARD_DATAVERSE_API_KEY` | docs 2026-11-09 |
+| [HGNC (HUGO Gene Nomenclature Committee)](https://www.genenames.org/help/rest/) `hgnc` | Approved human gene symbols and names, with aliases, previous symbols and cross-references (Ensembl, Entrez, UniProt, OMIM), plus VGNC symbols for other vertebrates. | 4 read | none | none | docs 2026-11-09 |
+| [MorphoSource](https://morphosource.stoplight.io/docs/morphosource-api/rm6bqdolcidct-morpho-source-rest-api) `morphosource` | MorphoSource, a public repository of 3D and 2D scientific media of biological specimens and cultural heritage objects: search media and physical objects, read their metadata, and get download links. | 6 read | key in header | `MORPHOSOURCE_API_KEY` | docs 2026-11-09 |
+| [NIH RePORTER](https://api.reporter.nih.gov/) `nih-reporter` | NIH RePORTER's API over federally funded research awards (NIH and other agencies): search projects by investigator, organization, fiscal year, text, funding and dates, and find the publications linked to them. | 2 read | none | none | docs 2026-11-09 |
+| [OpenAlex](https://help.openalex.org/how-to-use-the-api/api-overview) `openalex` | Open catalog of scholarly works, authors, institutions, sources and topics, with citations, open-access status and grouping counts. | 8 read | key in query | `OPENALEX_API_KEY` | docs 2026-11-09 |
+| [Open Targets Platform](https://platform-docs.opentargets.org/data-access/graphql-api) `opentargets` | Drug target evidence: target-disease associations, target tractability and genetic constraint, diseases, drugs and their mechanisms, through one GraphQL API. | 1 read | none | none | docs 2026-11-09 |
+| [Human Protein Atlas](https://www.proteinatlas.org/about/help/dataaccess) `proteinatlas` | Human protein and RNA expression across tissues, cells and subcellular locations, per gene or as a custom table for a gene search. | 3 read | none | none | docs 2026-11-09 |
+| [PubMed (NCBI E-utilities)](https://www.nlm.nih.gov/dataguide/eutilities/utilities.html) `pubmed` | NCBI's Entrez E-utilities over PubMed and the other NCBI databases: search, summaries, full records and links between records. | 5 read | key in query | `NCBI_API_KEY` | docs 2026-11-09 |
+| [RCSB Protein Data Bank](https://data.rcsb.org/) `rcsb-pdb` | 3D macromolecular structures from the PDB: search entries by text or attributes, then fetch entry, entity, chain, assembly and ligand metadata. | 8 read | none | none | docs 2026-11-09 |
+| [Reactome](https://reactome.org/ContentService/) `reactome` | Curated biological pathways and reactions: search the knowledgebase, map genes, proteins or chemicals to pathways, and read pathway participants and hierarchy. | 7 read | none | none | docs 2026-11-09 |
+| [Semantic Scholar](https://api.semanticscholar.org/api-docs/graph) `semanticscholar` | Academic Graph API from Ai2: paper and author search, paper details, citations, references and full-text snippet search. | 10 read | key in header | `SEMANTIC_SCHOLAR_API_KEY` | docs 2026-11-09 |
+| [Springer Nature](https://dev.springernature.com/docs/introduction) `springer-nature` | Metadata and abstracts for Springer Nature journal articles, book chapters and protocols, plus open-access full text in JATS, from the Springer Nature APIs. | 3 read | key in query | `SPRINGER_NATURE_API_KEY` | docs 2026-11-09 |
+| [STRING](https://string-db.org/help/api/) `string-db` | Protein-protein interaction networks and functional enrichment for thousands of organisms: identifier mapping, networks, interaction partners, enrichment, annotations and homology. | 7 read | none | none | docs 2026-11-09 |
+| [UniProt](https://www.uniprot.org/help/api) `uniprot` | The UniProt protein sequence and function knowledgebase (UniProtKB, UniRef, UniParc): query search, entry retrieval and identifier mapping. | 7 read | none | none | docs 2026-11-09 |
+
+### health
+
+Drugs, clinical trials, providers, nutrition and public-health data.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [BCPM Data](https://open.bcpmdata.com/guide/1.html) `bcpmdata` | Chinese pharmaceutical data (BCPMData Open Platform): global drug R&D pipelines, China and US clinical trials, and China drug approval numbers with insurance and essential-drug status. | 10 read | key in header | `BCPMDATA_API_KEY` | docs 2026-11-09 |
+| [CMS Open Payments](https://openpaymentsdata.cms.gov/about/api) `cms-open-payments` | US Open Payments data from CMS: payments and transfers of value from drug and device makers to physicians and teaching hospitals queried through the site's DKAN catalog and datastore API. | 6 read | none | none | docs 2026-11-09 |
+| [CMS Data (data.cms.gov)](https://data.cms.gov/api-docs) `data-cms` | Medicare and Medicaid datasets published by the US Centers for Medicare & Medicaid Services: the open-data catalog, and rows of any API-enabled dataset with keyword search, filters, sorting and column selection. | 3 read | none | none | docs 2026-11-09 |
+| [NIH Dietary Supplement Label Database (DSLD)](https://api.ods.od.nih.gov/dsld/docs) `dsld` | Full label contents of dietary supplements sold in the US: ingredients, amounts, claims, brands and market status, from the NIH Office of Dietary Supplements. | 5 read | none | none | docs 2026-11-09 |
+| [Canadian Nutrient File (Health Canada)](https://health-products.canada.ca/api/documentation/cnf-documentation-en.html) `health-canada-cnf` | Health Canada's reference food composition database: foods commonly eaten in Canada, their nutrient amounts per 100 g, serving-size conversion factors and food groups. | 6 read | none | none | docs 2026-11-09 |
+| [Health Canada Drug Product Database](https://health-products.canada.ca/api/documentation/dpd-documentation-en.html) `health-canada-dpd` | Keyless Health Canada data on drugs marketed in Canada: products by DIN or brand, ingredients, companies, forms, routes, schedules and status. | 9 read | none | none | docs 2026-11-09 |
+| [ISRCTN](https://www.isrctn.com/editorial/retrieveFile/81786542-9920-48a0-8fce-09f8428ab843/37855) `isrctn` | Registry of clinical trials: search trials by condition, intervention, country, phase, status or dates, and fetch one trial's full record. | 2 read | none | none | docs 2026-11-09 |
+| [Medicaid open data (data.medicaid.gov)](https://data.medicaid.gov/api/1) `medicaid` | CMS Medicaid datasets, including State Drug Utilization Data (SDUD) and NADAC drug acquisition costs: find a dataset, then filter, sort and page its rows. | 4 read | none | none | docs 2026-11-09 |
+| [NHSBSA Open Data Portal](https://opendata.nhsbsa.net/pages/api) `nhsbsa` | NHS Business Services Authority open data on its CKAN portal, including Secondary Care Medicines Data (SCMD): hospital medicine usage by trust, month and product. | 4 read | none | none | docs 2026-11-09 |
+| [NPPES NPI Registry](https://npiregistry.cms.hhs.gov/api-page) `npi-registry` | US healthcare providers and organizations by National Provider Identifier: names, taxonomies (specialties), practice and mailing addresses, other identifiers, refreshed daily by CMS. | 1 read | none | none | docs 2026-11-09 |
+| [openFDA](https://open.fda.gov/apis/) `openfda` | US Food and Drug Administration public data: drug, device and food adverse events, recalls, drug labels, NDC directory, approvals and 510(k) clearances. | 10 read | key in query | `OPENFDA_API_KEY` | docs 2026-11-09 |
+| [Open Food Facts](https://openfoodfacts.github.io/openfoodfacts-server/api/) `openfoodfacts` | Keyless open database of packaged food products: ingredients, nutrition facts, Nutri-Score, NOVA, allergens and labels by barcode, plus filtered product search. | 4 read | none | none | docs 2026-11-09 |
+| [Orphadata (Orphanet)](https://api.orphadata.com/) `orphadata` | Rare diseases from Orphanet: ORPHAcodes with ICD-10/ICD-11/OMIM cross-references, epidemiology (prevalence), natural history, associated genes, HPO phenotypes and classifications. | 9 read | none | none | docs 2026-11-09 |
+| [USDA FoodData Central](https://fdc.nal.usda.gov/api-guide/) `usda-fdc` | USDA nutrient composition data for foods: Foundation, SR Legacy, FNDDS survey foods and Branded Foods, searchable and by FDC ID. | 4 read | key in query | `USDA_FDC_API_KEY` | docs 2026-11-09 |
+| [WHO Global Health Observatory](https://www.who.int/data/gho/info/gho-odata-api) `who-gho` | World Health Organization health statistics by country or region, year and disaggregation such as sex, from the keyless GHO OData API. | 4 read | none | none | docs 2026-11-09 |
+
+### government
+
+Public records: law, courts, spending, procurement, sanctions, elections, open-data portals.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [AusTender](https://github.com/austender/austender-ocds-api) `austender` | Australian Government contract notices (awarded contracts since 2013) in Open Contracting Data Standard format, by notice ID or date range. | 2 read | none | none | docs 2026-11-09 |
+| [civicAPI](https://civicapi.org/api-documentation) `civicapi` | Live and historic election results and race calls for elections around the world, from local races to national ones. | 6 read | none | none | docs 2026-11-09 |
+| [CourtListener](https://wiki.free.law/c/courtlistener/help/api/rest/v4/overview) `courtlistener` | Free Law Project's US legal database: case law opinions, PACER dockets and filings, judges and oral arguments, with full-text search and citation lookup. | 9 read | key in header | `COURTLISTENER_API_KEY` | docs 2026-11-09 |
+| [CPSC Recalls (SaferProducts.gov)](https://www.cpsc.gov/s3fs-public/RecallRetrievalWebServicesProgrammersGuide20180917.pdf) `cpsc-recalls` | US Consumer Product Safety Commission product recalls: products, hazards, injuries, remedies, manufacturers, retailers and UPCs, searchable by field and date. | 2 read | none | none | docs 2026-11-09 |
+| [data.gov.au](https://docs.ckan.org/en/latest/api/) `data-gov-au` | Australia's national open data catalogue: search and read metadata of government datasets and query tabular resources row by row. | 5 read | none | none | docs 2026-11-09 |
+| [Latvian Open Data Portal (data.gov.lv)](https://docs.ckan.org/en/latest/api/) `data-gov-lv` | Latvia's national open data portal, including the Register of Enterprises' company register, officers, members, beneficial owners, insolvencies and annual-report financials, queryable row by row. | 5 read | none | none | docs 2026-11-09 |
+| [data.gov.ua](https://docs.ckan.org/en/latest/api/) `data-gov-ua` | Ukraine's national open data portal, including the Ministry of Justice's Unified State Register (EDR) of legal entities, sole proprietors and public associations: dataset search, metadata and publication status. | 5 read | none | none | docs 2026-11-09 |
+| [FEC (OpenFEC)](https://api.open.fec.gov/developers/) `fec` | US Federal Election Commission campaign finance data: candidates, committees, filings, financial totals, itemized contributions, disbursements and independent expenditures. | 10 read | key in header | `FEC_API_KEY` | docs 2026-11-09 |
+| [OpenFEMA](https://www.fema.gov/about/openfema/api) `fema` | FEMA open data: disaster declarations, assistance and mitigation funding, and National Flood Insurance Program claims and policies, queryable with OData-style filters. | 10 read | none | none | docs 2026-11-09 |
+| [GOV.UK](https://content-api.publishing.service.gov.uk/) `gov-uk` | The UK government's GOV.UK site as data: the Content API returns any www.gov.uk page as JSON, and the Search API searches, filters and aggregates all GOV.UK content. | 2 read | none | none | docs 2026-11-09 |
+| [GovInfo](https://api.govinfo.gov/docs/) `govinfo` | The US Government Publishing Office's GovInfo API: official publications of all three branches (bills, Congressional Record, Federal Register, CFR, court opinions, public laws) with search, change lists, package and granule metadata and related documents. | 8 read | key in query | `GOVINFO_API_KEY` | docs 2026-11-09 |
+| [Grants.gov](https://www.grants.gov/api/api-guide) `grants-gov` | US federal grant opportunities from Grants.gov: keyword and filter search over forecasted, posted, closed and archived opportunities, and the full detail of one opportunity. | 2 read | none | none | docs 2026-11-09 |
+| [legislation.gov.uk](https://www.legislation.gov.uk/developer) `legislation-gov-uk` | UK legislation (Acts, statutory instruments, devolved legislation) as revised and as enacted, in XML or Atom, from The National Archives' free Legislation API. | 5 read | none | none | docs 2026-11-09 |
+| [Legistar Web API](https://webapi.legistar.com/Help) `legistar` | Granicus Legistar's public Web API for city and county councils that use Legistar: legislation (matters) and their histories, meetings (events) and agenda items, votes, bodies and people, per client jurisdiction. | 8 read | key in query | `LEGISTAR_API_TOKEN` | docs 2026-11-09 |
+| [NHTSA vPIC](https://vpic.nhtsa.dot.gov/api/) `nhtsa` | The US National Highway Traffic Safety Administration's vPIC vehicle API: decode a VIN into make, model, year, body, engine and plant details, decode WMIs, and list makes and models. | 6 read | none | none | docs 2026-11-09 |
+| [OFAC Sanctions List Service](https://ofac.treasury.gov/sanctions-list-service) `ofac-sls` | The US Treasury OFAC Sanctions List Service's published list files: the Specially Designated Nationals (SDN) list and the consolidated non-SDN list, in the standard XML and the advanced data-model XML. | 4 read | none | none | docs 2026-11-09 |
+| [OFAC-API (sanctions screening)](https://docs.ofac-api.com/) `ofacapi` | Fuzzy screening of people, companies, vessels and aircraft against OFAC SDN and 20+ other sanctions, PEP and watch lists, single, batch or as async bulk jobs. | 5 read | key in header | `OFAC_API_KEY` | docs 2026-11-09 |
+| [OpenSanctions](https://www.opensanctions.org/docs/api/) `opensanctions` | OpenSanctions' hosted API over its consolidated sanctions, politically exposed persons and watchlist database: multi-property screening matches, full-text entity search, full entity records with relationships, and raw statements. | 6 read | key in header | `OPENSANCTIONS_API_KEY` | docs 2026-11-09 |
+| [PNCP (Portal Nacional de Contratações Públicas)](https://pncp.gov.br/api/consulta/swagger-ui/index.html) `pncp` | Brazil's national public procurement portal: tenders open for bids, published procurements, contracts and price-registration records (atas) from federal, state and municipal bodies. | 5 read | none | none | docs 2026-11-09 |
+| [SAM.gov](https://open.gsa.gov/api/get-opportunities-public-api/) `sam-gov` | US federal contract opportunities (solicitations, presolicitations, award notices) and the registry of entities registered to do business with the US government, from the GSA's SAM.gov APIs. | 2 read | key in query | `SAM_GOV_API_KEY` | docs 2026-11-09 |
+| [Socrata (Tyler Data & Insights)](https://dev.socrata.com/docs/other/discovery) `socrata` | Discovery API over the tens of thousands of government datasets, maps and charts published on Socrata open-data portals: search, autocomplete, and counts by portal, tag and category. | 7 read | key in header | `SOCRATA_APP_TOKEN` | docs 2026-11-09 |
+| [TED (Tenders Electronic Daily)](https://docs.ted.europa.eu/api/latest/search.html) `ted` | EU public procurement notices published in the Official Journal supplement (OJ S): tenders, awards and other notices from across the EU and EEA, via the TED Search API. | 1 read | none | none | docs 2026-11-09 |
+| [UNESCO Institute for Statistics Data API](https://api.uis.unesco.org/api/public/documentation) `unesco-uis` | UNESCO education, science, culture and communication indicators by country and region and year, with indicator and geo-unit definitions, from the keyless UIS Data API. | 5 read | none | none | docs 2026-11-09 |
+| [USAspending](https://api.usaspending.gov/docs/endpoints) `usaspending` | US federal spending: contracts, grants, loans and other awards, who received them, and agency budgets, from the Treasury's free USAspending.gov API. | 7 read | none | none | docs 2026-11-09 |
+| [US Census Bureau](https://www.census.gov/data/developers/guidance/api-user-guide.html) `uscensus` | US Census Bureau statistics (American Community Survey, decennial census and more) by geography, plus the Census Geocoder that turns addresses into coordinates and census geographies. | 8 read | key in query | `CENSUS_API_KEY` | docs 2026-11-09 |
+| [Vaquill](https://www.vaquill.ai/docs/api-guide/overview) `vaquill` | US statutes, regulations, constitutions and court rules (federal and every state): search, citation resolution, section metadata, full text and cross-state comparison. | 6 read | key in header | `VAQUILL_API_KEY` | docs 2026-11-09 |
+| [VoteHub Polling API](https://votehub.com/polls/api/) `votehub` | US political polling data aggregated from many pollsters: approval, favorability, generic-ballot and race polls with their source links. | 5 read | none | none | docs 2026-11-09 |
+
+### sports
+
+Fantasy sports, leagues and sports statistics.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Fantasy Football Calculator](https://help.fantasyfootballcalculator.com/article/42-adp-rest-api) `fantasyfootballcalculator` | Fantasy football average draft position (ADP) from Fantasy Football Calculator's mock drafts, by scoring format, league size and year, from its free ADP REST API. | 1 read | none | none | docs 2026-11-09 |
+| [Sleeper](https://docs.sleeper.com/) `sleeper` | Fantasy football leagues, rosters, matchups, transactions, drafts, players and trending adds/drops from Sleeper's free read-only API. | 10 read | none | none | docs 2026-11-09 |
+| [SportsDataIO (FantasyData)](https://sportsdata.io/developers/api-documentation/nfl) `sportsdataio` | NFL schedules, live scores, standings, players, season stats and fantasy projections with ADP from SportsDataIO, the API behind FantasyData. | 8 read | key in header | `SPORTSDATAIO_API_KEY` | docs 2026-11-09 |
+
+### security
+
+Vulnerabilities, advisories and threat intelligence.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [CISA Known Exploited Vulnerabilities (KEV) catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) `cisa-kev` | CISA's catalog of CVEs known to be exploited in the wild, with vendor, product, date added, required action, due date and ransomware use, as free JSON and CSV feeds. | 3 read | none | none | docs 2026-11-09 |
+| [CVE Program CVE Services](https://cveawg.mitre.org/api-docs/) `cve-services` | Official CVE Records (JSON 5 format: descriptions, affected products, references, CNA and ADP containers) and CVE ID status from the CVE Program's API. | 3 read | none | none | docs 2026-11-09 |
+| [OSV.dev](https://google.github.io/osv.dev/api/) `osv` | Open source vulnerabilities by package and version, commit hash or ID (GHSA, PYSEC, RUSTSEC, Go, OSS-Fuzz and more) in the OSV format, from Google's free OSV.dev API. | 3 read | none | none | docs 2026-11-09 |
+| [Red Hat Security Data API](https://access.redhat.com/hydra/rest/securitydata/api-docs) `redhat-security` | Red Hat Product Security data on CVEs (severity, CWE, CVSS v3/v4 scores, advisories, affected packages and package states), CSAF advisories and OVAL streams. | 4 read | none | none | docs 2026-11-09 |
+| [VirusTotal](https://docs.virustotal.com/reference/overview) `virustotal` | Threat-intelligence reports on files, URLs, domains and IP addresses: multi-engine antivirus verdicts, reputation and relationships. | 5 read | key in header | `VIRUSTOTAL_API_KEY` | docs 2026-11-09 |
+
+### developer
+
+Package registries, code hosting, cloud platforms and their prices.
+
+| Vendor | What it holds | Endpoints | Auth | Variables | Checked |
+|---|---|---|---|---|---|
+| [Azure Retail Prices](https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices) `azure-retail-prices` | Keyless Microsoft retail (pay-as-you-go, reservation, savings plan) prices for every Azure service, SKU and region. | 1 read | none | none | docs 2026-11-09 |
+| [Context7](https://context7.com/docs/api-guide) `context7` | Up-to-date, version-specific documentation and code snippets for software libraries, ranked for a question; plus reading one web page narrowed to a question. | 5 read | key in header | `CONTEXT7_API_KEY` | docs 2026-11-09 |
+| [Docker Hub](https://docs.docker.com/reference/api/hub/latest/) `docker-hub` | Docker Hub repositories and image tags: descriptions, pull and star counts, last update, tag digests, sizes and platforms. | 4 read | key in header | `DOCKER_HUB_TOKEN` | docs 2026-11-09 |
+| [GitHub](https://docs.github.com/en/rest) `github` | Repositories, issues, pull requests, commits and code search on GitHub through its REST API. | 9 read | key in header | `GITHUB_TOKEN` | docs 2026-11-09 |
+| [Google Cloud Billing Catalog](https://docs.cloud.google.com/billing/v1/how-tos/catalog-api) `google-cloud-billing` | Public list prices of Google Cloud: every service and each service's SKUs with description, regions and pricing tiers, from the Cloud Billing Catalog API. | 2 read | key in query | `GOOGLE_CLOUD_BILLING_API_KEY` | docs 2026-11-09 |
+| [IBM Cloud Global Catalog](https://cloud.ibm.com/apidocs/resource-catalog/global-catalog) `ibm-global-catalog` | IBM Cloud's catalog of services, plans and deployments with their public pricing, from the Global Catalog API. | 5 read | none | none | docs 2026-11-09 |
+| [npm registry](https://github.com/npm/registry/blob/main/docs/REGISTRY-API.md) `npm` | Public npm registry: package metadata, single versions, full-text package search, and daily download counts. | 5 read | none | none | docs 2026-11-09 |
+| [Oracle Cloud Infrastructure price list](https://docs.oracle.com/en-us/iaas/Content/Billing/Tasks/signingup_topic-Estimating_Costs.htm) `oci-price-list` | Public list prices of Oracle Cloud Infrastructure products by part number: display name, billing metric, service category and pay-as-you-go price, with tiers where they apply. | 1 read | none | none | docs 2026-11-09 |
+| [PyPI](https://docs.pypi.org/api/) `pypi` | Python Package Index metadata: a project's latest info, every release and file with hashes, known vulnerabilities, the simple index, and PyPI-wide size stats. | 5 read | none | none | docs 2026-11-09 |
+| [Read the Docs](https://docs.readthedocs.com/platform/stable/api/v3.html) `readthedocs` | Documentation projects hosted on Read the Docs: project details, versions, builds, full-text search across docs, and embeddable page sections. | 8 read | key in header | `READTHEDOCS_TOKEN` | docs 2026-11-09 |
+| [Supabase](https://supabase.com/docs/reference/api/introduction) `supabase` | Supabase Management API: the user's projects and organisations, read-only SQL against a project's Postgres, logs, health, advisors and edge functions. | 9 read | key in header | `SUPABASE_ACCESS_TOKEN` | docs 2026-11-09 |
+| [Vercel](https://vercel.com/docs/rest-api) `vercel` | Read a Vercel account: deployments and their build events and runtime logs, projects, domains, teams and the current user. | 9 read | key in header | `VERCEL_ACCESS_TOKEN` | docs 2026-11-09 |
 
 ### observability
+
+Logs, metrics, errors and uptime.
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
 | [Datadog](https://docs.datadoghq.com/api/latest/) `datadog` | Metrics, logs, events, monitors, dashboards, hosts, incidents and SLOs from your Datadog organization. | 13 read | key in header | `DD_API_KEY`, `DD_APPLICATION_KEY` | docs 2026-11-08 |
+| [Oh Dear](https://ohdear.app/docs/api/introduction) `ohdear` | Website monitoring: monitors, uptime and downtime, response-time metrics, certificate health, broken links and per-check summaries. | 9 read | key in header | `OHDEAR_API_KEY` | docs 2026-11-09 |
+| [Sentry](https://docs.sentry.io/api/) `sentry` | Error and performance monitoring: issues, their events and stack traces, explore queries over errors, logs and spans, event volume stats, projects and releases. | 8 read | key in header | `SENTRY_AUTH_TOKEN` | docs 2026-11-09 |
 <!-- /vendors -->

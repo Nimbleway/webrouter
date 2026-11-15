@@ -1,0 +1,95 @@
+{
+  "vendor": "querit",
+  "name": "Querit",
+  "category": "search",
+  "summary": "Web search API for AI agents, with highlights, optional full page text and code and finance verticals.",
+  "docs_url": "https://www.querit.ai/en/docs/overview/about",
+  "pricing_url": "https://www.querit.ai/en/pricing",
+  "base_url": "https://api.querit.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "QUERIT_API_KEY"
+        ],
+        "description": "A Querit API key (querit.ai dashboard). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "HTTP 429 means the rate limit was hit; back off exponentially. Limits and prices are on the pricing page and per plan.",
+    "Contents and Monitors endpoints exist but have no public reference page, so they are not in this entry."
+  ],
+  "sources": [
+    "https://www.querit.ai/en/docs/reference/post-for-coding-agents",
+    "https://www.querit.ai/en/docs/overview/about"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "querit.search",
+      "name": "Search the web",
+      "summary": "Web results with snippets or highlights, optionally full body text, with site, time, country, language and vertical filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Search query; natural language works.",
+          "required": true,
+          "example": "open source vector databases"
+        },
+        "count": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results; server default when omitted."
+        },
+        "highlights": {
+          "in": "body",
+          "type": "object",
+          "description": "true, or {query, maxCharacters (100 to 8000)}, for query-focused passages."
+        },
+        "needContent": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Put each result's body text in its sentence array; default false."
+        },
+        "contentMaxChars": {
+          "in": "body",
+          "type": "integer",
+          "description": "Per-result body text cap, 1 to 1,000,000; omitted or null means no cap."
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "sites {include, exclude}, timeRange {date: d[n] | w[n] | m[n] | y[n] | YYYY-MM-DDtoYYYY-MM-DD}, geo {countries {include}}, languages {include}, vertical (code or finance), resourceTags {include: qa, github; code vertical only}."
+        },
+        "rank": {
+          "in": "body",
+          "type": "object",
+          "description": "{preference: relevance | freshness}; not with vertical code."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "The response may carry a cost object (USD); its absence means unknown, not free.",
+        "Body text (needContent) is not covered by the monthly free search quota.",
+        "chunksPerDoc is deprecated in favor of highlights and is left out."
+      ],
+      "job": "web.search",
+      "docs_url": "https://www.querit.ai/en/docs/reference/post-for-coding-agents",
+      "verified": {
+        "docs": "https://www.querit.ai/en/docs/reference/post-for-coding-agents"
+      }
+    }
+  ]
+}

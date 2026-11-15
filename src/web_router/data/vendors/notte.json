@@ -1,0 +1,185 @@
+{
+  "vendor": "notte",
+  "name": "Notte",
+  "category": "scraping",
+  "summary": "Notte's API: scrape pages to markdown or structured JSON, and search the web.",
+  "docs_url": "https://docs.notte.cc/api-reference/authentication.md",
+  "pricing_url": "https://www.notte.cc/pricing",
+  "base_url": "https://api.notte.cc",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "NOTTE_API_KEY"
+        ],
+        "description": "A Notte API key (console.notte.cc/apikeys). Sent as Authorization: Bearer."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Browser work runs in a session: sessions.start, then page.goto, page.act and page.scrape with its session_id, then sessions.stop. A session also closes after idle_timeout_minutes (default 3) or max_duration_minutes (default 15). The hosted agent APIs are deprecated.",
+    "POST /sessions/start is rate limited per key by minute, hour and day; too many active sessions also returns 429 (NotteApiMaxActiveResourcesError).",
+    "Other page actions, profiles, vaults, personas, functions, the Anything API and the Data APIs (monitors, maps, news, people) are not in this entry."
+  ],
+  "sources": [
+    "https://docs.notte.cc/llms.txt",
+    "https://api.notte.cc/openapi.json",
+    "https://docs.notte.cc/api-reference/authentication.md",
+    "https://docs.notte.cc/api-reference/rate-limits.md",
+    "https://docs.notte.cc/concepts/search.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "notte.scrape",
+      "name": "Scrape a page",
+      "summary": "A page as markdown with links, or structured data shaped by instructions or a JSON Schema, from a one-off browser session.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The page to scrape.",
+          "example": "https://example.com"
+        },
+        "only_main_content": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Drop navbars, footers and the like. Default false."
+        },
+        "selector": {
+          "in": "body",
+          "type": "string",
+          "description": "Playwright selector to scope the scrape to."
+        },
+        "scrape_links": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include links. Default true."
+        },
+        "ignored_tags": {
+          "in": "body",
+          "type": "array",
+          "description": "HTML tags to ignore."
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "What to extract, e.g. 'Extract only the title, date and content of the articles.'"
+        },
+        "response_format": {
+          "in": "body",
+          "type": "object",
+          "description": "A JSON Schema for structured output."
+        },
+        "model": {
+          "in": "body",
+          "type": "string",
+          "description": "Model for structured extraction, as an OpenRouter id (e.g. google/gemini-3.5-flash)."
+        },
+        "solve_captchas": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Try to solve captchas. Default true."
+        },
+        "proxies": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Use Notte's default proxies (true, the default) or not."
+        },
+        "browser_type": {
+          "in": "body",
+          "type": "string",
+          "description": "Default chromium.",
+          "enum": [
+            "chromium",
+            "chrome"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. It opens and closes a browser session for you."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.notte.cc/api-reference/scrape/scrape-webpage.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/scrape/scrape-webpage.md"
+      }
+    },
+    {
+      "id": "notte.search",
+      "name": "Search the web",
+      "summary": "Search results, a sourced answer, or structured output for a query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The search query.",
+          "example": "notte browser automation"
+        },
+        "depth": {
+          "in": "body",
+          "type": "string",
+          "description": "How thorough the search is. Default standard.",
+          "enum": [
+            "standard",
+            "fast",
+            "deep"
+          ]
+        },
+        "outputType": {
+          "in": "body",
+          "type": "string",
+          "description": "What to return. Default searchResults.",
+          "enum": [
+            "searchResults",
+            "sourcedAnswer",
+            "structured"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.notte.cc/api-reference/search/search-web.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/search/search-web.md"
+      }
+    },
+    {
+      "id": "notte.usage",
+      "name": "Get usage",
+      "summary": "Account usage for a monthly period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "params": {
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "The month, e.g. 'May 2025'; the current one by default."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.notte.cc/api-reference/usage/get-usage.md",
+      "verified": {
+        "docs": "https://docs.notte.cc/api-reference/usage/get-usage.md"
+      }
+    }
+  ]
+}

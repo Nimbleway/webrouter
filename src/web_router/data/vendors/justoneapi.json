@@ -1,0 +1,716 @@
+{
+  "vendor": "justoneapi",
+  "name": "Just One API",
+  "category": "social",
+  "summary": "Social and e-commerce data from Chinese and global platforms: Xiaohongshu, Weibo, TikTok, Instagram and YouTube profiles, posts, comments and search.",
+  "docs_url": "https://docs.justoneapi.com/en/usage",
+  "base_url": "https://api.justoneapi.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "JUSTONEAPI_TOKEN"
+        ],
+        "description": "A Just One API access token (dashboard.justoneapi.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is a GET with the token as a query parameter.",
+    "Check the code field of the response body, not the HTTP status: 0 is success, 100 invalid token, 302 rate limit, 303 daily quota exceeded, 400 invalid parameters, 601 insufficient balance.",
+    "Docs recommend a client timeout of 120 seconds (at least 60).",
+    "Paging differs per endpoint: page, cursor, offset, paginationToken or nextToken.",
+    "The full catalog has hundreds of endpoints (Douyin, Taobao, Bilibili and more); this file names the social ones."
+  ],
+  "sources": [
+    "https://docs.justoneapi.com/en/usage",
+    "https://docs.justoneapi.com/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "justoneapi.tiktok.profile",
+      "name": "Get a TikTok profile",
+      "summary": "Profile by username or secUid.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tiktok/get-user-detail/v1",
+      "params": {
+        "uniqueId": {
+          "in": "query",
+          "type": "string",
+          "description": "Public TikTok username."
+        },
+        "secUid": {
+          "in": "query",
+          "type": "string",
+          "description": "TikTok's opaque user id (secUid), returned by the profile call."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.tiktok.posts",
+      "name": "List a TikTok user's posts",
+      "summary": "Posts by secUid, latest or most popular, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tiktok/get-user-post/v1",
+      "params": {
+        "secUid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TikTok's opaque user id (secUid), returned by the profile call."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous response; '0' for the first page."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "LATEST",
+            "MOST_POPULAR"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.tiktok.post",
+      "name": "Get a TikTok post",
+      "summary": "Details of one post by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tiktok/get-post-detail/v1",
+      "params": {
+        "postId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TikTok post id."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.tiktok.comments",
+      "name": "List comments on a TikTok post",
+      "summary": "Comments of a post, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tiktok/get-post-comment/v1",
+      "params": {
+        "awemeId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TikTok post id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous response; '0' for the first page."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.tiktok.search",
+      "name": "Search TikTok posts",
+      "summary": "Posts by keyword with sort, time and region.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/tiktok/search-post/v1",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keyword."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset, from 0 in steps of 20."
+        },
+        "sortType": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "RELEVANCE",
+            "MOST_LIKED"
+          ]
+        },
+        "publishTime": {
+          "in": "query",
+          "type": "string",
+          "description": "Publish-time filter.",
+          "enum": [
+            "ALL",
+            "ONE_DAY",
+            "ONE_WEEK",
+            "ONE_MONTH",
+            "THREE_MONTHS",
+            "HALF_YEAR"
+          ]
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country code."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.instagram.profile",
+      "name": "Get an Instagram profile",
+      "summary": "Profile by username.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/instagram/get-user-detail/v2",
+      "params": {
+        "username": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Instagram username."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.instagram.posts",
+      "name": "List an Instagram user's posts",
+      "summary": "Posts by username, paged by paginationToken.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/instagram/get-user-posts/v1",
+      "params": {
+        "username": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Instagram username."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.instagram.post",
+      "name": "Get an Instagram post",
+      "summary": "One post by shortcode.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/instagram/get-post-detail/v1",
+      "params": {
+        "code": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Post shortcode from the post URL."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.instagram.comments",
+      "name": "List comments on an Instagram post",
+      "summary": "Top-level comments, popular or newest.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/instagram/get-post-comments/v1",
+      "params": {
+        "code": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Post shortcode from the post URL."
+        },
+        "minId": {
+          "in": "query",
+          "type": "string",
+          "description": "next_min_id from the previous response."
+        },
+        "sortOrder": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "popular",
+            "newest"
+          ]
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.instagram.search",
+      "name": "Search Instagram",
+      "summary": "General keyword search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/instagram/general-search/v1",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keyword."
+        },
+        "paginationToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.youtube.search",
+      "name": "Search YouTube videos",
+      "summary": "Videos by keyword with language, date, duration and sort filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/youtube/search/v1",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Search keyword."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tag, e.g. en-US."
+        },
+        "uploadDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Upload-date filter.",
+          "enum": [
+            "all",
+            "lastHour",
+            "today",
+            "thisWeek",
+            "thisMonth",
+            "thisYear"
+          ]
+        },
+        "duration": {
+          "in": "query",
+          "type": "string",
+          "description": "Duration filter.",
+          "enum": [
+            "all",
+            "short",
+            "medium",
+            "long"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "relevance",
+            "uploadDate",
+            "viewCount",
+            "rating"
+          ]
+        },
+        "nextToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response; when set, keyword and filters are ignored."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.youtube.video",
+      "name": "Get a YouTube video",
+      "summary": "Public details of one video by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/youtube/get-video-detail/v1",
+      "params": {
+        "videoId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video id."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tag, e.g. en-US."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.youtube.channel_videos",
+      "name": "List a YouTube channel's videos",
+      "summary": "Uploads of a channel, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/youtube/get-channel-videos/v1",
+      "params": {
+        "channelId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube channel id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous response; '0' for the first page."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.youtube.captions",
+      "name": "Get YouTube captions",
+      "summary": "Caption tracks of a video, or one track as srt, xml, json3 or txt.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/youtube/get-video-captions/v1",
+      "params": {
+        "videoId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video id."
+        },
+        "languageCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format.",
+          "enum": [
+            "srt",
+            "xml",
+            "json3",
+            "txt"
+          ]
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.youtube.comments",
+      "name": "List comments on a YouTube video",
+      "summary": "First-level comments, top or newest.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/youtube/get-video-comment/v1",
+      "params": {
+        "videoId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous response; '0' for the first page."
+        },
+        "languageCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code."
+        },
+        "countryCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Region code."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "top",
+            "newest"
+          ]
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.weibo.search",
+      "name": "Search Weibo posts",
+      "summary": "Posts by keyword inside a required day-and-hour time range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/weibo/search-all/v2",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "startDay": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start day, yyyy-MM-dd."
+        },
+        "startHour": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Start hour, 0-23."
+        },
+        "endDay": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End day, yyyy-MM-dd."
+        },
+        "endHour": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "End hour, 0-23."
+        },
+        "hotSort": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True to sort by heat instead of time."
+        },
+        "contains": {
+          "in": "query",
+          "type": "string",
+          "description": "Only posts with this media kind.",
+          "enum": [
+            "ALL",
+            "PICTURE",
+            "VIDEO",
+            "MUSIC",
+            "LINK"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.weibo.profile",
+      "name": "Get a Weibo profile",
+      "summary": "Profile by UID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/weibo/get-user-detail/v3",
+      "params": {
+        "uid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Weibo user id."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.xiaohongshu.search_notes",
+      "name": "Search Xiaohongshu notes",
+      "summary": "Notes by keyword with sort, type and time filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/xiaohongshu/search-note/v4",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keyword."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "sortType": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "general",
+            "popularity_descending",
+            "time_descending",
+            "comment_descending",
+            "collect_descending"
+          ]
+        },
+        "noteType": {
+          "in": "query",
+          "type": "string",
+          "description": "Note type filter.",
+          "enum": [
+            "ALL",
+            "VIDEO_NOTE",
+            "NORMAL_NOTE"
+          ]
+        },
+        "timeFilter": {
+          "in": "query",
+          "type": "string",
+          "description": "Publish-time filter.",
+          "enum": [
+            "ALL",
+            "ONE_DAY",
+            "ONE_WEEK",
+            "HALF_YEAR"
+          ]
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.xiaohongshu.note",
+      "name": "Get a Xiaohongshu video note",
+      "summary": "Details of a video note by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/xiaohongshu/get-note-detail/v6",
+      "params": {
+        "noteId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Xiaohongshu note id."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "justoneapi.xiaohongshu.profile",
+      "name": "Get a Xiaohongshu profile",
+      "summary": "Profile by user id or profile URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/xiaohongshu/get-user/v3",
+      "params": {
+        "userId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Xiaohongshu user id or profile URL."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://docs.justoneapi.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.justoneapi.com/openapi.json"
+      }
+    }
+  ]
+}

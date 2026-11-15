@@ -1,0 +1,407 @@
+{
+  "vendor": "upspring",
+  "name": "Upspring",
+  "category": "advertising",
+  "summary": "Competitive ad intelligence: live ads across Meta, TikTok, YouTube, Google, LinkedIn and more, broken into creative dimensions, with advertisers graded D to A+ on estimated spend, traffic and sales.",
+  "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+  "pricing_url": "https://www.upspring.ai/pricing",
+  "base_url": "https://public-api.upspring.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "UPSPRING_API_KEY"
+        ],
+        "description": "An Upspring public API key (upk_...)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Read-only API. Spend, traffic and sales are coarse tiers (D, C, B, A, A+), never figures: spend is modelled, traffic and sales are third-party estimates.",
+    "Rate limit per key on the standard tier: 60 requests per minute and 5,000 per day; a 429 carries Retry-After.",
+    "Lists page by cursor: pass meta.next_cursor back unchanged. A cursor replayed with different filters is a 400.",
+    "Advertiser reads can answer status pending with refetch_after (seconds): call again after that long until status is ready or unavailable.",
+    "Valid vertical and category ids come from upspring.taxonomy.verticals."
+  ],
+  "sources": [
+    "https://public-api.upspring.ai/v1/docs/ui",
+    "https://upspring.ai/llms.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "upspring.ads.search",
+      "name": "List, search or summarize ads",
+      "summary": "Browse ads with filters, search them by text (q), or get a share-of-corpus distribution over one dimension (group_by).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/ads",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-text search; switches to relevance-ranked search mode.",
+          "example": "clinically proven results"
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Return a distribution over this dimension instead of ads (unpaginated). Not with q.",
+          "enum": [
+            "media_type",
+            "hook_archetype",
+            "hook_polarity",
+            "funnel",
+            "persona",
+            "archetype",
+            "mechanism",
+            "positioning",
+            "offer_type",
+            "persuasion_technique",
+            "claim_type",
+            "evidence_type"
+          ]
+        },
+        "vertical": {
+          "in": "query",
+          "type": "array",
+          "description": "Vertical ids; several match any.",
+          "example": [
+            "skincare"
+          ]
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "One category id."
+        },
+        "advertiser_id": {
+          "in": "query",
+          "type": "array",
+          "description": "Advertiser ids; several match any."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes, e.g. US,GB."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated languages: de, en, es, fr, it, nl, pt."
+        },
+        "is_active": {
+          "in": "query",
+          "type": "string",
+          "description": "true for running ads, false for stopped; omit for both.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "recency_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only ads first seen in the last N days."
+        },
+        "has_product": {
+          "in": "query",
+          "type": "string",
+          "description": "true for ads whose landing page has store product data.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "min_impressions": {
+          "in": "query",
+          "type": "integer",
+          "description": "Floor on Meta's 1-5 delivery-strength indicator."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "random (default, a shuffled sample), recent or best.",
+          "enum": [
+            "random",
+            "recent",
+            "best"
+          ]
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "media for durable asset URLs."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Ads per page, 1 to 100 (default 25); out-of-range values are clamped."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "meta.next_cursor from the previous page, verbatim; only valid with the same filters."
+        }
+      },
+      "notes": [
+        "Three modes: browse (default), search (q), distribution (group_by). q with group_by is a 400."
+      ],
+      "job": "ads.library.search",
+      "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+      "verified": {
+        "docs": "https://public-api.upspring.ai/v1/docs/ui"
+      }
+    },
+    {
+      "id": "upspring.ads.get",
+      "name": "Get an ad",
+      "summary": "One ad's full detail: one-line summary, scored creative dimensions, hook, offer and landing page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/ads/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ad id."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extras: scenes, transcript, full (both), media."
+        }
+      },
+      "job": "ads.library.get",
+      "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+      "verified": {
+        "docs": "https://public-api.upspring.ai/v1/docs/ui"
+      }
+    },
+    {
+      "id": "upspring.ads.similar",
+      "name": "Find similar ads",
+      "summary": "Ads creatively similar to one ad.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/ads/{id}/similar",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ad id."
+        }
+      },
+      "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+      "verified": {
+        "docs": "https://public-api.upspring.ai/v1/docs/ui"
+      }
+    },
+    {
+      "id": "upspring.advertisers.search",
+      "name": "List or find advertisers",
+      "summary": "Advertisers by name, domain, Facebook page, vertical, market or scale tier, each with its scale grades.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/advertisers",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Fuzzy advertiser name."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Website domain, URL or partial term."
+        },
+        "fb_page": {
+          "in": "query",
+          "type": "string",
+          "description": "Facebook page URL or numeric page id."
+        },
+        "vertical": {
+          "in": "query",
+          "type": "array",
+          "description": "Vertical ids; several match any."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "One category id."
+        },
+        "geo": {
+          "in": "query",
+          "type": "string",
+          "description": "Primary geography."
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated country codes: advertisers with active ads in any of them."
+        },
+        "min_ads": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum active-ad count."
+        },
+        "spend_tier": {
+          "in": "query",
+          "type": "string",
+          "description": "Spend grade at least this.",
+          "enum": [
+            "D",
+            "C",
+            "B",
+            "A",
+            "A+"
+          ]
+        },
+        "traffic_tier": {
+          "in": "query",
+          "type": "string",
+          "description": "Traffic grade at least this.",
+          "enum": [
+            "D",
+            "C",
+            "B",
+            "A",
+            "A+"
+          ]
+        },
+        "sales_tier": {
+          "in": "query",
+          "type": "string",
+          "description": "Sales grade at least this.",
+          "enum": [
+            "D",
+            "C",
+            "B",
+            "A",
+            "A+"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Advertisers per page, 1 to 50 (default 25)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "meta.next_cursor from the previous page, verbatim; only valid with the same filters."
+        }
+      },
+      "notes": [
+        "name, domain and fb_page combine with OR, best match first."
+      ],
+      "job": "ads.advertisers.search",
+      "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+      "verified": {
+        "docs": "https://public-api.upspring.ai/v1/docs/ui"
+      }
+    },
+    {
+      "id": "upspring.advertisers.by_domain",
+      "name": "Resolve an advertiser by domain",
+      "summary": "The best-matching advertiser for a company domain, in the same shape as upspring.advertisers.get.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/advertisers/by-domain",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Bare domain or full URL; normalized to the root domain.",
+          "example": "takeultra.com"
+        },
+        "sync": {
+          "in": "query",
+          "type": "string",
+          "description": "true to wait briefly for a result instead of answering pending.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "notes": [
+        "Never 404s: status is ready, pending (retry after refetch_after seconds) or unavailable."
+      ],
+      "job": "ads.advertisers.get",
+      "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+      "verified": {
+        "docs": "https://public-api.upspring.ai/v1/docs/ui"
+      }
+    },
+    {
+      "id": "upspring.advertisers.get",
+      "name": "Get an advertiser",
+      "summary": "Profile, spend/traffic/sales grades, creative signals, hook themes, landing-page types, social follower counts and top ads.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/advertisers/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Advertiser id."
+        }
+      },
+      "job": "ads.advertisers.get",
+      "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+      "verified": {
+        "docs": "https://public-api.upspring.ai/v1/docs/ui"
+      }
+    },
+    {
+      "id": "upspring.advertisers.compare",
+      "name": "Compare two advertisers",
+      "summary": "Dimension-by-dimension divergence, whitespace each leaves to the other, a similarity score and a short contrast.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/advertisers/{id}/compare/{otherId}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "First advertiser id."
+        },
+        "otherId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Second advertiser id."
+        }
+      },
+      "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+      "verified": {
+        "docs": "https://public-api.upspring.ai/v1/docs/ui"
+      }
+    },
+    {
+      "id": "upspring.taxonomy.verticals",
+      "name": "List verticals and categories",
+      "summary": "Valid vertical and category ids for the filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/taxonomy/verticals",
+      "docs_url": "https://public-api.upspring.ai/v1/docs/ui",
+      "verified": {
+        "docs": "https://public-api.upspring.ai/v1/docs/ui"
+      }
+    }
+  ]
+}

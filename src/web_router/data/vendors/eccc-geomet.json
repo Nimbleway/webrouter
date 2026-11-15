@@ -1,0 +1,470 @@
+{
+  "vendor": "eccc-geomet",
+  "name": "Environment and Climate Change Canada (GeoMet-OGC-API)",
+  "category": "environment",
+  "summary": "Canadian weather, climate and water data from ECCC/MSC as OGC API Features: climate stations and daily/monthly observations, hydrometric levels and flows, weather alerts, AQHI and more.",
+  "docs_url": "https://eccc-msc.github.io/open-data/msc-geomet/ogc_api_en/",
+  "base_url": "https://api.weather.gc.ca",
+  "notes": [
+    "Keyless. Each dataset is a collection; collections.list names them (climate-daily, climate-monthly, climate-stations, hydrometric-daily-mean, hydrometric-realtime, weather-alerts, aqhi-observations-realtime, ...).",
+    "Filter features by any collection property as a query parameter, named as the collection's queryables list it (e.g. CLIMATE_IDENTIFIER, STATION_NUMBER, PROVINCE_CODE).",
+    "At most 10,000 features per call; page with offset, or follow the 'next' link in the response.",
+    "Data are under the ECCC Data Server End-use Licence."
+  ],
+  "sources": [
+    "https://api.weather.gc.ca/",
+    "https://eccc-msc.github.io/open-data/msc-geomet/ogc_api_en/",
+    "https://api.weather.gc.ca/openapi?f=html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "eccc-geomet.collections.list",
+      "name": "List datasets",
+      "summary": "Every collection (dataset) the API serves, with ids, titles and extents.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections",
+      "params": {
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (GeoJSON, default), html, jsonld, or csv for feature collections.",
+          "example": "json"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en-CA or fr-CA.",
+          "enum": [
+            "en-CA",
+            "fr-CA"
+          ]
+        }
+      },
+      "job": "datasets.list",
+      "docs_url": "https://api.weather.gc.ca/openapi?f=html",
+      "verified": {
+        "docs": "https://api.weather.gc.ca/openapi?f=html"
+      }
+    },
+    {
+      "id": "eccc-geomet.collection.queryables",
+      "name": "List a dataset's filters",
+      "summary": "The properties of a collection that can be filtered on.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/{collection}/queryables",
+      "params": {
+        "collection": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Collection id.",
+          "example": "climate-daily"
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (GeoJSON, default), html, jsonld, or csv for feature collections.",
+          "example": "json"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://api.weather.gc.ca/openapi?f=html",
+      "verified": {
+        "docs": "https://api.weather.gc.ca/openapi?f=html"
+      }
+    },
+    {
+      "id": "eccc-geomet.items.search",
+      "name": "Query a dataset's features",
+      "summary": "Features of any collection, filtered by area, time and properties.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/{collection}/items",
+      "params": {
+        "collection": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Collection id.",
+          "example": "hydrometric-daily-mean"
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (GeoJSON, default), html, jsonld, or csv for feature collections.",
+          "example": "json"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en-CA or fr-CA.",
+          "enum": [
+            "en-CA",
+            "fr-CA"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Features per page, at most 10000.",
+          "example": 100
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first feature, 0-based."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minLon,minLat,maxLon,maxLat in EPSG:4326.",
+          "example": "-80,43,-79,44"
+        },
+        "datetime": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339 instant or interval; .. leaves an end open, e.g. 2020-01-01/..",
+          "example": "2020-01-01/2020-01-31"
+        },
+        "sortby": {
+          "in": "query",
+          "type": "string",
+          "description": "Property to sort by; prefix with - for descending.",
+          "example": "-LOCAL_DATE"
+        },
+        "properties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return."
+        },
+        "skipGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to drop geometries."
+        }
+      },
+      "notes": [
+        "Property filters this generic entry cannot name (e.g. STATION_NUMBER=10CD001) go through a raw call with the same path; climate.daily and stations.climate name the common ones."
+      ],
+      "job": "datasets.search",
+      "docs_url": "https://eccc-msc.github.io/open-data/msc-geomet/ogc_api_en/",
+      "verified": {
+        "docs": "https://eccc-msc.github.io/open-data/msc-geomet/ogc_api_en/"
+      }
+    },
+    {
+      "id": "eccc-geomet.item.get",
+      "name": "Get one feature",
+      "summary": "A single feature of a collection by its id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/{collection}/items/{featureId}",
+      "params": {
+        "collection": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Collection id.",
+          "example": "climate-stations"
+        },
+        "featureId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Feature id."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (GeoJSON, default), html, jsonld, or csv for feature collections.",
+          "example": "json"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en-CA or fr-CA.",
+          "enum": [
+            "en-CA",
+            "fr-CA"
+          ]
+        }
+      },
+      "job": "datasets.search",
+      "docs_url": "https://api.weather.gc.ca/openapi?f=html",
+      "verified": {
+        "docs": "https://api.weather.gc.ca/openapi?f=html"
+      }
+    },
+    {
+      "id": "eccc-geomet.stations.climate",
+      "name": "Find climate stations",
+      "summary": "Canadian climate stations with ids, location, operator and data availability dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/climate-stations/items",
+      "params": {
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (GeoJSON, default), html, jsonld, or csv for feature collections.",
+          "example": "json"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en-CA or fr-CA.",
+          "enum": [
+            "en-CA",
+            "fr-CA"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Features per page, at most 10000.",
+          "example": 100
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first feature, 0-based."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minLon,minLat,maxLon,maxLat in EPSG:4326.",
+          "example": "-80,43,-79,44"
+        },
+        "datetime": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339 instant or interval; .. leaves an end open, e.g. 2020-01-01/..",
+          "example": "2020-01-01/2020-01-31"
+        },
+        "sortby": {
+          "in": "query",
+          "type": "string",
+          "description": "Property to sort by; prefix with - for descending.",
+          "example": "-LOCAL_DATE"
+        },
+        "properties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return."
+        },
+        "skipGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to drop geometries."
+        },
+        "STATION_NAME": {
+          "in": "query",
+          "type": "string",
+          "description": "Station name."
+        },
+        "CLIMATE_IDENTIFIER": {
+          "in": "query",
+          "type": "string",
+          "description": "Climate id, e.g. 6158355."
+        },
+        "PROV_STATE_TERR_CODE": {
+          "in": "query",
+          "type": "string",
+          "description": "Province/territory code, e.g. ON."
+        },
+        "STN_ID": {
+          "in": "query",
+          "type": "integer",
+          "description": "Numeric station id."
+        }
+      },
+      "job": "weather.stations",
+      "docs_url": "https://api.weather.gc.ca/openapi?f=html",
+      "verified": {
+        "docs": "https://api.weather.gc.ca/openapi?f=html"
+      }
+    },
+    {
+      "id": "eccc-geomet.climate.daily",
+      "name": "Get daily climate observations",
+      "summary": "Daily max/min/mean temperature, rain, snow, precipitation, snow on ground and gusts per station.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/climate-daily/items",
+      "params": {
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (GeoJSON, default), html, jsonld, or csv for feature collections.",
+          "example": "json"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en-CA or fr-CA.",
+          "enum": [
+            "en-CA",
+            "fr-CA"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Features per page, at most 10000.",
+          "example": 100
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first feature, 0-based."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minLon,minLat,maxLon,maxLat in EPSG:4326.",
+          "example": "-80,43,-79,44"
+        },
+        "datetime": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339 instant or interval; .. leaves an end open, e.g. 2020-01-01/..",
+          "example": "2020-01-01/2020-01-31"
+        },
+        "sortby": {
+          "in": "query",
+          "type": "string",
+          "description": "Property to sort by; prefix with - for descending.",
+          "example": "-LOCAL_DATE"
+        },
+        "properties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return."
+        },
+        "skipGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to drop geometries."
+        },
+        "CLIMATE_IDENTIFIER": {
+          "in": "query",
+          "type": "string",
+          "description": "Climate id of the station.",
+          "example": "6158355"
+        },
+        "STN_ID": {
+          "in": "query",
+          "type": "integer",
+          "description": "Numeric station id."
+        },
+        "PROVINCE_CODE": {
+          "in": "query",
+          "type": "string",
+          "description": "Province code, e.g. ON."
+        },
+        "LOCAL_DATE": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact local date."
+        },
+        "LOCAL_YEAR": {
+          "in": "query",
+          "type": "integer",
+          "description": "Year."
+        },
+        "LOCAL_MONTH": {
+          "in": "query",
+          "type": "integer",
+          "description": "Month."
+        }
+      },
+      "job": "weather.history",
+      "docs_url": "https://api.weather.gc.ca/openapi?f=html",
+      "verified": {
+        "docs": "https://api.weather.gc.ca/openapi?f=html"
+      }
+    },
+    {
+      "id": "eccc-geomet.alerts.list",
+      "name": "List weather alerts",
+      "summary": "Current ECCC public weather alerts (warnings, watches, advisories) with areas.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections/weather-alerts/items",
+      "params": {
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (GeoJSON, default), html, jsonld, or csv for feature collections.",
+          "example": "json"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "en-CA or fr-CA.",
+          "enum": [
+            "en-CA",
+            "fr-CA"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Features per page, at most 10000.",
+          "example": 100
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first feature, 0-based."
+        },
+        "bbox": {
+          "in": "query",
+          "type": "string",
+          "description": "minLon,minLat,maxLon,maxLat in EPSG:4326.",
+          "example": "-80,43,-79,44"
+        },
+        "datetime": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339 instant or interval; .. leaves an end open, e.g. 2020-01-01/..",
+          "example": "2020-01-01/2020-01-31"
+        },
+        "sortby": {
+          "in": "query",
+          "type": "string",
+          "description": "Property to sort by; prefix with - for descending.",
+          "example": "-LOCAL_DATE"
+        },
+        "properties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return."
+        },
+        "skipGeometry": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to drop geometries."
+        },
+        "province": {
+          "in": "query",
+          "type": "string",
+          "description": "Province code."
+        },
+        "alert_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Alert type."
+        }
+      },
+      "job": "weather.alerts",
+      "docs_url": "https://api.weather.gc.ca/openapi?f=html",
+      "verified": {
+        "docs": "https://api.weather.gc.ca/openapi?f=html"
+      }
+    }
+  ]
+}

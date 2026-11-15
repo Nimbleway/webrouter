@@ -1,0 +1,309 @@
+{
+  "vendor": "tiktok-ads",
+  "name": "TikTok Ads (Marketing API)",
+  "category": "advertising",
+  "summary": "TikTok API for Business: ad accounts, campaigns, ad groups, ads and synchronous performance reports for the advertisers that authorized your app.",
+  "docs_url": "https://business-api.tiktok.com/portal/docs",
+  "base_url": "https://business-api.tiktok.com/open_api/v1.3",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "TIKTOK_ADS_ACCESS_TOKEN"
+        ],
+        "description": "A TikTok API for Business access token from the advertiser authorization flow (business-api.tiktok.com > My Apps)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Access-Token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Every path ends with a slash (/campaign/get/); keep it.",
+    "List and object inputs on GET calls (filtering, dimensions, metrics, advertiser_ids, fields) go in the query string as JSON-encoded strings, e.g. dimensions=[\"campaign_id\",\"stat_time_day\"].",
+    "Errors come back in the body: check code and message (see Appendix - Return Codes); data holds the result.",
+    "Advertiser ids the token can reach come from /oauth2/advertiser/get/, which needs the app id and secret and is not in this entry.",
+    "Writes (create, update, status changes) and asynchronous report tasks are not in this entry."
+  ],
+  "sources": [
+    "https://business-api.tiktok.com/portal/docs",
+    "https://github.com/tiktok/tiktok-business-api-sdk",
+    "https://github.com/tiktok/tiktok-business-api-sdk/blob/main/yml_files/report_integrated_get.yml",
+    "https://github.com/tiktok/tiktok-business-api-sdk/blob/main/yml_files/advertiser_info.yml",
+    "https://github.com/tiktok/tiktok-business-api-sdk/blob/main/python_sdk/docs/CampaignCreationApi.md",
+    "https://github.com/tiktok/tiktok-business-api-sdk/blob/main/python_sdk/docs/AdgroupApi.md",
+    "https://github.com/tiktok/tiktok-business-api-sdk/blob/main/python_sdk/docs/AdApi.md",
+    "https://github.com/tiktok/tiktok-business-api-sdk/blob/main/python_sdk/docs/ReportingApi.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "tiktok-ads.advertiser.info",
+      "name": "Get ad account info",
+      "summary": "Name, status, currency, time zone, balance and other details of ad accounts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/advertiser/info/",
+      "params": {
+        "advertiser_ids": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "JSON array string of advertiser ids.",
+          "example": "[\"1234567890\"]"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array string of fields to return."
+        }
+      },
+      "job": "ads.accounts.get",
+      "docs_url": "https://github.com/tiktok/tiktok-business-api-sdk/blob/main/yml_files/advertiser_info.yml",
+      "verified": {
+        "docs": "https://github.com/tiktok/tiktok-business-api-sdk/blob/main/yml_files/advertiser_info.yml"
+      }
+    },
+    {
+      "id": "tiktok-ads.campaign.list",
+      "name": "List campaigns",
+      "summary": "Campaigns of an ad account, with their settings and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/campaign/get/",
+      "params": {
+        "advertiser_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Advertiser (ad account) id."
+        },
+        "filtering": {
+          "in": "query",
+          "type": "string",
+          "description": "Filters as a JSON object string, e.g. {\"campaign_ids\": [\"123\"]}; also primary_status, objective_type, creation_filter_start_time and others."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10."
+        }
+      },
+      "job": "ads.campaigns.list",
+      "docs_url": "https://business-api.tiktok.com/portal/docs?id=1739315828649986",
+      "verified": {
+        "docs": "https://business-api.tiktok.com/portal/docs?id=1739315828649986"
+      }
+    },
+    {
+      "id": "tiktok-ads.adgroup.list",
+      "name": "List ad groups",
+      "summary": "Ad groups of an ad account, with targeting, budget and bidding.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/adgroup/get/",
+      "params": {
+        "advertiser_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Advertiser (ad account) id."
+        },
+        "filtering": {
+          "in": "query",
+          "type": "string",
+          "description": "Filters as a JSON object string, e.g. {\"adgroup_ids\": [\"123\"]}; also primary_status, objective_type, creation_filter_start_time and others."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10."
+        }
+      },
+      "job": "ads.adgroups.list",
+      "docs_url": "https://business-api.tiktok.com/portal/docs?id=1739314558673922",
+      "verified": {
+        "docs": "https://business-api.tiktok.com/portal/docs?id=1739314558673922"
+      }
+    },
+    {
+      "id": "tiktok-ads.ad.list",
+      "name": "List ads",
+      "summary": "Ads of an ad account, with their creative and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ad/get/",
+      "params": {
+        "advertiser_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Advertiser (ad account) id."
+        },
+        "filtering": {
+          "in": "query",
+          "type": "string",
+          "description": "Filters as a JSON object string, e.g. {\"ad_ids\": [\"123\"]}; also primary_status, objective_type, creation_filter_start_time and others."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10."
+        }
+      },
+      "job": "ads.ads.list",
+      "docs_url": "https://business-api.tiktok.com/portal/docs?id=1735735588640770",
+      "verified": {
+        "docs": "https://business-api.tiktok.com/portal/docs?id=1735735588640770"
+      }
+    },
+    {
+      "id": "tiktok-ads.report.query",
+      "name": "Run a report",
+      "summary": "Synchronous performance report: chosen metrics broken down by dimensions over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/report/integrated/get/",
+      "params": {
+        "advertiser_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Advertiser id (or use advertiser_ids, or bc_id for a BC report)."
+        },
+        "advertiser_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array string of advertiser ids, for a multi-account report."
+        },
+        "bc_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Business Center id, for report_type BC."
+        },
+        "report_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Report type.",
+          "enum": [
+            "BASIC",
+            "AUDIENCE",
+            "PLAYABLE_MATERIAL",
+            "CATALOG",
+            "BC",
+            "TT_SHOP"
+          ]
+        },
+        "service_type": {
+          "in": "query",
+          "type": "string",
+          "description": "AUCTION or RESERVATION.",
+          "enum": [
+            "AUCTION",
+            "RESERVATION"
+          ]
+        },
+        "data_level": {
+          "in": "query",
+          "type": "string",
+          "description": "Level the rows are at.",
+          "enum": [
+            "AUCTION_AD",
+            "AUCTION_ADGROUP",
+            "AUCTION_CAMPAIGN",
+            "AUCTION_ADVERTISER",
+            "RESERVATION_AD",
+            "RESERVATION_ADGROUP",
+            "RESERVATION_CAMPAIGN",
+            "RESERVATION_ADVERTISER"
+          ]
+        },
+        "dimensions": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array string of grouping dimensions.",
+          "example": "[\"campaign_id\",\"stat_time_day\"]"
+        },
+        "metrics": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array string of metrics.",
+          "example": "[\"spend\",\"impressions\",\"clicks\"]"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Report start date."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Report end date."
+        },
+        "query_lifetime": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Report over the whole lifetime instead of a date range."
+        },
+        "filtering": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON array string of {field_name, filter_type, filter_value} filters."
+        },
+        "order_field": {
+          "in": "query",
+          "type": "string",
+          "description": "Metric to sort by."
+        },
+        "order_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "enable_total_metrics": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return totals across all rows."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page, 1 to 1000, default 10."
+        }
+      },
+      "job": "ads.report.query",
+      "docs_url": "https://business-api.tiktok.com/portal/docs?id=1740302848100353",
+      "verified": {
+        "docs": "https://business-api.tiktok.com/portal/docs?id=1740302848100353"
+      }
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "vendor": "bible-api",
+  "name": "bible-api.com",
+  "category": "media",
+  "summary": "Free, keyless Bible verses by reference, book and chapter listings, and random verses in public-domain translations.",
+  "docs_url": "https://bible-api.com/",
+  "base_url": "https://bible-api.com",
+  "notes": [
+    "Keyless. Rate limit: 15 requests per 30 seconds per IP; do not use it to download whole Bibles.",
+    "Two styles: a free-text reference (john 3:16, matt 25:31-33,46) or the /data paths that need exact translation and book ids (JHN, GEN).",
+    "Translation ids: web (default), kjv, asv, bbe, bsb, darby, dra, webbe, oeb-us, oeb-cw, plus non-English ones such as cherokee, rccv (Romanian), cuv, luther1912, synodal, rv1909, clementine; /data lists them all."
+  ],
+  "sources": [
+    "https://bible-api.com/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "bible-api.verses.get",
+      "name": "Get verses by reference",
+      "summary": "The text of one verse, a range or a list, from a typed reference.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{reference}",
+      "params": {
+        "reference": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A reference such as 'john 3:16', 'jn 3:16' or 'matt 25:31-33,46'.",
+          "example": "john 3:16"
+        },
+        "translation": {
+          "in": "query",
+          "type": "string",
+          "description": "Translation id, default web (World English Bible). Others include kjv, asv, bbe, darby, dra, bsb, webbe, oeb-us, oeb-cw, cherokee, rccv, cuv, luther1912, synodal, rv1909.",
+          "example": "kjv"
+        },
+        "single_chapter_book_matching": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to indifferent so a bare chapter of a one-chapter book (jude 1) returns the whole book rather than its first verse.",
+          "enum": [
+            "indifferent"
+          ]
+        }
+      },
+      "job": "reference.text",
+      "docs_url": "https://bible-api.com/",
+      "verified": {
+        "docs": "https://bible-api.com/"
+      }
+    },
+    {
+      "id": "bible-api.translations.list",
+      "name": "List translations",
+      "summary": "Every available translation id with its language and name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data",
+      "job": "reference.text",
+      "docs_url": "https://bible-api.com/",
+      "verified": {
+        "docs": "https://bible-api.com/"
+      }
+    },
+    {
+      "id": "bible-api.books.list",
+      "name": "List books of a translation",
+      "summary": "The books (with ids like GEN, JHN) in one translation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/{translation}",
+      "params": {
+        "translation": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Translation id.",
+          "example": "web"
+        }
+      },
+      "job": "reference.text",
+      "docs_url": "https://bible-api.com/",
+      "verified": {
+        "docs": "https://bible-api.com/"
+      }
+    },
+    {
+      "id": "bible-api.chapter.get",
+      "name": "Get a chapter",
+      "summary": "Every verse of one chapter; without the chapter, the book's chapter list.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/{translation}/{book}/{chapter}",
+      "params": {
+        "translation": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Translation id.",
+          "example": "web"
+        },
+        "book": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Book id, case-insensitive.",
+          "example": "JHN"
+        },
+        "chapter": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Chapter number.",
+          "example": 3
+        }
+      },
+      "job": "reference.text",
+      "docs_url": "https://bible-api.com/",
+      "verified": {
+        "docs": "https://bible-api.com/"
+      }
+    },
+    {
+      "id": "bible-api.verses.random",
+      "name": "Get a random verse",
+      "summary": "One random verse from a translation, optionally limited to books or a testament.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/data/{translation}/random/{books}",
+      "params": {
+        "translation": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Translation id.",
+          "example": "web"
+        },
+        "books": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated book ids, or OT or NT.",
+          "example": "NT"
+        }
+      },
+      "notes": [
+        "For a random verse from the whole Bible call /data/{translation}/random, which this entry does not name separately."
+      ],
+      "job": "reference.text",
+      "docs_url": "https://bible-api.com/",
+      "verified": {
+        "docs": "https://bible-api.com/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,386 @@
+{
+  "vendor": "sec-api",
+  "name": "SEC API (sec-api.io)",
+  "category": "finance",
+  "summary": "SEC EDGAR filings as JSON from sec-api.io: filing search, full-text search, insider trades (Forms 3/4/5), 13F institutional holdings, XBRL-to-JSON financials, filing section extraction and ticker/CIK/CUSIP mapping.",
+  "docs_url": "https://sec-api.io/docs",
+  "pricing_url": "https://sec-api.io/pricing",
+  "base_url": "https://api.sec-api.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SEC_API_KEY"
+        ],
+        "description": "a sec-api.io API key (from your sec-api.io user profile)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The key goes in the Authorization header as-is, with no Bearer prefix (or as ?token=).",
+    "Search endpoints are POSTs with a JSON body {query, from, size, sort}; query is Lucene syntax over the documented fields of each dataset."
+  ],
+  "sources": [
+    "https://sec-api.io/docs",
+    "https://sec-api.io/docs/query-api",
+    "https://sec-api.io/docs/full-text-search-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sec-api.filings.search",
+      "name": "Search filings",
+      "summary": "Filing metadata (form type, company, tickers, filedAt, links, data files) for EDGAR filings of any form type.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Lucene-syntax query over filing fields, field:value with AND/OR/NOT, wildcards and [a TO b] ranges.",
+          "example": "ticker:TSLA AND formType:\"10-K\""
+        },
+        "from": {
+          "in": "body",
+          "type": "integer",
+          "description": "Offset of the first result; default 0, at most 10000."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per call; default 50, at most 50."
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort objects; default [{\"filedAt\":{\"order\":\"desc\"}}]."
+        }
+      },
+      "notes": [
+        "A read over POST. At most 10,000 results per query: page by raising from by size, and split larger sets into filedAt or periodOfReport date ranges.",
+        "query is at most 3,500 characters."
+      ],
+      "job": "company.documents",
+      "docs_url": "https://sec-api.io/docs/query-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/query-api"
+      }
+    },
+    {
+      "id": "sec-api.filings.fulltext",
+      "name": "Full-text search filings",
+      "summary": "Search the text of filings and exhibits.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/full-text-search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Words or quoted phrases, ANDed by default; supports OR, NOT/-, and * wildcards.",
+          "example": "\"substantial doubt\""
+        },
+        "formTypes": {
+          "in": "body",
+          "type": "array",
+          "description": "Form types to include, e.g. [\"8-K\", \"10-Q\"]; default all."
+        },
+        "ciks": {
+          "in": "body",
+          "type": "array",
+          "description": "Filer CIKs as strings; leading zeros optional; default all."
+        },
+        "startDate": {
+          "in": "body",
+          "type": "string",
+          "description": "yyyy-mm-dd; default 30 days ago."
+        },
+        "endDate": {
+          "in": "body",
+          "type": "string",
+          "description": "yyyy-mm-dd; default today."
+        },
+        "page": {
+          "in": "body",
+          "type": "string",
+          "description": "Page number as a string, from \"1\"; 100 results per page, at most page 100."
+        }
+      },
+      "notes": [
+        "A read over POST. The default window is only the last 30 days; set startDate for older filings.",
+        "When total.relation is gte the match count exceeds 10,000; narrow dates or CIKs."
+      ],
+      "job": "company.documents",
+      "docs_url": "https://sec-api.io/docs/full-text-search-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/full-text-search-api"
+      }
+    },
+    {
+      "id": "sec-api.insider.search",
+      "name": "Search insider trades",
+      "summary": "Forms 3, 4 and 5 as structured JSON: issuer, reporting owner, relationship and each transaction.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/insider-trading",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Lucene-syntax query over filing fields, field:value with AND/OR/NOT, wildcards and [a TO b] ranges.",
+          "example": "issuer.tradingSymbol:TSLA"
+        },
+        "from": {
+          "in": "body",
+          "type": "integer",
+          "description": "Offset of the first result; default 0, at most 10000."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per call; default 50, at most 50."
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort objects; default [{\"filedAt\":{\"order\":\"desc\"}}]."
+        }
+      },
+      "notes": [
+        "A read over POST. At most 10,000 results per query: page by raising from by size, and split larger sets into filedAt or periodOfReport date ranges.",
+        "Transaction codes: nonDerivativeTable.transactions.coding.code:P is an open-market purchase, S a sale."
+      ],
+      "docs_url": "https://sec-api.io/docs/insider-ownership-trading-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/insider-ownership-trading-api"
+      }
+    },
+    {
+      "id": "sec-api.form13f.holdings",
+      "name": "Search 13F holdings",
+      "summary": "Institutional managers' 13F holdings per filing, searchable by manager CIK, holding ticker, CUSIP or put/call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/form-13f/holdings",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Lucene-syntax query over filing fields, field:value with AND/OR/NOT, wildcards and [a TO b] ranges.",
+          "example": "cik:1633901 AND periodOfReport:[2023-01-01 TO 2023-12-31]"
+        },
+        "from": {
+          "in": "body",
+          "type": "integer",
+          "description": "Offset of the first result; default 0, at most 10000."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per call; default 50, at most 50."
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort objects; default [{\"filedAt\":{\"order\":\"desc\"}}]."
+        }
+      },
+      "notes": [
+        "A read over POST. At most 10,000 results per query: page by raising from by size, and split larger sets into filedAt or periodOfReport date ranges.",
+        "Find who holds a stock with holdings.ticker:TSLA or holdings.cusip:<cusip>."
+      ],
+      "docs_url": "https://sec-api.io/docs/form-13-f-filings-institutional-holdings-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/form-13-f-filings-institutional-holdings-api"
+      }
+    },
+    {
+      "id": "sec-api.form13f.coverpages",
+      "name": "Search 13F cover pages",
+      "summary": "13F filing cover pages, searchable by fields such as crdNumber.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/form-13f/cover-pages",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Lucene-syntax query over filing fields, field:value with AND/OR/NOT, wildcards and [a TO b] ranges.",
+          "example": "crdNumber:105129"
+        },
+        "from": {
+          "in": "body",
+          "type": "integer",
+          "description": "Offset of the first result; default 0, at most 10000."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per call; default 50, at most 50."
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort objects; default [{\"filedAt\":{\"order\":\"desc\"}}]."
+        }
+      },
+      "notes": [
+        "A read over POST. At most 10,000 results per query: page by raising from by size, and split larger sets into filedAt or periodOfReport date ranges."
+      ],
+      "docs_url": "https://sec-api.io/docs/form-13-f-filings-institutional-holdings-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/form-13-f-filings-institutional-holdings-api"
+      }
+    },
+    {
+      "id": "sec-api.xbrl.json",
+      "name": "Convert a filing's XBRL to JSON",
+      "summary": "The XBRL financial data of one filing (e.g. a 10-K or 10-Q) as JSON.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/xbrl-to-json",
+      "params": {
+        "htm-url": {
+          "in": "query",
+          "type": "string",
+          "description": "URL of the filing (.htm/.html) or its index page.",
+          "wire_name": "htm-url"
+        },
+        "xbrl-url": {
+          "in": "query",
+          "type": "string",
+          "description": "URL of the XBRL instance .xml (from dataFiles in filings.search).",
+          "wire_name": "xbrl-url"
+        },
+        "accession-no": {
+          "in": "query",
+          "type": "string",
+          "description": "Accession number.",
+          "example": "0001564590-21-004599",
+          "wire_name": "accession-no"
+        }
+      },
+      "notes": [
+        "Pass exactly one of htm-url, xbrl-url or accession-no."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://sec-api.io/docs/xbrl-to-json-converter-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/xbrl-to-json-converter-api"
+      }
+    },
+    {
+      "id": "sec-api.filings.extract_item",
+      "name": "Extract a filing section",
+      "summary": "The text or HTML of one item (e.g. 1A Risk Factors, 7 MD&A) of a 10-K, 10-Q or 8-K.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/extractor",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL of the 10-K, 10-Q or 8-K (.htm or .txt)."
+        },
+        "item": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One item. 10-K: 1, 1A, 1B, 1C, 2, 3, 4, 5, 6, 7, 7A, 8, 9, 9A, 9B, 10-15. 10-Q: part1item1-part1item4, part2item1, part2item1a, part2item2-part2item6. 8-K: e.g. 1-1, 2-2, 5-2, signature.",
+          "example": "1A"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "text (default) or html.",
+          "enum": [
+            "text",
+            "html"
+          ]
+        }
+      },
+      "job": "web.extract",
+      "docs_url": "https://sec-api.io/docs/sec-filings-item-extraction-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/sec-filings-item-extraction-api"
+      }
+    },
+    {
+      "id": "sec-api.mapping.ticker",
+      "name": "Resolve a ticker",
+      "summary": "Company name, CIK, CUSIP, exchange, sector and industry for a ticker.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/mapping/ticker/{ticker}",
+      "params": {
+        "ticker": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "TSLA"
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://sec-api.io/docs/mapping-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/mapping-api"
+      }
+    },
+    {
+      "id": "sec-api.mapping.name",
+      "name": "Find companies by name",
+      "summary": "Companies whose name matches, with ticker, CIK and CUSIP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/mapping/name/{name}",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company name, URL-encoded.",
+          "example": "Tesla"
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://sec-api.io/docs/mapping-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/mapping-api"
+      }
+    },
+    {
+      "id": "sec-api.mapping.cik",
+      "name": "Resolve a CIK",
+      "summary": "Tickers and company details registered under a CIK.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/mapping/cik/{cik}",
+      "params": {
+        "cik": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "example": "1318605"
+        }
+      },
+      "docs_url": "https://sec-api.io/docs/mapping-api",
+      "verified": {
+        "docs": "https://sec-api.io/docs/mapping-api"
+      }
+    }
+  ]
+}

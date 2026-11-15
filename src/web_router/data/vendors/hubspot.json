@@ -1,0 +1,287 @@
+{
+  "vendor": "hubspot",
+  "name": "HubSpot",
+  "category": "analytics",
+  "summary": "HubSpot CRM records (contacts, companies, deals, tickets), CRM search, deal pipelines and stages, and owners through the CRM v3 API.",
+  "docs_url": "https://developers.hubspot.com/docs/api-reference/legacy/crm/understanding-the-crm",
+  "pricing_url": "https://www.hubspot.com/pricing",
+  "base_url": "https://api.hubapi.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "HUBSPOT_ACCESS_TOKEN"
+        ],
+        "description": "a HubSpot private app or service key access token with the crm.objects.*.read scopes needed"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Records return only default properties unless 'properties' names the ones wanted; list the available ones with hubspot.properties.list.",
+    "Paging is a cursor: send paging.next.after from the previous answer as 'after'. No paging.next means the last page.",
+    "Deal stages and pipelines come back as internal ids (e.g. dealstage 'appointmentscheduled'); map them to labels with hubspot.pipelines.list.",
+    "Search is limited to 5 requests per second per account and 10,000 results per query; newly changed records take a few moments to appear in search."
+  ],
+  "sources": [
+    "https://developers.hubspot.com/docs/api-reference/legacy/crm/search-the-crm",
+    "https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/deals/guide",
+    "https://developers.hubspot.com/docs/api-reference/crm-contacts-v3/basic/get-crm-v3-objects-contacts",
+    "https://developers.hubspot.com/docs/api-reference/legacy/crm/owners/guide",
+    "https://developers.hubspot.com/docs/api-reference/legacy/crm/pipelines/guide",
+    "https://developers.hubspot.com/docs/api-reference/legacy/crm/properties/guide"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "hubspot.objects.list",
+      "name": "List CRM records",
+      "summary": "A page of records of one object type (contacts, companies, deals, tickets...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crm/v3/objects/{objectType}",
+      "params": {
+        "objectType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CRM object type: contacts, companies, deals, tickets, or another object's name or type id.",
+          "example": "deals"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, at most 100."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "paging.next.after from the previous page."
+        },
+        "properties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return; only defaults come back otherwise.",
+          "example": "dealname,amount,dealstage,closedate"
+        },
+        "propertiesWithHistory": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return with their history."
+        },
+        "associations": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated object types to return associated record ids for.",
+          "example": "contacts,companies"
+        }
+      },
+      "job": "lists.items",
+      "docs_url": "https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/deals/guide",
+      "verified": {
+        "docs": "https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/deals/guide"
+      }
+    },
+    {
+      "id": "hubspot.objects.get",
+      "name": "Get a CRM record",
+      "summary": "One record by its record id, or by a unique property such as email with idProperty.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crm/v3/objects/{objectType}/{recordId}",
+      "params": {
+        "objectType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CRM object type: contacts, companies, deals, tickets, or another object's name or type id.",
+          "example": "deals"
+        },
+        "recordId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Record id, or the unique property value when idProperty is set.",
+          "example": "12345"
+        },
+        "idProperty": {
+          "in": "query",
+          "type": "string",
+          "description": "Look up by this unique property instead of the record id, e.g. email for contacts.",
+          "example": "email"
+        },
+        "properties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return; only defaults come back otherwise.",
+          "example": "dealname,amount,dealstage,closedate"
+        },
+        "propertiesWithHistory": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated properties to return with their history."
+        },
+        "associations": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated object types to return associated record ids for.",
+          "example": "contacts,companies"
+        }
+      },
+      "docs_url": "https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/deals/guide",
+      "verified": {
+        "docs": "https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/deals/guide"
+      }
+    },
+    {
+      "id": "hubspot.objects.search",
+      "name": "Search CRM records",
+      "summary": "Filter, sort and full-text search records of one object type, e.g. open deals over an amount or contacts at a company domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/crm/v3/objects/{objectType}/search",
+      "params": {
+        "objectType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CRM object type: contacts, companies, deals, tickets, or another object's name or type id.",
+          "example": "deals"
+        },
+        "filterGroups": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 5 groups (OR'd) of up to 6 filters (AND'd), 18 filters total. A filter is {propertyName, operator, value} with operator EQ, NEQ, LT, LTE, GT, GTE, BETWEEN (value + highValue), IN / NOT_IN (values), HAS_PROPERTY, NOT_HAS_PROPERTY, CONTAINS_TOKEN, NOT_CONTAINS_TOKEN. associations.{objectType} filters by associated record.",
+          "example": [
+            {
+              "filters": [
+                {
+                  "propertyName": "amount",
+                  "operator": "GT",
+                  "value": "10000"
+                }
+              ]
+            }
+          ]
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Text searched across the object's default text properties."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "One sort rule: [{propertyName, direction: ASCENDING|DESCENDING}].",
+          "example": [
+            {
+              "propertyName": "createdate",
+              "direction": "DESCENDING"
+            }
+          ]
+        },
+        "properties": {
+          "in": "body",
+          "type": "array",
+          "description": "Properties to return.",
+          "example": [
+            "dealname",
+            "amount",
+            "dealstage"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, default 10, at most 200."
+        },
+        "after": {
+          "in": "body",
+          "type": "string",
+          "description": "paging.next.after from the previous page."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Archived records never appear. IN/NOT_IN values on string properties must be lowercase; enumeration properties match case-sensitively.",
+        "The request body may be at most 3,000 characters; paging past 10,000 results answers 400."
+      ],
+      "job": "lists.search",
+      "docs_url": "https://developers.hubspot.com/docs/api-reference/legacy/crm/search-the-crm",
+      "verified": {
+        "docs": "https://developers.hubspot.com/docs/api-reference/legacy/crm/search-the-crm"
+      }
+    },
+    {
+      "id": "hubspot.properties.list",
+      "name": "List an object's properties",
+      "summary": "Every property defined on an object type, with its internal name, label, type and options.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crm/v3/properties/{objectType}",
+      "params": {
+        "objectType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CRM object type: contacts, companies, deals, tickets, or another object's name or type id.",
+          "example": "deals"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/deals/guide",
+      "verified": {
+        "docs": "https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/deals/guide"
+      }
+    },
+    {
+      "id": "hubspot.pipelines.list",
+      "name": "List pipelines and stages",
+      "summary": "Every pipeline for an object type (deals, tickets) with its stages' ids, labels and order.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crm/v3/pipelines/{objectType}",
+      "params": {
+        "objectType": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "deals or tickets (or another object with pipelines).",
+          "example": "deals"
+        }
+      },
+      "docs_url": "https://developers.hubspot.com/docs/api-reference/legacy/crm/pipelines/guide",
+      "verified": {
+        "docs": "https://developers.hubspot.com/docs/api-reference/legacy/crm/pipelines/guide"
+      }
+    },
+    {
+      "id": "hubspot.owners.list",
+      "name": "List owners",
+      "summary": "Users who can own records, with owner id, user id, name, email and teams.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/crm/v3/owners",
+      "params": {
+        "archived": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True lists deactivated owners instead."
+        }
+      },
+      "notes": [
+        "Use the owner id (id) to look up or assign owners; userId is only for the settings API and fails as an owner."
+      ],
+      "docs_url": "https://developers.hubspot.com/docs/api-reference/legacy/crm/owners/guide",
+      "verified": {
+        "docs": "https://developers.hubspot.com/docs/api-reference/legacy/crm/owners/guide"
+      }
+    }
+  ]
+}

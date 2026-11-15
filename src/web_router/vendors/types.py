@@ -35,7 +35,7 @@ class VendorResponse(BaseModel):
     credential masked out of the vendor's message.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", ser_json_bytes="base64", val_json_bytes="base64")
 
     vendor: str
     endpoint: str | None = Field(default=None, description="The catalog endpoint called; None for a raw request.")
@@ -44,6 +44,13 @@ class VendorResponse(BaseModel):
     status_code: int
     data: Any = Field(default=None, description="The decoded JSON body; None when the body was not JSON.")
     text: str | None = Field(default=None, description="The body as text, when it was not JSON.")
+    content: bytes | None = Field(
+        default=None,
+        description=(
+            "The body's bytes when its content type is not text (an image, a PDF); URL-safe base64 in JSON."
+            " Not masked: a key the vendor echoed inside a file would stay there."
+        ),
+    )
     content_type: str | None = None
     headers: dict[str, str] = Field(
         default_factory=dict,

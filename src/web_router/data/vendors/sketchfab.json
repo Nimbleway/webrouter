@@ -1,0 +1,395 @@
+{
+  "vendor": "sketchfab",
+  "name": "Sketchfab",
+  "category": "media",
+  "summary": "Search and read Sketchfab's 3D model library (filters for downloadable, license, face count, PBR, rigging) and get download links for downloadable models.",
+  "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html",
+  "base_url": "https://api.sketchfab.com",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "SKETCHFAB_API_KEY"
+        ],
+        "required": false,
+        "description": "Your Sketchfab API Token, sent as 'Authorization: Token ...'; needed only for downloads and account-scoped calls."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Token {api_token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Search, model details and categories are public; models.download needs the API token.",
+    "Lists page with cursors: each response carries next and previous URLs. count sets the page size, capped at 24 (a higher value is ignored and 24 used).",
+    "Throttled calls get 429 Too Many Requests: wait before retrying.",
+    "A password-protected model needs its password, base64-encoded, in the x-skfb-model-pwd header."
+  ],
+  "sources": [
+    "https://sketchfab.com/developers/data-api/v3",
+    "https://docs.sketchfab.com/data-api/v3/index.html",
+    "https://docs.sketchfab.com/data-api/v3/swagger.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "sketchfab.models.search",
+      "name": "Search models",
+      "summary": "Models matching keywords and filters (tags, categories, license, downloadable, animated, face count, PBR type, rigged, file format), by relevance unless sorted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/search",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "models"
+          ],
+          "description": "What to search; models."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Space-separated keywords.",
+          "example": "medieval sword"
+        },
+        "user": {
+          "in": "query",
+          "type": "string",
+          "description": "Only models by this username."
+        },
+        "tags": {
+          "in": "query",
+          "type": "array",
+          "description": "Tag slugs."
+        },
+        "categories": {
+          "in": "query",
+          "type": "array",
+          "description": "Category slugs."
+        },
+        "date": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            1,
+            7,
+            31
+          ],
+          "description": "Only models from the last 1, 7 or 31 days."
+        },
+        "downloadable": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only downloadable models."
+        },
+        "animated": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only animated models."
+        },
+        "staffpicked": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only staff picks."
+        },
+        "sound": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only models with sound."
+        },
+        "rigged": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only rigged models."
+        },
+        "min_face_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum number of faces."
+        },
+        "max_face_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum number of faces."
+        },
+        "pbr_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "false",
+            "true",
+            "metalness",
+            "specular"
+          ],
+          "description": "PBR filter: true for any PBR, metalness or specular for that workflow, false for non-PBR."
+        },
+        "license": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "by",
+            "by-sa",
+            "by-nd",
+            "by-nc",
+            "by-nc-sa",
+            "by-nc-nd",
+            "cc0",
+            "ed",
+            "st"
+          ],
+          "description": "License."
+        },
+        "file_format": {
+          "in": "query",
+          "type": "string",
+          "description": "Original file format, e.g. obj, fbx, blend."
+        },
+        "collection": {
+          "in": "query",
+          "type": "string",
+          "description": "Only models in this collection (uid)."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "likeCount",
+            "-likeCount",
+            "viewCount",
+            "-viewCount",
+            "publishedAt",
+            "-publishedAt",
+            "processedAt",
+            "-processedAt"
+          ],
+          "description": "Sort order; relevance when omitted."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, at most 24."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html#!/search/get_v3_search_type_models",
+      "verified": {
+        "docs": "https://docs.sketchfab.com/data-api/v3/swagger.json"
+      }
+    },
+    {
+      "id": "sketchfab.models.list",
+      "name": "List published models",
+      "summary": "Public, published models filtered by user, tags, categories, staff pick, downloadable, animated, face or vertex count, or publish date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/models",
+      "params": {
+        "user": {
+          "in": "query",
+          "type": "string",
+          "description": "Only models by this username."
+        },
+        "tags": {
+          "in": "query",
+          "type": "array",
+          "description": "Tag slugs."
+        },
+        "categories": {
+          "in": "query",
+          "type": "array",
+          "description": "Category uids."
+        },
+        "liked_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Models liked by this username; cannot be combined with other filters."
+        },
+        "published_since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only models published after this ISO 8601 time."
+        },
+        "staffpicked": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only staff picks."
+        },
+        "downloadable": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only downloadable models."
+        },
+        "animated": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only animated models."
+        },
+        "has_sound": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only models with sound."
+        },
+        "max_face_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum number of faces."
+        },
+        "max_vertex_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum number of vertices."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "createdAt",
+            "-createdAt",
+            "viewCount",
+            "-viewCount",
+            "likedAt",
+            "-likedAt"
+          ],
+          "description": "Sort order; likedAt only with liked_by."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, at most 24."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html#!/models/get_v3_models",
+      "verified": {
+        "docs": "https://docs.sketchfab.com/data-api/v3/swagger.json"
+      }
+    },
+    {
+      "id": "sketchfab.models.get",
+      "name": "Get a model",
+      "summary": "Details of one model.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/models/{uid}",
+      "params": {
+        "uid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The model uid."
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html#!/models/get_v3_models_uid",
+      "verified": {
+        "docs": "https://docs.sketchfab.com/data-api/v3/swagger.json"
+      }
+    },
+    {
+      "id": "sketchfab.models.download",
+      "name": "Get a model's download links",
+      "summary": "Temporary download URLs for a downloadable model's archives, each with the seconds until it expires.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/models/{uid}/download",
+      "params": {
+        "uid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The model uid."
+        }
+      },
+      "notes": [
+        "The URLs expire (expires is in seconds, e.g. 300): download promptly.",
+        "Needs the API token, and works only for models whose author made them downloadable; respect each model's license."
+      ],
+      "credentials": [
+        "api_token"
+      ],
+      "job": "media.stock.get",
+      "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html#!/models/get_v3_models_uid_download",
+      "verified": {
+        "docs": "https://docs.sketchfab.com/data-api/v3/swagger.json"
+      }
+    },
+    {
+      "id": "sketchfab.categories.list",
+      "name": "List categories",
+      "summary": "Every model category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/categories",
+      "params": {
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "slug",
+            "-slug"
+          ],
+          "description": "Sort order."
+        }
+      },
+      "job": "media.stock.filters",
+      "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html#!/categories/get_v3_categories",
+      "verified": {
+        "docs": "https://docs.sketchfab.com/data-api/v3/swagger.json"
+      }
+    },
+    {
+      "id": "sketchfab.collections.models",
+      "name": "List models in a collection",
+      "summary": "The models in one collection.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/collections/{uid}/models",
+      "params": {
+        "uid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The collection uid."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "createdAt",
+            "-createdAt",
+            "collectedAt",
+            "-collectedAt"
+          ],
+          "description": "Sort order."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html#!/collections/get_v3_collections_uid_models",
+      "verified": {
+        "docs": "https://docs.sketchfab.com/data-api/v3/swagger.json"
+      }
+    },
+    {
+      "id": "sketchfab.licenses.list",
+      "name": "List licenses",
+      "summary": "Every license a model can carry.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/licenses",
+      "params": {},
+      "job": "media.stock.filters",
+      "docs_url": "https://docs.sketchfab.com/data-api/v3/index.html#!/licenses/get_v3_licenses",
+      "verified": {
+        "docs": "https://docs.sketchfab.com/data-api/v3/swagger.json"
+      }
+    }
+  ]
+}
