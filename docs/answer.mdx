@@ -53,6 +53,12 @@ backend marks which source backs which sentence, the marker is in
 `citation.field`; where it does not (Parallel), every citation backs the answer
 as a whole. `outcome` is `partial` only when the backend says it stopped early.
 
+`timeout=` caps how many seconds the call waits: `router.answer(q, timeout=15)`.
+Under `auto`, a backend is tried only while time is left; running out raises
+`DeadlineExceededError`. `timeout=15` is the same as
+`budget=Budget(time_limit_s=15)`, and beside a `budget` the tighter cap holds; see
+[Running in production](/production#timeouts).
+
 ## What it cost and who ran
 
 Every answer says who wrote it, how long the call took and what it cost, with no

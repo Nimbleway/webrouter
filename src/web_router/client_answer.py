@@ -10,6 +10,7 @@ import threading
 from typing import Any
 
 from web_router._validation import refused_as_parameter
+from web_router.client_requests import with_timeout
 from web_router.providers.answer import AnswerProvider
 from web_router.registry_answer import create_answer_provider, default_answer_provider
 from web_router.routing import Budget
@@ -66,6 +67,7 @@ class SyncAnswer(_AnswerLookup, SyncRouted):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        timeout: float | None = None,
         budget: Budget | None = None,
     ) -> AnswerResponse:
         """Ask ``provider`` one question and return its written answer with the sources it rests on.
@@ -81,6 +83,10 @@ class SyncAnswer(_AnswerLookup, SyncRouted):
         an answer backend. On the usual default, ``auto``, that is the answer
         backends you hold a key for, in ranked order: one that fails or answers
         with nothing is passed over for the next, and each one tried bills.
+
+        ``timeout`` caps the seconds the call waits, as ``Budget(time_limit_s=...)``
+        does (the tighter cap holds beside a ``budget``); running out raises
+        :class:`~web_router.DeadlineExceededError`.
         """
         request = self._answer_request(
             query,
@@ -92,7 +98,7 @@ class SyncAnswer(_AnswerLookup, SyncRouted):
             recency=recency,
         )
         chain = self.get_answer_provider(provider)
-        return self._routed(chain, request, budget, chain.answer)
+        return self._routed(chain, request, with_timeout(budget, timeout), chain.answer)
 
 
 class AsyncAnswer(_AnswerLookup, AsyncRouted):
@@ -107,9 +113,10 @@ class AsyncAnswer(_AnswerLookup, AsyncRouted):
         locale: str | None = None,
         recency: Recency | None = None,
         provider_options: dict[str, Any] | None = None,
+        timeout: float | None = None,
         budget: Budget | None = None,
     ) -> AnswerResponse:
-        """Ask ``provider`` one question and await its written answer, as on the sync router."""
+        """Ask ``provider`` one question and await its written answer, as on the sync router, ``timeout`` included."""
         request = self._answer_request(
             query,
             provider_options,
@@ -120,4 +127,4 @@ class AsyncAnswer(_AnswerLookup, AsyncRouted):
             recency=recency,
         )
         chain = self.get_answer_provider(provider)
-        return await self._arouted(chain, request, budget, chain.aanswer)
+        return await self._arouted(chain, request, with_timeout(budget, timeout), chain.aanswer)

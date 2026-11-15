@@ -1,4 +1,4 @@
-"""``timeout=`` on search and extract: the shortcut for ``Budget(time_limit_s=...)``, and the pages kept in time."""
+"""``timeout=`` on search, extract and answer: the shortcut for ``Budget(time_limit_s=...)``, and pages kept in time."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any, ClassVar
 
 import pytest
 
-from tests.conftest import FakeExtractProvider, FakeProvider
+from tests.conftest import FakeAnswerProvider, FakeExtractProvider, FakeProvider
 from web_router import AsyncWebRouter, Budget, DeadlineExceededError, InvalidParameterError, WebRouter
 from web_router.client_requests import with_timeout
 from web_router.providers._deadline import current_deadline
@@ -18,7 +18,9 @@ from web_router.registry import (
     unregister_extract_provider,
     unregister_provider,
 )
+from web_router.registry_answer import register_answer_provider, unregister_answer_provider
 from web_router.types import ExtractRequest, ExtractResponse, SearchRequest, SearchResponse
+from web_router.types_answer import AnswerRequest, AnswerResponse
 
 SLOW = "https://slow.example/page"
 FAST = ("https://a.example/1", "https://b.example/2")
@@ -59,13 +61,25 @@ class _SeesDeadline(FakeProvider):
         return self._respond(request)
 
 
+class _AnswerSeesDeadline(FakeAnswerProvider):
+    name = "answerseesdeadline"
+    seen: ClassVar[list[float | None]] = []
+
+    def _answer(self, request: AnswerRequest) -> AnswerResponse:
+        deadline = current_deadline()
+        type(self).seen.append(None if deadline is None else deadline.seconds)
+        return super()._answer(request)
+
+
 @pytest.fixture(autouse=True)
 def _providers() -> Any:
     register_extract_provider("slowpage", _SlowPage)
     register_extract_provider("hangs", _Hangs)
     register_provider("seesdeadline", _SeesDeadline)
-    _SeesDeadline.seen = []
+    register_answer_provider("answerseesdeadline", _AnswerSeesDeadline)
+    _SeesDeadline.seen, _AnswerSeesDeadline.seen = [], []
     yield
+    unregister_answer_provider("answerseesdeadline")
     unregister_extract_provider("slowpage")
     unregister_extract_provider("hangs")
     unregister_provider("seesdeadline")
@@ -91,6 +105,22 @@ def test_search_runs_under_the_timeout_as_its_deadline() -> None:
         router.search("q", timeout=7.0)
         router.search("q")
     assert _SeesDeadline.seen == [7.0, None]
+
+
+def test_answer_runs_under_the_tighter_of_its_timeout_and_budget() -> None:
+    with WebRouter() as router:
+        router.answer("q", provider="answerseesdeadline", timeout=7.0, budget=Budget(time_limit_s=3.0))
+        with pytest.raises(InvalidParameterError) as caught:
+            router.answer("q", provider="answerseesdeadline", timeout=-1)
+    assert caught.value.field == "timeout"
+    assert _AnswerSeesDeadline.seen == [3.0]
+
+
+async def test_async_answer_runs_under_the_timeout_as_its_deadline() -> None:
+    async with AsyncWebRouter() as router:
+        await router.answer("q", provider="answerseesdeadline", timeout=7.0)
+        await router.answer("q", provider="answerseesdeadline")
+    assert _AnswerSeesDeadline.seen == [7.0, None]
 
 
 def test_sync_extract_keeps_the_pages_that_came_back_in_time() -> None:

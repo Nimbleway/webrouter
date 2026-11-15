@@ -4,7 +4,7 @@
 mixins, so ``router.extract`` is where it always was; ``search`` is in
 :mod:`web_router.client_search`.
 
-``timeout=`` on ``extract`` and ``search`` is the shortcut for ``budget=Budget(time_limit_s=...)``:
+``timeout=`` on ``extract``, ``search`` and ``answer`` is the shortcut for ``budget=Budget(time_limit_s=...)``:
 the call waits at most that many seconds, ``auto`` starts a member only while
 time is left and passes over one whose measured p90 would not fit, and an
 extract keeps every page that came back in time, reporting the rest as
