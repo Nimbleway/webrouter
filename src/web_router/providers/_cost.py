@@ -28,6 +28,12 @@ def stated_cost(payload: Any, *path: str) -> dict[str, Any]:
     currency = holder.get(COST_CURRENCY_FIELD) if isinstance(holder, dict) else None
     if currency is not None and str(currency).upper() != COST_CURRENCY_USD:
         return {}
-    if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value) or value < 0:
+    if isinstance(value, bool) or not isinstance(value, int | float):
         return {}
-    return {"cost_usd": float(value), "cost_source": COST_REPORTED}
+    try:
+        cost = float(value)  # an int too large for a float states nothing usable
+    except OverflowError:
+        return {}
+    if not math.isfinite(cost) or cost < 0:
+        return {}
+    return {"cost_usd": cost, "cost_source": COST_REPORTED}
