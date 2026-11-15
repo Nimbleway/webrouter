@@ -10,6 +10,7 @@ from typing import Any
 
 from web_router.constants_errors import MSG_INVALID_PARAMETER
 from web_router.exceptions import ProviderError, WebRouterError
+from web_router.types_errors import ERROR_KIND_UPSTREAM
 
 
 class InvalidParameterError(WebRouterError, ValueError):
@@ -40,7 +41,7 @@ class AllProvidersFailedError(ProviderError):
     def __init__(self, provider: str, message: str, failures: Mapping[str, WebRouterError]) -> None:
         kinds = {getattr(exc, "kind", None) for exc in failures.values()}
         shared = kinds.pop() if len(kinds) == 1 else None
-        super().__init__(provider, message, kind=shared or "upstream")
+        super().__init__(provider, message, kind=shared or ERROR_KIND_UPSTREAM)
         self.failures = dict(failures)
         delays = [d for d in (getattr(exc, "retry_after", None) for exc in self.failures.values()) if d is not None]
         self.retry_after = max(delays) if delays else None
