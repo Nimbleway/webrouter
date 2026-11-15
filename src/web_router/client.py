@@ -60,7 +60,7 @@ from web_router.constants import (
     RESEARCH_TIMEOUT,
 )
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
-from web_router.providers._runtime import Runtime, checked_limit
+from web_router.providers._runtime import Runtime
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -136,7 +136,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 extract and answer it serves (per event loop on the async router); ``None`` caps nothing. A call
                 waits for a slot within its own ``timeout`` -- see :mod:`web_router.providers._runtime`.
         """
-        self._runtime = Runtime(limiter=checked_limit(max_concurrency))
+        self._runtime = Runtime.capped(max_concurrency)
         self._init_vendors(vendor_credentials)
         name = provider_name(provider)
         # Either registry is enough to name a default: a router defaulted to a

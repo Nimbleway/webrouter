@@ -27,7 +27,8 @@ from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_invoke import ROUTER_URL_POLICY_ATTR
-from web_router.providers._runtime import Runtime, lent, noting
+from web_router.providers._cooldown import noting
+from web_router.providers._runtime import Runtime, lent
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import BudgetedCall, budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates

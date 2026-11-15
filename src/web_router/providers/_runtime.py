@@ -3,95 +3,23 @@
 Held in a context variable for the length of each routed call, as the deadline
 is, so the providers underneath read it without it appearing in their
 signatures; a provider used on its own, outside any router, sees none and
-behaves as it always has.
-
-The cap counts vendor calls, not router calls: one extract of twenty URLs
-through a one-URL-per-call backend takes up to twenty slots, one at a time, and
-an ``auto`` chain takes a slot per member it tries. A delegating provider
-(``auto``, ``max``) takes none of its own. The sync router's cap is one
-semaphore across its threads; the async router's is one per event loop, since
-an asyncio semaphore belongs to one loop.
+behaves as it always has. The cap itself is :class:`~web_router.providers._limiter.Limiter`.
 """
 
 from __future__ import annotations
 
-import asyncio
-import threading
-import weakref
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Iterator
 from contextlib import AbstractContextManager, asynccontextmanager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from web_router.constants import DELEGATING_PROVIDERS
-from web_router.constants_production import MSG_INVALID_MAX_CONCURRENCY
-from web_router.exceptions import DeadlineExceededError
-from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._cooldown import Cooldowns
+from web_router.providers._limiter import Limiter, checked_limit
 
 if TYPE_CHECKING:
     from web_router.providers._deadline import Deadline
-
-_T = TypeVar("_T")
-
-
-class Limiter:
-    """At most ``limit`` vendor calls in flight: one semaphore for threads, one per event loop for tasks."""
-
-    def __init__(self, limit: int) -> None:
-        self.limit = limit
-        self._threads = threading.BoundedSemaphore(limit)
-        self._loops: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore] = (
-            weakref.WeakKeyDictionary()
-        )
-        self._lock = threading.Lock()
-
-    def _for_loop(self) -> asyncio.Semaphore:
-        loop = asyncio.get_running_loop()
-        with self._lock:
-            if loop not in self._loops:
-                self._loops[loop] = asyncio.Semaphore(self.limit)
-            return self._loops[loop]
-
-    @contextmanager
-    def held(self, provider: str, deadline: Deadline | None) -> Iterator[None]:
-        """A slot for one call, waited for no longer than ``deadline`` allows."""
-        acquired = self._threads.acquire(timeout=None if deadline is None else max(0.0, deadline.left()))
-        if not acquired:
-            assert deadline is not None  # an unbounded acquire always succeeds
-            raise DeadlineExceededError(provider, deadline.seconds)
-        try:
-            yield
-        finally:
-            self._threads.release()
-
-    @asynccontextmanager
-    async def aheld(self, provider: str, deadline: Deadline | None) -> AsyncIterator[None]:
-        """Async counterpart of :meth:`held`, on this loop's semaphore."""
-        semaphore = self._for_loop()
-        try:
-            await asyncio.wait_for(semaphore.acquire(), None if deadline is None else max(0.0, deadline.left()))
-        except TimeoutError:
-            assert deadline is not None
-            raise DeadlineExceededError(provider, deadline.seconds) from None
-        try:
-            yield
-        finally:
-            semaphore.release()
-
-
-def checked_limit(value: int | None) -> Limiter | None:
-    """A :class:`Limiter` for ``max_concurrency``; ``None`` caps nothing.
-
-    Raises:
-        InvalidParameterError: for anything but a whole number of 1 or more (a bool included).
-    """
-    if value is None:
-        return None
-    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
-        raise InvalidParameterError("max_concurrency", MSG_INVALID_MAX_CONCURRENCY.format(value=value))
-    return Limiter(value)
 
 
 @dataclass(frozen=True)
@@ -100,6 +28,11 @@ class Runtime:
 
     cooldowns: Cooldowns = field(default_factory=Cooldowns)
     limiter: Limiter | None = None
+
+    @classmethod
+    def capped(cls, max_concurrency: int | None) -> Runtime:
+        """A router's runtime, its vendor calls held to ``max_concurrency``; ``None`` caps nothing."""
+        return cls(limiter=checked_limit(max_concurrency))
 
 
 _RUNTIME: ContextVar[Runtime | None] = ContextVar("web_router_runtime", default=None)
@@ -119,32 +52,6 @@ def running(runtime: Runtime) -> Iterator[None]:
 def lent(runtime: Runtime | None) -> AbstractContextManager[None]:
     """:func:`running` for a router's runtime; nothing for a router that has none."""
     return nullcontext() if runtime is None else running(runtime)
-
-
-@contextmanager
-def noting(runtime: Runtime | None, backend: object) -> Iterator[Callable[[_T], _T]]:
-    """Start a named backend's cooldown when its call, or an answer passed to the yielded hook, is throttled.
-
-    ``auto``'s members are noted by their hops.
-    """
-    name = getattr(backend, "name", None)
-    if runtime is None or not isinstance(name, str) or name in DELEGATING_PROVIDERS:
-        yield _unchanged
-        return
-
-    def answered(response: _T) -> _T:
-        runtime.cooldowns.note_answer(name, response)
-        return response
-
-    try:
-        yield answered
-    except Exception as exc:
-        runtime.cooldowns.note(name, exc)
-        raise
-
-
-def _unchanged(response: _T) -> _T:
-    return response
 
 
 def current_runtime() -> Runtime | None:
@@ -167,12 +74,8 @@ def slot(provider: str, deadline: Deadline | None) -> Iterator[None]:
     if limiter is None:
         yield
         return
-    with limiter.held(provider, deadline):
-        token = _HOLDING.set(True)
-        try:
-            yield
-        finally:
-            _HOLDING.reset(token)
+    with limiter.held(provider, deadline), _holding():
+        yield
 
 
 @asynccontextmanager
@@ -183,8 +86,15 @@ async def aslot(provider: str, deadline: Deadline | None) -> AsyncIterator[None]
         yield
         return
     async with limiter.aheld(provider, deadline):
-        token = _HOLDING.set(True)
-        try:
+        with _holding():
             yield
-        finally:
-            _HOLDING.reset(token)
+
+
+@contextmanager
+def _holding() -> Iterator[None]:
+    """Mark the calls inside as already holding a slot, so a nested vendor call takes no second one."""
+    token = _HOLDING.set(True)
+    try:
+        yield
+    finally:
+        _HOLDING.reset(token)

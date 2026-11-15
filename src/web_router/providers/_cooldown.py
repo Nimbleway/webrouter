@@ -14,7 +14,11 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, TypeVar
 
+from web_router.constants import DELEGATING_PROVIDERS
 from web_router.constants_production import (
     COOLDOWN_DEFAULT_S,
     COOLDOWN_FALLBACK_S,
@@ -24,6 +28,11 @@ from web_router.constants_production import (
     MSG_COOLING_DOWN,
 )
 from web_router.exceptions import ProviderError
+
+if TYPE_CHECKING:
+    from web_router.providers._runtime import Runtime
+
+_T = TypeVar("_T")
 
 logger = logging.getLogger(__name__)
 
@@ -106,3 +115,29 @@ def _cooldown_of(exc: BaseException) -> tuple[float | None, int | None]:
     if wait is None:
         wait = COOLDOWN_DEFAULT_S.get(status, COOLDOWN_FALLBACK_S) if status is not None else COOLDOWN_FALLBACK_S
     return min(max(wait, 0.0), COOLDOWN_MAX_S), status
+
+
+@contextmanager
+def noting(runtime: Runtime | None, backend: object) -> Iterator[Callable[[_T], _T]]:
+    """Start a named backend's cooldown when its call, or an answer passed to the yielded hook, is throttled.
+
+    ``auto``'s members are noted by their hops.
+    """
+    name = getattr(backend, "name", None)
+    if runtime is None or not isinstance(name, str) or name in DELEGATING_PROVIDERS:
+        yield _unchanged
+        return
+
+    def answered(response: _T) -> _T:
+        runtime.cooldowns.note_answer(name, response)
+        return response
+
+    try:
+        yield answered
+    except Exception as exc:
+        runtime.cooldowns.note(name, exc)
+        raise
+
+
+def _unchanged(response: _T) -> _T:
+    return response
