@@ -90,5 +90,5 @@ MSG_BRAVE_SEARCH_VALUES = (
     "unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )
 
-BRAVE_TOKEN_INVALID_CODE = "SUBSCRIPTION_TOKEN_INVALID"
+BRAVE_REFUSED_KEY_CODE = "SUBSCRIPTION_TOKEN_INVALID"
 """The ``error.code`` Brave answers a refused subscription token with, under HTTP 422 rather than a 401 or 403."""
