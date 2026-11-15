@@ -3,15 +3,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import overload
 
 from web_router.constants_spend import MSG_SPEND_SINK
 from web_router.exceptions import ConfigurationError
 from web_router.spend import SpendLog, SpendSink
+from web_router.spend_record import SpendSinkHolder
 
 
-class SpendLogging:
-    _spend_sink: SpendSink | None = None
-
+class SpendLogging(SpendSinkHolder):
+    @overload
+    def log_spend(self, to: str | Path, /) -> SpendLog: ...
+    @overload
+    def log_spend(self, to: SpendSink, /) -> SpendSink: ...
+    @overload
+    def log_spend(self, to: None, /) -> None: ...
     def log_spend(self, to: str | Path | SpendSink | None, /) -> SpendSink | None:
         """Log every call this router answers from now on to ``to``: a file path, or any object with ``record``.
 

@@ -105,3 +105,14 @@ def test_a_default_chain_override_that_takes_nothing_is_read_as_construction_rea
     monkeypatch.setattr(AutoProvider, "default_chain", staticmethod(lambda: (("first", {}),)))
     keyed = AutoProvider(provider_config={"first": {"api_key": "k"}})
     assert cost_order._runs_default(keyed), "no TypeError: a key in code does not widen an override's chain"
+
+
+def test_a_keyless_member_stays_last_though_its_keyed_namesake_is_ranked(
+    monkeypatch: pytest.MonkeyPatch, priced: Table
+) -> None:
+    _benchmark(monkeypatch, "search", 0.05, first=0.5, second=0.5)
+    priced.update(first=(0.017, None), second=(0.008, None))
+    monkeypatch.setattr(cost_order, "_runs_default", lambda _chain: True)
+    monkeypatch.setattr(cost_order, "eligible_members", lambda *_: ([("first", False), ("second", True)], {}))
+    route, _ = cost_order.cost_route(AutoProvider(), "search", SearchRequest(query="q"), CAP)
+    assert route is None, "keyless second is cheaper and shares a measure, yet the keyed member keeps first place"

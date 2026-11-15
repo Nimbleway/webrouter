@@ -131,3 +131,18 @@ def test_a_line_left_unfinished_is_skipped_and_the_rest_read(tmp_path: Path, cap
     with caplog.at_level(logging.WARNING, logger="web_router"):
         assert [entry.provider for entry in log.entries()] == ["fake", "next"], "the next entry is not joined to it"
     assert "not a whole entry" in caplog.text
+
+
+def test_a_naive_time_is_read_as_utc_on_any_host() -> None:
+    naive = SpendEntry(at=datetime(2026, 11, 2, 23, 30), method="search", provider="fake")
+    assert naive.at.tzinfo is UTC and naive.day == date(2026, 11, 2)
+
+
+def test_a_reported_cost_never_fills_the_whole_call_estimate(fake_provider: Any) -> None:
+    from web_router.spend_record import spend_entry
+    from web_router.types import SearchResponse
+
+    billed = SearchResponse(query="q", provider="fake", results=[], cost_usd=0.02, cost_source="reported")
+    assert spend_entry(billed, "search").call_estimate_usd is None
+    estimated = billed.model_copy(update={"cost_source": "estimated"})
+    assert spend_entry(estimated, "search").call_estimate_usd == 0.02

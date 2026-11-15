@@ -37,11 +37,6 @@ from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
 
-def orders_by_cost(budget: Budget | None) -> bool:
-    """Whether a call under ``budget`` runs in cost order: when it caps cost."""
-    return budget is not None and budget.max_cost_usd is not None
-
-
 def cost_ordered(tool: ToolName, names: Sequence[str], request: NormalizedRequest) -> list[str]:
     """``names`` -- ``tool``'s eligible members in static order -- in cost order within each accuracy tier."""
     data = chains().get(tool) or {}
@@ -69,10 +64,14 @@ def cost_route(
     when the order is the static one: no cost cap, a backend the caller named, a ``chain`` the caller set, or
     no tier the request's prices reorder.
     """
-    if not orders_by_cost(budget) or getattr(chain, "name", None) != PROVIDER_AUTO or not _runs_default(chain):
+    capped = budget is not None and budget.max_cost_usd is not None
+    if not capped or getattr(chain, "name", None) != PROVIDER_AUTO or not _runs_default(chain):
         return None, None
-    names = [name for name, _ in eligible_members(Only(tool, chain), tool, request)[0]]
-    ordered = cost_ordered(tool, names, request)
+    members = eligible_members(Only(tool, chain), tool, request)[0]
+    names = [name for name, _ in members]
+    # a keyless member shares its keyed namesake's measure but not its quality: it stays last, unranked
+    keyed = [name for name, keyless in members if not keyless]
+    ordered = cost_ordered(tool, keyed, request) + [name for name, keyless in members if keyless]
     if ordered == names:
         return None, None
     record = DecisionRecord(merged=[candidate_id(tool, name) for name in ordered])

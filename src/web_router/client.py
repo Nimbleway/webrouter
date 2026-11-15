@@ -277,7 +277,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncLiveData, SyncBenchm
         >>> response.urls
         >>> router.extract(response.urls[:3], format="markdown")
 
-    ``budget=`` caps one call and :meth:`budget` several (experimental): see :mod:`web_router.routing.budget`.
+    ``budget=`` caps one call and :meth:`budget` several: see :mod:`web_router.routing.budget`.
     """
 
     def __init__(

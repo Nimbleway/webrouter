@@ -27,7 +27,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Literal, Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from web_router.constants_cost import COST_REPORTED
 from web_router.constants_spend import MSG_SPEND_LINE_SKIPPED, MSG_SPEND_REPORT_KEY, SPEND_REPORT_KEYS
@@ -56,9 +56,15 @@ class SpendEntry(BaseModel):
     elapsed_s: float | None = Field(default=None, description="Wall-clock seconds the call took.")
     decision_id: str | None = Field(default=None, description="The decision record's id, when it has one.")
 
+    @field_validator("at")
+    @classmethod
+    def _in_utc(cls, at: datetime) -> datetime:
+        """A naive time is read as UTC, as the field says, never as the host's own zone."""
+        return at.replace(tzinfo=UTC) if at.tzinfo is None else at.astimezone(UTC)
+
     @property
     def day(self) -> date:
-        return self.at.astimezone(UTC).date()
+        return self.at.date()
 
 
 @runtime_checkable

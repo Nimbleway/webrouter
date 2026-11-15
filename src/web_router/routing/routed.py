@@ -43,8 +43,7 @@ from web_router.routing.record import prompt_of
 from web_router.routing.route_tools import ALL_TOOLS, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
-from web_router.spend import SpendSink
-from web_router.spend_record import log_spent
+from web_router.spend_record import SpendSinkHolder, log_spent
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
@@ -55,15 +54,13 @@ _TOOL_OF: dict[type[NormalizedRequest], ToolName] = {cls: tool for tool, cls in 
 """The tool a request is for, read from its type."""
 
 
-class RouterSetup(RouterOwner):
+class RouterSetup(RouterOwner, SpendSinkHolder):
     """The attached router and the tools it is consulted on, shared by both routers."""
 
     _router: AttachedRouter | None = None
     _route_tools: frozenset[ToolName] = ALL_TOOLS
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
-    _spend_sink: SpendSink | None = None
-    """Where each answered call is logged: set by ``log_spend()``, ``None`` logs nothing."""
     """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
 
     def _attach_router(

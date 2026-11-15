@@ -148,6 +148,7 @@ lists each method's order and how it is generated.
 from web_router import Budget, WebRouter, prices
 
 router = WebRouter(router="cheapest_first")  # free backends first, then the cheapest paid ones
+log = router.log_spend("spend.jsonl")  # from here on, every answered call is logged
 response = router.answer("...", budget=Budget(max_cost_usd=0.01, time_limit_s=10))
 response.provider, response.cost_usd, response.cost_source, response.elapsed_s
 
@@ -156,7 +157,7 @@ with router.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
     b.research("...")
     b.status()  # spent, reserved, remaining, time left
 
-router.log_spend("spend.jsonl").report()  # what you spent, by day, backend and method
+log.report()  # what you spent, by day, backend and method
 prices.estimate("tavily", "search")  # 0.008: list price of one request
 ```
 

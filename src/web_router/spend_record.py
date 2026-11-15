@@ -11,10 +11,18 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 
+from web_router.constants_cost import COST_ESTIMATED
 from web_router.constants_spend import MSG_SPEND_SINK_FAILED
 from web_router.spend import SpendEntry, SpendSink
 
 logger = logging.getLogger("web_router")
+
+
+class SpendSinkHolder:
+    """The one place a router keeps its spend sink, shared by ``log_spend()`` and the calls that write to it."""
+
+    _spend_sink: SpendSink | None = None
+    """Where each answered call is logged: set by ``log_spend()``, ``None`` logs nothing."""
 
 
 def spend_entry(response: BaseModel, method: str) -> SpendEntry:
@@ -22,13 +30,15 @@ def spend_entry(response: BaseModel, method: str) -> SpendEntry:
     decision = getattr(response, "decision", None)
     cost = getattr(response, "cost_usd", None)
     whole = getattr(decision, "estimated_cost_usd", None)
+    source = getattr(response, "cost_source", None)
     return SpendEntry(
         at=datetime.now(UTC),
         method=method,
         provider=str(getattr(response, "provider", "")),
         cost_usd=cost,
-        cost_source=getattr(response, "cost_source", None),
-        call_estimate_usd=whole if whole is not None else cost,
+        cost_source=source,
+        # with no decision estimate, the answer's own cost stands in only when it is an estimate, never a billed sum
+        call_estimate_usd=whole if whole is not None or source != COST_ESTIMATED else cost,
         elapsed_s=getattr(response, "elapsed_s", None),
         decision_id=getattr(decision, "decision_id", None),
     )

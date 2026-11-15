@@ -59,7 +59,7 @@ a router, `response.decision` lists each with its estimate and seconds, and
 | `search` | `you-mcp`, `exa-mcp`, `parallel-mcp` (keyless) | `deepseek`, $0.00075 | Keyless Tavily is $0.008; keyless Keenable has no price, so a cost cap skips it |
 | `extract` | none | `deepseek`, $0.00075 a page | Keyless Jina is free at 20 requests a minute but billed by tokens with a key, so a cost cap skips it |
 | `answer` | none | `perplexity`, about $0.0012 (measured) | Then Brave ($0.004 plus tokens, a floor a cap skips), Exa and You.com ($0.005) |
-| `research` | none | `parallel`, $0.025 a run | Nimble, You.com and Perplexity above its default have no known price |
+| `research` | none | `parallel`, $0.005 a run at `effort="low"` | Nimble at its default and at `max`, and You.com, have no known price; Perplexity is billed by tokens |
 | `browse` | none | `browser-use`, $0.01 a task plus steps | Its price is a floor, so a cost cap skips it |
 | `open_browser` | `local` (your own Chromium) | `steel` and `hyperbrowser`, $0.10 an hour | Per minute of the session's `timeout`; Anchor's $0.05 is a floor ($0.01 a browser on top), so a cost cap skips it |
 | `live_data` | none | `nimble`, $0.003 a run | Never routed or capped by a budget |
@@ -120,9 +120,9 @@ failed attempt still counts.
 To spend several calls from one budget:
 
 ```python
-with wr.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
+with router.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:
     b.search("...")
-    b.research("...")  # calls on wr inside the block spend from it too
+    b.research("...")  # calls on router inside the block spend from it too
     b.status()  # spent, reserved, remaining, elapsed, time left
 ```
 
