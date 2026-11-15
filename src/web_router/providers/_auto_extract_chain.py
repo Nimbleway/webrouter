@@ -153,7 +153,9 @@ def _asked(url: str, urls: list[str]) -> set[str]:
     """The requested URLs ``url`` stands for: itself when asked for exactly, else those a backend rewrote into it."""
     if url in urls:
         return {url}
-    return {asked for asked in urls if _same(asked) == _same(url)}
+    # A rewrite that could be either of two URLs asked for proves neither was read.
+    matches = {asked for asked in urls if _same(asked) == _same(url)}
+    return matches if len(matches) == 1 else set()
 
 
 def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:

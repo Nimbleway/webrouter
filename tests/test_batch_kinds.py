@@ -94,3 +94,15 @@ def test_a_deadline_on_retry_is_a_timeout_and_a_provider_error_keeps_its_kind() 
     assert (late.kind, late.status_code) == ("timeout", 503)
     refused = _also_failed(first, ProviderError("two", "slow", kind="rate_limit")).failures[0]
     assert refused.kind == "rate_limit"
+
+
+def test_a_rewritten_url_that_could_be_either_of_two_asked_for_clears_neither() -> None:
+    from web_router.providers._auto_extract_chain import _merged
+    from web_router.types import ExtractedDocument, ExtractResponse
+
+    lower, upper = "https://a.test/p", "https://A.test/p"
+    first = ExtractResponse(
+        provider="one", failures=[ExtractFailure(url=lower, error="down"), ExtractFailure(url=upper, error="down")]
+    )
+    second = ExtractResponse(provider="two", documents=[ExtractedDocument(url="https://a.test/p/", content="hi")])
+    assert [failure.url for failure in _merged(first, second, [lower, upper]).failures] == [lower, upper]
