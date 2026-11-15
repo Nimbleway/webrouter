@@ -33,6 +33,7 @@ from web_router.types_options import (
     RECENCY_DESCRIPTION,
     SEARCH_DEPTH_DESCRIPTION,
     SEARCH_EFFORT_DESCRIPTION,
+    NonBlankText,
 )
 from web_router.types_options import Recency as Recency
 from web_router.types_options import ResearchEffort as ResearchEffort
@@ -50,10 +51,9 @@ ExtractFormat = Literal["markdown", "html", "text"]
 - ``html``: the page's HTML, as the backend fetched it.
 - ``text``: the visible text, with no markup at all.
 
-Backends do not all offer all three: one that cannot produce the format you
-asked for raises :class:`~web_router.exceptions.UnsupportedFormatError` rather
-than returning a different one under the same name. See the format table at
-https://docs.webrouter.net/extract#formats
+Backends do not all offer all three: one that cannot produce the format you asked for raises
+:class:`~web_router.exceptions.UnsupportedFormatError` rather than returning a different one under the same name.
+See the format table at https://docs.webrouter.net/extract#formats
 """
 
 
@@ -163,7 +163,7 @@ class SearchRequest(NormalizedRequest):
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
 
-    query: Annotated[str, Field(min_length=1, description="The search query.")]
+    query: Annotated[NonBlankText, Field(description="The search query.")]
     max_results: Annotated[int | None, Field(default=None, ge=1, description=MAX_RESULTS_DESCRIPTION)] = None
     search_depth: SearchDepth | None = Field(default=None, description=SEARCH_DEPTH_DESCRIPTION)
     include_domains: list[str] | None = Field(default=None, description="Restrict results to these domains.")
@@ -380,7 +380,7 @@ class ResearchRequest(NormalizedRequest):
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
 
-    query: Annotated[str, Field(min_length=1, description="The question, or the instructions for the run.")]
+    query: Annotated[NonBlankText, Field(description="The question, or the instructions for the run.")]
     output_schema: dict[str, Any] | None = Field(
         default=None,
         description="JSON Schema the answer must conform to. Unset asks for prose instead.",
@@ -648,7 +648,7 @@ class BrowseRequest(NormalizedRequest):
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"task", "provider_options"})
 
-    task: Annotated[str, Field(min_length=1, description="What the agent should do, in plain words.")]
+    task: Annotated[NonBlankText, Field(description="What the agent should do, in plain words.")]
     start_url: str | None = Field(default=None, description="The page the agent starts on.")
     output_schema: dict[str, Any] | None = Field(
         default=None,

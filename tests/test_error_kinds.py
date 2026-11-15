@@ -85,6 +85,10 @@ def test_an_extract_failure_carries_a_kind() -> None:
     ("call", "field", "allowed"),
     [
         (lambda router: router.search(""), "query", None),
+        (lambda router: router.search(" \t\n"), "query", None),
+        (lambda router: router.answer("   "), "query", None),
+        (lambda router: router.research("   "), "query", None),
+        (lambda router: router.browse("   "), "task", None),
         (lambda router: router.search("x", max_results=0), "max_results", None),
         (lambda router: router.search("x", search_depth="ultra"), "search_depth", ["lite", "fast", "deep"]),
         (lambda router: router.extract([]), "urls", None),

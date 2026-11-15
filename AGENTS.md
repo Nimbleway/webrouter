@@ -423,6 +423,7 @@ src/web_router/
     │                   auto.py re-exports it
     ├── brave.py        search, via httpx; re-exports brave_answer.py
     ├── brave_answer.py answer, streamed, via httpx
+    ├── _brave_errors.py both: a refused token (a 422 SUBSCRIPTION_TOKEN_INVALID) as auth
     ├── parallel.py     research + answer, via httpx; re-exports parallel_search.py
     ├── parallel_search.py  search, via httpx
     ├── perplexity.py   search + research, via httpx; re-exports perplexity_answer.py

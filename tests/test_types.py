@@ -11,6 +11,10 @@ def test_request_requires_a_non_empty_query() -> None:
         SearchRequest(query="")
 
 
+def test_a_query_that_is_not_blank_is_kept_as_written() -> None:
+    assert SearchRequest(query="  hi \n").query == "  hi \n"
+
+
 def test_request_rejects_unknown_fields() -> None:
     with pytest.raises(ValidationError):
         SearchRequest(query="hi", nonsense=True)

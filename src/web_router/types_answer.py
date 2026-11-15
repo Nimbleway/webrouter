@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from web_router.types import Citation, NormalizedRequest, ResearchOutcome
 from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
 from web_router.types_decision import DECISION_DESCRIPTION, DecisionRecord
-from web_router.types_options import RECENCY_DESCRIPTION
+from web_router.types_options import RECENCY_DESCRIPTION, NonBlankText
 from web_router.types_options import Recency as Recency
 
 __all__ = ["ANSWER_ALWAYS_SENT", "ANSWER_PARAMETERS", "AnswerRequest", "AnswerResponse", "Recency"]
@@ -28,7 +28,7 @@ class AnswerRequest(NormalizedRequest):
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
 
-    query: Annotated[str, Field(min_length=1, description="The question to answer.")]
+    query: Annotated[NonBlankText, Field(description="The question to answer.")]
     include_domains: list[str] | None = Field(default=None, description="Restrict sources to these domains.")
     exclude_domains: list[str] | None = Field(default=None, description="Keep these domains out of the sources.")
     country: str | None = Field(default=None, description="Country code for geo-targeting, e.g. 'US'.")
