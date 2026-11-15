@@ -40,7 +40,9 @@ holding it ends:
     ...     tree = browser.snapshot().tree
 """
 
+from web_router import _exports_registry
 from web_router import live_data_compat as _live_data_compat
+from web_router._exports_registry import *  # noqa: F403  (the registry's names, in its __all__)
 from web_router._version import __version__
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.client_scope import AsyncBudgetScope, BudgetScope
@@ -84,38 +86,6 @@ from web_router.providers.base import (
     ResearchJob,
     ResearchProvider,
     SearchProvider,
-)
-from web_router.registry import (
-    available_browse_providers,
-    available_browser_providers,
-    available_extract_providers,
-    available_live_data_providers,
-    available_providers,
-    available_research_providers,
-    configured_browse_providers,
-    configured_browser_providers,
-    configured_extract_providers,
-    configured_live_data_providers,
-    configured_providers,
-    configured_research_providers,
-    register_browse_provider,
-    register_browser_provider,
-    register_extract_provider,
-    register_live_data_provider,
-    register_provider,
-    register_research_provider,
-    unregister_browse_provider,
-    unregister_browser_provider,
-    unregister_extract_provider,
-    unregister_live_data_provider,
-    unregister_provider,
-    unregister_research_provider,
-)
-from web_router.registry_answer import (
-    available_answer_providers,
-    configured_answer_providers,
-    register_answer_provider,
-    unregister_answer_provider,
 )
 from web_router.routing import (
     Budget,
@@ -305,40 +275,13 @@ __all__ = [
     "WebRouter",
     "WebRouterError",
     "__version__",
-    "available_answer_providers",
-    "available_browse_providers",
-    "available_browser_providers",
-    "available_extract_providers",
-    "available_live_data_providers",
-    "available_providers",
-    "available_research_providers",
     "available_routers",
     "cheapest_first",
-    "configured_answer_providers",
-    "configured_browse_providers",
-    "configured_browser_providers",
-    "configured_extract_providers",
-    "configured_live_data_providers",
-    "configured_providers",
-    "configured_research_providers",
-    "register_answer_provider",
-    "register_browse_provider",
-    "register_browser_provider",
-    "register_extract_provider",
-    "register_live_data_provider",
-    "register_provider",
-    "register_research_provider",
     "register_router",
     "spend_report",
-    "unregister_answer_provider",
-    "unregister_browse_provider",
-    "unregister_browser_provider",
-    "unregister_extract_provider",
-    "unregister_live_data_provider",
-    "unregister_provider",
-    "unregister_research_provider",
     "unregister_router",
 ]
+__all__ += _exports_registry.__all__
 
 
 _live_data_compat.install()
