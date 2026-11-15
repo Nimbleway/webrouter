@@ -68,3 +68,6 @@ MSG_OCTEN_LOCALE = (
 )
 
 MSG_OCTEN_UNSUCCESSFUL = "Octen answered with code {code}: {msg}"
+
+MSG_OCTEN_NO_DATA = "Octen answered without a data object (fields: {fields})"
+"""Octen's envelope carries ``data`` on every success; a reply without it cannot be read as a search."""

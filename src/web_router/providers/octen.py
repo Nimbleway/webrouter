@@ -16,6 +16,7 @@ from typing import Any, ClassVar
 from web_router.constants import ENV_OCTEN_API_KEY, PROVIDER_OCTEN
 from web_router.constants_octen import (
     MSG_OCTEN_LOCALE,
+    MSG_OCTEN_NO_DATA,
     MSG_OCTEN_UNSUCCESSFUL,
     OCTEN_API_KEY_PREFIX,
     OCTEN_BASE_URL,
@@ -78,7 +79,9 @@ class OctenProvider(HttpSearchProvider):
         code = payload.get("code")
         if code not in (None, 0):
             raise ProviderError(self.name, MSG_OCTEN_UNSUCCESSFUL.format(code=code, msg=payload.get("msg")))
-        data = payload.get("data") or {}
+        data = payload.get("data")
+        if not isinstance(data, dict):
+            raise ProviderError(self.name, MSG_OCTEN_NO_DATA.format(fields=", ".join(sorted(payload)) or "none"))
         return SearchResponse(
             provider=self.name,
             query=request.query,

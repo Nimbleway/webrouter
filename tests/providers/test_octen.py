@@ -8,13 +8,14 @@ documentation-derived. The payload below is the spec's example response.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import httpx
 import pytest
 
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.octen import OctenProvider
-from web_router.types import SearchRequest
+from web_router.types import SearchRequest, SearchResponse
 
 DOCUMENTED = {
     "code": 0,
@@ -127,6 +128,24 @@ def test_results_map_and_nothing_is_invented(provider: OctenProvider) -> None:
 def test_a_nonzero_code_raises(provider: OctenProvider) -> None:
     with pytest.raises(ProviderError, match="code 4001: bad"):
         provider._to_response(SearchRequest(query="q"), {"code": 4001, "msg": "bad", "request_id": "r"})
+
+
+def _search_answered_with(monkeypatch: pytest.MonkeyPatch, body: dict[str, Any]) -> SearchResponse:
+    monkeypatch.setenv("OCTEN_API_KEY", "test-key")
+    provider = OctenProvider(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body)))
+    return provider.search(SearchRequest(query="q"))
+
+
+@pytest.mark.parametrize("body", [{"msg": "gateway hiccup"}, {"code": 0}, {"code": 0, "data": None}])
+def test_a_reply_without_a_data_object_is_an_error_not_an_empty_search(
+    monkeypatch: pytest.MonkeyPatch, body: dict[str, Any]
+) -> None:
+    with pytest.raises(ProviderError, match="data"):
+        _search_answered_with(monkeypatch, body)
+
+
+def test_an_empty_results_list_is_a_search_that_found_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert _search_answered_with(monkeypatch, {"code": 0, "data": {"results": []}}).results == []
 
 
 @pytest.mark.integration
