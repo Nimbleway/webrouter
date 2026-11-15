@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from importlib import import_module
 from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
@@ -330,15 +331,14 @@ class ExtractResponse(BaseModel):
         return [document.url for document in self.documents]
 
 
-_BENCHMARK_MODELS = frozenset({"BenchmarkRun", "BenchmarkReport", "ExtractBenchmarkRun", "ExtractBenchmarkReport"})
+_MOVED = {"BrowseProgress": "browse"} | dict.fromkeys(("BenchmarkRun", "BenchmarkReport"), "benchmark")
+_MOVED |= dict.fromkeys(("ExtractBenchmarkRun", "ExtractBenchmarkReport"), "benchmark")
 
 
 def __getattr__(name: str) -> Any:
-    """The benchmark models' old path: ``types_benchmark`` imports this module, so it cannot be imported at the top."""
-    if name in _BENCHMARK_MODELS:
-        from web_router import types_benchmark
-
-        return getattr(types_benchmark, name)
+    """A moved model's old path: its ``types_*`` module imports this one, so it cannot be imported at the top."""
+    if name in _MOVED:
+        return getattr(import_module(f"web_router.types_{_MOVED[name]}"), name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

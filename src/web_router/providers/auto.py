@@ -100,7 +100,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers._auto_extract import extract_eligible
-from web_router.providers._auto_extract_chain import aextract_down_chain, extract_down_chain
+from web_router.providers._auto_extract_chain import _Walk, aextract_down_chain, extract_down_chain
 from web_router.providers._chain import (
     _RECOVERABLE,
     _ChainSpec,
@@ -108,7 +108,6 @@ from web_router.providers._chain import (
     _held_or_raise,
     _keyed_chain,
     _keyless_after,
-    _member_options,
     _members_and_chain,
     _no_backend,
     _nothing_started,
@@ -117,6 +116,7 @@ from web_router.providers._chain import (
 )
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
+from web_router.providers._members import _Members
 from web_router.providers.auto_browser import AutoBrowserProvider as AutoBrowserProvider
 from web_router.providers.base import (
     BrowseJob,
@@ -183,8 +183,9 @@ class AutoProvider(SearchProvider):
             chain, members_config, AUTO_CHAIN_SEARCH, self.default_chain
         )
         self.fallback_on_empty = fallback_on_empty
-        # Keyed by position, not name: one provider can appear twice on different terms -- Tavily keyed, then keyless.
-        self._members: dict[int, SearchProvider] = {}
+        # Keyed by position, not by name: the same provider can appear twice on different terms -- Tavily keyed, then
+        # Tavily keyless.
+        self._members: _Members[SearchProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -205,12 +206,7 @@ class AutoProvider(SearchProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_provider)
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         failures: dict[str, WebRouterError] = {}
@@ -345,7 +341,7 @@ class AutoExtractProvider(ExtractProvider):
             chain, members_config, AUTO_CHAIN_EXTRACT, self.default_chain
         )
         self.fallback_on_empty = fallback_on_empty
-        self._members: dict[int, ExtractProvider] = {}
+        self._members: _Members[ExtractProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -366,30 +362,29 @@ class AutoExtractProvider(ExtractProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_extract_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_extract_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_extract_provider)
 
-    def _walk(self, request: ExtractRequest, urls: list[str]) -> tuple[str, bool, ExtractRequest, Any, Any]:
-        order = in_call_order("extract", self._eligible(request))
-        return self.name, self.fallback_on_empty, self._delegated(request, urls), self._member, order
+    def _walk(self, request: ExtractRequest) -> _Walk:
+        return _Walk(self.name, self.fallback_on_empty, self._member, in_call_order("extract", self._eligible(request)))
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         """The first answer, with each URL it failed tried on the members after it; see :mod:`._auto_extract_chain`."""
-        return extract_down_chain(*self._walk(request, urls), urls)
+        return extract_down_chain(self._walk(request), self._delegated(request, urls), urls)
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        return await aextract_down_chain(*self._walk(request, urls), urls)
+        return await aextract_down_chain(self._walk(request), self._delegated(request, urls), urls)
 
     def _eligible(self, request: ExtractRequest) -> list[tuple[int, str]]:
         """The chain members that return the format and map every other option set; see :func:`extract_eligible`."""
         return extract_eligible(self.name, self._chain, self.format_of(request), request)
 
     def _delegated(self, request: ExtractRequest, urls: list[str]) -> ExtractRequest:
-        """The request to hand a member, its format named: the members' own defaults differ."""
+        """The request to hand a member, with the format named explicitly.
+
+        The members disagree about their own defaults -- Nimble returns HTML,
+        Tavily markdown -- so letting one fall through would make the shape of
+        the content depend on which backend happened to answer.
+        """
         return request.model_copy(update={"format": self.format_of(request), "urls": urls})
 
     def close(self) -> None:
@@ -424,7 +419,7 @@ class AutoResearchProvider(ResearchProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_RESEARCH, self.default_chain
         )
-        self._members: dict[int, ResearchProvider] = {}
+        self._members: _Members[ResearchProvider] = _Members()
         # A run belongs to the backend that accepted it: its id means nothing to the others, so the member that answered
         # is kept and every later poll goes back to it rather than re-entering the chain.
         self._jobs: dict[str, ResearchJob] = {}
@@ -440,12 +435,7 @@ class AutoResearchProvider(ResearchProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_research_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_research_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_research_provider)
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
         eligible = self._eligible(request)
@@ -626,7 +616,7 @@ class AutoBrowseProvider(BrowseProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_BROWSE, self.default_chain
         )
-        self._members: dict[int, BrowseProvider] = {}
+        self._members: _Members[BrowseProvider] = _Members()
         # As for research: a task id means nothing to a backend that did not issue it, so every later poll goes back to
         # the member that took it.
         self._jobs: dict[str, BrowseJob] = {}
@@ -642,12 +632,7 @@ class AutoBrowseProvider(BrowseProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_browse_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_browse_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_browse_provider)
 
     def _start(self, request: BrowseRequest) -> BrowseProgress:
         failures: dict[str, WebRouterError] = {}

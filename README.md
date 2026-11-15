@@ -73,7 +73,7 @@ Python 3.11 or later. Extras per method (`search`, `extract`, `research`,
 `answer`, `browser`, `mcp`, ...) keep the install small; see the
 [Quickstart](https://docs.webrouter.net/quickstart).
 
-Keys are read from the environment. Copy [`.env.example`](.env.example), which
+Keys are read from the environment. Copy [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example), which
 names every variable and where to get it, and fill in the ones you hold.
 
 ## Methods
@@ -177,7 +177,7 @@ hosts. See [Smart routing](https://docs.webrouter.net/smart-routing).
 claude mcp add web-router -- uvx --from "webrouter[mcp]" web-router-mcp
 ```
 
-The [MCP guide](docs/mcp.md) covers Claude Desktop, Cursor and other clients,
+The [MCP guide](https://github.com/Nimbleway/webrouter/blob/main/docs/mcp.md) covers Claude Desktop, Cursor and other clients,
 credentials, tool costs and browser guards.
 
 **Agent frameworks.** Ready-made `web_search` and `web_extract` tools, with a
@@ -228,9 +228,9 @@ SealQA or your own CSV) with an LLM judge. See
 | [Quickstart](https://docs.webrouter.net/quickstart) | [Extract](https://docs.webrouter.net/extract) | [Smart routing](https://docs.webrouter.net/smart-routing) |
 | [How it works](https://docs.webrouter.net/how-it-works) | [Answer](https://docs.webrouter.net/answer) | [Benchmarks](https://docs.webrouter.net/benchmarks) |
 | [Providers](https://docs.webrouter.net/providers) | [Research](https://docs.webrouter.net/research) | [Adding a provider](https://docs.webrouter.net/custom-providers) |
-| [Configuration](https://docs.webrouter.net/configuration) | [Live data](https://docs.webrouter.net/live-data) | [MCP server](docs/mcp.md) |
-| [Errors](https://docs.webrouter.net/errors) | [Browser](https://docs.webrouter.net/browser) | [Examples](examples/) |
-| | [Vendor data](https://docs.webrouter.net/vendors) | [Changelog](CHANGELOG.md) |
+| [Configuration](https://docs.webrouter.net/configuration) | [Live data](https://docs.webrouter.net/live-data) | [MCP server](https://github.com/Nimbleway/webrouter/blob/main/docs/mcp.md) |
+| [Errors](https://docs.webrouter.net/errors) | [Browser](https://docs.webrouter.net/browser) | [Examples](https://github.com/Nimbleway/webrouter/tree/main/examples) |
+| | [Vendor data](https://docs.webrouter.net/vendors) | [Changelog](https://github.com/Nimbleway/webrouter/blob/main/CHANGELOG.md) |
 
 ## Contributing
 
