@@ -68,3 +68,10 @@ def test_the_command_keeps_a_path_with_a_space_whole(tmp_path: Path, monkeypatch
     command = str(ConfigurationError.missing_api_key("nimble", KEY)).split("`")[1]
     args = shlex.split(command)
     assert args[args.index("--env-file") + 1] == str((spaced / ".env").resolve())
+
+
+def test_a_word_in_the_message_is_not_taken_for_a_variable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / ".env").write_text("API=foo\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv(KEY, raising=False)
+    assert ".env exists" not in str(ConfigurationError.missing_api_key("nimble", KEY))

@@ -17,7 +17,7 @@ from web_router.constants import MCP_ENV_FILE_MAX_BYTES
 from web_router.constants_dotenv import DOTENV_FILENAME, MSG_DOTENV_NOT_READ, MSG_DOTENV_PREFIX
 
 _ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
-_VARIABLE = re.compile(r"\b[A-Z][A-Z0-9_]*\b")
+_VARIABLE = re.compile(r"\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b")  # an underscore, so "API" in "No API key" is not one
 
 
 def nearest_dotenv(start: Path | None = None) -> Path | None:
