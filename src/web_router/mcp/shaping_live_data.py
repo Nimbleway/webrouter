@@ -12,7 +12,7 @@ import json
 from typing import Any
 
 from web_router.constants import MCP_JSON_INDENT, MCP_MIN_FIELD_CHARS, MCP_MSG_OVERSIZED, MCP_MSG_SAMPLES_OMITTED
-from web_router.mcp.shaping import _fit, render
+from web_router.mcp.shaping import _fit, redact, render
 from web_router.types_live_data import LiveDataResponse, LiveDataSource, LiveDataSourcePage
 
 
@@ -26,12 +26,15 @@ def shape_live_data_sources(page: LiveDataSourcePage, handle: str, *, budget: in
     full samples for the one it picked.
     """
     templates = [_source_listing_row(source) for source in page.sources]
+    # A backend's failure can quote its vendor's response, a key in a URL included: redacted as a tool error is.
+    failures, _ = redact(page.failures)
     payload: dict[str, Any] = {
         "provider": page.provider,
         "total": page.total,
         "offset": page.offset,
         "limit": page.limit,
         **({"query": page.query, "search": page.search} if page.query else {}),
+        **({"failures": failures} if failures else {}),
         "sources": templates,
     }
     # A recorded input is copied whole or not at all, so one larger than its
@@ -162,6 +165,8 @@ def _source_listing_row(template: LiveDataSource) -> dict[str, Any]:
     schema = template.input_schema
     required = schema.get("required") if isinstance(schema, dict) else None
     return {
+        # Each row names its vendor: a page drawn from every backend mixes them, and a run must name it back.
+        "provider": template.provider,
         **_source_row(template),
         "required_inputs": list(required) if isinstance(required, list) else ([] if isinstance(schema, dict) else None),
         "sample_inputs": next(

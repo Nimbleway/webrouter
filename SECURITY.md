@@ -83,9 +83,9 @@ sees every URL you pass — including one that is itself sensitive, such as a
 signed or single-use link. Name a provider and it is the one you named.
 
 The default provider, `auto`, chooses for you: the backends you hold a
-credential for first, then the anonymous tiers those vendors publish — Tavily's
-keyless mode then You.com's open MCP endpoint for a search, Tavily's keyless
-mode then Jina Reader for an extract. So **a router you have not configured
+credential for first, then the anonymous tiers those vendors publish — Nimble's
+keyless tier, then Tavily's keyless mode and You.com's open MCP endpoint for a
+search; Nimble's, then Tavily's keyless mode and Jina Reader for an extract. So **a router you have not configured
 still sends queries and URLs to a third party you did not name**, under that
 vendor's terms for anonymous use rather than under an account you control.
 

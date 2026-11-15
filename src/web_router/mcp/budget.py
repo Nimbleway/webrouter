@@ -41,6 +41,7 @@ from web_router.constants_mcp import (
     MCP_PRICE_OPEN_BROWSER,
     MCP_TOOL_BUDGET_START,
 )
+from web_router.live_data_backends import backend_for
 from web_router.providers._deadline import current_deadline
 from web_router.providers.auto_browser import AutoBrowserProvider
 from web_router.routing.attempts import Attempt
@@ -172,8 +173,8 @@ def live_data_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> Abst
     """:func:`charged` for a ``live_data`` call with ``kwargs``: one run on the named backend."""
     if current_pool() is None:
         return nullcontext()
-    backend = router.get_live_data_provider(kwargs[MCP_ARG_PROVIDER])
-    return charged(MCP_PRICE_LIVE_DATA, [backend.name], LiveDataRequest(source=str(kwargs["source"])), router)
+    backend, name = backend_for(router, str(kwargs["source"]), kwargs.get(MCP_ARG_PROVIDER))
+    return charged(MCP_PRICE_LIVE_DATA, [backend.name], LiveDataRequest(source=name), router)
 
 
 def browser_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> AbstractContextManager[None]:

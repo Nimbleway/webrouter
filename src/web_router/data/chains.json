@@ -29,12 +29,18 @@
       "keenable",
       "deepseek",
       "agentcore",
+      "exa-litellm",
+      "tavily-litellm",
+      "parallel-litellm",
       "seltz"
     ],
     "unmeasured": [
       "keenable",
       "deepseek",
       "agentcore",
+      "exa-litellm",
+      "tavily-litellm",
+      "parallel-litellm",
       "seltz"
     ],
     "too_few_questions": [],
