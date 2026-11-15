@@ -3937,8 +3937,6 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     **VENDOR_MCP_REQUIRED,
 }
 
-MCP_PROVIDER_DESCRIPTION = "The backend to use, of those configured here; omit it and the router picks one."
-
 # A tool description is the routing decision: the model choosing between the tools is the actual router
 # (`web_run` hands it to ours), and latency and cost are what it chooses on.
 
