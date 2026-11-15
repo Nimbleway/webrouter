@@ -2535,10 +2535,8 @@ MSG_MISSING_SETTING = (
 
 MSG_UNKNOWN_PROVIDER = "Unknown provider {name!r}. Available providers: {available}."
 
-MSG_PROVIDER_NOT_INSTALLED = (
-    "Provider {name!r} requires an optional dependency. Install it with: "
-    "uv sync --extra {extra} in your web-router clone, or make setup for every extra"
-)
+INSTALL_EXTRA = 'pip install "webrouter[{extra}]" (or uv sync --extra {extra} in a web-router clone)'
+MSG_PROVIDER_NOT_INSTALLED = "Provider {name!r} requires an optional dependency. Install it with: " + INSTALL_EXTRA
 
 MSG_UNSUPPORTED_PARAMETERS = "Provider {provider!r} does not map {names}."
 

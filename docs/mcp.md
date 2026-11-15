@@ -26,6 +26,12 @@ cd webrouter && make setup
 uv run web-router-mcp    # a check that it starts: it waits silently for a client; Ctrl-C stops it
 ```
 
+Without a clone, install it from PyPI: `pip install "webrouter[all]"` (or
+`"webrouter[mcp]"` for the server alone) puts `web-router-mcp` on your `PATH`,
+and `uvx --from "webrouter[mcp]" web-router-mcp` runs it with no install at all.
+An install without the `mcp` extra has the command too; it prints the line
+that installs the extra and exits.
+
 That is a working `search` and a working `extract` with no account, no key and
 no signup — the keyless backends listed in
 [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials). Then
@@ -156,6 +162,13 @@ rotated in the original file takes effect on the next start. The tool's
 description tells the model to call it only with a path you gave and to set
 `remember` only when you ask.
 
+A remembered path is read in every project the server starts in. When the file
+lies outside the server's working directory, so its keys belong to another
+checkout, the capabilities resource's `env` starts with a `warning` naming it
+and the record to delete, and the server's instructions tell the model that
+billed backends are live. A setup you believe is keyless can then still bill:
+check the warning, or delete `env-path`.
+
 A key already set is never replaced, so a load can only add backends. That is
 also its one risk: a model steered by a page it read could call `load_env` on a
 file someone planted on this machine, adding a key for a backend you hold none
@@ -232,6 +245,12 @@ the client's `env` block or a file the server already read takes a restart.
 Each tool also carries a `title` and MCP's behaviour hints (`readOnlyHint`,
 `destructiveHint`, `idempotentHint`, `openWorldHint`), so a client can let a
 free lookup through and ask before a billed run or a click on a live page.
+Here `readOnlyHint` means safe to run unasked: it changes nothing you own
+**and bills nothing**. So `answer` and `live_data`, which bill every call, are
+not read-only, and `search` and `extract` are read-only only while no paid
+backend is configured for them. Once a key is set, `auto` tries that backend
+first and each call bills, so they lose the hint. Listing and describing
+live data sources, polling a job and `fetch_raw` stay read-only.
 
 The descriptions the model reads say what each tool is for, what it costs and
 how long it takes: that is what the model chooses on.

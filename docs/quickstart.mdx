@@ -103,7 +103,7 @@ You can install fewer extras by naming them in place of `all`. Extras are named 
 | `remote` | httpx for the built-in `remote` router |
 | `vendors` | httpx for `call_vendor()` and the vendor catalog |
 | `aws` | `botocore`, for AWS AgentCore Web Search |
-| `all` | Every method's providers, `browser`, `vendors`, `aws` and `remote`. Not `mcp`, `evals` or `langchain`: add those by name, as in `webrouter[all,mcp]` |
+| `all` | Every method's providers, the MCP server, `browser`, `vendors`, `aws` and `remote`. Not `evals` or `langchain`: add those by name, as in `webrouter[all,evals]` |
 
 `open_browser` needs no Playwright: a vendor session opens over httpx, which `[all]` installs, and `local` needs only the standard library and a Chrome or Chromium.
 
