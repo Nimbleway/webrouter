@@ -33,7 +33,7 @@ An install without the `mcp` extra has the command too; it prints the line
 that installs the extra and exits.
 
 That is a working `search` and a working `extract` with no account, no key and
-no signup — the keyless backends listed in 
+no signup — the keyless backends listed in
 [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials). Then
 register it with your client, using the absolute path of your clone:
 
