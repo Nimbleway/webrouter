@@ -34,6 +34,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from web_router._dotenv import with_dotenv_hint
 from web_router.constants import (
     MSG_BENCHMARK_TIMEOUT,
     MSG_BROWSE_TIMEOUT,
@@ -71,6 +72,9 @@ class WebRouterError(Exception):
 
 class ConfigurationError(WebRouterError):
     """The router or a provider was configured incorrectly."""
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(*with_dotenv_hint(args))
 
     @classmethod
     def missing_api_key(cls, provider: str, env_var: str) -> ConfigurationError:
