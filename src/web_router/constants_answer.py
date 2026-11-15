@@ -94,8 +94,9 @@ MCP_ANSWER_PROPERTIES: dict[str, dict[str, Any]] = {
 
 MCP_DESC_ANSWER = (
     "Answer one closed question in a sentence or two: the backend searches and writes the answer, with "
-    "the sources it cites, each by its marker (e.g. '[2]'). A few seconds; bills one call. Unedited: "
-    "check it against the sources when it matters. `search` returns the pages themselves."
+    "the sources it cites, each by its marker (e.g. '[2]'). A few seconds. Unset, `provider` tries the "
+    "configured backends in ranked order, and each one tried bills. Unedited: check it against the sources "
+    "when it matters. `search` returns the pages themselves."
 )
 
 # answer()'s `auto`: the configured answer backends, in the order route-eval ranked them.

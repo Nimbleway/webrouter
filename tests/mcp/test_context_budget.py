@@ -18,6 +18,7 @@ from mcp import Client
 from tests.mcp.conftest import URL, outcome, routed
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_TOOL_ANSWER, MCP_TOOL_EXTRACT, MCP_TOOL_FETCH_RAW, MCP_TOOL_SEARCH
+from web_router.constants_answer import MCP_DESC_ANSWER
 from web_router.constants_mcp import MCP_TOOL_WEB_RUN
 from web_router.constants_mcp_context import ENV_MCP_TOOLS, MCP_OUTPUT_SCHEMAS
 from web_router.mcp import allowlist
@@ -187,3 +188,7 @@ async def test_answer_refuses_a_flag_that_is_not_a_boolean(tools: WebRouterTools
     result = await call_tool(tools, MCP_TOOL_ANSWER, {"query": "q", "snippets": "false"})
 
     assert result.is_error and "booleans" in result.content[0].text
+
+
+def test_the_answer_description_says_each_backend_tried_bills() -> None:
+    assert "each one tried bills" in MCP_DESC_ANSWER
