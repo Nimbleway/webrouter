@@ -100,13 +100,13 @@
     "https://docs.parallel.ai/search/advanced-search-settings"
   ],
   "verified": {
-    "max_results": "live: tests/providers/test_litellm.py::test_live_search_returns_results",
-    "search_depth": "live: tests/providers/test_litellm.py::test_live_lite_comes_back_short",
-    "include_domains": "live: tests/providers/test_litellm.py::test_live_a_domain_filter_is_honoured",
+    "max_results": "live: tests/providers/test_litellm_live.py::test_live_search_returns_results",
+    "search_depth": "live: tests/providers/test_litellm_live.py::test_live_lite_comes_back_short",
+    "include_domains": "live: tests/providers/test_litellm_live.py::test_live_a_domain_filter_is_honoured",
     "exclude_domains": "docs: parallel's own mapping, verified in contracts/search/parallel.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
     "country": "docs: parallel's own mapping, verified in contracts/search/parallel.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
     "recency": "docs: parallel's own mapping, verified in contracts/search/parallel.json; the proxy forwards the field as sent (docs.litellm.ai/docs/search)",
-    "effort": "live: tests/providers/test_litellm.py::test_live_every_effort_is_accepted (2026-11-12: Exa type=deep-lite and Parallel mode=advanced also changed the results)"
+    "effort": "live: tests/providers/test_litellm_live.py::test_live_every_effort_is_accepted (2026-11-12: Exa type=deep-lite and Parallel mode=advanced also changed the results)"
   },
   "vendor_options": {
     "max_chars_total": {
