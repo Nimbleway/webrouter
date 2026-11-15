@@ -54,9 +54,10 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_DESC_SEARCH = (
-    "Search the web: ranked links with titles and page text, in about a second; free on the keyless "
-    "backends, billed on a paid one. For pages you have no URL for; `extract` reads a URL you have, "
-    "`research` investigates. Leave `effort` unset unless needed: higher costs more and takes longer."
+    "Search the web: ranked links with titles and page text, in about a second; free on keyless "
+    "backends, else billed. For pages without a URL; `extract` reads a known URL, `research` "
+    "investigates. Higher `effort` costs more: leave it unset unless needed. Behind a login or form, "
+    "suggest `browser_open`."
 )
 
 MSG_UNSUPPORTED_DEPTH = (
