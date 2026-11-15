@@ -49,3 +49,27 @@ def test_a_sites_own_403_through_nimble_is_no_refused_key(caplog: pytest.LogCapt
     with caplog.at_level(logging.WARNING, logger="web_router"):
         failed({}, "extract", "nimble", error)
     assert "refused its credential" not in caplog.text
+
+
+def test_a_retry_reads_by_the_exact_url_asked_for() -> None:
+    from web_router.providers._auto_extract_chain import _merged
+    from web_router.types import ExtractedDocument, ExtractResponse
+
+    page, slashed = "https://a.test/p", "https://a.test/p/"
+    first = ExtractResponse(
+        provider="one", failures=[ExtractFailure(url=page, error="down"), ExtractFailure(url=slashed, error="down")]
+    )
+    second = ExtractResponse(
+        provider="two",
+        documents=[ExtractedDocument(url=page, content="hi")],
+        failures=[ExtractFailure(url=slashed, error="blocked")],
+    )
+    merged = _merged(first, second, [page, slashed])
+    assert [failure.url for failure in merged.failures] == [slashed]
+    assert merged.failures[0].error == "down; then blocked"
+
+    other = ExtractResponse(provider="two", documents=[ExtractedDocument(url="https://b.test/p", content="hi")])
+    assert [f.url for f in _merged(first, other, [page, slashed]).failures] == [page, slashed]
+    lone = ExtractResponse(provider="one", failures=[ExtractFailure(url=page, error="down")])
+    rewritten = ExtractResponse(provider="two", documents=[ExtractedDocument(url=slashed, content="hi")])
+    assert _merged(lone, rewritten, [page]).failures == []

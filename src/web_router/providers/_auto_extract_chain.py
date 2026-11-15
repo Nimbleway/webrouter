@@ -143,27 +143,34 @@ def _same(url: str) -> str:
     return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, ""))
 
 
+def _asked(url: str, urls: list[str]) -> set[str]:
+    """The requested URLs ``url`` stands for: itself when asked for exactly, else those a backend rewrote into it."""
+    if url in urls:
+        return {url}
+    return {asked for asked in urls if _same(asked) == _same(url)}
+
+
 def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
     """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons."""
-    again = {_same(failure.url): failure for failure in retried.failures}
-    read = {_same(document.url) for document in retried.documents}
+    again = {asked: failure for failure in retried.failures for asked in _asked(failure.url, urls) or {failure.url}}
+    read = {asked for document in retried.documents for asked in _asked(document.url, urls)}
     # A URL the retry read is no failure; one it failed too keeps both reasons; one never retried (a page
     # that is gone) keeps its own.
     failures = [
         failure.model_copy(
             update={
-                "error": f"{failure.error}; then {again[_same(failure.url)].error}",
-                "kind": again[_same(failure.url)].kind,
-                "status_code": again[_same(failure.url)].status_code,
+                "error": f"{failure.error}; then {again[failure.url].error}",
+                "kind": again[failure.url].kind,
+                "status_code": again[failure.url].status_code,
             }
         )
-        if _same(failure.url) in again
+        if failure.url in again
         else failure
         for failure in first.failures
-        if _same(failure.url) not in read
+        if failure.url not in read
     ]
-    known = {_same(failure.url) for failure in first.failures}
-    failures.extend(failure for failure in retried.failures if _same(failure.url) not in known)
+    known = {failure.url for failure in first.failures}
+    failures.extend(failure for failure in retried.failures if not (_asked(failure.url, urls) & known))
     position = {url: index for index, url in enumerate(urls)}
     documents = sorted(
         [*first.documents, *retried.documents], key=lambda document: position.get(document.url, len(urls))
