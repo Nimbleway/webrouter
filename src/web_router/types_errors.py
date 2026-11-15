@@ -34,9 +34,9 @@ RETRYABLE_KINDS: Final = frozenset({"rate_limit", "timeout", "upstream"})
 """The kinds a later retry, of the same backend or another, may get past."""
 
 CHAIN_STOPPING_KINDS: Final = frozenset({"local", "target"})
+"""The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
 RETRY_AFTER_HEADER: Final = "retry-after"
 _CAUSE_DEPTH: Final = 4
-"""The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
 
 KIND_BY_STATUS: Final[dict[int, ProviderErrorKind]] = {
     400: "bad_request",
