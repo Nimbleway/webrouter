@@ -8,12 +8,15 @@ one the budget maps, as :mod:`web_router.routing.routed` maps it for
 
 from __future__ import annotations
 
+from functools import partial
+from time import monotonic
 from typing import Any, Protocol, TypeVar
 
 from web_router.providers.base import Job
 from web_router.routing.budget import BudgetedCall, budget_scope
 from web_router.routing.contract import ToolName
 from web_router.routing.effort_call import unrouted
+from web_router.routing.metered import metered
 from web_router.routing.pool import limited
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -38,19 +41,23 @@ def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedReque
     it starts as it would without one. The job's ``decision`` carries the
     effort and, under a budget, what it charged the start, as ``research()``'s does.
     """
+    started = monotonic()
     request, record = unrouted(backend, request, limited(None, router))  # before the scope, which admits a named one
     with budget_scope(None, tool, backend, request, router) as scope:
         job = backend.submit(request)
         job.decision = _charged(scope, record, job.provider)
+    job.stamp = partial(metered, tool=tool, request=request, started=started)
     return job
 
 
 async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: NormalizedRequest, router: object) -> _JobT:
     """As :func:`submitted`, awaited."""
+    started = monotonic()
     request, record = unrouted(backend, request, limited(None, router))
     with budget_scope(None, tool, backend, request, router) as scope:
         job = await backend.asubmit(request)
         job.decision = _charged(scope, record, job.provider)
+    job.stamp = partial(metered, tool=tool, request=request, started=started)
     return job
 
 
