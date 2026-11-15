@@ -14,6 +14,7 @@ from datetime import date
 import httpx
 import pytest
 
+from web_router import WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.providers._clock import pinned_today
 from web_router.providers.litellm import ExaLiteLLMProvider, ParallelLiteLLMProvider, TavilyLiteLLMProvider
@@ -114,6 +115,15 @@ def test_they_are_configured_only_with_both_the_key_and_the_url(
     names = {"exa-litellm", "tavily-litellm", "parallel-litellm"}
     assert (names & set(configured_providers()) == names) is listed
     assert listed or not names & set(configured_providers())
+
+
+@pytest.mark.parametrize("name", ["exa-litellm", "tavily-litellm", "parallel-litellm"])
+def test_auto_counts_a_proxy_url_passed_in_code(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
+    """The key in the environment and the URL in ``provider_config``: as ``agentcore``'s gateway URL counts."""
+    monkeypatch.setenv("LITELLM_PROXY_API_KEY", "sk-test")
+    monkeypatch.delenv("LITELLM_PROXY_API_BASE", raising=False)
+    with WebRouter(provider_config={name: {"base_url": PROXY}}) as router:
+        assert name in router.get_provider("auto").members  # type: ignore[attr-defined]
 
 
 def test_the_reply_is_normalized_the_same_for_every_vendor() -> None:

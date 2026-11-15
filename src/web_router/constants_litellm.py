@@ -40,6 +40,9 @@ LITELLM_ENV_BY_PROVIDER: dict[str, str | None] = dict.fromkeys(
 )
 """Each provider's credential, for ``ENV_BY_PROVIDER``: the proxy's key, never the vendor's."""
 
+LITELLM_AUTO_SETTINGS: dict[str, str] = dict.fromkeys(LITELLM_SEARCH_TOOL_BY_PROVIDER, "base_url")
+"""For ``AUTO_SETTING_PROVIDERS``: a ``base_url`` in ``provider_config`` counts as the proxy URL, as the variable."""
+
 LITELLM_SEARCH_SETTINGS_BY_PROVIDER: dict[str, tuple[str, ...]] = dict.fromkeys(
     LITELLM_SEARCH_TOOL_BY_PROVIDER, (ENV_LITELLM_PROXY_API_BASE,)
 )
