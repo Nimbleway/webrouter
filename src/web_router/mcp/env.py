@@ -63,6 +63,7 @@ from web_router.constants import (
 )
 from web_router.constants_mcp import MCP_MSG_ENV_MISSING, MCP_MSG_ENV_UNREADABLE
 from web_router.mcp.env_credentials import EnvLoad, apply_credentials, credential_variables
+from web_router.mcp.env_foreign import foreign_files, foreign_warning, noted_instructions
 
 
 def _set_in_environment() -> tuple[str, ...]:
@@ -151,9 +152,23 @@ class EnvSources:
         self.runtime.append(applied)
         return applied
 
+    def foreign(self) -> list[Path]:
+        """The remembered files from outside the working directory that loaded a billed key."""
+        return foreign_files(self.searched, self.startup)
+
+    def noted(self, instructions: str) -> str:
+        """The server's ``instructions``, with a warning added when :meth:`foreign` found a file."""
+        return noted_instructions(instructions, self.foreign())
+
     def report(self) -> dict[str, Any]:
-        """The ``env`` object of the capabilities resource: places, files and variable names -- never a value."""
+        """The ``env`` object of the capabilities resource: places, files and variable names -- never a value.
+
+        A remembered file from another directory leads it as a ``warning``, so a
+        model reading the resource sees it before anything else.
+        """
+        warning = foreign_warning(self.foreign(), user_config_dir() / MCP_ENV_POINTER_FILE)
         return {
+            **warning,
             "searched": [_lookup_report(lookup) for lookup in self.searched],
             # Each variable a file set at startup, and the file it came from.
             "loaded": {name: str(load.path) for load in self.startup for name in load.loaded},

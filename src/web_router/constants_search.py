@@ -55,7 +55,7 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
 
 MCP_DESC_SEARCH = (
     "Search the web: ranked links with their titles, descriptions and page text. Returns in about "
-    "a second, so call it freely and call it again with a better query. Use it to find pages you "
+    "a second; free on the keyless backends, billed when a paid one is set. Use it to find pages you "
     "do not have URLs for; use `extract` when you already have the URL, and `research` only when "
     "the question needs an investigation rather than a list of results. `search_depth` sets how much "
     "text comes back per result; `effort` how hard the backend looks, and higher effort costs more and "
