@@ -49,6 +49,7 @@ member that accepted it.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
+from functools import partial
 from typing import Any, ClassVar
 
 from web_router.constants import (
@@ -376,10 +377,24 @@ class AutoExtractProvider(ExtractProvider):
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         """The first answer, with each URL it failed tried on the members after it; see :mod:`._auto_extract_chain`."""
-        return extract_down_chain(self, in_call_order("extract", self._eligible(request)), request, urls)
+        return extract_down_chain(
+            self.name,
+            self.fallback_on_empty,
+            partial(self._delegated, request),
+            self._member,
+            in_call_order("extract", self._eligible(request)),
+            urls,
+        )
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        return await aextract_down_chain(self, in_call_order("extract", self._eligible(request)), request, urls)
+        return await aextract_down_chain(
+            self.name,
+            self.fallback_on_empty,
+            partial(self._delegated, request),
+            self._member,
+            in_call_order("extract", self._eligible(request)),
+            urls,
+        )
 
     def _eligible(self, request: ExtractRequest) -> list[tuple[int, str]]:
         """The chain members that return the format and map every other option set; see :func:`extract_eligible`."""
