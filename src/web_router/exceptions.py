@@ -332,4 +332,5 @@ def _named(parameter: str, values: Mapping[str, Any]) -> str:
 
 
 # Re-exported so every existing import keeps working; at the bottom because that module imports WebRouterError.
-from web_router.exceptions_provider import NoAnswerProviderError, ProviderNotFoundError  # noqa: E402, F401
+from web_router.exceptions_provider import NoAnswerProviderError as NoAnswerProviderError  # noqa: E402
+from web_router.exceptions_provider import ProviderNotFoundError as ProviderNotFoundError  # noqa: E402
