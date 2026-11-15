@@ -14,102 +14,121 @@ reason from each member that answered for it.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
 from urllib.parse import urlsplit, urlunsplit
 
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers.base import ExtractProvider
 from web_router.routing.attempts import admitted, failed
 from web_router.types import ExtractRequest, ExtractResponse
 from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET
 
-if TYPE_CHECKING:
-    from web_router.providers.auto import AutoExtractProvider
-
 _Order = list[tuple[int, str]]
+_Member = Callable[[int], ExtractProvider]
 
 
 def extract_down_chain(
-    auto: AutoExtractProvider, order: _Order, request: ExtractRequest, urls: list[str]
+    name: str,
+    fallback_on_empty: bool,
+    request: ExtractRequest,
+    member: _Member,
+    order: _Order,
+    urls: list[str],
 ) -> ExtractResponse:
     """The first member's answer, with each URL it failed retried on the members after it."""
-    response, rest = _first_answer(auto, order, request, urls)
+    response, rest = _first_answer(name, fallback_on_empty, request, member, order, urls)
     while rest and (retry := _failed_urls(response)):
         try:
-            retried, rest = _first_answer(auto, rest, request, retry)
+            retried, rest = _first_answer(name, fallback_on_empty, request, member, rest, retry)
         except WebRouterError as exc:
             if getattr(exc, "kind", None) == ERROR_KIND_LOCAL:
                 raise
             return _also_failed(response, exc)
-        response = merged(response, retried, urls)
+        response = _merged(response, retried, urls)
     return response
 
 
 async def aextract_down_chain(
-    auto: AutoExtractProvider, order: _Order, request: ExtractRequest, urls: list[str]
+    name: str,
+    fallback_on_empty: bool,
+    request: ExtractRequest,
+    member: _Member,
+    order: _Order,
+    urls: list[str],
 ) -> ExtractResponse:
     """Async counterpart of :func:`extract_down_chain`."""
-    response, rest = await _afirst_answer(auto, order, request, urls)
+    response, rest = await _afirst_answer(name, fallback_on_empty, request, member, order, urls)
     while rest and (retry := _failed_urls(response)):
         try:
-            retried, rest = await _afirst_answer(auto, rest, request, retry)
+            retried, rest = await _afirst_answer(name, fallback_on_empty, request, member, rest, retry)
         except WebRouterError as exc:
             if getattr(exc, "kind", None) == ERROR_KIND_LOCAL:
                 raise
             return _also_failed(response, exc)
-        response = merged(response, retried, urls)
+        response = _merged(response, retried, urls)
     return response
 
 
 def _first_answer(
-    auto: AutoExtractProvider, order: _Order, request: ExtractRequest, urls: list[str]
+    name: str,
+    fallback_on_empty: bool,
+    request: ExtractRequest,
+    member: _Member,
+    order: _Order,
+    urls: list[str],
 ) -> tuple[ExtractResponse, _Order]:
     """The first member's answer for ``urls``, and the members after it; raises when none answers."""
-    delegated = auto._delegated(request, urls)
+    delegated = request.model_copy(update={"urls": urls})
     failures: dict[str, WebRouterError] = {}
     held: ExtractResponse | None = None
     for index, (position, provider_name) in enumerate(order):
-        if (late := _late_answer(held, auto.name, failures)) is not None:
+        if (late := _late_answer(held, name, failures)) is not None:
             return late, []
         if not admitted("extract", provider_name, delegated):
             continue
         try:
-            response = auto._member(position).extract(delegated)
+            response = member(position).extract(delegated)
         except DeadlineExceededError as exc:
-            return _held_or_late(held, auto.name, failures, exc, provider_name, "extract"), []
+            return _held_or_late(held, name, failures, exc, provider_name, "extract"), []
         except _RECOVERABLE as exc:
             failed(failures, "extract", provider_name, exc)
             continue
-        if not (auto.fallback_on_empty and _empty_extract(response)):
+        if not (fallback_on_empty and _empty_extract(response)):
             return response, order[index + 1 :]
         held = response if held is None else held
-    return _held_or_raise(held, auto.name, failures), []
+    return _held_or_raise(held, name, failures), []
 
 
 async def _afirst_answer(
-    auto: AutoExtractProvider, order: _Order, request: ExtractRequest, urls: list[str]
+    name: str,
+    fallback_on_empty: bool,
+    request: ExtractRequest,
+    member: _Member,
+    order: _Order,
+    urls: list[str],
 ) -> tuple[ExtractResponse, _Order]:
     """Async counterpart of :func:`_first_answer`."""
-    delegated = auto._delegated(request, urls)
+    delegated = request.model_copy(update={"urls": urls})
     failures: dict[str, WebRouterError] = {}
     held: ExtractResponse | None = None
     for index, (position, provider_name) in enumerate(order):
-        if (late := _late_answer(held, auto.name, failures)) is not None:
+        if (late := _late_answer(held, name, failures)) is not None:
             return late, []
         if not admitted("extract", provider_name, delegated):
             continue
         try:
-            response = await auto._member(position).aextract(delegated)
+            response = await member(position).aextract(delegated)
         except DeadlineExceededError as exc:
-            return _held_or_late(held, auto.name, failures, exc, provider_name, "extract"), []
+            return _held_or_late(held, name, failures, exc, provider_name, "extract"), []
         except _RECOVERABLE as exc:
             failed(failures, "extract", provider_name, exc)
             continue
-        if not (auto.fallback_on_empty and _empty_extract(response)):
+        if not (fallback_on_empty and _empty_extract(response)):
             return response, order[index + 1 :]
         held = response if held is None else held
-    return _held_or_raise(held, auto.name, failures), []
+    return _held_or_raise(held, name, failures), []
 
 
 def _failed_urls(response: ExtractResponse) -> list[str]:
@@ -136,7 +155,7 @@ def _same(url: str) -> str:
     return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip("/"), parts.query, ""))
 
 
-def merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
+def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
     """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons."""
     again = {_same(failure.url): failure for failure in retried.failures}
     read = {_same(document.url) for document in retried.documents}

@@ -41,7 +41,7 @@ def test_a_longer_name_sharing_a_login_path_start_is_a_page() -> None:
 
 
 def test_a_retry_that_reads_a_canonical_url_clears_the_failure_and_a_later_kind_wins() -> None:
-    from web_router.providers._auto_extract_chain import merged
+    from web_router.providers._auto_extract_chain import _merged as merged
     from web_router.types import ExtractResponse
 
     first = ExtractResponse(
