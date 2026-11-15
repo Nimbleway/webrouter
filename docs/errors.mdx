@@ -47,7 +47,8 @@ a missing extra. Catch `WebRouterError` unless you mean one specific case.
 
 Every `ProviderError` says what kind of failure it was, so code can decide what
 to do without reading the message. A failed URL in an extract (`ExtractFailure`)
-carries the same `kind` and `status_code`.
+carries the same `kind` and `status_code`. Over MCP, a failed tool call's text
+ends in the same facts, as ` (kind=target, retryable=false)`.
 
 | Field | Meaning |
 | --- | --- |

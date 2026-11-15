@@ -78,3 +78,6 @@ MCP_ELAPSED_DIGITS = 2
 
 MCP_COST_DIGITS = 6
 """Decimal places a shaped result keeps of ``cost_usd``: a millionth of a dollar, past any per-call price."""
+
+MCP_MSG_ERROR_FACTS = " (kind={kind}, retryable={retryable})"
+"""Appended to a failed tool call's text when the error says what kind it was, so a model branches on fields."""
