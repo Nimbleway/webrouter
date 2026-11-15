@@ -11,8 +11,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pytest
+
 from tests.mcp.env_helpers import KEY, write
-from web_router.constants import ENV_BRAVE_API_KEY, MCP_ENV_POINTER_FILE
+from web_router.constants import ENV_BRAVE_API_KEY, ENV_MCP_ENV_FILE, MCP_ENV_FILE, MCP_ENV_POINTER_FILE
 from web_router.mcp.env import EnvSources, user_config_dir
 
 
@@ -61,3 +63,44 @@ def test_a_link_inside_the_project_to_a_file_elsewhere_is_still_foreign(isolated
     _remember(link)
 
     assert EnvSources.at_startup().foreign() == [link]
+
+
+def test_started_in_the_home_folder_a_remembered_file_from_another_checkout_is_foreign(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    elsewhere = write(isolated_home / "other-checkout" / ".env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    _remember(elsewhere)
+    monkeypatch.chdir(isolated_home)
+
+    assert "warning" in EnvSources.at_startup().report()
+
+
+def test_started_in_the_filesystem_root_a_remembered_file_is_foreign(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    elsewhere = write(isolated_home / "other-checkout" / ".env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    _remember(elsewhere)
+    monkeypatch.chdir(Path(Path.cwd().anchor))
+
+    assert "warning" in EnvSources.at_startup().report()
+
+
+def test_an_explicit_file_outside_the_working_directory_is_not_foreign(
+    isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    explicit = write(isolated_home / "chosen" / ".env", f"{ENV_BRAVE_API_KEY}={KEY}\n")
+    monkeypatch.setenv(ENV_MCP_ENV_FILE, str(explicit))
+
+    assert "warning" not in EnvSources.at_startup().report()
+
+
+def test_a_user_config_file_is_not_foreign(isolated_home: Path) -> None:
+    write(user_config_dir() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n")
+
+    assert "warning" not in EnvSources.at_startup().report()
+
+
+def test_a_remembered_pointer_to_a_missing_file_is_not_foreign(isolated_home: Path) -> None:
+    write(user_config_dir() / MCP_ENV_POINTER_FILE, f"{isolated_home / 'gone' / '.env'}\n")
+
+    assert "warning" not in EnvSources.at_startup().report()
