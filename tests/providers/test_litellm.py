@@ -126,27 +126,6 @@ def test_auto_counts_a_proxy_url_passed_in_code(monkeypatch: pytest.MonkeyPatch,
         assert name in router.get_provider("auto").members  # type: ignore[attr-defined]
 
 
-@pytest.mark.parametrize(
-    ("env", "config", "joins"),
-    [
-        ({"LITELLM_PROXY_API_BASE": PROXY}, {"api_key": "sk-test"}, True),
-        ({}, {"base_url": PROXY}, False),
-        ({"LITELLM_PROXY_API_KEY": "sk-test"}, {"base_url": "http://proxy.example.com"}, False),
-        ({}, {"api_key": "sk-test"}, False),
-    ],
-)
-def test_auto_takes_a_proxy_only_when_it_can_start(
-    monkeypatch: pytest.MonkeyPatch, env: dict[str, str], config: dict[str, str], joins: bool
-) -> None:
-    """``auto`` charges a member's estimate before building it: no key, or an unsafe URL, must not join."""
-    for name in ("LITELLM_PROXY_API_KEY", "LITELLM_PROXY_API_BASE"):
-        monkeypatch.delenv(name, raising=False)
-    for name, value in env.items():
-        monkeypatch.setenv(name, value)
-    with WebRouter(provider_config={"exa-litellm": config}) as router:
-        assert ("exa-litellm" in router.get_provider("auto").members) is joins  # type: ignore[attr-defined]
-
-
 def test_the_reply_is_normalized_the_same_for_every_vendor() -> None:
     response = ParallelLiteLLMProvider(api_key="k", base_url=PROXY)._to_response(SearchRequest(query="rag"), REPLY)
     (result,) = response.results

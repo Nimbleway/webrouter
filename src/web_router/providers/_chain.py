@@ -31,14 +31,12 @@ from web_router.constants import (
     MSG_OPTION_VALUE,
     RESEARCH_ENV_BY_PROVIDER,
 )
-from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER
 from web_router.exceptions import (
     ConfigurationError,
     ProviderError,
     ProviderNotInstalledError,
     WebRouterError,
 )
-from web_router.providers._litellm import ready_in_code
 from web_router.types import ExtractResponse, SearchResponse
 from web_router.types import provider_name as _lookup_name
 from web_router.types_answer import AnswerResponse
@@ -130,18 +128,13 @@ def _member_options(
 
 
 def _configured_in(members_config: Mapping[str, Mapping[str, Any]]) -> frozenset[str]:
-    """The backends handed a key, a client or their setting in code, as ``provider_config``.
-
-    A LiteLLM search provider counts when it is usable: a safe ``base_url`` here or in the environment, with a key
-    here or in the environment. Its key alone, or its URL alone, would join a member that cannot start.
-    """
+    """The backends handed a key, a client or their setting in code, as ``provider_config``."""
     return frozenset(
         name
         for name, config in members_config.items()
-        if (name not in LITELLM_SEARCH_SETTINGS_BY_PROVIDER and config.get("api_key"))
+        if config.get("api_key")
         or (name in AUTO_CLIENT_PROVIDERS and config.get(AUTO_CLIENT_OPTION))
         or (name in AUTO_SETTING_PROVIDERS and config.get(AUTO_SETTING_PROVIDERS[name]))
-        or (name in LITELLM_SEARCH_SETTINGS_BY_PROVIDER and ready_in_code(config))
     )
 
 

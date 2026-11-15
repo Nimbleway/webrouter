@@ -18,6 +18,8 @@ from __future__ import annotations
 import os
 from typing import Any, ClassVar
 
+import httpx
+
 from web_router.constants_litellm import (
     ENV_LITELLM_PROXY_API_BASE,
     ENV_LITELLM_PROXY_API_KEY,
@@ -45,12 +47,12 @@ from web_router.constants_litellm import (
 from web_router.constants_tavily import TAVILY_SEARCH_PARAMETERS
 from web_router.exceptions import ConfigurationError
 from web_router.providers._http import HttpSearchProvider
-from web_router.providers._litellm import safe_proxy_url
 from web_router.providers._search_text import as_snippet, lite_body
 from web_router.providers._utils import best_text
 from web_router.providers.exa import ExaProvider
 from web_router.providers.parallel_search import ParallelProvider
 from web_router.providers.tavily import TavilyProvider, search_fields
+from web_router.routing.remote_url import checked_url
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 
@@ -79,12 +81,12 @@ class LiteLLMSearchMixin:
         proxy key rides on every request; an unsafe one is never given to the client.
         """
         url = (base_url or os.environ.get(ENV_LITELLM_PROXY_API_BASE) or "").strip()
-        self._proxy_url = (safe_proxy_url(url) or "") if url else ""
-        self._url_error = (
-            ConfigurationError(MSG_LITELLM_PROXY_URL.format(provider=self.name))
-            if url and not self._proxy_url
-            else None
-        )
+        self._url_error: ConfigurationError | None = None
+        try:
+            url = checked_url(url, httpx).rstrip("/") if url else ""
+        except ConfigurationError:
+            self._url_error, url = ConfigurationError(MSG_LITELLM_PROXY_URL.format(provider=self.name)), ""
+        self._proxy_url = url
         super().__init__(base_url=url or None, **kwargs)  # type: ignore[call-arg]
         if search_tool:
             self.search_path = LITELLM_SEARCH_PATH.format(tool=search_tool)  # type: ignore[misc]
