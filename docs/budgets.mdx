@@ -228,6 +228,8 @@ first seen. `SpendRow` splits each group's `cost_usd` into `reported_usd` and
 Any object with `record(entry)` is a sink -- a database, a metrics client --
 and `spend_report(entries, by=...)` sums entries from anywhere. A sink that
 raises never fails the call: the router logs a warning and returns the answer.
+`record` runs inside the call, on the event loop for `AsyncWebRouter`, so keep
+it quick and hand slow writes to a queue or thread of your own.
 
 ## Estimated prices
 

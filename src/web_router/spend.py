@@ -73,7 +73,10 @@ class SpendEntry(BaseModel):
 
 @runtime_checkable
 class SpendSink(Protocol):
-    """Where a router's spend log goes: anything with ``record``."""
+    """Where a router's spend log goes: anything with ``record``.
+
+    ``record`` runs inside the call, on the event loop for an async router: it must not block.
+    """
 
     def record(self, entry: SpendEntry) -> None: ...
 
