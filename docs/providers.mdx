@@ -31,7 +31,7 @@ used here for identification only.
 | [Kernel](https://kernel.sh) |  |  |  |  | ✓ |  |
 | [Linkup](https://www.linkup.so) | ✓ | ✓ | ✓ | ✓ |  |  |
 | [Local Chromium](https://www.chromium.org) |  |  |  |  | ✓ keyless |  |
-| [Nimble](https://nimbleway.com) | ✓ | ✓ |  | ✓ |  |  |
+| [Nimble](https://nimbleway.com) | ✓ keyless | ✓ keyless |  | ✓ |  |  |
 | [Oxylabs](https://oxylabs.io) |  | ✓ |  |  |  |  |
 | [Parallel](https://parallel.ai) | ✓ keyless |  | ✓ | ✓ |  |  |
 | [Perplexity](https://docs.perplexity.ai) | ✓ |  | ✓ | ✓ |  |  |
@@ -49,8 +49,8 @@ You can start with no API keys. `auto`, the default for every method, uses the p
 
 | Method | Free tiers, tried in this order |
 | --- | --- |
-| Search | Tavily, then You.com, Exa and Parallel (their open MCP servers), then Keenable |
-| Extract | Tavily, then Jina Reader, Firecrawl, then Keenable |
+| Search | Nimble, then Tavily, then You.com, Exa and Parallel (their open MCP servers), then Keenable |
+| Extract | Nimble, then Tavily, then Jina Reader, Firecrawl, then Keenable |
 | Browser session | `local` (a Chromium on your machine) |
 | Answer, research, browse | None: every call is billed, so they need a key |
 

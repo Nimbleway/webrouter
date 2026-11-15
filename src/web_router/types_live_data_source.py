@@ -94,10 +94,18 @@ class LiveDataSourcePage(BaseModel):
         default=None,
         description=(
             "How `query` was matched: by the vendor's own search ('native', in its relevance order), or here "
-            "over the whole catalogue on name, site and description ('local'). None for a listing."
+            "over the whole catalogue on name, site and description ('local'). None for a listing, and for a "
+            "page from several backends that did not all search the same way."
         ),
     )
     raw: Any = Field(default=None, description="The provider's untouched response payload, object or array.")
+    failures: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "On a page drawn from every configured backend (provider 'auto'), each backend that could not answer, "
+            "with why. Its sources are missing from the page. Empty otherwise."
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod

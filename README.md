@@ -139,7 +139,7 @@ which ones this environment can use.
 
 | Pass | Name | Provider | Credentials | Formats |
 | --- | --- | --- | --- | --- |
-| `Provider.NIMBLE` | `nimble` | [Nimble Extract](https://docs.nimbleway.com/api-reference/extract/extract) | `NIMBLE_API_KEY` | `markdown`, `html` |
+| `Provider.NIMBLE` | `nimble` | [Nimble Extract](https://docs.nimbleway.com/api-reference/extract/extract) | `NIMBLE_API_KEY`, or keyless with `allow_keyless=True` (capped per caller per day) | `markdown`, `html` |
 | `Provider.TAVILY` | `tavily` | [Tavily Extract](https://tavily.com) | `TAVILY_API_KEY` *(keyless only through `auto`)* | `markdown`, `text` |
 | `Provider.EXA` | `exa` | [Exa Contents](https://exa.ai) | `EXA_API_KEY` | `text` |
 | `Provider.LINKUP` | `linkup` | [Linkup Fetch](https://docs.linkup.so) | `LINKUP_API_KEY` | `markdown`, `html` |
@@ -192,8 +192,9 @@ conversation.
 
 ### Live data
 
-Four backends serve live data. There is no keyless tier and no `auto`, so the
-provider is required for every call. See the detailed [Live data](#live-data-1)
+Four backends serve live data. There is no keyless tier. Leave `provider` out
+and the search runs on every backend you have a key for; each source it
+returns names its own, so a run never needs one. See the detailed [Live data](#live-data-1)
 guide below.
 
 | Pass | Name | Provider | Credentials | Page formats beside the records |
@@ -331,8 +332,8 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM |
-| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
+| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Nimble keyless, Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM |
+| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Nimble keyless, Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's keyed order is generated, not hand-written: `make chains` ranks the
@@ -357,7 +358,7 @@ class, which costs no credential and sends nothing. A member that does not map
 an option you set, or refuses the value (a `search_depth` level it lacks, a
 country off its list), is passed over for that call: ask for
 `search_depth="deep"` with keys for only Perplexity and Brave, neither of which
-returns whole pages, and the search goes to the keyless tier, where Exa MCP does.
+returns whole pages, and the search goes to the keyless tier, where Nimble does.
 The keyless tier between them maps every search option. When no member is left
 it raises, naming what each one lacked, rather than running the query without
 the option:
@@ -446,9 +447,27 @@ A live data source is a vendor's ready-made scraper for one site -- a
 retailer's product page, a maps search, a job board's listing -- that turns
 the site into **records with fixed fields**, fetched for this call, rather
 than page text to read through. Three calls cover a vendor's catalogue: list
-it, describe one, run one. All three name the vendor, because a source's name,
-inputs and fields are the vendor's own; the same site has a different name on
-each.
+it, describe one, run one. A source's name, inputs and fields are the
+vendor's own -- the same site has a different name on each -- but you never
+have to pick the vendor: leave `provider` out and the search runs on every
+backend you have a key for, and each source it returns names its own.
+
+```python
+page = router.live_data_sources(query="amazon product")  # every vendor with a key, asked at once
+source = page.sources[0]
+source.provider  # the vendor that holds it: "nimble", "apify", "brightdata" or "oxylabs"
+page.failures  # each vendor that could not answer, and why; its sources are missing
+
+source = router.live_data_source(source)  # its schemas and samples, from its own vendor
+result = router.live_data(source, source.samples[0].input)  # run it there; no provider named
+```
+
+The merged page takes each vendor's sources in turn, so no one vendor's
+catalogue crowds out the others, and `limit` and `offset` page the merged
+list. Its `provider` is `"auto"`, `total` is counted only when every vendor
+answered with a count, and it raises only when every vendor failed. A run
+takes the `LiveDataSource` whole; a bare name needs `provider`, unless you
+have one live data backend. To work in one vendor's catalogue, name it:
 
 ```python
 page = router.live_data_sources(provider="apify", limit=20)  # one page of the catalogue

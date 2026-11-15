@@ -566,6 +566,7 @@ it ahead of the keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
+    (PROVIDER_NIMBLE, {"allow_keyless": True}),
     (PROVIDER_TAVILY, {"allow_keyless": True}),
     (PROVIDER_YOU_MCP, {}),
     (PROVIDER_EXA_MCP, {}),
@@ -574,14 +575,10 @@ AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
 )
 """Tried when no credential is available, in order. Unmeasured, hand-ordered: never ranked by ``make chains``.
 
-Ordered rather than random on purpose: a router that picks a different backend
-each run returns different result counts and content lengths for the same
-query, and a bug reported against it cannot be reproduced. The chain still
-gives what random was reaching for -- if one anonymous tier is rate-limited,
-the next one answers. Exa's and Parallel's MCP servers joined last (2026-10-01),
-so a keyless call reaches them only when Tavily and You.com fail, and none that
-was being served moves. Their order between them is not yet backed by a scan.
-Keenable's ``/public`` endpoint joined after them (2026-10-13) on the same terms.
+Ordered rather than random, so a bug reported against it can be reproduced; if
+one anonymous tier is rate-limited, the next one answers. Nimble leads (2026-11-15);
+Exa's and Parallel's MCP servers (2026-10-01) and Keenable's ``/public`` endpoint
+(2026-10-13) joined at the end, their order not yet backed by a scan.
 """
 
 AUTO_SUPPORTED_PARAMETERS = NORMALIZED_PARAMETERS
@@ -621,6 +618,7 @@ wants another order passes their own ``chain``.
 """
 
 AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
+    (PROVIDER_NIMBLE, {"allow_keyless": True}),
     (PROVIDER_TAVILY, {"allow_keyless": True}),
     (PROVIDER_JINA, {}),
     (PROVIDER_FIRECRAWL, {"allow_keyless": True}),
@@ -631,6 +629,8 @@ AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
 Firecrawl joined last (2026-10-01, documented at docs.firecrawl.dev/rate-limits),
 so it is reached only when the two before it fail and no call already served
 moves. Keenable's ``/public`` fetch joined after it (2026-10-13) on the same terms.
+Nimble's keyless tier joined first (2026-11-15), so a keyless extract goes to
+Nimble and falls back to the others when its daily cap is spent.
 """
 
 AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
@@ -3921,10 +3921,10 @@ backends actually configured there -- see
 MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_SEARCH: ("query",),
     MCP_TOOL_EXTRACT: ("urls",),
-    # `provider` is required here and nowhere else: a template's name belongs to one vendor.
-    MCP_TOOL_LIVE_DATA_SOURCES: (MCP_ARG_PROVIDER,),
-    MCP_TOOL_LIVE_DATA_SOURCE: ("name", MCP_ARG_PROVIDER),
-    MCP_TOOL_LIVE_DATA: ("source", MCP_ARG_PROVIDER),
+    # Not `provider`: unnamed, the listing asks every live data backend and each row names its own.
+    MCP_TOOL_LIVE_DATA_SOURCES: (),
+    MCP_TOOL_LIVE_DATA_SOURCE: ("name",),
+    MCP_TOOL_LIVE_DATA: ("source",),
     # Not `provider`: unnamed, the router's default answers -- `auto`, the configured backends in ranked order.
     MCP_TOOL_ANSWER: ("query",),
     MCP_TOOL_RESEARCH: ("query",),

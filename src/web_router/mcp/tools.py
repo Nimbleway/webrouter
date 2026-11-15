@@ -544,7 +544,7 @@ class WebRouterTools:
         # `is None`, not truthiness: browser_type's required `text` may be ""
         # -- the way a field is cleared -- and supplied-but-empty is not missing.
         missing = [name for name in MCP_TOOL_REQUIRED[tool] if arguments.get(name) is None]
-        if MCP_ARG_PROVIDER in missing and not (method := METHODS[tool]).configured():
+        if (method := methods.unconfigured_live_data(tool, arguments)) is not None:
             # The schema offers no `provider` when there is none: say what would add one, not that it is missing.
             env_vars = ", ".join(methods.env_vars(method))
             raise ValueError(MCP_MSG_NOTHING_CONFIGURED.format(tool=tool, env_vars=env_vars))
