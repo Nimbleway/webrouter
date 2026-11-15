@@ -207,7 +207,7 @@ def test_a_status_other_than_success_is_a_failure_not_an_empty_document(
 
     assert not response.documents
     assert response.failures[0].url == URL
-    assert "blocked" in response.failures[0].error
+    assert response.failures[0].error.startswith("the backend fetched nothing and reported status 'blocked'")
     assert "challenge not solved" in response.failures[0].error
 
 
