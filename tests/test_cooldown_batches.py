@@ -50,3 +50,10 @@ def test_a_throttle_on_any_url_cools_the_backend_when_every_url_fails(first: int
         router.extract("https://c.example/")
     assert _Mixed.calls == calls
 
+
+def test_a_shorter_throttle_does_not_shorten_a_running_cooldown() -> None:
+    cooldowns = Cooldowns()
+    cooldowns.note("a", _throttle(429, "30"))
+    cooldowns.note("a", _throttle(429, "5"))
+    left = cooldowns.remaining("a")
+    assert left is not None and left[0] > 25
