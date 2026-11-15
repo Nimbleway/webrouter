@@ -202,9 +202,9 @@ the client's `env` block or a file the server already read takes a restart.
 | --- | --- | --- |
 | `search` | Find pages: ranked links with their titles and page text. | about a second |
 | `extract` | Read pages you already have URLs for, as markdown, HTML or text. `provider="max"` reads through every configured backend at once and returns the first answer, at one fetch per backend per URL. | about a second |
-| `live_data_sources` | List a vendor's live data sources: ready-made scrapers for one site each -- Nimble's templates, Apify's Actors, Bright Data's scrapers, Oxylabs' dedicated scrapers -- each turning one kind of page into records, fetched on every run. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). `provider` is required, as on the two tools below. Paged with `limit` and `offset`; `query` finds sources by keyword, searched by the vendor where it has a search (Apify) and matched here otherwise, and the answer's `search` says which (`native` or `local`). | about a second, and free |
+| `live_data_sources` | List a vendor's live data sources: ready-made scrapers for one site each -- Nimble's templates, Apify's Actors, Bright Data's scrapers, Oxylabs' dedicated scrapers -- each turning one kind of page into records, fetched on every run. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). Leave `provider` out to search every vendor configured here at once: each row then names its `provider`, which the two tools below take back, and `failures` names any vendor that could not answer. Paged with `limit` and `offset`; `query` finds sources by keyword, searched by the vendor where it has a search (Apify) and matched here otherwise, and the answer's `search` says which (`native` or `local`). | about a second, and free |
 | `live_data_source` | Describe one source: the `input_schema` a run must pass as `inputs`, the `output_schema` of each record, and `samples`, recorded runs to copy a first call from. A schema the vendor does not publish is `null`. | about a second, and free |
-| `live_data` | Run a source and get its `records` back, fetched for this call, with `fetched_at` when the vendor states it. | seconds to a few minutes (Apify waits up to 300 s), and it bills one run at the vendor's own rate -- see `benchmarks/providers/PRICING.md` |
+| `live_data` | Run a source and get its `records` back, fetched for this call, with `fetched_at` when the vendor states it. Pass the `provider` the listing named for the source; it may be left out only when one vendor is configured. | seconds to a few minutes (Apify waits up to 300 s), and it bills one run at the vendor's own rate -- see `benchmarks/providers/PRICING.md` |
 | `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries the marker in `field`. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
@@ -242,8 +242,8 @@ runs, with the names it takes.
 
 `search` offers an option only when a backend reachable from here maps it, and
 `search_depth` only at the levels one serves, as `browser_open` narrows
-`stealth`. With no key the keyless tier between them (You.com MCP, Exa MCP,
-Tavily keyless, Keenable) maps every search option. The tool's description
+`stealth`. With no key the keyless tier between them (Nimble keyless, You.com
+MCP, Exa MCP, Tavily keyless, Keenable) maps every search option. The tool's description
 tells the model that `search_depth` is how much text comes back per result and
 `effort` how hard the backend looks, and that higher effort costs more and
 takes longer, so it leaves `effort` unset unless needed.
@@ -281,8 +281,11 @@ unchanged: `search`, `extract` and the rest never ask the router.
 The router is set by the operator -- whoever starts the server and sets its
 environment -- once, when the server starts:
 
-- unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
-  with an `http(s)` URL is read with `extract`, anything else searched;
+- unset, the built-in rules router (`rules`, also the library's default): a
+  prompt with an `http(s)` URL is read with `extract`; one asking for a report,
+  a comparison or an in-depth analysis runs `research`, billed per run, or
+  `search` when no research backend is configured; anything else is searched.
+  `WEB_ROUTER_MCP_ROUTER=rules` names it;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library. It is imported before
   any `.env` file loads, so code that runs at import sees only the server's own

@@ -86,10 +86,10 @@ def test_there_is_no_keyless_tier_and_no_auto(monkeypatch: pytest.MonkeyPatch) -
 
 
 @pytest.mark.parametrize("method", ["live_data_sources", "live_data_source", "live_data"])
-def test_the_router_requires_the_provider_to_be_named(method: str) -> None:
-    """No default: the router's default is `auto`, and a template's name means something to one vendor only."""
+def test_the_provider_is_optional_and_never_the_routers_default(method: str) -> None:
+    """Unnamed, it is not the router's `auto` but every live data backend (a listing) or the source's own (a run)."""
     parameter = inspect.signature(getattr(WebRouter, method)).parameters["provider"]
-    assert parameter.default is inspect.Parameter.empty
+    assert parameter.default is None
     assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
 
 
