@@ -96,6 +96,9 @@ def _cooldown_of(exc: BaseException) -> tuple[float | None, int | None]:
     """How long ``exc`` asks its backend to be left alone, and the status that says so; ``(None, None)`` if not."""
     if not isinstance(exc, ProviderError):
         return None, None
+    if exc.call_errors:  # a sum of several calls: the longest throttle any one of them met
+        found = [each for each in map(_cooldown_of, exc.call_errors) if each[0] is not None]
+        return max(found, key=lambda each: each[0] or 0.0, default=(None, None))
     status = exc.status_code
     if status not in COOLDOWN_STATUSES and exc.kind != _RATE_LIMIT:
         return None, None

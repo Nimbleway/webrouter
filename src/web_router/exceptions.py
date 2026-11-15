@@ -283,6 +283,9 @@ class ProviderError(WebRouterError):
     and the message, so a caller can branch without parsing text.
     """
 
+    call_errors: tuple[BaseException, ...] = ()
+    """Each call's own error, when this one sums up several (an extract whose every URL failed)."""
+
     def __init__(
         self, provider: str, message: str, *, original: BaseException | None = None, kind: str | None = None
     ) -> None:

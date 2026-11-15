@@ -54,7 +54,6 @@ from web_router.constants import (
     MSG_BROWSER_UNKNOWN_STATE,
     MSG_EXTRACT_FAILED,
     MSG_EXTRACT_NO_DOCUMENT,
-    MSG_EXTRACT_NOTHING_RETURNED,
     MSG_JOB_CANCELLED,
     MSG_JOB_FAILED,
     MSG_JOB_NO_DETAIL,
@@ -89,6 +88,7 @@ from web_router.exceptions import (
 from web_router.live_data_compat import TemplateMethods
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
 from web_router.providers._error_pages import split_error_pages
+from web_router.providers._exhausted import nothing_returned
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.types import (
     BrowseRequest,
@@ -469,14 +469,11 @@ class _Collected:
                 return error
 
         failures = self.failures or [ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in self.requested]
-        detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
         late = [error for _, error in self.errors if isinstance(error, DeadlineExceededError)]
         if late and len(late) == len(self.errors) and not self.reported:
             # Every URL ran out of time; one that failed for a reason of its own keeps the summary below, naming each.
             return DeadlineExceededError(self.provider, late[0].seconds)
-        original = ExtractFailure.shared_original(failures, [error for _, error in self.errors])
-        message = MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail)
-        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.batch_kind(failures))
+        return nothing_returned(self.provider, failures, self.errors)
 
 
 class LiveDataProvider(TemplateMethods, _BaseProvider):
