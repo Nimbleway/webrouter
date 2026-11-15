@@ -89,10 +89,6 @@ class ErrorFacts:
     status_code: int | None = None
     retry_after: float | None = None
 
-    @property
-    def retryable(self) -> bool:
-        return is_retryable(self.kind)
-
 
 def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
     """The facts of one failure, read from ``original`` first and from ``message`` where it says more.
