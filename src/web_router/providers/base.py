@@ -817,6 +817,9 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     decision: Any = None
     """The answer's ``decision``: under a budget, the effort it mapped and what it charged the start."""
 
+    stamp: Callable[[Any], Any] | None = None
+    """Applied once to the finished answer: how a router puts what the run took and cost on it (``metered``)."""
+
     def __init__(
         self,
         provider: JobProvider[_RequestT, _ProgressT, _ResponseT],
@@ -971,6 +974,10 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
             raise ProviderError(self.provider, MSG_JOB_RUN_FAILED.format(detail=progress.detail or MSG_JOB_NO_DETAIL))
         if self.decision is not None and cast(Any, response).decision is not self.decision:  # copied once, then kept
             response = cast(Any, response).model_copy(update={"decision": self.decision})
+            self._progress = cast(Any, progress).model_copy(update={"response": response})
+        if self.stamp is not None:  # once: a job's answer is kept, and asking again must not move its clock
+            response = self.stamp(response)
+            self.stamp = None
             self._progress = cast(Any, progress).model_copy(update={"response": response})
         return response
 
