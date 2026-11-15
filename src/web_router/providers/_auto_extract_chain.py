@@ -127,15 +127,14 @@ def _failed_urls(response: ExtractResponse) -> list[str]:
 
 
 def _also_failed(response: ExtractResponse, exc: WebRouterError) -> ExtractResponse:
-    """``response`` with why no later member read its retried URLs added to each one's reason, its kind the latest."""
+    """``response`` with why no later member read its retried URLs added to each one's reason, its kind the latest.
+
+    The kind and the status are replaced together, so both describe the same failure: an earlier backend's 429
+    never stays beside a later ``target``. A deadline carries no status, so its URLs are left with none.
+    """
     retried = set(_failed_urls(response))
     kind = ERROR_KIND_TIMEOUT if isinstance(exc, DeadlineExceededError) else getattr(exc, "kind", None)
-    # Only what the later failure knows replaces the earlier: a deadline carries no status of its own.
-    latest = {
-        field: value
-        for field, value in (("kind", kind), ("status_code", getattr(exc, "status_code", None)))
-        if value is not None
-    }
+    latest = {} if kind is None else {"kind": kind, "status_code": getattr(exc, "status_code", None)}
     failures = [
         failure.model_copy(update={"error": f"{failure.error}; then {exc}", **latest})
         if failure.url in retried
@@ -171,7 +170,7 @@ def _merged(
             update={
                 "error": f"{failure.error}; then {again[failure.url].error}",
                 "kind": again[failure.url].kind,
-                "status_code": again[failure.url].status_code or failure.status_code,
+                "status_code": again[failure.url].status_code,
             }
         )
         if failure.url in again

@@ -85,16 +85,17 @@ def test_an_unknown_live_data_source_is_not_found_and_not_retried(provider: str)
     assert error.retryable is False
 
 
-def test_a_deadline_on_retry_is_a_timeout_and_a_provider_error_keeps_its_kind() -> None:
+def test_a_failure_on_retry_replaces_the_kind_and_the_status_together() -> None:
+    """An earlier backend's 429 never stays beside a later backend's ``target``: both describe one failure."""
     from web_router.exceptions import DeadlineExceededError, ProviderError
     from web_router.providers._auto_extract_chain import _also_failed
     from web_router.types import ExtractResponse
 
-    first = ExtractResponse(provider="one", failures=[ExtractFailure(url=A, error="down", status_code=503)])
+    first = ExtractResponse(provider="one", failures=[ExtractFailure(url=A, error="slow", status_code=429)])
     late = _also_failed(first, DeadlineExceededError("two", 5.0)).failures[0]
-    assert (late.kind, late.status_code) == ("timeout", 503)
-    refused = _also_failed(first, ProviderError("two", "slow", kind="rate_limit")).failures[0]
-    assert refused.kind == "rate_limit"
+    assert (late.kind, late.status_code) == ("timeout", None)
+    gone = _also_failed(first, ProviderError("two", "every backend met the page's 404", kind="target")).failures[0]
+    assert (gone.kind, gone.status_code) == ("target", None)
 
 
 def test_a_rewritten_url_that_could_be_either_of_two_asked_for_clears_neither() -> None:
@@ -159,3 +160,13 @@ def test_a_rewrite_on_retry_matches_only_the_urls_it_was_sent() -> None:
     )
     second = ExtractResponse(provider="two", documents=[ExtractedDocument(url=page, content="hi again")])
     assert _merged(first, second, [page, slashed], ExtractRequest(urls=[page, slashed])).failures == []
+
+
+def test_a_url_a_later_member_also_failed_carries_that_members_kind_and_status() -> None:
+    from web_router.providers._auto_extract_chain import _merged
+    from web_router.types import ExtractRequest, ExtractResponse
+
+    first = ExtractResponse(provider="one", failures=[ExtractFailure(url=A, error="slow", status_code=429)])
+    second = ExtractResponse(provider="two", failures=[ExtractFailure(url=A, error="blocked", kind="upstream")])
+    failure = _merged(first, second, [A], ExtractRequest(urls=[A])).failures[0]
+    assert (failure.kind, failure.status_code) == ("upstream", None)
