@@ -29,7 +29,7 @@ from web_router.constants_live_data_vendors import (
 )
 from web_router.exceptions import ProviderError
 from web_router.exceptions_live_data import LiveDataJobError
-from web_router.providers._deadline import job_deadline
+from web_router.providers._deadline import current_deadline, job_deadline
 from web_router.providers._job_wait import JobWait, wait_until
 from web_router.providers.brightdata_shapes import to_response
 from web_router.types_live_data import LiveDataRequest, LiveDataResponse
@@ -91,7 +91,8 @@ def wait_and_read(provider: BrightDataLiveDataProvider, request: LiveDataRequest
     snapshot's id rather than sending a poll the caller's deadline cuts off.
     The records are read under the caller's deadline and the provider's
     timeout, not what is left of the wait, which a snapshot ready late leaves
-    almost none of.
+    almost none of. Like the polling, the read ends just before the caller's
+    deadline, so a read that deadline would cut off still names the snapshot.
     """
     snapshot = _waiting(provider, request, response)
     with job_deadline(snapshot.until):
@@ -101,7 +102,7 @@ def wait_and_read(provider: BrightDataLiveDataProvider, request: LiveDataRequest
                 if snapshot.done(provider._send("GET", snapshot.path)):
                     break
             time.sleep(snapshot.pause())
-    with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
+    with job_deadline(_read_until(provider)), snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
         read = provider._client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
         payload = provider._decoded(read)
     return _records(provider.name, request, snapshot.job_id, read.status_code, payload)
@@ -119,10 +120,15 @@ async def await_and_read(
                 if snapshot.done(await provider._asend("GET", snapshot.path)):
                     break
             await asyncio.sleep(snapshot.pause())
-    with snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
+    with job_deadline(_read_until(provider)), snapshot.naming(MSG_BRIGHTDATA_POLL_FAILED):
         read = await provider._async_client.get(snapshot.records_path, params=SNAPSHOT_READ, **provider._clamped())
         payload = provider._decoded(read)
     return _records(provider.name, request, snapshot.job_id, read.status_code, payload)
+
+
+def _read_until(provider: BrightDataLiveDataProvider) -> float | None:
+    """When the records read gives up: just before the caller's deadline, or ``None`` when there is none."""
+    return None if current_deadline() is None else wait_until(provider._client_kwargs["timeout"])
 
 
 def _waiting(provider: BrightDataLiveDataProvider, request: LiveDataRequest, response: Any) -> SnapshotWait:
