@@ -61,7 +61,7 @@ class AcmeExtractProvider(HttpExtractProvider):
     name = "acme"
     supported_parameters = frozenset({"format"})
     supported_formats = frozenset(ACME_FORMATS)  # the table is the single description
-    default_format = "html"
+    default_format = "markdown"
     base_url = "https://api.acme.com"
     extract_path = "/v1/fetch"
     env_api_key = "ACME_API_KEY"

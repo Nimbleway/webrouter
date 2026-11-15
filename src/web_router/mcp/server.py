@@ -37,7 +37,6 @@ from typing import Any
 import anyio
 from mcp.server import NotificationOptions, Server, ServerRequestContext
 from mcp.server.stdio import stdio_server
-from mcp.shared.exceptions import MCPError
 from mcp_types import (
     CallToolRequestParams,
     CallToolResult,
@@ -48,29 +47,21 @@ from mcp_types import (
     PaginatedRequestParams,
     ReadResourceRequestParams,
     ReadResourceResult,
-    Resource,
     TextContent,
-    TextResourceContents,
 )
 
 from web_router._version import __version__
 from web_router.constants import (
     MCP_BROWSER_SHUTDOWN_TIMEOUT,
-    MCP_MIME_JSON,
     MCP_MIME_PNG,
-    MCP_MSG_UNKNOWN_RESOURCE,
-    MCP_RESOURCE_DESCRIPTION,
-    MCP_RESOURCE_NAME,
-    MCP_RESOURCE_TITLE,
-    MCP_RESOURCE_URI,
     MCP_SERVER_NAME,
     MCP_SHUTDOWN_SIGNALS,
     MCP_SIGNAL_EXIT_BASE,
 )
-from web_router.constants_mcp import MCP_RESOURCE_NOT_FOUND
 from web_router.exceptions import WebRouterError
 from web_router.mcp.env import EnvSources
 from web_router.mcp.messages import error_text
+from web_router.mcp.resources import list_resource_templates, list_resources, read_resource
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import ToolOutput, render
 from web_router.mcp.tools import WebRouterTools
@@ -104,33 +95,6 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
     # The same object as the first text block, for a client that reads structured results; parsed back from the
     # text so it holds exactly what the model read, every value JSON.
     return CallToolResult(content=content, structured_content=json.loads(text))
-
-
-def list_resources() -> ListResourcesResult:
-    """The one resource: what this install can actually do."""
-    return ListResourcesResult(
-        resources=[
-            Resource(
-                uri=MCP_RESOURCE_URI,
-                name=MCP_RESOURCE_NAME,
-                title=MCP_RESOURCE_TITLE,
-                description=MCP_RESOURCE_DESCRIPTION,
-                mime_type=MCP_MIME_JSON,
-            )
-        ]
-    )
-
-
-def read_resource(tools: WebRouterTools, uri: str) -> ReadResourceResult:
-    """The configured providers per method, so a client learns them without a round trip."""
-    if uri != MCP_RESOURCE_URI:
-        # The spec's resource-not-found code: anything else reaches the client as an internal error.
-        raise MCPError(MCP_RESOURCE_NOT_FOUND, MCP_MSG_UNKNOWN_RESOURCE.format(uri=uri, known=MCP_RESOURCE_URI))
-    return ReadResourceResult(
-        contents=[
-            TextResourceContents(uri=uri, mime_type=MCP_MIME_JSON, text=render(tools.capabilities())),
-        ]
-    )
 
 
 def build_server(tools: WebRouterTools) -> Server[object]:
@@ -170,6 +134,7 @@ def build_server(tools: WebRouterTools) -> Server[object]:
         on_list_tools=on_list_tools,
         on_call_tool=on_call_tool,
         on_list_resources=on_list_resources,
+        on_list_resource_templates=lambda context, params: list_resource_templates(),
         on_read_resource=on_read_resource,
     )
 

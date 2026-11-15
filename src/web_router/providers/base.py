@@ -474,9 +474,9 @@ class _Collected:
         if late and len(late) == len(self.errors) and not self.reported:
             # Every URL ran out of time; one that failed for a reason of its own keeps the summary below, naming each.
             return DeadlineExceededError(self.provider, late[0].seconds)
-        original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
+        original = ExtractFailure.shared_original(failures, [error for _, error in self.errors])
         message = MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail)
-        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.shared_kind(failures))
+        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.batch_kind(failures))
 
 
 class LiveDataProvider(TemplateMethods, _BaseProvider):

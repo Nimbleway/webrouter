@@ -26,6 +26,12 @@ cd webrouter && make setup
 uv run web-router-mcp    # a check that it starts: it waits silently for a client; Ctrl-C stops it
 ```
 
+Without a clone, install it from PyPI: `pip install "webrouter[all]"` (or
+`"webrouter[mcp]"` for the server alone) puts `web-router-mcp` on your `PATH`,
+and `uvx --from "webrouter[mcp]" web-router-mcp` runs it with no install at all.
+An install without the `mcp` extra has the command too; it prints the line
+that installs the extra and exits.
+
 That is a working `search` and a working `extract` with no account, no key and
 no signup — the keyless backends listed in
 [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials). Then
@@ -156,6 +162,13 @@ rotated in the original file takes effect on the next start. The tool's
 description tells the model to call it only with a path you gave and to set
 `remember` only when you ask.
 
+A remembered path is read in every project the server starts in. When the file
+lies outside the server's working directory, so its keys belong to another
+checkout, the capabilities resource's `env` starts with a `warning` naming it
+and the record to delete, and the server's instructions tell the model that
+billed backends are live. A setup you believe is keyless can then still bill:
+check the warning, or delete `env-path`.
+
 A key already set is never replaced, so a load can only add backends. That is
 also its one risk: a model steered by a page it read could call `load_env` on a
 file someone planted on this machine, adding a key for a backend you hold none
@@ -206,7 +219,7 @@ the client's `env` block or a file the server already read takes a restart.
 | `live_data_sources` | List a vendor's live data sources: ready-made scrapers for one site each -- Nimble's templates, Apify's Actors, Bright Data's scrapers, Oxylabs' dedicated scrapers -- each turning one kind of page into records, fetched on every run. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). `provider` is required, as on the two tools below. Paged with `limit` and `offset`; `query` finds sources by keyword, searched by the vendor where it has a search (Apify) and matched here otherwise, and the answer's `search` says which (`native` or `local`). | about a second, and free |
 | `live_data_source` | Describe one source: the `input_schema` a run must pass as `inputs`, the `output_schema` of each record, and `samples`, recorded runs to copy a first call from. A schema the vendor does not publish is `null`. | about a second, and free |
 | `live_data` | Run a source and get its `records` back, fetched for this call, with `fetched_at` when the vendor states it. | seconds to a few minutes (Apify waits up to 300 s), and it bills one run at the vendor's own rate -- see `benchmarks/providers/PRICING.md` |
-| `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries the marker in `field`. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
+| `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries its marker in `marker`. Only cited sources are listed by default; the rest are counted in `uncited_sources`, and `all_sources` lists them all. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
 | `browse` | Hand a task to a hosted browser agent that clicks, types and reads through pages. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the task** |
@@ -232,6 +245,12 @@ the client's `env` block or a file the server already read takes a restart.
 Each tool also carries a `title` and MCP's behaviour hints (`readOnlyHint`,
 `destructiveHint`, `idempotentHint`, `openWorldHint`), so a client can let a
 free lookup through and ask before a billed run or a click on a live page.
+Here `readOnlyHint` means safe to run unasked: it changes nothing you own
+**and bills nothing**. So `answer` and `live_data`, which bill every call, are
+not read-only, and `search` and `extract` are read-only only while no paid
+backend is configured for them. Once a key is set, `auto` tries that backend
+first and each call bills, so they lose the hint. Listing and describing
+live data sources, polling a job and `fetch_raw` stay read-only.
 
 The descriptions the model reads say what each tool is for, what it costs and
 how long it takes: that is what the model chooses on.
@@ -720,6 +739,24 @@ Through this server: the user puts the key in their .env, and you call
 `load_env` with the path they give; or it is set where the server starts, and
 the server is restarted.
 ```
+
+## Serving fewer tools: `WEB_ROUTER_MCP_TOOLS`
+
+The model reads every listed tool on every turn: all 27, with every key set,
+are about 26 KB (some 6.4k tokens). Name the ones you want, comma-separated, and
+the rest are neither listed nor callable:
+
+```bash
+WEB_ROUTER_MCP_TOOLS=search,extract,answer,fetch_raw   # about 5.8 KB
+WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw,browser_*
+```
+
+A trailing `*` matches a prefix. Unset or blank serves every tool; a name that
+matches nothing is ignored with a warning in the server's log. Keep `fetch_raw`
+if results may be cut, and `load_env` if keys may be added mid-conversation.
+Read once at startup, from the real environment only. `research`, `browse` and
+`browser_open` each bring their partner (`research_status`, `browse_status`,
+`browser_close`), so a long run can still be polled and a browser closed.
 
 ## Environment variables the server itself reads
 
