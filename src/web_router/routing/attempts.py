@@ -160,7 +160,13 @@ def note_keyless(member: object, exc: BaseException) -> None:
 
 
 def holds_credential(member: object) -> bool:
-    """Whether ``member`` was built with a credential: a key of its own, else its variable set in the environment."""
+    """Whether ``member`` was built with a credential: one it declares, a key of its own, else its variable set.
+
+    A member whose credential lives elsewhere -- a caller's own SDK client -- says so in ``sends_credential``.
+    """
+    declared = getattr(member, "sends_credential", None)
+    if isinstance(declared, bool):
+        return declared
     if getattr(member, "api_key", None):
         return True
     env_var = getattr(member, "env_api_key", None)
