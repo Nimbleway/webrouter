@@ -168,7 +168,7 @@ class SyncPlan(_Planner, SyncRouted):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = self.plan(plan, budget=budget, tool=tool)
             chain, request, scope = self._run_scope(stack, plan, budget)
-            return scope.settle(_settled(getattr(chain, plan.tool)(request), plan))  # type: ignore[no-any-return]
+            return self._spent(scope.settle(_settled(getattr(chain, plan.tool)(request), plan)), plan.tool)  # type: ignore[no-any-return]
 
 
 class AsyncPlan(_Planner, AsyncRouted):
@@ -186,7 +186,8 @@ class AsyncPlan(_Planner, AsyncRouted):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = await self.plan(plan, budget=budget, tool=tool)
             chain, request, scope = self._run_scope(stack, plan, budget)
-            return scope.settle(_settled(await getattr(chain, f"a{plan.tool}")(request), plan))  # type: ignore[no-any-return]
+            answered = await getattr(chain, f"a{plan.tool}")(request)
+            return self._spent(scope.settle(_settled(answered, plan)), plan.tool)  # type: ignore[no-any-return]
 
 
 __all__ = ["AsyncPlan", "RunResponse", "SyncPlan"]
