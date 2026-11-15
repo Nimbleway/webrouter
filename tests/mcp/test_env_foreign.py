@@ -14,7 +14,13 @@ from pathlib import Path
 import pytest
 
 from tests.mcp.env_helpers import KEY, write
-from web_router.constants import ENV_BRAVE_API_KEY, ENV_MCP_ENV_FILE, MCP_ENV_FILE, MCP_ENV_POINTER_FILE
+from web_router.constants import (
+    ENV_BRAVE_API_KEY,
+    ENV_JINA_API_KEY,
+    ENV_MCP_ENV_FILE,
+    MCP_ENV_FILE,
+    MCP_ENV_POINTER_FILE,
+)
 from web_router.mcp.env import EnvSources, user_config_dir
 
 
@@ -104,3 +110,15 @@ def test_a_remembered_pointer_to_a_missing_file_is_not_foreign(isolated_home: Pa
     write(user_config_dir() / MCP_ENV_POINTER_FILE, f"{isolated_home / 'gone' / '.env'}\n")
 
     assert "warning" not in EnvSources.at_startup().report()
+
+
+def test_a_remembered_file_with_only_the_free_jina_key_is_not_foreign(isolated_home: Path) -> None:
+    """Jina's key only raises a keyless backend's rate limit: the tool hints call it free, and so does the warning."""
+    elsewhere = write(isolated_home / "other-project" / ".env", f"{ENV_JINA_API_KEY}={KEY}\n")
+    EnvSources().load(str(elsewhere), remember=True)
+    os.environ.pop(ENV_JINA_API_KEY)
+
+    sources = EnvSources.at_startup()
+
+    assert sources.foreign() == []
+    assert "warning" not in sources.report()
