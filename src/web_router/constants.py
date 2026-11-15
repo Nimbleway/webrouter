@@ -1051,15 +1051,15 @@ INTEGRATION_ROUTING_GUIDE_INTRO = (
 INTEGRATION_ROUTING_GUIDE_METHODS: dict[str, str] = {
     "search": (
         "{search} finds pages: ranked results, each with a title, a URL and the text the backend returned, "
-        "in about a second. Start here for every fact you need. Search for one fact at a time rather than the "
+        "in a few seconds. Start here for every fact you need. Search for one fact at a time rather than the "
         "whole question -- a question with several parts is several searches -- and make independent searches "
         "in parallel. When the results do not settle a fact, rephrase and search again rather than guess."
     ),
     "extract": (
-        "{extract} reads the full page at URLs you already have, in about a second each. Use it when a result "
+        "{extract} reads the full page at URLs you already have, in a few seconds. Use it when a result "
         "is clearly the right page but its text is cut off or lacks the detail you need -- a table, a list, a "
-        "figure, a date. Pass only URLs a search returned, up to five at a time. It does not find pages; "
-        "search does."
+        "figure, a date. Pass URLs a search returned, the user gave, or a canonical page you know (a project's "
+        "releases page, the official docs), up to five at a time. It does not find pages; search does."
     ),
     "answer": (
         "{answer} returns a backend's written answer to one question, with the pages it rests on, in a few "
@@ -3934,7 +3934,7 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
 # (`web_run` hands it to ours), and latency and cost are what it chooses on.
 
 MCP_DESC_EXTRACT = (
-    "Read pages you have URLs for, as markdown, HTML or text, in about a second. It reads, it does not "
+    "Read pages you have URLs for, as markdown, HTML or text, in a few seconds. It reads, it does not "
     "find: URLs come from `search`, the user or a page. A page behind a login or clicks is "
     "`browser_open`'s. provider='max' races every backend, one fetch each: only when the user wants speed "
     "over cost."

@@ -201,7 +201,7 @@ with router.budget(Budget(max_cost_usd=0.05, time_limit_s=90)) as b:
         try:
             print(b.answer(question).answer)
         except BudgetExceededError:
-            hits = b.search(question, provider="you-mcp")  # keyless and $0: free search instead
+            hits = b.search(question)  # auto skips what no longer fits and tries the $0 backends
             print(hits.answer or [result.url for result in hits.results])
 ```
 

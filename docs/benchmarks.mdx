@@ -46,10 +46,12 @@ would only repeat one of them. The other search options (`search_depth`,
 
 What the report carries is **measured facts only**: wall-clock latency around
 the call, the result count, and the full `SearchResponse` so you can apply your
-own judgment. There is no quality score, relevance estimate or price — judging
-results against your task is your (or your LLM judge's) job, and any price
-table shipped here would drift; when you want that judgment made for you, on a
-question set with known answers, that is [`evaluate()`](/benchmarks#evaluating-accuracy).
+own judgment. There is no quality score, relevance estimate or cost column —
+judging results against your task is your (or your LLM judge's) job; when you
+want that judgment made for you, on a question set with known answers, that is
+[`evaluate()`](/benchmarks#evaluating-accuracy). A response's `cost_usd` and
+`cost_source` say what a call cost, where the backend states it; for list
+prices and estimates, see [Cost and budgets](/budgets).
 What it never does is fail as a whole: a
 provider that refuses an option, has no key, errors, or runs out of `timeout`
 is its own row's `error` (a `BenchmarkTimeoutError` for the last), and the

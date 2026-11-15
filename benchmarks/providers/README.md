@@ -86,7 +86,10 @@ Each run gets its own folder under `benchmarks/providers/results/`
 | `run.json` | The setup the run used |
 
 Accuracy is the judge's grade, latency is timed around the search alone, and
-there is no cost column, because no search backend states one. Only the
+there is no cost column. A call through `WebRouter` carries `cost_usd` and
+`cost_source`, the backend's own figure or an estimate from list prices; the
+scan calls each backend directly, so it gets only the figure a backend reports.
+See [Cost and budgets](https://docs.webrouter.net/budgets) and [PRICING.md](PRICING.md). Only the
 recommended order (below) reads a cost: the list price from `web_router.prices`, an
 estimate, to break ties.
 
