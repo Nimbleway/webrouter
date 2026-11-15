@@ -1,0 +1,185 @@
+{
+  "vendor": "brightdata",
+  "name": "Bright Data",
+  "category": "scraping",
+  "summary": "Bright Data Marketplace datasets: the list, each dataset's fields, and filtered snapshots.",
+  "docs_url": "https://docs.brightdata.com/",
+  "pricing_url": "https://brightdata.com/pricing",
+  "base_url": "https://api.brightdata.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BRIGHTDATA_API_TOKEN"
+        ],
+        "description": "a Bright Data API key (control panel > Account settings > API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <API key>'.",
+    "Filtering a dataset starts a billed snapshot job; poll its status, then download it.",
+    "Bright Data scrapers, Web Unlocker and SERP go through web-router's extract, search and live_data, not this entry."
+  ],
+  "sources": [
+    "https://docs.brightdata.com/llms.txt",
+    "https://docs.brightdata.com/api-reference/scrapers/synchronous-requests.md",
+    "https://docs.brightdata.com/api-reference/rest-api/scraper/asynchronous-requests.md",
+    "https://docs.brightdata.com/api-reference/marketplace-dataset-api/overview.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "brightdata.datasets.list",
+      "name": "List Marketplace datasets",
+      "summary": "The Marketplace datasets your account can query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datasets/list",
+      "job": "datasets.list",
+      "docs_url": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-list.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-list.md"
+      }
+    },
+    {
+      "id": "brightdata.datasets.metadata",
+      "name": "Get a Marketplace dataset's fields",
+      "summary": "Fields, types and descriptions of one dataset, to read before filtering it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datasets/{dataset_id}/metadata",
+      "params": {
+        "dataset_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Marketplace dataset id (gd_...).",
+          "example": "gd_l1viktl72bvl7bjuj0"
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-metadata.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-dataset-metadata.md"
+      }
+    },
+    {
+      "id": "brightdata.datasets.filter",
+      "name": "Create a snapshot of a dataset filtered by field values",
+      "summary": "Start a bulk async job that selects records of a Marketplace dataset matching a filter.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/datasets/filter",
+      "params": {
+        "dataset_id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Dataset to filter.",
+          "example": "gd_l1viktl72bvl7bjuj0"
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filter object, e.g. {\"name\": \"name\", \"operator\": \"includes\", \"value\": \"Egor\"}; conditions can be combined."
+        },
+        "records_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most records to include in the snapshot.",
+          "example": 1000
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Async: returns a snapshot_id; poll datasets.snapshot.status until ready (the docs say up to 5 minutes), then read it with datasets.snapshot.download. Dataset records are billed at $2.5 per thousand records at the time of writing."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/filter-dataset.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/filter-dataset.md"
+      }
+    },
+    {
+      "id": "brightdata.datasets.snapshot.status",
+      "name": "Get a dataset snapshot's status",
+      "summary": "A filtered snapshot's status (scheduled, building, ready or failed), record count and file size.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datasets/snapshots/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The snapshot_id that datasets.filter returned.",
+          "example": "s_m123456789"
+        }
+      },
+      "notes": [
+        "Poll until status is ready, then download it with datasets.snapshot.download."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-snapshot-meta.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/get-snapshot-meta.md"
+      }
+    },
+    {
+      "id": "brightdata.datasets.snapshot.download",
+      "name": "Download a dataset snapshot",
+      "summary": "The records of a ready snapshot, whole or one batch at a time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/datasets/snapshots/{id}/download",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The snapshot_id that datasets.filter returned.",
+          "example": "s_m123456789"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "ndjson",
+            "jsonl",
+            "csv"
+          ],
+          "description": "Format of the records; jsonl by default.",
+          "example": "json"
+        },
+        "batch_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per batch, at least 1000; use with part for large snapshots."
+        },
+        "part": {
+          "in": "query",
+          "type": "integer",
+          "description": "Which batch to return, starting at 1."
+        }
+      },
+      "notes": [
+        "Answers 202 while the snapshot is not ready yet."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/download-the-file-by-snapshot_id.md",
+      "verified": {
+        "docs": "https://docs.brightdata.com/api-reference/marketplace-dataset-api/download-the-file-by-snapshot_id.md"
+      }
+    }
+  ]
+}

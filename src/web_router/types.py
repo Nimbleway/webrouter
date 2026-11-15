@@ -18,6 +18,7 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from web_router.types_data_api import DATA_APIS_DESCRIPTION, DataApiMatch
 from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
@@ -231,8 +232,7 @@ class SearchResult(BaseModel):
     score: float | None = Field(default=None, description="Provider relevance score, when one is given.")
     published_date: str | None = None
     extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
+        default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
 
 
@@ -249,6 +249,7 @@ class SearchResponse(BaseModel):
     request_id: str | None = None
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    data_apis: list[DataApiMatch] = Field(default_factory=list, description=DATA_APIS_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.results)
@@ -279,8 +280,7 @@ class ExtractedDocument(BaseModel):
     status_code: int | None = Field(default=None, description="The fetched page's HTTP status, when reported.")
     published_date: str | None = None
     extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
+        default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
 
 
@@ -415,8 +415,7 @@ class Citation(BaseModel):
         ),
     )
     extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
+        default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
 
 
@@ -707,8 +706,7 @@ class BrowseStep(BaseModel):
     detail: str | None = Field(default=None, description="The agent's own note on the step -- its reasoning, a result.")
     screenshot_url: str | None = Field(default=None, description="A screenshot taken at this step, when reported.")
     extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
+        default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
 
 
