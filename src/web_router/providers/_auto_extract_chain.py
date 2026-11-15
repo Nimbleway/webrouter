@@ -51,7 +51,7 @@ def extract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[str]) ->
             if getattr(exc, "kind", None) == ERROR_KIND_LOCAL:
                 raise
             return _also_failed(response, exc)
-        if retried.documents:
+        if not _empty_extract(retried):
             contributed("extract", retried.provider)
         response = _merged(response, retried, urls)
     return response
@@ -67,7 +67,7 @@ async def aextract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[s
             if getattr(exc, "kind", None) == ERROR_KIND_LOCAL:
                 raise
             return _also_failed(response, exc)
-        if retried.documents:
+        if not _empty_extract(retried):
             contributed("extract", retried.provider)
         response = _merged(response, retried, urls)
     return response
