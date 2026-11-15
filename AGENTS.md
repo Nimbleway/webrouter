@@ -47,11 +47,13 @@ Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills
 writes the answer itself, and the response carries it with the sources it rests
 on. Between `search`, which returns pages, and `research`, a job of minutes.
 Nothing here composes or edits the answer. No keyless tier, since every backend
-bills the call, and no `auto` until its order is chosen: with no `provider`,
-the router's default serves it when that is an answer backend, else the one
-configured answer backend -- a key in `provider_config` counts -- and
-otherwise the call raises `ProviderNotFoundError`, naming the configured
-backends when there are several and the variables to set when there are none.
+bills the call. `auto`, the usual default, tries the answer backends you hold
+keys for in the ranked order in `data/chains.json`, passing over one that fails
+or answers with nothing, and each one it tries bills. With a default that does
+not serve answers, the one configured answer backend serves the call -- a key in
+`provider_config` counts -- and otherwise it raises `ProviderNotFoundError`,
+naming the configured backends when there are several and the variables to set
+when there are none.
 
 **`open_browser`** — a browser session: not an answer but a handle, carrying a
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and

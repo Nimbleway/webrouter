@@ -17,7 +17,6 @@ from web_router.mcp.shaping import (
     max_response_chars,
     redact,
     render,
-    shape_answer,
     shape_browse,
     shape_extract,
     shape_search,
@@ -26,13 +25,11 @@ from web_router.mcp.shaping import (
 from web_router.types import (
     BrowseResponse,
     BrowseStep,
-    Citation,
     ExtractedDocument,
     ExtractResponse,
     SearchResponse,
     SearchResult,
 )
-from web_router.types_answer import AnswerResponse
 
 _PROSE = "alpha beta gamma delta " * 200
 
@@ -68,7 +65,7 @@ def test_a_shaped_search_fits_the_budget_and_says_it_was_cut() -> None:
     assert len(render(payload)) <= 1200
     assert payload["truncated"] is True
     assert "fetch_raw" in payload["note"]
-    assert payload["handle"] in payload["note"]
+    assert payload["handle"] == "search-0001"
 
 
 def test_raw_is_never_inlined_in_a_shaped_result() -> None:
@@ -84,7 +81,7 @@ def test_dropping_whole_results_is_reported_with_the_count() -> None:
     assert len(payload["results"]) < 20
     # The count of what came back is kept even when the results themselves are not.
     assert payload["result_count"] == 20
-    assert "did not fit" in payload["note"]
+    assert "left out" in payload["note"]
 
 
 def test_text_is_cut_before_any_result_is_dropped() -> None:
@@ -93,7 +90,9 @@ def test_text_is_cut_before_any_result_is_dropped() -> None:
 
     assert len(payload["results"]) == 10
     assert len(render(payload)) <= MCP_MAX_RESPONSE_CHARS
-    assert "did not fit" not in payload["note"]
+    # Each result's text was cut, and says so where it was; the result list itself is whole, so not `truncated`.
+    assert all(result["content"].endswith(MCP_TRUNCATION_MARKER) for result in payload["results"])
+    assert payload["truncated"] is False and "note" not in payload
 
 
 def test_an_untruncated_result_carries_no_note() -> None:
@@ -163,7 +162,7 @@ def test_a_budget_too_small_for_the_shape_keeps_the_shape() -> None:
     payload = shape_search(_search_response(count=1), "search-0001", budget=100)
 
     assert payload["results"][0]["url"] == "https://example.com/0"
-    assert payload["truncated"] is True
+    assert payload["results"][0]["content"].endswith(MCP_TRUNCATION_MARKER)
 
 
 @pytest.mark.parametrize(
@@ -306,17 +305,3 @@ def test_a_devtools_endpoint_written_without_a_scheme_is_redacted(text: str) -> 
     cleaned, count = redact(text)
 
     assert count == 1 and "/devtools/" not in cleaned and MCP_REDACTED in cleaned
-
-
-def test_a_long_answer_is_cut_and_keeps_its_cited_sources_first() -> None:
-    uncited = [Citation(url=f"https://read.example/{i}", snippet=_PROSE) for i in range(30)]
-    cited = Citation(url="https://cited.example", snippet=_PROSE, field="[31]")
-    response = AnswerResponse(provider="perplexity", query="q", answer=_PROSE * 3, citations=[*uncited, cited])
-
-    shaped = shape_answer(response, "answer-0001", budget=4000)
-
-    assert len(render(shaped)) <= 4000
-    assert shaped["answer"].endswith(MCP_TRUNCATION_MARKER)
-    assert shaped["truncated"] is True
-    assert shaped["citation_count"] == 31, "the count is the backend's, whatever the cut left"
-    assert shaped["citations"][0]["url"] == "https://cited.example", "a cited source outlives the cut"

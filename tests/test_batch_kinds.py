@@ -140,6 +140,8 @@ def test_a_gone_page_echoed_without_its_fragment_is_still_gone() -> None:
 
     _, failures = split_error_pages([ExtractedDocument(url=A, status_code=404)], asked=A + "#top")
     assert failures[0].kind == "target"
+    _, failures = split_error_pages([ExtractedDocument(url=A, status_code=404)], asked="https://A.TEST/")
+    assert failures[0].kind == "target"
 
 
 def test_a_rewrite_on_retry_matches_only_the_urls_it_was_sent() -> None:

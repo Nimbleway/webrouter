@@ -61,7 +61,7 @@ router.vendor_request(
 )
 ```
 
-Credentials come from the environment (or `.env`), under the variable names
+Credentials come from the environment (the MCP server loads a `.env` into it; the library does not), under the variable names
 each vendor's file lists — `make vendors` writes them all into
 `.env.example`. To pass them in code instead, give the router
 `vendor_credentials={"datadog": {"api_key": ..., "app_key": ...}}`, read

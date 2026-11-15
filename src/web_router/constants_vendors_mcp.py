@@ -18,8 +18,7 @@ MCP_TOOL_CALL_VENDOR: Final = "call_vendor"
 MCP_VENDORS_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {
         "type": "string",
-        "description": "What you want, in words: 'google ads spend by campaign', 'datadog error logs'. "
-        "Lists matching endpoints, best first. Unset, lists the vendors instead.",
+        "description": "What you want, in words, e.g. 'google ads spend by campaign'.",
     },
     "vendor": {"type": "string", "description": "Only this vendor's endpoints (its slug, e.g. 'google-ads')."},
     "category": {"type": "string", "enum": list(VENDOR_CATEGORIES), "description": "Only vendors on this shelf."},
@@ -37,8 +36,7 @@ MCP_VENDOR_ENDPOINT_PROPERTIES: dict[str, dict[str, Any]] = {
 MCP_CALL_VENDOR_PROPERTIES: dict[str, dict[str, Any]] = {
     "endpoint": {
         "type": "string",
-        "description": "A catalog endpoint id. Its inputs go in 'params'. Omit it, and give 'vendor', 'method' "
-        "and 'path', to call a path the catalog does not name.",
+        "description": "A catalog endpoint id, its inputs in 'params'; or give 'vendor', 'method' and 'path'.",
     },
     "params": {
         "type": "object",
@@ -55,26 +53,22 @@ MCP_CALL_VENDOR_PROPERTIES: dict[str, dict[str, Any]] = {
     "body": {"description": "For a raw call: the JSON body."},
     "allow_writes": {
         "type": "boolean",
-        "description": "Required for a call that changes data on the vendor's side. Ask the user first, and send "
-        "the vendor's dry-run option (validateOnly and the like) before the real call.",
+        "description": "Required to change data. Ask the user first, and dry-run (validateOnly etc.) before.",
     },
 }
 
 MCP_DESC_VENDORS = (
-    "Find a vendor API to call with the user's own credentials: Google Ads, Datadog and the rest of the vendor "
-    "catalog. With 'query', lists matching endpoints, best first, each with its id, what it does, whether it "
-    "reads or writes, and whether its vendor's credentials are set here. Without, lists the vendors. Then "
-    "'vendor_endpoint' for an endpoint's inputs and 'call_vendor' to run it."
+    "Find a vendor API (Google Ads, Datadog, ...) to call with the user's own credentials. With 'query', "
+    "matching endpoints, best first; without, the vendors. Then 'vendor_endpoint' and 'call_vendor'."
 )
 MCP_DESC_VENDOR_ENDPOINT = (
     "Describe one vendor endpoint: every input with where it goes and an example, the notes a caller gets "
     "wrong without (units, paging, quirks), and the credentials it needs. Read it before 'call_vendor'."
 )
 MCP_DESC_CALL_VENDOR = (
-    "Call a vendor's API with the user's credentials and return its answer as the vendor sent it: field names, "
-    "units and paging are the vendor's own. Credentials are added here and never shown. Calls that change "
-    "data are refused unless 'allow_writes' is true and the server allows writes. The full answer stays "
-    "behind the returned handle for 'fetch_raw' when it does not fit."
+    "Call a vendor's API with the user's credentials (never shown) and return its answer as sent. Writes "
+    "are refused unless 'allow_writes' is true and the server allows them. A large answer stays behind "
+    "the handle for 'fetch_raw'."
 )
 
 MCP_MSG_VENDOR_ARG_TYPE: Final = "Tool {tool!r} takes {name!r} as {kind}, not {value!r}."
