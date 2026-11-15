@@ -1,0 +1,32 @@
+"""Failure kinds read from a bare status, a shared kind across URLs, the retry delay of ``auto``, and HTML shells."""
+
+from __future__ import annotations
+
+import pytest
+
+from web_router import AllProvidersFailedError
+from web_router.exceptions import ProviderError
+from web_router.providers._error_pages import near_empty
+from web_router.types import ExtractedDocument, ExtractFailure
+
+
+@pytest.mark.parametrize(("status", "kind"), [(401, "auth"), (429, "rate_limit")])
+def test_a_status_alone_sets_the_kind_of_a_failed_page(status: int, kind: str) -> None:
+    assert ExtractFailure(url="https://a.test", error="failed", status_code=status).kind == kind
+
+
+def test_urls_that_agree_on_a_kind_share_it() -> None:
+    failures = [ExtractFailure(url=f"https://{n}.test", error="x", status_code=429) for n in "ab"]
+    assert ExtractFailure.shared_kind(failures) == "rate_limit"
+    assert ExtractFailure.shared_kind([*failures, ExtractFailure(url="c", error="x", status_code=404)]) is None
+
+
+def test_auto_keeps_the_longest_member_delay() -> None:
+    members = {"a": ProviderError("a", "slow", kind="rate_limit"), "b": ProviderError("b", "slow", kind="rate_limit")}
+    members["a"].retry_after, members["b"].retry_after = 2.0, 7.0
+    assert AllProvidersFailedError("auto", "all failed", members).retry_after == 7.0
+
+
+def test_a_script_shell_is_near_empty() -> None:
+    shell = "<html><head><script>" + "x=1;" * 2000 + "</script></head><body><div>Loading</div></body></html>"
+    assert near_empty(ExtractedDocument(url="https://a.test", content=shell, format="html"))

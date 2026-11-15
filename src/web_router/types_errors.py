@@ -205,16 +205,20 @@ class ExtractFailure(BaseModel):
     @model_validator(mode="after")
     def _kind_from_error(self) -> ExtractFailure:
         if self.kind is None:
-            gone = self.status_code in TARGET_GONE_STATUSES
-            self.kind = ERROR_KIND_TARGET if gone else classify(None, self.error).kind
+            by_status = KIND_BY_STATUS.get(self.status_code) if self.status_code is not None else None
+            if self.status_code in TARGET_GONE_STATUSES:
+                self.kind = ERROR_KIND_TARGET
+            elif by_status in ("auth", "rate_limit"):
+                self.kind = by_status  # a refused key or a throttle, whatever the warning text says
+            else:
+                self.kind = classify(None, self.error).kind
         return self
 
     @staticmethod
     def shared_kind(failures: Sequence[ExtractFailure]) -> ProviderErrorKind | None:
-        """``target`` when every URL failed for its own page, so a call that read none of them stops ``auto``."""
-        if failures and all(failure.kind == ERROR_KIND_TARGET for failure in failures):
-            return ERROR_KIND_TARGET
-        return None
+        """The kind every URL failed with, when they agree, so a call that read none of them reports it."""
+        kinds = {failure.kind for failure in failures}
+        return kinds.pop() if len(kinds) == 1 else None
 
     @classmethod
     def from_error(cls, url: str, error: BaseException) -> ExtractFailure:

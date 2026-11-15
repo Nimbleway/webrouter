@@ -9,6 +9,7 @@ a document carrying a warning.
 from __future__ import annotations
 
 import html
+import re
 from collections.abc import Iterable
 from http import HTTPStatus
 from urllib.parse import urlsplit
@@ -90,9 +91,15 @@ def _title(document: ExtractedDocument) -> str:
     return html.unescape(found.group(1)).strip() if found else ""
 
 
+HTML_NON_TEXT = re.compile(r"<(script|style)\b.*?</\1>|<[^>]*>", re.IGNORECASE | re.DOTALL)
+
+
 def near_empty(document: ExtractedDocument) -> bool:
     """Some text, but under :data:`EXTRACT_NEAR_EMPTY_CHARS` characters of it: a shell more often than a page."""
-    return 0 < len(document.content.strip()) < EXTRACT_NEAR_EMPTY_CHARS
+    content = document.content
+    if document.format == "html":
+        content = html.unescape(HTML_NON_TEXT.sub(" ", content))
+    return 0 < len(content.strip()) < EXTRACT_NEAR_EMPTY_CHARS
 
 
 def _warned(document: ExtractedDocument) -> ExtractedDocument:

@@ -42,4 +42,6 @@ class AllProvidersFailedError(ProviderError):
         shared = kinds.pop() if len(kinds) == 1 else None
         super().__init__(provider, message, kind=shared or "upstream")
         self.failures = dict(failures)
+        delays = [d for d in (getattr(exc, "retry_after", None) for exc in self.failures.values()) if d is not None]
+        self.retry_after = max(delays) if delays else None
         self.retryable = any(getattr(exc, "retryable", False) for exc in self.failures.values())
