@@ -22,8 +22,8 @@ from web_router.constants import (
     MIN_JOB_BUDGET,
 )
 from web_router.exceptions import DeadlineExceededError, ProviderError, WebRouterError
-from web_router.providers._in_flight import InFlight, tracking
-from web_router.providers._runtime import aslot, slot
+from web_router.providers._deadline_slots import aslotted, slotted
+from web_router.providers._in_flight import InFlight
 
 if TYPE_CHECKING:
     from web_router.types import ExtractRequest, ExtractResponse
@@ -241,15 +241,7 @@ class _DeadlineMixin:
         :class:`DeadlineExceededError` rather than as the backend's own read
         timeout.
         """
-        deadline = current_deadline()
-        with slot(self.name, deadline):
-            if deadline is None:
-                return self._wrapped(call, message, **fields)
-            self._refuse_late(deadline)
-            try:
-                return self._wrapped(call, message, **fields)
-            except Exception as exc:
-                self._reraise_late(deadline, exc)
+        return slotted(self, current_deadline(), lambda: self._wrapped(call, message, **fields))
 
     async def _abounded(self, call: Callable[[], Awaitable[_ResultT]], message: str, **fields: Any) -> _ResultT:
         """Async counterpart of :meth:`_bounded`, which also cancels the call at the deadline.
@@ -257,16 +249,7 @@ class _DeadlineMixin:
         Takes a callable rather than an awaitable, so a call refused before it
         starts never creates a coroutine nobody awaits.
         """
-        deadline = current_deadline()
-        async with aslot(self.name, deadline):
-            if deadline is None:
-                return await self._awrapped(call(), message, **fields)
-            self._refuse_late(deadline)
-            with tracking() as flight:
-                try:
-                    return await _within(deadline, self._awrapped(call(), message, **fields))
-                except Exception as exc:
-                    self._reraise_late(deadline, exc, flight)
+        return await aslotted(self, current_deadline(), lambda: self._awrapped(call(), message, **fields), _within)
 
     def _refuse_past_deadline(self) -> None:
         """Raise :class:`DeadlineExceededError` when a deadline in force has already passed.
@@ -354,14 +337,7 @@ class _DeadlineMixin:
 
     def _extract_within(self, deadline: Deadline | None, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         """One call of an extract's ``extract``: refused past ``deadline``, and a timeout at it is the deadline's."""
-        with slot(self.name, deadline):
-            if deadline is None:
-                return self._extract(request, urls)
-            self._refuse_late(deadline)
-            try:
-                return self._extract(request, urls)
-            except Exception as exc:
-                self._reraise_late(deadline, exc)
+        return slotted(self, deadline, lambda: self._extract(request, urls))
 
     async def _aextract_within(
         self, deadline: Deadline | None, request: ExtractRequest, urls: list[str]
@@ -372,12 +348,4 @@ class _DeadlineMixin:
         the deadline has passed for all of them, and a backend that refused
         early would read as one the deadline cut off.
         """
-        async with aslot(self.name, deadline):
-            if deadline is None:
-                return await self._aextract(request, urls)
-            self._refuse_late(deadline)
-            with tracking() as flight:
-                try:
-                    return await _within(deadline, self._aextract(request, urls))
-                except Exception as exc:
-                    self._reraise_late(deadline, exc, flight)
+        return await aslotted(self, deadline, lambda: self._aextract(request, urls), _within)
