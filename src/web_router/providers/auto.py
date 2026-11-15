@@ -100,7 +100,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers._auto_extract import extract_eligible
-from web_router.providers._auto_extract_chain import aextract_down_chain, extract_down_chain
+from web_router.providers._auto_extract_chain import _Walk, aextract_down_chain, extract_down_chain
 from web_router.providers._chain import (
     _RECOVERABLE,
     _ChainSpec,
@@ -364,23 +364,27 @@ class AutoExtractProvider(ExtractProvider):
 
         return self._members.member(position, self._chain, self._members_config, create_extract_provider)
 
-    def _walk(self, request: ExtractRequest, urls: list[str]) -> tuple[str, bool, ExtractRequest, Any, Any]:
-        order = in_call_order("extract", self._eligible(request))
-        return self.name, self.fallback_on_empty, self._delegated(request, urls), self._member, order
+    def _walk(self, request: ExtractRequest) -> _Walk:
+        return _Walk(self.name, self.fallback_on_empty, self._member, in_call_order("extract", self._eligible(request)))
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         """The first answer, with each URL it failed tried on the members after it; see :mod:`._auto_extract_chain`."""
-        return extract_down_chain(*self._walk(request, urls), urls)
+        return extract_down_chain(self._walk(request), self._delegated(request, urls), urls)
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        return await aextract_down_chain(*self._walk(request, urls), urls)
+        return await aextract_down_chain(self._walk(request), self._delegated(request, urls), urls)
 
     def _eligible(self, request: ExtractRequest) -> list[tuple[int, str]]:
         """The chain members that return the format and map every other option set; see :func:`extract_eligible`."""
         return extract_eligible(self.name, self._chain, self.format_of(request), request)
 
     def _delegated(self, request: ExtractRequest, urls: list[str]) -> ExtractRequest:
-        """The request to hand a member, its format named: the members' own defaults differ."""
+        """The request to hand a member, with the format named explicitly.
+
+        The members disagree about their own defaults -- Nimble returns HTML,
+        Tavily markdown -- so letting one fall through would make the shape of
+        the content depend on which backend happened to answer.
+        """
         return request.model_copy(update={"format": self.format_of(request), "urls": urls})
 
     def close(self) -> None:
