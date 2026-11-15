@@ -50,7 +50,9 @@ class Cooldowns:
         the others; the backend is throttled all the same. No ``Retry-After``
         survives into a failure, so the status's default applies.
         """
-        statuses = [getattr(failure, "status_code", None) for failure in getattr(response, "failures", None) or ()]
+        failures = getattr(response, "failures", None) or ()
+        # Only the backend's own throttle (kind rate_limit): a page the target site answered 429 is kind upstream.
+        statuses = [getattr(f, "status_code", None) for f in failures if getattr(f, "kind", None) == _RATE_LIMIT]
         throttled = [status for status in statuses if status in COOLDOWN_STATUSES]
         if throttled:
             status = max(throttled, key=lambda code: COOLDOWN_DEFAULT_S[code])

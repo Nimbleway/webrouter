@@ -18,6 +18,7 @@ from web_router.registry import (
     unregister_provider,
 )
 from web_router.types import ExtractRequest, ExtractResponse, SearchRequest, SearchResponse
+from web_router.types_errors import ExtractFailure
 
 
 def _throttle(status: int, retry_after: str | None = None) -> ProviderError:
@@ -180,3 +181,15 @@ def test_a_named_extract_throttled_on_some_urls_starts_the_cooldown_for_auto() -
         unregister_extract_provider("halfthrottled")
         unregister_extract_provider("pages")
     assert after.provider == "fake" and _HalfThrottled.calls == 2
+
+
+def test_a_page_the_target_site_answered_429_does_not_cool_the_backend() -> None:
+    cooldowns, failure = Cooldowns(), ExtractFailure(url="https://a.example/", error="429", status_code=429)
+    cooldowns.note_answer(
+        "pages", ExtractResponse(provider="pages", failures=[failure.model_copy(update={"kind": "upstream"})])
+    )
+    assert cooldowns.remaining("pages") is None
+    cooldowns.note_answer(
+        "pages", ExtractResponse(provider="pages", failures=[failure.model_copy(update={"kind": "rate_limit"})])
+    )
+    assert cooldowns.remaining("pages") is not None

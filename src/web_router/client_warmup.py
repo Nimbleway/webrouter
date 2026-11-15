@@ -38,7 +38,7 @@ class _Warmup:
     def warmup(self) -> list[str]:
         """Build the search and extract backends a first call would, with their clients; return the names built.
 
-        A backend whose client cannot be built is left out of the list and logged at INFO.
+        A backend whose client cannot be built is left out of the list and logged as a warning, with its traceback.
 
         Call it once at startup, before the router serves requests. Safe to call again: what is built is reused.
         """
@@ -48,7 +48,7 @@ class _Warmup:
                 try:
                     getattr(backend, self._client_attribute, None)
                 except Exception as exc:  # a client that cannot be built now fails the call that needs it, as before
-                    logger.info(LOG_WARMUP_FAILED, backend.name, type(exc).__name__)
+                    logger.warning(LOG_WARMUP_FAILED, backend.name, type(exc).__name__, exc_info=True)
                     continue
                 warmed.append(backend.name)
         return list(dict.fromkeys(warmed))
