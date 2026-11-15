@@ -16,6 +16,7 @@ import pytest
 from tests._live_data_paged import PagedProvider
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
+from web_router.exceptions import DeadlineExceededError
 from web_router.providers._deadline import call_deadline, current_deadline
 from web_router.registry import register_live_data_provider, unregister_live_data_provider
 from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
@@ -114,3 +115,75 @@ def test_the_callers_deadline_reaches_every_backend_on_the_sync_path(recorders: 
     with call_deadline(5):
         router.live_data_sources(limit=2)
     assert recorders == [True, True]
+
+
+# -- a backend that runs out of time is left out, like any failed backend -------
+
+
+class SlowProvider(PagedProvider):
+    """Runs past the caller's time limit on every listing."""
+
+    name = "slow"
+
+    def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+        raise DeadlineExceededError("slow", 5.0)
+
+
+class BrokenProvider(PagedProvider):
+    """Raises a plain exception past the library's wrapper: a bug, not a failed backend."""
+
+    name = "broken"
+
+    def live_data_sources(self, *, limit: int | None = None, offset: int | None = None) -> LiveDataSourcePage:
+        raise RuntimeError("bug")
+
+    async def alive_data_sources(self, *, limit: int | None = None, offset: int | None = None) -> LiveDataSourcePage:
+        raise RuntimeError("bug")
+
+
+@pytest.fixture
+def slow(capped: None) -> Iterator[None]:
+    register_live_data_provider("slow", SlowProvider)
+    yield
+    unregister_live_data_provider("slow")
+
+
+@pytest.fixture
+def broken(capped: None) -> Iterator[None]:
+    register_live_data_provider("broken", BrokenProvider)
+    yield
+    unregister_live_data_provider("broken")
+
+
+def test_a_backend_past_the_time_limit_is_left_out_and_named(slow: None) -> None:
+    page = WebRouter().live_data_sources(limit=2)
+
+    assert page.names == ["c0", "c1"]
+    assert list(page.failures) == ["slow"]
+
+
+def test_the_async_router_leaves_out_a_backend_past_the_time_limit(slow: None) -> None:
+    async def scenario() -> LiveDataSourcePage:
+        router = AsyncWebRouter()
+        page = await router.live_data_sources(limit=2)
+        await router.aclose()
+        return page
+
+    page = asyncio.run(scenario())
+    assert page.names == ["c0", "c1"]
+    assert list(page.failures) == ["slow"]
+
+
+def test_a_plain_exception_from_a_backend_still_propagates(broken: None) -> None:
+    with pytest.raises(RuntimeError, match="bug"):
+        WebRouter().live_data_sources(limit=2)
+
+    async def scenario() -> None:
+        router = AsyncWebRouter()
+        try:
+            await router.live_data_sources(limit=2)
+        finally:
+            await router.aclose()
+
+    with pytest.raises(RuntimeError, match="bug"):
+        asyncio.run(scenario())
