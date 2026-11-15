@@ -502,7 +502,7 @@ Extract's order is measured on pages returned, not graded, and research's and
 browse's are unmeasured, so all three stay hand-ordered. `chains.py --check` exits 1 when
 the file is stale, and a unit test runs it, so a change to the frozen results
 or the price list that moves an order fails until `make chains` is run and the
-the provider tables in docs/providers.mdx follow. For the full report behind both orders:
+provider tables in docs/providers.mdx follow. For the full report behind both orders:
 
 ```bash
 uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --set answer-simpleqa-300
