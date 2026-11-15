@@ -217,6 +217,14 @@ class ExtractFailure(BaseModel):
         return kinds.pop() if len(kinds) == 1 else None
 
     @staticmethod
+    def shared_original(failures: Sequence[ExtractFailure], errors: Sequence[BaseException]) -> BaseException | None:
+        """The first call's own exception, when every URL failed with one status; else none, so no status misleads."""
+        if len({failure.status_code for failure in failures}) > 1:
+            return None
+        originals = (getattr(error, "original", None) for error in errors)
+        return next((original for original in originals if original is not None), None)
+
+    @staticmethod
     def batch_kind(failures: Sequence[ExtractFailure]) -> ProviderErrorKind:
         """A batch's kind: the shared one, else the most recoverable present, so one dead URL never stops the rest."""
         shared = ExtractFailure.shared_kind(failures)
