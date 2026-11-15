@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pickle
+import shlex
 from pathlib import Path
 
 import pytest
@@ -56,3 +57,14 @@ def test_the_hint_is_added_once_through_pickling(project: Path) -> None:
 def test_no_hint_from_an_oversized_dotenv(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("web_router._dotenv.MCP_ENV_FILE_MAX_BYTES", 8)
     assert dotenv_hint(f"Set the {KEY} environment variable.") == ""
+
+
+def test_the_command_keeps_a_path_with_a_space_whole(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    spaced = tmp_path / "My Project"
+    spaced.mkdir()
+    (spaced / ".env").write_text(f"{KEY}=abc\n", encoding="utf-8")
+    monkeypatch.chdir(spaced)
+    monkeypatch.delenv(KEY, raising=False)
+    command = str(ConfigurationError.missing_api_key("nimble", KEY)).split("`")[1]
+    args = shlex.split(command)
+    assert args[args.index("--env-file") + 1] == str((spaced / ".env").resolve())

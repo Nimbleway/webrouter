@@ -13,7 +13,7 @@ MSG_DOTENV_PREFIX = " A .env exists at "
 
 MSG_DOTENV_NOT_READ = (
     MSG_DOTENV_PREFIX + "{path} and sets {env_var}, but the library does not read it: the library reads "
-    "the process environment only. Load the file first -- run with `uv run --env-file {path} ...`, or call "
+    "the process environment only. Load the file first -- run with `uv run --env-file {quoted_path} ...`, or call "
     "`load_dotenv()` from python-dotenv before building the router."
 )
 """Appended to a configuration error naming a variable that the nearest ``.env`` sets and the environment lacks."""

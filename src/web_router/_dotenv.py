@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 from pathlib import Path
 
 from web_router.constants import MCP_ENV_FILE_MAX_BYTES
@@ -61,7 +62,9 @@ def dotenv_hint(message: str, start: Path | None = None) -> str:
         return ""
     unread = _set_in(path) - {name for name, value in os.environ.items() if value.strip()}
     named = next((name for name in _VARIABLE.findall(message) if name in unread), None)
-    return "" if named is None else MSG_DOTENV_NOT_READ.format(path=path, env_var=named)
+    if named is None:
+        return ""
+    return MSG_DOTENV_NOT_READ.format(path=path, quoted_path=shlex.quote(str(path)), env_var=named)
 
 
 def with_dotenv_hint(args: tuple[object, ...]) -> tuple[object, ...]:
