@@ -24,7 +24,7 @@ from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers.base import ExtractProvider
 from web_router.routing.attempts import admitted, contributed, failed
 from web_router.types import ExtractRequest, ExtractResponse
-from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET
+from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET, ERROR_KIND_TIMEOUT
 
 _Order = list[tuple[int, str]]
 
@@ -127,7 +127,13 @@ def _failed_urls(response: ExtractResponse) -> list[str]:
 def _also_failed(response: ExtractResponse, exc: WebRouterError) -> ExtractResponse:
     """``response`` with why no later member read its retried URLs added to each one's reason, its kind the latest."""
     retried = set(_failed_urls(response))
-    latest = {"kind": getattr(exc, "kind", None), "status_code": getattr(exc, "status_code", None)}
+    kind = ERROR_KIND_TIMEOUT if isinstance(exc, DeadlineExceededError) else getattr(exc, "kind", None)
+    # Only what the later failure knows replaces the earlier: a deadline carries no status of its own.
+    latest = {
+        field: value
+        for field, value in (("kind", kind), ("status_code", getattr(exc, "status_code", None)))
+        if value is not None
+    }
     failures = [
         failure.model_copy(update={"error": f"{failure.error}; then {exc}", **latest})
         if failure.url in retried

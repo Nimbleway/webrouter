@@ -82,3 +82,15 @@ def test_an_unknown_live_data_source_is_not_found_and_not_retried(provider: str)
     error = LiveDataSourceNotFoundError(provider, "no-such-source")
     assert error.kind == "not_found"
     assert error.retryable is False
+
+
+def test_a_deadline_on_retry_is_a_timeout_and_a_provider_error_keeps_its_kind() -> None:
+    from web_router.exceptions import DeadlineExceededError, ProviderError
+    from web_router.providers._auto_extract_chain import _also_failed
+    from web_router.types import ExtractResponse
+
+    first = ExtractResponse(provider="one", failures=[ExtractFailure(url=A, error="down", status_code=503)])
+    late = _also_failed(first, DeadlineExceededError("two", 5.0)).failures[0]
+    assert (late.kind, late.status_code) == ("timeout", 503)
+    refused = _also_failed(first, ProviderError("two", "slow", kind="rate_limit")).failures[0]
+    assert refused.kind == "rate_limit"
