@@ -40,6 +40,12 @@ LITELLM_ENV_BY_PROVIDER: dict[str, str | None] = dict.fromkeys(
 )
 """Each provider's credential, for ``ENV_BY_PROVIDER``: the proxy's key, never the vendor's."""
 
+LITELLM_SEARCH_SETTINGS_BY_PROVIDER: dict[str, tuple[str, ...]] = dict.fromkeys(
+    LITELLM_SEARCH_TOOL_BY_PROVIDER, (ENV_LITELLM_PROXY_API_BASE,)
+)
+"""What each needs beside its key before it counts as configured: the proxy's URL. ``LITELLM_PROXY_API_KEY`` is
+often set already for LiteLLM's model calls, and without a URL these would be listed yet fail every call."""
+
 LITELLM_QUERY_FIELD = "query"
 LITELLM_MAX_RESULTS_FIELD = "max_results"
 """LiteLLM's own request fields, sent beside the vendor's: Parallel's body has no ``query`` of its own."""

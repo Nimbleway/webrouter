@@ -18,6 +18,7 @@ import pytest
 from web_router.exceptions import ConfigurationError
 from web_router.providers._clock import pinned_today
 from web_router.providers.litellm import ExaLiteLLMProvider, ParallelLiteLLMProvider, TavilyLiteLLMProvider
+from web_router.registry import configured_providers
 from web_router.types import SearchRequest
 
 PROXY = "https://litellm.example.com"
@@ -101,6 +102,23 @@ def test_without_a_proxy_url_nothing_is_sent(monkeypatch: pytest.MonkeyPatch) ->
     with pytest.raises(ConfigurationError, match="LITELLM_PROXY_API_BASE"):
         provider.search(SearchRequest(query="q"))
     assert seen == []
+
+
+@pytest.mark.parametrize(
+    ("key", "url", "listed"), [("sk-test", None, False), (None, PROXY, False), ("sk-test", PROXY, True)]
+)
+def test_they_are_configured_only_with_both_the_key_and_the_url(
+    monkeypatch: pytest.MonkeyPatch, key: str | None, url: str | None, listed: bool
+) -> None:
+    """The key alone is often set already for LiteLLM's model calls; without the URL every search would fail."""
+    for name, value in (("LITELLM_PROXY_API_KEY", key), ("LITELLM_PROXY_API_BASE", url)):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+    names = {"exa-litellm", "tavily-litellm", "parallel-litellm"}
+    assert (names & set(configured_providers()) == names) is listed
+    assert listed or not names & set(configured_providers())
 
 
 def test_the_reply_is_normalized_the_same_for_every_vendor() -> None:
