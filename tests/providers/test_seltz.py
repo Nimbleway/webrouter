@@ -13,9 +13,11 @@ import os
 import httpx
 import pytest
 
+from web_router.constants_seltz import SELTZ_SEARCH_PATH
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.seltz import SeltzProvider
 from web_router.types import SearchRequest, SearchResponse
+from web_router.vendors.catalog import builtin_catalog
 
 DOCUMENTED = {
     "request_id": "req_123",
@@ -121,6 +123,11 @@ def test_without_snippets_the_description_is_the_opening_of_the_body(provider: S
     ).results
     assert result.content == body
     assert body.startswith(result.description.rstrip("…")) and len(result.description) < len(body)
+
+
+def test_the_vendor_catalog_leaves_web_search_to_the_backend() -> None:
+    endpoints = builtin_catalog().vendor("seltz").endpoints
+    assert all(endpoint.path != SELTZ_SEARCH_PATH for endpoint in endpoints)
 
 
 @pytest.mark.integration

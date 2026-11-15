@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-363 vendors, 2675 endpoints.
+363 vendors, 2674 endpoints.
 
 ### advertising
 
@@ -276,7 +276,7 @@ Web, news and archive search.
 | [Opoint](https://api-docs.opoint.com/guides/search) `opoint` | Global news monitoring: boolean search over Opoint's news archive, stored-search feeds and SafeFeed firehoses. | 6 read | key in header | `OPOINT_API_KEY` | docs 2026-11-09 |
 | [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
 | [Search1API](https://s1.dev/docs) `search1api` | Web, news and Maps search, page reading, screenshots, extraction and site crawling through one API. | 12 read | key in header | `SEARCH1API_KEY` | docs 2026-11-08 |
-| [Seltz](https://docs.seltz.ai/) `seltz` | Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports. | 7 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
+| [Seltz](https://docs.seltz.ai/) `seltz` | Cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports; web search is served by search(). | 6 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
 | [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
 | [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 9 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
