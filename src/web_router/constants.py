@@ -12,6 +12,7 @@ from typing import Any, Literal, get_args
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_litellm import LITELLM_AUTO_SETTINGS, LITELLM_ENV_BY_PROVIDER
 from web_router.constants_live_data import (
     MCP_DESC_LIVE_DATA,
     MCP_DESC_LIVE_DATA_SOURCE,
@@ -193,6 +194,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_YOU_MCP: None,
     PROVIDER_EXA_MCP: None,
     PROVIDER_PARALLEL_MCP: None,
+    **LITELLM_ENV_BY_PROVIDER,
     PROVIDER_AUTO: None,
 }
 """Which variable holds each provider's credential; ``None`` means it needs none.
@@ -532,12 +534,11 @@ joins the default chain as though its key were in the environment. Any other
 backend would only fail to start on it, so a client there counts for nothing.
 """
 
-AUTO_SETTING_PROVIDERS: dict[str, str] = {PROVIDER_AGENTCORE: "gateway_url"}
+AUTO_SETTING_PROVIDERS: dict[str, str] = {PROVIDER_AGENTCORE: "gateway_url", **LITELLM_AUTO_SETTINGS}
 """The backends configured in code by a setting rather than a key, and that setting's name.
 
-``agentcore`` takes no key -- its credential is the AWS one botocore resolves -- so
-the gateway URL is what says it is set up, in ``provider_config`` as in the
-environment's ``AGENTCORE_GATEWAY_URL``.
+``agentcore`` takes no key -- its credential is the AWS one botocore resolves -- so the gateway URL says it is set
+up, as ``AGENTCORE_GATEWAY_URL`` does. A LiteLLM search provider's ``base_url`` stands in for its proxy URL.
 """
 
 AUTO_PREFERRED: tuple[str, ...] = _chain("search", "preferred")
@@ -2861,14 +2862,6 @@ MSG_EVALS_JUDGE_STOPPED = "the reply stopped on {stop_reason!r} before it was fi
 
 MSG_EVALS_ROW_OUTCOME = "an EvaluationRow carries exactly one of grade and error, and failed_at with the error alone"
 
-
-# --- Brave ------------------------------------------------------------------
-
-BRAVE_BASE_URL = "https://api.search.brave.com"
-BRAVE_SEARCH_PATH = "/res/v1/web/search"
-BRAVE_API_KEY_HEADER = "X-Subscription-Token"
-BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
-"""Brave wraps query terms in these; they are its markup, not page content."""
 
 # --- Exa --------------------------------------------------------------------
 

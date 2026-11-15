@@ -121,6 +121,9 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | all but `effort` |
 | `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp), its `web_search_advanced_exa` tool | direct HTTP, **no key** | all but `locale` |
 | `Provider.PARALLEL_MCP` | `parallel-mcp` | [Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/quickstart) | direct HTTP, **no key** | `max_results` (applied to the response: the tool ignores a count) |
+| `Provider.EXA_LITELLM` | `exa-litellm` | [Exa](https://exa.ai) through your [LiteLLM proxy](https://docs.litellm.ai/docs/search) | direct HTTP to the proxy's `/v1/search/exa`, its key (`LITELLM_PROXY_API_KEY`) | as `exa` |
+| `Provider.TAVILY_LITELLM` | `tavily-litellm` | [Tavily](https://tavily.com) through your LiteLLM proxy | direct HTTP to the proxy's `/v1/search/tavily` | as `tavily` |
+| `Provider.PARALLEL_LITELLM` | `parallel-litellm` | [Parallel](https://parallel.ai) through your LiteLLM proxy | direct HTTP to the proxy's `/v1/search/parallel` | as `parallel` |
 | `Provider.AUTO` *(default)* | `auto` | — | every backend you hold a key for, in the order the frozen benchmark results rank them, then the keyless ones — so a key held only for research serves searches too, and those calls bill; see [Working with no credentials](#working-with-no-credentials) | every option some member maps, each request routed to a member that maps what it sets |
 
 A backend maps an option only where its API has a documented field or query
@@ -328,7 +331,7 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore |
+| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM |
 | `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
@@ -1000,7 +1003,9 @@ paid for. `evaluate()` is `search` only, for the same reason `benchmark()` is.
 ## Smart routing (experimental)
 
 Everything in this section is experimental: any name in it may change before
-1.0. With no router and no budget, nothing here changes a call.
+1.0. The default router, `rules`, is asked by `plan()` and `run()` alone: with no
+budget, `search()`, `extract()` and every other method you call run as they
+would with no router. `router=None` attaches none.
 
 A router is your code. WebRouter shows it a prompt and the candidates that
 could serve it, each priced and timed; the router picks the method and orders
@@ -1093,7 +1098,10 @@ the network and the hour: rerun the script for your own router.
 
 `plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method
 (`tool`), its options (`params`), the backends in order (`providers`) and the
-decision record. With no router it is a search, unless `tool` pins a method.
+decision record. With the default `rules` router a prompt with a URL is read,
+one asking for a report, a comparison or an in-depth analysis researched
+(billed per run: pass a `budget`), and anything else searched; with
+`router=None` it is a search. `tool` pins a method either way.
 `run(plan)` calls that method on `auto` in that order and returns its own
 response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
 `ResearchResponse` or `BrowseResponse`. `run(prompt)` does both. A saved
@@ -1222,8 +1230,13 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships one keyless router, `web_router.routing.rules.rules`: a
-prompt with a URL is extracted, anything else searched, and two model routers,
+The library ships one keyless router, `rules`, attached unless you pass
+`router=` (`router="rules"` names it, `router=None` attaches none): a prompt
+with a URL is extracted; one asking in so many words for a report, a comparison
+or an in-depth analysis is researched, or searched when no research backend is
+configured; anything else is searched. It reads English phrases, never single
+words like "why" or "list", and never picks `browse` or `answer`. It also ships
+two model routers,
 `router="llm"` and `router="systemone"`: see
 [Decision APIs](#decision-apis-deciderrouter-routerllm-and-routersystemone).
 Six example routers, tested offline: [rules](examples/router_rules.py), a
@@ -1799,3 +1812,5 @@ WebRouter is licensed under the [Apache License 2.0](LICENSE).
 
 The SimpleQA grader prompt vendored at `src/web_router/evals/prompts/` keeps
 its own MIT license, in `LICENSE-simple-evals` beside it.
+
+<!-- mcp-name: io.github.Nimbleway/webrouter -->

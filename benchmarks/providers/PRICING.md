@@ -239,6 +239,19 @@ check what a run keeps before adding one.
 
 You.com's keyless MCP is priced in its own section above.
 
+### Search through a LiteLLM proxy
+
+Exa, Tavily and Parallel search sent through a LiteLLM proxy's `/v1/search`, which bills each call to the LiteLLM
+key at the proxy's own cost map. These are LiteLLM's published defaults; an operator may set others.
+
+<!-- prices: method=search provider=exa-litellm,tavily-litellm,parallel-litellm -->
+| Backend | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|
+| exa-litellm | `exa-litellm` | Exa's own mapping, sent through the proxy | Exa search, billed to the LiteLLM key | $5 per 1k; LiteLLM's cost map bills `exa_ai/search` per query: $0.005 for up to 25 results, $0.025 above | [github.com](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json) | 2026-11-12 |
+| tavily-litellm | `tavily-litellm` | Tavily's own mapping, sent through the proxy | Tavily search, billed to the LiteLLM key | $8 per 1k; LiteLLM's cost map: `tavily/search` $0.008 a query, `tavily/search-advanced` $0.016 | [github.com](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json) | 2026-11-12 |
+| parallel-litellm | `parallel-litellm` | Parallel's own mapping, sent through the proxy | Parallel search, billed to the LiteLLM key | $5 per 1k; LiteLLM's cost map: `parallel_ai/search` $0.005 a query | [github.com](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json) | 2026-11-12 |
+<!-- /prices -->
+
 ## Extract (page reading)
 
 <!-- prices: method=extract -->

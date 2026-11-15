@@ -18,6 +18,8 @@ from web_router.constants_live_data_vendors import (
     OXYLABS_BATCH_PREFIX,
     OXYLABS_DOCS_URL,
     OXYLABS_SCRAPE_PREFIX,
+    OXYLABS_SOURCE_AS_JOB,
+    OXYLABS_SOURCE_DESCRIPTION,
     OXYLABS_SYNC,
 )
 from web_router.types_live_data import LiveDataSource
@@ -78,11 +80,11 @@ def listed(provider: str, scraper: Scraper) -> LiveDataSource:
     parts = scraper.name.split("/")
     # Media scrapers name their site second: media/youtube/metadata reads YouTube.
     at = 1 if parts[0] == _MEDIA and len(parts) > 1 else 0
-    only = "" if scraper.realtime else ", run as a job"
+    mode = "" if scraper.realtime else OXYLABS_SOURCE_AS_JOB
     return LiveDataSource(
         provider=provider,
         name=scraper.name,
-        description=f"Oxylabs' dedicated {scraper.name} scraper{only}: {OXYLABS_DOCS_URL}",
+        description=OXYLABS_SOURCE_DESCRIPTION.format(name=scraper.name, mode=mode, docs=OXYLABS_DOCS_URL),
         domain=parts[at],
         entity_type="/".join(parts[at + 1 :]) or None,
         published=True,

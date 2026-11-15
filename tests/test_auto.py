@@ -75,7 +75,7 @@ from web_router.types import (
     SearchResult,
 )
 
-_EVERY_SEARCH_KEY = [env_var for env_var in ENV_BY_PROVIDER.values() if env_var]
+_EVERY_SEARCH_KEY = [env_var for env_var in ENV_BY_PROVIDER.values() if env_var] + ["LITELLM_PROXY_API_BASE"]
 _EVERY_RESEARCH_KEY = sorted({env_var for env_vars in RESEARCH_ENV_BY_PROVIDER.values() for env_var in env_vars})
 _EVERY_EXTRACT_KEY = sorted({env_var for env_vars in EXTRACT_ENV_BY_PROVIDER.values() for env_var in env_vars})
 
