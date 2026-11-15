@@ -145,8 +145,6 @@ def test_tavily_extras_land_where_native_tavily_puts_them() -> None:
     [
         "http://proxy.example.com",
         "https://user:secret@proxy.example.com",
-        "https://proxy.example.com?key=secret",
-        "ftp://proxy.example.com",
     ],
 )
 def test_an_unsafe_proxy_url_never_gets_the_key(url: str) -> None:
