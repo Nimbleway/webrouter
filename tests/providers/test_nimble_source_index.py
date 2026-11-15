@@ -78,3 +78,10 @@ def test_the_trust_claims_still_come_first_with_their_excerpts() -> None:
     citations = research_citations(ANSWER, _output(trust=trust))
     assert (citations[0].url, citations[0].field, citations[0].snippet) == (SUMMARY, "[1]", "quoted")
     assert [(c.url, c.field) for c in citations[1:]] == [(PRESS, "[2]"), (UNCITED, None)]
+
+
+def test_a_claim_wrapped_across_lines_keeps_its_whole_passage() -> None:
+    prose = "A fact based on\nsource [1].\n\n- an item that\n  wraps [1]\n- another\n\n"
+    answer = f"{prose}Source index:\n\n- [1] Summary — {SUMMARY}\n"
+    (cited,) = [c for c in research_citations(answer, {"sources": SOURCES[:1]}) if c.url == SUMMARY]
+    assert cited.extra[ANSWER_PASSAGES] == ["A fact based on source [1].", "an item that wraps [1]"]
