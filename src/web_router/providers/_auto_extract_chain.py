@@ -1,7 +1,6 @@
 """Extract ``auto`` down its chain: the first member that answers, then each URL it failed on the members after it.
 
-Kept apart from :mod:`web_router.providers.auto`, which calls it from
-``AutoExtractProvider._extract``, so that file stops growing.
+Kept apart from :mod:`web_router.providers.auto`, which calls it, so that file stops growing.
 
 A batch can partly succeed on one backend: Jina reads the docs page and is
 refused GitHub. Returning that answer as it came would leave the GitHub URL
@@ -18,12 +17,13 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from urllib.parse import urlsplit, urlunsplit
 
+from web_router.constants_extract import MSG_EXTRACT_RETRY_BLANK
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers.base import ExtractProvider
 from web_router.routing.attempts import admitted, contributed, failed
-from web_router.types import ExtractRequest, ExtractResponse
+from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse
 from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET, ERROR_KIND_TIMEOUT
 
 _Order = list[tuple[int, str]]
@@ -159,31 +159,38 @@ def _asked(url: str, urls: list[str]) -> set[str]:
 
 
 def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
-    """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons."""
+    """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons.
+
+    A blank page ``retried`` held was not read, and a URL it named neither way (a redirect's address) stays
+    failed; one a backend only rewrote (case, trailing slash) counts as the one it was sent for.
+    """
     sent = [failure.url for failure in first.failures]  # only these went on the retry
-    again = {asked: failure for failure in retried.failures for asked in _asked(failure.url, sent) or {failure.url}}
-    read = {asked for document in retried.documents for asked in _asked(document.url, sent)}
-    # A URL the retry read is no failure; one it failed too keeps both reasons; one never retried (a page
-    # that is gone) keeps its own.
+    blank = MSG_EXTRACT_RETRY_BLANK.format(provider=retried.provider)
+    read = [document for document in retried.documents if document.content.strip()]
+    blanks = [ExtractFailure(url=d.url, error=blank) for d in retried.documents if not d.content.strip()]
+    again = {
+        asked: failure
+        for failure in [*blanks, *retried.failures]
+        for asked in _asked(failure.url, sent) or {failure.url}
+    }
+    found = {asked for document in read for asked in _asked(document.url, sent)}
     failures = [
         failure.model_copy(
             update={
                 "error": f"{failure.error}; then {again[failure.url].error}",
                 "kind": again[failure.url].kind,
-                "status_code": again[failure.url].status_code,
+                "status_code": again[failure.url].status_code or failure.status_code,
             }
         )
         if failure.url in again
         else failure
         for failure in first.failures
-        if failure.url not in read
+        if failure.url in again or failure.url not in found
     ]
     known = {failure.url for failure in first.failures}
     failures.extend(failure for failure in retried.failures if not (_asked(failure.url, sent) & known))
     position = {url: index for index, url in enumerate(urls)}
-    documents = sorted(
-        [*first.documents, *retried.documents], key=lambda document: position.get(document.url, len(urls))
-    )
+    documents = sorted([*first.documents, *read], key=lambda document: position.get(document.url, len(urls)))
     return first.model_copy(
         update={
             "documents": documents,

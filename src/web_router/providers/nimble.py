@@ -20,7 +20,6 @@ from nimble_python import APIError, AsyncNimble, Nimble
 from web_router.constants import (
     ENV_NIMBLE_API_KEY,
     JSON_SCHEMA_DEFINITIONS,
-    MSG_EXTRACT_BAD_STATUS,
     MSG_NIMBLE_ASYNC_CLIENT_ONLY,
     MSG_NIMBLE_CLIENT_AND_KEY,
     MSG_NIMBLE_ENRICHMENT,
@@ -43,6 +42,7 @@ from web_router.constants import (
     PROVIDER_NIMBLE,
     RESEARCH_HTTP_TIMEOUT,
 )
+from web_router.constants_extract import MSG_EXTRACT_FETCHED_NOTHING
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._clamp import clamp_timeout
 from web_router.providers._deadline import current_deadline, research_budget
@@ -245,7 +245,7 @@ class NimbleExtractProvider(_NimbleClients, ExtractProvider):
         # Nimble answers 200 and says in `status` whether it got the page: a block or a fatal fetch error is a
         # successful call with no content, which reported as an empty document would be hidden.
         if status != NIMBLE_EXTRACT_SUCCESS_STATUS:
-            detail = MSG_EXTRACT_BAD_STATUS.format(status=status)
+            detail = MSG_EXTRACT_FETCHED_NOTHING.format(status=status)
             reason = "; ".join([detail, *(payload.get("warnings") or [])])
             failure = ExtractFailure(url=url, error=reason, status_code=_as_int(payload.get("status_code")))
             return ExtractResponse(provider=self.name, failures=[failure], raw=[payload])
