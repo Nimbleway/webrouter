@@ -38,3 +38,6 @@ SELTZ_SEARCH_NAMES = {
 
 SELTZ_RECENCY: dict[Recency, str] = {"day": "now-1d", "week": "now-7d", "month": "now-1M", "year": "now-1y"}
 """``from_date`` offsets: ``M`` is a calendar month and ``y`` a calendar year, ``m`` would be a minute."""
+
+MSG_SELTZ_NO_DOCUMENTS = "Seltz answered without a documents list (fields: {fields})"
+"""A 200 body with no ``documents`` list is a reply this mapping cannot read, not a search that found nothing."""

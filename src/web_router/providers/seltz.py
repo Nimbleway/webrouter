@@ -16,6 +16,7 @@ from typing import Any, ClassVar
 
 from web_router.constants import ENV_SELTZ_API_KEY, PROVIDER_SELTZ
 from web_router.constants_seltz import (
+    MSG_SELTZ_NO_DOCUMENTS,
     SELTZ_API_KEY_HEADER,
     SELTZ_BASE_URL,
     SELTZ_RECENCY,
@@ -23,6 +24,7 @@ from web_router.constants_seltz import (
     SELTZ_SEARCH_PARAMETERS,
     SELTZ_SEARCH_PATH,
 )
+from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import build_payload, mapped
@@ -57,10 +59,13 @@ class SeltzProvider(HttpSearchProvider):
         )
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
+        documents = payload.get("documents")
+        if not isinstance(documents, list):
+            raise ProviderError(self.name, MSG_SELTZ_NO_DOCUMENTS.format(fields=", ".join(sorted(payload)) or "none"))
         return SearchResponse(
             provider=self.name,
             query=request.query,
-            results=[self._to_result(document) for document in payload.get("documents") or []],
+            results=[self._to_result(document) for document in documents],
             request_id=payload.get("request_id"),
             raw=payload,
         )

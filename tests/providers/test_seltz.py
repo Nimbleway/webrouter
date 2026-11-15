@@ -13,9 +13,9 @@ import os
 import httpx
 import pytest
 
-from web_router.exceptions import UnsupportedParameterError
+from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.seltz import SeltzProvider
-from web_router.types import SearchRequest
+from web_router.types import SearchRequest, SearchResponse
 
 DOCUMENTED = {
     "request_id": "req_123",
@@ -74,6 +74,25 @@ def test_the_key_travels_in_its_header(monkeypatch: pytest.MonkeyPatch) -> None:
     assert sent[0].method == "POST" and sent[0].url.path == "/v1/search"
     assert sent[0].headers["x-api-key"] == "test-key"
     assert response.request_id == "req_123"
+
+
+def _search_answered_with(monkeypatch: pytest.MonkeyPatch, body: dict) -> SearchResponse:
+    monkeypatch.setenv("SELTZ_API_KEY", "test-key")
+    provider = SeltzProvider(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body)))
+    return provider.search(SearchRequest(query="q"))
+
+
+@pytest.mark.parametrize("body", [{"results": [{"url": "https://a"}]}, {"error": "quota"}, {"documents": None}])
+def test_a_reply_without_a_documents_list_is_an_error_not_an_empty_search(
+    monkeypatch: pytest.MonkeyPatch, body: dict
+) -> None:
+    with pytest.raises(ProviderError, match="documents"):
+        _search_answered_with(monkeypatch, body)
+
+
+def test_an_empty_documents_list_is_a_search_that_found_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    response = _search_answered_with(monkeypatch, {"documents": []})
+    assert response.results == []
 
 
 @pytest.mark.parametrize("option", [{"country": "US"}, {"locale": "en"}, {"search_depth": "lite"}, {"effort": "low"}])
