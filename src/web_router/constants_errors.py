@@ -13,3 +13,7 @@ MSG_REUSED_LOOP = (
 
 MSG_KEY_REFUSED = "%s refused its credential (HTTP %s); auto moved on to the next backend. Check that key."
 """Logged at WARNING, by provider and status, when a configured backend answers 401 or 403."""
+
+RATE_LIMIT_MARKERS = ("rate limit", "rate-limit", "quota", "free tier limit", "too many requests")
+"""Phrases, lowercased, by which a backend that answers in a 200 body -- an MCP tool's error -- says it throttled the
+call or its quota ran out: ``rate_limit``, so ``auto`` cools the backend down as it would after a 429."""

@@ -149,6 +149,9 @@ minutes.
   a 429 or 402 it answers starts its cooldown for later `auto` calls.
 - An extract that read some URLs but was throttled on others starts the
   backend's cooldown too, for the status's default.
+- A keyless MCP backend (You.com, Exa, Parallel) that says in its 200 answer it
+  throttled the call or its free quota ran out is a `rate_limit` failure and
+  cools down for 10 seconds.
 - When every backend `auto` would try is cooling down, the call fails at once
   with `AllProvidersFailedError`, each failure carrying its `retry_after`.
 
