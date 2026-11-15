@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from web_router.constants import MCP_ENV_SOURCE_REMEMBERED, MCP_ENV_STATUS_USED
 from web_router.constants_mcp_env import MCP_MSG_ENV_FOREIGN, MCP_MSG_INSTRUCTIONS_FOREIGN_ENV
-from web_router.mcp.env_credentials import OPTIONAL_KEYS
+from web_router.mcp.env_credentials import free_variables
 
 if TYPE_CHECKING:
     from web_router.mcp.env import EnvLookup
@@ -17,10 +17,12 @@ if TYPE_CHECKING:
 def foreign_files(searched: list[EnvLookup], startup: list[EnvLoad]) -> list[Path]:
     """The remembered files from outside the working directory that loaded a billed key: keys from another project.
 
-    A file that set only an optional key -- Jina's, which raises a keyless
-    backend's rate limit -- bills nothing, as the read-only tool hints say.
+    A file that set only free names -- Jina's optional key, which raises a
+    keyless backend's rate limit, or a vendor setting such as ``DD_SITE`` --
+    bills nothing, as the read-only tool hints say.
     """
-    billed = {load.path for load in startup if set(load.loaded) - set(OPTIONAL_KEYS)}
+    free = free_variables()
+    billed = {load.path for load in startup if set(load.loaded) - free}
     # Resolved, so a link inside the project to a file elsewhere still counts as elsewhere.
     here = Path.cwd().resolve()
     # Started in the home folder, `/` or a parent of it, no project is meant: every remembered file is elsewhere.

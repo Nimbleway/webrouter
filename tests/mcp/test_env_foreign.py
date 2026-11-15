@@ -122,3 +122,12 @@ def test_a_remembered_file_with_only_the_free_jina_key_is_not_foreign(isolated_h
 
     assert sources.foreign() == []
     assert "warning" not in sources.report()
+
+
+def test_a_remembered_file_with_only_a_vendor_setting_is_not_foreign(isolated_home: Path) -> None:
+    """A region such as ``DD_SITE`` is a setting, not a key: it bills no account."""
+    elsewhere = write(isolated_home / "other-project" / ".env", "DD_SITE=datadoghq.eu\n")
+    EnvSources().load(str(elsewhere), remember=True)
+    os.environ.pop("DD_SITE")
+
+    assert EnvSources.at_startup().foreign() == []

@@ -65,6 +65,12 @@ def credential_variables() -> frozenset[str]:
     return frozenset(named | set(OPTIONAL_KEYS) | vendors)
 
 
+def free_variables() -> frozenset[str]:
+    """The names a file may set that bill nothing on their own: the optional keys and every vendor setting."""
+    settings = {var for vendor in _vendors() for setting in vendor.settings.values() for var in setting.env}
+    return frozenset(set(OPTIONAL_KEYS) | settings)
+
+
 def _vendors() -> list[Vendor]:
     """The vendor catalog, or none when a bad ``WEB_ROUTER_VENDOR_CATALOG`` cannot load: the server still starts,
     and the vendor tools report the bad catalog when they are called."""
