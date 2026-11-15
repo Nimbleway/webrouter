@@ -12,6 +12,7 @@ from typing import Any, Literal, get_args
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_litellm import LITELLM_AUTO_SETTINGS, LITELLM_ENV_BY_PROVIDER
 from web_router.constants_live_data import (
     MCP_DESC_LIVE_DATA,
     MCP_DESC_LIVE_DATA_SOURCE,
@@ -196,6 +197,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_YOU_MCP: None,
     PROVIDER_EXA_MCP: None,
     PROVIDER_PARALLEL_MCP: None,
+    **LITELLM_ENV_BY_PROVIDER,
     PROVIDER_AUTO: None,
 }
 """Which variable holds each provider's credential; ``None`` means it needs none.
@@ -533,12 +535,11 @@ joins the default chain as though its key were in the environment. Any other
 backend would only fail to start on it, so a client there counts for nothing.
 """
 
-AUTO_SETTING_PROVIDERS: dict[str, str] = {PROVIDER_AGENTCORE: "gateway_url"}
+AUTO_SETTING_PROVIDERS: dict[str, str] = {PROVIDER_AGENTCORE: "gateway_url", **LITELLM_AUTO_SETTINGS}
 """The backends configured in code by a setting rather than a key, and that setting's name.
 
-``agentcore`` takes no key -- its credential is the AWS one botocore resolves -- so
-the gateway URL is what says it is set up, in ``provider_config`` as in the
-environment's ``AGENTCORE_GATEWAY_URL``.
+``agentcore`` takes no key -- its credential is the AWS one botocore resolves -- so the gateway URL says it is set
+up, as ``AGENTCORE_GATEWAY_URL`` does. A LiteLLM search provider's ``base_url`` stands in for its proxy URL.
 """
 
 AUTO_PREFERRED: tuple[str, ...] = _chain("search", "preferred")
@@ -565,6 +566,7 @@ keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
+    (PROVIDER_NIMBLE, {"allow_keyless": True}),
     (PROVIDER_TAVILY, {"allow_keyless": True}),
     (PROVIDER_YOU_MCP, {}),
     (PROVIDER_EXA_MCP, {}),
@@ -573,14 +575,10 @@ AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
 )
 """Tried when no credential is available, in order. Unmeasured, hand-ordered: never ranked by ``make chains``.
 
-Ordered rather than random on purpose: a router that picks a different backend
-each run returns different result counts and content lengths for the same
-query, and a bug reported against it cannot be reproduced. The chain still
-gives what random was reaching for -- if one anonymous tier is rate-limited,
-the next one answers. Exa's and Parallel's MCP servers joined last (2026-10-01),
-so a keyless call reaches them only when Tavily and You.com fail, and none that
-was being served moves. Their order between them is not yet backed by a scan.
-Keenable's ``/public`` endpoint joined after them (2026-10-13) on the same terms.
+Ordered rather than random, so a bug reported against it can be reproduced; if
+one anonymous tier is rate-limited, the next one answers. Nimble leads (2026-11-15);
+Exa's and Parallel's MCP servers (2026-10-01) and Keenable's ``/public`` endpoint
+(2026-10-13) joined at the end, their order not yet backed by a scan.
 """
 
 AUTO_SUPPORTED_PARAMETERS = NORMALIZED_PARAMETERS
@@ -620,6 +618,7 @@ wants another order passes their own ``chain``.
 """
 
 AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
+    (PROVIDER_NIMBLE, {"allow_keyless": True}),
     (PROVIDER_TAVILY, {"allow_keyless": True}),
     (PROVIDER_JINA, {}),
     (PROVIDER_FIRECRAWL, {"allow_keyless": True}),
@@ -630,6 +629,8 @@ AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
 Firecrawl joined last (2026-10-01, documented at docs.firecrawl.dev/rate-limits),
 so it is reached only when the two before it fail and no call already served
 moves. Keenable's ``/public`` fetch joined after it (2026-10-13) on the same terms.
+Nimble's keyless tier joined first (2026-11-15), so a keyless extract goes to
+Nimble and falls back to the others when its daily cap is spent.
 """
 
 AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
@@ -2862,14 +2863,6 @@ MSG_EVALS_JUDGE_STOPPED = "the reply stopped on {stop_reason!r} before it was fi
 MSG_EVALS_ROW_OUTCOME = "an EvaluationRow carries exactly one of grade and error, and failed_at with the error alone"
 
 
-# --- Brave ------------------------------------------------------------------
-
-BRAVE_BASE_URL = "https://api.search.brave.com"
-BRAVE_SEARCH_PATH = "/res/v1/web/search"
-BRAVE_API_KEY_HEADER = "X-Subscription-Token"
-BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
-"""Brave wraps query terms in these; they are its markup, not page content."""
-
 # --- Exa --------------------------------------------------------------------
 
 EXA_BASE_URL = "https://api.exa.ai"
@@ -3928,10 +3921,10 @@ backends actually configured there -- see
 MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_SEARCH: ("query",),
     MCP_TOOL_EXTRACT: ("urls",),
-    # `provider` is required here and nowhere else: a template's name belongs to one vendor.
-    MCP_TOOL_LIVE_DATA_SOURCES: (MCP_ARG_PROVIDER,),
-    MCP_TOOL_LIVE_DATA_SOURCE: ("name", MCP_ARG_PROVIDER),
-    MCP_TOOL_LIVE_DATA: ("source", MCP_ARG_PROVIDER),
+    # Not `provider`: unnamed, the listing asks every live data backend and each row names its own.
+    MCP_TOOL_LIVE_DATA_SOURCES: (),
+    MCP_TOOL_LIVE_DATA_SOURCE: ("name",),
+    MCP_TOOL_LIVE_DATA: ("source",),
     # Not `provider`: unnamed, the router's default answers -- `auto`, the configured backends in ranked order.
     MCP_TOOL_ANSWER: ("query",),
     MCP_TOOL_RESEARCH: ("query",),
