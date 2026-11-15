@@ -39,7 +39,6 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -61,6 +60,7 @@ from web_router.types import (
     StealthLevel,
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
+from web_router.types_browse import BrowseProgress
 
 # Load .env before collection, so the integration tests' skipif conditions see
 # the keys. Unit tests never read them. Absent in CI, which is the point: no

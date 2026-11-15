@@ -16,7 +16,7 @@ import pytest
 from tests.conftest import FakeBrowseProvider, FakeResearchProvider
 from tests.mcp.conftest import FAKE
 from tests.providers._answer_stub import stub_answer_api
-from web_router.client import AsyncWebRouter
+from web_router import AsyncWebRouter, BrowseProgress
 from web_router.constants import (
     AUTO_KEYLESS,
     ENV_BRAVE_API_KEY,
@@ -69,7 +69,7 @@ from web_router.registry import (
     unregister_browse_provider,
     unregister_research_provider,
 )
-from web_router.types import BrowseProgress, BrowseRequest, BrowseStep
+from web_router.types import BrowseRequest, BrowseStep
 
 
 def _tool(session: WebRouterTools, name: str) -> Any:

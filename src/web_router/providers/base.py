@@ -91,7 +91,6 @@ from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_win
 from web_router.providers._error_pages import split_error_pages
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.types import (
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -112,6 +111,7 @@ from web_router.types import (
     SearchResponse,
     StealthLevel,
 )
+from web_router.types_browse import BrowseProgress
 from web_router.types_live_data import LiveDataRequest, LiveDataResponse, LiveDataSource, LiveDataSourcePage
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
