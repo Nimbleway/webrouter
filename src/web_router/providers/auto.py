@@ -116,7 +116,7 @@ from web_router.providers._chain import (
 )
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
-from web_router.providers._members import _Members
+from web_router.providers._members import BuiltMembers, _Members
 from web_router.providers.auto_browser import AutoBrowserProvider as AutoBrowserProvider
 from web_router.providers.base import (
     BrowseJob,
@@ -141,7 +141,7 @@ from web_router.types import (
 from web_router.types_browse import BrowseProgress
 
 
-class AutoProvider(SearchProvider):
+class AutoProvider(BuiltMembers, SearchProvider):
     """Searches through the first backend that answers, credentialed ones first.
 
     Declares every option some member maps, and sends each request only to the
@@ -304,7 +304,7 @@ class AutoProvider(SearchProvider):
             await member.aclose()
 
 
-class AutoExtractProvider(ExtractProvider):
+class AutoExtractProvider(BuiltMembers, ExtractProvider):
     """Extracts through the first backend that answers, credentialed ones first.
 
     Declares every format some member returns, and sends each request only to

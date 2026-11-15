@@ -13,7 +13,7 @@ from typing import Any
 
 from tavily import AsyncTavilyClient, TavilyClient
 
-from web_router.providers._utils import compact
+from web_router.providers._utils import WarmClients, compact
 
 
 class TavilyClients:
@@ -45,7 +45,7 @@ class TavilyClients:
             return self._async
 
 
-class TavilyClientsMixin:
+class TavilyClientsMixin(WarmClients):
     """``_client`` and ``_async_client`` on a Tavily provider, built when first read, and closed if they were."""
 
     _clients: TavilyClients

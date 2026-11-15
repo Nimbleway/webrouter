@@ -62,7 +62,7 @@ from web_router.constants import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._clamp import clamped
 from web_router.providers._deadline import job_budget, research_budget
-from web_router.providers._utils import compact, error_detail, resolve_api_key
+from web_router.providers._utils import WarmClients, compact, error_detail, resolve_api_key
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     BrowseProvider,
@@ -90,7 +90,7 @@ _RequestT = TypeVar("_RequestT", SearchRequest, AnswerRequest)
 _ResponseT = TypeVar("_ResponseT", SearchResponse, AnswerResponse)
 
 
-class _HttpProvider(_BaseProvider):
+class _HttpProvider(WarmClients, _BaseProvider):
     """A provider backed by a plain HTTP endpoint."""
 
     base_url: ClassVar[str]

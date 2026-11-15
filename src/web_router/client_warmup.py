@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from web_router.constants_production import LOG_WARMUP_FAILED
 from web_router.exceptions import WebRouterError
+from web_router.providers._members import BuiltMembers
+from web_router.providers._utils import Warmable
 
 if TYPE_CHECKING:
     from web_router.providers.base import ExtractProvider, SearchProvider
@@ -26,8 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 class _Warmup:
-    _client_attribute: ClassVar[str]
-    """The client this router calls its providers through: the sync one, or the async one."""
+    _asynchronous: ClassVar[bool]
+    """Whether this router calls its providers through their async clients."""
 
     if TYPE_CHECKING:
 
@@ -46,7 +48,8 @@ class _Warmup:
         for lookup in (self.get_provider, self.get_extract_provider):
             for backend in _backends(lookup):
                 try:
-                    getattr(backend, self._client_attribute, None)
+                    if isinstance(backend, Warmable):
+                        backend.warm(asynchronous=self._asynchronous)
                 except Exception as exc:  # a client that cannot be built now fails the call that needs it, as before
                     logger.warning(LOG_WARMUP_FAILED, backend.name, type(exc).__name__, exc_info=True)
                     continue
@@ -60,20 +63,15 @@ def _backends(lookup: Callable[[], Any]) -> Iterator[Any]:
         chain = lookup()
     except WebRouterError:
         return  # the default serves another method only
-    members = getattr(chain, "members", None)
-    if members is None:
+    if isinstance(chain, BuiltMembers):
+        yield from chain.built_members()
+    else:
         yield chain
-        return
-    for position in range(len(members)):
-        try:
-            yield chain._member(position)
-        except (WebRouterError, ImportError):
-            continue
 
 
 class SyncWarmup(_Warmup):
-    _client_attribute: ClassVar[str] = "_client"
+    _asynchronous: ClassVar[bool] = False
 
 
 class AsyncWarmup(_Warmup):
-    _client_attribute: ClassVar[str] = "_async_client"
+    _asynchronous: ClassVar[bool] = True

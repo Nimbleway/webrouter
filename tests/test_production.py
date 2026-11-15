@@ -138,8 +138,7 @@ def test_warmup_builds_each_auto_member_and_its_client_without_calling_it() -> N
 class _NoClient(FakeProvider):
     name = "noclient"
 
-    @property
-    def _client(self) -> Any:
+    def warm(self, *, asynchronous: bool = False) -> None:
         raise RuntimeError("no TLS here")
 
 
@@ -152,4 +151,5 @@ def test_warmup_leaves_out_a_backend_whose_client_fails_to_build(caplog: pytest.
     finally:
         unregister_provider("noclient")
     assert "noclient" not in warmed and "fake" in warmed
-    assert any("noclient could not build its client (RuntimeError)" in r.getMessage() for r in caplog.records)
+    (record,) = [r for r in caplog.records if "noclient could not build its client (RuntimeError)" in r.getMessage()]
+    assert record.exc_info is not None, "the traceback says why"

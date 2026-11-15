@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Callable, Mapping, Sequence
-from typing import Any, Generic, TypeVar
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from typing import Any, Generic, TypeVar, cast
 
+from web_router.exceptions import WebRouterError
 from web_router.providers._chain import _member_options
 
 _MemberT = TypeVar("_MemberT")
@@ -35,3 +36,16 @@ class _Members(dict[int, _MemberT], Generic[_MemberT]):
                 name, options = chain[position]
                 self[position] = create(name, **_member_options(members_config, name, options))
             return self[position]
+
+
+class BuiltMembers:
+    """:meth:`built_members` for an ``auto`` chain: what ``warmup()`` builds ahead of the first call."""
+
+    def built_members(self) -> Iterator[Any]:
+        """Each member of the chain that can be built now; one that cannot (a missing extra or key) is skipped."""
+        chain = cast(Any, self)
+        for position in range(len(chain.members)):
+            try:
+                yield chain._member(position)
+            except (WebRouterError, ImportError):
+                continue
