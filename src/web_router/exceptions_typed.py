@@ -5,7 +5,7 @@ Kept apart from :mod:`web_router.exceptions`, so that file stops growing.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from web_router.constants_errors import MSG_INVALID_PARAMETER
@@ -43,6 +43,15 @@ class AllProvidersFailedError(ProviderError):
         shared = kinds.pop() if len(kinds) == 1 else None
         super().__init__(provider, message, kind=shared or ERROR_KIND_UPSTREAM)
         self.failures = dict(failures)
+        self.status_code = self.status_code or shared_status(
+            getattr(exc, "status_code", None) for exc in failures.values()
+        )
         delays = [d for d in (getattr(exc, "retry_after", None) for exc in self.failures.values()) if d is not None]
         self.retry_after = max(delays) if delays else None
         self.retryable = any(getattr(exc, "retryable", False) for exc in self.failures.values())
+
+
+def shared_status(statuses: Iterable[int | None]) -> int | None:
+    """The one status every failure answered with, else ``None``: a summary names a status only when all agree."""
+    found = set(statuses)
+    return found.pop() if len(found) == 1 else None

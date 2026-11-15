@@ -51,3 +51,13 @@ def test_an_empty_404_beside_a_real_page_is_reported_as_failed() -> None:
 def test_a_call_that_found_only_an_empty_404_raises_so_auto_tries_the_next_backend() -> None:
     with pytest.raises(ProviderError, match="404"):
         _ErrorPages().extract(ExtractRequest(urls=[GONE]))
+
+
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_a_one_url_call_raises_with_the_status_a_batch_reports_for_that_url(asynchronous: bool) -> None:
+    provider, request = _ErrorPages(), ExtractRequest(urls=[GONE])
+    with pytest.raises(ProviderError) as raised:
+        await provider.aextract(request) if asynchronous else provider.extract(request)
+
+    batched = provider.extract(ExtractRequest(urls=[HERE, GONE])).failures[0]
+    assert (raised.value.kind, raised.value.status_code) == (batched.kind, batched.status_code) == ("target", 404)

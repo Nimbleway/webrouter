@@ -107,7 +107,7 @@ def test_a_budget_cap_that_is_not_a_number_is_an_invalid_parameter_error() -> No
     assert caught.value.field == "max_cost_usd"
 
 
-def test_every_member_failing_keeps_each_ones_error_and_their_shared_kind() -> None:
+def test_every_member_failing_keeps_each_ones_error_and_their_shared_kind_and_status() -> None:
     refused = {name: ProviderError(name, "HTTP 401", original=_status_error(401)) for name in ("tavily", "exa")}
     throttled = {"brave": ProviderError("brave", "HTTP 429", original=_status_error(429))}
 
@@ -117,6 +117,7 @@ def test_every_member_failing_keeps_each_ones_error_and_their_shared_kind() -> N
     assert isinstance(same, ProviderError)
     assert same.failures == refused and same.kind == "auth" and same.retryable is False
     assert mixed.kind == "upstream" and mixed.retryable is True
+    assert (same.status_code, mixed.status_code) == (401, None), "a status only when every member met it"
 
 
 def test_an_infinite_retry_after_is_no_wait_at_all() -> None:
