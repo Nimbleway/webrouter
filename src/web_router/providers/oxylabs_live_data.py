@@ -46,8 +46,9 @@ from web_router.constants_live_data_vendors import (
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._deadline import job_deadline
 from web_router.providers._http_live_data import HttpLiveDataProvider
+from web_router.providers._job_wait import wait_until
 from web_router.providers._utils import resolve_setting
-from web_router.providers.oxylabs_jobs import JobWait, job_id, wait_until
+from web_router.providers.oxylabs_jobs import OxylabsJob, job_id
 from web_router.providers.oxylabs_options import input_schema
 from web_router.providers.oxylabs_response import to_response
 from web_router.providers.oxylabs_scrapers import Scraper, catalogue, listed, source_name
@@ -146,12 +147,12 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
         given = {**request.inputs, **request.provider_options}
         return {**{k: v for k, v in given.items() if k not in OXYLABS_TRANSPORT_PARAMS}, "output": list(OXYLABS_OUTPUT)}
 
-    def _job(self, request: LiveDataRequest, payload: Any) -> JobWait:
-        return JobWait(
+    def _job(self, request: LiveDataRequest, payload: Any) -> OxylabsJob:
+        return OxylabsJob(
             self.name, request, job_id(self.name, request, payload), wait_until(self.wait_seconds), self.poll_seconds
         )
 
-    def _wait(self, job: JobWait, payload: Any) -> Any:
+    def _wait(self, job: OxylabsJob, payload: Any) -> Any:
         with job_deadline(job.until):
             while not job.done(payload):
                 time.sleep(job.pause())
@@ -160,7 +161,7 @@ class OxylabsLiveDataProvider(HttpLiveDataProvider):
                     payload = self._send("GET", job.path)
         return payload
 
-    async def _await(self, job: JobWait, payload: Any) -> Any:
+    async def _await(self, job: OxylabsJob, payload: Any) -> Any:
         with job_deadline(job.until):
             while not job.done(payload):
                 await asyncio.sleep(job.pause())

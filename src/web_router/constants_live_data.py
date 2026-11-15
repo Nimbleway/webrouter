@@ -11,6 +11,9 @@ from typing import Any, Final, get_args
 
 from web_router.types import ExtractFormat, Provider
 
+LIVE_DATA_JOB_DEADLINE_MARGIN: Final = 0.5
+"""Seconds a wait on a vendor's job stops before the call's own deadline, so the job's error, naming it, is raised."""
+
 # -- messages ---------------------------------------------------------------
 
 MSG_LIVE_DATA_FAILED: Final = "live data run failed: {error}"

@@ -15,8 +15,19 @@ BRIGHTDATA_SCRAPE_PATH: Final = "/datasets/v3/scrape"
 """A synchronous scrape: ``dataset_id`` in the query, ``{"input": [...]}`` in the body, records back.
 
 Waits about a minute; a scrape that runs longer answers 202 with a
-``snapshot_id`` to fetch later from ``/datasets/v3/snapshot/{id}``.
+``snapshot_id``, whose progress is read from ``/datasets/v3/progress/{id}`` and
+whose records, once it is ready, from ``/datasets/v3/snapshot/{id}``.
 """
+
+BRIGHTDATA_PROGRESS_PATH: Final = "/datasets/v3/progress"
+BRIGHTDATA_SNAPSHOT_PATH: Final = "/datasets/v3/snapshot"
+BRIGHTDATA_SNAPSHOT_READY: Final = "ready"
+BRIGHTDATA_SNAPSHOT_FAILED: Final = "failed"
+BRIGHTDATA_SNAPSHOT_CANCELED: Final = "canceled"
+
+BRIGHTDATA_SNAPSHOT_POLL_SECONDS: Final = 5.0
+BRIGHTDATA_SNAPSHOT_WAIT_SECONDS: Final = 300.0
+"""How often, and how long, a scrape that outlasted the synchronous window is waited for, within the call's deadline."""
 
 BRIGHTDATA_SCRAPERS_PATH: Final = "/datasets/v3/scrapers"
 """Every ready-made scraper, as one unpaged array; ``?dataset_id=`` narrows it to one."""
@@ -30,8 +41,26 @@ BRIGHTDATA_ID_PREFIX: Final = "gd_"
 """The collection method a scraper is described by when it has one: inputs keyed by the page's URL."""
 
 MSG_BRIGHTDATA_PENDING: Final = (
-    "Bright Data is still scraping {source!r} past its synchronous window; nothing is lost. Fetch the records "
-    "later from snapshot {snapshot_id!r}: GET /datasets/v3/snapshot/{snapshot_id}?format=json"
+    "Bright Data is still scraping {source!r}; waited {seconds:.0f} s for snapshot {job_id!r} and nothing is lost. "
+    "Fetch the records later: GET /datasets/v3/snapshot/{job_id}?format=json"
+)
+
+MSG_BRIGHTDATA_NOT_READY: Final = "Bright Data has no records for {source!r} yet: the scrape is still running"
+
+MSG_BRIGHTDATA_NO_SNAPSHOT: Final = (
+    "Bright Data kept scraping {source!r} past its synchronous window but returned no snapshot id to read it by"
+)
+
+MSG_BRIGHTDATA_SNAPSHOT_FAILED: Final = "Bright Data's snapshot {job_id} for {source!r} failed: {reason}"
+MSG_BRIGHTDATA_NO_REASON: Final = "Bright Data gave no reason"
+
+MSG_BRIGHTDATA_SNAPSHOT_CANCELED: Final = (
+    "Bright Data's snapshot {job_id} for {source!r} was canceled; it has no records"
+)
+
+MSG_BRIGHTDATA_POLL_FAILED: Final = (
+    "Bright Data's snapshot {job_id} for {source!r} was started, but reading it failed: {error}. "
+    "It may still finish: GET /datasets/v3/progress/{job_id}"
 )
 
 MSG_BRIGHTDATA_ALL_FAILED: Final = "every input failed on {source!r}: {errors}"
@@ -65,9 +94,6 @@ OXYLABS_TRANSPORT_PARAMS: Final = frozenset({"output", "callback_url", "storage"
 OXYLABS_JOB_POLL_SECONDS: Final = 5.0
 OXYLABS_JOB_WAIT_SECONDS: Final = 300.0
 """How often, and how long, a run of an async-only scraper (``chatgpt``, ``gemini``...) waits for its job."""
-
-OXYLABS_JOB_DEADLINE_MARGIN: Final = 0.5
-"""Seconds a job's wait stops before the call's own deadline, so the job's error, naming it, is what is raised."""
 
 OXYLABS_JOB_DONE: Final = "done"
 OXYLABS_JOB_FAULTED: Final = "faulted"
