@@ -2,7 +2,7 @@
   "vendor": "octen",
   "name": "Octen",
   "category": "search",
-  "summary": "Real-time web, news and broad search plus URL content extraction from Octen.",
+  "summary": "Real-time news and broad search plus URL content extraction from Octen; web search is served by search().",
   "docs_url": "https://docs.octen.ai/",
   "pricing_url": "https://docs.octen.ai/overview/pricing.md",
   "base_url": "https://api.octen.ai",
@@ -26,7 +26,8 @@
   "notes": [
     "Auth is 'Authorization: Bearer <key>'; the x-api-key header also works. The API needs a payment method on the account.",
     "Rate limits are QPS per plan.",
-    "Octen also offers image and video search, answer, agent, deep research, embeddings and generation endpoints, not in this entry."
+    "Octen also offers image and video search, answer, agent, deep research, embeddings and generation endpoints, not in this entry.",
+    "Web search (POST /search) is served by search(provider=\"octen\"), so it is not listed here."
   ],
   "sources": [
     "https://docs.octen.ai/llms.txt",
@@ -34,133 +35,6 @@
   ],
   "curated": "2026-11-08",
   "endpoints": [
-    {
-      "id": "octen.search.web",
-      "name": "Search the web",
-      "summary": "Live web search with ranked results, highlights and optional full content.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/search",
-      "params": {
-        "query": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "The search query; supports site: operators.",
-          "example": "semiconductor export controls"
-        },
-        "count": {
-          "in": "body",
-          "type": "integer",
-          "description": "Number of results to return."
-        },
-        "include_domains": {
-          "in": "body",
-          "type": "array",
-          "description": "Domains to include; the site: operator adds to this list."
-        },
-        "exclude_domains": {
-          "in": "body",
-          "type": "array",
-          "description": "Domains to exclude; the -site: operator adds to this list."
-        },
-        "include_text": {
-          "in": "body",
-          "type": "array",
-          "description": "Strings that must appear in the result text."
-        },
-        "exclude_text": {
-          "in": "body",
-          "type": "array",
-          "description": "Strings that must not appear in the result text."
-        },
-        "time_basis": {
-          "in": "body",
-          "type": "string",
-          "description": "Which time field time filters use.",
-          "enum": [
-            "auto",
-            "published",
-            "crawled"
-          ]
-        },
-        "time_range": {
-          "in": "body",
-          "type": "string",
-          "description": "Relative time window back from now; exclusive with start_time/end_time.",
-          "enum": [
-            "day",
-            "week",
-            "month",
-            "year",
-            "d",
-            "w",
-            "m",
-            "y"
-          ]
-        },
-        "start_time": {
-          "in": "body",
-          "type": "string",
-          "description": "Start time, ISO 8601.",
-          "example": "2025-01-01T00:00:00Z"
-        },
-        "end_time": {
-          "in": "body",
-          "type": "string",
-          "description": "End time, ISO 8601."
-        },
-        "language": {
-          "in": "body",
-          "type": "array",
-          "description": "ISO 639-1 language codes to restrict to.",
-          "example": [
-            "en"
-          ]
-        },
-        "highlight": {
-          "in": "body",
-          "type": "object",
-          "description": "Highlight extraction options, e.g. {\"enable\": true, \"max_tokens\": 300}."
-        },
-        "full_content": {
-          "in": "body",
-          "type": "object",
-          "description": "Full-content options for each result page."
-        },
-        "format": {
-          "in": "body",
-          "type": "string",
-          "description": "Format of highlight output.",
-          "enum": [
-            "markdown",
-            "text"
-          ]
-        },
-        "safesearch": {
-          "in": "body",
-          "type": "string",
-          "description": "Adult-content filter.",
-          "enum": [
-            "off",
-            "strict"
-          ]
-        },
-        "include_images": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Include images in each result."
-        }
-      },
-      "notes": [
-        "A read over POST: it runs a search and changes nothing in your account."
-      ],
-      "job": "web.search",
-      "docs_url": "https://docs.octen.ai/api-reference/search.md",
-      "verified": {
-        "docs": "https://docs.octen.ai/api-reference/search.md"
-      }
-    },
     {
       "id": "octen.search.news",
       "name": "Search news",

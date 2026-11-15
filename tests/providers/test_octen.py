@@ -13,9 +13,11 @@ from typing import Any
 import httpx
 import pytest
 
+from web_router.constants_octen import OCTEN_SEARCH_PATH
 from web_router.exceptions import ProviderError, UnsupportedParameterError
 from web_router.providers.octen import OctenProvider
 from web_router.types import SearchRequest, SearchResponse
+from web_router.vendors.catalog import builtin_catalog
 
 DOCUMENTED = {
     "code": 0,
@@ -153,6 +155,11 @@ def test_a_reply_without_a_data_object_is_an_error_not_an_empty_search(
 
 def test_an_empty_results_list_is_a_search_that_found_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _search_answered_with(monkeypatch, {"code": 0, "data": {"results": []}}).results == []
+
+
+def test_the_vendor_catalog_leaves_web_search_to_the_backend() -> None:
+    endpoints = builtin_catalog().vendor("octen").endpoints
+    assert all(endpoint.path != OCTEN_SEARCH_PATH for endpoint in endpoints)
 
 
 @pytest.mark.integration
