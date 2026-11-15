@@ -476,7 +476,7 @@ class _Collected:
             return DeadlineExceededError(self.provider, late[0].seconds)
         original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
         message = MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail)
-        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.shared_kind(failures))
+        return ProviderError(self.provider, message, original=original, kind=ExtractFailure.batch_kind(failures))
 
 
 class LiveDataProvider(TemplateMethods, _BaseProvider):

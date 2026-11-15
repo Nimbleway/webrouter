@@ -76,6 +76,8 @@ ERROR_KIND_LOCAL: Final[ProviderErrorKind] = "local"
 ERROR_KIND_TARGET: Final[ProviderErrorKind] = "target"
 ERROR_KIND_UPSTREAM: Final[ProviderErrorKind] = "upstream"
 ERROR_KIND_TIMEOUT: Final[ProviderErrorKind] = "timeout"
+_RECOVERABLE_FIRST: Final[tuple[ProviderErrorKind, ...]] = (ERROR_KIND_UPSTREAM, ERROR_KIND_TIMEOUT, "rate_limit")
+"""The kinds a mixed batch takes, most recoverable first: another backend may read what these failed."""
 
 
 @dataclass(frozen=True)
@@ -219,6 +221,15 @@ class ExtractFailure(BaseModel):
         """The kind every URL failed with, when they agree, so a call that read none of them reports it."""
         kinds = {failure.kind for failure in failures}
         return kinds.pop() if len(kinds) == 1 else None
+
+    @staticmethod
+    def batch_kind(failures: Sequence[ExtractFailure]) -> ProviderErrorKind:
+        """A batch's kind: the shared one, else the most recoverable present, so one dead URL never stops the rest."""
+        shared = ExtractFailure.shared_kind(failures)
+        if shared is not None:
+            return shared
+        kinds = {failure.kind for failure in failures}
+        return next((kind for kind in _RECOVERABLE_FIRST if kind in kinds), ERROR_KIND_UPSTREAM)
 
     @classmethod
     def from_error(cls, url: str, error: BaseException) -> ExtractFailure:
