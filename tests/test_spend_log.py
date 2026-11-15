@@ -146,3 +146,9 @@ def test_a_reported_cost_never_fills_the_whole_call_estimate(fake_provider: Any)
     assert spend_entry(billed, "search").call_estimate_usd is None
     estimated = billed.model_copy(update={"cost_source": "estimated"})
     assert spend_entry(estimated, "search").call_estimate_usd == 0.02
+
+
+@pytest.mark.parametrize("field", ["cost_usd", "call_estimate_usd", "elapsed_s"])
+def test_a_non_finite_amount_is_refused(field: str) -> None:
+    with pytest.raises(ValueError, match="finite"):
+        SpendEntry(at=datetime(2026, 11, 2, tzinfo=UTC), method="search", provider="fake", **{field: float("nan")})

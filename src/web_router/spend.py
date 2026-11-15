@@ -48,12 +48,16 @@ class SpendEntry(BaseModel):
     at: datetime = Field(description="When the call answered, in UTC.")
     method: str = Field(description="search, extract, answer, research or browse.")
     provider: str = Field(description="The backend that answered.")
-    cost_usd: float | None = Field(default=None, description="The response's cost_usd; None when unknown.")
+    cost_usd: float | None = Field(
+        default=None, allow_inf_nan=False, description="The response's cost_usd; None when unknown."
+    )
     cost_source: CostSource | None = Field(default=None, description="reported or estimated.")
     call_estimate_usd: float | None = Field(
-        default=None, description="The decision record's estimate for the whole call, failed attempts included."
+        default=None,
+        allow_inf_nan=False,
+        description="The decision record's estimate for the whole call, failed attempts included.",
     )
-    elapsed_s: float | None = Field(default=None, description="Wall-clock seconds the call took.")
+    elapsed_s: float | None = Field(default=None, allow_inf_nan=False, description="Wall-clock seconds the call took.")
     decision_id: str | None = Field(default=None, description="The decision record's id, when it has one.")
 
     @field_validator("at")

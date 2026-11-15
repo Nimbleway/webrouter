@@ -31,14 +31,14 @@ def spend_entry(response: BaseModel, method: str) -> SpendEntry:
     cost = getattr(response, "cost_usd", None)
     whole = getattr(decision, "estimated_cost_usd", None)
     source = getattr(response, "cost_source", None)
+    own_estimate = cost if source == COST_ESTIMATED else None  # a billed sum is never an estimate
     return SpendEntry(
         at=datetime.now(UTC),
         method=method,
         provider=str(getattr(response, "provider", "")),
         cost_usd=cost,
         cost_source=source,
-        # with no decision estimate, the answer's own cost stands in only when it is an estimate, never a billed sum
-        call_estimate_usd=whole if whole is not None or source != COST_ESTIMATED else cost,
+        call_estimate_usd=whole if whole is not None else own_estimate,
         elapsed_s=getattr(response, "elapsed_s", None),
         decision_id=getattr(decision, "decision_id", None),
     )
