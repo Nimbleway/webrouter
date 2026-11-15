@@ -33,6 +33,7 @@ from web_router.constants_brave import (
     MSG_BRAVE_ANSWER_STREAM_ERROR,
 )
 from web_router.exceptions import ProviderError
+from web_router.providers._brave_errors import BraveTokenErrorsMixin
 from web_router.providers._http import HttpAnswerProvider
 from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import build_payload
@@ -42,7 +43,7 @@ from web_router.types_answer import AnswerRequest, AnswerResponse
 _ANSWER_TAG = re.compile(r"<({names})>(.*?)</\1>".format(names="|".join(BRAVE_ANSWER_TAGS)), re.DOTALL)
 
 
-class BraveAnswerProvider(HttpAnswerProvider):
+class BraveAnswerProvider(BraveTokenErrorsMixin, HttpAnswerProvider):
     """Answers a question through Brave's Answers API, ``POST /res/v1/chat/completions``.
 
     Sent streamed with ``enable_citations``, the only way Brave returns its

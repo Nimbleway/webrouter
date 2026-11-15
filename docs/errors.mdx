@@ -51,7 +51,7 @@ carries the same `kind` and `status_code`.
 
 | Field | Meaning |
 | --- | --- |
-| `kind` | `auth` (the key was refused: 401, 403), `rate_limit` (429, 402, or an MCP backend's 200 that says it throttled the call or its quota ran out), `bad_request` (400, 422), `not_found` (404), `timeout`, `target` (the page is the problem: its host does not resolve, or its URL is not one), `local` (a failure on this side: an async router reused on a second event loop, or a provider's own bug), or `upstream` (anything else the backend did) |
+| `kind` | `auth` (the key was refused: 401, 403, or Brave's 422 `SUBSCRIPTION_TOKEN_INVALID`), `rate_limit` (429, 402, or an MCP backend's 200 that says it throttled the call or its quota ran out), `bad_request` (400, 422), `not_found` (404), `timeout`, `target` (the page is the problem: its host does not resolve, or its URL is not one), `local` (a failure on this side: an async router reused on a second event loop, or a provider's own bug), or `upstream` (anything else the backend did) |
 | `status_code` | The backend's HTTP status, when it answered with one |
 | `retryable` | Whether trying again, on the same backend or another, may work: `rate_limit`, `timeout` and `upstream` |
 | `retry_after` | Seconds the backend asked you to wait (`Retry-After`), when it said |

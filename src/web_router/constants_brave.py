@@ -89,3 +89,6 @@ MSG_BRAVE_SEARCH_VALUES = (
     "it lists (pt and zh alone are refused, as each could be either of two). Ask for one of those, leave it "
     "unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )
+
+BRAVE_TOKEN_INVALID_CODE = "SUBSCRIPTION_TOKEN_INVALID"
+"""The ``error.code`` Brave answers a refused subscription token with, under HTTP 422 rather than a 401 or 403."""

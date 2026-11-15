@@ -39,6 +39,7 @@ from web_router.constants_brave import (
 )
 from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
+from web_router.providers._brave_errors import BraveTokenErrorsMixin
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
 from web_router.providers._search_text import lite_body, site_operators, unsited_domains
@@ -60,7 +61,7 @@ def _unmark(text: str) -> str:
     return text
 
 
-class BraveProvider(HttpSearchProvider):
+class BraveProvider(BraveTokenErrorsMixin, HttpSearchProvider):
     """Routes searches to the Brave Web Search API."""
 
     name: ClassVar[str] = PROVIDER_BRAVE
