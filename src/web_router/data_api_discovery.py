@@ -9,6 +9,7 @@ changes data is found with :meth:`~web_router.WebRouter.find_vendor_endpoints`.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
@@ -17,6 +18,7 @@ from web_router.constants_data_api import (
     DATA_API_SEARCH_LIMIT,
     DATA_APIS_ONLY_PROVIDER,
     MSG_DATA_API_CATALOG_SKIPPED,
+    MSG_DATA_API_MATCHING_FAILED,
     MSG_DATA_APIS_ONLY_CONFLICT,
     MSG_DATA_APIS_ONLY_OFF,
 )
@@ -71,9 +73,16 @@ def load_catalog(data_apis: bool) -> VendorCatalog | None:
         return None
     try:
         return get_catalog()
-    except ConfigurationError as exc:
+    except (ConfigurationError, OSError) as exc:
         logger.warning(MSG_DATA_API_CATALOG_SKIPPED, exc)
         return None
+
+
+def warm_catalog(data_apis: bool) -> None:
+    """Read the catalog into its cache, quietly: an async search runs this in a thread, off the event loop."""
+    if data_apis:
+        with contextlib.suppress(ConfigurationError, OSError):
+            get_catalog()
 
 
 def with_matches(
@@ -82,7 +91,11 @@ def with_matches(
     """``response`` with its data API matches, or untouched when there is no catalog to read them from."""
     if catalog is None:
         return response
-    matches = find_matches(response.query, source, configured_only=configured_only, catalog=catalog)
+    try:
+        matches = find_matches(response.query, source, configured_only=configured_only, catalog=catalog)
+    except Exception:  # the web answer is already paid for; a matching bug must not lose it
+        logger.exception(MSG_DATA_API_MATCHING_FAILED)
+        return response
     return response.model_copy(update={"data_apis": matches}) if matches else response
 
 

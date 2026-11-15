@@ -8,11 +8,12 @@ never called (see :mod:`web_router.data_api_discovery`).
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 from web_router.client_requests import build_search_request
-from web_router.data_api_discovery import load_catalog, matches_only, with_matches
+from web_router.data_api_discovery import load_catalog, matches_only, warm_catalog, with_matches
 from web_router.types import SearchResponse
 
 if TYPE_CHECKING:
@@ -137,6 +138,7 @@ class AsyncSearch(_SearchPlan):
 
         The options are the sync router's; see :meth:`~web_router.WebRouter.search`.
         """
+        await asyncio.to_thread(warm_catalog, data_apis or data_apis_only)  # the first read is file IO
         options = _options(search_depth, include_domains, exclude_domains, country, locale, recency, effort)
         plan = self._search_plan(
             query,

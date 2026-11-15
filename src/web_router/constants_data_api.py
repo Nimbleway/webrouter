@@ -28,3 +28,4 @@ MSG_DATA_APIS_ONLY_CONFLICT: Final = (
 )
 MSG_DATA_APIS_ONLY_OFF: Final = "search(data_apis_only=True) needs data_apis=True: it lists data APIs and nothing else."
 MSG_DATA_API_CATALOG_SKIPPED: Final = "data API matching skipped: the vendor catalog did not load: %s"
+MSG_DATA_API_MATCHING_FAILED: Final = "data API matching failed; the web results are returned without matches"
