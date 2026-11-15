@@ -78,6 +78,13 @@ def test_the_key_travels_in_its_header(monkeypatch: pytest.MonkeyPatch) -> None:
     assert response.request_id == "req_123"
 
 
+def test_snippets_only_document_fills_content_from_snippets(provider: SeltzProvider) -> None:
+    document = {"url": "https://e.com", "content": None, "snippets": [{"text": "first"}, {"text": "second"}]}
+    (result,) = provider._to_response(SearchRequest(query="q"), {"documents": [document]}).results
+    assert result.content == "first\n\nsecond"
+    assert result.description == "first"
+
+
 def _search_answered_with(monkeypatch: pytest.MonkeyPatch, body: dict) -> SearchResponse:
     monkeypatch.setenv("SELTZ_API_KEY", "test-key")
     provider = SeltzProvider(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body)))
