@@ -219,7 +219,7 @@ the client's `env` block or a file the server already read takes a restart.
 | `live_data_sources` | List a vendor's live data sources: ready-made scrapers for one site each -- Nimble's templates, Apify's Actors, Bright Data's scrapers, Oxylabs' dedicated scrapers -- each turning one kind of page into records, fetched on every run. Each row names the inputs a run must pass (`required_inputs`) and one input the vendor recorded a run with (`sample_inputs`). `provider` is required, as on the two tools below. Paged with `limit` and `offset`; `query` finds sources by keyword, searched by the vendor where it has a search (Apify) and matched here otherwise, and the answer's `search` says which (`native` or `local`). | about a second, and free |
 | `live_data_source` | Describe one source: the `input_schema` a run must pass as `inputs`, the `output_schema` of each record, and `samples`, recorded runs to copy a first call from. A schema the vendor does not publish is `null`. | about a second, and free |
 | `live_data` | Run a source and get its `records` back, fetched for this call, with `fetched_at` when the vendor states it. | seconds to a few minutes (Apify waits up to 300 s), and it bills one run at the vendor's own rate -- see `benchmarks/providers/PRICING.md` |
-| `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries the marker in `field`. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
+| `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries its marker in `marker`. Only cited sources are listed by default; the rest are counted in `uncited_sources`, and `all_sources` lists them all. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
 | `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
 | `browse` | Hand a task to a hosted browser agent that clicks, types and reads through pages. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the task** |
@@ -739,6 +739,24 @@ Through this server: the user puts the key in their .env, and you call
 `load_env` with the path they give; or it is set where the server starts, and
 the server is restarted.
 ```
+
+## Serving fewer tools: `WEB_ROUTER_MCP_TOOLS`
+
+The model reads every listed tool on every turn: all 27, with every key set,
+are about 26 KB (some 6.4k tokens). Name the ones you want, comma-separated, and
+the rest are neither listed nor callable:
+
+```bash
+WEB_ROUTER_MCP_TOOLS=search,extract,answer,fetch_raw   # about 5.8 KB
+WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw,browser_*
+```
+
+A trailing `*` matches a prefix. Unset or blank serves every tool; a name that
+matches nothing is ignored with a warning in the server's log. Keep `fetch_raw`
+if results may be cut, and `load_env` if keys may be added mid-conversation.
+Read once at startup, from the real environment only. `research`, `browse` and
+`browser_open` each bring their partner (`research_status`, `browse_status`,
+`browser_close`), so a long run can still be polled and a browser closed.
 
 ## Environment variables the server itself reads
 

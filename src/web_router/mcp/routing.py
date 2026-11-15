@@ -29,18 +29,19 @@ from web_router.constants_mcp import (
     MCP_TOOL_BUDGET_STATUS,
     MCP_TOOL_WEB_RUN,
 )
+from web_router.constants_mcp_context import ENV_MCP_TOOLS, MCP_MSG_PLAN_NOT_SERVED
 from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
 from web_router.mcp.budget import budget_start, budget_status, positive_limit, wait_left
 from web_router.mcp.shaping import (
     max_response_chars,
     redact,
-    shape_answer,
     shape_browse,
     shape_extract,
     shape_pending,
     shape_research,
     shape_search,
 )
+from web_router.mcp.shaping_answer import shape_answer
 from web_router.providers._deadline import call_deadline
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.routing.contract import Budget, Plan
@@ -109,6 +110,9 @@ async def web_run(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[s
         plan = await tools.router.plan(prompt, budget=budget)
         if kwargs.get("dry_run"):
             return {"dry_run": True, **_plan_payload(tools, plan)}
+        if plan.tool not in tools.served:
+            # The allowlist holds for web_run too: a method left off it is not run by another name.
+            raise ValueError(MCP_MSG_PLAN_NOT_SERVED.format(tool=plan.tool, env_var=ENV_MCP_TOOLS))
         return await _ran(tools, plan, budget)
 
 
