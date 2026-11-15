@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections.abc import Sequence
 from typing import Any
 
 import pytest
@@ -55,3 +56,20 @@ async def test_an_async_search_reads_the_catalog_off_the_event_loop(
         response = await router.search("datadog monitors")
     assert response.data_apis
     assert first_read[0] != loop_thread
+
+
+class _VaultDown:
+    """A credentials source whose backing store times out on every read."""
+
+    def get(self, vendor: str, name: str, env: Sequence[str]) -> str | None:
+        raise TimeoutError("vault timed out")
+
+
+def test_a_credentials_source_that_throws_keeps_the_paid_web_results(
+    fake_provider: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING), WebRouter("fake", vendor_credentials=_VaultDown()) as router:
+        response = router.search("datadog monitors")
+    assert response.urls == ["https://example.com"]
+    assert response.data_apis == []
+    assert "matching failed" in caplog.text

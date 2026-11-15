@@ -25,9 +25,6 @@ def described(model: type[BaseModel], field: str) -> str:
     return description
 
 
-DATA_API_SEARCH_OPTIONS = frozenset({"data_apis", "data_apis_only", "configured_only"})
-"""The search options that steer data API discovery: the router's own, served whatever the backend."""
-
 MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "What to search for."},
     "max_results": {"type": "integer", "minimum": 1, "description": described(SearchRequest, "max_results")},
