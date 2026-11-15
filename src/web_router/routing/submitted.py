@@ -51,7 +51,7 @@ def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedReque
     with budget_scope(None, tool, backend, request, router) as scope:
         job = backend.submit(request)
         job.decision = _charged(scope, record, job.provider)
-    job.meter(partial(_answered, tool=tool, request=request, started=started, router=router))
+    job.meter(partial(_answered, job=job, tool=tool, request=request, started=started, router=router))
     return job
 
 
@@ -62,16 +62,26 @@ async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: Normali
     with budget_scope(None, tool, backend, request, router) as scope:
         job = await backend.asubmit(request)
         job.decision = _charged(scope, record, job.provider)
-    job.meter(partial(_answered, tool=tool, request=request, started=started, router=router))
+    job.meter(partial(_answered, job=job, tool=tool, request=request, started=started, router=router))
     return job
 
 
 def _answered(
-    response: _ResponseT, *, tool: ToolName, request: NormalizedRequest, started: float, router: object
+    response: _ResponseT,
+    *,
+    job: Job[Any, Any, Any],
+    tool: ToolName,
+    request: NormalizedRequest,
+    started: float,
+    router: object,
 ) -> _ResponseT:
-    """``response`` with what the run took and cost, written to ``router``'s spend log when it keeps one."""
+    """``response`` with what the run took and cost, written to ``router``'s spend log when it keeps one.
+
+    The entry carries the job's ``decision``, which the job puts on the answer only after this runs.
+    """
     answered = metered(response, tool, request, started)
-    log_spent(getattr(router, "_spend_sink", None), answered, tool)
+    logged = answered if job.decision is None else answered.model_copy(update={"decision": job.decision})
+    log_spent(getattr(router, "_spend_sink", None), logged, tool)
     return answered
 
 

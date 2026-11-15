@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from web_router import AsyncWebRouter, SpendEntry, WebRouter
+from web_router import AsyncWebRouter, Budget, SpendEntry, WebRouter
 
 
 class _Kept:
@@ -38,3 +38,12 @@ async def test_an_async_submitted_job_is_logged_once(fake_research_provider: Any
     await job.aresult()
     await job.aresult()
     assert [entry.method for entry in kept.entries] == ["research"]
+
+
+def test_a_budgeted_job_logs_its_decision(fake_research_provider: Any, clock: Any) -> None:
+    router, kept = WebRouter("fake"), _Kept()
+    router.log_spend(kept)
+    with router.budget(Budget(time_limit_s=600)) as scoped:
+        answer = scoped.submit_research("q").result()
+    assert answer.decision is not None
+    assert [entry.decision_id for entry in kept.entries] == [answer.decision.decision_id]
