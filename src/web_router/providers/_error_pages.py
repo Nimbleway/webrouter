@@ -12,7 +12,7 @@ import html
 import re
 from collections.abc import Iterable
 from http import HTTPStatus
-from urllib.parse import urlsplit
+from urllib.parse import urldefrag, urlsplit
 
 from web_router.constants import MSG_EXTRACT_BAD_STATUS
 from web_router.constants_extract import (
@@ -42,10 +42,15 @@ def _failure(document: ExtractedDocument, reason: str, asked: str | None = None)
     """
     status = document.status_code
     # A redirect that landed on an error page says nothing certain about the URL asked for: another backend may read it.
-    redirected = asked is not None and asked.rstrip("/") != document.url.rstrip("/")
+    redirected = asked is not None and _bare(asked) != _bare(document.url)
     gone = status in TARGET_GONE_STATUSES and not redirected
     kind = ERROR_KIND_TARGET if gone else ERROR_KIND_UPSTREAM
     return ExtractFailure(url=asked or document.url, error=reason, kind=kind, status_code=status)
+
+
+def _bare(url: str) -> str:
+    """``url`` without its fragment or trailing slash, which a backend may drop when it echoes what it fetched."""
+    return urldefrag(url).url.rstrip("/")
 
 
 def split_error_pages(

@@ -106,3 +106,37 @@ def test_a_rewritten_url_that_could_be_either_of_two_asked_for_clears_neither() 
     )
     second = ExtractResponse(provider="two", documents=[ExtractedDocument(url="https://a.test/p/", content="hi")])
     assert [failure.url for failure in _merged(first, second, [lower, upper]).failures] == [lower, upper]
+
+
+def test_a_batch_with_mixed_statuses_names_none_of_them() -> None:
+    import httpx
+
+    from web_router.exceptions import ProviderError
+
+    def refused(status: int) -> ProviderError:
+        request = httpx.Request("GET", "https://api.test")
+        response = httpx.Response(status, request=request)
+        return ProviderError("p", "x", original=httpx.HTTPStatusError("x", request=request, response=response))
+
+    collected = _Collected("p", [A, B])
+    collected.failures = [
+        ExtractFailure(url=A, error="x", status_code=401),
+        ExtractFailure(url=B, error="y", status_code=429),
+    ]
+    collected.errors = [([A], refused(401)), ([B], refused(429))]
+    assert collected._exhausted().status_code is None
+
+    collected.failures = [
+        ExtractFailure(url=A, error="x", status_code=503),
+        ExtractFailure(url=B, error="y", status_code=503),
+    ]
+    collected.errors = [([A], refused(503)), ([B], refused(503))]
+    assert collected._exhausted().status_code == 503
+
+
+def test_a_gone_page_echoed_without_its_fragment_is_still_gone() -> None:
+    from web_router.providers._error_pages import split_error_pages
+    from web_router.types import ExtractedDocument
+
+    _, failures = split_error_pages([ExtractedDocument(url=A, status_code=404)], asked=A + "#top")
+    assert failures[0].kind == "target"
