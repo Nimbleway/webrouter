@@ -99,3 +99,9 @@ def test_an_index_url_with_parentheses_is_kept_whole() -> None:
     citations = research_citations(answer, {"sources": [{"url": wiki}, {"url": other}]})
     assert [(c.url, c.field) for c in citations] == [(wiki, "[1]"), (other, "[2]")]
     assert citations[0].extra[ANSWER_PASSAGES] == ["Foo [1] and B [2]."]
+
+
+def test_sources_from_the_trust_block_are_cited_once_with_their_marker() -> None:
+    trust = {"claims": [], "sources": [{"url": PRESS, "title": "press"}, {"url": SUMMARY, "title": "summary"}]}
+    citations = research_citations(ANSWER, _output(trust=trust, sources=[{"url": SUMMARY, "title": "again"}]))
+    assert [(c.url, c.field) for c in citations] == [(PRESS, "[2]"), (SUMMARY, "[1]")]
