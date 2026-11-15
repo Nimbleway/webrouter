@@ -157,6 +157,12 @@ class _NimbleKeyless(_NimbleClients):
             self._keyless = True
             return None
 
+    def _connect(self, api_key: str | None, async_client: AsyncNimble | None) -> None:
+        # A spent daily cap answers 429; retrying it only delays the fallback to the next keyless backend.
+        if self._keyless:
+            self.options = {"max_retries": 0, **self.options}
+        super()._connect(api_key, async_client)
+
     def _authed(self, payload: dict[str, Any]) -> dict[str, Any]:
         """``payload``, keyless, with the key's header omitted beside any ``extra_headers`` the caller set."""
         if not self._keyless:

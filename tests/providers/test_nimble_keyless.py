@@ -74,6 +74,13 @@ def test_a_keyless_call_keeps_the_caller_s_own_headers(monkeypatch: pytest.Monke
     assert "authorization" not in seen[0].headers
 
 
+def test_a_keyless_provider_does_not_retry_unless_asked(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NIMBLE_API_KEY", raising=False)
+
+    assert NimbleProvider(allow_keyless=True)._async_client.max_retries == 0
+    assert NimbleExtractProvider(allow_keyless=True, max_retries=3)._async_client.max_retries == 3
+
+
 @pytest.mark.parametrize("provider_class", [NimbleProvider, NimbleExtractProvider])
 def test_a_key_in_the_environment_wins_over_the_keyless_tier(
     monkeypatch: pytest.MonkeyPatch, provider_class: type[NimbleProvider | NimbleExtractProvider]
