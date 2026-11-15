@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
+from typing import TypeVar
 
 from pydantic import BaseModel
 
@@ -17,12 +18,19 @@ from web_router.spend import SpendEntry, SpendSink
 
 logger = logging.getLogger("web_router")
 
+_ResponseT = TypeVar("_ResponseT", bound=BaseModel)
+
 
 class SpendSinkHolder:
     """The one place a router keeps its spend sink, shared by ``log_spend()`` and the calls that write to it."""
 
     _spend_sink: SpendSink | None = None
     """Where each answered call is logged: set by ``log_spend()``, ``None`` logs nothing."""
+
+    def _spent(self, response: _ResponseT, method: str) -> _ResponseT:
+        """``response``, written to the spend log first when the router keeps one."""
+        log_spent(self._spend_sink, response, method)
+        return response
 
 
 def spend_entry(response: BaseModel, method: str) -> SpendEntry:

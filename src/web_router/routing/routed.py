@@ -43,7 +43,7 @@ from web_router.routing.record import prompt_of
 from web_router.routing.route_tools import ALL_TOOLS, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
-from web_router.spend_record import SpendSinkHolder, log_spent
+from web_router.spend_record import SpendSinkHolder
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
@@ -110,11 +110,6 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         )
         return req, found
 
-    def _spent(self, response: _ResponseT, tool: ToolName) -> _ResponseT:
-        """``response``, written to the spend log first when the router keeps one (``log_spend()``)."""
-        log_spent(self._spend_sink, response, tool)
-        return response
-
     def _attached(self) -> AttachedRouter:
         assert self._router is not None  # a call is routed only with a router attached
         return self._router
@@ -173,15 +168,14 @@ class SyncRouted(RouterSetup):
         A routed call runs in the order the router chose, and its response records how. Every response
         carries what the call took and cost (:func:`~.metered.metered`).
         """
-        started = monotonic()
+        started, tool = monotonic(), _TOOL_OF[type(request)]
         request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
-        with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
+        with budget_scope(budget, tool, chain, request, self) as scope:
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
                 answered = logged.settle(with_record(call(request), record or chosen))
-        tool = _TOOL_OF[type(request)]
         return self._spent(metered(answered, tool, request, started), tool)
 
 
@@ -194,13 +188,12 @@ class AsyncRouted(RouterSetup):
         call: Callable[[_RequestT], Awaitable[_ResponseT]],
     ) -> _ResponseT:
         """Await ``call``, which calls ``chain``, as :meth:`SyncRouted._routed` runs it."""
-        started = monotonic()
+        started, tool = monotonic(), _TOOL_OF[type(request)]
         request, chosen = named(chain, request, limited(budget, self))  # before the scope, which admits a named one
-        with budget_scope(budget, _TOOL_OF[type(request)], chain, request, self) as scope:
+        with budget_scope(budget, tool, chain, request, self) as scope:
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
             with _logged(scope, route) as logged:
                 answered = logged.settle(with_record(await call(request), record or chosen))
-        tool = _TOOL_OF[type(request)]
         return self._spent(metered(answered, tool, request, started), tool)
