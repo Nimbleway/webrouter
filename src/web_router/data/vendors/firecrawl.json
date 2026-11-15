@@ -2,7 +2,7 @@
   "vendor": "firecrawl",
   "name": "Firecrawl",
   "category": "scraping",
-  "summary": "Firecrawl's map, crawl, batch scrape, search and structured extract jobs, and the team's credit usage.",
+  "summary": "Firecrawl's map, crawl, search and structured extract jobs, and the team's credit usage.",
   "docs_url": "https://docs.firecrawl.dev/introduction",
   "pricing_url": "https://www.firecrawl.dev/pricing",
   "base_url": "https://api.firecrawl.dev/v2",
@@ -25,9 +25,9 @@
   },
   "notes": [
     "Auth is 'Authorization: Bearer <key>'. All paths are under /v2.",
-    "Crawl, batch scrape and extract are asynchronous: start returns an id, then poll the matching status endpoint; finished results are paged with a 'next' URL.",
+    "Crawl and extract are asynchronous: start returns an id, then poll the matching status endpoint; finished results are paged with a 'next' URL.",
     "Timeouts are in milliseconds.",
-    "Single-page scrape goes through web-router's extract, not this entry."
+    "Scraping one page or a list of pages goes through web-router's extract (it fans a list out over Firecrawl's scrape), not this entry."
   ],
   "sources": [
     "https://docs.firecrawl.dev/llms.txt",
@@ -254,96 +254,6 @@
       "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-active",
       "verified": {
         "docs": "https://docs.firecrawl.dev/api-reference/endpoint/crawl-active"
-      }
-    },
-    {
-      "id": "firecrawl.batch.scrape.start",
-      "name": "Start a batch scrape",
-      "summary": "Scrape many URLs as one asynchronous job.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/batch/scrape",
-      "params": {
-        "urls": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "URLs to scrape.",
-          "example": [
-            "https://example.com/a",
-            "https://example.com/b"
-          ]
-        },
-        "formats": {
-          "in": "body",
-          "type": "array",
-          "description": "Output formats, e.g. [\"markdown\", \"html\", \"links\"] or objects like {\"type\": \"markdown\"}."
-        },
-        "onlyMainContent": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Return only the main content, without headers, navs and footers; default true."
-        },
-        "maxAge": {
-          "in": "body",
-          "type": "integer",
-          "description": "Serve a cached copy younger than this many milliseconds; default 172800000 (2 days). 0 forces a fresh fetch."
-        },
-        "waitFor": {
-          "in": "body",
-          "type": "integer",
-          "description": "Extra delay in milliseconds before reading the page."
-        },
-        "proxy": {
-          "in": "body",
-          "type": "string",
-          "description": "Proxy type: basic, enhanced or auto.",
-          "enum": [
-            "basic",
-            "enhanced",
-            "auto"
-          ]
-        },
-        "maxConcurrency": {
-          "in": "body",
-          "type": "integer",
-          "description": "Concurrent scrapes cap."
-        },
-        "ignoreInvalidURLs": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Skip invalid URLs instead of failing the whole request."
-        }
-      },
-      "notes": [
-        "Starts a billed job: it only produces data and changes nothing else in your account.",
-        "Async: returns an id; poll batch.scrape.status."
-      ],
-      "job": "web.extract",
-      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape",
-      "verified": {
-        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape"
-      }
-    },
-    {
-      "id": "firecrawl.batch.scrape.status",
-      "name": "Get a batch scrape's status and pages",
-      "summary": "Status and pages of a batch scrape.",
-      "kind": "read",
-      "method": "GET",
-      "path": "/batch/scrape/{id}",
-      "params": {
-        "id": {
-          "in": "path",
-          "type": "string",
-          "required": true,
-          "description": "Batch scrape job id."
-        }
-      },
-      "job": "jobs.status",
-      "docs_url": "https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape-get",
-      "verified": {
-        "docs": "https://docs.firecrawl.dev/api-reference/endpoint/batch-scrape-get"
       }
     },
     {

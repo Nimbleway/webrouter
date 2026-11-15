@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-372 vendors, 2710 endpoints.
+372 vendors, 2708 endpoints.
 
 ### advertising
 
@@ -299,7 +299,7 @@ Fetching, rendering and extracting web pages; hosted browsers.
 | [Browser Use](https://docs.browser-use.com/cloud/api-reference.md) `browseruse` | The Browser Use Cloud account and its credit balance. | 1 read | key in header | `BROWSER_USE_API_KEY` | docs 2026-11-09 |
 | [Crawl4AI Cloud](https://api.crawl4ai.com/docs) `crawl4ai` | Crawl4AI's hosted API: scrape pages to markdown, extract JSON, search the web, Google results as data, direct answers and ready-made site recipes. | 7 read | key in header | `CRAWL4AI_KEY` | docs 2026-11-09 |
 | [Decodo](https://help.decodo.com/docs/web-data-api-introduction.md) `decodo` | Decodo's Web Data API: scrape a page or a supported site's template, Google results, crawl a site up to 10,000 pages, or map its URLs. | 8 read | key in header | `DECODO_API_KEY` | docs 2026-11-09 |
-| [Firecrawl](https://docs.firecrawl.dev/introduction) `firecrawl` | Firecrawl's map, crawl, batch scrape, search and structured extract jobs, and the team's credit usage. | 11 read | key in header | `FIRECRAWL_API_KEY` | docs 2026-11-08 |
+| [Firecrawl](https://docs.firecrawl.dev/introduction) `firecrawl` | Firecrawl's map, crawl, search and structured extract jobs, and the team's credit usage. | 9 read | key in header | `FIRECRAWL_API_KEY` | docs 2026-11-08 |
 | [Massive (Web Render)](https://docs.joinmassive.com/web-render/overview.md) `joinmassive` | Massive's Web Render API: unblock and render web pages, Google results pages, and ChatGPT, Gemini, Perplexity or AI Overview answers, from chosen locations. | 4 read | key in header | `MASSIVE_TOKEN` | docs 2026-11-09 |
 | [Notte](https://docs.notte.cc/api-reference/authentication.md) `notte` | Notte's API: scrape pages to markdown or structured JSON, and search the web. | 3 read | key in header | `NOTTE_API_KEY` | docs 2026-11-09 |
 | [Olostep](https://docs.olostep.com/) `olostep` | Scrape, crawl, map, search and answer over the web with Olostep's API. | 12 read | key in header | `OLOSTEP_API_KEY` | docs 2026-11-08 |

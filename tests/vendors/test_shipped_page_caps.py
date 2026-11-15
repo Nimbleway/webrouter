@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from web_router.exceptions import MissingParameterError
+from web_router.vendors.catalog import get_catalog
 from web_router.vendors.plan import endpoint_plan
 
 
@@ -19,3 +20,9 @@ def test_a_firecrawl_crawl_sends_the_cap_it_was_given() -> None:
     plan = endpoint_plan("firecrawl.crawl.start", {"url": "https://example.com", "limit": 10})
     assert (plan.method, plan.path) == ("POST", "/crawl")
     assert plan.body == {"url": "https://example.com", "limit": 10}
+
+
+def test_firecrawl_scrapes_stay_with_extract() -> None:
+    """AGENTS.md: extract already scrapes one URL or a list through Firecrawl, so the catalog names no scrape."""
+    paths = [endpoint.path for endpoint in get_catalog().vendor("firecrawl").endpoints]
+    assert [path for path in paths if "scrape" in path] == []
