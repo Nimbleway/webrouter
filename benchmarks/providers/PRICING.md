@@ -262,7 +262,7 @@ You.com's keyless MCP is priced in its own section above.
 ## Templates (Extract Templates)
 
 Not benchmarked; listed because a run bills on the vendor's account, and
-because the `live_data` MCP tool and the README point here for the figure.
+because the `live_data` MCP tool and the docs live data page (docs/live-data.mdx) point here for the figure.
 
 <!-- prices: method=live_data -->
 | Backend | What web-router sends | Estimated price | Source | Checked |
