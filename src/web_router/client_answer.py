@@ -97,8 +97,9 @@ class SyncAnswer(_AnswerLookup, SyncRouted):
             locale=locale,
             recency=recency,
         )
+        budget = with_timeout(budget, timeout)  # an invalid timeout is named before any backend lookup
         chain = self.get_answer_provider(provider)
-        return self._routed(chain, request, with_timeout(budget, timeout), chain.answer)
+        return self._routed(chain, request, budget, chain.answer)
 
 
 class AsyncAnswer(_AnswerLookup, AsyncRouted):
@@ -126,5 +127,6 @@ class AsyncAnswer(_AnswerLookup, AsyncRouted):
             locale=locale,
             recency=recency,
         )
+        budget = with_timeout(budget, timeout)  # an invalid timeout is named before any backend lookup
         chain = self.get_answer_provider(provider)
-        return await self._arouted(chain, request, with_timeout(budget, timeout), chain.aanswer)
+        return await self._arouted(chain, request, budget, chain.aanswer)

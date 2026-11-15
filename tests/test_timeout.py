@@ -110,8 +110,8 @@ def test_search_runs_under_the_timeout_as_its_deadline() -> None:
 def test_answer_runs_under_the_tighter_of_its_timeout_and_budget() -> None:
     with WebRouter() as router:
         router.answer("q", provider="answerseesdeadline", timeout=7.0, budget=Budget(time_limit_s=3.0))
-        with pytest.raises(InvalidParameterError) as caught:
-            router.answer("q", provider="answerseesdeadline", timeout=-1)
+        with pytest.raises(InvalidParameterError) as caught:  # named before the unknown backend is looked up
+            router.answer("q", provider="no-such-answer-backend", timeout=-1)
     assert caught.value.field == "timeout"
     assert _AnswerSeesDeadline.seen == [3.0]
 
