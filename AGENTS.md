@@ -1517,7 +1517,7 @@ set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
 `auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
-Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
+Nimble, Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in

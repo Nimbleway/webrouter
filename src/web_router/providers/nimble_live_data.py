@@ -2,7 +2,7 @@
 
 Kept apart from :mod:`web_router.providers.nimble`, which holds the search,
 extract and research classes, so that module stops growing; it shares their
-SDK clients and constructor through :class:`~web_router.providers.nimble._NimbleClients`.
+SDK clients and constructor through :class:`~web_router.providers._nimble_clients._NimbleClients`.
 """
 
 from __future__ import annotations
@@ -18,9 +18,9 @@ from web_router.constants import (
     PROVIDER_NIMBLE,
 )
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
+from web_router.providers._nimble_clients import _NimbleClients
 from web_router.providers._utils import build_payload, compact, model_to_dict
 from web_router.providers.base import LiveDataProvider
-from web_router.providers.nimble import _NimbleClients
 from web_router.providers.nimble_live_data_map import to_page, to_response, to_source
 from web_router.types import (
     ExtractFormat,

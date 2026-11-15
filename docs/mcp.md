@@ -242,8 +242,8 @@ runs, with the names it takes.
 
 `search` offers an option only when a backend reachable from here maps it, and
 `search_depth` only at the levels one serves, as `browser_open` narrows
-`stealth`. With no key the keyless tier between them (You.com MCP, Exa MCP,
-Tavily keyless, Keenable) maps every search option. The tool's description
+`stealth`. With no key the keyless tier between them (Nimble keyless, You.com
+MCP, Exa MCP, Tavily keyless, Keenable) maps every search option. The tool's description
 tells the model that `search_depth` is how much text comes back per result and
 `effort` how hard the backend looks, and that higher effort costs more and
 takes longer, so it leaves `effort` unset unless needed.
@@ -281,8 +281,11 @@ unchanged: `search`, `extract` and the rest never ask the router.
 The router is set by the operator -- whoever starts the server and sets its
 environment -- once, when the server starts:
 
-- unset, the built-in rules router (`web_router.routing.rules.rules`): a prompt
-  with an `http(s)` URL is read with `extract`, anything else searched;
+- unset, the built-in rules router (`rules`, also the library's default): a
+  prompt with an `http(s)` URL is read with `extract`; one asking for a report,
+  a comparison or an in-depth analysis runs `research`, billed per run, or
+  `search` when no research backend is configured; anything else is searched.
+  `WEB_ROUTER_MCP_ROUTER=rules` names it;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library. It is imported before
   any `.env` file loads, so code that runs at import sees only the server's own

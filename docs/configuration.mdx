@@ -14,7 +14,7 @@ Keys are read from the environment, or passed explicitly through
 
 | Provider | Variable | Serves |
 | --- | --- | --- |
-| Nimble | `NIMBLE_API_KEY` | search, extract, research |
+| Nimble | `NIMBLE_API_KEY` *(optional for `auto`, which uses its keyless tier for search and extract without one)* | search, extract, research |
 | Tavily | `TAVILY_API_KEY` | search, extract |
 | Exa | `EXA_API_KEY` | search, extract, answer |
 | You.com | `YOU_API_KEY` | search, research, answer |
@@ -39,6 +39,7 @@ Keys are read from the environment, or passed explicitly through
 | Kernel | `KERNEL_API_KEY` | open_browser |
 | Browser Use | `BROWSER_USE_API_KEY` | browse |
 | Skyvern | `SKYVERN_API_KEY` | browse |
+| LiteLLM proxy | `LITELLM_PROXY_API_KEY` + `LITELLM_PROXY_API_BASE` *(the URL: the MCP server reads it from its process environment only)* | search (`exa-litellm`, `tavily-litellm`, `parallel-litellm`) |
 | `local` | *none, keyless* (`CHROME_PATH` optional, the browser to launch) | open_browser |
 | `you-mcp` | *none, keyless* | search |
 | `exa-mcp` | *none, keyless* | search |

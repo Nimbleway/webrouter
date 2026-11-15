@@ -8,7 +8,7 @@
   "credentials": [
     "NIMBLE_API_KEY"
   ],
-  "keyless": null,
+  "keyless": "through auto, allow_keyless=True",
   "always_sent": {
     "body.formats": [
       "markdown"
