@@ -109,6 +109,15 @@ async def test_an_async_deadline_names_the_member_in_flight_and_those_before_it(
     assert "hangs: Provider 'hangs' had not answered" in message
 
 
+async def test_a_member_cut_off_by_the_async_deadline_is_logged(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.INFO, logger="web_router")
+    async with AsyncWebRouter(provider_config={"auto": {"chain": ["hangs"]}}) as router:
+        with pytest.raises(DeadlineExceededError):
+            await router.search("q", timeout=0.2)
+    hops = [r.getMessage() for r in caplog.records if r.name == "web_router.providers._hop"]
+    assert any("hangs failed (cut off at the deadline" in hop for hop in hops)
+
+
 def test_tavily_builds_neither_client_until_a_call_needs_one() -> None:
     provider = TavilyProvider(api_key="test-key")
     assert provider._clients._sync is None and provider._clients._async is None

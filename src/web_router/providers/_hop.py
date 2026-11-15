@@ -14,6 +14,7 @@ query string. A success is DEBUG; a failure, a skip and a cooldown are INFO.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -22,6 +23,7 @@ from typing import Any, TypeVar
 from web_router._urls import host_of
 from web_router.constants_production import (
     LOG_HOP_COOLING,
+    LOG_HOP_CUT_OFF,
     LOG_HOP_FAILED,
     LOG_HOP_OK,
     LOG_HOST_SUFFIX,
@@ -63,6 +65,9 @@ async def ahop(
         response = await call(request)
     except Exception as exc:
         _failed(tool, provider, exc, started, request)
+        raise
+    except asyncio.CancelledError:  # the deadline cut the member off; its error names it, the log says so too
+        logger.info(LOG_HOP_FAILED, tool, provider, LOG_HOP_CUT_OFF, None, time.monotonic() - started, _hosts(request))
         raise
     if flight is not None:
         flight.member = None

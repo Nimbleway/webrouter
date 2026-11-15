@@ -170,8 +170,8 @@ class SyncRouted(RouterSetup):
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else self._attached().call(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with _logged(scope, route) as logged, noting(self._runtime, chain):
-                return logged.settle(with_record(call(request), record or chosen))
+            with _logged(scope, route) as logged, noting(self._runtime, chain) as noted:
+                return logged.settle(with_record(noted(call(request)), record or chosen))
 
 
 class AsyncRouted(RouterSetup):
@@ -188,5 +188,5 @@ class AsyncRouted(RouterSetup):
             routed = self._route_request(chain, request, scope.budget)
             outcome = None if routed is None else await self._attached().acall(routed[0])
             route, request, record = self._prepared(chain, request, scope.budget, routed, outcome)
-            with _logged(scope, route) as logged, noting(self._runtime, chain):
-                return logged.settle(with_record(await call(request), record or chosen))
+            with _logged(scope, route) as logged, noting(self._runtime, chain) as noted:
+                return logged.settle(with_record(noted(await call(request)), record or chosen))

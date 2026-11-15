@@ -18,11 +18,11 @@ from __future__ import annotations
 import asyncio
 import threading
 import weakref
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import AbstractContextManager, asynccontextmanager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from web_router.constants import DELEGATING_PROVIDERS
 from web_router.constants_production import MSG_INVALID_MAX_CONCURRENCY
@@ -32,6 +32,8 @@ from web_router.providers._cooldown import Cooldowns
 
 if TYPE_CHECKING:
     from web_router.providers._deadline import Deadline
+
+_T = TypeVar("_T")
 
 
 class Limiter:
@@ -120,17 +122,29 @@ def lent(runtime: Runtime | None) -> AbstractContextManager[None]:
 
 
 @contextmanager
-def noting(runtime: Runtime | None, backend: object) -> Iterator[None]:
-    """Start a named backend's cooldown when its call is throttled; ``auto``'s members are noted by their hops."""
+def noting(runtime: Runtime | None, backend: object) -> Iterator[Callable[[_T], _T]]:
+    """Start a named backend's cooldown when its call, or an answer passed to the yielded hook, is throttled.
+
+    ``auto``'s members are noted by their hops.
+    """
     name = getattr(backend, "name", None)
     if runtime is None or not isinstance(name, str) or name in DELEGATING_PROVIDERS:
-        yield
+        yield _unchanged
         return
+
+    def answered(response: _T) -> _T:
+        runtime.cooldowns.note_answer(name, response)
+        return response
+
     try:
-        yield
+        yield answered
     except Exception as exc:
         runtime.cooldowns.note(name, exc)
         raise
+
+
+def _unchanged(response: _T) -> _T:
+    return response
 
 
 def current_runtime() -> Runtime | None:

@@ -166,3 +166,17 @@ def test_an_extract_throttled_on_some_urls_still_starts_the_cooldown() -> None:
         unregister_extract_provider("pages")
     assert first.provider == "halfthrottled" and second.provider == "fake"
     assert _HalfThrottled.calls == 2, "the second extract skipped the backend throttled on one URL"
+
+
+def test_a_named_extract_throttled_on_some_urls_starts_the_cooldown_for_auto() -> None:
+    register_extract_provider("halfthrottled", _HalfThrottled)
+    register_extract_provider("pages", FakeExtractProvider)
+    _HalfThrottled.calls = 0
+    try:
+        with WebRouter(provider_config={"auto": {"chain": ["halfthrottled", "pages"]}}) as router:
+            router.extract(["https://a.example/", "https://b.example/"], provider="halfthrottled")
+            after = router.extract("https://c.example/")
+    finally:
+        unregister_extract_provider("halfthrottled")
+        unregister_extract_provider("pages")
+    assert after.provider == "fake" and _HalfThrottled.calls == 2
