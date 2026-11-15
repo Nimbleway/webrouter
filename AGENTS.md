@@ -76,7 +76,9 @@ has no keyless tier, because every task bills.
 `vendor`, `vendor_endpoint`, `find_vendor_endpoints` to find what to call) is
 not an eighth method of interchangeable backends. It reaches one vendor's own
 API with the user's credentials -- their Google Ads, their Datadog -- and
-returns the vendor's answer untouched. The vendors are data, not classes: one
+returns the vendor's answer untouched. `search` lists the read endpoints that
+match its query in `data_apis` -- locally, never calling one -- and only
+`call_vendor` runs one. The vendors are data, not classes: one
 JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
 `web_router/vendors/`. See "Adding a vendor" below.
 
@@ -118,6 +120,8 @@ src/web_router/
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
+├── client_search.py    search(), mixed into both routers: the web results, plus the data APIs
+│                       that match, from data_api_discovery.py (types_data_api.py's DataApiMatch)
 ├── client_live_data.py live_data(), live_data_sources(), live_data_source() and the
 │                       deprecated template names, mixed into both routers
 ├── live_data_search.py live_data_sources(query=...): NativeSourceSearch for vendors that
@@ -345,6 +349,7 @@ src/web_router/
     │                   operators, and the domain lists a backend refuses
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
     │                   that holds a provider's call to it
+    ├── _job_wait.py    waiting on a vendor's job (Oxylabs' jobs, Bright Data's snapshots); every error names it
     ├── _clamp.py       a transport's own timeout, clamped to the deadline's time left
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
@@ -356,10 +361,11 @@ src/web_router/
     ├── _http_live_data.py   HttpLiveDataProvider: the base of the three below
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
+    ├── brightdata_snapshots.py  waiting on the snapshot of a scrape that outlasted the synchronous window
     ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
     ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
     ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
-    ├── oxylabs_jobs.py          waiting on a job-only scraper; every error after the submit names the job
+    ├── oxylabs_jobs.py          an Oxylabs job: its id, where it is read, and when it is done
     ├── oxylabs_response.py      a scrape's answer as a live data response
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
     ├── tavily_extract.py  extract, and the SDK clients, key and timeout both classes share
@@ -1230,6 +1236,12 @@ A vendor is a file, never code: `src/web_router/data/vendors/<vendor>.json`,
 validated by the strict models in `web_router/vendors/schema.py` (an unknown
 key is refused). If a vendor seems to need code -- a signed request, say --
 it is a format change to discuss first, not a branch in `caller.py`.
+
+An endpoint goes in the catalog only when no WebRouter method covers it. A
+vendor that is also a backend (Tavily, Firecrawl, Exa...) keeps only what
+`search`, `extract`, `answer`, `research`, `live_data` and `browse` cannot do,
+and an endpoint leaves the catalog in the same pull request that adds the
+method covering it.
 
 1. Write it **from the vendor's own documentation**, never from another
    project's catalog: notes and summaries are ours. List the pages in

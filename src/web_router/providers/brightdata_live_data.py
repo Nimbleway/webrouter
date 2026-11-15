@@ -22,12 +22,10 @@ search, a description and a run of ``amazon_products`` on one product URL.
 What the API does not say, this does not invent. A scraper's input and output
 are listed as field names without types, so a description's schemas name
 those fields and nothing more. Records carry no documented time of
-collection, so ``fetched_at`` stays ``None``. A scrape that outlasts the
-synchronous window (about a minute) raises with the snapshot id Bright Data
-returns, so the records can be fetched later -- it is not waited for here.
-An input that failed comes back as a record with ``error`` and ``error_code``;
-those are kept in ``extra["errors"]``, never counted as records, and a run
-where every input failed raises.
+collection, so ``fetched_at`` stays ``None``. A scrape past the synchronous
+window is read from its snapshot (:mod:`~web_router.providers.brightdata_snapshots`).
+A failed input comes back as a record with ``error`` and ``error_code``, kept
+in ``extra["errors"]`` and never counted; a run where every input failed raises.
 
 ``provider_options`` go to the scrape's query string -- ``limit_per_input``,
 ``custom_output_fields`` -- but never override the dataset or method a source names.
@@ -47,14 +45,18 @@ from web_router.constants_live_data_vendors import (
     BRIGHTDATA_DEFAULT_METHOD,
     BRIGHTDATA_DISCOVER_TYPE,
     BRIGHTDATA_ID_PREFIX,
+    BRIGHTDATA_PENDING_STATUS,
     BRIGHTDATA_SCRAPE_PATH,
     BRIGHTDATA_SCRAPERS_PATH,
+    BRIGHTDATA_SNAPSHOT_POLL_SECONDS,
+    BRIGHTDATA_SNAPSHOT_WAIT_SECONDS,
     MSG_BRIGHTDATA_RENAMED_HINT,
 )
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers.brightdata_names import Scraper, plain_name, scrapers, slug
 from web_router.providers.brightdata_shapes import described, listed, to_response
+from web_router.providers.brightdata_snapshots import await_and_read, wait_and_read
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
@@ -77,6 +79,9 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
     base_url: ClassVar[str] = BRIGHTDATA_BASE_URL
     env_api_key: ClassVar[str] = ENV_BRIGHTDATA_API_KEY
     api_key_prefix: ClassVar[str] = BRIGHTDATA_API_KEY_PREFIX
+    # Past the synchronous window the scrape goes on, billed: its snapshot is polled this often, for this long.
+    poll_seconds: ClassVar[float] = BRIGHTDATA_SNAPSHOT_POLL_SECONDS
+    wait_seconds: ClassVar[float] = BRIGHTDATA_SNAPSHOT_WAIT_SECONDS
 
     def __init__(self, *, zone: str | None = None, **kwargs: Any) -> None:
         """
@@ -130,14 +135,18 @@ class BrightDataLiveDataProvider(HttpLiveDataProvider):
         scraper = self._resolve(request.source, known)
         with self._named(request.source):
             response = self._client.post(self.run_path, **self._scrape(request, scraper), **self._clamped())
-            return self._to_response(request, response)
+            if response.status_code != BRIGHTDATA_PENDING_STATUS:
+                return self._to_response(request, response)
+        return wait_and_read(self, request, response)
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
         known = None if request.source.startswith(BRIGHTDATA_ID_PREFIX) else await self._aknown()
         scraper = self._resolve(request.source, known)
         with self._named(request.source):
             response = await self._async_client.post(self.run_path, **self._scrape(request, scraper), **self._clamped())
-            return self._to_response(request, response)
+            if response.status_code != BRIGHTDATA_PENDING_STATUS:
+                return self._to_response(request, response)
+        return await await_and_read(self, request, response)
 
     @staticmethod
     def _scrape(request: LiveDataRequest, scraper: Scraper) -> dict[str, Any]:
