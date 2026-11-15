@@ -502,7 +502,7 @@ Extract's order is measured on pages returned, not graded, and research's and
 browse's are unmeasured, so all three stay hand-ordered. `chains.py --check` exits 1 when
 the file is stale, and a unit test runs it, so a change to the frozen results
 or the price list that moves an order fails until `make chains` is run and the
-README's tables follow. For the full report behind both orders:
+provider tables in docs/providers.mdx follow. For the full report behind both orders:
 
 ```bash
 uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --set answer-simpleqa-300
@@ -655,7 +655,7 @@ measured latency. Only search and answer are measured; for extract, research
 and browse the verdict is a judgement call, and the script never makes a
 number up. The latency belongs to the router, not the tool, so the result is a
 row per router: a router declares the tools it fits as its own `route_tools`
-(see the README's Smart routing), and a caller's `route_tools` always wins.
+(see https://docs.webrouter.net/smart-routing), and a caller's `route_tools` always wins.
 
 **How it times.** A router is one of `rules` (the built-in rules router),
 `llm` (the built-in `router="llm"`, on the preset `LLM_ROUTER_PRESET` names,
