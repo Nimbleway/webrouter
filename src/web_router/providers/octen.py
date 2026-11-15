@@ -63,17 +63,15 @@ class OctenProvider(HttpSearchProvider):
         return {}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        payload = build_payload(
+        return build_payload(
             request,
             OCTEN_SEARCH_NAMES,
             query=request.query,
+            count=min(request.max_results, OCTEN_MAX_COUNT) if request.max_results else None,
             language=[language_code(request.locale)] if request.locale else None,
             time_range=mapped(OCTEN_RECENCY, request.recency),
             **(mapped(OCTEN_DEPTH, request.search_depth) or {}),
         )
-        if request.max_results:
-            payload["count"] = min(payload["count"], OCTEN_MAX_COUNT)
-        return payload
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         code = payload.get("code")

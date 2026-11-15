@@ -33,13 +33,13 @@ filter. ``effort`` too: Web Search has one mode.
 """
 
 OCTEN_SEARCH_NAMES = {
-    "max_results": "count",
     "include_domains": "include_domains",
     "exclude_domains": "exclude_domains",
 }
 
 OCTEN_MAX_COUNT = 100
-"""The most results one search returns; a larger ``count`` is out of range, so it is sent as this."""
+"""The most results one search returns; a larger ``max_results`` is sent as this. A ``count`` set in
+``provider_options`` goes as given, so Octen can refuse it."""
 
 OCTEN_RECENCY: dict[Recency, str] = {"day": "day", "week": "week", "month": "month", "year": "year"}
 

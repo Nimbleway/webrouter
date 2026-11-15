@@ -81,6 +81,13 @@ def test_fast_turns_full_content_on_at_octens_default_and_a_bare_search_sends_th
 
 def test_max_results_is_held_to_octens_range(provider: OctenProvider) -> None:
     assert provider._build_payload(SearchRequest(query="q", max_results=500))["count"] == 100
+    assert provider._build_payload(SearchRequest(query="q", max_results=8))["count"] == 8
+
+
+def test_a_count_in_provider_options_is_sent_as_given(provider: OctenProvider) -> None:
+    request = SearchRequest(query="q", max_results=5, provider_options={"count": 101})
+    assert provider._build_payload(request)["count"] == 101
+    assert provider._build_payload(SearchRequest(query="q", provider_options={"count": 101}))["count"] == 101
 
 
 def test_the_key_is_a_bearer_token(monkeypatch: pytest.MonkeyPatch) -> None:
