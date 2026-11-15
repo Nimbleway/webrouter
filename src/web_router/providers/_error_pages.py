@@ -54,13 +54,15 @@ def not_the_page(document: ExtractedDocument) -> str | None:
     status = document.status_code
     if status is not None and status >= HTTPStatus.BAD_REQUEST:
         return MSG_EXTRACT_BAD_STATUS.format(status=status)
-    title = _title(document)
-    if EXTRACT_CHALLENGE_TITLE.search(title):
-        return MSG_EXTRACT_CHALLENGE
-    if EXTRACT_LOGIN_TITLE.search(title) or urlsplit(document.url).path.startswith(EXTRACT_LOGIN_URL_PARTS):
+    if urlsplit(document.url).path.startswith(EXTRACT_LOGIN_URL_PARTS):
         return MSG_EXTRACT_LOGIN_WALL
     if len(document.content) >= EXTRACT_WALL_MAX_CHARS:
         return None
+    title = _title(document)
+    if EXTRACT_CHALLENGE_TITLE.search(title):
+        return MSG_EXTRACT_CHALLENGE
+    if EXTRACT_LOGIN_TITLE.search(title):
+        return MSG_EXTRACT_LOGIN_WALL
     text = document.content.casefold()
     if any(marker in text for marker in EXTRACT_CHALLENGE_MARKERS):
         return MSG_EXTRACT_CHALLENGE
