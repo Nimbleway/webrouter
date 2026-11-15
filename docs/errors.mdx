@@ -74,4 +74,5 @@ except ProviderError as exc:
 trying it would only bill another call. It raises that error instead. A key
 that is refused (`auth`) moves on, and is logged at `WARNING` on the
 `web_router` logger, so a broken key is not hidden by the backend that
-answered after it.
+answered after it. A keyless backend's 401 or 403 refused no key of yours, so
+only its `INFO` hop record shows it.

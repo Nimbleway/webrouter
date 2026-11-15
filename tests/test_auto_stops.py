@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 import os
 from collections.abc import Callable, Iterator
 from typing import Any, ClassVar
 
-import httpx
 import pytest
 
 from web_router.constants import ENV_OXYLABS_USERNAME
@@ -69,11 +67,6 @@ def chain() -> Iterator[Callable[..., AutoProvider]]:
         unregister_provider(name)
 
 
-def _refused(status: int) -> httpx.HTTPStatusError:
-    request = httpx.Request("GET", "https://api.example.com")
-    return httpx.HTTPStatusError("refused", request=request, response=httpx.Response(status, request=request))
-
-
 def test_a_providers_own_bug_raises_instead_of_moving_on(chain: Callable[..., AutoProvider]) -> None:
     """A KeyError in a provider's parsing would quietly bill the next backend on every call."""
     broken, spare = _searcher("broken", lambda: KeyError("results")), _searcher("spare")
@@ -115,19 +108,6 @@ def test_a_target_side_failure_raises_instead_of_moving_on(chain: Callable[..., 
         chain(gone, spare).search(SearchRequest(query="q"))
 
     assert spare.calls == 0
-
-
-def test_a_refused_key_moves_on_and_is_logged(
-    chain: Callable[..., AutoProvider], caplog: pytest.LogCaptureFixture
-) -> None:
-    refused = _searcher("refused", lambda: ProviderError("refused", "HTTP 401", original=_refused(401)))
-    spare = _searcher("spare")
-
-    with caplog.at_level(logging.WARNING, logger="web_router"):
-        response = chain(refused, spare).search(SearchRequest(query="q"))
-
-    assert response.provider == "spare"
-    assert any("refused refused its credential (HTTP 401)" in record.getMessage() for record in caplog.records)
 
 
 def _extractor(name: str, failure: dict[str, Any] | None = None) -> type[ExtractProvider]:

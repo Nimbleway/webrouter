@@ -120,7 +120,7 @@ logging.getLogger("web_router").setLevel(logging.DEBUG)  # every hop, the succes
 | --- | --- |
 | `DEBUG` | Each `auto` hop that answered: the method, the backend and how long it took |
 | `INFO` | Each `auto` hop that failed (kind, status, time), a backend passed over while it cools down, and the start of a cooldown |
-| `WARNING` | A configured key the backend refused, which `auto` would otherwise hide by moving on |
+| `WARNING` | A configured key the backend refused, which `auto` would otherwise hide by moving on; a backend that sent no key logs its 401 or 403 at `INFO` only |
 
 ```text
 INFO web_router.providers._hop: auto search: tavily failed (rate_limit, status 429) in 0.412s

@@ -16,6 +16,7 @@ threaded through every provider between the router and the chain.
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from contextvars import ContextVar
@@ -28,6 +29,9 @@ from web_router.types import NormalizedRequest
 from web_router.types_errors import CHAIN_STOPPING_KINDS, ERROR_KIND_AUTH
 
 logger = logging.getLogger(__name__)
+
+_SENT_NO_KEY = "_web_router_sent_no_key"
+"""Set by :func:`note_keyless` on a failure whose backend held no credential to refuse."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -140,9 +144,27 @@ def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseExc
 
 
 def warn_if_refused(provider: str, exc: BaseException) -> None:
-    """Log a WARNING when ``exc`` is ``provider`` refusing its key: a setup problem moving on would otherwise hide."""
-    if getattr(exc, "kind", None) == ERROR_KIND_AUTH:
+    """Log a WARNING when ``exc`` is ``provider`` refusing its key: a setup problem moving on would otherwise hide.
+
+    A backend that sent no key (a keyless tier, a keyless custom provider) refused no key of the caller's: its
+    401 or 403 is left to the hop's INFO record.
+    """
+    if getattr(exc, "kind", None) == ERROR_KIND_AUTH and not getattr(exc, _SENT_NO_KEY, False):
         logger.warning(MSG_KEY_REFUSED, provider, getattr(exc, "status_code", None))
+
+
+def note_keyless(member: object, exc: BaseException) -> None:
+    """Mark ``exc`` as raised by ``member`` holding no credential, so :func:`warn_if_refused` keeps quiet about it."""
+    if member is not None and not holds_credential(member):
+        setattr(exc, _SENT_NO_KEY, True)
+
+
+def holds_credential(member: object) -> bool:
+    """Whether ``member`` was built with a credential: a key of its own, else its variable set in the environment."""
+    if getattr(member, "api_key", None):
+        return True
+    env_var = getattr(member, "env_api_key", None)
+    return isinstance(env_var, str) and bool(os.environ.get(env_var, "").strip())
 
 
 def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
