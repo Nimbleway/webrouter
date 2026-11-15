@@ -19,28 +19,27 @@ from collections.abc import Callable
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
-from web_router.routing.attempts import admitted, failed
 from web_router.providers.base import ExtractProvider
+from web_router.routing.attempts import admitted, failed
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse
 
 _Order = list[tuple[int, str]]
-_Delegate = Callable[[list[str]], ExtractRequest]
 _Member = Callable[[int], ExtractProvider]
 
 
 def extract_down_chain(
     name: str,
     fallback_on_empty: bool,
-    delegate: _Delegate,
+    request: ExtractRequest,
     member: _Member,
     order: _Order,
     urls: list[str],
 ) -> ExtractResponse:
     """The first member's answer, with each URL it failed retried on the members after it."""
-    response, rest = _first_answer(name, fallback_on_empty, delegate, member, order, urls)
+    response, rest = _first_answer(name, fallback_on_empty, request, member, order, urls)
     while rest and (retry := _failed_urls(response)):
         try:
-            retried, rest = _first_answer(name, fallback_on_empty, delegate, member, rest, retry)
+            retried, rest = _first_answer(name, fallback_on_empty, request, member, rest, retry)
         except WebRouterError as exc:
             return _also_failed(response, exc)
         response = _merged(response, retried, urls)
@@ -50,16 +49,16 @@ def extract_down_chain(
 async def aextract_down_chain(
     name: str,
     fallback_on_empty: bool,
-    delegate: _Delegate,
+    request: ExtractRequest,
     member: _Member,
     order: _Order,
     urls: list[str],
 ) -> ExtractResponse:
     """Async counterpart of :func:`extract_down_chain`."""
-    response, rest = await _afirst_answer(name, fallback_on_empty, delegate, member, order, urls)
+    response, rest = await _afirst_answer(name, fallback_on_empty, request, member, order, urls)
     while rest and (retry := _failed_urls(response)):
         try:
-            retried, rest = await _afirst_answer(name, fallback_on_empty, delegate, member, rest, retry)
+            retried, rest = await _afirst_answer(name, fallback_on_empty, request, member, rest, retry)
         except WebRouterError as exc:
             return _also_failed(response, exc)
         response = _merged(response, retried, urls)
@@ -69,13 +68,13 @@ async def aextract_down_chain(
 def _first_answer(
     name: str,
     fallback_on_empty: bool,
-    delegate: _Delegate,
+    request: ExtractRequest,
     member: _Member,
     order: _Order,
     urls: list[str],
 ) -> tuple[ExtractResponse, _Order]:
     """The first member's answer for ``urls``, and the members after it; raises when none answers."""
-    delegated = delegate(urls)
+    delegated = request.model_copy(update={"urls": urls})
     failures: dict[str, WebRouterError] = {}
     held: ExtractResponse | None = None
     for index, (position, provider_name) in enumerate(order):
@@ -99,13 +98,13 @@ def _first_answer(
 async def _afirst_answer(
     name: str,
     fallback_on_empty: bool,
-    delegate: _Delegate,
+    request: ExtractRequest,
     member: _Member,
     order: _Order,
     urls: list[str],
 ) -> tuple[ExtractResponse, _Order]:
     """Async counterpart of :func:`_first_answer`."""
-    delegated = delegate(urls)
+    delegated = request.model_copy(update={"urls": urls})
     failures: dict[str, WebRouterError] = {}
     held: ExtractResponse | None = None
     for index, (position, provider_name) in enumerate(order):

@@ -137,7 +137,6 @@ from web_router.types import (
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
     BrowseOutcome,
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -166,6 +165,7 @@ from web_router.types import (
 )
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse, Recency
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
+from web_router.types_browse import BrowseProgress
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionMember, DecisionRecord
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,

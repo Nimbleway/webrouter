@@ -54,7 +54,6 @@ from web_router.constants import (
 )
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
-    BrowseProgress,
     BrowseResponse,
     Citation,
     ExtractResponse,
@@ -63,6 +62,7 @@ from web_router.types import (
     SearchResponse,
 )
 from web_router.types_answer import AnswerResponse
+from web_router.types_browse import BrowseProgress
 
 _URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"'<>]+")
 _DEVTOOLS = re.compile(MCP_REDACT_DEVTOOLS_PATTERN)
