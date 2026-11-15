@@ -30,20 +30,26 @@ from web_router.constants_extract import (
 from web_router.types import ExtractedDocument, ExtractFailure
 
 
-def split_error_pages(documents: Iterable[ExtractedDocument]) -> tuple[list[ExtractedDocument], list[ExtractFailure]]:
+def split_error_pages(
+    documents: Iterable[ExtractedDocument], asked: str | None = None
+) -> tuple[list[ExtractedDocument], list[ExtractFailure]]:
     """The documents worth returning, and each page that is not the one asked for as a failure saying why.
 
     A page with a 4xx or 5xx status fails whatever it says: a site's "not
     found" page read as content is the error the caller most needs to see. A
     near-empty page is kept, with :data:`MSG_EXTRACT_NEAR_EMPTY` in its
     ``warnings``, since some real answers are that short.
+
+    ``asked`` is the one URL the call carried, when it carried one: a failure is
+    named by it rather than by where a redirect landed, so the caller sees the
+    address they asked for and ``auto`` retries that address.
     """
     kept: list[ExtractedDocument] = []
     failed: list[ExtractFailure] = []
     for document in documents:
         reason = not_the_page(document)
         if reason is not None:
-            failed.append(ExtractFailure(url=document.url, error=reason))
+            failed.append(ExtractFailure(url=asked or document.url, error=reason))
         else:
             kept.append(_warned(document))
     return kept, failed
