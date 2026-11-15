@@ -47,7 +47,7 @@ def extract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[str]) ->
             retried, rest = _first_answer(replace(walk, order=rest), request, retry)
         except WebRouterError as exc:
             return _also_failed(response, exc)
-        if retried.documents:
+        if not _empty_extract(retried):
             contributed("extract", retried.provider)
         response = _merged(response, retried, urls)
     return response
@@ -61,7 +61,7 @@ async def aextract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[s
             retried, rest = await _afirst_answer(replace(walk, order=rest), request, retry)
         except WebRouterError as exc:
             return _also_failed(response, exc)
-        if retried.documents:
+        if not _empty_extract(retried):
             contributed("extract", retried.provider)
         response = _merged(response, retried, urls)
     return response
