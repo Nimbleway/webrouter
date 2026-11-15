@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+import pytest
 
 from web_router.providers.base import _Collected
 from web_router.types import ExtractFailure
@@ -32,3 +35,17 @@ def test_a_batch_that_agrees_keeps_its_kind() -> None:
     )
     assert gone.kind == "target"
     assert down.kind == "upstream"
+
+
+def test_a_sites_own_403_through_nimble_is_no_refused_key(caplog: pytest.LogCaptureFixture) -> None:
+    from web_router.providers.nimble import NimbleExtractProvider
+    from web_router.routing.attempts import failed
+    from web_router.types import ExtractRequest
+
+    payload = {"url": A, "status": "failed", "status_code": 403, "warnings": ["Forbidden"]}
+    response = NimbleExtractProvider(api_key="k")._to_response(ExtractRequest(urls=[A]), [A], payload)
+    error = _exhausted(*response.failures, ExtractFailure(url=B, error="x", status_code=403))
+    assert error.kind != "auth"
+    with caplog.at_level(logging.WARNING, logger="web_router"):
+        failed({}, "extract", "nimble", error)
+    assert "refused its credential" not in caplog.text

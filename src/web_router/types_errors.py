@@ -207,13 +207,10 @@ class ExtractFailure(BaseModel):
     @model_validator(mode="after")
     def _kind_from_error(self) -> ExtractFailure:
         if self.kind is None:
-            by_status = KIND_BY_STATUS.get(self.status_code) if self.status_code is not None else None
-            if self.status_code in TARGET_GONE_STATUSES:
-                self.kind = ERROR_KIND_TARGET
-            elif by_status in ("auth", "rate_limit"):
-                self.kind = by_status  # a refused key or a throttle, whatever the warning text says
-            else:
-                self.kind = classify(None, self.error).kind
+            # The status here is the page's, not the backend's answer about the key: a site's own 403 is no refused
+            # key, so only "gone" is read from it. A backend's own 401 or 429 arrives through from_error with its kind.
+            gone = self.status_code in TARGET_GONE_STATUSES
+            self.kind = ERROR_KIND_TARGET if gone else classify(None, self.error).kind
         return self
 
     @staticmethod
