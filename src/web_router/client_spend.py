@@ -23,7 +23,8 @@ class SpendLogging(SpendSinkHolder):
 
         A path is a :class:`~web_router.SpendLog`, appended to as JSON lines and read back with its
         :meth:`~web_router.SpendLog.report`; ``None`` stops logging. Returns the sink in force. Calls made through
-        :meth:`budget`'s scope are this router's calls, and are logged too.
+        :meth:`budget`'s scope are this router's calls, and are logged too; a submitted job logs
+        once, when its answer is first seen.
 
         Raises:
             ConfigurationError: for anything else.

@@ -12,15 +12,19 @@ from functools import partial
 from time import monotonic
 from typing import Any, Protocol, TypeVar
 
+from pydantic import BaseModel
+
 from web_router.providers.base import Job
 from web_router.routing.budget import BudgetedCall, budget_scope
 from web_router.routing.contract import ToolName
 from web_router.routing.effort_call import unrouted
 from web_router.routing.metered import metered
 from web_router.routing.pool import limited
+from web_router.spend_record import log_spent
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
+_ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 _JobT = TypeVar("_JobT", bound="Job[Any, Any, Any]", covariant=True)
 
 
@@ -39,14 +43,15 @@ def submitted(tool: ToolName, backend: _Submits[_JobT], request: NormalizedReque
     start one is reserved like any other, and research with no effort set runs
     at the one the budget maps, as ``research()`` does; with no shared budget
     it starts as it would without one. The job's ``decision`` carries the
-    effort and, under a budget, what it charged the start, as ``research()``'s does.
+    effort and, under a budget, what it charged the start, as ``research()``'s does. Its answer is
+    metered and written to the router's spend log once, when it is first seen, as a call's is.
     """
     started = monotonic()
     request, record = unrouted(backend, request, limited(None, router))  # before the scope, which admits a named one
     with budget_scope(None, tool, backend, request, router) as scope:
         job = backend.submit(request)
         job.decision = _charged(scope, record, job.provider)
-    job.meter(partial(metered, tool=tool, request=request, started=started))
+    job.meter(partial(_answered, tool=tool, request=request, started=started, router=router))
     return job
 
 
@@ -57,8 +62,17 @@ async def asubmitted(tool: ToolName, backend: _ASubmits[_JobT], request: Normali
     with budget_scope(None, tool, backend, request, router) as scope:
         job = await backend.asubmit(request)
         job.decision = _charged(scope, record, job.provider)
-    job.meter(partial(metered, tool=tool, request=request, started=started))
+    job.meter(partial(_answered, tool=tool, request=request, started=started, router=router))
     return job
+
+
+def _answered(
+    response: _ResponseT, *, tool: ToolName, request: NormalizedRequest, started: float, router: object
+) -> _ResponseT:
+    """``response`` with what the run took and cost, written to ``router``'s spend log when it keeps one."""
+    answered = metered(response, tool, request, started)
+    log_spent(getattr(router, "_spend_sink", None), answered, tool)
+    return answered
 
 
 def _charged(scope: BudgetedCall[Any], record: DecisionRecord | None, provider: str) -> DecisionRecord | None:
