@@ -27,7 +27,7 @@ from typing import Any
 from web_router._chains import chains
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import ACCURACY_TOLERANCE
-from web_router.providers._chain import _configured_in
+from web_router.providers._chain import _configured_in, _default_chain
 from web_router.routing.attempts import Attempt, CallRoute
 from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.effort_call import Only
@@ -56,14 +56,10 @@ def cost_ordered(tool: ToolName, names: Sequence[str], request: NormalizedReques
     while left:
         best = max(accuracy[name] for name in left)
         tier = [name for name in left if best - accuracy[name] <= floor]
-        ranked += sorted(tier, key=lambda name: (*_price(tool, name, request), static[name]))
+        price = {name: cost_key(attempt_cost(Attempt(tool=tool, provider=name, request=request))) for name in tier}
+        ranked += sorted(tier, key=lambda name: (*price[name], static[name]))
         left = [name for name in left if name not in tier]
     return ranked + [name for name in names if name not in accuracy]
-
-
-def _price(tool: ToolName, provider: str, request: NormalizedRequest) -> tuple[bool, float]:
-    """A member's estimate for this request as a sort key: known before unknown, then cheapest."""
-    return cost_key(attempt_cost(Attempt(tool=tool, provider=provider, request=request)))
 
 
 def cost_route(
@@ -73,7 +69,7 @@ def cost_route(
     when the order is the static one: no cost cap, a backend the caller named, a ``chain`` the caller set, or
     no tier the request's prices reorder.
     """
-    if not orders_by_cost(budget) or getattr(chain, "name", None) != PROVIDER_AUTO or not _default_chain(chain):
+    if not orders_by_cost(budget) or getattr(chain, "name", None) != PROVIDER_AUTO or not _runs_default(chain):
         return None, None
     names = [name for name, _ in eligible_members(Only(tool, chain), tool, request)[0]]
     ordered = cost_ordered(tool, names, request)
@@ -83,7 +79,7 @@ def cost_route(
     return CallRoute(order={tool: ordered}), record
 
 
-def _default_chain(chain: Any) -> bool:
+def _runs_default(chain: Any) -> bool:
     """Whether ``chain`` -- an ``auto`` -- runs its default order: a ``chain`` the caller set is theirs to keep.
 
     Names and each member's options both match the default: a chain that differs in either was set on purpose.
@@ -92,4 +88,4 @@ def _default_chain(chain: Any) -> bool:
     members, resolved = getattr(chain, "_members_config", None), getattr(chain, "_chain", None)
     if default is None or members is None or resolved is None:
         return False
-    return list(resolved) == list(default(_configured_in(members)))
+    return list(resolved) == list(_default_chain(default, _configured_in(members)))  # as construction calls it

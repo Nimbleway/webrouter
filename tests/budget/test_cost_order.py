@@ -65,7 +65,7 @@ def test_a_capped_call_on_the_default_order_runs_in_cost_order_and_records_it(
 ) -> None:
     tool = chain.tool.name
     _benchmark(monkeypatch, tool, 0.05, first=0.5, second=0.5, third=0.5)
-    monkeypatch.setattr(cost_order, "_default_chain", lambda _chain: True)
+    monkeypatch.setattr(cost_order, "_runs_default", lambda _chain: True)
     priced.update(first=(0.008, None), second=(0.002, None), third=(0.005, None))
     response = call(chain, CAP)
     assert (response.provider, chain.called[0]) == ("second", "second")
@@ -74,7 +74,7 @@ def test_a_capped_call_on_the_default_order_runs_in_cost_order_and_records_it(
 
 def test_with_no_cost_cap_the_static_order_runs(chain: Chain, priced: Table, monkeypatch: pytest.MonkeyPatch) -> None:
     _benchmark(monkeypatch, chain.tool.name, 0.05, first=0.5, second=0.5, third=0.5)
-    monkeypatch.setattr(cost_order, "_default_chain", lambda _chain: True)
+    monkeypatch.setattr(cost_order, "_runs_default", lambda _chain: True)
     priced.update(first=(0.008, None), second=(0.002, None), third=(0.005, None))
     response = call(chain, Budget(time_limit_s=60))
     assert response.provider == "first"
@@ -88,12 +88,20 @@ def test_a_chain_the_caller_set_runs_as_given(chain: Chain, priced: Table, monke
 
 
 def test_only_the_default_chain_counts_as_the_default() -> None:
-    assert cost_order._default_chain(AutoProvider())
-    assert not cost_order._default_chain(AutoProvider(chain=["you-mcp", "exa-mcp"]))
-    assert not cost_order._default_chain(object())
+    assert cost_order._runs_default(AutoProvider())
+    assert not cost_order._runs_default(AutoProvider(chain=["you-mcp", "exa-mcp"]))
+    assert not cost_order._runs_default(object())
 
 
 def test_a_chain_with_the_default_names_but_its_own_options_counts_as_set() -> None:
     default = AutoProvider()
     names = [name for name, _ in default._chain]
-    assert not cost_order._default_chain(AutoProvider(chain=[(name, {"timeout": 9}) for name in names]))
+    assert not cost_order._runs_default(AutoProvider(chain=[(name, {"timeout": 9}) for name in names]))
+
+
+def test_a_default_chain_override_that_takes_nothing_is_read_as_construction_reads_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(AutoProvider, "default_chain", staticmethod(lambda: (("first", {}),)))
+    keyed = AutoProvider(provider_config={"first": {"api_key": "k"}})
+    assert cost_order._runs_default(keyed), "no TypeError: a key in code does not widen an override's chain"
