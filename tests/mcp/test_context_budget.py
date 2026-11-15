@@ -110,6 +110,31 @@ def test_a_blank_allowlist_serves_every_tool(value: str) -> None:
     assert allowlist.allowed(handlers, value) == handlers
 
 
+@pytest.mark.parametrize(
+    ("value", "partner"),
+    [("research", "research_status"), ("browse", "browse_status"), ("browser_open", "browser_close")],
+)
+def test_a_named_tool_brings_its_partner(value: str, partner: str) -> None:
+    handlers = {
+        name: name
+        for name in (
+            "search",
+            "research",
+            "research_status",
+            "browse",
+            "browse_status",
+            "browser_open",
+            "browser_close",
+        )
+    }
+    assert set(allowlist.allowed(handlers, value)) == {value, partner}
+
+
+def test_a_tool_without_a_partner_brings_none() -> None:
+    handlers = {name: name for name in ("search", "research", "research_status", "browser_open", "browser_close")}
+    assert list(allowlist.allowed(handlers, "search")) == ["search"]
+
+
 def test_a_result_is_rendered_compact() -> None:
     assert render({"a": [1, 2], "b": {"c": "d"}}) == '{"a":[1,2],"b":{"c":"d"}}'
 

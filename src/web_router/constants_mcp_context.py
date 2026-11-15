@@ -9,7 +9,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from web_router.constants import MCP_TOOL_ANSWER, MCP_TOOL_EXTRACT, MCP_TOOL_SEARCH
+from web_router.constants import (
+    MCP_TOOL_ANSWER,
+    MCP_TOOL_BROWSE,
+    MCP_TOOL_BROWSE_STATUS,
+    MCP_TOOL_BROWSER_CLOSE,
+    MCP_TOOL_BROWSER_OPEN,
+    MCP_TOOL_EXTRACT,
+    MCP_TOOL_RESEARCH,
+    MCP_TOOL_RESEARCH_STATUS,
+    MCP_TOOL_SEARCH,
+)
 
 ENV_MCP_TOOLS = "WEB_ROUTER_MCP_TOOLS"
 """A comma-separated allowlist of the tools the server lists and serves, e.g. ``search,extract,answer``.
@@ -19,6 +29,13 @@ Read once, when the server starts, from the process environment only.
 """
 
 MCP_TOOLS_SEPARATOR = ","
+
+MCP_TOOL_PARTNERS: dict[str, str] = {
+    MCP_TOOL_RESEARCH: MCP_TOOL_RESEARCH_STATUS,
+    MCP_TOOL_BROWSE: MCP_TOOL_BROWSE_STATUS,
+    MCP_TOOL_BROWSER_OPEN: MCP_TOOL_BROWSER_CLOSE,
+}
+"""A tool the allowlist names brings its partner: a run that outlasts its wait needs polling, a browser closing."""
 
 MCP_MSG_TOOLS_UNKNOWN = "%s names no tool this server has, so it was ignored: %s. Its tools: %s."
 """Logged at startup for each allowlist entry that matches nothing: a typo should not pass in silence."""

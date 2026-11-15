@@ -754,7 +754,9 @@ WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw,browser_*
 A trailing `*` matches a prefix. Unset or blank serves every tool; a name that
 matches nothing is ignored with a warning in the server's log. Keep `fetch_raw`
 if results may be cut, and `load_env` if keys may be added mid-conversation.
-Read once at startup, from the real environment only.
+Read once at startup, from the real environment only. `research`, `browse` and
+`browser_open` each bring their partner (`research_status`, `browse_status`,
+`browser_close`), so a long run can still be polled and a browser closed.
 
 ## Environment variables the server itself reads
 
