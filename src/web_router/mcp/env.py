@@ -153,8 +153,8 @@ class EnvSources:
         return applied
 
     def foreign(self) -> list[Path]:
-        """The remembered files loaded at startup that lie outside the working directory: keys from another project."""
-        return foreign_files(self.searched)
+        """The remembered files from outside the working directory that loaded a billed key."""
+        return foreign_files(self.searched, self.startup)
 
     def noted(self, instructions: str) -> str:
         """The server's ``instructions``, with a warning added when :meth:`foreign` found a file."""
