@@ -47,12 +47,12 @@ def test_routers_are_timed_interleaved_first_call_and_warm_up_apart(latency: Mod
 
     def slow(req: RouteRequest) -> RouteDecision:
         calls.append("slow")
-        time.sleep(0.05)
+        time.sleep(0.3)
         return RouteDecision()
 
     plan = [req()] * 6
     out = module("router_latency_run").interleaved(
-        {"fast": fast, "slow": slow}, plan, warmup=2, deadline_s=0.01, seed=0, loop=None
+        {"fast": fast, "slow": slow}, plan, warmup=2, deadline_s=0.2, seed=0, loop=None
     )
     assert out["fast"]["first_call"]["answered"] == 1
     assert out["fast"]["warm"]["calls"] == 3 and out["fast"]["warm"]["fallback_rate"] == 0.0
