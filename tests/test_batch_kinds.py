@@ -140,3 +140,17 @@ def test_a_gone_page_echoed_without_its_fragment_is_still_gone() -> None:
 
     _, failures = split_error_pages([ExtractedDocument(url=A, status_code=404)], asked=A + "#top")
     assert failures[0].kind == "target"
+
+
+def test_a_rewrite_on_retry_matches_only_the_urls_it_was_sent() -> None:
+    from web_router.providers._auto_extract_chain import _merged
+    from web_router.types import ExtractedDocument, ExtractResponse
+
+    page, slashed = "https://a.test/p", "https://a.test/p/"
+    first = ExtractResponse(
+        provider="one",
+        documents=[ExtractedDocument(url=page, content="hi")],
+        failures=[ExtractFailure(url=slashed, error="down")],
+    )
+    second = ExtractResponse(provider="two", documents=[ExtractedDocument(url=page, content="hi again")])
+    assert _merged(first, second, [page, slashed]).failures == []

@@ -160,8 +160,9 @@ def _asked(url: str, urls: list[str]) -> set[str]:
 
 def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -> ExtractResponse:
     """``first`` with what ``retried`` read added, in request order; a URL that failed both keeps both reasons."""
-    again = {asked: failure for failure in retried.failures for asked in _asked(failure.url, urls) or {failure.url}}
-    read = {asked for document in retried.documents for asked in _asked(document.url, urls)}
+    sent = [failure.url for failure in first.failures]  # only these went on the retry
+    again = {asked: failure for failure in retried.failures for asked in _asked(failure.url, sent) or {failure.url}}
+    read = {asked for document in retried.documents for asked in _asked(document.url, sent)}
     # A URL the retry read is no failure; one it failed too keeps both reasons; one never retried (a page
     # that is gone) keeps its own.
     failures = [
@@ -178,7 +179,7 @@ def _merged(first: ExtractResponse, retried: ExtractResponse, urls: list[str]) -
         if failure.url not in read
     ]
     known = {failure.url for failure in first.failures}
-    failures.extend(failure for failure in retried.failures if not (_asked(failure.url, urls) & known))
+    failures.extend(failure for failure in retried.failures if not (_asked(failure.url, sent) & known))
     position = {url: index for index, url in enumerate(urls)}
     documents = sorted(
         [*first.documents, *retried.documents], key=lambda document: position.get(document.url, len(urls))
