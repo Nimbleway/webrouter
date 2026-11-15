@@ -24,6 +24,7 @@ from web_router.types import ExtractedDocument, ExtractRequest, ExtractResponse
 URL = "https://example.com/page"
 GONE = "https://example.com/does-not-exist-xyz"
 ARTICLE = "A long article. " * 300
+POST = "I moved every project from pip-tools to uv this month, and the lockfile alone was worth it. " * 15
 
 
 def _screened(**fields: Any) -> tuple[list[ExtractedDocument], list[str]]:
@@ -42,6 +43,7 @@ def _screened(**fields: Any) -> tuple[list[ExtractedDocument], list[str]]:
         ),
         ({"title": "Sign In | LinkedIn", "content": "Welcome back."}, MSG_EXTRACT_LOGIN_WALL),
         ({"title": "LinkedIn Login, Sign in | LinkedIn"}, MSG_EXTRACT_LOGIN_WALL),
+        ({"content": "Members only. Sign in to continue."}, MSG_EXTRACT_LOGIN_WALL),
         (
             {"content": "Join LinkedIn. Sign in to view the full profile of this member."},
             MSG_EXTRACT_LOGIN_WALL,
@@ -68,6 +70,11 @@ def test_a_challenge_or_login_page_is_a_failure_saying_which(fields: dict[str, A
         {"title": "Login - Wikipedia", "content": ARTICLE},
         {"title": "Social Login - Auth0 Docs", "content": ARTICLE},
         {"url": "https://blog.example.com/posts?ref=/authwall", "content": ARTICLE},
+        {"title": "Why I switched to uv", "content": POST + "Leave a Reply\nYou must be logged in to post a comment."},
+        {
+            "title": "Re: uv lock",
+            "content": "Same here, uv lock fixed it for me after the upgrade.\nPlease log in to reply.",
+        },
         {"title": "Cloudflare challenges explained", "content": ARTICLE + "verify you are human"},
         {
             "title": "Example Domain",

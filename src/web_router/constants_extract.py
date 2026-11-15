@@ -69,13 +69,14 @@ EXTRACT_LOGIN_MARKERS: Final = (
     "log in to continue",
     "login to continue",
     "log in to view",
-    "you must be logged in",
     "you need to sign in",
-    "please log in to",
-    "please sign in to",
     "join to view",
 )
-"""Phrases of a login wall's text, matched like :data:`EXTRACT_CHALLENGE_MARKERS`."""
+"""Phrases of a login wall's text, matched like :data:`EXTRACT_CHALLENGE_MARKERS`.
+
+Only phrases that gate the page itself: "you must be logged in" and "please log in to" end the comment form of
+many a short post, so they are not here.
+"""
 
 EXTRACT_LOGIN_URL_PARTS: Final = ("/authwall",)
 """How the path a login wall redirects to begins, whatever the page's length: LinkedIn's is ``/authwall``."""
