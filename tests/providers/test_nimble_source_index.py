@@ -91,3 +91,11 @@ def test_punctuation_after_an_index_url_is_not_part_of_it() -> None:
     answer = f"A fact [1].\n\nSource index:\n\n- [1] Summary — {SUMMARY}.\n"
     (cited,) = [c for c in research_citations(answer, {"sources": SOURCES[:1]}) if c.url == SUMMARY]
     assert cited.field == "[1]"
+
+
+def test_an_index_url_with_parentheses_is_kept_whole() -> None:
+    wiki, other = "https://en.wikipedia.org/wiki/Foo_(bar)", "https://b.com/x"
+    answer = f"Foo [1] and B [2].\n\nSource index:\n\n- [1] Foo — {wiki}\n- [2] B — ({other})\n"
+    citations = research_citations(answer, {"sources": [{"url": wiki}, {"url": other}]})
+    assert [(c.url, c.field) for c in citations] == [(wiki, "[1]"), (other, "[2]")]
+    assert citations[0].extra[ANSWER_PASSAGES] == ["Foo [1] and B [2]."]
