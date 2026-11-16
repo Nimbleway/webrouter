@@ -50,6 +50,9 @@ In order of precedence: a source named for a product's reviews is a reviews
 page, not a product page, so the more specific kinds come first.
 """
 
+_KIND_WORDS: Final = frozenset(word for said in KINDS.values() for word in said)
+"""Every word that names a kind: none of them is a site word, whichever kind a query is read as."""
+
 COUNTRIES: Final[dict[str, str]] = {
     "uk": "uk", "gb": "uk", "britain": "uk", "england": "uk", "de": "de", "germany": "de",
     "fr": "fr", "france": "fr", "it": "it", "italy": "it", "es": "es", "spain": "es",
@@ -115,10 +118,11 @@ class Query:
 def read_query(query: str) -> Query:
     """``query`` split into the site words, the kind of page and the country it asks for."""
     words = [word for word in _words(query) if word not in _FILLER]
-    kind = next((name for name, said in KINDS.items() if any(word in said for word in words)), None)
+    named = [name for name, said in KINDS.items() if said.intersection(words)]
+    # "search amazon products": beside another kind, "search" is the verb, not the page asked for.
+    kind = next((name for name in named if name != "search"), named[0] if named else None)
     country = next((COUNTRIES[word] for word in words if word in _COUNTRY_WORDS_IN_QUERY), None)
-    kind_words = KINDS[kind] if kind else frozenset()
-    site = tuple(word for word in words if word not in kind_words and word not in _COUNTRY_WORDS_IN_QUERY)
+    site = tuple(word for word in words if word not in _KIND_WORDS and word not in _COUNTRY_WORDS_IN_QUERY)
     return Query(site_words=site, kind=kind, country=country)
 
 

@@ -120,6 +120,14 @@ def test_a_kind_word_asks_for_the_kind_not_the_text() -> None:
     assert read_query("amazon product page").kind == "product"
 
 
+def test_search_beside_another_kind_is_the_verb_not_the_kind() -> None:
+    """'search amazon products' asks for a product page; 'amazon search' alone still asks for a search page."""
+    assert read_query("search amazon products").kind == "product"
+    assert read_query("search amazon products").site_words == ("amazon",)
+    assert _top("search amazon products", 1) == ["amazon_pdp"]
+    assert _top("amazon search", 1) == ["amazon_serp_localized"]
+
+
 def test_the_name_says_the_kind_before_a_loose_label() -> None:
     reviews = next(source for source in CATALOGUE if source.name == "bestbuy_com_product_reviews_community_2026_03_17")
 
