@@ -89,9 +89,9 @@ source that does not say its kind, below the ones that do. A query that
 names only a country (`"uk"`) keeps that country's sources, and one of
 filler words only (`"page data"`) matches none. Matches are
 ranked by how the site matches (its own domain first), the kind, the main
-site before other countries unless the query names one, and then quality:
-the vendor's public catalogue before an account's private copy, a published
-version, a schema and a sample, and no `test` or `copy` in the name. With no
+site before other countries unless the query names one, and then quality,
+read only from what any vendor's source can carry: a schema, a sample, and
+no `test` or `copy` in the name. With no
 `provider`, every vendor's matches are merged on that one scale, Apify's
 included: each vendor's own order is kept (Apify's relevance, the ranking
 above for the others) and the best-scored next match of any vendor comes

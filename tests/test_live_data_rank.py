@@ -9,6 +9,10 @@ from __future__ import annotations
 
 from web_router.live_data_rank import read_query, relevant, score
 from web_router.live_data_search import ranked
+from web_router.providers import brightdata_shapes, oxylabs_scrapers
+from web_router.providers import nimble_live_data_map as nimble_map
+from web_router.providers.brightdata_names import Scraper as BrightDataScraper
+from web_router.providers.oxylabs_scrapers import Scraper as OxylabsScraper
 from web_router.types_live_data import LiveDataSource
 
 
@@ -64,3 +68,30 @@ def test_a_generic_ending_is_the_main_site_and_a_country_code_is_not() -> None:
     assert relevant(_source("amazon_pdp", "www.amazon.co.uk"), read_query("uk"))
     assert relevant(_source("amazon_pdp", "www.amazon.com.mx"), read_query("mexico"))
     assert score(_source("x_product", "www.amazon.de"), query) < main
+
+
+def _from_each_vendor() -> list[LiveDataSource]:
+    """An amazon.com product source from each vendor's own mapper, as its listing gives it."""
+    nimble_row = {
+        "name": "amazon_pdp",
+        "privacy": "public",
+        "managed_by": "nimble",
+        "metadata": {"domain": "www.amazon.com", "entity_type": "Product Detail Page (PDP)"},
+    }
+    bright_data = {"id": "gd_x", "name": "Amazon products", "domain": "amazon.com", "category": "Product"}
+    return [
+        nimble_map.to_source("nimble", nimble_row),
+        brightdata_shapes.listed("brightdata", BrightDataScraper("amazon_products", "gd_x", "url", bright_data)),
+        oxylabs_scrapers.listed("oxylabs", OxylabsScraper("amazon/product", {"realtime"})),
+    ]
+
+
+def test_equal_sources_from_every_vendor_score_the_same() -> None:
+    """Nothing one vendor's mapper says and another's cannot lifts its sources: the order is the turns'."""
+    query = read_query("amazon product")
+    sources = _from_each_vendor()
+
+    assert len({score(source, query) for source in sources}) == 1
+    assert [source.provider for source in ranked(sources, "amazon product")] == ["nimble", "brightdata", "oxylabs"]
+    unfinished = sources[0].model_copy(update={"name": "amazon_pdp_test"})
+    assert ranked([unfinished, *sources], "amazon product")[-1] is unfinished

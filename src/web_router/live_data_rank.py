@@ -16,9 +16,9 @@ longer counts as one.
 - **kind** -- the page is the kind asked for, rather than one that does not say;
 - **locale** -- the main site (amazon.com) unless the query names a country,
   then that country's site;
-- **quality** -- what makes a source likelier to run as listed: a published
-  version, a schema, a recorded sample, the vendor's own public catalogue
-  rather than an account's private copy, and no test or copy in its name.
+- **quality** -- what makes a source likelier to run as listed, read only
+  from what any vendor's source can carry: a schema, a recorded sample, and
+  no test or copy in its name.
 
 :func:`relevant` is the gate: every query word that is not a kind or a
 country must appear in what the source says about itself, and a source of
@@ -93,10 +93,6 @@ _KIND_SAME = 30
 _LOCALE_MATCH = 15
 _LOCALE_MAIN = 10
 _LOCALE_OTHER = -10
-_PUBLIC = 10
-"""More than a published version, a schema and a sample together: a vendor's public listing row may omit
-all three (Nimble's does), where a private copy of the same template shows them."""
-_PUBLISHED = 3
 _SCHEMA = 2
 _SAMPLE = 2
 _UNFINISHED_PENALTY = -15
@@ -268,11 +264,13 @@ def _focus(source: LiveDataSource, query: Query) -> int:
 
 
 def _quality(source: LiveDataSource) -> int:
+    """What the source shows of itself, on fields any vendor fills alike.
+
+    Not ``published``, nor a vendor's own catalogue flags: Nimble's public
+    listing rows carry no version, and only Nimble says public or private, so
+    either would rank one vendor's sources above another's equal ones.
+    """
     points = 0
-    if source.extra.get("privacy") == "public" or source.extra.get("managed_by"):
-        points += _PUBLIC
-    if source.published:
-        points += _PUBLISHED
     if source.input_schema:
         points += _SCHEMA
     if source.samples:
