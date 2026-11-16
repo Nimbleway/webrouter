@@ -150,6 +150,7 @@ ROUTE_EVAL_SIBLINGS = (
     "frozen",
     "_frozen_checks",
     "_frozen_mixed",
+    "_frozen_price",
     "_tools_effort_plan",
     "route_eval_paths",
     "route_eval_sets",
@@ -198,8 +199,7 @@ def route_eval_report(route_eval: ModuleType) -> ModuleType:
 
 
 def route_row(provider: str, grade: str | None, latency: float = 1.0, cost: float | None = None, **extra: Any) -> dict:
-    """One frozen row of the set ``tiny``: ``qid``, ``method``, ``mode`` and ``error`` default to ``q``, search,
-    default and none."""
+    """One frozen row of the set ``tiny``; ``qid``, ``method``, ``mode``, ``error``: ``q``, search, default, none."""
     return {
         "set": "tiny",
         "question_id": extra.get("qid", "q"),
@@ -242,6 +242,7 @@ SCAN_SIBLINGS = (
     "frozen",
     "_frozen_checks",
     "_frozen_mixed",
+    "_frozen_price",
     "_tools_effort_plan",
 )
 """What the search scan imports from its folder, under plain names, so they are forgotten once it is."""
@@ -257,8 +258,7 @@ def scan() -> Iterator[ModuleType]:
 def scan_row(provider: str, question: str, grade: str | None, topic: str = "Science", **extra: Any) -> dict[str, Any]:
     """One backend's graded search on one question, as ``rows.jsonl`` holds it.
 
-    ``grade=None`` is a failed search, a server error a ranking counts as a miss; ``error=`` gives another.
-    """
+    ``grade=None`` is a failed search (a server error, a miss to a ranking); ``error=`` gives another."""
     failed = grade is None
     return {
         "provider": provider,

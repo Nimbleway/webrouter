@@ -81,6 +81,7 @@ def test_the_shipped_list_prices_the_old_spelling_as_the_new_one_with_a_warning(
     assert old == prices.estimate("tavily", "search", "tavily-ultra-fast") == 0.008
     assert prices_modes.mode_price("tavily", "search", ":ultra-fast") == 0.008
     assert prices_modes.mode_price("tavily", "search", "tavily-ultra-fast+deep") is None
+    assert prices_modes.canonical_parts("tavily", "search", ["tavily-full-content", "lite"]) is None
 
 
 def test_every_vendor_mode_row_says_what_it_is() -> None:

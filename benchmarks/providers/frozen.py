@@ -58,12 +58,8 @@ from _frozen_checks import (
     require_same_answers,
 )
 from _frozen_mixed import MIXED, freeze_mixed, sample_index
+from _frozen_price import price_mode as price_mode
 from _tools_effort_plan import QUESTIONS as MIXED_QUESTIONS
-from _tools_effort_plan import RESEARCH
-
-from web_router.constants_modes import PART_SEP
-from web_router.modes import legacy_parts
-from web_router.prices_modes import canonical_parts
 
 HERE = Path(__file__).resolve().parent
 FROZEN_DIR = HERE / "frozen"
@@ -105,24 +101,6 @@ def split_setup(setup: str) -> tuple[str, str]:
     provider, vendor_mode, depth = split_label(setup)
     mode = vendor_mode + (DEPTH_MARK + depth if depth else "")
     return provider, mode or DEFAULT_MODE
-
-
-def price_mode(provider: str, method: str, mode: str) -> str | None:
-    """A frozen row's ``mode`` as ``web_router.prices`` keys it, for its cost and its latency alike.
-
-    ``default`` (the scan asked for none) is ``None``; a research row's mode is
-    its effort, keyed as it is; ``@deep`` is the ``search_depth`` ``deep``;
-    ``ultra-fast`` on tavily is the vendor part ``tavily-ultra-fast``, and
-    ``ultra-fast@deep`` is ``tavily-ultra-fast+deep``, which has no row of its
-    own. A part the price list does not name is kept, so it matches nothing.
-    """
-    if mode == DEFAULT_MODE:
-        return None
-    if method == RESEARCH:
-        return mode
-    vendor, _, depth = mode.partition(DEPTH_MARK)
-    parts = legacy_parts(provider, vendor, depth)
-    return canonical_parts(provider, method, parts) or PART_SEP.join(parts)
 
 
 def frozen_row(set_name: str, method: str, row: Mapping[str, Any]) -> dict[str, Any]:

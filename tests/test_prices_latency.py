@@ -52,7 +52,6 @@ def test_latency_is_unknown_where_nothing_measured_it() -> None:
         ("search", "@deep", "deep"),
         ("search", "ultra-fast", "tavily-ultra-fast"),
         ("search", "ultra-fast@deep", "tavily-ultra-fast+deep"),
-        ("search", "full-content@lite", "tavily-full-content+lite"),
         ("research", "low", "low"),
         ("research", "default", None),
     ],
