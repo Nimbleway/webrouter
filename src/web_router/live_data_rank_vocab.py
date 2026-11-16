@@ -47,8 +47,14 @@ NOT_COUNTRIES: Final = frozenset({"us", "ai", "io", "co", "tv", "me", "ly", "fm"
 SECOND_LEVEL: Final = frozenset({"co", "com", "org", "net", "gov", "ac"})
 """Labels that sit before a country code in a domain, as in amazon.co.uk."""
 
-FILLER: Final = frozenset({"page", "pages", "results", "data", "scraper", "api", "the", "a", "an", "of", "for", "on"})
-"""Query words that say nothing about which source: "amazon product page" asks what "amazon product" does."""
+FILLER: Final = frozenset(
+    {"page", "pages", "results", "data", "scraper", "api", "the", "a", "an", "of", "for", "on", "in", "it", "be"}
+)
+"""Query words that say nothing about which source: "amazon product page" asks what "amazon product" does.
+
+"in", "it" and "be" among them: in a query they are English words, not the
+country codes :data:`COUNTRY_WORDS_IN_QUERY` leaves out.
+"""
 
 UNFINISHED: Final = frozenset({"test", "tmp", "temp", "copy", "debug", "draft", "deprecated"})
 """Words in a source's name that mark it as someone's experiment rather than the one to run.

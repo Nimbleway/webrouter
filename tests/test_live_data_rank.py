@@ -43,6 +43,17 @@ def test_a_country_alone_keeps_that_countrys_sources() -> None:
     assert [source.name for source in ranked([main, uk], "amazon uk product")] == ["amazon_uk_pdp", "amazon_pdp"]
 
 
+def test_in_it_and_be_in_a_query_are_filler_not_site_words() -> None:
+    german = _source("amazon_de_pdp", "www.amazon.de", "Product Detail Page (PDP)")
+    query = read_query("amazon products in germany")
+
+    assert query.site_words == ("amazon",) and query.country == "de"
+    assert relevant(german, query)
+    assert ranked([_source("amazon_pdp"), german], "amazon products in germany")[0] is german
+    # A source's name still reads "in" as India.
+    assert relevant(_source("amazon_in_product_reviews", domain=""), read_query("india"))
+
+
 def test_a_query_of_filler_words_only_matches_nothing() -> None:
     assert ranked([_source("amazon_pdp"), _source("amazon_uk_pdp", "www.amazon.co.uk")], "page data") == []
 
