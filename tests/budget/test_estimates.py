@@ -20,7 +20,10 @@ def _search(provider: str, depth: str | None, max_results: int | None) -> Attemp
     return Attempt(tool="search", provider=provider, request=request)
 
 
-@pytest.mark.parametrize(("provider", "depth"), [("nimble", "deep"), ("you", "deep"), ("exa", None), ("valyu", None)])
+@pytest.mark.parametrize(
+    ("provider", "depth"),
+    [("nimble", "deep"), ("you", "deep"), ("exa", None), ("valyu", None), ("octen", "fast"), ("octen", "deep")],
+)
 def test_a_search_asking_more_results_than_its_price_assumes_is_unpriced(provider: str, depth: str | None) -> None:
     row = prices.price(provider, "search", depth)
     assert row is not None and row.results_assumed == 10
@@ -35,6 +38,13 @@ def test_under_a_cost_cap_a_deep_search_for_fifty_results_is_not_admitted_at_the
     assert ledger.skipped == {"search:nimble": SKIP_PRICE_UNKNOWN}
     assert ledger.admit(_search("nimble", "deep", 10))
     assert ledger.spent == pytest.approx(0.015)
+
+
+@pytest.mark.parametrize("depth", ["fast", "deep"])
+def test_under_a_cost_cap_an_octen_search_with_full_content_is_admitted(depth: str) -> None:
+    ledger = Ledger(Budget(max_cost_usd=1.0))
+    assert ledger.admit(_search("octen", depth, None))
+    assert ledger.spent == pytest.approx(0.001)
 
 
 def test_a_row_that_charges_no_result_keeps_its_price_for_any_count() -> None:
