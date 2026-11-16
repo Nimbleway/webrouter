@@ -181,3 +181,11 @@ def test_endpoints_rank_across_every_vendor_serving_the_site(
         assert endpoints == ["zeta.videos.list", "alpha.aaa.list", "alpha.bbb.list"]
     else:
         assert endpoints == ["alpha.aaa.list", "alpha.bbb.list", "alpha.ccc.list"]
+
+
+@pytest.mark.parametrize(
+    "url", ["https://clips.test/videos/abc", "https://clips.test/videos?videos=1", "https://clips.test"]
+)
+def test_a_page_lists_each_endpoint_once(url: str) -> None:
+    matches = site_matches(url, EnvCredentials())
+    assert len({match.endpoint for match in matches}) == len(matches) == DATA_API_EXTRACT_LIMIT
