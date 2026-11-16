@@ -34,6 +34,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from web_router._dotenv import with_dotenv_hint
 from web_router.constants import (
     MSG_BENCHMARK_TIMEOUT,
     MSG_BROWSE_TIMEOUT,
@@ -47,15 +48,18 @@ from web_router.constants import (
     MSG_OPTION_VALUE,
     MSG_PROVIDER_NOT_INSTALLED,
     MSG_RESEARCH_TIMEOUT,
-    MSG_UNKNOWN_PROVIDER,
     MSG_UNSUPPORTED_FORMAT,
     MSG_UNSUPPORTED_FORMAT_ADVICE,
     MSG_UNSUPPORTED_PARAMETERS,
     MSG_UNSUPPORTED_PARAMETERS_ADVICE,
     MSG_UNSUPPORTED_VALUES,
 )
-from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
+from web_router.constants_errors import MSG_REUSED_LOOP
 from web_router.constants_invoke import MSG_ROUTER_FAILED
+from web_router.types import Provider
+from web_router.types_errors import ERROR_KIND_TIMEOUT, classify, is_retryable, reused_loop
+
+_BUILTIN_NAMES = frozenset(provider.value for provider in Provider)
 
 
 def describe(exc: BaseException) -> str:
@@ -74,6 +78,9 @@ class WebRouterError(Exception):
 class ConfigurationError(WebRouterError):
     """The router or a provider was configured incorrectly."""
 
+    def __init__(self, *args: object) -> None:
+        super().__init__(*with_dotenv_hint(args))
+
     @classmethod
     def missing_api_key(cls, provider: str, env_var: str) -> ConfigurationError:
         """Build the error for a provider with no usable credential."""
@@ -88,40 +95,6 @@ class ConfigurationError(WebRouterError):
         worth guessing, so both are named the same way a missing key is.
         """
         return cls(MSG_MISSING_SETTING.format(provider=provider, env_var=env_var, setting=setting))
-
-
-class ProviderNotFoundError(WebRouterError):
-    """A provider was requested by a name that is not registered."""
-
-    def __init__(self, name: str, available: Iterable[str]) -> None:
-        self.name = name
-        # Deduplicated: the router looks a default up in both method registries,
-        # and a provider serving both would otherwise be listed twice.
-        self.available = sorted(set(available))
-        super().__init__(MSG_UNKNOWN_PROVIDER.format(name=name, available=", ".join(self.available)))
-
-
-class NoAnswerProviderError(ProviderNotFoundError):
-    """``answer()`` was called with no provider, and none could be chosen, or ``auto`` had no backend to try.
-
-    A :class:`ProviderNotFoundError`, so an ``except`` for that still catches it.
-    :attr:`configured` names the answer backends with a key -- several, so which
-    to call is the caller's choice -- and when there are none, :attr:`env_vars`
-    names the variables that would add one.
-    """
-
-    def __init__(self, default: str, available: Iterable[str], configured: Iterable[str], env_vars: Iterable[str]):
-        self.name = default
-        self.available = sorted(set(available))
-        self.configured = sorted(configured)
-        self.env_vars = sorted(env_vars)
-        if self.configured:
-            message = MSG_ANSWER_NO_DEFAULT.format(
-                default=default, count=len(self.configured), available=", ".join(self.configured)
-            )
-        else:
-            message = MSG_ANSWER_NONE_CONFIGURED.format(default=default, env_vars=", ".join(self.env_vars) or "none")
-        WebRouterError.__init__(self, message)
 
 
 class ProviderNotInstalledError(WebRouterError):
@@ -284,8 +257,10 @@ class DeadlineExceededError(WebRouterError):
     def __init__(self, provider: str, seconds: float, *, tried: str | None = None) -> None:
         self.provider = provider
         self.seconds = seconds
+        self.kind = ERROR_KIND_TIMEOUT  # as a ProviderError's, so an extract's late URL is a `timeout` failure
         message = MSG_DEADLINE_EXCEEDED.format(provider=provider, seconds=seconds)
-        super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried) if tried else ""))
+        # A failure's own text may end in a period already; the message adds its own.
+        super().__init__(message + (MSG_DEADLINE_TRIED.format(failures=tried.rstrip(".")) if tried else ""))
 
 
 class RouterError(WebRouterError):
@@ -307,13 +282,27 @@ class ProviderError(WebRouterError):
     """A provider failed while serving a request.
 
     The original SDK or HTTP exception is available as :attr:`original` and as
-    ``__cause__``.
+    ``__cause__``. :attr:`kind`, :attr:`status_code`, :attr:`retryable` and
+    :attr:`retry_after` say what kind of failure it was, read from that exception
+    and the message, so a caller can branch without parsing text.
     """
 
-    def __init__(self, provider: str, message: str, *, original: BaseException | None = None) -> None:
+    call_errors: tuple[BaseException, ...] = ()
+    """Each call's own error, when this one sums up several (an extract whose every URL failed)."""
+
+    def __init__(
+        self, provider: str, message: str, *, original: BaseException | None = None, kind: str | None = None
+    ) -> None:
+        if reused_loop(original):
+            message += MSG_REUSED_LOOP
         super().__init__(f"[{provider}] {message}")
         self.provider = provider
         self.original = original
+        facts = classify(original, message)
+        self.kind = kind or facts.kind
+        self.status_code = facts.status_code
+        self.retryable = is_retryable(self.kind)
+        self.retry_after = facts.retry_after
 
 
 class BrowserActionError(WebRouterError):
@@ -364,3 +353,8 @@ class PageClosedError(BrowserActionError):
 
 def _named(parameter: str, values: Mapping[str, Any]) -> str:
     return MSG_OPTION_VALUE.format(name=parameter, value=values[parameter]) if parameter in values else repr(parameter)
+
+
+# Re-exported so every existing import keeps working; at the bottom because that module imports WebRouterError.
+from web_router.exceptions_provider import NoAnswerProviderError as NoAnswerProviderError  # noqa: E402
+from web_router.exceptions_provider import ProviderNotFoundError as ProviderNotFoundError  # noqa: E402

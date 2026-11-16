@@ -9,11 +9,16 @@ sync router's check of its ``provider_config``, lives here for the same reason.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from web_router._validation import refused_as_parameter
 from web_router.constants import AUTO_CLIENT_OPTION, DELEGATING_PROVIDERS
+from web_router.constants_production import MSG_INVALID_TIMEOUT
+from web_router.exceptions_typed import InvalidParameterError
+from web_router.routing.contract import Budget
 from web_router.types import (
     BrowseRequest,
     BrowserRequest,
@@ -36,6 +41,7 @@ JsonSchema = dict[str, Any] | type[BaseModel]
 """A schema for a structured answer: JSON Schema, or the pydantic model to take one from."""
 
 
+@refused_as_parameter(SearchRequest)
 def build_search_request(
     query: str, *, provider_options: dict[str, Any] | None, **options: Unpack[SearchOptions]
 ) -> SearchRequest:
@@ -43,6 +49,7 @@ def build_search_request(
     return SearchRequest(query=query, provider_options=provider_options or {}, **options)
 
 
+@refused_as_parameter(ExtractRequest)
 def build_extract_request(
     urls: str | list[str],
     *,
@@ -61,6 +68,7 @@ def build_extract_request(
     )
 
 
+@refused_as_parameter(ResearchRequest)
 def build_research_request(
     query: str,
     *,
@@ -82,6 +90,7 @@ def build_research_request(
     )
 
 
+@refused_as_parameter(BrowserRequest)
 def build_browser_request(
     *,
     proxy_country: str | None,
@@ -109,6 +118,7 @@ def build_browser_request(
     )
 
 
+@refused_as_parameter(BrowseRequest)
 def build_browse_request(
     task: str,
     *,
@@ -160,3 +170,25 @@ def async_client_holders(config: dict[str, dict[str, Any]]) -> set[str]:
         for name, options in entries
         if isinstance(options, Mapping) and options.get(AUTO_CLIENT_OPTION)
     }
+
+
+def with_timeout(budget: Budget | None, timeout: float | None) -> Budget | None:
+    """``budget`` with ``timeout`` as its time cap: the tighter of the two when both set one.
+
+    ``timeout=`` is the shortcut for ``budget=Budget(time_limit_s=...)``, so the
+    two meet in one budget and the call runs under one deadline.
+
+    Raises:
+        InvalidParameterError: for a ``timeout`` that is not a finite number of 0 or more, as the budget would.
+    """
+    if timeout is None:
+        return budget
+    try:
+        capped = Budget(time_limit_s=timeout)
+    except InvalidParameterError:
+        raise InvalidParameterError("timeout", MSG_INVALID_TIMEOUT.format(value=timeout)) from None
+    if budget is None:
+        return capped
+    if budget.time_limit_s is not None and budget.time_limit_s <= timeout:
+        return budget
+    return replace(budget, time_limit_s=timeout)

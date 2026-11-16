@@ -23,6 +23,7 @@ import threading
 from collections.abc import Mapping
 from typing import Any
 
+from web_router._validation import refused_as_parameter
 from web_router.live_data_any import asearch_every_backend, search_every_backend
 from web_router.live_data_backends import backend_for
 from web_router.live_data_compat_router import AsyncTemplateMethods, SyncTemplateMethods
@@ -60,6 +61,7 @@ class _LiveDataLookup:
             return self._live_data_instances[key]
 
     @staticmethod
+    @refused_as_parameter(LiveDataRequest)
     def _live_data_request(
         source: str,
         inputs: Mapping[str, Any] | None,
@@ -151,8 +153,8 @@ class SyncLiveData(SyncTemplateMethods, _LiveDataLookup):
         which names its own backend, or a bare name with ``provider`` --
         optional when this router has one live data backend.
         """
-        backend, name = backend_for(self, source, provider)
-        return backend.run(self._live_data_request(name, inputs, format, provider_options))
+        request = self._live_data_request(_name_of_source(source), inputs, format, provider_options)
+        return backend_for(self, source, provider)[0].run(request)  # checked before a backend is looked up
 
 
 class AsyncLiveData(AsyncTemplateMethods, _LiveDataLookup):
@@ -190,5 +192,10 @@ class AsyncLiveData(AsyncTemplateMethods, _LiveDataLookup):
         provider_options: dict[str, Any] | None = None,
     ) -> LiveDataResponse:
         """Run one of ``provider``'s live data sources and return what it extracted. As on the sync router."""
-        backend, name = backend_for(self, source, provider)
-        return await backend.arun(self._live_data_request(name, inputs, format, provider_options))
+        request = self._live_data_request(_name_of_source(source), inputs, format, provider_options)
+        return await backend_for(self, source, provider)[0].arun(request)
+
+
+def _name_of_source(source: str | LiveDataSource) -> str:
+    """The name a run asks its backend for: a bare name as given, or the source's own."""
+    return source.name if isinstance(source, LiveDataSource) else source

@@ -5,8 +5,8 @@ Experimental. Opt in by name::
     WebRouter(router="remote", router_config={"url": "https://router.example.com/route", "timeout_s": 1.0})
 
 Each routed call posts its :class:`~web_router.RouteRequest` as JSON and reads a
-:class:`~web_router.RouteDecision` back: one request, never retried. The README's
-"A router service" says what is sent and how each failure is recorded. The parts:
+:class:`~web_router.RouteDecision` back: one request, never retried. The docs'
+"A router service" (docs/smart-routing.mdx) says what is sent and how each failure is recorded. The parts:
 
 - :mod:`.remote_url`: the URL, ``https`` or plain ``http`` to loopback.
 - :mod:`.remote_config`: httpx, the timeout and the bearer key, read once.

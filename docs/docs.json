@@ -65,7 +65,27 @@
           "extract",
           "answer",
           "research",
+          "live-data",
           "browser"
+        ]
+      },
+      {
+        "group": "Agents and routing",
+        "pages": [
+          "mcp",
+          "integrations",
+          "agent-prompt",
+          "budgets",
+          "smart-routing"
+        ]
+      },
+      {
+        "group": "Guides",
+        "pages": [
+          "production",
+          "benchmarks",
+          "vendors",
+          "custom-providers"
         ]
       },
       {

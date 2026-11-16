@@ -129,6 +129,19 @@ def test_a_response_with_no_web_section_is_empty_not_an_error(provider: BravePro
     assert provider._to_response(SearchRequest(query="hi"), {"query": {}}).results == []
 
 
+@pytest.mark.parametrize(("code", "kind"), [("SUBSCRIPTION_TOKEN_INVALID", "auth"), ("VALIDATION", "bad_request")])
+def test_a_refused_token_is_auth_though_brave_sends_422(monkeypatch: pytest.MonkeyPatch, code: str, kind: str) -> None:
+    """Brave refuses a bad token with a 422, which by status alone reads as the request's fault."""
+    monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "test-key")
+    body = {"type": "ErrorResponse", "error": {"code": code, "status": 422}}
+    provider = BraveProvider(transport=httpx.MockTransport(lambda _: httpx.Response(422, json=body)))
+
+    with pytest.raises(ProviderError) as raised:
+        provider.search(SearchRequest(query="hi"))
+
+    assert (raised.value.kind, raised.value.status_code) == (kind, 422)
+
+
 @pytest.mark.integration
 @pytest.mark.skipif(not os.getenv("BRAVE_SEARCH_API_KEY"), reason="BRAVE_SEARCH_API_KEY not set")
 def test_live_search_returns_results() -> None:

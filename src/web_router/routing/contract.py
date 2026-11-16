@@ -1,6 +1,7 @@
 """The router contract's types: what a router is shown, and what it may answer.
 
-Experimental: every name here may change before 1.0.
+:class:`Budget` is stable; the router's types -- :class:`Candidate`, :class:`RouteRequest`,
+:class:`RouteDecision` and :class:`Plan` -- are experimental and may change before 1.0.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from pydantic import ConfigDict
 
 from web_router._urls import shown
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
+from web_router.exceptions_typed import InvalidParameterError
 from web_router.types_decision import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
@@ -67,13 +69,14 @@ class Budget:
     def __post_init__(self) -> None:
         """
         Raises:
-            ValueError: for a cap that is not a finite number of 0 or more -- negative, text, a bool, NaN,
+            InvalidParameterError: a :class:`ValueError`, for a cap that is not a finite number of 0 or
+                more -- negative, text, a bool, NaN,
                 infinity, or too large for a float: it would cap nothing or everything, or fail later.
         """
         for name in ("max_cost_usd", "time_limit_s"):
             value = getattr(self, name)
             if value is not None and not _finite_cap(value):
-                raise ValueError(MSG_BUDGET_VALUE.format(name=name, value=value))
+                raise InvalidParameterError(name, MSG_BUDGET_VALUE.format(name=name, value=value))
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -89,7 +92,7 @@ class Candidate:
     """The backend that would serve it, by registry name."""
 
     est_cost_usd: float | None = None
-    """Its estimated cost in US dollars, at list price. ``None`` when unknown or billed by tokens."""
+    """Its estimated cost in US dollars, at list price, or a token-billed backend's measured mean; ``None`` unknown."""
 
     est_latency_s: float | None = None
     """Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured."""

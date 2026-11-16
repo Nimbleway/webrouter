@@ -8,7 +8,7 @@ credentials, finds the endpoint, and keeps three guarantees (credentials go
 only to the vendor's host, no input is dropped or invented, writes are
 opt-in). Every endpoint listed here reads: none sends, publishes, writes or
 generates media, and none is a raw model call, though some return what an AI
-engine answered as data. See the README's "Vendor data" section for the API.
+engine answered as data. See https://docs.webrouter.net/vendors for the API.
 
 Every entry is written from the vendor's own documentation. **Checked** says
 how: `docs <date>` means the entry was transcribed from the vendor's reference

@@ -54,7 +54,6 @@ from web_router.constants import (
     MSG_BROWSER_UNKNOWN_STATE,
     MSG_EXTRACT_FAILED,
     MSG_EXTRACT_NO_DOCUMENT,
-    MSG_EXTRACT_NOTHING_RETURNED,
     MSG_JOB_CANCELLED,
     MSG_JOB_FAILED,
     MSG_JOB_NO_DETAIL,
@@ -87,11 +86,13 @@ from web_router.exceptions import (
     describe,
 )
 from web_router.live_data_compat import TemplateMethods
+from web_router.providers._credential import _CredentialMixin
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
-from web_router.providers._error_pages import split_error_pages
+from web_router.providers._error_pages import named_failures, split_error_pages
+from web_router.providers._exhausted import nothing_returned
 from web_router.providers._page import AsyncPage, SyncPage
+from web_router.routing.metered import collected_cost
 from web_router.types import (
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -112,6 +113,7 @@ from web_router.types import (
     SearchResponse,
     StealthLevel,
 )
+from web_router.types_browse import BrowseProgress
 from web_router.types_live_data import LiveDataRequest, LiveDataResponse, LiveDataSource, LiveDataSourcePage
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
@@ -133,7 +135,7 @@ _ResponseT = TypeVar("_ResponseT")
 _ResponseT_co = TypeVar("_ResponseT_co", covariant=True)
 
 
-class _BaseProvider(_DeadlineMixin, abc.ABC):
+class _BaseProvider(_CredentialMixin, _DeadlineMixin, abc.ABC):
     """What a provider is, whichever method it serves."""
 
     name: ClassVar[str]
@@ -385,24 +387,22 @@ class _Collected:
     def __init__(self, provider: str, requested: list[str]) -> None:
         self.provider = provider
         self.requested = requested
-        # Whoever actually answered, which is not always `provider`: `auto` delegates, and the response must name the
-        # backend that served the call rather than the one that chose it.
+        # Whoever answered, not always `provider`: `auto` delegates, and the response names who served, not who chose.
         self.served_by: str | None = None
         self.documents: list[ExtractedDocument] = []
         self.failures: list[ExtractFailure] = []
-        self.payloads: list[dict[str, Any]] = []
-        self.request_id: str | None = None
+        self.answers: list[ExtractResponse] = []  # each answer as it came: its payloads, request id and cost
         self.reported = 0  # failures a backend reported in an answer, not a call that raised
         self.errors: list[tuple[list[str], ProviderError | DeadlineExceededError]] = []
 
     def add(self, urls: list[str], response: ExtractResponse) -> None:
         self.served_by = self.served_by or response.provider
-        documents, error_pages = split_error_pages(response.documents)
+        self.answers.append(response)
+        response = named_failures(response, urls)
+        documents, error_pages = split_error_pages(response.documents, urls, [f.url for f in response.failures])
         self.documents.extend(documents)
         self.failures.extend([*response.failures, *error_pages])
         self.reported += len(response.failures) + len(error_pages)
-        self.payloads.extend(response.raw or [])
-        self.request_id = self.request_id or response.request_id
         self._account_for(urls, response)
 
     def _account_for(self, urls: list[str], response: ExtractResponse) -> None:
@@ -412,8 +412,7 @@ class _Collected:
         Oxylabs returns no result tagged with the format asked for, a batching
         backend leaves a URL out of its list -- and the URL would otherwise
         vanish from a call that partly succeeded. Only reached when fewer items
-        came back than URLs went out, so a backend that canonicalizes the URL it
-        echoes is not mistaken for one that dropped it.
+        came back than URLs went out, so a rewritten echo is not read as a drop.
         """
         if len(response.documents) + len(response.failures) >= len(urls):
             return
@@ -426,7 +425,7 @@ class _Collected:
     def fail(self, urls: list[str], error: ProviderError | DeadlineExceededError) -> None:
         """Record a call that raised as a failure against each URL it carried."""
         self.errors.append((urls, error))
-        self.failures.extend(ExtractFailure(url=url, error=str(error)) for url in urls)
+        self.failures.extend(ExtractFailure.from_error(url, error) for url in urls)
 
     def resolved(self) -> ExtractResponse:
         # Not `if self.failures`: an empty answer is the one outcome a caller cannot tell from a page with no text.
@@ -436,8 +435,9 @@ class _Collected:
             provider=self.served_by or self.provider,
             documents=self._in_request_order(),
             failures=self.failures,
-            request_id=self.request_id,
-            raw=self.payloads or None,
+            request_id=next((answer.request_id for answer in self.answers if answer.request_id), None),
+            raw=[payload for answer in self.answers for payload in answer.raw or []] or None,
+            **collected_cost(self.answers),  # a retry's summed cost (`auto`), or each call's of a fan-out
         )
 
     def _in_request_order(self) -> list[ExtractedDocument]:
@@ -469,14 +469,11 @@ class _Collected:
                 return error
 
         failures = self.failures or [ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in self.requested]
-        detail = "; ".join(f"{failure.url}: {failure.error}" for failure in failures)
         late = [error for _, error in self.errors if isinstance(error, DeadlineExceededError)]
         if late and len(late) == len(self.errors) and not self.reported:
-            # Every URL that failed ran out of time. One that failed for a reason of its own -- a call that raised, or a
-            # URL a backend reported in its answer -- keeps the summary below, which names each.
+            # Every URL ran out of time; one that failed for a reason of its own keeps the summary below, naming each.
             return DeadlineExceededError(self.provider, late[0].seconds)
-        original = next((error.original for _, error in self.errors if isinstance(error, ProviderError)), None)
-        return ProviderError(self.provider, MSG_EXTRACT_NOTHING_RETURNED.format(failures=detail), original=original)
+        return nothing_returned(self.provider, failures, self.errors)
 
 
 class LiveDataProvider(TemplateMethods, _BaseProvider):
@@ -605,45 +602,37 @@ _ProgressT = TypeVar("_ProgressT", bound=JobProgress[Any])
 class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     """Base class for a method that is a *job* rather than a call.
 
-    The backend accepts the work, carries on with it for somewhere between a
-    minute and an hour, and answers when it is done. That shape is owned here
-    -- starting a run, backing off while it is polled, timing out, cancelling,
-    and turning a finished run into an answer or the reason there is none -- so
+    The backend accepts the work, carries on with it for somewhere between a minute and an hour, and answers when it
+    is done. That shape is owned here -- starting a run, backing off while it is polled, timing out, cancelling, and
+    turning a finished run into an answer or the reason there is none -- so
     a provider implements only how its API starts a run and how it reports one:
     :meth:`_start` and :meth:`_fetch`, plus their async counterparts.
 
-    A method built on this -- :class:`ResearchProvider` is one -- names its
-    request, progress and response types, implements :meth:`submit` and
-    :meth:`asubmit` to hand back its own :class:`Job`, says in
-    :meth:`_timed_out` what giving up on a run raises, and may put its own
-    words on the two messages below.
+    A method built on this -- :class:`ResearchProvider` is one -- names its request, progress and response types,
+    implements :meth:`submit` and :meth:`asubmit` to hand back its own :class:`Job`, says in :meth:`_timed_out` what
+    giving up on a run raises, and may put its own words on the two messages below.
 
-    A backend that answers inside the request that started it implements
-    :meth:`_start` alone, returns a ``completed`` progress from it, and sets
-    :attr:`resumable` to ``False``.
+    A backend that answers inside the request that started it implements :meth:`_start` alone, returns a ``completed``
+    progress from it, and sets :attr:`resumable` to ``False``.
 
-    One thing the types do not hold: ``_ProgressT`` is bound to
-    ``JobProgress[Any]``, so mypy does not check that a progress's
-    ``response`` is a ``_ResponseT``. A method whose progress model carries
-    some other response type type-checks anyway, and it is the method's
-    progress model -- :class:`~web_router.ResearchProgress` typing ``response``
-    as :class:`~web_router.ResearchResponse` -- that keeps the two in step.
+    One thing the types do not hold: ``_ProgressT`` is bound to ``JobProgress[Any]``, so mypy does not check that a
+    progress's ``response`` is a ``_ResponseT``. A method whose progress model carries some other response type
+    type-checks anyway, and it is the method's progress model -- :class:`~web_router.ResearchProgress` typing
+    ``response`` as :class:`~web_router.ResearchResponse` -- that keeps the two in step.
     """
 
     resumable: ClassVar[bool] = True
     """Whether a run can be polled after the call that started it returned.
 
-    ``False`` for a backend that does the whole run inside one request, which
-    has no id to come back to. Waiting for the answer works either way; only
-    handing the job around afterwards needs this.
+    ``False`` for a backend that does the whole run inside one request, which has no id to come back to. Waiting for
+    the answer works either way; only handing the job around afterwards needs this.
     """
 
     _failed_message: ClassVar[str] = MSG_JOB_FAILED
     """How a wrapped backend failure reads, with the original as ``{error}``.
 
-    Defaulted rather than required, so a method that forgets to name its own
-    still reports the backend's failure instead of an ``AttributeError`` from
-    inside the error path.
+    Defaulted rather than required, so a method that forgets to name its own still reports the backend's failure
+    instead of an ``AttributeError`` from inside the error path.
     """
 
     _not_resumable_message: ClassVar[str] = MSG_JOB_NOT_RESUMABLE
@@ -667,9 +656,8 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     def _fetch(self, request: _RequestT, job_id: str) -> _ProgressT:
         """Report where a started run is now, with the answer once it has one.
 
-        The default refuses, which is right for a backend that has no run to
-        come back to. Any backend whose :attr:`resumable` is ``True`` overrides
-        this.
+        The default refuses, which is right for a backend that has no run to come back to. Any backend whose
+        :attr:`resumable` is ``True`` overrides this.
         """
         raise ProviderError(self.name, self._not_resumable_message.format(provider=self.name))
 
@@ -753,9 +741,8 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
     def state_of(self, reported: str, states: Mapping[str, JobState]) -> JobState:
         """Translate a backend's own run status through its table.
 
-        A status the table does not list raises rather than being passed
-        through: an unrecognized state is a backend that has changed under us,
-        and treating it as "still running" would poll a finished job forever.
+        A status the table does not list raises rather than being passed through: an unrecognized state is a backend
+        that has changed under us, and treating it as "still running" would poll a finished job forever.
         """
         return _translate_state(self.name, reported, states, MSG_JOB_UNKNOWN_STATE)
 
@@ -794,12 +781,10 @@ class JobProvider(_BaseProvider, Generic[_RequestT, _ProgressT, _ResponseT]):
 class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     """A run in progress, and the handle you wait on.
 
-    Polling backs off as the run goes on, so a job that takes an hour is not
-    asked about two thousand times, and :meth:`result` can be called more than
-    once -- the answer is kept once it arrives rather than re-fetched. Each
-    method subclasses this for its own name, and sets the class attributes
-    below where its runs call for a different wait: :class:`ResearchJob` is
-    one.
+    Polling backs off as the run goes on, so a job that takes an hour is not asked about two thousand times, and
+    :meth:`result` can be called more than once -- the answer is kept once it arrives rather than re-fetched. Each
+    method subclasses this for its own name, and sets the class attributes below where its runs call for a different
+    wait: :class:`ResearchJob` is one.
     """
 
     default_timeout: ClassVar[float | None] = JOB_TIMEOUT
@@ -816,6 +801,8 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
 
     decision: Any = None
     """The answer's ``decision``: under a budget, the effort it mapped and what it charged the start."""
+
+    stamp: Callable[[Any], Any] | None = None  # applied once to the finished answer: what the run took and cost
 
     def __init__(
         self,
@@ -855,13 +842,13 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     def status(self) -> _ProgressT:
         """Ask the backend where the run is now; a finished run is not asked again, and its last progress stands."""
         if not self._progress.is_terminal:
-            self._progress = self._provider.poll(self._request, self.job_id)
+            self._progress = self._stamped(self._provider.poll(self._request, self.job_id))
         return self._progress
 
     async def astatus(self) -> _ProgressT:
         """Async counterpart of :meth:`status`."""
         if not self._progress.is_terminal:
-            self._progress = await self._provider.apoll(self._request, self.job_id)
+            self._progress = self._stamped(await self._provider.apoll(self._request, self.job_id))
         return self._progress
 
     def result(self, *, timeout: float | _Default | None = _Default.TIMEOUT) -> _ResponseT:
@@ -894,17 +881,15 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
     def _wait_until(self, deadline: float | None, timeout: float | None) -> _ResponseT:
         """Poll until the run finishes or ``deadline`` passes.
 
-        The deadline is checked before each poll as well as before each sleep.
-        A run that finished while nobody was looking -- which is every run a
-        synchronous backend serves -- is answered even when the budget is
-        already spent: it has been paid for, and throwing the answer away to
-        report a timeout would be the one outcome nobody wants.
+        The deadline is checked before each poll as well as before each sleep. A run that finished while nobody was
+        looking -- which is every run a synchronous backend serves -- is answered even when the budget is already
+        spent: it has been paid for, and throwing the answer away to report a timeout would be the one outcome nobody
+        wants.
 
-        A poll that timed out past the deadline, or that the deadline cut off, raises the method's timeout,
-        with the failure as its cause and the job id the caller needs to come back to a run still going,
-        and billing; any other failure, an auth error or an unrecognized status, is raised as it is. Every
-        call inside the run is clamped to what the caller has left, so a status request that stalls fails
-        exactly as the deadline arrives.
+        A poll that timed out past the deadline, or that the deadline cut off, raises the method's timeout, with the
+        failure as its cause and the job id the caller needs to come back to a run still going, and billing; any other
+        failure, an auth error or an unrecognized status, is raised as it is. Every call inside the run is clamped to
+        what the caller has left, so a status request that stalls fails exactly as the deadline arrives.
         """
         for delay in self._poll_delays():
             try:
@@ -974,6 +959,17 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
             self._progress = cast(Any, progress).model_copy(update={"response": response})
         return response
 
+    def meter(self, stamp: Callable[[Any], Any]) -> None:
+        """Put ``stamp`` on the answer once, as soon as the run has one: now, or when a poll first sees it."""
+        self.stamp = stamp
+        self._progress = self._stamped(self._progress)
+
+    def _stamped(self, progress: _ProgressT) -> _ProgressT:
+        if self.stamp is None or progress.response is None:
+            return progress
+        response, self.stamp = self.stamp(progress.response), None  # once: asking again must not move the clock
+        return cast(_ProgressT, cast(Any, progress).model_copy(update={"response": response}))
+
     def __repr__(self) -> str:
         return f"<{type(self).__name__} provider={self.provider!r} job_id={self.job_id!r} state={self.state!r}>"
 
@@ -981,16 +977,13 @@ class Job(Generic[_RequestT, _ProgressT, _ResponseT]):
 class ResearchProvider(JobProvider[ResearchRequest, ResearchProgress, ResearchResponse]):
     """Base class for an agentic research backend.
 
-    Research is a *job* rather than a call: the backend accepts the question,
-    works on it for somewhere between a minute and an hour, and answers when it
-    is done. That shape is owned by :class:`JobProvider`, so a provider
-    implements only how its API starts a run and how it reports one --
-    :meth:`_start` and :meth:`_fetch`, plus their async counterparts -- and
-    every backend then waits, times out and reports the same way.
+    Research is a *job* rather than a call: the backend accepts the question, works on it for somewhere between a
+    minute and an hour, and answers when it is done. That shape is owned by :class:`JobProvider`, so a provider
+    implements only how its API starts a run and how it reports one -- :meth:`_start` and :meth:`_fetch`, plus their
+    async counterparts -- and every backend then waits, times out and reports the same way.
 
-    A backend that answers inside the request that started it -- Perplexity's
-    deep research model is one -- implements :meth:`_start` alone, returns a
-    ``completed`` progress from it, and sets :attr:`resumable` to ``False``.
+    A backend that answers inside the request that started it -- Perplexity's deep research model is one -- implements
+    :meth:`_start` alone, returns a ``completed`` progress from it, and sets :attr:`resumable` to ``False``.
     """
 
     _failed_message = MSG_RESEARCH_FAILED
@@ -1027,14 +1020,12 @@ class ResearchProvider(JobProvider[ResearchRequest, ResearchProgress, ResearchRe
     def validate(self, request: ResearchRequest) -> None:
         """Raise :class:`UnsupportedParameterError` for any option this backend does not map.
 
-        ``output_schema`` and ``records`` are ordinary options here rather than
-        special cases: a backend with no structured output simply does not
-        declare ``output_schema``, and asking it for one says so in the same
+        ``output_schema`` and ``records`` are ordinary options here rather than special cases: a backend with no
+        structured output simply does not declare ``output_schema``, and asking it for one says so in the same
         sentence a backend that cannot geo-target a search does.
 
-        Then the backend's own conditions, through :meth:`missing_parameters` and
-        :meth:`refused_values`: an option it maps only alongside another, or at
-        some values. Raised before a run starts, so nothing is billed for it.
+        Then the backend's own conditions, through :meth:`missing_parameters` and :meth:`refused_values`: an option it
+        maps only alongside another, or at some values. Raised before a run starts, so nothing is billed for it.
         """
         self._reject_unmapped(request)
         self._check_conditions(request)

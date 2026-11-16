@@ -141,7 +141,7 @@ vendor's own pricing page (`unknown` if it publishes none), and run
    table, and `tests/test_contract.py` fails if a provider is missing from it.
 6. Add tests — parameter mapping and response normalization against a recorded
    payload, plus one `@pytest.mark.integration` live test — and a row in the
-   README support table.
+   `docs/providers.mdx` support table.
 
 ### An extract provider
 
@@ -177,7 +177,7 @@ example.
    `.env.example`.
 6. Add `tests/providers/test_<name>.py` and the live checks in
    `tests/test_integration_surface.py`, which run only against providers
-   declaring the format under test. Add a row to the README's extract support
+   declaring the format under test. Add a row to `docs/providers.mdx`'s extract support
    table.
 
 If your auth scheme is not a single header, override `_auth_headers` rather than
@@ -228,7 +228,7 @@ provider-specific. Mapping one properly makes it work the same way across every
 backend, for every user.
 
 The clearest gaps right now: `locale` on Exa and Parallel and `recency` on WebIQ
-on the search side (the README support table lists the rest), and on the extract
+on the search side (the `docs/providers.mdx` support table lists the rest), and on the extract
 side nobody maps JS rendering or geo-targeting even though most of those
 backends support both.
 
@@ -248,7 +248,7 @@ providers map most of them. To add one:
    rejection test so the option is no longer listed as unmapped.
 4. Run `make contracts`, and move the option out of the contract's
    `vendor_options` — the test fails while a mapped field is still listed there.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
 
 Watch for options that mean the same thing but take a different form. Tavily's
 `country`, for instance, wants a lowercase country name and rejects the ISO
@@ -329,9 +329,14 @@ tag (`gh workflow run release.yml --ref vX.Y.Z -f tag=vX.Y.Z`): it builds the sd
 approves the `pypi` environment, publishes them to
 [PyPI](https://pypi.org/project/webrouter/) through trusted publishing, so no
 upload token exists. It refuses a tag that is not on `main`, does not match
-`__version__`, or is not above every version already on PyPI. Once PyPI has
-it, `mcp-publisher publish` lists that version in the
-[MCP Registry](https://registry.modelcontextprotocol.io).
+`__version__` or `server.json`, or is not above every version already on PyPI.
+Once PyPI has it, the [MCP Registry](.github/workflows/mcp-registry.yml) job
+lists that version in the [MCP Registry](https://registry.modelcontextprotocol.io),
+signed in with the run's OIDC token. If only that job fails, use "Re-run failed
+jobs" (re-running all jobs stops at the PyPI version check), or run the workflow
+on the tag (`gh workflow run mcp-registry.yml --ref vX.Y.Z -f tag=vX.Y.Z`). The
+hand run needs a tag that already has `mcp-registry.yml`, so tags cut before it
+existed can't be listed this way.
 
 ## AI coding agents
 

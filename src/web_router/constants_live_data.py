@@ -69,11 +69,7 @@ MCP_METHOD_LIVE_DATA: Final = "live_data"
 MCP_LIVE_DATA_SOURCES_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {
         "type": "string",
-        "description": (
-            "Keywords to find a source by -- a site, a brand, the kind of page ('amazon product', 'linkedin "
-            "jobs'). Searched by the vendor's own search where it has one, else matched here on name, site "
-            "and description. Unset lists the catalogue in order."
-        ),
+        "description": "A site, brand or kind of page, e.g. 'amazon product'. Unset, the catalogue in order.",
     },
     "limit": {"type": "integer", "minimum": 1, "description": "How many sources to list. Unset, the backend's page."},
     "offset": {"type": "integer", "minimum": 0, "description": "How many to skip first, for the next page."},
@@ -87,53 +83,33 @@ MCP_LIVE_DATA_PROPERTIES: dict[str, dict[str, Any]] = {
     "source": {"type": "string", "description": "The source's name, as `live_data_sources` lists it."},
     "inputs": {
         "type": "object",
-        "description": (
-            "The source's inputs, named by its input_schema from `live_data_source` -- a URL for some, an id, "
-            "a slug or a search term for others. Omit it only for a source whose schema names nothing."
-        ),
+        "description": "Named by the source's input_schema, from `live_data_source`.",
     },
     "format": {
         "type": "string",
         "enum": list(get_args(ExtractFormat)),
-        "description": (
-            "Also return the page the records came from, in this representation. Unset returns the records "
-            "alone, which is usually all you need."
-        ),
+        "description": "Also return the source page in this form. Unset, the records alone.",
     },
 }
 
 MCP_DESC_LIVE_DATA_SOURCES = (
-    "List live data sources: ready-made scrapers for one site each, turning one kind of "
-    "page -- a retailer's product page, a job listing, a search results page -- into records with "
-    "fixed fields, fetched fresh on every run. Returns in about a second, with each source's name, "
-    "site, what it extracts, the names of the inputs a run must pass (`required_inputs`) and one input "
-    "the vendor recorded a run with (`sample_inputs`). Call it before `live_data` to find a source for "
-    "the site at hand; a catalogue can be long, so pass `query` with the site or the kind of page, and "
-    "page with `limit` and `offset`. The answer's `search` says whether the vendor searched ('native') "
-    "or the catalogue was matched here ('local'). Leave `provider` out to search every vendor configured "
-    "here at once: each row names its `provider`, which `live_data_source` and `live_data` then take, and "
-    "`failures` names any vendor that could not answer. Then "
-    "`live_data_source` for the full schemas and samples."
+    "List live data sources: ready-made scrapers that turn one site's pages (a product, a job "
+    "listing) into records with fixed fields. About a second. Pass `query` with the site or page kind; "
+    "page with `limit` and `offset`. Leave `provider` out to search every configured vendor: each row "
+    "names its `provider`, and `failures` names a vendor that could not answer. Each lists its "
+    "`required_inputs` and `sample_inputs`; `live_data_source` has the full schemas."
 )
 
 MCP_DESC_LIVE_DATA_SOURCE = (
-    "Describe one live data source: its input_schema, which says exactly what `live_data` must pass "
-    "as `inputs`, its output_schema, which says what each record will hold, and its `samples`, runs "
-    "the vendor recorded -- an input and what it returned -- to copy a first run from. Returns in "
-    "about a second and bills nothing. Read it before running a source you have not run in this "
-    "conversation. Names, inputs and fields are the vendor's own: the same site differs between vendors."
+    "Describe one live data source: its input_schema (what `live_data` passes as `inputs`), output_schema "
+    "and recorded sample runs. About a second; free. Read it before a source's first run here."
 )
 
 MCP_DESC_LIVE_DATA = (
-    "Run a live data source and get structured records back -- the site's fields, scraped for this "
-    "call by a scraper built for that site, rather than prose to read through. One record for a "
-    "product page, many for a search or a listing. Takes seconds, up to a few minutes on some "
-    "vendors, and bills one run on the vendor's account at the vendor's own rate. Pass the `provider` "
-    "that `live_data_sources` named for the source, since a source's name belongs to one vendor; it may "
-    "be left out only when one vendor is configured. Use it when `live_data_sources` lists a "
-    "source for the site and item you have; use `extract` for a page no source covers, and `search` "
-    "to find pages. `inputs` are the source's own, from `live_data_source`. A run the backend could "
-    "not complete is an error, never an empty answer."
+    "Run a live data source and get structured records, scraped for this call. Seconds, up to minutes; "
+    "bills one run at the vendor's rate. Pass the `provider` `live_data_sources` named (optional with one "
+    "vendor configured); `inputs` come from `live_data_source`. For a page no source covers use "
+    "`extract`. A failed run is an error, never an empty answer."
 )
 
 # -- search -----------------------------------------------------------------
@@ -185,7 +161,7 @@ LIVE_DATA_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 Spelled out rather than imported, because :mod:`web_router.constants` imports
 this module; ``tests/test_live_data_contract.py`` checks each matches the
 variable the provider's other methods read. A live data run fetches and
-parses on the backend's account, so there is no keyless tier, and no ``auto``:
+parses on the backend's account, so there is no keyless tier, and no ``auto`` fallback:
 a source's name belongs to one vendor. Bright Data's live data needs its token
 alone -- the zone is its Web Unlocker's, which a scraper does not use.
 Oxylabs' live data runs on its Web API, whose key is not the Realtime

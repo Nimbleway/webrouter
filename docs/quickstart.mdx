@@ -22,19 +22,22 @@ This page takes you from install to a working search and extract in four steps. 
     ```
     </CodeGroup>
 
-    The package is `webrouter`; the import name is `web_router`. Put the keys you hold in your environment or a `.env` file; none is required. [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names each variable.
+    The package is `webrouter`; the import name is `web_router`. Put the keys you hold in your environment; none is required. The library reads the environment only, so load a `.env` yourself: `uv run --env-file .env python app.py`, or `load_dotenv()` from `python-dotenv`. [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names each variable.
   </Step>
   <Step title="Search with no key">
     ```python quickstart.py wrap
     from web_router import WebRouter
 
-    response = WebRouter().search("what is retrieval augmented generation", max_results=5)
+    with WebRouter() as router:
+        response = router.search("what is retrieval augmented generation", max_results=5, timeout=10)
 
     for result in response.results:
         print(result.title, result.url)
 
     print(response.provider)  # which backend actually answered
     ```
+
+    `with` closes the router's connections when the block ends, and `timeout` caps how many seconds the call waits.
 
     <Accordion title="Example output">
     ```text
@@ -50,11 +53,14 @@ This page takes you from install to a working search and extract in four steps. 
   </Step>
   <Step title="Read the pages you found">
     ```python
-    pages = WebRouter().extract(response.urls[:3], format="markdown")
+    with WebRouter() as router:
+        pages = router.extract(response.urls[:3], format="markdown", timeout=30)
 
     for document in pages.documents:
         print(document.url, len(document.content))
     ```
+
+    Under a `timeout`, the pages that came back in time are in `pages.documents` and the rest in `pages.failures`.
   </Step>
   <Step title="Name a provider">
     Once you have a key for one, name it. `Provider` is an enum of the built-in backends, so your editor completes it and a typo is caught where you type it.
@@ -62,10 +68,9 @@ This page takes you from install to a working search and extract in four steps. 
     ```python
     from web_router import Provider, WebRouter
 
-    router = WebRouter(Provider.NIMBLE)  # reads NIMBLE_API_KEY from the environment
-    response = router.search("who founded nimbleway", max_results=5, country="US")
-
-    router.search("...", provider=Provider.BRAVE)  # per-call override
+    with WebRouter(Provider.NIMBLE) as router:  # reads NIMBLE_API_KEY from the environment
+        response = router.search("who founded nimbleway", max_results=5, country="US")
+        router.search("...", provider=Provider.BRAVE)  # per-call override
     ```
 
     A backend that does not map an option you set, such as `country`, raises `UnsupportedParameterError` rather than quietly running the search unfiltered. See [Providers](/providers) for which keys unlock which backends.
@@ -89,19 +94,23 @@ asyncio.run(main())
 ```
 </Accordion>
 
+Serving requests? [Running in production](/production) covers timeouts, one shared router, closing it, threads, logging and warm-up.
+
 ## Install options
 
 You can install fewer extras by naming them in place of `all`. Extras are named after the **methods you call**, not the backends behind them: `search` brings in every provider that can serve one, so choosing between them stays a runtime decision.
 
 | Extra | Installs |
 | --- | --- |
-| `search`, `extract`, `research` | Every provider that can serve that method |
+| `search`, `extract`, `research`, `answer` | Every provider that can serve that method |
 | `browser` | Playwright, so a browser handle can drive the page |
 | `mcp` | The MCP server, which exposes the methods as tools. Add `browser` for its `browser_*` tools |
 | `evals` | The OpenAI and Anthropic SDKs behind the built-in judges of `evaluate()` |
 | `langchain` | `langchain-core` for the LangChain tools |
 | `remote` | httpx for the built-in `remote` router |
-| `all` | Everything above |
+| `vendors` | httpx for `call_vendor()` and the vendor catalog |
+| `aws` | `botocore`, for AWS AgentCore Web Search |
+| `all` | Every method's providers, the MCP server, `browser`, `vendors`, `aws` and `remote`. Not `evals` or `langchain`: add those by name, as in `webrouter[all,evals]` |
 
 `open_browser` needs no Playwright: a vendor session opens over httpx, which `[all]` installs, and `local` needs only the standard library and a Chrome or Chromium.
 

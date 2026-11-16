@@ -9,6 +9,7 @@ from __future__ import annotations
 from web_router.constants_live_data import MSG_LIVE_DATA_SOURCE_NOT_FOUND
 from web_router.exceptions import ProviderError
 from web_router.live_data_compat import deprecated_keyword
+from web_router.types_errors import ERROR_KIND_NOT_FOUND
 
 
 class LiveDataSourceNotFoundError(ProviderError):
@@ -34,7 +35,12 @@ class LiveDataSourceNotFoundError(ProviderError):
         source = deprecated_keyword(type(self).__name__, old, "template", "source", source)
         self.source = source
         self.template = source
-        super().__init__(provider, MSG_LIVE_DATA_SOURCE_NOT_FOUND.format(name=source) + hint, original=original)
+        super().__init__(
+            provider,
+            MSG_LIVE_DATA_SOURCE_NOT_FOUND.format(name=source) + hint,
+            original=original,
+            kind=ERROR_KIND_NOT_FOUND,
+        )
 
 
 class LiveDataJobError(ProviderError):

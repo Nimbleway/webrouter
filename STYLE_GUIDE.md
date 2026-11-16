@@ -233,7 +233,7 @@ A pull request should:
 - pass `make check` before review
 - explain *why* in the description, not just what changed
 - update `CHANGELOG.md` under `## [Unreleased]` if users would notice
-- update the README support table if provider capabilities changed
+- update the `docs/providers.mdx` support table if provider capabilities changed
 - include live-call evidence when it touches a provider mapping
 
 Keep PRs small enough to review properly. If a change is large by nature, say so
