@@ -18,6 +18,7 @@ from web_router.data_api_discovery import site_matches
 from web_router.exceptions import ConfigurationError
 from web_router.vendors.catalog import load_vendor_file, reload_catalog
 from web_router.vendors.credentials import EnvCredentials
+from web_router.vendors.sites import vendors_for_site
 
 CLIPS: dict[str, Any] = {
     **_COMMON,
@@ -132,3 +133,9 @@ def test_a_bad_site_is_named_by_position_never_by_value(tmp_path: Path) -> None:
     vendor["sites"] = ["youtube.com"]
     path.write_text(json.dumps(vendor))
     assert load_vendor_file(path).sites == ["youtube.com"]
+
+
+def test_vendors_for_site_takes_subdomains_and_not_lookalikes() -> None:
+    catalog = reload_catalog()
+    assert [vendor.vendor for vendor in vendors_for_site(catalog, "https://m.clips.test/x")] == ["clips"]
+    assert vendors_for_site(catalog, "https://notclips.test/x") == []

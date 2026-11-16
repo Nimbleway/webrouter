@@ -315,7 +315,8 @@ src/web_router/
 │                       schema_endpoint.py), catalog.py, credentials.py, tokens.py
 │                       (OAuth tokens), masking.py, plan.py (inputs placed),
 │                       values.py (credentials resolved), caller.py (sent),
-│                       response.py (the answer, masked), types.py
+│                       response.py (the answer, masked), sites.py (the vendors
+│                       that serve a page's site, and their endpoints for it), types.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
 │   ├── methods.py      the library method behind each provider-picking tool: its

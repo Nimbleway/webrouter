@@ -32,6 +32,7 @@ from web_router.types_data_api import DataApiMatch
 from web_router.vendors.catalog import VendorCatalog, get_catalog
 from web_router.vendors.credentials import CredentialSource, missing_credentials
 from web_router.vendors.schema import Vendor, VendorEndpoint
+from web_router.vendors.sites import vendors_for_site
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +114,7 @@ def site_matches(
     catalog = catalog or get_catalog()
     parts = urlsplit(url)
     matches: list[DataApiMatch] = []
-    for owner in catalog.for_site(url):
+    for owner in vendors_for_site(catalog, url):
         ranked = catalog.find(f"{parts.path} {parts.query}", vendor=owner.vendor, kind="read")
         endpoints = [*ranked, *(item for item in owner.endpoints if item.kind == "read" and item not in ranked)]
         for endpoint in endpoints:
