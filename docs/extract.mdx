@@ -119,8 +119,14 @@ same rule turns these into failures rather than documents:
 - **A login wall.** A page titled "Sign in" or "Login", one that asks you to sign
   in to view it, or one LinkedIn sent to its `/authwall`.
 
-Like any failure, `auto` tries the next backend for them, and a call where
-every URL was one of them raises. The challenge and login checks read the
+Each failure carries a `kind` and the page's `status_code`. A 404 or 410 is
+`target`, whatever the page shows: the site says the page is gone, every
+backend would read the same, so `auto` does not try another for that URL. Any
+other error status, or a challenge or login wall served with a status below
+400, is `upstream`, and `auto` tries the next backend for it. So is a 404 that
+a redirect reached, since it is the landing page's, not the URL asked for,
+when the page can be matched to the URL it came from. A
+call where every URL failed raises. The challenge and login checks read the
 title, and the text only of a short page, so an article that mentions a login
 page stays a document.
 

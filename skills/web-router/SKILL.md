@@ -89,9 +89,12 @@ Beside the ladder:
 - For "latest", "current" or version facts, `extract` the canonical page (the
   release page, the official docs) — a search snippet can be the backend's
   stale copy.
-- Check each document's `status_code`: a 403, 404 or 5xx page is an error
-  page, not an answer.
-- Check `failures` on an `extract`: a URL listed there was not read at all.
+- Check `failures` on an `extract`: an error page (status 400 or more), a
+  bot challenge or a login wall lands there, not in `documents`. Its `kind`
+  and `status_code` say why; `target` (a 404 or 410) means the page is gone.
+- An `extract` that read no URL raises. When its kind is `target` (a
+  404 or 410 page), that is the site's own answer: do not retry it on another
+  provider. Other statuses may read on another backend.
 - When a result does not answer the question, rephrase the query or read
   another source rather than guess.
 

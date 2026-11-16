@@ -6,7 +6,7 @@ own credentials from your own environment, so no key ever leaves the machine;
 with no key at all the ``auto`` chain still searches and extracts through the
 keyless backends.
 
-Seventeen tools: ``search`` and ``extract`` answer in about a second, ``research``
+Among its tools: ``search`` and ``extract`` answer in a few seconds, ``research``
 starts an agentic run and hands back a handle, ``research_status`` polls it,
 ``browse`` and ``browse_status`` do the same for a hosted browser agent's task,
 and ``fetch_raw`` returns the untouched payload behind any shaped result --
