@@ -65,7 +65,7 @@ def _default_level(provider: str, method: str) -> str | None:
 def _base_price(provider: str, method: str, slots: Slots) -> float | None:
     base = Slots(slots.tier, slots.depth, ()).mode
     row = prices.price(provider, method, base)
-    if row is not None:
+    if row is not None and (slots.tier is None or slots.depth is not None):
         return _row_price(row, provider, method, base)
     tier = prices.price(provider, method, slots.tier) if slots.tier else None
     if tier is None or tier.kind != KIND_TIER:

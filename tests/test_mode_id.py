@@ -62,14 +62,23 @@ def test_an_unknown_part_is_refused(mode: str) -> None:
 
 @pytest.mark.parametrize(
     "mode",
-    ["acme-turbo+acme-turbo", "lite+deep", "acme-full+deep", "acme-extras+acme-extras", "acme-turbo++lite"],
+    [
+        "acme-turbo+acme-turbo",
+        "lite+deep",
+        "acme-full+deep",
+        "acme-extras+acme-extras",
+        "acme-turbo++lite",
+        *(":", "turbo@", "@", ":@deep"),  # an empty vendor or depth part in the old spellings
+    ],
 )
 def test_a_slot_filled_twice_or_an_empty_part_is_refused(mode: str) -> None:
     with pytest.raises(InvalidParameterError):
         parse_mode("acme", mode, Acme)
 
 
-@pytest.mark.parametrize("text", ["", "search:", "a:b:c:d", "search:acme:lite:x", ":acme"])
+@pytest.mark.parametrize(
+    "text", ["", "search:", "a:b:c:d", "search:acme:lite:x", ":acme", "acme:acme-turbo@", "acme@", "acme:@deep"]
+)
 def test_an_id_of_the_wrong_shape_is_refused(text: str) -> None:
     with pytest.raises(InvalidParameterError):
         parse_id(text, _acme)

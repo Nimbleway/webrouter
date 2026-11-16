@@ -51,7 +51,7 @@ ModeKind = Literal["tier", "content", "flag", "depth", "effort"]
 
 @dataclass(frozen=True)
 class Tier:
-    """A vendor tier: fields depth never writes (Exa's ``type``), merged into the built payload."""
+    """A vendor tier: ``wire`` is the payload change it makes, to fields depth never writes (Exa's ``type``)."""
 
     wire: Mapping[str, Any] = field(default_factory=dict)
     does: str | None = None
@@ -59,7 +59,7 @@ class Tier:
 
 @dataclass(frozen=True)
 class Content:
-    """A content switch that replaces what depth sends, so it fills the depth slot as the level ``as_depth``."""
+    """A content switch: ``wire`` replaces what depth sends, so it fills the depth slot as the level ``as_depth``."""
 
     as_depth: str
     wire: Mapping[str, Any] = field(default_factory=dict)
@@ -68,7 +68,7 @@ class Content:
 
 @dataclass(frozen=True)
 class Flag:
-    """A true add-on: a field nothing else writes, so it combines with any tier and depth."""
+    """A true add-on: ``wire`` changes a field nothing else writes, so it combines with any tier and depth."""
 
     wire: Mapping[str, Any] = field(default_factory=dict)
     does: str | None = None
@@ -150,14 +150,14 @@ def legacy_parts(provider: str, vendor: str, depth: str = "") -> list[str]:
 
 
 def parse_mode(provider: str, text: str | None, declared: Declared = NO_MODES) -> str | None:
-    """``text``, a mode of ``provider``, in its canonical spelling; ``None`` for no mode.
-
-    Also reads the old spellings: ``ultra-fast@deep`` (the benchmarks') and ``:ultra-fast`` (the price list's).
-    """
+    """``text``, a mode of ``provider``, canonical (``None`` for none); also the old ``x@deep`` and ``:x``."""
     if not text:
         return None
-    if text.startswith(LEGACY_PRICE_MARK) or LEGACY_DEPTH_MARK in text:
-        vendor, _, depth = text.removeprefix(LEGACY_PRICE_MARK).partition(LEGACY_DEPTH_MARK)
+    priced = text.startswith(LEGACY_PRICE_MARK)
+    if priced or LEGACY_DEPTH_MARK in text:
+        vendor, mark, depth = text.removeprefix(LEGACY_PRICE_MARK).partition(LEGACY_DEPTH_MARK)
+        if (priced and not vendor) or (mark and not depth):
+            raise InvalidParameterError(MODE_FIELD, MSG_MODE_EMPTY.format(text=text))
         return split_mode(provider, legacy_parts(provider, vendor, depth), declared).mode
     return split_mode(provider, text.split(PART_SEP), declared).mode
 

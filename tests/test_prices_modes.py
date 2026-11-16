@@ -56,7 +56,9 @@ def acme(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         ("acme-extras+acme-turbo", 0.0045),  # read in any order
         ("acme-turbo+lite", 0.004),  # the default level is the depth a tier assumes when it assumes none
         ("acme-pro+deep", 0.006),  # depth_assumed matches
-        ("acme-pro+acme-extras", 0.007),  # the tier's own row plus the flag
+        ("acme-pro+acme-extras", None),  # acme-pro assumes deep, the call sends no depth
+        ("acme-pro+deep+acme-extras", 0.007),  # the tier at the depth it assumes, plus the flag
+        ("acme-turbo+lite+acme-extras", 0.005),  # the default level counts as no depth
         ("deep+acme-extras", 0.021),  # a depth's row plus the flag
         ("acme-turbo+deep", None),  # a tier at a depth it was not priced at
         ("acme-turbo+acme-full", None),
@@ -105,6 +107,8 @@ def test_every_vendor_mode_row_says_what_it_is() -> None:
         {"mode": "acme-x", "kind": "flag", "depth_assumed": "lite"},
         {"mode": "acme-x", "kind": "content"},
         {"mode": "acme-x", "kind": "tier", "depth_assumed": "high"},
+        {"mode": "acme-x", "kind": "flag", "adds_usd": float("nan")},
+        {"mode": "acme-x", "kind": "flag", "adds_usd": -1.0},
     ],
 )
 def test_a_row_whose_mode_fields_do_not_fit_is_refused(fields: dict[str, Any]) -> None:

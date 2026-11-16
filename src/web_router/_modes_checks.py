@@ -5,6 +5,7 @@ It imports neither ``modes`` nor ``prices``, so both may import it.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from web_router.constants_modes import (
@@ -21,6 +22,7 @@ from web_router.constants_modes import (
     MSG_DECLARED_TWICE,
     MSG_ROW_MODE,
     ROW_ADDS,
+    ROW_ADDS_VALUE,
     ROW_DEPTH,
     ROW_LEVEL,
     ROW_NO_KIND,
@@ -76,5 +78,7 @@ def check_row_mode(key: Any, kind: str | None, depth_assumed: str | None, adds_u
     problem = _row_problem(provider, mode, kind, depth_assumed)
     if problem is None and adds_usd is not None and kind != KIND_FLAG:
         problem = ROW_ADDS
+    if problem is None and adds_usd is not None and not (math.isfinite(adds_usd) and adds_usd >= 0):
+        problem = ROW_ADDS_VALUE
     if problem is not None:
         raise ValueError(MSG_ROW_MODE.format(key=key, problem=problem))
