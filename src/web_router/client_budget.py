@@ -1,4 +1,4 @@
-"""``budget()`` on the routers, kept apart so ``client.py`` stops growing.
+"""``budget()`` and ``log_spend()`` on the routers, kept apart so ``client.py`` stops growing.
 
 :class:`~web_router.WebRouter` and :class:`~web_router.AsyncWebRouter` take these as
 mixins. The scopes they return live in :mod:`web_router.client_scope`, which
@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from web_router.client_spend import SpendLogging
 from web_router.routing import Budget
 
 if TYPE_CHECKING:
@@ -16,9 +17,9 @@ if TYPE_CHECKING:
     from web_router.client_scope import AsyncBudgetScope, BudgetScope
 
 
-class SyncBudget:
+class SyncBudget(SpendLogging):
     def budget(self, limits: Budget, /) -> BudgetScope:
-        """A budget several calls spend from, together; experimental.
+        """A budget several calls spend from, together.
 
         ``with router.budget(Budget(max_cost_usd=3.0, time_limit_s=600)) as b:``
         -- every call made through ``b`` (``b.search(...)``, ``b.research(...)``),
@@ -37,7 +38,7 @@ class SyncBudget:
         return BudgetScope(cast("WebRouter", self), limits)
 
 
-class AsyncBudget:
+class AsyncBudget(SpendLogging):
     def budget(self, limits: Budget, /) -> AsyncBudgetScope:
         """As on the sync router, for ``async with``; asyncio tasks started inside the block spend from it."""
         from web_router.client_scope import AsyncBudgetScope

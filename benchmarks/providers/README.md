@@ -86,7 +86,10 @@ Each run gets its own folder under `benchmarks/providers/results/`
 | `run.json` | The setup the run used |
 
 Accuracy is the judge's grade, latency is timed around the search alone, and
-there is no cost column, because no search backend states one. Only the
+there is no cost column. A call through `WebRouter` carries `cost_usd` and
+`cost_source`, the backend's own figure or an estimate from list prices; the
+scan calls each backend directly, so it gets only the figure a backend reports.
+See [Cost and budgets](https://docs.webrouter.net/budgets) and [PRICING.md](PRICING.md). Only the
 recommended order (below) reads a cost: the list price from `web_router.prices`, an
 estimate, to break ties.
 
@@ -502,7 +505,7 @@ Extract's order is measured on pages returned, not graded, and research's and
 browse's are unmeasured, so all three stay hand-ordered. `chains.py --check` exits 1 when
 the file is stale, and a unit test runs it, so a change to the frozen results
 or the price list that moves an order fails until `make chains` is run and the
-README's tables follow. For the full report behind both orders:
+provider tables in docs/providers.mdx follow. For the full report behind both orders:
 
 ```bash
 uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --set answer-simpleqa-300
@@ -655,7 +658,7 @@ measured latency. Only search and answer are measured; for extract, research
 and browse the verdict is a judgement call, and the script never makes a
 number up. The latency belongs to the router, not the tool, so the result is a
 row per router: a router declares the tools it fits as its own `route_tools`
-(see the README's Smart routing), and a caller's `route_tools` always wins.
+(see https://docs.webrouter.net/smart-routing), and a caller's `route_tools` always wins.
 
 **How it times.** A router is one of `rules` (the built-in rules router),
 `llm` (the built-in `router="llm"`, on the preset `LLM_ROUTER_PRESET` names,

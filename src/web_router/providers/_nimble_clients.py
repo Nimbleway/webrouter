@@ -66,7 +66,13 @@ class _NimbleClients(_BaseProvider):
         """
         key = self._key(api_key, async_client)
         super().__init__(api_key=key, base_url=base_url, timeout=timeout, **kwargs)
+        self._callers_client = async_client is not None
         self._connect(key, async_client)
+
+    @property
+    def holds_credential(self) -> bool:
+        """A key, or the caller's own client, which carries its own credential."""
+        return self.api_key is not None or self._callers_client
 
     def _key(self, api_key: str | None, async_client: AsyncNimble | None) -> str | None:
         return _resolve_key(api_key, async_client, self.name)

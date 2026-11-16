@@ -12,7 +12,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
-from web_router.client_requests import build_search_request
+from web_router.client_requests import build_search_request, with_timeout
 from web_router.data_api_discovery import load_catalog, matches_only, warm_catalog, with_matches
 from web_router.types import SearchResponse
 
@@ -82,6 +82,7 @@ class SyncSearch(_SearchPlan):
         recency: Recency | None = None,
         effort: ResearchEffort | None = None,
         provider_options: dict[str, Any] | None = None,
+        timeout: float | None = None,
         budget: Budget | None = None,
         data_apis: bool = True,
         data_apis_only: bool = False,
@@ -96,7 +97,11 @@ class SyncSearch(_SearchPlan):
         the ones this router holds credentials for. ``data_apis_only`` lists
         them alone and calls no web backend, so it refuses every web option
         but ``max_results``, which then caps the matches.
+
+        ``timeout`` caps the seconds the call waits, as ``Budget(time_limit_s=...)``
+        does; running out raises :class:`~web_router.DeadlineExceededError`.
         """
+        budget = with_timeout(budget, timeout)
         options = _options(search_depth, include_domains, exclude_domains, country, locale, recency, effort)
         plan = self._search_plan(
             query,
@@ -129,6 +134,7 @@ class AsyncSearch(_SearchPlan):
         recency: Recency | None = None,
         effort: ResearchEffort | None = None,
         provider_options: dict[str, Any] | None = None,
+        timeout: float | None = None,
         budget: Budget | None = None,
         data_apis: bool = True,
         data_apis_only: bool = False,
@@ -136,8 +142,10 @@ class AsyncSearch(_SearchPlan):
     ) -> SearchResponse:
         """Search the web through ``provider`` (or the router's default), with the data APIs that match.
 
-        The options are the sync router's; see :meth:`~web_router.WebRouter.search`.
+        The options are the sync router's; see :meth:`~web_router.WebRouter.search`. Prefer
+        ``timeout`` to wrapping the call in :func:`asyncio.wait_for`: it cuts each vendor call off cleanly.
         """
+        budget = with_timeout(budget, timeout)
         await asyncio.to_thread(warm_catalog, data_apis or data_apis_only)  # the first read is file IO
         options = _options(search_depth, include_domains, exclude_domains, country, locale, recency, effort)
         plan = self._search_plan(

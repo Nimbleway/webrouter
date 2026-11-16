@@ -13,15 +13,17 @@ Three steps to a first answer:
 
 1. Install with the `answer` extra: `pip install "webrouter[answer]"`
    (`make setup` in a clone installs every extra).
-2. Set one answer backend's key in your environment or `.env`, for example
+2. Set one answer backend's key in your environment, for example
    `PERPLEXITY_API_KEY` -- [Configuration](/configuration) lists each one's variable.
+   The library reads the environment only; keys in a `.env` file need loading
+   first, with `uv run --env-file .env python app.py` or `python-dotenv`.
 3. Ask:
 
 ```python wrap
 from web_router import WebRouter
 
 with WebRouter() as router:
-    response = router.answer("who won the 2022 world cup final")  # the one backend you hold a key for
+    response = router.answer("who won the 2022 world cup final")  # auto: the backends you hold keys for
 
 print(response.answer)
 for citation in response.citations:
@@ -35,8 +37,10 @@ Argentina won, beating France 4-2 on penalties after a 3-3 draw through extra ti
 ...
 ```
 
-With more than one key set, name the backend: `router.answer(q, provider="linkup")`.
-Which one: they score alike on accuracy (see [the answer comparison](https://github.com/Nimbleway/webrouter/blob/main/README.md#answer)), so pick
+On a router built with no default, `provider` unset runs `auto`: it tries the
+answer backends you hold keys for in ranked order and passes over one that fails
+or answers with nothing; each one it tries bills. To pin one, name it: `router.answer(q, provider="linkup")`.
+Which one: they score alike on accuracy (see [the answer comparison](/providers#answer)), so pick
 on what you need -- Linkup had the lowest median latency in that scan (0.9 s); Perplexity, You.com
 and Linkup take source filters (domains, recency); Perplexity, You.com, Exa and
 Linkup tie each source to a sentence. [`examples/answer.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/answer.py)
@@ -49,12 +53,40 @@ backend marks which source backs which sentence, the marker is in
 `citation.field`; where it does not (Parallel), every citation backs the answer
 as a whole. `outcome` is `partial` only when the backend says it stopped early.
 
+`timeout=` caps how many seconds the call waits: `router.answer(q, timeout=15)`.
+Under `auto`, a backend is tried only while time is left; running out raises
+`DeadlineExceededError`. `timeout=15` is the same as
+`budget=Budget(time_limit_s=15)`, and beside a `budget` the tighter cap holds; see
+[Running in production](/production#timeouts).
+
+## What it cost and who ran
+
+Every answer says who wrote it, how long the call took and what it cost, with no
+budget set:
+
+```python
+response.provider  # who answered
+response.elapsed_s  # wall-clock seconds, every backend tried before it included
+response.cost_usd  # what that backend charged, in US dollars, or None
+response.cost_source  # 'reported' or 'estimated'
+```
+
+Perplexity and Exa state their own cost, so theirs is `reported`: Perplexity's
+is `usage.cost.total_cost` in `raw[0]`, an object, not a number (about $0.0012
+an answer). Every other backend's is `estimated` from the price list in
+`web_router.prices` -- an estimate, not your bill. Perplexity is billed by
+tokens, so before a call (under a budget, say) it is estimated at the mean its
+responses stated over the [answer scan](/providers#answer). No answer backend is
+free. With a `budget=` or a router, `response.decision` also lists every
+attempt, failed ones included, with its estimated cost and seconds (see
+[the decision record](/smart-routing#the-decision-record)).
+
 The options are `include_domains`, `exclude_domains`, `country`, `locale` and
 `recency` (`"day"`, `"week"`, `"month"` or `"year"`). Windows count whole days;
 where the router sets the start date itself (Linkup), it counts back from
 today's date in UTC. A backend that does not
 map one raises `UnsupportedParameterError` before anything is sent -- the
-[answer table](https://github.com/Nimbleway/webrouter/blob/main/README.md#answer) says which backend maps what.
+[answer table](/providers#answer) says which backend maps what.
 
 With `provider` unset, the router's default answers when it is an answer
 backend. On the usual default, `auto`, that is every answer backend you hold a

@@ -1,6 +1,6 @@
 """A budget several calls spend from: what :meth:`~web_router.WebRouter.budget` holds.
 
-Experimental. A pool keeps one :class:`~web_router.Budget` for every call
+A pool keeps one :class:`~web_router.Budget` for every call
 made through its scope, and is the only state those calls share:
 
 - each call's budget is the tighter of its own ``budget=`` and what the

@@ -7,7 +7,8 @@ and the prompt's own words, and picks ``extract`` when there is a URL;
 or an in-depth analysis (:data:`~web_router.constants_routing.RULES_RESEARCH_PATTERN`),
 with ``search`` after it for when no research backend is configured; and
 ``search`` otherwise. It never picks ``browse`` or ``answer``: a caller who wants
-them calls them. The backends' order stays the static one.
+them calls them. It ranks no backends: they run in ``auto``'s order, cheapest
+first under a cost cap (:mod:`~web_router.routing.cost_order`).
 
 ``WebRouter()`` and ``AsyncWebRouter()`` attach it by name, ``router="rules"``,
 as :class:`RulesRouter`, which declares ``route_tools=()``: only

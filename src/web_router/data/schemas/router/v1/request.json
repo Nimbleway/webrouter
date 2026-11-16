@@ -72,7 +72,7 @@
             }
           ],
           "default": null,
-          "description": "Its estimated cost in US dollars, at list price. ``None`` when unknown or billed by tokens.",
+          "description": "Its estimated cost in US dollars, at list price, or a token-billed backend's measured mean; ``None`` unknown.",
           "title": "Est Cost Usd"
         },
         "est_latency_s": {

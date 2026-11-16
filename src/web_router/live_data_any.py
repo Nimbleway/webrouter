@@ -13,7 +13,8 @@ never names the vendor:
     >>> router.live_data(source, {"url": "https://www.amazon.com/dp/B0CHX1W1XY"})
 
 A backend that fails is left out and named in the page's ``failures``; the
-page raises only when every backend failed. Kept out of
+page raises :class:`~web_router.AllProvidersFailedError` only when every
+backend failed, each one's own error in its ``failures``. Kept out of
 :mod:`web_router.client_live_data` so the routers stay thin; which backends
 count, and which one a run goes to, is :mod:`web_router.live_data_backends`.
 """
@@ -28,11 +29,13 @@ from typing import TYPE_CHECKING
 
 from web_router.constants_live_data import LIVE_DATA_SEARCH_PAGE
 from web_router.constants_live_data_any import LIVE_DATA_EVERY_BACKEND, MSG_LIVE_DATA_EVERY_BACKEND_FAILED
-from web_router.exceptions import ProviderError, WebRouterError
+from web_router.exceptions import ConfigurationError, WebRouterError
+from web_router.exceptions_typed import AllProvidersFailedError
 from web_router.live_data_backends import usable_backends_or_raise
 from web_router.live_data_catalogue import check_page
 from web_router.live_data_search import asearch_live_data_sources, search_live_data_sources
 from web_router.providers.base import LiveDataProvider
+from web_router.routing.attempts import warn_if_refused
 from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
 
 if TYPE_CHECKING:
@@ -148,20 +151,25 @@ def _merged(
 ) -> LiveDataSourcePage:
     """The backends' pages as one: their sources taken in turn, so each backend's best match comes first.
 
-    A backend that raised what a backend may raise is named in ``failures``;
-    anything else is a bug and propagates. When none answered, the page
-    raises rather than coming back empty, as ``auto`` does on search.
+    A backend that raised what a backend may raise is named in ``failures``,
+    and a refused key logged as ``auto`` logs one; anything else is a bug and
+    propagates. When none answered, the page raises
+    :class:`~web_router.AllProvidersFailedError` rather than coming back empty,
+    as ``auto`` does on search.
     """
     pages: dict[str, LiveDataSourcePage] = {}
+    errors: dict[str, WebRouterError] = {name: ConfigurationError(reason) for name, reason in failures.items()}
     for name, answer in answers.items():
         if isinstance(answer, LiveDataSourcePage):
             pages[name] = answer
         elif isinstance(answer, _LEFT_OUT):
-            failures[name] = str(answer)
+            failures[name], errors[name] = str(answer), answer
+            warn_if_refused(name, answer)
         else:
             raise answer
     if not pages:
-        raise ProviderError(LIVE_DATA_EVERY_BACKEND, MSG_LIVE_DATA_EVERY_BACKEND_FAILED.format(failures=failures))
+        message = MSG_LIVE_DATA_EVERY_BACKEND_FAILED.format(failures=failures)
+        raise AllProvidersFailedError(LIVE_DATA_EVERY_BACKEND, message, errors)
     start = offset or 0
     taken = list(_in_turn(page.sources for page in pages.values()))
     modes = {page.search for page in pages.values()}

@@ -1,4 +1,4 @@
-"""The benchmark models moved to ``types_benchmark``; the old import paths still work."""
+"""Models moved out of ``types`` -- the benchmark ones, browse progress -- keep their old import paths."""
 
 from __future__ import annotations
 
@@ -26,3 +26,10 @@ def test_from_web_router_types_import_still_works() -> None:
 def test_an_unknown_name_still_raises_attribute_error() -> None:
     with pytest.raises(AttributeError, match="no attribute 'NotAModel'"):
         _ = types.NotAModel
+
+
+def test_browse_progress_imports_from_types_as_from_the_package() -> None:
+    from web_router.types import BrowseProgress
+    from web_router.types_browse import BrowseProgress as moved
+
+    assert BrowseProgress is moved is web_router.BrowseProgress

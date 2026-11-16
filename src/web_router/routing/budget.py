@@ -1,6 +1,6 @@
 """Holding a call to its :class:`~web_router.Budget`.
 
-Experimental. Every method that takes ``budget=`` runs inside
+Every method that takes ``budget=`` runs inside
 :func:`budget_scope`. With no budget the scope sets nothing and the call runs
 exactly as it would without one. With a budget:
 
@@ -52,7 +52,7 @@ from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _empty_response
 from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
-from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
+from web_router.routing.attempts import AnswerHook, Attempt, CallRoute, admitted, call_route, current_route
 from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
 from web_router.routing.pool import PoolChain, chain_in_force
@@ -196,7 +196,7 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...] = ()) -> CallRoute:
     ``held``, each counting the attempt toward its own cap; when ``ledger``
     then refuses it, each takes it back. Only the innermost ledger in force
     where the attempt runs -- its own call's -- reserves it in the shared budget.
-    A failure is noted in ``ledger``'s hop trail after the route's own note.
+    A failure, or a retry's part of an answer, is noted in ``ledger``'s hop trail after the route's own note.
     """
     route = current_route() or CallRoute()
     outer, outer_failed = route.before_attempt, route.on_failure
@@ -222,4 +222,15 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...] = ()) -> CallRoute:
             outer_failed(tool, provider, exc)
         ledger.failed(tool, provider, exc)
 
-    return replace(route, before_attempt=admit, on_failure=note)
+    return replace(route, before_attempt=admit, on_failure=note, on_answer=_answered(route.on_answer, ledger))
+
+
+def _answered(outer: AnswerHook | None, ledger: Ledger) -> AnswerHook:
+    """The answer hook: ``outer``'s note, then ``ledger``'s."""
+
+    def answered(tool: ToolName, provider: str) -> None:
+        if outer is not None:
+            outer(tool, provider)
+        ledger.contributed(tool, provider)
+
+    return answered

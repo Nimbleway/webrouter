@@ -54,8 +54,15 @@ def test_the_mcp_schema_offers_every_level_and_says_what_effort_costs() -> None:
 @pytest.mark.parametrize("router", [WebRouter, AsyncWebRouter])
 def test_the_mcp_schema_lists_every_option_search_takes(router: type[WebRouter] | type[AsyncWebRouter]) -> None:
     # Read from search() itself, so an option added there and not to the tool fails here.
-    # `provider` is added per session from the configured backends; budget and provider_options are not offered.
-    taken = set(inspect.signature(router.search).parameters) - {"self", "provider", "budget", "provider_options"}
+    # `provider` is added per session from the configured backends; timeout, budget and provider_options
+    # are not offered.
+    taken = set(inspect.signature(router.search).parameters) - {
+        "self",
+        "provider",
+        "timeout",
+        "budget",
+        "provider_options",
+    }
     assert taken >= NORMALIZED_PARAMETERS
     assert set(MCP_SEARCH_PROPERTIES) == taken
 

@@ -27,7 +27,7 @@ def described(model: type[BaseModel], field: str) -> str:
 
 MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": "What to search for."},
-    "max_results": {"type": "integer", "minimum": 1, "description": described(SearchRequest, "max_results")},
+    "max_results": {"type": "integer", "minimum": 1, "description": "Unset, the backend's default; 5 to 10 suit most."},
     "search_depth": {
         "type": "string",
         "enum": list(get_args(SearchDepth)),
@@ -45,49 +45,37 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     },
     "country": {"type": "string", "description": described(SearchRequest, "country")},
     "locale": {"type": "string", "description": described(SearchRequest, "locale")},
-    "recency": {"type": "string", "enum": list(get_args(Recency)), "description": described(SearchRequest, "recency")},
+    "recency": {"type": "string", "enum": list(get_args(Recency)), "description": "Only sources dated within this."},
     "effort": {
         "type": "string",
         "enum": list(get_args(ResearchEffort)),
-        "description": described(SearchRequest, "effort"),
+        "description": "Higher costs more and takes longer: leave it unset unless needed.",
     },
     "data_apis": {
         "type": "boolean",
-        "description": (
-            "Also list the data APIs whose catalog entries match the query, under `data_apis`: found locally at no "
-            "cost, never called. On by default; false for the web results alone."
-        ),
+        "description": "Also list matching vendor data APIs under `data_apis`, free and never run; "
+        "`call_vendor` runs one. On by default.",
     },
     "data_apis_only": {
         "type": "boolean",
-        "description": (
-            "List the matching data APIs alone and call no web backend. Takes no web option but `max_results`, "
-            "which then caps the matches."
-        ),
+        "description": "The data APIs alone, no web call; takes only `max_results`.",
     },
     "configured_only": {
         "type": "boolean",
-        "description": "List only the data APIs whose credentials are set here. Unset also lists the rest, "
-        "each with the variable that would add it.",
+        "description": "Only data APIs whose credentials are set here.",
     },
 }
 
 MCP_DESC_SEARCH = (
-    "Search the web: ranked links with their titles, descriptions and page text. Returns in about "
-    "a second, so call it freely and call it again with a better query. Use it to find pages you "
-    "do not have URLs for; use `extract` when you already have the URL, and `research` only when "
-    "the question needs an investigation rather than a list of results. `search_depth` sets how much "
-    "text comes back per result; `effort` how hard the backend looks, and higher effort costs more and "
-    "takes longer by a vendor-specific amount, so leave it unset unless needed. When the page that answers "
-    "needs a login, a form or other interaction, suggest a browser (`browser_open`) to the user "
-    "rather than only listing the steps. `data_apis` lists data APIs that match the query -- a vendor's own API, "
-    "such as an SEO or ads platform -- which this call never runs: `call_vendor` runs one on the user's own key, "
-    "so offer it only when its data answers better than the pages do."
+    "Search the web: ranked links with titles and text, in seconds; free if keyless, else billed. "
+    "Use `extract` for a known URL, `research` to investigate. Higher `effort` costs more; leave it unset "
+    "unless needed. For a login or form, suggest `browser_open`. `data_apis`: vendor APIs for `call_vendor`; "
+    "offer one if it beats the pages."
 )
 
 MSG_UNSUPPORTED_DEPTH = (
     "It serves search_depth at {levels}. Ask for one of those, leave it unset for the backend's own default, or "
-    "name a provider that serves the level -- see the search table in README.md."
+    "name a provider that serves the level -- see the search table at https://docs.webrouter.net/providers#search."
 )
 """Follows :data:`~web_router.constants.MSG_UNSUPPORTED_VALUES`: a shorter body is never served in a level's place."""
 

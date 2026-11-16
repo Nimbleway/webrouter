@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Mapping
-from typing import Any, TypeVar
+from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -257,3 +257,19 @@ def best_text(body: str | None, description: str | None) -> str:
     whichever backend served the query.
     """
     return body or description or ""
+
+
+@runtime_checkable
+class Warmable(Protocol):
+    """A provider whose vendor client can be built ahead of its first call."""
+
+    def warm(self, *, asynchronous: bool = False) -> None: ...
+
+
+class WarmClients:
+    """:meth:`warm` for a provider that calls its vendor through ``_client`` / ``_async_client``, built on first use."""
+
+    def warm(self, *, asynchronous: bool = False) -> None:
+        """Build the client this provider's calls go through, the async one when ``asynchronous``; it sends nothing."""
+        clients = cast(Any, self)
+        _ = clients._async_client if asynchronous else clients._client

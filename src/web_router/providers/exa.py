@@ -32,6 +32,7 @@ from web_router.constants import (
 from web_router.constants_exa import (
     EXA_CONTENTS,
     EXA_CONTENTS_BY_DEPTH,
+    EXA_COST_PATH,
     EXA_DATE_FORMAT,
     EXA_PARAM_NAMES,
     EXA_RECENCY_FIELD,
@@ -39,6 +40,7 @@ from web_router.constants_exa import (
     EXA_TYPE_FIELD,
 )
 from web_router.providers._clock import recency_start
+from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._search_text import as_snippet, lite_body
 from web_router.providers._utils import best_text, build_payload, mapped
@@ -90,6 +92,7 @@ class ExaProvider(HttpSearchProvider):
             results=[self._to_result(hit, request) for hit in payload.get("results") or []],
             request_id=payload.get("requestId"),
             raw=payload,
+            **stated_cost(payload, *EXA_COST_PATH),
         )
 
     @staticmethod
