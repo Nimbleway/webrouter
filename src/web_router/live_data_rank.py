@@ -148,7 +148,14 @@ def relevant(source: LiveDataSource, query: Query) -> bool:
     which, with or without site words: a search results page is no answer to
     "amazon product" or "product", and a source that does not say its kind is
     one to both, ranked below those that do.
+
+    A query with no site word and no kind asks only for a country, and is
+    answered by that country's sources ("uk"); one with not even a country --
+    only filler words, as in "page data" -- names nothing to match, and
+    matches no source rather than the whole catalogue.
     """
+    if not query.site_words and query.kind is None:
+        return query.country is not None and _country_of(source) == query.country
     if query.kind is not None and kind_of(source) not in (query.kind, None):
         return False
     text = haystack(source)

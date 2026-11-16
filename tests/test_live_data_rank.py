@@ -28,3 +28,16 @@ def test_a_source_that_does_not_say_its_kind_answers_a_kind_alone_as_it_does_wit
     # It answers, below one that says it is the kind asked for.
     assert ranked([unlabelled, _source("amazon_pdp")], "product")[0].name == "amazon_pdp"
     assert score(_source("amazon_pdp"), read_query("product")) > score(unlabelled, read_query("product"))
+
+
+def test_a_country_alone_keeps_that_countrys_sources() -> None:
+    uk, main = _source("amazon_uk_pdp", "www.amazon.co.uk"), _source("amazon_pdp")
+
+    assert read_query("uk") == read_query("britain")
+    assert relevant(uk, read_query("uk")) and not relevant(main, read_query("uk"))
+    # With a site and a kind the main site still answers, below the country asked for.
+    assert [source.name for source in ranked([main, uk], "amazon uk product")] == ["amazon_uk_pdp", "amazon_pdp"]
+
+
+def test_a_query_of_filler_words_only_matches_nothing() -> None:
+    assert ranked([_source("amazon_pdp"), _source("amazon_uk_pdp", "www.amazon.co.uk")], "page data") == []

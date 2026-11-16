@@ -85,7 +85,9 @@ source's name, site, kind of page or description. The kind is matched as a
 kind, not as text -- product, search, category, reviews, offers or article,
 read from the source's name and else from its vendor's label -- so `"amazon
 product"` leaves out a reviews page that mentions products, and keeps a
-source that does not say its kind, below the ones that do. Matches are
+source that does not say its kind, below the ones that do. A query that
+names only a country (`"uk"`) keeps that country's sources, and one of
+filler words only (`"page data"`) matches none. Matches are
 ranked by how the site matches (its own domain first), the kind, the main
 site before other countries unless the query names one, and then quality:
 the vendor's public catalogue before an account's private copy, a published
