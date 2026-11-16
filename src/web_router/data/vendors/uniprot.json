@@ -10,6 +10,9 @@
     "Search pages with a cursor: the next page's full URL is in the Link response header (rel=\"next\"), the total in x-total-results. Use size=500 for speed.",
     "Query syntax is UniProt's own, e.g. (reviewed:true) AND (organism_id:9606) or gene:BRCA1."
   ],
+  "sites": [
+    "uniprot.org"
+  ],
   "sources": [
     "https://www.uniprot.org/help/api",
     "https://www.uniprot.org/help/api_queries",

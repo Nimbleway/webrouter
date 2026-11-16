@@ -57,6 +57,9 @@
     "No fixed read limit: send requests one at a time, batch titles with | where a call accepts several, and back off on a ratelimited error.",
     "Action API calls (/w/api.php) need action and format=json; the REST calls (/w/rest.php/v1) answer JSON already."
   ],
+  "sites": [
+    "wikipedia.org"
+  ],
   "sources": [
     "https://www.mediawiki.org/wiki/API:Search",
     "https://www.mediawiki.org/wiki/Extension:TextExtracts",

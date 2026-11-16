@@ -25,6 +25,9 @@
     "CIKs in data.sec.gov paths are zero-padded to 10 digits (CIK0000320193). Map a ticker to its CIK with tickers.list.",
     "XBRL data covers standard taxonomies (us-gaap, ifrs-full, dei, srt) only, not company-custom tags. For bulk work the SEC publishes nightly companyfacts.zip and submissions.zip instead."
   ],
+  "sites": [
+    "sec.gov"
+  ],
   "sources": [
     "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
     "https://www.sec.gov/search-filings/edgar-search-assistance/accessing-edgar-data",

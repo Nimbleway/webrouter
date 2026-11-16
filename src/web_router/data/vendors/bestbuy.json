@@ -32,6 +32,9 @@
     "A 403 means a bad key or the call quota is exceeded; prefer one in(...) query over many single lookups to avoid per-second errors.",
     "Links in responses (url, addToCartUrl) expire after seven days."
   ],
+  "sites": [
+    "bestbuy.com"
+  ],
   "sources": [
     "https://bestbuyapis.github.io/api-documentation/"
   ],

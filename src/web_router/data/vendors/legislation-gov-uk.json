@@ -12,6 +12,9 @@
     "With no version the current revised text is returned; a date (YYYY-MM-DD) gives the text in force then, enacted or made the original. Dates before 1991-02-01 redirect to the base-date version.",
     "Lists are Atom feeds paged by first/previous/next/last links, with opensearch:totalResults and leg:morePages."
   ],
+  "sites": [
+    "legislation.gov.uk"
+  ],
   "sources": [
     "https://www.legislation.gov.uk/developer",
     "https://www.legislation.gov.uk/developer/uris",
