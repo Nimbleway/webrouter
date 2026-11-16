@@ -8,6 +8,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+### Changed
+
+- The [Live data](https://docs.webrouter.net/live-data) page walks through finding, describing and running a source, with a note per backend and sections on keyword search, inputs, freshness, errors and cost, and the MCP tools. The providers page gains a live data column, the configuration page lists Apify and Bright Data's token for live data, and `LiveDataJobError` covers a Bright Data snapshot as well as an Oxylabs job.
+
 ### Fixed
 
 ## [0.13.0] - 2026-11-16
@@ -52,7 +56,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
-- The [Live data](https://docs.webrouter.net/live-data) page walks through finding, describing and running a source, with a note per backend and sections on keyword search, inputs, freshness, errors and cost, and the MCP tools. The providers page gains a live data column, the configuration page lists Apify and Bright Data's token for live data, and `LiveDataJobError` covers a Bright Data snapshot as well as an Oxylabs job.
 - The sync `WebRouter` warns with a `RuntimeWarning` when it is called on a thread running an event loop, which it blocks; the call still runs. `DeadlineExceededError` from an async `auto` call cut off at its deadline now names, in its message, each backend tried and the one in flight, as the sync path did; it also carries `kind="timeout"`, so a URL an extract lost to the deadline is a `timeout` failure rather than `upstream`. Tavily's SDK clients are built on first use, so the async router no longer builds a sync client it never uses.
 - The MCP guide and the agent system prompt are now pages on the docs site, [docs.webrouter.net/mcp](https://docs.webrouter.net/mcp) and [/agent-prompt](https://docs.webrouter.net/agent-prompt), listed under "Agents and routing", so an agent reading only the site can set up the MCP server. Their sources moved to `docs/mcp.mdx` and `docs/agent-prompt.mdx`, and links to the old `docs/mcp.md` now point at the site. The prompt page also says how to install the same contract as an agent skill.
 - The MCP server costs a model less context per turn. Its tool list, with every key set, is 26.3 KB of compact JSON (about 6.6k tokens) with search's data API options, down from 31.1 KB (about 7.8k): shorter tool and argument descriptions, and `provider`'s sentence said once in the server instructions instead of on every tool. The new `WEB_ROUTER_MCP_TOOLS` names the tools to list and serve (`search,extract,answer` is about 5.3 KB; a trailing `*` matches a prefix), and a test holds the default list to a budget; `web_run` will not run a method the allowlist leaves out. Results are compact JSON with `None`, `""` and `[]` keys left out. `answer` lists only the sources its answer cites, each with its `marker` (`field` before), and counts the rest in `uncited_sources`, which replaces `citation_count`; `all_sources` lists them all and `snippets` adds each quoted passage. `truncated` now means the main content was cut or an item left out -- a search result's text or a citation's snippet cut to fit is marked where it was cut but no longer sets it -- and its note is shorter. `search_depth` says that unset means the backend's own default. `search`, `extract` and `answer` publish an `outputSchema`, and `resources/templates/list` answers with an empty list.
