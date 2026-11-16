@@ -41,6 +41,12 @@ from web_router.types import Citation
 from web_router.types_answer import AnswerRequest, AnswerResponse
 from web_router.types_errors import ERROR_KIND_AUTH
 
+
+def refused_token_kind(_provider: object, exc: httpx.HTTPStatusError) -> str | None:
+    """Both Brave providers' ``_error_kind``: ``auth`` for a refused subscription token, which comes as a 422."""
+    return ERROR_KIND_AUTH if BRAVE_REFUSED_KEY_CODE in exc.response.text else None
+
+
 _ANSWER_TAG = re.compile(r"<({names})>(.*?)</\1>".format(names="|".join(BRAVE_ANSWER_TAGS)), re.DOTALL)
 
 
@@ -69,9 +75,7 @@ class BraveAnswerProvider(HttpAnswerProvider):
     env_api_key: ClassVar[str] = ENV_BRAVE_ANSWER_API_KEY
     api_key_header: ClassVar[str] = BRAVE_API_KEY_HEADER
 
-    def _error_kind(self, exc: httpx.HTTPStatusError) -> str | None:
-        """``auth`` for a refused subscription token, which Brave answers with a 422, not a 401 or 403."""
-        return ERROR_KIND_AUTH if BRAVE_REFUSED_KEY_CODE in exc.response.text else None
+    _error_kind = refused_token_kind
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
         return build_payload(
