@@ -14,6 +14,9 @@
     "Three IDs matter: an event holds markets; a market has a condition id (Data API 'condition') and one CLOB token id per outcome (the market's clobTokenIds, used as token_id / market on the CLOB host).",
     "Prices are between 0 and 1 and read as the implied probability of the outcome."
   ],
+  "sites": [
+    "polymarket.com"
+  ],
   "sources": [
     "https://docs.polymarket.com/llms.txt",
     "https://docs.polymarket.com/api-spec/gamma-openapi.yaml",

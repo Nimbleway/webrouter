@@ -10,6 +10,9 @@
     "Responses carry an ETag; respect it on repeated requests. For watching new releases PyPI recommends its RSS feeds.",
     "In the JSON API, downloads is always -1, has_sig always false and bugtrack_url always null; the project-level releases key is deprecated in favour of the Index API."
   ],
+  "sites": [
+    "pypi.org"
+  ],
   "sources": [
     "https://docs.pypi.org/api/",
     "https://docs.pypi.org/api/json/",

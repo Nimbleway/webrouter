@@ -28,6 +28,9 @@
     "Results are HAL: items sit under _embedded (events, attractions, venues, classifications) and paging under page and _links.",
     "Discovery API only: ticket availability, prices and purchase are in Ticketmaster's partner-only Commerce and Partner APIs, not in this entry."
   ],
+  "sites": [
+    "ticketmaster.com"
+  ],
   "sources": [
     "https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/"
   ],

@@ -10,6 +10,9 @@
     "Each text version carries its own licence (e.g. CC-BY-SA, public domain); see the version's license field before reuse.",
     "find-refs is asynchronous: it returns a task_id with HTTP 202, then poll GET /api/async/{task_id} until it holds the result."
   ],
+  "sites": [
+    "sefaria.org"
+  ],
   "sources": [
     "https://developers.sefaria.org/docs/welcome",
     "https://developers.sefaria.org/reference/get-v3-texts",

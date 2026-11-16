@@ -24,6 +24,9 @@
     "Company numbers keep leading zeros (00000006). Paging is items_per_page plus start_index.",
     "Filing documents themselves are served by the separate Document API, not in this entry."
   ],
+  "sites": [
+    "find-and-update.company-information.service.gov.uk"
+  ],
   "sources": [
     "https://developer-specs.company-information.service.gov.uk/companies-house-public-data-api/reference",
     "https://developer.company-information.service.gov.uk/authentication",
