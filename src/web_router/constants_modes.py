@@ -33,8 +33,6 @@ KIND_CONTENT = "content"
 KIND_FLAG = "flag"
 KIND_DEPTH = "depth"
 KIND_EFFORT = "effort"
-VENDOR_KINDS: frozenset[str] = frozenset({KIND_TIER, KIND_CONTENT, KIND_FLAG})
-"""The kinds of mode part a provider declares, each spelled with the provider's name first."""
 
 MODE_FIELD = "mode"
 """The option an unknown or repeated mode part is reported against."""
