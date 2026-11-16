@@ -29,6 +29,10 @@
     "Lists page with nextPageToken and pageToken; maxResults tops out at 50 (100 for comment threads).",
     "part is required on every list call and decides which fields come back."
   ],
+  "sites": [
+    "youtube.com",
+    "youtu.be"
+  ],
   "sources": [
     "https://developers.google.com/youtube/v3/getting-started",
     "https://developers.google.com/youtube/v3/docs/videos/list",

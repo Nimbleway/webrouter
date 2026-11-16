@@ -1,4 +1,4 @@
-"""What :meth:`~web_router.WebRouter.search` lists beside the web results: data APIs that match the query.
+"""What ``search`` and ``extract`` list beside their results: data APIs that match the query or the page's site.
 
 Kept apart from :mod:`web_router.types` so that file stops growing; it imports
 this, never the reverse.
@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class DataApiMatch(BaseModel):
-    """One catalog endpoint whose words match a search query: found locally, never called.
+    """One catalog endpoint that matches a search query or an extracted page's site: found locally, never called.
 
     Run it with :meth:`~web_router.WebRouter.call_vendor` and :attr:`endpoint`.
     """
@@ -46,4 +46,9 @@ class DataApiMatch(BaseModel):
 DATA_APIS_DESCRIPTION = (
     "Catalog endpoints whose words match the query, best first: found locally at no cost, never called. "
     "Empty when search ran with data_apis=False or nothing matched well enough."
+)
+
+DATA_API_SITE_DESCRIPTION = (
+    "Read endpoints of the data APIs that serve this page's site, those named by the URL's path first: found "
+    "locally at no cost, never called. Empty when extract ran with data_apis=False or no catalog entry serves the site."
 )

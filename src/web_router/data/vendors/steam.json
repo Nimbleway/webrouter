@@ -29,6 +29,10 @@
     "This is the public host api.steampowered.com; partner.steam-api.com is for publisher keys only.",
     "There is no documented store-page (price, description) endpoint; apps.list gives ids, names and price_change_number."
   ],
+  "sites": [
+    "store.steampowered.com",
+    "steamcommunity.com"
+  ],
   "sources": [
     "https://steamcommunity.com/dev",
     "https://partner.steamgames.com/doc/webapi_overview",

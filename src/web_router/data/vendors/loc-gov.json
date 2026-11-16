@@ -21,6 +21,9 @@
     "Facet values in fa are not controlled vocabularies, so an exact value may miss variants.",
     "Catalog (MARC) records are not served here, only digitized items, collections and their metadata."
   ],
+  "sites": [
+    "loc.gov"
+  ],
   "sources": [
     "https://www.loc.gov/apis/json-and-yaml/",
     "https://www.loc.gov/apis/json-and-yaml/requests/endpoints/",

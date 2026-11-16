@@ -30,6 +30,9 @@
     "Paging: page defaults to 1, per_page to 10, max 30.",
     "API guidelines: hotlink the returned image URLs (keep the ixid parameter on any resized URL), credit the photographer and Unsplash, and call photos.download_track whenever your app downloads a photo."
   ],
+  "sites": [
+    "unsplash.com"
+  ],
   "sources": [
     "https://unsplash.com/documentation"
   ],

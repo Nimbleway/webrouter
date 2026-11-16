@@ -30,6 +30,9 @@
     "Throttled calls get 429 Too Many Requests: wait before retrying.",
     "A password-protected model needs its password, base64-encoded, in the x-skfb-model-pwd header."
   ],
+  "sites": [
+    "sketchfab.com"
+  ],
   "sources": [
     "https://sketchfab.com/developers/data-api/v3",
     "https://docs.sketchfab.com/data-api/v3/index.html",

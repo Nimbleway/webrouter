@@ -11,6 +11,9 @@
     "The documented parameters are query, tags, numericFilters and page (plus hitsPerPage); the API is built on Algolia's search API, whose other query parameters it says are also accepted.",
     "Timestamps for numericFilters are Unix seconds (created_at_i)."
   ],
+  "sites": [
+    "news.ycombinator.com"
+  ],
   "sources": [
     "https://hn.algolia.com/api"
   ],

@@ -11,6 +11,9 @@
     "Lists page with limit and cursor: pass the cursor from the previous response until it comes back empty.",
     "Timestamps are Unix seconds. Markets settled before the historical cutoff are only served by the /historical endpoints."
   ],
+  "sites": [
+    "kalshi.com"
+  ],
   "sources": [
     "https://docs.kalshi.com/getting_started/quick_start_market_data",
     "https://docs.kalshi.com/llms.txt"
