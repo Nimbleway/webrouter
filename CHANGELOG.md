@@ -14,15 +14,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - The [Live data](https://docs.webrouter.net/live-data) page walks through finding, describing and running a source, with a note per backend and sections on keyword search, inputs, freshness, errors and cost, and the MCP tools. The providers page gains a live data column, the configuration page lists Apify and Bright Data's token for live data, and `LiveDataJobError` covers a Bright Data snapshot as well as an Oxylabs job.
 
-### Removed
-
-- Vendor catalog: the `seltz.search` endpoint, now that `search(provider="seltz")` covers it; `vendor_endpoint("seltz.search")` and an MCP `call_vendor` naming it raise `VendorNotFoundError`. The catalog lists 2,706 endpoints.
-
 ### Fixed
 
 ### Removed
 
 - Vendor catalog: the `valyu.search` endpoint, now that `search(provider="valyu")` covers it; `vendor_endpoint("valyu.search")` and an MCP `call_vendor` naming it raise `VendorNotFoundError`. The catalog lists 2,707 endpoints.
+- Vendor catalog: the `seltz.search` endpoint, now that `search(provider="seltz")` covers it; `vendor_endpoint("seltz.search")` and an MCP `call_vendor` naming it raise `VendorNotFoundError`. The catalog lists 2,706 endpoints.
 
 ## [0.13.0] - 2026-11-16
 
