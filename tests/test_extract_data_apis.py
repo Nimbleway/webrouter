@@ -119,3 +119,16 @@ def test_a_site_must_be_a_bare_lowercase_host(tmp_path: Path, site: str) -> None
     path.write_text(json.dumps(vendor))
     with pytest.raises(ConfigurationError, match="bare lowercase host"):
         load_vendor_file(path)
+
+
+def test_a_bad_site_is_named_by_position_never_by_value(tmp_path: Path) -> None:
+    vendor = copy.deepcopy(CLIPS)
+    vendor["sites"] = ["clips.test", "PASTED-VALUE"]
+    path = tmp_path / "clips.json"
+    path.write_text(json.dumps(vendor))
+    with pytest.raises(ConfigurationError, match="site #1 ") as raised:
+        load_vendor_file(path)
+    assert "PASTED-VALUE" not in str(raised.value)
+    vendor["sites"] = ["youtube.com"]
+    path.write_text(json.dumps(vendor))
+    assert load_vendor_file(path).sites == ["youtube.com"]

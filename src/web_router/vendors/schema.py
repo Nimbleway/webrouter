@@ -109,9 +109,9 @@ class Vendor(_Strict):
     @field_validator("sites")
     @classmethod
     def _sites(cls, value: list[str]) -> list[str]:
-        for site in value:
+        for index, site in enumerate(value):
             if not re.match(VENDOR_SITE_PATTERN, site):
-                raise ValueError(MSG_VENDOR_CATALOG_SITE.format(site=site))
+                raise ValueError(MSG_VENDOR_CATALOG_SITE.format(index=index))
         return value
 
     @field_validator("category")
