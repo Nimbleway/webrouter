@@ -145,12 +145,12 @@ def relevant(source: LiveDataSource, query: Query) -> bool:
 
     Every site word must appear in what it says about itself, and when the
     query asks for a kind of page, the source must be that kind or not say
-    which: a search results page is no answer to "amazon product".
+    which, with or without site words: a search results page is no answer to
+    "amazon product" or "product", and a source that does not say its kind is
+    one to both, ranked below those that do.
     """
     if query.kind is not None and kind_of(source) not in (query.kind, None):
         return False
-    if not query.site_words:
-        return query.kind is None or kind_of(source) == query.kind
     text = haystack(source)
     return all(word in text for word in query.site_words)
 
