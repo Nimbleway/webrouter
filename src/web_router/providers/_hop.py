@@ -33,7 +33,6 @@ from web_router.constants_production import (
 from web_router.providers._deadline import current_deadline
 from web_router.providers._in_flight import in_flight
 from web_router.providers._runtime import current_runtime
-from web_router.routing.attempts import note_keyless
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,6 @@ def hop(tool: str, provider: str, call: Callable[[_RequestT], _ResultT], request
     try:
         response = call(request)
     except Exception as exc:
-        note_keyless(getattr(call, "__self__", None), exc)
         _failed(tool, provider, exc, started, request)
         raise
     _answered(provider, response)
@@ -68,7 +66,6 @@ async def ahop(
     try:
         response = await call(request)
     except Exception as exc:
-        note_keyless(getattr(call, "__self__", None), exc)
         _failed(tool, provider, exc, started, request)
         raise
     except asyncio.CancelledError:  # cut off: by the deadline when it has passed, else by whoever cancelled the call

@@ -139,7 +139,7 @@ class AutoAnswerProvider(AnswerProvider):
                 noted("answer", provider_name, exc)
                 continue
             except _RECOVERABLE as exc:
-                failed(failures, "answer", provider_name, exc)
+                failed(failures, "answer", provider_name, exc, self._members.get(position))
                 continue
             if not (self.fallback_on_empty and _empty_answer(response)):
                 return response
@@ -164,7 +164,7 @@ class AutoAnswerProvider(AnswerProvider):
                 noted("answer", provider_name, exc)
                 continue
             except _RECOVERABLE as exc:
-                failed(failures, "answer", provider_name, exc)
+                failed(failures, "answer", provider_name, exc, self._members.get(position))
                 continue
             if not (self.fallback_on_empty and _empty_answer(response)):
                 return response

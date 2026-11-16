@@ -86,6 +86,7 @@ from web_router.exceptions import (
     describe,
 )
 from web_router.live_data_compat import TemplateMethods
+from web_router.providers._credential import _CredentialMixin
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
 from web_router.providers._error_pages import named_failures, split_error_pages
 from web_router.providers._exhausted import nothing_returned
@@ -133,7 +134,7 @@ _ResponseT = TypeVar("_ResponseT")
 _ResponseT_co = TypeVar("_ResponseT_co", covariant=True)
 
 
-class _BaseProvider(_DeadlineMixin, abc.ABC):
+class _BaseProvider(_CredentialMixin, _DeadlineMixin, abc.ABC):
     """What a provider is, whichever method it serves."""
 
     name: ClassVar[str]
@@ -385,8 +386,7 @@ class _Collected:
     def __init__(self, provider: str, requested: list[str]) -> None:
         self.provider = provider
         self.requested = requested
-        # Whoever actually answered, which is not always `provider`: `auto` delegates, and the response must name the
-        # backend that served the call rather than the one that chose it.
+        # Whoever answered, not always `provider`: `auto` delegates, and the response names who served, not who chose.
         self.served_by: str | None = None
         self.documents: list[ExtractedDocument] = []
         self.failures: list[ExtractFailure] = []

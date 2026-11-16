@@ -372,6 +372,7 @@ src/web_router/
     ├── _runtime.py     what a router lends its calls: its cooldowns and max_concurrency's slots
     ├── _cooldown.py    a router's cooldowns: the backends a 429 or 402 told auto to leave alone
     ├── _hop.py         one auto hop: skipped while cooling, timed, logged without keys or URLs
+    ├── _credential.py  holds_credential: whether a provider's calls carry one, read before auto warns
     ├── _in_flight.py   what an async auto call had tried when its deadline cut it off
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs

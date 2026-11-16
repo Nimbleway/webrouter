@@ -183,8 +183,7 @@ class AutoProvider(BuiltMembers, SearchProvider):
             chain, members_config, AUTO_CHAIN_SEARCH, self.default_chain
         )
         self.fallback_on_empty = fallback_on_empty
-        # Keyed by position, not by name: the same provider can appear twice on different terms -- Tavily keyed, then
-        # Tavily keyless.
+        # Keyed by position, not name: a provider can appear twice on different terms -- Tavily keyed, then keyless.
         self._members: _Members[SearchProvider] = _Members()
 
     @staticmethod
@@ -221,7 +220,7 @@ class AutoProvider(BuiltMembers, SearchProvider):
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
-                failed(failures, "search", provider_name, exc)
+                failed(failures, "search", provider_name, exc, self._members.get(position))
                 continue
             if not (self.fallback_on_empty and _empty_search(response)):
                 return response
@@ -242,7 +241,7 @@ class AutoProvider(BuiltMembers, SearchProvider):
             except DeadlineExceededError as exc:
                 return _held_or_late(held, self.name, failures, exc, provider_name, "search")
             except _RECOVERABLE as exc:
-                failed(failures, "search", provider_name, exc)
+                failed(failures, "search", provider_name, exc, self._members.get(position))
                 continue
             if not (self.fallback_on_empty and _empty_search(response)):
                 return response
@@ -365,7 +364,8 @@ class AutoExtractProvider(BuiltMembers, ExtractProvider):
         return self._members.member(position, self._chain, self._members_config, create_extract_provider)
 
     def _walk(self, request: ExtractRequest) -> _Walk:
-        return _Walk(self.name, self.fallback_on_empty, self._member, in_call_order("extract", self._eligible(request)))
+        order = in_call_order("extract", self._eligible(request))
+        return _Walk(self.name, self.fallback_on_empty, self._member, order, self._members)
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         """The first answer, with each URL it failed tried on the members after it; see :mod:`._auto_extract_chain`."""

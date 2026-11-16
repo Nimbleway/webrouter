@@ -13,8 +13,8 @@ reason from each member that answered for it.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import dataclass, replace
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field, replace
 
 from web_router.constants_extract import MSG_EXTRACT_RETRY_BLANK
 from web_router.exceptions import DeadlineExceededError, WebRouterError
@@ -41,6 +41,8 @@ class _Walk:
     """Builds, or returns the cached, member at a chain position."""
     order: _Order
     """The members still to try, as (chain position, name), in call order."""
+    built: Mapping[int, ExtractProvider] = field(default_factory=dict)
+    """The members built so far, by chain position: a failure's says whether it held a credential to refuse."""
 
 
 def extract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
@@ -90,7 +92,7 @@ def _first_answer(walk: _Walk, request: ExtractRequest, urls: list[str]) -> tupl
         except DeadlineExceededError as exc:
             return _held_or_late(held, walk.name, failures, exc, provider_name, "extract"), []
         except _RECOVERABLE as exc:
-            failed(failures, "extract", provider_name, exc)
+            failed(failures, "extract", provider_name, exc, walk.built.get(position))
             continue
         if not (walk.fallback_on_empty and _empty_extract(response)):
             return response, walk.order[index + 1 :]
@@ -113,7 +115,7 @@ async def _afirst_answer(walk: _Walk, request: ExtractRequest, urls: list[str]) 
         except DeadlineExceededError as exc:
             return _held_or_late(held, walk.name, failures, exc, provider_name, "extract"), []
         except _RECOVERABLE as exc:
-            failed(failures, "extract", provider_name, exc)
+            failed(failures, "extract", provider_name, exc, walk.built.get(position))
             continue
         if not (walk.fallback_on_empty and _empty_extract(response)):
             return response, walk.order[index + 1 :]
