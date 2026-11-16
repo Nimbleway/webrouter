@@ -81,7 +81,8 @@ def unmapped_option() -> None:
     """
     print("\n4. UnsupportedParameterError -- the backend does not map an option you set")
     try:
-        WebRouter(KEYLESS).search("anything", country="US")
+        # Parallel's keyless MCP endpoint maps max_results alone, so a country is refused before any call.
+        WebRouter(Provider.PARALLEL_MCP).search("anything", country="US")
     except UnsupportedParameterError as exc:
         print(f"   {exc}")
         print(f"   unmapped: {exc.parameters}")

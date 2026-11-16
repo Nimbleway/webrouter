@@ -110,3 +110,24 @@ async def test_async_plan_and_run_route_as_the_sync_ones_do(called: list[str]) -
     response = await wr.run(plan)
     assert isinstance(response, AnswerResponse) and called[0] == "answer:third"
     assert isinstance(await wr.run(PROMPT), AnswerResponse)
+
+
+def test_run_writes_the_spend_log(called: list[str]) -> None:
+    from web_router import SpendEntry
+
+    entries: list[SpendEntry] = []
+    wr = _wr(router=chooser("search"))
+    wr.log_spend(type("Kept", (), {"record": lambda _self, entry: entries.append(entry)})())
+    response = wr.run(PROMPT)
+    assert [(entry.method, entry.provider) for entry in entries] == [("search", "third")]
+    assert response.elapsed_s is not None and entries[0].elapsed_s == response.elapsed_s, "metered as any call is"
+
+
+async def test_async_run_writes_the_spend_log(called: list[str]) -> None:
+    from web_router import SpendEntry
+
+    entries: list[SpendEntry] = []
+    wr = _wr(AsyncWebRouter, router=chooser("answer"))
+    wr.log_spend(type("Kept", (), {"record": lambda _self, entry: entries.append(entry)})())
+    await wr.run(PROMPT)
+    assert [(entry.method, entry.provider) for entry in entries] == [("answer", "third")]

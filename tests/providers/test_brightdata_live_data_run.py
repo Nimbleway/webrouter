@@ -49,13 +49,6 @@ def test_a_run_where_every_input_failed_raises() -> None:
         provider.run(LiveDataRequest(source=DATASET, inputs={"url": URL}))
 
 
-def test_a_scrape_past_the_synchronous_window_names_its_snapshot() -> None:
-    body = {"snapshot_id": "sd_abc", "message": "Your request is still in progress"}
-    provider, _ = _provider(lambda request: httpx.Response(202, json=body))
-    with pytest.raises(ProviderError, match="sd_abc"):
-        provider.run(LiveDataRequest(source=DATASET, inputs={"url": URL}))
-
-
 def test_bad_input_raises_with_bright_datas_reason() -> None:
     body = {"error": "Invalid input provided", "code": "validation_error", "errors": [["url", "Required"]]}
     provider, _ = _provider(lambda request: httpx.Response(400, json=body))

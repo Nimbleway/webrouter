@@ -44,6 +44,7 @@ from web_router.providers._language import language_tag, off_the_lists
 from web_router.providers._search_text import lite_body, site_operators, unsited_domains
 from web_router.providers._utils import build_payload, mapped
 from web_router.providers.brave_answer import BraveAnswerProvider as BraveAnswerProvider
+from web_router.providers.brave_answer import refused_token_kind
 from web_router.types import SearchDepth, SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "extra_snippets", "page_age"})
@@ -77,6 +78,8 @@ class BraveProvider(HttpSearchProvider):
     env_api_key: ClassVar[str] = ENV_BRAVE_API_KEY
     api_key_header: ClassVar[str] = BRAVE_API_KEY_HEADER
     http_method: ClassVar[Literal["GET", "POST"]] = "GET"
+
+    _error_kind = refused_token_kind
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
