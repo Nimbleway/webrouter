@@ -7,6 +7,9 @@ run-name: MCP Registry ${{ inputs.tag }}
 # The release workflow calls it once PyPI has the new version. Run it by hand to
 # list a release that is already on PyPI, on the tag itself:
 #   gh workflow run mcp-registry.yml --ref vX.Y.Z -f tag=vX.Y.Z
+# That works only for a tag whose tree has this file. If only this job fails in
+# a release run, "Re-run failed jobs" also works; re-running all jobs stops at
+# the release's "not above PyPI" check.
 #
 # It signs in with this run's GitHub OIDC token: the registry grants the
 # io.github.Nimbleway/* namespace to a workflow in a Nimbleway repository, so
