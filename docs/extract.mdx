@@ -87,6 +87,85 @@ single entry from a backend that took every URL at once, one per URL that came
 back from a backend that did not. A call that failed outright is in `failures`
 instead; there was no payload to keep.
 
+### Under a timeout
+
+`timeout=` caps how many seconds the call waits. Each vendor call still running
+when it runs out is cut off, its URLs land in `failures` with `kind` `timeout`,
+and the pages that came back in time are returned:
+
+```python
+response = router.extract(urls, provider="jina", timeout=10)
+
+response.documents  # every page read within 10 seconds
+[f.url for f in response.failures if f.kind == "timeout"]  # the ones still loading
+```
+
+When nothing came back in time the call raises `DeadlineExceededError`; when a
+single vendor call failed for a reason of its own, such as a 401, that error is
+raised as it came. `timeout=10` is the same as `budget=Budget(time_limit_s=10)`,
+and beside a `budget` the tighter time cap holds; see
+[Running in production](/production#timeouts).
+
+### Error pages, challenges and login walls
+
+A page that came back is not always the page asked for. On every backend, the
+same rule turns these into failures rather than documents:
+
+- **An error status.** A page with a status of 400 or more lands in `failures`
+  naming the status, whatever text it carries: a site's own "not found" page is
+  the error, not the content.
+- **A bot challenge.** A Cloudflare "Just a moment..." page, an "Attention
+  Required!" page, a "verify you are human" check.
+- **A login wall.** A page titled "Sign in" or "Login", one that asks you to sign
+  in to view it, or one LinkedIn sent to its `/authwall`.
+
+Each failure carries a `kind` and the page's `status_code`. A 404 or 410 is
+`target`, whatever the page shows: the site says the page is gone, every
+backend would read the same, so `auto` does not try another for that URL. Any
+other error status, or a challenge or login wall served with a status below
+400, is `upstream`, and `auto` tries the next backend for it. So is a 404 that
+a redirect reached, since it is the landing page's, not the URL asked for,
+when the page can be matched to the URL it came from. A
+call where every URL failed raises. The challenge and login checks read the
+title, and the text only of a short page, so an article that mentions a login
+page stays a document.
+
+A page with **almost no text** -- under 64 characters, often a shell its
+scripts fill in -- stays a document, because some real answers are that short
+(a plain-text endpoint, a one-line reply), but it carries a warning in
+`document.warnings`. That list also holds a backend's own warning about the
+page, such as Jina's "This page maybe not yet fully loaded".
+
+### A batch under `auto`
+
+Under `auto`, a batch that partly fails on one backend is not the end of it:
+each URL that backend failed is sent on to the backends after it in the chain,
+and what they read joins the answer, in the order you asked. `response.provider`
+names the backend that answered first. A URL no backend could read stays in
+`failures`, its error giving the reason from each backend that answered for it.
+
+## Reading a page behind a login
+
+`profile` is the extract side of the browser's `profile`: a saved identity on
+the backend — its cookies and storage — whose cookies are sent with each fetch.
+Log in once in a browser session that persists to it, release the session, and
+the fetches that name the same id read the page as that user:
+
+```python
+with router.open_browser(provider="browserbase", profile=context_id, persist_profile=True) as browser:
+    browser.goto("https://example.com/login")
+    ...  # type the credentials, submit
+
+response = router.extract("https://example.com/account/orders", provider="browserbase", profile=context_id)
+```
+
+The fetch never writes cookies back, so an expired login means another
+session. Browserbase is the one backend that maps it, through its Contexts; a
+backend without saved profiles raises `UnsupportedParameterError` rather than
+fetching anonymously, and `auto` and `max` pass such members over. The MCP
+server never offers it: a logged-in identity is set in code, not from a
+conversation.
+
 ## The fastest answer any backend can give: `max`
 
 `auto` tries its backends one after another and stops at the first that works.

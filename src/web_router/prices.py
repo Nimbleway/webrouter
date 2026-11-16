@@ -1,7 +1,5 @@
 """Estimated list prices for every (provider, method, mode) web-router calls.
 
-Experimental: this module is new and its shape may change before 1.0.
-
 The figures are each vendor's published pay-as-you-go list price, read from the
 vendor's own page (``source_url``) on the date in ``checked`` and shipped in
 ``web_router/data/prices.json``. They are estimates: volume plans and negotiated
@@ -187,7 +185,7 @@ def estimate(provider: str | Provider, method: str, mode: str | None = None) -> 
 def estimate_latency(provider: str | Provider, method: str, mode: str | None = None) -> tuple[float, float] | None:
     """Measured ``(p50, p90)`` seconds of one successful call, or ``None`` when unmeasured or not in the list.
 
-    Experimental. The figures are benchmark medians and 90th percentiles, not a
+    The figures are benchmark medians and 90th percentiles, not a
     promise: a backend's latency drifts from run to run and with the query.
     """
     row = price(provider, method, mode)

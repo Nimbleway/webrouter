@@ -7,6 +7,7 @@ each, in order, by its error's class or status.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import re
 from collections.abc import Callable, Iterator
@@ -104,7 +105,7 @@ async def test_a_member_that_refuses_a_parameter_is_a_hop_with_its_error(
     if asynchronous:
         response = await _wr(AsyncWebRouter).answer("q")
     else:
-        response = _wr().answer("q")
+        response = await asyncio.to_thread(_wr().answer, "q")  # a sync call on the loop's thread warns
     assert response.provider == "second"
     assert response.decision.hops == [DecisionHop(id="answer:first", error="UnsupportedParameterError")]
 

@@ -115,6 +115,17 @@ def test_a_tool_error_becomes_a_provider_error(provider: YouMcpProvider) -> None
         provider._payload(response)
 
 
+@pytest.mark.parametrize("text", ["Rate limited by You.com API", "Free tier limit exceeded", "ThrottlingException"])
+def test_a_quota_error_in_a_200_body_is_a_rate_limit(provider: YouMcpProvider, text: str) -> None:
+    """You.com says its keyless quota ran out in the tool's text, so the kind comes from the text, as a 429's would."""
+    response = _sse({"result": {"isError": True, "content": [{"type": "text", "text": text}]}})
+
+    with pytest.raises(ProviderError) as raised:
+        provider._payload(response)
+
+    assert raised.value.kind == "rate_limit" and raised.value.retryable
+
+
 def test_a_jsonrpc_error_becomes_a_provider_error(provider: YouMcpProvider) -> None:
     response = _sse({"jsonrpc": "2.0", "error": {"code": -32602, "message": "Invalid params"}})
 

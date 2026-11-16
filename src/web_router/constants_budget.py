@@ -1,6 +1,5 @@
 """A call's budget: why a candidate was skipped, and what the call raises when nothing fits.
 
-Experimental: :mod:`web_router.routing.budget` is new and may change before 1.0.
 Kept apart from :mod:`web_router.constants`, so that file stops growing.
 """
 
@@ -46,3 +45,9 @@ SECONDS_PER_MINUTE = 60.0
 
 BROWSER_UNBILLED_OPTIONS = frozenset({"timeout", "idle_timeout", "viewport", "headless"})
 """The browser options no vendor bills apart; any other -- a proxy, stealth, CAPTCHA solving -- may turn on an extra."""
+
+TOKEN_BILLED = "token_billed"
+"""The price list's unit for a row billed by tokens, estimated at a benchmark's measured mean."""
+
+ACCURACY_TOLERANCE = 1e-9
+"""Slack on a noise-floor comparison, so two accuracies a float apart are never split into tiers."""

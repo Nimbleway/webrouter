@@ -14,21 +14,26 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from importlib import import_module
 from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from web_router.types_citation import Citation as Citation
+from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
 from web_router.types_data_api import DATA_APIS_DESCRIPTION, DataApiMatch
 from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
+from web_router.types_errors import ExtractFailure as ExtractFailure
 from web_router.types_options import (
     EXTRACT_PROFILE_DESCRIPTION,
     MAX_RESULTS_DESCRIPTION,
     RECENCY_DESCRIPTION,
     SEARCH_DEPTH_DESCRIPTION,
     SEARCH_EFFORT_DESCRIPTION,
+    NonBlankText,
 )
 from web_router.types_options import Recency as Recency
 from web_router.types_options import ResearchEffort as ResearchEffort
@@ -46,10 +51,9 @@ ExtractFormat = Literal["markdown", "html", "text"]
 - ``html``: the page's HTML, as the backend fetched it.
 - ``text``: the visible text, with no markup at all.
 
-Backends do not all offer all three: one that cannot produce the format you
-asked for raises :class:`~web_router.exceptions.UnsupportedFormatError` rather
-than returning a different one under the same name. See the format table at
-https://docs.webrouter.net/extract#formats
+Backends do not all offer all three: one that cannot produce the format you asked for raises
+:class:`~web_router.exceptions.UnsupportedFormatError` rather than returning a different one under the same name.
+See the format table at https://docs.webrouter.net/extract#formats
 """
 
 
@@ -159,7 +163,7 @@ class SearchRequest(NormalizedRequest):
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
 
-    query: Annotated[str, Field(min_length=1, description="The search query.")]
+    query: Annotated[NonBlankText, Field(description="The search query.")]
     max_results: Annotated[int | None, Field(default=None, ge=1, description=MAX_RESULTS_DESCRIPTION)] = None
     search_depth: SearchDepth | None = Field(default=None, description=SEARCH_DEPTH_DESCRIPTION)
     include_domains: list[str] | None = Field(default=None, description="Restrict results to these domains.")
@@ -250,6 +254,9 @@ class SearchResponse(BaseModel):
     request_id: str | None = None
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
     data_apis: list[DataApiMatch] = Field(default_factory=list, description=DATA_APIS_DESCRIPTION)
 
     def __len__(self) -> int:
@@ -280,18 +287,12 @@ class ExtractedDocument(BaseModel):
     )
     status_code: int | None = Field(default=None, description="The fetched page's HTTP status, when reported.")
     published_date: str | None = None
+    warnings: list[str] = Field(
+        default_factory=list, description="What looked off about a page that came back, such as a near-empty body."
+    )
     extra: dict[str, Any] = Field(
         default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
-
-
-class ExtractFailure(BaseModel):
-    """A URL the provider could not fetch, and why."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    error: str
 
 
 class ExtractResponse(BaseModel):
@@ -324,6 +325,9 @@ class ExtractResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
 
     def __len__(self) -> int:
         return len(self.documents)
@@ -334,15 +338,14 @@ class ExtractResponse(BaseModel):
         return [document.url for document in self.documents]
 
 
-_BENCHMARK_MODELS = frozenset({"BenchmarkRun", "BenchmarkReport", "ExtractBenchmarkRun", "ExtractBenchmarkReport"})
+_MOVED = {"BrowseProgress": "browse"} | dict.fromkeys(("BenchmarkRun", "BenchmarkReport"), "benchmark")
+_MOVED |= dict.fromkeys(("ExtractBenchmarkRun", "ExtractBenchmarkReport"), "benchmark")
 
 
 def __getattr__(name: str) -> Any:
-    """The benchmark models' old path: ``types_benchmark`` imports this module, so it cannot be imported at the top."""
-    if name in _BENCHMARK_MODELS:
-        from web_router import types_benchmark
-
-        return getattr(types_benchmark, name)
+    """A moved model's old path: its ``types_*`` module imports this one, so it cannot be imported at the top."""
+    if name in _MOVED:
+        return getattr(import_module(f"web_router.types_{_MOVED[name]}"), name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -377,7 +380,7 @@ class ResearchRequest(NormalizedRequest):
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
 
-    query: Annotated[str, Field(min_length=1, description="The question, or the instructions for the run.")]
+    query: Annotated[NonBlankText, Field(description="The question, or the instructions for the run.")]
     output_schema: dict[str, Any] | None = Field(
         default=None,
         description="JSON Schema the answer must conform to. Unset asks for prose instead.",
@@ -396,28 +399,6 @@ RESEARCH_ALWAYS_SENT = ResearchRequest.always_sent
 
 RESEARCH_PARAMETERS: frozenset[str] = ResearchRequest.normalized_parameters()
 """Every optional parameter a research provider may declare support for."""
-
-
-class Citation(BaseModel):
-    """A source the answer rests on."""
-
-    # Unknown keys are a provider bug: anything unmapped belongs in `extra`.
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = Field(default="", description="The cited page's title, when the provider returned one.")
-    snippet: str = Field(default="", description="The passage the backend quoted from the page, when it quoted one.")
-    field: str | None = Field(
-        default=None,
-        description=(
-            "Which part of the answer this source backs -- a JSON path into `structured`, or a marker "
-            "in `answer` (`[2]`, or on You.com the whole group that names it, `[[1, 2]]`) -- when the "
-            "backend attributes per field. `None` when it ties the source to no part of it."
-        ),
-    )
-    extra: dict[str, Any] = Field(
-        default_factory=dict, description="Provider-specific fields with no normalized equivalent."
-    )
 
 
 class ResearchResponse(BaseModel):
@@ -450,6 +431,9 @@ class ResearchResponse(BaseModel):
         description="The provider's untouched payloads, one per call the run took.",
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
 
     @property
     def urls(self) -> list[str]:
@@ -664,7 +648,7 @@ class BrowseRequest(NormalizedRequest):
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"task", "provider_options"})
 
-    task: Annotated[str, Field(min_length=1, description="What the agent should do, in plain words.")]
+    task: Annotated[NonBlankText, Field(description="What the agent should do, in plain words.")]
     start_url: str | None = Field(default=None, description="The page the agent starts on.")
     output_schema: dict[str, Any] | None = Field(
         default=None,
@@ -753,25 +737,6 @@ class BrowseResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
-
-
-class BrowseProgress(BaseModel):
-    """Where one browse task stands, and its answer once it has one."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    job_id: str = Field(description="The backend's id for this task, which is what a later poll is keyed on.")
-    state: JobState
-    response: BrowseResponse | None = Field(
-        default=None,
-        description="The answer. Set exactly when `state` is 'completed'.",
-    )
-    detail: str | None = Field(
-        default=None,
-        description="Whatever the backend said about this state -- an error message, a progress note.",
-    )
-
-    @property
-    def is_terminal(self) -> bool:
-        """Whether this task has stopped, one way or another."""
-        return self.state not in ("queued", "running")
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None

@@ -9,14 +9,16 @@ cleared, so no test reaches a real vendor.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Iterator
 from typing import Any
 
+import httpx
 import pytest
 
 from tests._live_data_fake import FakeLiveDataProvider
 from tests._live_data_paged import PagedProvider
-from web_router import AsyncWebRouter, WebRouter
+from web_router import AllProvidersFailedError, AsyncWebRouter, WebRouter
 from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.live_data_backends import usable_backends
@@ -91,6 +93,41 @@ def test_every_backend_failing_raises_rather_than_answering_empty(fake_live_data
             WebRouter().live_data_sources()
     finally:
         FakeLiveDataProvider.list_raises = None
+
+
+def _refused_key(provider: str) -> ProviderError:
+    request = httpx.Request("GET", "https://api.example.com")
+    response = httpx.Response(401, request=request)
+    refused = httpx.HTTPStatusError("401", request=request, response=response)
+    return ProviderError(provider, "HTTP 401", original=refused)
+
+
+@pytest.mark.parametrize("use_async", [False, True])
+def test_every_backend_failing_keeps_each_ones_error_and_kind(
+    two_backends: None, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, use_async: bool
+) -> None:
+    FakeLiveDataProvider.list_raises = _refused_key("fake")
+    paged_error = _refused_key("paged")
+
+    def refuse(*_args: Any, **_kwargs: Any) -> Any:
+        raise paged_error
+
+    async def arefuse(*_args: Any, **_kwargs: Any) -> Any:
+        raise paged_error
+
+    monkeypatch.setattr(PagedProvider, "_list", refuse)
+    monkeypatch.setattr(PagedProvider, "_alist", arefuse)
+    with caplog.at_level(logging.WARNING, logger="web_router"), pytest.raises(AllProvidersFailedError) as caught:
+        if use_async:
+            asyncio.run(AsyncWebRouter().live_data_sources())
+        else:
+            WebRouter().live_data_sources()
+
+    assert set(caught.value.failures) == {"fake", "paged"}
+    assert caught.value.failures["paged"] is paged_error
+    assert (caught.value.kind, caught.value.retryable) == ("auth", False)
+    warned = {record.getMessage().split()[0] for record in caplog.records if record.levelno == logging.WARNING}
+    assert warned == {"fake", "paged"}
 
 
 def test_no_backend_at_all_names_the_variables_to_set() -> None:

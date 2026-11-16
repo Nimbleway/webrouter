@@ -1,7 +1,8 @@
 """From candidates and a router's outcome to what a call runs: the method, its backends, its options, its record.
 
 Experimental. The one path a routed call and :meth:`~web_router.WebRouter.plan`
-share: :func:`static_order` reads the candidate builder's order,
+share: :func:`static_order` reads the candidate builder's order -- under a cost
+cap, ``auto``'s cost order for each method the router ranks no backend of --
 :func:`~web_router.routing.merge.merge` merges the router's decision into it,
 and :func:`decided` keeps the research effort the candidates were priced at,
 unless the router set one, and writes the decision record, stamped with a fresh
@@ -21,6 +22,7 @@ from web_router.routing.composite import members_of, none_answered
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
+from web_router.routing.merge_shape import well_formed
 from web_router.routing.record import stamp
 from web_router.types_decision import DecisionRecord
 
@@ -47,6 +49,17 @@ def static_order(found: CandidateSet) -> dict[ToolName, list[str]]:
     return order
 
 
+def _base_order(found: CandidateSet, decision: object) -> dict[ToolName, list[str]]:
+    """The order the merge starts from: the static order, and the cost order of each method ``decision`` -- a
+    well-formed one, else ``None`` -- ranks no backend of. The default ``rules`` router ranks none, so a plan
+    under a cost cap runs cheapest first as an unrouted call does; a router's own ranking is kept as it gave it.
+    """
+    order = static_order(found)
+    ranked: Mapping[Any, Any] = getattr(decision, "providers", None) or {}
+    order.update({tool: list(names) for tool, names in found.cost_order.items() if not ranked.get(tool)})
+    return order
+
+
 def decided(
     req: RouteRequest,
     found: CandidateSet,
@@ -70,7 +83,7 @@ def decided(
     merged = merge(
         req,
         decision,
-        static_order(found),
+        _base_order(found, None if failure is not None or not well_formed(decision) else decision),
         failure=failure,
         caller_set=caller_set,
         url_check=url_check,

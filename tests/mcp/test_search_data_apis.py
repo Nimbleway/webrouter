@@ -34,7 +34,7 @@ async def test_no_match_and_discovery_off_leave_the_field_out(tools: WebRouterTo
 async def test_data_apis_only_reaches_no_web_backend(tools: WebRouterTools, fake_provider: Any) -> None:
     payload = await ok_on(tools, MCP_TOOL_SEARCH, query="datadog monitors", data_apis_only=True)
     assert payload["provider"] == DATA_APIS_ONLY_PROVIDER
-    assert payload["results"] == []
+    assert payload.get("results", []) == []  # an empty list is left out of a tool answer
     assert payload["data_apis"]
     assert tools.router.get_provider("fake").requests == []  # type: ignore[attr-defined]
 

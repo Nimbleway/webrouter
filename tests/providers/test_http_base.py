@@ -21,7 +21,6 @@ from web_router.constants import BROWSE_HTTP_TIMEOUT
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._http import HttpBrowseProvider, HttpBrowserProvider, HttpSearchProvider
 from web_router.types import (
-    BrowseProgress,
     BrowseRequest,
     BrowseResponse,
     BrowserRequest,
@@ -30,6 +29,7 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
 )
+from web_router.types_browse import BrowseProgress
 
 ENV_VAR = "ACME_API_KEY"
 

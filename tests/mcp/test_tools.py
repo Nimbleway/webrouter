@@ -16,7 +16,7 @@ import pytest
 from tests.conftest import FakeBrowseProvider, FakeResearchProvider
 from tests.mcp.conftest import FAKE
 from tests.providers._answer_stub import stub_answer_api
-from web_router.client import AsyncWebRouter
+from web_router import AsyncWebRouter, BrowseProgress
 from web_router.constants import (
     AUTO_KEYLESS,
     ENV_BRAVE_API_KEY,
@@ -69,7 +69,7 @@ from web_router.registry import (
     unregister_browse_provider,
     unregister_research_provider,
 )
-from web_router.types import BrowseProgress, BrowseRequest, BrowseStep
+from web_router.types import BrowseRequest, BrowseStep
 
 
 def _tool(session: WebRouterTools, name: str) -> Any:
@@ -148,7 +148,7 @@ def test_a_method_with_only_delegating_providers_configured_is_not_usable() -> N
 
 def test_the_extract_tool_says_what_max_costs(tools: WebRouterTools) -> None:
     description = _tool(tools, MCP_TOOL_EXTRACT).description
-    assert "provider='max'" in description and "one fetch per backend" in description
+    assert "provider='max'" in description and "one fetch each" in description
 
 
 def test_a_key_appears_in_the_enum_for_every_method_it_serves(
@@ -229,7 +229,7 @@ def test_research_says_so_when_nothing_can_serve_it(
 
 
 def test_the_wait_budget_is_in_the_research_description(tools: WebRouterTools) -> None:
-    assert "waits 0s" in _tool(tools, MCP_TOOL_RESEARCH).description
+    assert "After 0s" in _tool(tools, MCP_TOOL_RESEARCH).description
 
 
 async def test_search_round_trip(tools: WebRouterTools) -> None:
@@ -512,7 +512,7 @@ def test_browse_takes_exactly_the_routers_arguments(tools: WebRouterTools, no_ke
     }
     assert schema["properties"]["provider"]["enum"] == [PROVIDER_AUTO]
     assert schema["required"] == ["task"]
-    assert "waits 0s" in _tool(tools, MCP_TOOL_BROWSE).description
+    assert "After 0s" in _tool(tools, MCP_TOOL_BROWSE).description
 
 
 def test_browse_says_so_when_nothing_can_serve_it(
@@ -544,9 +544,7 @@ async def test_browse_that_finishes_inside_the_budget_answers_outright(tools: We
     assert payload["state"] == "completed"
     assert payload["answer"] == "the answer"
     assert payload["structured"] == {"ok": True}
-    assert payload["steps"] == [
-        {"action": "navigate", "url": "https://example.com", "detail": None, "screenshot_url": None}
-    ]
+    assert payload["steps"] == [{"action": "navigate", "url": "https://example.com"}], "no empty keys"
     assert payload["handle"].startswith(MCP_TOOL_BROWSE)
     assert "raw" not in payload
     request = tools.router.get_browse_provider(FAKE).requests[-1]  # type: ignore[attr-defined]
@@ -733,7 +731,7 @@ def test_the_server_steers_an_interactive_page_to_a_browser_the_user_agrees_to(t
     assert "browser_open" in described["extract"]
     opener = described.get("browser_open")
     if opener is not None:  # listed only where Playwright imports
-        assert "logins, forms, multi-step portals" in opener and "headless=false" in opener
+        assert "logins, forms and portals" in opener and "headless=false" in opener
         assert "BILLS FOR EVERY MINUTE" in opener  # the billing warning stays
 
 
@@ -761,7 +759,6 @@ async def test_answer_round_trip_and_fetch_raw(tools: WebRouterTools, fake_answe
     assert payload["provider"] == FAKE
     assert payload["answer"] == "the answer"
     assert payload["outcome"] == "complete"
-    assert payload["citation_count"] == 1
     assert payload["citations"][0]["url"] == "https://example.com"
     assert payload["handle"].startswith(MCP_TOOL_ANSWER)
     request = tools.router.get_answer_provider(FAKE).requests[-1]  # type: ignore[attr-defined]
@@ -777,7 +774,7 @@ async def test_answer_needs_no_provider_argument(no_keys: None, monkeypatch: pyt
     monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
     session = WebRouterTools(AsyncWebRouter())
     schema = _tool(session, MCP_TOOL_ANSWER).input_schema
-    assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
+    assert schema["properties"]["provider"]["enum"] == ["auto", PROVIDER_LINKUP]
     assert "provider" not in schema["required"]
 
     auto = session.router.get_answer_provider()
@@ -800,7 +797,7 @@ def test_answer_says_so_when_nothing_can_serve_it(
     monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
     schema = _tool(tools, MCP_TOOL_ANSWER).input_schema
     assert "NOTHING IS CONFIGURED" not in _tool(tools, MCP_TOOL_ANSWER).description
-    assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
+    assert schema["properties"]["provider"]["enum"] == ["auto", PROVIDER_LINKUP]
 
 
 def test_answer_offers_only_the_options_a_configured_backend_maps(

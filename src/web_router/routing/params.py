@@ -1,6 +1,6 @@
 """The options a budget sets on a call: research's effort, mapped from what the budget has left.
 
-Experimental. A pure selection with no model and no side effects: it reads the
+A pure selection with no model and no side effects: it reads the
 research effort table (:mod:`web_router.routing.effort_table`), and prices
 and times each effort by :mod:`.pricing`'s rule -- the table's own p90 first,
 then the price list's -- and answers which effort to run with and why.

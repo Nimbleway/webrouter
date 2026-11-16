@@ -30,7 +30,8 @@ from web_router.constants import (
 )
 from web_router.providers._http import HttpBrowseProvider
 from web_router.providers._utils import build_payload
-from web_router.types import BrowseProgress, BrowseRequest, BrowseResponse
+from web_router.types import BrowseRequest, BrowseResponse
+from web_router.types_browse import BrowseProgress
 
 
 class SkyvernBrowseProvider(HttpBrowseProvider):
