@@ -80,7 +80,7 @@ jobs:
           for _ in $(seq 1 30); do
             if curl -fsS "https://pypi.org/pypi/webrouter/$version/json" -o "$RUNNER_TEMP/release.json"; then
               jq -r '.info.description' "$RUNNER_TEMP/release.json" \
-                | grep -q 'mcp-name: io.github.Nimbleway/webrouter' \
+                | grep -Eq 'mcp-name: io\.github\.Nimbleway/webrouter($|[[:space:]]|-->)' \
                 || { echo "::error::PyPI's description of $version has no mcp-name line"; exit 1; }
               echo "PyPI serves webrouter $version"
               exit 0

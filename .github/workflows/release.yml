@@ -166,6 +166,10 @@ jobs:
           meta=$(unzip -p "${wheels[0]}" "webrouter-$version.dist-info/METADATA")
           printf '%s\n' "$meta" | grep -qx "Name: webrouter" || { echo "::error::wheel is not webrouter"; exit 1; }
           printf '%s\n' "$meta" | grep -qx "Version: $version" || { echo "::error::wheel version is not $version"; exit 1; }
+          # The MCP Registry reads this line from PyPI's description, and a PyPI
+          # version can't be replaced, so check it before the upload.
+          printf '%s\n' "$meta" | grep -Eq 'mcp-name: io\.github\.Nimbleway/webrouter($|[[:space:]]|-->)' \
+            || { echo "::error::the wheel's description has no mcp-name line"; exit 1; }
           echo "dist matches webrouter $version"
 
       - name: Publish to PyPI
