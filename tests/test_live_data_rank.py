@@ -7,7 +7,7 @@ here, so a rule that stops working fails by name.
 
 from __future__ import annotations
 
-from web_router.live_data_rank import read_query, relevant, score
+from web_router.live_data_rank import kind_of, read_query, relevant, score
 from web_router.live_data_search import ranked
 from web_router.providers import brightdata_shapes, oxylabs_scrapers
 from web_router.providers import nimble_live_data_map as nimble_map
@@ -95,3 +95,10 @@ def test_equal_sources_from_every_vendor_score_the_same() -> None:
     assert [source.provider for source in ranked(sources, "amazon product")] == ["nimble", "brightdata", "oxylabs"]
     unfinished = sources[0].model_copy(update={"name": "amazon_pdp_test"})
     assert ranked([unfinished, *sources], "amazon product")[-1] is unfinished
+
+
+def test_the_title_is_read_for_the_match_and_the_kind_alike() -> None:
+    titled = _source("tpl_1", "www.example.com").model_copy(update={"extra": {"display_name": "Books - Reviews"}})
+
+    assert relevant(titled, read_query("books")) and kind_of(titled) == "reviews"
+    assert not relevant(titled.model_copy(update={"extra": {"title": 7}}), read_query("books"))

@@ -115,7 +115,7 @@ class Query:
 def read_query(query: str) -> Query:
     """``query`` split into the site words, the kind of page and the country it asks for."""
     words = [word for word in _words(query) if word not in _FILLER]
-    named = [name for name, said in KINDS.items() if said.intersection(words)]
+    named = _kinds_in(words)
     # "search amazon products": beside another kind, "search" is the verb, not the page asked for.
     kind = next((name for name in named if name != "search"), named[0] if named else None)
     country = next((COUNTRIES[word] for word in words if word in _COUNTRY_WORDS_IN_QUERY), None)
@@ -168,9 +168,8 @@ def score(source: LiveDataSource, query: Query) -> int:
 
 def haystack(source: LiveDataSource) -> str:
     """Everything ``source`` says about itself, lower-cased: name, site, kind, title and description."""
-    title = source.extra.get("title") or source.extra.get("display_name")
-    parts = (source.name, source.domain, source.entity_type, title if isinstance(title, str) else None)
-    return " ".join(part for part in (*parts, source.description) if part).casefold()
+    parts = (source.name, source.domain, source.entity_type, _title(source), source.description)
+    return " ".join(part for part in parts if part).casefold()
 
 
 # -- helpers ------------------------------------------------------------------
@@ -180,14 +179,23 @@ def _words(text: str) -> list[str]:
     return _WORD.findall(text.casefold())
 
 
+def _kinds_in(words: list[str]) -> list[str]:
+    """Every kind ``words`` name, in :data:`KINDS`' order of precedence."""
+    return [name for name, said in KINDS.items() if said.intersection(words)]
+
+
 def _kind_in(words: list[str]) -> str | None:
-    present = set(words)
-    return next((name for name, said in KINDS.items() if present & said), None)
+    return next(iter(_kinds_in(words)), None)
+
+
+def _title(source: LiveDataSource) -> str | None:
+    """The source's display title, when its vendor gives one."""
+    title = source.extra.get("title") or source.extra.get("display_name")
+    return title if isinstance(title, str) else None
 
 
 def _name_and_title(source: LiveDataSource) -> str:
-    title = source.extra.get("title") or source.extra.get("display_name")
-    return " ".join(part for part in (source.name, title if isinstance(title, str) else None) if part)
+    return " ".join(part for part in (source.name, _title(source)) if part)
 
 
 def _site_name(domain: str | None) -> tuple[str | None, str | None]:
