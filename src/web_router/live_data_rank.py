@@ -24,80 +24,31 @@ longer counts as one.
 country must appear in what the source says about itself, and a source of
 another kind than the one asked for is left out. Ties keep the
 vendor's order. Kept apart from :mod:`web_router.live_data_search` so the
-scoring can be read, and tested, on its own.
+scoring can be read, and tested, on its own; the vocabulary and weights are
+:mod:`web_router.live_data_rank_vocab`, and reading a domain's site and
+country is :mod:`web_router.live_data_rank_site`.
 """
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
-from typing import Final
-from urllib.parse import urlsplit
 
+from web_router.live_data_rank_site import country_of, locale_score, site_score
+from web_router.live_data_rank_vocab import (
+    COUNTRIES,
+    COUNTRY_WORDS_IN_QUERY,
+    FILLER,
+    FOCUS,
+    KIND_SAME,
+    KIND_WORDS,
+    KINDS,
+    SAMPLE,
+    SCHEMA,
+    UNFINISHED,
+    UNFINISHED_PENALTY,
+    words_of,
+)
 from web_router.types_live_data import LiveDataSource
-
-KINDS: Final[dict[str, frozenset[str]]] = {
-    "reviews": frozenset({"review", "reviews", "rating", "ratings", "comment", "comments"}),
-    "article": frozenset({"article", "articles"}),
-    "offers": frozenset({"offer", "offers", "pricing"}),
-    "search": frozenset({"search", "serp", "searches"}),
-    "category": frozenset({"category", "categories", "clp", "plp", "bestsellers", "collection", "browse"}),
-    "product": frozenset({"product", "products", "pdp", "item", "detail", "details"}),
-}
-"""Each kind of page, and the words that name it in a query, a vendor's label or a source's name.
-
-In order of precedence: a source named for a product's reviews is a reviews
-page, not a product page, so the more specific kinds come first.
-"""
-
-_KIND_WORDS: Final = frozenset(word for said in KINDS.values() for word in said)
-"""Every word that names a kind: none of them is a site word, whichever kind a query is read as."""
-
-COUNTRIES: Final[dict[str, str]] = {
-    "uk": "uk", "gb": "uk", "britain": "uk", "england": "uk", "de": "de", "germany": "de",
-    "fr": "fr", "france": "fr", "it": "it", "italy": "it", "es": "es", "spain": "es",
-    "in": "in", "india": "in", "jp": "jp", "japan": "jp", "ca": "ca", "canada": "ca",
-    "au": "au", "australia": "au", "nl": "nl", "netherlands": "nl", "se": "se", "sweden": "se",
-    "pl": "pl", "poland": "pl", "br": "br", "brazil": "br", "mx": "mx", "mexico": "mx",
-    "ae": "ae", "uae": "ae", "sa": "sa", "sg": "sg", "singapore": "sg", "tr": "tr", "turkey": "tr",
-    "be": "be", "belgium": "be", "eg": "eg", "egypt": "eg", "cz": "cz", "ie": "ie", "ireland": "ie",
-}  # fmt: skip
-"""Country words a query or a source's name may carry, each to the code its site's domain ends in."""
-
-_COUNTRY_WORDS_IN_QUERY: Final = frozenset(COUNTRIES) - {"in", "it", "be"}
-"""Country words read as a country in a query: all but the codes that are also English words there."""
-
-_NOT_COUNTRIES: Final = frozenset({"us", "ai", "io", "co", "tv", "me", "ly", "fm", "gg", "to", "cc"})
-"""Two-letter domain endings of a site's main edition: the US, and country codes used as generic ones."""
-
-_SECOND_LEVEL: Final = frozenset({"co", "com", "org", "net", "gov", "ac"})
-"""Labels that sit before a country code in a domain, as in amazon.co.uk."""
-
-_FILLER: Final = frozenset({"page", "pages", "results", "data", "scraper", "api", "the", "a", "an", "of", "for", "on"})
-"""Query words that say nothing about which source: "amazon product page" asks what "amazon product" does."""
-
-_UNFINISHED: Final = frozenset({"test", "tmp", "temp", "copy", "debug", "draft", "deprecated"})
-"""Words in a source's name that mark it as someone's experiment rather than the one to run.
-
-Whole words only, a trailing number aside (``copy2``): inside a word they are
-part of real names -- latest, contest -- and "old" is a brand (old_navy).
-"""
-
-_WORD = re.compile(r"[a-z0-9]+")
-
-# Weights: a site match outranks everything else, then the kind, then locale, then quality.
-_SITE_NAMED = 40
-_SITE_IN_NAME = 25
-_SITE_IN_TEXT = 5
-_KIND_SAME = 30
-_LOCALE_MATCH = 15
-_LOCALE_MAIN = 10
-_LOCALE_OTHER = -10
-_SCHEMA = 2
-_SAMPLE = 2
-_UNFINISHED_PENALTY = -15
-_FOCUS = 4
-"""At most this much for a name the query explains whole: walmart_serp over walmart_store_directory_by_town."""
 
 
 @dataclass(frozen=True)
@@ -114,12 +65,12 @@ class Query:
 
 def read_query(query: str) -> Query:
     """``query`` split into the site words, the kind of page and the country it asks for."""
-    words = [word for word in _words(query) if word not in _FILLER]
+    words = [word for word in words_of(query) if word not in FILLER]
     named = _kinds_in(words)
     # "search amazon products": beside another kind, "search" is the verb, not the page asked for.
     kind = next((name for name in named if name != "search"), named[0] if named else None)
-    country = next((COUNTRIES[word] for word in words if word in _COUNTRY_WORDS_IN_QUERY), None)
-    site = tuple(word for word in words if word not in _KIND_WORDS and word not in _COUNTRY_WORDS_IN_QUERY)
+    country = next((COUNTRIES[word] for word in words if word in COUNTRY_WORDS_IN_QUERY), None)
+    site = tuple(word for word in words if word not in KIND_WORDS and word not in COUNTRY_WORDS_IN_QUERY)
     return Query(site_words=site, kind=kind, country=country)
 
 
@@ -131,7 +82,7 @@ def kind_of(source: LiveDataSource) -> str | None:
     product's reviews can be labelled a product page.
     """
     for text in (_name_and_title(source), source.entity_type):
-        found = _kind_in(_words(text or ""))
+        found = _kind_in(words_of(text or ""))
         if found:
             return found
     return None
@@ -152,7 +103,7 @@ def relevant(source: LiveDataSource, query: Query) -> bool:
     matches no source rather than the whole catalogue.
     """
     if not query.site_words and query.kind is None:
-        return query.country is not None and _country_of(source) == query.country
+        return query.country is not None and country_of(source) == query.country
     if query.kind is not None and kind_of(source) not in (query.kind, None):
         return False
     text = haystack(source)
@@ -162,7 +113,11 @@ def relevant(source: LiveDataSource, query: Query) -> bool:
 def score(source: LiveDataSource, query: Query) -> int:
     """How well ``source`` answers ``query``: higher first. Only meaningful for a :func:`relevant` source."""
     return (
-        _site(source, query) + _kind(source, query) + _locale(source, query) + _quality(source) + _focus(source, query)
+        site_score(source, query.site_words)
+        + _kind(source, query)
+        + locale_score(source, query.country)
+        + _quality(source)
+        + _focus(source, query)
     )
 
 
@@ -173,10 +128,6 @@ def haystack(source: LiveDataSource) -> str:
 
 
 # -- helpers ------------------------------------------------------------------
-
-
-def _words(text: str) -> list[str]:
-    return _WORD.findall(text.casefold())
 
 
 def _kinds_in(words: list[str]) -> list[str]:
@@ -198,64 +149,11 @@ def _name_and_title(source: LiveDataSource) -> str:
     return " ".join(part for part in (source.name, _title(source)) if part)
 
 
-def _site_name(domain: str | None) -> tuple[str | None, str | None]:
-    """A domain's site name and its ending: ``www.amazon.co.uk`` is ``("amazon", "uk")``; ``amazon`` alone has none."""
-    if not domain:
-        return None, None
-    # Some vendors write the site as a URL: https://www.aldi.us/ is www.aldi.us.
-    host = urlsplit(domain).hostname if "//" in domain else domain.split("/")[0]
-    labels = [label for label in (host or "").casefold().split(".") if label and label != "www"]
-    if len(labels) < 2:
-        return (labels[0] if labels else None), None
-    ending = labels[-1]
-    rest = labels[:-1]
-    if len(rest) >= 2 and rest[-1] in _SECOND_LEVEL and len(ending) == 2:
-        rest = rest[:-1]
-    return rest[-1], ending
-
-
-def _site(source: LiveDataSource, query: Query) -> int:
-    if not query.site_words:
-        return 0
-    site, _ = _site_name(source.domain)
-    name = set(_words(source.name)) | set(_words(source.domain or ""))
-    total = 0
-    for word in query.site_words:
-        if word == site or (site is None and _words(source.name)[:1] == [word]):
-            total += _SITE_NAMED
-        elif word in name:
-            total += _SITE_IN_NAME
-        else:
-            total += _SITE_IN_TEXT
-    return total // len(query.site_words)
-
-
 def _kind(source: LiveDataSource, query: Query) -> int:
     if query.kind is None:
         return 0
     # A source of another kind is not relevant at all; one that does not say which ranks below the kind asked.
-    return _KIND_SAME if kind_of(source) == query.kind else 0
-
-
-def _country_of(source: LiveDataSource) -> str | None:
-    """The country edition ``source`` reads, from its domain's ending, else a country code in its name.
-
-    Only a two-letter ending names a country, and not every one: .com, .app,
-    .ai or .tv is a site's main edition.
-    """
-    _, ending = _site_name(source.domain)
-    if ending:
-        return COUNTRIES.get(ending, ending) if len(ending) == 2 and ending not in _NOT_COUNTRIES else None
-    # A slug like amazon_in_product_reviews names its country second.
-    words = _words(source.name)
-    return COUNTRIES.get(words[1]) if len(words) > 1 and len(words[1]) == 2 else None
-
-
-def _locale(source: LiveDataSource, query: Query) -> int:
-    country = _country_of(source)
-    if query.country is not None:
-        return _LOCALE_MATCH if country == query.country else _LOCALE_OTHER
-    return _LOCALE_MAIN if country is None else 0
+    return KIND_SAME if kind_of(source) == query.kind else 0
 
 
 def _focus(source: LiveDataSource, query: Query) -> int:
@@ -263,12 +161,12 @@ def _focus(source: LiveDataSource, query: Query) -> int:
 
     Dates and generated suffixes -- any word with a digit -- are not counted either way.
     """
-    words = [word for word in _words(source.name) if not any(char.isdigit() for char in word)]
+    words = [word for word in words_of(source.name) if not any(char.isdigit() for char in word)]
     if not words:
         return 0
     asked = set(query.site_words) | (KINDS[query.kind] if query.kind else frozenset())
     explained = sum(1 for word in words if word in asked or (query.country and COUNTRIES.get(word) == query.country))
-    return _FOCUS * explained // len(words)
+    return FOCUS * explained // len(words)
 
 
 def _quality(source: LiveDataSource) -> int:
@@ -280,11 +178,11 @@ def _quality(source: LiveDataSource) -> int:
     """
     points = 0
     if source.input_schema:
-        points += _SCHEMA
+        points += SCHEMA
     if source.samples:
-        points += _SAMPLE
-    if _UNFINISHED.intersection(word.rstrip("0123456789") for word in _words(source.name)):
-        points += _UNFINISHED_PENALTY
+        points += SAMPLE
+    if UNFINISHED.intersection(word.rstrip("0123456789") for word in words_of(source.name)):
+        points += UNFINISHED_PENALTY
     return points
 
 

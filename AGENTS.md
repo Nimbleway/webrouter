@@ -133,6 +133,9 @@ src/web_router/
 │                       deprecated template names, mixed into both routers
 ├── live_data_search.py live_data_sources(query=...): NativeSourceSearch for vendors that
 │                       search their own catalogue, a local match for the rest
+├── live_data_rank.py   a local match: the query read as site, kind and country, the gate and the score;
+│                       its words and weights are live_data_rank_vocab.py, a domain's site and
+│                       country live_data_rank_site.py
 ├── live_data_compat.py the old Template* names, importable from web_router with a warning
 ├── client_vendors.py   call_vendor(), vendor_request() and the catalog lookups, mixed into
 │                       both routers
