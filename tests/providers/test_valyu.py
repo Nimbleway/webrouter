@@ -137,6 +137,11 @@ def test_results_map_and_nothing_is_invented(provider: ValyuProvider) -> None:
     assert (second.description, second.content, second.published_date) == ("", "", None)
 
 
+def test_the_charge_valyu_states_is_the_calls_cost(provider: ValyuProvider) -> None:
+    response = provider._to_response(SearchRequest(query="quantum"), DOCUMENTED)
+    assert (response.cost_usd, response.cost_source) == (0.00125, "reported")
+
+
 def test_with_no_description_the_snippet_is_the_opening_of_the_body(provider: ValyuProvider) -> None:
     body = "word " * 200
     (result,) = provider._to_response(

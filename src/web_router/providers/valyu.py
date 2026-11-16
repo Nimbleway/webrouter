@@ -29,6 +29,7 @@ from web_router.constants_valyu import (
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
+from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import best_text, build_payload
@@ -82,6 +83,7 @@ class ValyuProvider(HttpSearchProvider):
             results=[self._to_result(hit) for hit in payload.get("results") or []],
             request_id=payload.get("tx_id"),
             raw=payload,
+            **stated_cost(payload, "total_deduction_dollars"),
         )
 
     @staticmethod
