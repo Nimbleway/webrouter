@@ -13,7 +13,7 @@ from web_router.providers import brightdata_shapes, oxylabs_scrapers
 from web_router.providers import nimble_live_data_map as nimble_map
 from web_router.providers.brightdata_names import Scraper as BrightDataScraper
 from web_router.providers.oxylabs_scrapers import Scraper as OxylabsScraper
-from web_router.types_live_data import LiveDataSource
+from web_router.types_live_data import LiveDataSample, LiveDataSource
 
 
 def _source(name: str, domain: str = "www.amazon.com", entity_type: str | None = None) -> LiveDataSource:
@@ -102,3 +102,58 @@ def test_the_title_is_read_for_the_match_and_the_kind_alike() -> None:
 
     assert relevant(titled, read_query("books")) and kind_of(titled) == "reviews"
     assert not relevant(titled.model_copy(update={"extra": {"title": 7}}), read_query("books"))
+
+
+# -- what each weight decides -------------------------------------------------
+# Each test turns on one weight: setting it to 0 makes the two sources tie (the
+# input order then stands, and the losing source is put first) or flips them.
+
+
+def _names(sources: list[LiveDataSource], query: str) -> list[str]:
+    return [f"{source.name}@{source.domain}" for source in ranked(sources, query)]
+
+
+def test_the_main_site_ranks_above_a_country_edition_when_no_country_is_asked() -> None:
+    uk, main = _source("amazon_pdp", "www.amazon.co.uk"), _source("amazon_pdp")
+
+    assert _names([uk, main], "amazon product") == ["amazon_pdp@www.amazon.com", "amazon_pdp@www.amazon.co.uk"]
+    assert _names([main, uk], "amazon uk product") == ["amazon_pdp@www.amazon.co.uk", "amazon_pdp@www.amazon.com"]
+
+
+def test_a_named_country_outweighs_a_better_site_match_on_the_main_site() -> None:
+    """A UK reseller's page against Amazon's own .com page with a schema and a sample, for "amazon uk product"."""
+    reseller = _source("amazon_uk_product", "www.shopamazon.co.uk")
+    main = _source("amazon_product").model_copy(
+        update={"input_schema": {"type": "object"}, "samples": [LiveDataSample()]}
+    )
+
+    assert ranked([main, reseller], "amazon uk product") == [reseller, main]
+
+
+def test_the_kind_asked_ranks_above_a_source_that_does_not_say_its_kind() -> None:
+    unsaid, product = _source("amazon_x"), _source("amazon_x", entity_type="Product page")
+
+    assert ranked([unsaid, product], "amazon product") == [product, unsaid]
+
+
+def test_a_schema_and_a_sample_each_rank_a_source_higher() -> None:
+    bare = _source("amazon_pdp")
+    with_schema = bare.model_copy(update={"input_schema": {"type": "object"}})
+    with_sample = bare.model_copy(update={"samples": [LiveDataSample()]})
+
+    assert ranked([bare, with_schema], "amazon product") == [with_schema, bare]
+    assert ranked([bare, with_sample], "amazon product") == [with_sample, bare]
+
+
+def test_a_site_word_in_the_name_ranks_above_one_only_in_the_description() -> None:
+    described = LiveDataSource(provider="nimble", name="other_x", domain="www.example.com", description="Acme pages")
+    named = LiveDataSource(provider="nimble", name="acme_x", domain="www.example.com")
+
+    assert ranked([described, named], "acme") == [named, described]
+
+
+def test_a_test_or_copy_twin_ranks_below_the_source() -> None:
+    source = _source("amazon_pdp")
+    twins = [source.model_copy(update={"name": f"amazon_pdp_{word}"}) for word in ("test", "copy")]
+
+    assert ranked([*twins, source], "amazon product")[0] is source
