@@ -36,19 +36,6 @@ jobs:
       TAG: ${{ inputs.tag }}
       RUN_REF: ${{ github.ref }}
     steps:
-      - name: Tag must look like vX.Y.Z, and the run must be on that tag
-        # Plain releases only: no pre-release suffixes and no leading zeros, so
-        # the tag, __version__ and the built file names are the same string.
-        run: |
-          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "::error::'$TAG' is not a release tag (vX.Y.Z)"
-            exit 1
-          fi
-          if [ "$RUN_REF" != "refs/tags/$TAG" ]; then
-            echo "::error::run this on the tag: gh workflow run release.yml --ref $TAG -f tag=$TAG (ran on $RUN_REF)"
-            exit 1
-          fi
-
       # The commit the run started on, not the tag's name, so a tag moved
       # mid-run can't change what is built.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,14 +45,8 @@ jobs:
           persist-credentials: false
 
       # These checks run before any build tool touches the checked-out code.
-      - name: Tag must still be this commit, on main
-        # Full ref names, so a tag named like a branch can't stand in for main.
-        run: |
-          tagged=$(git rev-parse "refs/tags/${TAG}^{commit}")
-          [ "$tagged" = "$GITHUB_SHA" ] \
-            || { echo "::error::$TAG now points at $tagged, not $GITHUB_SHA the run started on"; exit 1; }
-          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main \
-            || { echo "::error::$TAG is not on main"; exit 1; }
+      - name: Tag must be vX.Y.Z, the run on it, and the tag this commit on main
+        run: scripts/check_release_tag.sh "$TAG" release.yml
 
       - name: Tag must match __version__
         run: |
@@ -75,6 +56,11 @@ jobs:
             exit 1
           fi
           echo "Building webrouter $version"
+
+      - name: server.json must name this version
+        # Checked before PyPI, since the registry job after it lists server.json
+        # as it is on this tag.
+        run: scripts/check_server_json.sh "$TAG"
 
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
@@ -161,7 +147,21 @@ jobs:
           meta=$(unzip -p "${wheels[0]}" "webrouter-$version.dist-info/METADATA")
           printf '%s\n' "$meta" | grep -qx "Name: webrouter" || { echo "::error::wheel is not webrouter"; exit 1; }
           printf '%s\n' "$meta" | grep -qx "Version: $version" || { echo "::error::wheel version is not $version"; exit 1; }
+          # The MCP Registry reads this line from PyPI's description, and a PyPI
+          # version can't be replaced, so check it before the upload.
+          printf '%s\n' "$meta" | grep -Eq 'mcp-name: io\.github\.Nimbleway/webrouter($|[[:space:]]|-->)' \
+            || { echo "::error::the wheel's description has no mcp-name line"; exit 1; }
           echo "dist matches webrouter $version"
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+  mcp-registry:
+    # Once PyPI has the release, list it in the MCP Registry.
+    needs: publish
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/mcp-registry.yml
+    with:
+      tag: ${{ inputs.tag }}

@@ -24,8 +24,10 @@ from web_router.constants import (
     MSG_MCP_ERROR,
     MSG_MCP_NO_RESULT,
 )
+from web_router.constants_errors import RATE_LIMIT_MARKERS
 from web_router.exceptions import ProviderError
 from web_router.types import SearchRequest
+from web_router.types_errors import ERROR_KIND_RATE_LIMIT
 
 
 class McpSearchMixin:
@@ -60,7 +62,7 @@ class McpSearchMixin:
         """The tool's answer, out of the JSON-RPC reply, whether it came as plain JSON or as an event stream."""
         result = self._rpc_result(response)
         if result.get("isError"):
-            raise ProviderError(self.name, MSG_MCP_ERROR.format(error=result))
+            raise self._tool_error(result)
         text = "".join(block.get("text", "") for block in result.get("content") or [])
         # A tool may answer in structuredContent alone; its _unwrap reads that.
         if not text and result.get("structuredContent") is None:
@@ -79,7 +81,7 @@ class McpSearchMixin:
 
         for message in self._messages(response.text):
             if error := message.get("error"):
-                raise ProviderError(self.name, MSG_MCP_ERROR.format(error=error))
+                raise self._tool_error(error)
             # Progress notifications share the stream with the answer; only the
             # reply to our call carries "result".
             if "result" in message:
@@ -87,6 +89,15 @@ class McpSearchMixin:
                 return result
 
         raise ProviderError(self.name, MSG_MCP_NO_RESULT)
+
+    def _tool_error(self, error: object) -> ProviderError:
+        """A tool's or a JSON-RPC error, ``rate_limit`` when its text says the call was throttled or out of quota.
+
+        The answer is a 200 either way, so no status says it; the text is all there is.
+        """
+        message = MSG_MCP_ERROR.format(error=error)
+        throttled = any(marker in message.lower() for marker in RATE_LIMIT_MARKERS)
+        return ProviderError(self.name, message, kind=ERROR_KIND_RATE_LIMIT if throttled else None)
 
     def _unwrap(self, text: str, result: dict[str, Any]) -> dict[str, Any]:
         """The search payload in the tool's text content. JSON unless a provider says otherwise.

@@ -1,0 +1,264 @@
+"""What kind of failure a backend's error is, and a URL an extract could not read, so callers branch on fields.
+
+A leaf of the import graph, like the other ``types_*`` modules: it imports nothing of web-router's, so
+:mod:`web_router.types` and :mod:`web_router.exceptions` can both build on it. Import its names from there.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import math
+from collections.abc import Iterator, Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
+from typing import Final, Literal, cast, get_args
+
+from pydantic import BaseModel, ConfigDict, model_validator
+
+ProviderErrorKind = Literal["auth", "rate_limit", "bad_request", "not_found", "timeout", "target", "local", "upstream"]
+"""Why a backend call failed.
+
+- ``auth``: the credential was refused (401, 403).
+- ``rate_limit``: throttled or out of quota (429, 402).
+- ``bad_request``: the backend refused the request as sent (400, 422).
+- ``not_found``: the backend's endpoint or resource is not there (404).
+- ``timeout``: no answer in time.
+- ``target``: the page asked for is the problem -- its host does not resolve, or its URL is not one -- so
+  another backend would fail the same way.
+- ``local``: a failure on this side of the call: a closed event loop, or a provider's own parsing bug.
+- ``upstream``: anything else the backend did: a 5xx, a dropped connection, an answer that could not be read.
+"""
+
+ERROR_KIND_AUTH: Final[ProviderErrorKind] = "auth"
+ERROR_KIND_LOCAL: Final[ProviderErrorKind] = "local"
+ERROR_KIND_TARGET: Final[ProviderErrorKind] = "target"
+ERROR_KIND_UPSTREAM: Final[ProviderErrorKind] = "upstream"
+ERROR_KIND_TIMEOUT: Final[ProviderErrorKind] = "timeout"
+ERROR_KIND_NOT_FOUND: Final[ProviderErrorKind] = "not_found"
+ERROR_KIND_RATE_LIMIT: Final[ProviderErrorKind] = "rate_limit"
+ERROR_KIND_BAD_REQUEST: Final[ProviderErrorKind] = "bad_request"
+RETRYABLE_KINDS: Final = frozenset({ERROR_KIND_RATE_LIMIT, ERROR_KIND_TIMEOUT, ERROR_KIND_UPSTREAM})
+"""The kinds a later retry, of the same backend or another, may get past."""
+
+CHAIN_STOPPING_KINDS: Final = frozenset({ERROR_KIND_LOCAL, ERROR_KIND_TARGET})
+"""The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
+RETRY_AFTER_HEADER: Final = "retry-after"
+_CAUSE_DEPTH: Final = 4
+
+KIND_BY_STATUS: Final[dict[int, ProviderErrorKind]] = {
+    400: ERROR_KIND_BAD_REQUEST,
+    401: ERROR_KIND_AUTH,
+    402: ERROR_KIND_RATE_LIMIT,
+    403: ERROR_KIND_AUTH,
+    404: ERROR_KIND_NOT_FOUND,
+    408: ERROR_KIND_TIMEOUT,
+    422: ERROR_KIND_BAD_REQUEST,
+    429: ERROR_KIND_RATE_LIMIT,
+}
+"""An HTTP status's kind; any other 4xx is ``bad_request`` and any 5xx ``upstream``."""
+
+TARGET_MARKERS: Final = (
+    "nx_domain",
+    "nxdomain",
+    "name or service not known",
+    "could not resolve host",
+    "enotfound",
+    "invalid url",
+    "could not parse the provided url",
+    "url must have a valid top-level domain",
+)
+"""Phrases, lowercased, by which a backend says the page's own address is the problem."""
+
+LOCAL_LOOP_MARKERS: Final = ("event loop is closed", "attached to a different loop", "different event loop")
+"""Phrases of a ``RuntimeError`` that come from reusing an async client across event loops."""
+
+LOCAL_ERROR_TYPES: Final = (KeyError, TypeError, AttributeError, NameError, AssertionError, IndexError)
+"""Exceptions a provider's own code raises on a bug, not ones a backend's answer causes."""
+
+TARGET_GONE_STATUSES: Final = frozenset({404, 410})
+"""A page's own status that says it is not there, whichever backend fetched it."""
+
+_RECOVERABLE_FIRST: Final = (ERROR_KIND_UPSTREAM, ERROR_KIND_TIMEOUT, ERROR_KIND_RATE_LIMIT)
+"""The kinds a mixed batch takes, most recoverable first: another backend may read what these failed."""
+
+
+@dataclass(frozen=True)
+class ErrorFacts:
+    """What a failure was: its kind, the HTTP status when there was one, and when to try again."""
+
+    kind: ProviderErrorKind
+    status_code: int | None = None
+    retry_after: float | None = None
+
+
+def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
+    """The facts of one failure, read from ``original`` first and from ``message`` where it says more.
+
+    The status wins over the text, except that a backend naming the page's own
+    address as the problem (an unresolvable host, an invalid URL) is ``target``
+    whatever status it came with: no other backend could do better.
+    """
+    inner = getattr(original, "kind", None)
+    if inner in get_args(ProviderErrorKind):
+        # A backend's failure wrapped once more (a retry, a job poll) is still that failure.
+        return ErrorFacts(
+            cast(ProviderErrorKind, inner),
+            getattr(original, "status_code", None),
+            getattr(original, "retry_after", None),
+        )
+    status = _status(original)
+    text = f"{message} {original if original is not None else ''}".lower()
+    retry_after = _retry_after(original)
+    by_status = KIND_BY_STATUS.get(status) if status is not None else None
+    if by_status in (ERROR_KIND_AUTH, ERROR_KIND_RATE_LIMIT):
+        # A refused key or a throttle is the backend's answer about the caller, whatever its body goes on to say.
+        return ErrorFacts(by_status, status, retry_after)
+    # A failure to reach the backend itself says nothing about the page, whatever its text.
+    if not _connect_failed(original) and any(marker in text for marker in TARGET_MARKERS):
+        return ErrorFacts(ERROR_KIND_TARGET, status, retry_after)
+    if status is not None:
+        kind = KIND_BY_STATUS.get(status) or (ERROR_KIND_BAD_REQUEST if status < 500 else ERROR_KIND_UPSTREAM)
+        return ErrorFacts(kind, status, retry_after)
+    if _timed_out(original):
+        return ErrorFacts(ERROR_KIND_TIMEOUT)
+    if is_local(original):
+        return ErrorFacts(ERROR_KIND_LOCAL)
+    return ErrorFacts(ERROR_KIND_UPSTREAM)
+
+
+def is_retryable(kind: str | None) -> bool:
+    """Whether a failure of ``kind`` may go away on another try, on the same backend or another."""
+    return kind in RETRYABLE_KINDS
+
+
+def reused_loop(exc: BaseException | None) -> bool:
+    """Whether ``exc``, or an error it carries as its cause, is an async client used from another event loop.
+
+    An SDK wraps the loop's ``RuntimeError`` in its own connection error, so the chain is read, not just the top.
+    """
+    return any(
+        isinstance(link, RuntimeError) and any(marker in str(link).lower() for marker in LOCAL_LOOP_MARKERS)
+        for link in _chain(exc)
+    )
+
+
+def is_local(exc: BaseException | None) -> bool:
+    """Whether ``exc`` came from this side of the call: a provider's own bug, or a client from a closed loop."""
+    if reused_loop(exc):
+        return True
+    return not isinstance(exc, RuntimeError) and isinstance(exc, LOCAL_ERROR_TYPES)
+
+
+def _status(original: BaseException | None) -> int | None:
+    for source in (getattr(original, "response", None), original):
+        for attribute in ("status_code", "status"):
+            value = getattr(source, attribute, None)
+            if isinstance(value, int) and not isinstance(value, bool) and 100 <= value < 600:
+                return value
+    return None
+
+
+def _connect_failed(original: BaseException | None) -> bool:
+    return original is not None and "connect" in type(original).__name__.lower()
+
+
+def _timed_out(original: BaseException | None) -> bool:
+    """Whether ``original``, or an error it carries as its cause (an SDK's connection error), is a timeout."""
+    return any(
+        isinstance(link, (TimeoutError, asyncio.TimeoutError)) or ERROR_KIND_TIMEOUT in type(link).__name__.lower()
+        for link in _chain(original)
+    )
+
+
+def _chain(exc: BaseException | None) -> Iterator[BaseException]:
+    """``exc`` and the errors it carries as its cause (else its context), at most :data:`_CAUSE_DEPTH`, each once."""
+    seen: set[int] = set()
+    while exc is not None and len(seen) < _CAUSE_DEPTH and id(exc) not in seen:
+        seen.add(id(exc))
+        yield exc
+        exc = getattr(exc, "__cause__", None) or getattr(exc, "__context__", None)
+
+
+def _retry_after(original: BaseException | None) -> float | None:
+    """Seconds from a ``Retry-After`` header, as seconds or an HTTP date; ``None`` when absent or unreadable."""
+    headers = getattr(getattr(original, "response", None), "headers", None)
+    raw = headers.get(RETRY_AFTER_HEADER) if headers is not None else None
+    if not raw:
+        return None
+    try:
+        seconds = float(raw)
+    except ValueError:
+        pass
+    else:
+        return max(0.0, seconds) if math.isfinite(seconds) else None
+    try:
+        when = parsedate_to_datetime(raw)
+    except (TypeError, ValueError, IndexError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)  # an HTTP date is GMT; one sent without a zone is read so
+    return max(0.0, float((when - datetime.now(UTC)).total_seconds()))
+
+
+class ExtractFailure(BaseModel):
+    """A URL the provider could not fetch, and why.
+
+    :attr:`kind` and :attr:`status_code` say what kind of failure it was, as
+    on a :class:`~web_router.ProviderError`: a backend that knew sets them, and
+    otherwise ``kind`` is read from :attr:`error`'s text.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    url: str
+    error: str
+    kind: ProviderErrorKind | None = None
+    status_code: int | None = None
+
+    @model_validator(mode="after")
+    def _kind_from_error(self) -> ExtractFailure:
+        if self.kind is None:
+            # The status here is the page's, not the backend's answer about the key: a site's own 403 is no refused
+            # key, so only "gone" is read from it. A backend's own 401 or 429 arrives through from_error with its kind.
+            gone = self.status_code in TARGET_GONE_STATUSES
+            self.kind = ERROR_KIND_TARGET if gone else classify(None, self.error).kind
+        return self
+
+    @staticmethod
+    def shared_kind(failures: Sequence[ExtractFailure]) -> ProviderErrorKind | None:
+        """The kind every URL failed with, when they agree, so a call that read none of them reports it."""
+        kinds = {failure.kind for failure in failures}
+        return kinds.pop() if len(kinds) == 1 else None
+
+    @staticmethod
+    def shared_original(failures: Sequence[ExtractFailure], errors: Sequence[BaseException]) -> BaseException | None:
+        """The first call's own exception, when every URL failed with one status; else none, so no status misleads."""
+        if len({failure.status_code for failure in failures}) > 1:
+            return None
+        originals = (getattr(error, "original", None) for error in errors)
+        return next((original for original in originals if original is not None), None)
+
+    @staticmethod
+    def batch_kind(failures: Sequence[ExtractFailure]) -> ProviderErrorKind:
+        """A batch's kind: the shared one, else the most recoverable present, so one dead URL never stops the rest."""
+        shared = ExtractFailure.shared_kind(failures)
+        if shared is not None:
+            return shared
+        kinds = {failure.kind for failure in failures}
+        return next((kind for kind in _RECOVERABLE_FIRST if kind in kinds), ERROR_KIND_UPSTREAM)
+
+    @classmethod
+    def from_error(cls, url: str, error: BaseException) -> ExtractFailure:
+        """``url``'s failure from the error its call raised, keeping that error's kind and status."""
+        return cls(
+            url=url,
+            error=str(error),
+            kind=getattr(error, "kind", None),
+            status_code=getattr(error, "status_code", None),
+        )
+
+    @property
+    def retryable(self) -> bool:
+        """Whether another try, on this backend or another, may get the page."""
+        return is_retryable(self.kind)

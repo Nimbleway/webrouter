@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from web_router.constants import (
+    MSG_SEARCH_FAILED,
     PROVIDER_TAVILY,
     TAVILY_PARAMS_BY_DEPTH,
     TAVILY_SDK_SEARCH_TIMEOUT,
@@ -37,8 +38,9 @@ from web_router.providers._language import language_code
 from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.base import SearchProvider
+from web_router.providers.tavily_clients import TavilyClients, TavilyClientsMixin, sdk_errors
 from web_router.providers.tavily_extract import TavilyExtractProvider as TavilyExtractProvider
-from web_router.providers.tavily_extract import clamped_timeout, sdk_clients, tavily_key
+from web_router.providers.tavily_extract import clamped_timeout, tavily_key
 from web_router.types import (
     SearchRequest,
     SearchResponse,
@@ -66,7 +68,7 @@ def search_fields(request: SearchRequest, *, timeout: float | None = None) -> di
     )
 
 
-class TavilyProvider(SearchProvider):
+class TavilyProvider(TavilyClientsMixin, SearchProvider):
     """Routes searches to the Tavily Search API."""
 
     name: ClassVar[str] = PROVIDER_TAVILY
@@ -100,21 +102,17 @@ class TavilyProvider(SearchProvider):
         super().__init__(api_key=key, api_base_url=api_base_url, **kwargs)
 
         self._timeout = timeout
-        self._client, self._async_client = sdk_clients(key, api_base_url, kwargs)
+        self._clients = TavilyClients(key, api_base_url, kwargs)
 
     def _search(self, request: SearchRequest) -> SearchResponse:
-        payload = self._client.search(**self._build_payload(request))
+        with sdk_errors(self.name, MSG_SEARCH_FAILED):
+            payload = self._client.search(**self._build_payload(request))
         return self._to_response(request, payload)
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
-        payload = await self._async_client.search(**self._build_payload(request))
+        with sdk_errors(self.name, MSG_SEARCH_FAILED):
+            payload = await self._async_client.search(**self._build_payload(request))
         return self._to_response(request, payload)
-
-    def close(self) -> None:
-        self._client.close()
-
-    async def aclose(self) -> None:
-        await self._async_client.close()
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:

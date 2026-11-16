@@ -92,9 +92,11 @@ router.live_data("amazon/product", {"query": "B0CHX1W1XY", "domain": "com"}, pro
     Each discovery method is its own source: `amazon_products` collects by URL,
     `amazon_products_by_keyword` discovers by keyword. A name gains its site if
     another scraper takes the same one; the `gd_` id never changes, so pin that
-    in code. A scrape that outlasts Bright Data's synchronous window raises,
-    naming the snapshot to fetch later. Inputs that failed inside a run land in
-    `result.extra["errors"]`.
+    in code. A scrape that outlasts Bright Data's synchronous window (about a
+    minute) is polled for up to five minutes or until the call's deadline. Any
+    error after that is a `LiveDataJobError` whose `job_id` names the snapshot,
+    so a billed run can still be read later. Inputs that failed inside a run
+    land in `result.extra["errors"]`.
   </Accordion>
   <Accordion title="Oxylabs">
     Uses the Oxylabs Web API key, not the Realtime username and password that

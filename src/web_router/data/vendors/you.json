@@ -1,0 +1,92 @@
+{
+  "vendor": "you",
+  "name": "You.com",
+  "category": "search",
+  "summary": "You.com's Finance Research API and the account balance.",
+  "docs_url": "https://you.com/docs/welcome",
+  "pricing_url": "https://you.com/platform",
+  "base_url": "https://api.you.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "YOU_API_KEY",
+          "YDC_API_KEY"
+        ],
+        "description": "a You.com API key (you.com/platform)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is the X-API-Key header. YOU_API_KEY is read first, then YDC_API_KEY, the name You.com's own docs use.",
+    "You.com search, contents, answers and research go through web-router's search, extract, answer and research, not this entry."
+  ],
+  "sources": [
+    "https://you.com/docs/llms.txt",
+    "https://you.com/docs/api-reference/llms.txt",
+    "https://you.com/docs/openapi/research.json",
+    "https://you.com/docs/openapi/answer.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "you.finance.research",
+      "name": "Run a finance research query",
+      "summary": "Research tuned for financial questions, with multi-step reasoning and citations.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/finance_research",
+      "params": {
+        "input": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The financial research question.",
+          "example": "How did NVIDIA's data-center revenue change last quarter?"
+        },
+        "research_effort": {
+          "in": "body",
+          "type": "string",
+          "description": "Effort level.",
+          "enum": [
+            "deep",
+            "exhaustive"
+          ]
+        },
+        "output_schema": {
+          "in": "body",
+          "type": "object",
+          "description": "Beta. JSON Schema subset for structured output."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs research and changes nothing in your account."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://you.com/docs/api-reference/finance-research/v1-finance_research.md",
+      "verified": {
+        "docs": "https://you.com/docs/api-reference/finance-research/v1-finance_research.md"
+      }
+    },
+    {
+      "id": "you.billing.balance",
+      "name": "Get the credit balance",
+      "summary": "Remaining credits for the billing entity behind the API key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/billing/account_balance",
+      "job": "account.usage",
+      "docs_url": "https://you.com/docs/api-reference/billing/get-account-balance.md",
+      "verified": {
+        "docs": "https://you.com/docs/api-reference/billing/get-account-balance.md"
+      }
+    }
+  ]
+}

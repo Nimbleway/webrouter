@@ -1,4 +1,5 @@
-"""The levels shared options are set at: how much page text, how much work, how recent.
+"""The levels shared options are set at: how much page text, how much work, how recent; and the text a request is
+about -- a query, a question, a task -- refused when it is only whitespace.
 
 Kept apart so ``types.py`` stops growing. ``types.py`` imports these back, so
 ``web_router.types.SearchDepth`` and the rest still resolve; this module
@@ -7,7 +8,10 @@ imports nothing of the package's, so any other module may import it.
 
 from __future__ import annotations
 
-from typing import Literal, TypedDict
+from typing import Annotated, Final, Literal, TypedDict
+
+from pydantic import AfterValidator, Field
+from pydantic_core import PydanticCustomError
 
 SearchDepth = Literal["lite", "fast", "deep"]
 """How much page text comes back per result, by size.
@@ -25,9 +29,8 @@ no snippet-sized setting refuses ``lite``: each declares the levels it serves in
 """
 
 SEARCH_DEPTH_DESCRIPTION = (
-    "How much page text comes back per result: 'lite' a snippet of up to about 500 characters, 'fast' a truncated "
-    "body of a few thousand, 'deep' the whole page, and the slowest. A backend that cannot return a level's size "
-    "refuses that level rather than returning less."
+    "Text per result: 'lite' a snippet (~500 characters), 'fast' a few thousand, 'deep' the whole page, slowest. "
+    "Unset, the backend's own default; a backend that cannot return a level's size refuses it."
 )
 """What ``search_depth`` means, in the request model and the MCP schema alike."""
 
@@ -94,3 +97,21 @@ MAX_RESULTS_DESCRIPTION = (
 
 EXTRACT_PROFILE_DESCRIPTION = "The backend's id for a saved profile whose cookies are sent with each fetch."
 """What a model reads about an extract's ``profile``."""
+
+BLANK_TEXT_ERROR: Final = "blank_text"
+"""The pydantic error type of text that is only whitespace."""
+
+MSG_BLANK_TEXT: Final = "Text must hold something other than whitespace"
+"""Why text of only whitespace is refused; read as ``Invalid query: ...`` by the routers."""
+
+
+def _not_blank(value: str) -> str:
+    """``value`` as written, unless it is only whitespace: no backend can search for, answer or do nothing."""
+    if not value.strip():
+        raise PydanticCustomError(BLANK_TEXT_ERROR, MSG_BLANK_TEXT)
+    return value
+
+
+NonBlankText = Annotated[str, Field(min_length=1), AfterValidator(_not_blank)]
+"""At least one character that is not whitespace, kept unchanged: a search's query, an answer's or a research
+run's question, a browse task. A blank one is refused before any backend is called."""

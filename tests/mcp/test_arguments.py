@@ -46,7 +46,7 @@ async def test_a_tool_with_no_arguments_refuses_one_and_says_so(tools: WebRouter
     assert MCP_NO_ARGUMENTS in result.content[0].text
 
 
-def test_every_listed_tool_carries_a_title_and_behaviour_hints(tools: WebRouterTools) -> None:
+def test_every_listed_tool_carries_a_title_and_behaviour_hints(tools: WebRouterTools, no_keys: None) -> None:
     listed = {tool.name: tool for tool in tools.list_tools()}
 
     assert set(MCP_TOOL_HINTS) >= set(listed) and set(MCP_TOOL_HINTS) == set(tools._handlers)

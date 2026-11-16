@@ -90,6 +90,11 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
     search_path: ClassVar[str] = AGENTCORE_DEFAULT_PATH
     mcp_tool: ClassVar[str] = ""
 
+    @property
+    def holds_credential(self) -> bool:
+        """Always: the gateway takes an AWS signature, not a key, so a refusal is of the caller's credential."""
+        return True
+
     def __init__(self, *, gateway_url: str | None = None, **kwargs: Any) -> None:
         """
         Args:

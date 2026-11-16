@@ -36,7 +36,7 @@ ALL_ENV_TABLES: tuple[Mapping[str, str | tuple[str, ...] | None], ...] = (
 )
 """Every method's ``*_ENV_BY_PROVIDER`` table: what a file may set, and, in the tools, what would unlock more."""
 
-_OPTIONAL_KEYS = (ENV_JINA_API_KEY,)
+OPTIONAL_KEYS = (ENV_JINA_API_KEY,)
 """Keys a keyless backend takes only to raise its rate limit, so no table names them: Jina Reader's."""
 
 
@@ -62,7 +62,13 @@ def credential_variables() -> frozenset[str]:
     """
     named = {name for table in ALL_ENV_TABLES for env in table.values() for name in env_names(env)}
     vendors = {var for vendor in _vendors() for var in vendor.credential_variables()}
-    return frozenset(named | set(_OPTIONAL_KEYS) | vendors)
+    return frozenset(named | set(OPTIONAL_KEYS) | vendors)
+
+
+def free_variables() -> frozenset[str]:
+    """The names a file may set that bill nothing on their own: the optional keys and every vendor setting."""
+    settings = {var for vendor in _vendors() for setting in vendor.settings.values() for var in setting.env}
+    return frozenset(set(OPTIONAL_KEYS) | settings)
 
 
 def _vendors() -> list[Vendor]:

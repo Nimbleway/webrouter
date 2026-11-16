@@ -1,4 +1,4 @@
-"""The error a per-call budget raises. Experimental.
+"""The error a per-call budget raises.
 
 Listed in the tree of :mod:`web_router.exceptions`, which does not import it.
 """
@@ -12,7 +12,7 @@ from web_router.exceptions import WebRouterError
 
 
 class BudgetExceededError(WebRouterError):
-    """Nothing the call could run fits its :class:`~web_router.Budget`. Experimental.
+    """Nothing the call could run fits its :class:`~web_router.Budget`.
 
     Raised before anything starts, naming each candidate the budget skipped
     and why, as :attr:`skipped` holds them. Not a

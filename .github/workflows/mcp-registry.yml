@@ -1,0 +1,101 @@
+name: MCP Registry
+run-name: MCP Registry ${{ inputs.tag }}
+
+# Lists a release of the MCP server in the official MCP Registry
+# (registry.modelcontextprotocol.io) as io.github.Nimbleway/webrouter.
+#
+# The release workflow calls it once PyPI has the new version. Run it by hand to
+# list a release that is already on PyPI, on the tag itself:
+#   gh workflow run mcp-registry.yml --ref vX.Y.Z -f tag=vX.Y.Z
+# That works only for a tag whose tree has this file. If only this job fails in
+# a release run, "Re-run failed jobs" also works; re-running all jobs stops at
+# the release's "not above PyPI" check.
+#
+# It signs in with this run's GitHub OIDC token: the registry grants the
+# io.github.Nimbleway/* namespace to a workflow in a Nimbleway repository, so
+# no token is stored. (`mcp-publisher login github` from a laptop cannot publish
+# to an organization's namespace.) The registry then checks that PyPI's
+# description of that version carries the README's `mcp-name:` line.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag, e.g. v0.13.0
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, e.g. v0.13.0
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: mcp-registry
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # the OIDC token the registry checks; nothing else
+    env:
+      TAG: ${{ inputs.tag }}
+      RUN_REF: ${{ github.ref }}
+      MCP_PUBLISHER_VERSION: v1.8.9
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Tag must be vX.Y.Z, the run on it, and the tag this commit on main
+        run: scripts/check_release_tag.sh "$TAG" mcp-registry.yml
+
+      - name: server.json must name this version
+        run: scripts/check_server_json.sh "$TAG"
+
+      - name: Wait for PyPI to serve this version
+        # Right after an upload, PyPI's JSON API can lag behind for a minute.
+        run: |
+          version="${TAG#v}"
+          for _ in $(seq 1 30); do
+            if curl -fsS "https://pypi.org/pypi/webrouter/$version/json" -o "$RUNNER_TEMP/release.json"; then
+              jq -r '.info.description' "$RUNNER_TEMP/release.json" \
+                | grep -Eq 'mcp-name: io\.github\.Nimbleway/webrouter($|[[:space:]]|-->)' \
+                || { echo "::error::PyPI's description of $version has no mcp-name line"; exit 1; }
+              echo "PyPI serves webrouter $version"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::PyPI does not serve webrouter $version after 5 minutes"
+          exit 1
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Download and verify mcp-publisher
+        # Pinned, and checked against the Sigstore bundle the registry's own
+        # release workflow signed, before it is unpacked.
+        run: |
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o "$archive" "$base_url/$archive"
+          curl -fsSL -o "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+
+      - name: Publish to the MCP Registry
+        run: |
+          "$RUNNER_TEMP/mcp-publisher" login github-oidc
+          "$RUNNER_TEMP/mcp-publisher" publish

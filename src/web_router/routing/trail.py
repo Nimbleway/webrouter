@@ -1,6 +1,6 @@
 """One routed call's hop trail: every candidate it moved past, in the order it happened.
 
-Experimental. The :class:`~web_router.routing.ledger.Ledger` keeps one and
+The :class:`~web_router.routing.ledger.Ledger` keeps one and
 writes it into the decision record's ``hops``: a skip with the budget's
 reason, a failure by its status or error class, an empty answer with none.
 """
@@ -46,6 +46,11 @@ class HopTrail:
         attempt = self.open.attempt if self.open is not None and self.open.id == id else None
         self.passed.append(Passed(attempt, id, why))
         self.open = None if attempt is not None else self.open
+
+    def answered(self, id: str) -> None:
+        """The open attempt, ``id``, read part of the answer another attempt's response carries: no hop."""
+        if self.open is not None and self.open.id == id:
+            self.open = None
 
     def moved_on(self) -> None:
         """The call went on past the open attempt without its failing: it answered empty."""

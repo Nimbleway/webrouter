@@ -1,6 +1,6 @@
 """The candidates a call offers a router: every (tool, provider) web-router can serve it with.
 
-Experimental. :func:`build_candidates` reads each method's ``auto`` -- the
+:func:`build_candidates` reads each method's ``auto`` -- the
 chain it would try, a configured ``chain`` included -- and keeps the members
 its ``_eligible`` keeps, read by :mod:`web_router.routing.eligible`: only those
 that map every option the request sets, so a candidate is never one the call
@@ -34,9 +34,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_candidates import MSG_DROPPED_REFUSES_EFFORT
+from web_router.constants_candidates import AUTO_GETTERS, MSG_DROPPED_REFUSES_EFFORT
 from web_router.routing.candidates_priced import Found, price_members
 from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
+from web_router.routing.cost_order import cost_route
 from web_router.routing.effort_call import choose_effort
 from web_router.routing.eligible import eligible_members
 from web_router.routing.params import EffortChoice
@@ -70,6 +71,10 @@ class CandidateSet:
 
     requests: Mapping[ToolName, NormalizedRequest] = field(default_factory=dict, repr=False)
     """Per method, the request its candidates were priced at: the router's options are priced on it."""
+
+    cost_order: Mapping[ToolName, Sequence[str]] = field(default_factory=dict)
+    """Per method, ``auto``'s cheapest-first order under the budget's cost cap (:mod:`.cost_order`), where it is
+    not the static one: the order a method runs in when the router ranks none of its backends."""
 
 
 REQUEST_OF: dict[ToolName, type[NormalizedRequest]] = {
@@ -136,6 +141,9 @@ def build_candidates(
             eligible = taken
         found.priced[tool] = request
         price_members(tool, request, eligible, budget, found)
+        costed, _ = cost_route(getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget)
+        if costed is not None:
+            found.cost_order[tool] = list(costed.order[tool])
         for name, why in unbuilt.items():
             if (unbuilt_id := candidate_id(tool, name)) not in found.seen:  # built at another place
                 found.dropped[unbuilt_id] = why
@@ -145,4 +153,5 @@ def build_candidates(
         unmeasured=tuple(found.unmeasured),
         effort=effort,
         requests=found.priced,
+        cost_order=found.cost_order,
     )

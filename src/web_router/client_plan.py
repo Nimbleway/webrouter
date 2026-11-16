@@ -21,6 +21,7 @@ router picks it without URLs.
 from __future__ import annotations
 
 from contextlib import ExitStack
+from time import monotonic
 from typing import Any
 
 from web_router._urls import urls_in
@@ -37,6 +38,7 @@ from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
 from web_router.routing.decide import decided
 from web_router.routing.eligible import budget_dropped
 from web_router.routing.invoke import RouterOutcome
+from web_router.routing.metered import metered
 from web_router.routing.pool import limited
 from web_router.routing.record import stamp
 from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
@@ -163,12 +165,14 @@ class SyncPlan(_Planner, SyncRouted):
         The response's ``decision`` is the plan's record, with what the budget spent. ``budget`` holds the
         run; for a prompt it holds the planning too. ``tool`` pins the method of a prompt's plan.
         """
+        started = monotonic()
         with ExitStack() as stack:
             if isinstance(plan, str):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = self.plan(plan, budget=budget, tool=tool)
             chain, request, scope = self._run_scope(stack, plan, budget)
-            return scope.settle(_settled(getattr(chain, plan.tool)(request), plan))  # type: ignore[no-any-return]
+            answered = scope.settle(_settled(getattr(chain, plan.tool)(request), plan))
+        return self._spent(metered(answered, plan.tool, request, started), plan.tool)  # type: ignore[no-any-return]
 
 
 class AsyncPlan(_Planner, AsyncRouted):
@@ -181,12 +185,14 @@ class AsyncPlan(_Planner, AsyncRouted):
 
     async def run(self, plan: Plan | str, *, budget: Budget | None = None, tool: ToolName | None = None) -> RunResponse:
         """As :meth:`SyncPlan.run`."""
+        started = monotonic()
         with ExitStack() as stack:
             if isinstance(plan, str):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = await self.plan(plan, budget=budget, tool=tool)
             chain, request, scope = self._run_scope(stack, plan, budget)
-            return scope.settle(_settled(await getattr(chain, f"a{plan.tool}")(request), plan))  # type: ignore[no-any-return]
+            answered = scope.settle(_settled(await getattr(chain, f"a{plan.tool}")(request), plan))
+        return self._spent(metered(answered, plan.tool, request, started), plan.tool)  # type: ignore[no-any-return]
 
 
 __all__ = ["AsyncPlan", "RunResponse", "SyncPlan"]
