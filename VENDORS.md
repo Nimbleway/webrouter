@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-372 vendors, 2708 endpoints.
+372 vendors, 2705 endpoints.
 
 ### advertising
 
@@ -275,16 +275,16 @@ Web, news and archive search.
 | [Library of Congress loc.gov API](https://www.loc.gov/apis/json-and-yaml/) `loc-gov` | Search and metadata for the Library of Congress's digitized collections (audio recordings, photos, maps, manuscripts, newspapers, books, films...) from the keyless loc.gov JSON API. | 6 read | none | none | docs 2026-11-09 |
 | [NewsAPI.org](https://newsapi.org/docs) `newsapi` | Search news articles from worldwide sources and blogs, top headlines by country, category or source, and the list of sources. | 3 read | key in header | `NEWSAPI_API_KEY` | docs 2026-11-09 |
 | [NewsData.io](https://newsdata.io/documentation) `newsdata` | Worldwide news API: latest and archived articles with country, category, language, domain and sentiment filters, plus crypto and market news, sources and article counts. | 6 read | key in header | `NEWSDATA_API_KEY` | docs 2026-11-09 |
-| [Octen](https://docs.octen.ai/) `octen` | Real-time web, news and broad search plus URL content extraction from Octen. | 4 read | key in header | `OCTEN_API_KEY` | docs 2026-11-08 |
+| [Octen](https://docs.octen.ai/) `octen` | Real-time news and broad search plus URL content extraction from Octen; web search is served by search(). | 3 read | key in header | `OCTEN_API_KEY` | docs 2026-11-08 |
 | [Opoint](https://api-docs.opoint.com/guides/search) `opoint` | Global news monitoring: boolean search over Opoint's news archive, stored-search feeds and SafeFeed firehoses. | 6 read | key in header | `OPOINT_API_KEY` | docs 2026-11-09 |
 | [Parallel](https://docs.parallel.ai/getting-started/overview) `parallel` | People and company discovery from Parallel Web Systems: entity search and FindAll runs. | 3 read | key in header | `PARALLEL_API_KEY` | docs 2026-11-08 |
 | [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
 | [Search1API](https://s1.dev/docs) `search1api` | Web, news and Maps search, page reading, screenshots, extraction and site crawling through one API. | 12 read | key in header | `SEARCH1API_KEY` | docs 2026-11-08 |
-| [Seltz](https://docs.seltz.ai/) `seltz` | Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports. | 7 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
+| [Seltz](https://docs.seltz.ai/) `seltz` | Cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports; web search is served by search(). | 6 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
 | [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
 | [Tavily](https://docs.tavily.com/documentation/api-reference) `tavily` | Tavily's site crawl and map APIs, and the account's credit usage. | 3 read | key in header | `TAVILY_API_KEY` | docs 2026-11-08 |
-| [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 9 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
+| [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 8 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
 | [Wikipedia](https://www.mediawiki.org/wiki/API:Main_page) `wikipedia` | Keyless Wikipedia search, plain-text article extracts, page source and HTML, revision history, language links and file info through the MediaWiki APIs. | 9 read | none | none | docs 2026-11-09 |
 | [You.com](https://you.com/docs/welcome) `you` | You.com's Finance Research API and the account balance. | 2 read | key in header | `YOU_API_KEY` | docs 2026-11-08 |
 

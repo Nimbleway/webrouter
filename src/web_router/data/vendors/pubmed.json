@@ -30,6 +30,9 @@
     "Answers are XML unless retmode=json, which esearch, esummary and einfo support; efetch does not return JSON.",
     "The usual flow is search (IDs) then summary or fetch with those IDs."
   ],
+  "sites": [
+    "pubmed.ncbi.nlm.nih.gov"
+  ],
   "sources": [
     "https://www.nlm.nih.gov/dataguide/eutilities/utilities.html",
     "https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities"

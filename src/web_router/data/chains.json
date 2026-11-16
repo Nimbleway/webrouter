@@ -31,7 +31,10 @@
       "agentcore",
       "exa-litellm",
       "tavily-litellm",
-      "parallel-litellm"
+      "parallel-litellm",
+      "valyu",
+      "seltz",
+      "octen"
     ],
     "unmeasured": [
       "keenable",
@@ -39,7 +42,10 @@
       "agentcore",
       "exa-litellm",
       "tavily-litellm",
-      "parallel-litellm"
+      "parallel-litellm",
+      "valyu",
+      "seltz",
+      "octen"
     ],
     "too_few_questions": [],
     "no_row_served": [],

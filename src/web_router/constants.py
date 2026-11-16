@@ -12,6 +12,7 @@ from typing import Any, Literal, get_args
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_extract import MCP_DESC_EXTRACT, MCP_EXTRACT_PROPERTIES
 from web_router.constants_litellm import LITELLM_AUTO_SETTINGS, LITELLM_ENV_BY_PROVIDER
 from web_router.constants_live_data import (
     MCP_DESC_LIVE_DATA,
@@ -47,7 +48,6 @@ from web_router.types import (
     BrowserRequest,
     BrowserState,
     ExtractFormat,
-    ExtractRequest,
     FieldPath,
     JobState,
     Provider,
@@ -70,9 +70,12 @@ PROVIDER_EXA = Provider.EXA.value
 PROVIDER_PARALLEL = Provider.PARALLEL.value
 PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
+PROVIDER_SELTZ = Provider.SELTZ.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
+PROVIDER_OCTEN = Provider.OCTEN.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
+PROVIDER_VALYU = Provider.VALYU.value
 PROVIDER_AGENTCORE = Provider.AGENTCORE.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
@@ -112,16 +115,15 @@ MAX_INHERITS_FROM_AUTO: tuple[str, ...] = ("chain", "members_config")
 DEFAULT_PROVIDER = PROVIDER_AUTO
 """Used when the caller names no provider anywhere.
 
-``auto`` needs no credential, so an unconfigured router still searches instead
-of raising about a key the caller never mentioned. Naming a provider explicitly
-keeps the old behaviour: a missing key for *that* provider is still an error.
+``auto`` needs no credential, so an unconfigured router still searches instead of raising about a key the caller
+never mentioned. Naming a provider explicitly keeps the old behaviour: a missing key for *that* provider is still
+an error.
 """
 
 # --- Install extras ---------------------------------------------------------
 
-# Extras are named after the methods you call, not the backends behind them, so
-# a provider maps to the extra that installs it rather than owning one of its
-# own. See the comment over [project.optional-dependencies] in pyproject.toml.
+# Extras are named after the methods you call, not the backends behind them, so a provider maps to the extra that
+# installs it rather than owning one of its own. See the comment over [project.optional-dependencies] in pyproject.toml.
 EXTRA_SEARCH = "search"
 EXTRA_EXTRACT = "extract"
 EXTRA_RESEARCH = "research"
@@ -133,18 +135,16 @@ EXTRA_ALL = "all"
 EXTRA_MCP = "mcp"
 """The one extra that is not named after a method.
 
-``search``, ``extract`` and ``research`` install backends for a method you
-call. ``mcp`` installs a way to *reach* those methods from somewhere else, so
-it names a transport instead -- the deliberate exception to the rule the
+``search``, ``extract`` and ``research`` install backends for a method you call. ``mcp`` installs a way to *reach*
+those methods from somewhere else, so it names a transport instead -- the deliberate exception to the rule the
 comment over [project.optional-dependencies] states.
 """
 
 EXTRA_AWS = "aws"
 """botocore, for the backends reached through an AWS account -- ``agentcore`` so far.
 
-The second exception to the method rule: botocore is a large install that
-signs requests for one cloud, and a ``search`` install that never touches AWS
-should not carry it. ``all`` includes it.
+The second exception to the method rule: botocore is a large install that signs requests for one cloud, and a
+``search`` install that never touches AWS should not carry it. ``all`` includes it.
 """
 
 # --- Credentials ------------------------------------------------------------
@@ -158,9 +158,12 @@ ENV_EXA_API_KEY = "EXA_API_KEY"
 ENV_PARALLEL_API_KEY = "PARALLEL_API_KEY"
 ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
+ENV_SELTZ_API_KEY = "SELTZ_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
+ENV_OCTEN_API_KEY = "OCTEN_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
+ENV_VALYU_API_KEY = "VALYU_API_KEY"
 ENV_AGENTCORE_GATEWAY_URL = "AGENTCORE_GATEWAY_URL"
 ENV_OXYLABS_USERNAME = "OXYLABS_USERNAME"
 ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
@@ -185,9 +188,12 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_PARALLEL: ENV_PARALLEL_API_KEY,
     PROVIDER_PERPLEXITY: ENV_PERPLEXITY_API_KEY,
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
+    PROVIDER_SELTZ: ENV_SELTZ_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
+    PROVIDER_OCTEN: ENV_OCTEN_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
+    PROVIDER_VALYU: ENV_VALYU_API_KEY,
     # Not a credential: the AWS one comes from botocore's chain. The gateway is
     # what has to exist before a call can be worth trying.
     PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
@@ -199,14 +205,12 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
 }
 """Which variable holds each provider's credential; ``None`` means it needs none.
 
-A table rather than a class attribute so :func:`configured_providers` can answer
-without importing a single provider module, and with it every optional SDK.
-``tests/test_contract.py`` checks it against the registry.
+A table rather than a class attribute so :func:`configured_providers` can answer without importing a single
+provider module, and with it every optional SDK. ``tests/test_contract.py`` checks it against the registry.
 
-Search only -- :data:`EXTRACT_ENV_BY_PROVIDER` is the same table for extract.
-The two are separate because the two method registries are: a name that serves
-both appears in each, and one that serves only extract appears in neither this
-nor :func:`available_providers`.
+Search only -- :data:`EXTRACT_ENV_BY_PROVIDER` is the same table for extract. The two are separate because the
+two method registries are: a name that serves both appears in each, and one that serves only extract appears in
+neither this nor :func:`available_providers`.
 """
 
 EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -227,10 +231,9 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each extract provider needs, all of them; ``()`` means none.
 
-A tuple rather than a single name because two backends need more than a key:
-Oxylabs authenticates with a username and password, and Bright Data needs the
-zone that routes the request beside its token. ``jina`` needs nothing -- a key
-only raises its rate limit -- and ``auto`` needs whatever its chain does.
+A tuple rather than a single name because two backends need more than a key: Oxylabs authenticates with a
+username and password, and Bright Data needs the zone that routes the request beside its token. ``jina`` needs
+nothing -- a key only raises its rate limit -- and ``auto`` needs whatever its chain does.
 """
 
 RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -558,10 +561,9 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek`` and
-``agentcore`` joined after the scan that set the order, and the ranking set has
-no rows for them. A backend that joins later goes at the end of the file's
-``appended``, so joining changes no environment's routing; ``make chains`` moves
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz`` and
+``octen`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
+later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves
 it ahead of the keyless tier only once frozen results rank it.
 """
 
@@ -1118,10 +1120,8 @@ promptly.
 JOB_TIMEOUT_ERROR_SUFFIXES = ("TimeoutError", "TimeoutException")
 """How a poll's failure is recognized as a timed-out request: by the names of its exception classes.
 
-By name rather than by type because the job core imports no HTTP client or SDK:
-``TimeoutError`` (``asyncio``'s is the same class), httpx's
-``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in
-one of these.
+By name rather than by type because the job core imports no HTTP client or SDK: ``TimeoutError`` (``asyncio``'s
+is the same class), httpx's ``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in one of these.
 """
 
 JOB_POLL_BACKOFF = 1.5
@@ -3647,22 +3647,6 @@ The three template tools share one registry, and the browser tools' method is
 ``provider_config`` speak the same name.
 """
 
-# `profile` is left out on purpose, as on `browser_open`: a saved, logged-in
-# identity is the user's own, set in code, never from a conversation.
-MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
-    "urls": {
-        "type": "array",
-        "items": {"type": "string"},
-        "minItems": 1,
-        "description": _described(ExtractRequest, "urls"),
-    },
-    "format": {
-        "type": "string",
-        "enum": list(get_args(ExtractFormat)),
-        "description": "A backend that cannot produce it refuses rather than return another.",
-    },
-}
-
 MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": _described(ResearchRequest, "query")},
     "output_schema": {
@@ -3932,13 +3916,6 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
 
 # A tool description is the routing decision: the model choosing between the tools is the actual router
 # (`web_run` hands it to ours), and latency and cost are what it chooses on.
-
-MCP_DESC_EXTRACT = (
-    "Read pages you have URLs for, as markdown, HTML or text, in a few seconds. It reads, it does not "
-    "find: URLs come from `search`, the user or a page. A page behind a login or clicks is "
-    "`browser_open`'s. provider='max' races every backend, one fetch each: only when the user wants speed "
-    "over cost."
-)
 
 MCP_DESC_RESEARCH = (
     "Start an agentic research run: many turns of searching and reading, which takes MINUTES and bills "

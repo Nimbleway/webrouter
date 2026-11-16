@@ -10,6 +10,9 @@
     "Responses default to XML on most calls; pass format=json for JSON.",
     "Every publication is addressed by a source code plus id (MED/12345678, PMC/PMC1234567, PPR/...); take both from a search result."
   ],
+  "sites": [
+    "europepmc.org"
+  ],
   "sources": [
     "https://www.ebi.ac.uk/europepmc/webservices/rest/v3/api-docs"
   ],

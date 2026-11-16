@@ -27,7 +27,8 @@
     "The header is x-api-key, not Authorization: Bearer.",
     "Pay per use from a credit balance; paid plans unlock specialist sources (SEC filings, trials, patents); a 403 can mean a plan too low for a dataset.",
     "Async patterns: contents with async true returns a job_id (poll valyu.contents.job); DeepResearch returns a task id (poll valyu.research.status).",
-    "The streaming Answer endpoint (POST /v1/answer, server-sent events) is left out."
+    "The streaming Answer endpoint (POST /v1/answer, server-sent events) is left out.",
+    "Web search (POST /v1/search) is served by search(provider=\"valyu\"), so it is not listed here."
   ],
   "sources": [
     "https://docs.valyu.ai/api-reference/overview",
@@ -37,105 +38,6 @@
   ],
   "curated": "2026-11-08",
   "endpoints": [
-    {
-      "id": "valyu.search",
-      "name": "Search the web and specialist datasets",
-      "summary": "Ranked results with extracted content from the web, news, SEC filings, market data, papers, trials and patents.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/v1/search",
-      "params": {
-        "query": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "The search query, in natural language.",
-          "example": "Apple 10-K risk factors 2025"
-        },
-        "max_num_results": {
-          "in": "body",
-          "type": "integer",
-          "description": "Maximum results; keep small to control cost.",
-          "example": 5
-        },
-        "search_type": {
-          "in": "body",
-          "type": "string",
-          "description": "all (default), web, news or proprietary (the dataset route).",
-          "enum": [
-            "all",
-            "web",
-            "news",
-            "proprietary"
-          ]
-        },
-        "included_sources": {
-          "in": "body",
-          "type": "array",
-          "description": "Dataset ids, presets such as finance, or domains to restrict to."
-        },
-        "excluded_sources": {
-          "in": "body",
-          "type": "array",
-          "description": "Domains, dataset ids or presets to leave out."
-        },
-        "scope_policy": {
-          "in": "body",
-          "type": "string",
-          "description": "advisory (default) or strict to search every listed dataset."
-        },
-        "instructions": {
-          "in": "body",
-          "type": "string",
-          "description": "Natural-language ranking guidance."
-        },
-        "response_length": {
-          "in": "body",
-          "type": "string",
-          "description": "Content size per result: short (25,000 characters, default), medium, large or max."
-        },
-        "start_date": {
-          "in": "body",
-          "type": "string",
-          "description": "Published on or after: YYYY, YYYY-MM-DD or ISO datetime."
-        },
-        "end_date": {
-          "in": "body",
-          "type": "string",
-          "description": "Published on or before."
-        },
-        "country_code": {
-          "in": "body",
-          "type": "string",
-          "description": "ISO 3166-1 alpha-2 code for geo-targeted web results."
-        },
-        "fast_mode": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Skip query rewriting and reranking for lower latency."
-        },
-        "url_only": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Return only URLs; web and news search types only."
-        },
-        "max_price": {
-          "in": "body",
-          "type": "number",
-          "description": "Cap on the cost of the whole request."
-        }
-      },
-      "notes": [
-        "A read over POST: it only retrieves data.",
-        "Priced per result returned: web and news 0.1 credit each, other datasets priced per 1,000 results (see valyu.datasources.list). A 206 means partial success.",
-        "Plan limits can skip a dataset and report it in the warnings list instead of failing."
-      ],
-      "job": "web.search",
-      "docs_url": "https://docs.valyu.ai/api-reference/endpoint/search",
-      "verified": {
-        "docs": "https://docs.valyu.ai/api-reference/endpoint/search"
-      }
-    },
     {
       "id": "valyu.contents.extract",
       "name": "Extract content from URLs",

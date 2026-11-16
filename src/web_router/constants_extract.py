@@ -1,12 +1,16 @@
-"""What extract reads as a page that is not the page asked for, and what it says about one.
+"""Extract's constants: what it reads as a page that is not the page asked for, and the MCP extract tool's schema.
 
-Kept apart from :mod:`web_router.constants`, so that file stops growing.
+Kept apart from :mod:`web_router.constants`, so that file stops growing; it
+imports the extract tool's tables from here.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Final
+from typing import Any, Final, get_args
+
+from web_router.constants_search import described
+from web_router.types import ExtractFormat, ExtractRequest
 
 MSG_EXTRACT_CHALLENGE: Final = "the backend got a bot challenge instead of the page"
 """A Cloudflare "Just a moment..." page, a CAPTCHA, a "verify you are human" check."""
@@ -92,3 +96,33 @@ HTML_TITLE: Final = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.
 
 Markers in the body are not read on a long HTML page: a protected site's own pages carry the challenge scripts too.
 """
+
+# `profile` is left out on purpose, as on `browser_open`: a saved, logged-in
+# identity is the user's own, set in code, never from a conversation.
+MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
+    "urls": {
+        "type": "array",
+        "items": {"type": "string"},
+        "minItems": 1,
+        "description": described(ExtractRequest, "urls"),
+    },
+    "format": {
+        "type": "string",
+        "enum": list(get_args(ExtractFormat)),
+        "description": "A backend that cannot produce it refuses rather than return another.",
+    },
+    "data_apis": {
+        "type": "boolean",
+        "description": "Also list each page's site's vendor data APIs; free, never run. On by default.",
+    },
+    "configured_only": {"type": "boolean", "description": "Only data APIs whose credentials are set here."},
+}
+
+# A tool description is the routing decision: the model choosing between the tools is the actual router
+# (`web_run` hands it to ours), and latency and cost are what it chooses on.
+MCP_DESC_EXTRACT = (
+    "Read pages you have URLs for, as markdown, HTML or text, in a few seconds. It reads, it does not "
+    "find: URLs come from `search`, the user or a page. A page behind a login or clicks is "
+    "`browser_open`'s. provider='max' races every backend, one fetch each: only when the user wants speed "
+    "over cost. `data_apis`: its site's vendor APIs, for `call_vendor`."
+)

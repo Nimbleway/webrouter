@@ -144,6 +144,26 @@ and what they read joins the answer, in the order you asked. `response.provider`
 names the backend that answered first. A URL no backend could read stays in
 `failures`, its error giving the reason from each backend that answered for it.
 
+## Data APIs that serve the page's site
+
+An extract lists, per page, the data APIs whose catalog entry names that page's
+site in its `sites` (subdomains included) — see [Vendor data](/vendors) —
+under `document.data_apis`: the read endpoints of each, those whose words the
+URL's path holds first, at most three. The shipped catalog names the sites of
+YouTube, GitHub, Stack Overflow and the other Stack Exchange sites, Wikipedia,
+npm, PyPI, arXiv, Hacker News, Hugging Face, X and others:
+
+```python
+page = router.extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ").documents[0]
+page.data_apis[0].data_api  # "youtube": the YouTube Data API serves youtube.com
+```
+
+As on [search](/search#data-apis-that-match-the-search), matching reads the
+local catalog, costs nothing and calls nothing; a catalog that fails to load is
+logged and skipped, and the pages come back as usual. `data_apis=False` leaves
+them out and `configured_only=True` keeps the ones you hold credentials for;
+the MCP `extract` tool adds `data_apis` to a page only when it has matches.
+
 ## Reading a page behind a login
 
 `profile` is the extract side of the browser's `profile`: a saved identity on

@@ -72,7 +72,7 @@
       {
         "group": "Agents and routing",
         "pages": [
-          "mcp",
+          "mcp-server",
           "integrations",
           "agent-prompt",
           "budgets",

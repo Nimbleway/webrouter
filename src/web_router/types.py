@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from web_router.types_citation import Citation as Citation
 from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
-from web_router.types_data_api import DATA_APIS_DESCRIPTION, DataApiMatch
+from web_router.types_data_api import DATA_API_SITE_DESCRIPTION, DATA_APIS_DESCRIPTION, DataApiMatch
 from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
@@ -60,18 +60,15 @@ See the format table at https://docs.webrouter.net/extract#formats
 class Provider(str, Enum):
     """The providers built into web-router.
 
-    Every argument that names a provider also accepts a plain string; this
-    exists so the built-in names are discoverable from an editor rather than
-    remembered. Backends added with :func:`web_router.register_provider` are
-    named by string, which is why the string form is never going away.
+    Every argument that names a provider also accepts a plain string; this exists so the built-in names are
+    discoverable from an editor rather than remembered. Backends added with :func:`web_router.register_provider`
+    are named by string, which is why the string form is never going away.
 
-    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl``
-    and ``jina`` extract but do not search, and most search backends do not
-    extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``, ``kernel`` and
-    ``local`` only open browser sessions, ``browser-use`` and ``skyvern`` only run
-    browse tasks, and ``apify`` only runs live data. :func:`web_router.available_providers`
-    and its per-method counterparts list each method's own set. ``auto`` serves
-    every method by trying its backends in turn; ``max`` serves extract alone, by
+    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl`` and ``jina`` extract but do not
+    search, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
+    ``kernel`` and ``local`` only open browser sessions, ``browser-use`` and ``skyvern`` only run browse tasks, and
+    ``apify`` only runs live data. :func:`web_router.available_providers` and its per-method counterparts list each
+    method's own set. ``auto`` serves every method by trying its backends in turn; ``max`` serves extract alone, by
     trying every backend at once and returning the first document back.
     """
 
@@ -83,9 +80,12 @@ class Provider(str, Enum):
     PARALLEL = "parallel"
     PERPLEXITY = "perplexity"
     LINKUP = "linkup"
+    SELTZ = "seltz"
     WEBIQ = "webiq"
+    OCTEN = "octen"
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
+    VALYU = "valyu"
     AGENTCORE = "agentcore"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
@@ -126,8 +126,7 @@ class NormalizedRequest(BaseModel):
     :class:`ExtractRequest` -- and they share only this: a set of optional
     parameters a provider may or may not map, and an untranslated passthrough.
     :meth:`SearchProvider.validate <web_router.SearchProvider.validate>` reads
-    :meth:`specified_parameters` to reject a request carrying options the chosen
-    backend does not map.
+    :meth:`specified_parameters` to reject a request carrying options the chosen backend does not map.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -293,15 +292,15 @@ class ExtractedDocument(BaseModel):
     extra: dict[str, Any] = Field(
         default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
+    data_apis: list[DataApiMatch] = Field(default_factory=list, description=DATA_API_SITE_DESCRIPTION)
 
 
 class ExtractResponse(BaseModel):
     """The result of one extract call, tagged with the provider that served it.
 
-    Extracting several URLs can partly succeed: what came back is in
-    :attr:`documents`, and every URL that did not is in :attr:`failures` with
-    the reason. A call where *nothing* came back raises instead, so a failure
-    is never something you have to go looking for.
+    Extracting several URLs can partly succeed: what came back is in :attr:`documents`, and every URL that
+    did not is in :attr:`failures` with the reason. A call where *nothing* came back raises instead, so a
+    failure is never something you have to go looking for.
     """
 
     # Unknown keys are a provider bug: the untouched payload belongs in `raw`.

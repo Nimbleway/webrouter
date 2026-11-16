@@ -215,6 +215,47 @@ requests a second.
 | `deepseek-content` | `deepseek:content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 <!-- /prices -->
 
+### Valyu
+
+Per result, not per request: a web or news result is 0.1 credit, and $10 buys
+1,600 credits pay-as-you-go, so a search of 10 web results costs about $0.006
+([pricing](https://docs.valyu.ai/pricing)). The default of 5 results costs half
+that. web-router sends `search_type=web`; Valyu's own default also searches
+datasets, priced per 1,000 results at up to $30. Accounts get free credits each
+month.
+
+<!-- prices: method=search provider=valyu -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `valyu` | default (`search_type=web`) | Titles, URLs, a relevance score and the page body per result | $6.25 per 1k; searches of 10 web results: 0.1 credit per result, at $10 per 1,600 credits pay-as-you-go; dataset results cost more | [docs.valyu.ai](https://docs.valyu.ai/pricing) | 2026-11-12 |
+<!-- /prices -->
+
+### Seltz
+
+Per search, however many documents it returns ([pricing](https://docs.seltz.ai/pricing)): $5 per 1k on
+the Pro tier, which Seltz uses unless `tier` says otherwise, and $3 per 1k on Base. New accounts get $20
+of credit.
+
+<!-- prices: method=search provider=seltz -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `seltz` | default (`tier=pro`) | URLs, dates and the document body per result; no titles | $5 per 1k; Pro tier, the default; $3 per 1k with `tier=base` | [docs.seltz.ai](https://docs.seltz.ai/pricing) | 2026-11-12 |
+<!-- /prices -->
+
+### Octen
+
+Per call ([pricing](https://docs.octen.ai/overview/pricing)): Web Search lists at $5 per 1k, currently
+$1. Full content, which `search_depth` `fast` and `deep` turn on, adds $0.50 per 1k results. New accounts get $5
+of balance, and a payment method is required to use the API.
+
+<!-- prices: method=search provider=octen -->
+| Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|
+| default | `octen` | default (highlights, no `full_content`) | Titles, URLs, dates and a query-relevant highlight per result | $1 per 1k; 80% off the $5 list price; full content $0.50 per 1k results on top | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+| `fast` | `octen@fast` | `full_content.enable=true` | Adds each result's page body | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+| `deep` | `octen@deep` | `full_content` up to 100,000 tokens | Adds a longer page body per result | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the
