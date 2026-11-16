@@ -9,7 +9,8 @@ A mode is priced in this order, and never at another mode's price:
 3. else unknown, ``None``.
 
 A row billed by tokens has no list price: it is estimated at the mean cost the
-benchmark measured, at its default mode only, and is unknown at any other. A
+benchmark measured, at its default mode only, and is unknown at any other, a
+flag on the default included. A
 row whose figure is only a floor is unknown too, so a cost cap never trusts it.
 """
 
@@ -49,9 +50,10 @@ def canonical_parts(provider: str, method: str, parts: Iterable[str]) -> str | N
         return None
 
 
-def _row_price(row: prices.Price, provider: str, method: str, mode: str | None) -> float | None:
+def _row_price(row: prices.Price, provider: str, method: str, mode: str | None, flagged: bool = False) -> float | None:
     if getattr(row, "unit", None) == TOKEN_BILLED:
-        return measured_cost(method, provider) if mode is None or getattr(row, "default", False) else None
+        default = mode is None or getattr(row, "default", False)
+        return measured_cost(method, provider) if default and not flagged else None
     if row.estimate_is_floor:
         return None
     return row.estimate_usd
@@ -66,13 +68,13 @@ def _base_price(provider: str, method: str, slots: Slots) -> float | None:
     base = Slots(slots.tier, slots.depth, ()).mode
     row = prices.price(provider, method, base)
     if row is not None and (slots.tier is None or slots.depth is not None):
-        return _row_price(row, provider, method, base)
+        return _row_price(row, provider, method, base, flagged=bool(slots.flags))
     tier = prices.price(provider, method, slots.tier) if slots.tier else None
     if tier is None or tier.kind != KIND_TIER:
         return None
     default = _default_level(provider, method)
     assumed, depth = (None if d == default else d for d in (tier.depth_assumed, slots.depth))
-    return _row_price(tier, provider, method, slots.tier) if assumed == depth else None
+    return _row_price(tier, provider, method, slots.tier, flagged=bool(slots.flags)) if assumed == depth else None
 
 
 def mode_price(provider: str | Provider, method: str, mode: str | None) -> float | None:

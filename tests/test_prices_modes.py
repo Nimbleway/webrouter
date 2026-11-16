@@ -30,7 +30,8 @@ ROWS = (
     _row("acme-extras", "flag", 11.0, adds_usd=1.0),
     _row("acme-snippets", "flag", None),
     _row("acme-turbo+acme-extras", "tier", 4.5),
-    _row(None, None, None, method="answer", unit="token_billed"),
+    _row("lite", "depth", None, method="answer", unit="token_billed", default=True),
+    _row("acme-extras", "flag", 11.0, method="answer", adds_usd=1.0),
     _row("acme-pro", "tier", None, method="answer", unit="token_billed"),
 )
 
@@ -75,6 +76,11 @@ def test_the_pricing_order(acme: None, mode: str | None, expected: float | None)
 def test_a_token_billed_row_is_estimated_at_its_default_mode_only(acme: None) -> None:
     assert prices_modes.mode_price("acme", "answer", None) == 0.002
     assert prices_modes.mode_price("acme", "answer", "acme-pro") is None
+
+
+def test_a_flag_on_a_token_billed_default_has_no_price(acme: None) -> None:
+    assert prices_modes.mode_price("acme", "answer", "lite+acme-extras") is None
+    assert prices_modes.mode_price("acme", "search", "lite+acme-extras") == pytest.approx(0.011)  # per_1k control
 
 
 def test_the_shipped_list_prices_the_old_spelling_as_the_new_one_with_a_warning() -> None:
