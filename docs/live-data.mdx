@@ -87,20 +87,20 @@ read from the source's name and else from its vendor's label -- so `"amazon
 product"` leaves out a reviews page that mentions products, and keeps a
 source that does not say its kind, below the ones that do. A query that
 names only a country (`"uk"`) keeps that country's sources, and one of
-filler words only (`"page data"`) matches none. Matches are
-ranked by how the site matches (its own domain first), the kind, the main
-site before other countries unless the query names one, and then quality,
-read only from what any vendor's source can carry: a schema, a sample, and
-no `test` or `copy` in the name. With no
-`provider`, every vendor's matches are merged on that one scale, Apify's
-included: each vendor's own order is kept (Apify's relevance, the ranking
-above for the others) and the best-scored next match of any vendor comes
-next, so pages line up with no repeat or gap. A local search reads at most 5,000 sources and pages its matches
-with `limit` and `offset`. `page.total` counts the matches, and is
-`None` if the catalogue was read only in part. `page.query` and `page.search`
-(`"native"` or `"local"`) say what was asked and how. A custom backend whose
-vendor searches its own catalogue derives from `NativeSourceSearch` as well
-and implements `_search`/`_asearch`.
+filler words only (`"page data"`) matches none. Matches are ranked by how
+the site matches (its own domain first), the kind, the main site before
+other countries unless the query names one, and then quality, read only from
+what any vendor's source can carry: a schema, a sample, and no `test` or
+`copy` in the name. With no `provider`, every vendor's matches are merged on
+that one scale, Apify's included: each vendor's own order is kept (Apify's
+relevance, the ranking above for the others) and the best-scored next match
+of any vendor comes next, so pages line up with no repeat or gap. A local
+search reads at most 5,000 sources and pages its matches with `limit` and
+`offset`. `page.total` counts the matches, and is `None` if the catalogue
+was read only in part. `page.query` and `page.search` (`"native"` or
+`"local"`) say what was asked and how. A custom backend whose vendor
+searches its own catalogue derives from `NativeSourceSearch` as well and
+implements `_search`/`_asearch`.
 
 **A source's inputs are its own, not ours.** `inputs` is whatever its
 `input_schema` names: a URL for some sources, an id, a slug or a search term
