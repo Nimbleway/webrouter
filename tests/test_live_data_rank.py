@@ -53,3 +53,14 @@ def test_a_test_or_copy_in_the_name_ranks_lower_as_a_whole_word_only() -> None:
         assert _quality(name) == 0, name
     for name in ("amazon_pdp_test", "amazon_pdp_copy", "test_pdp_copy2"):
         assert _quality(name) < 0, name
+
+
+def test_a_generic_ending_is_the_main_site_and_a_country_code_is_not() -> None:
+    query = read_query("x product")
+    main = score(_source("x_product", "www.amazon.com"), query)
+
+    for domain in ("www.perplexity.ai", "www.example.app", "www.twitch.tv", "www.example.io", "www.example.shop"):
+        assert score(_source("x_product", domain), query) == main, domain
+    assert relevant(_source("amazon_pdp", "www.amazon.co.uk"), read_query("uk"))
+    assert relevant(_source("amazon_pdp", "www.amazon.com.mx"), read_query("mexico"))
+    assert score(_source("x_product", "www.amazon.de"), query) < main

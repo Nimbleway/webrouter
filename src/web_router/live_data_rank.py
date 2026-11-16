@@ -67,8 +67,8 @@ COUNTRIES: Final[dict[str, str]] = {
 _COUNTRY_WORDS_IN_QUERY: Final = frozenset(COUNTRIES) - {"in", "it", "be"}
 """Country words read as a country in a query: all but the codes that are also English words there."""
 
-_MAIN_SUFFIXES: Final = frozenset({"com", "net", "org", "io", "co", "us"})
-"""Domain endings of a site's main, international or US edition."""
+_NOT_COUNTRIES: Final = frozenset({"us", "ai", "io", "co", "tv", "me", "ly", "fm", "gg", "to", "cc"})
+"""Two-letter domain endings of a site's main edition: the US, and country codes used as generic ones."""
 
 _SECOND_LEVEL: Final = frozenset({"co", "com", "org", "net", "gov", "ac"})
 """Labels that sit before a country code in a domain, as in amazon.co.uk."""
@@ -234,12 +234,14 @@ def _kind(source: LiveDataSource, query: Query) -> int:
 
 
 def _country_of(source: LiveDataSource) -> str | None:
-    """The country edition ``source`` reads, from its domain's ending, else a country code in its name."""
+    """The country edition ``source`` reads, from its domain's ending, else a country code in its name.
+
+    Only a two-letter ending names a country, and not every one: .com, .app,
+    .ai or .tv is a site's main edition.
+    """
     _, ending = _site_name(source.domain)
-    if ending and ending not in _MAIN_SUFFIXES:
-        return COUNTRIES.get(ending, ending)
-    if ending in _MAIN_SUFFIXES:
-        return None
+    if ending:
+        return COUNTRIES.get(ending, ending) if len(ending) == 2 and ending not in _NOT_COUNTRIES else None
     # A slug like amazon_in_product_reviews names its country second.
     words = _words(source.name)
     return COUNTRIES.get(words[1]) if len(words) > 1 and len(words[1]) == 2 else None
