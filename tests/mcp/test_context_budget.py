@@ -37,8 +37,12 @@ three data API options (``data_apis``, ``data_apis_only``, ``configured_only``)
 bring it to 26,289; ``extract``'s two (``data_apis``, ``configured_only``), to 26,602.
 """
 
-TOOL_BUDGET = 2_600
-"""Bytes any one tool may take: ``search``, the largest, is 2,566 with its data API options."""
+TOOL_BUDGET = 2_650
+"""Bytes any one tool may take: ``search``, the largest, is 2,606 with its data API options.
+
+Each search backend adds its name to ``search``'s ``provider`` list; Valyu, Seltz and
+Octen together bring it to about 2,620.
+"""
 
 
 def _size(value: Any) -> int:

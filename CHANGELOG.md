@@ -8,6 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- Valyu as a search backend: `search(provider="valyu")`, over `POST /v1/search`, reading `VALYU_API_KEY`. It maps `max_results` (at most 20), `include_domains`, `exclude_domains`, `country` (the 36 countries Valyu lists; another raises before the call) and `recency`; `locale`, `search_depth` and `effort` raise. Every search is a web search (`search_type=web`), since Valyu's default also searches datasets priced up to 300 times a web result; `provider_options` overrides it. Each result carries its page body in markdown and Valyu's 0-1 `relevance_score` as `score`. `auto` tries it after the keyless tier, with a key. Written from Valyu's API reference; not yet verified live. New: `Provider.VALYU`.
 ### Changed
 
 - A keyword search of live data sources (`query=`) over Nimble, Bright Data and Oxylabs, which match it here, now reads the query as a site, a kind of page (product, search, category, reviews, offers, article) and a country, instead of matching every word as text with name and site matches first. A source of another kind is left out ("amazon product" no longer lists review pages), and one that does not say its kind is kept below those that do; beside another kind, "search" is the verb ("search amazon products" asks for product pages); a query of only a country ("uk") keeps that country's sources, and one of filler words only ("page data") matches none. Matches rank by site, kind, the main site before other countries unless one is named (.ai, .app, .tv and the like are main sites), then quality read only from what any vendor's source can carry: a schema, a sample, and no `test` or `copy` as a word in the name. With no `provider`, every vendor's matches are merged on that one scale, each vendor's own order kept, so pages line up with no repeat or gap. On a recorded copy of Nimble's 339 public templates, the right source now comes first for 32 of 32 test queries, up from 23.
@@ -16,6 +17,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Fixed
 
 - Nimble's public Extract Templates now carry their site, kind of page and description in a listing. Their listing rows carry no published version, and the metadata that describes them sits on the row itself, which was not read, so a local search could match them by name alone. `published` stays `False` on such a row, since the row does not say; `live_data_source()` reads the version.
+### Removed
+
+- Vendor catalog: the `valyu.search` endpoint, now that `search(provider="valyu")` covers it; `vendor_endpoint("valyu.search")` and an MCP `call_vendor` naming it raise `VendorNotFoundError`. The catalog lists 2,707 endpoints.
 
 ## [0.13.0] - 2026-11-16
 

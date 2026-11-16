@@ -20,7 +20,7 @@ def _search(provider: str, depth: str | None, max_results: int | None) -> Attemp
     return Attempt(tool="search", provider=provider, request=request)
 
 
-@pytest.mark.parametrize(("provider", "depth"), [("nimble", "deep"), ("you", "deep"), ("exa", None)])
+@pytest.mark.parametrize(("provider", "depth"), [("nimble", "deep"), ("you", "deep"), ("exa", None), ("valyu", None)])
 def test_a_search_asking_more_results_than_its_price_assumes_is_unpriced(provider: str, depth: str | None) -> None:
     row = prices.price(provider, "search", depth)
     assert row is not None and row.results_assumed == 10

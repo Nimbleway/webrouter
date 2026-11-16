@@ -105,7 +105,7 @@ Every method has an async twin on `AsyncWebRouter`.
 
 | Method | Providers |
 | --- | --- |
-| Search | Nimble, Tavily, Exa, Brave, Perplexity, Parallel, Linkup, You.com, WebIQ, Keenable, DeepSeek, AWS AgentCore, plus the keyless You.com, Exa and Parallel MCP endpoints |
+| Search | Nimble, Tavily, Exa, Brave, Perplexity, Parallel, Linkup, You.com, WebIQ, Keenable, DeepSeek, AWS AgentCore, Valyu, plus the keyless You.com, Exa and Parallel MCP endpoints |
 | Extract | Nimble, Tavily, Firecrawl, Exa, Linkup, Oxylabs, Bright Data, Jina Reader, WebIQ, Keenable, DeepSeek, Browserbase |
 | Answer | Perplexity, You.com, Linkup, Parallel, Exa, Brave |
 | Research | Nimble, Parallel, Perplexity, Linkup, You.com |

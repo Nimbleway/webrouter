@@ -214,6 +214,21 @@ requests a second.
 | `:content` | `deepseek:content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 <!-- /prices -->
 
+### Valyu
+
+Per result, not per request: a web or news result is 0.1 credit, and $10 buys
+1,600 credits pay-as-you-go, so a search of 10 web results costs about $0.006
+([pricing](https://docs.valyu.ai/pricing)). The default of 5 results costs half
+that. web-router sends `search_type=web`; Valyu's own default also searches
+datasets, priced per 1,000 results at up to $30. Accounts get free credits each
+month.
+
+<!-- prices: method=search provider=valyu -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `valyu` | default (`search_type=web`) | Titles, URLs, a relevance score and the page body per result | $6.25 per 1k; searches of 10 web results: 0.1 credit per result, at $10 per 1,600 credits pay-as-you-go; dataset results cost more | [docs.valyu.ai](https://docs.valyu.ai/pricing) | 2026-11-12 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the

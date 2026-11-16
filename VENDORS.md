@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-372 vendors, 2708 endpoints.
+372 vendors, 2707 endpoints.
 
 ### advertising
 
@@ -284,7 +284,7 @@ Web, news and archive search.
 | [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
 | [Tavily](https://docs.tavily.com/documentation/api-reference) `tavily` | Tavily's site crawl and map APIs, and the account's credit usage. | 3 read | key in header | `TAVILY_API_KEY` | docs 2026-11-08 |
-| [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 9 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
+| [Valyu](https://docs.valyu.ai/api-reference/overview) `valyu` | Search API for agents over the web, SEC filings, market data, economics, papers, trials and patents, plus async DeepResearch reports. | 8 read | key in header | `VALYU_API_KEY` | docs 2026-11-08 |
 | [Wikipedia](https://www.mediawiki.org/wiki/API:Main_page) `wikipedia` | Keyless Wikipedia search, plain-text article extracts, page source and HTML, revision history, language links and file info through the MediaWiki APIs. | 9 read | none | none | docs 2026-11-09 |
 | [You.com](https://you.com/docs/welcome) `you` | You.com's Finance Research API and the account balance. | 2 read | key in header | `YOU_API_KEY` | docs 2026-11-08 |
 
