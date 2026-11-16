@@ -13,39 +13,20 @@ reason from each member that answered for it.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 
 from web_router.constants_extract import MSG_EXTRACT_RETRY_BLANK
 from web_router.exceptions import DeadlineExceededError, WebRouterError
-from web_router.providers._chain import _RECOVERABLE, _empty_extract, _held_or_raise
-from web_router.providers._chain_deadline import _held_or_late, _late_answer
-from web_router.providers._hop import ahop, hop
+from web_router.providers._attempt_loop import Order, Walk, arun, run
+from web_router.providers._chain import _empty_extract
 from web_router.providers._url_match import asked_for, owners
-from web_router.providers.base import ExtractProvider
-from web_router.routing.attempts import admitted, contributed, failed
+from web_router.routing.attempts import contributed
 from web_router.routing.metered import combined_cost
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse
 from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET, ERROR_KIND_TIMEOUT
 
-_Order = list[tuple[int, str]]
 
-
-@dataclass(frozen=True)
-class _Walk:
-    """What a walk down ``auto``'s chain needs from it: its name, whether an empty answer moves on, its members."""
-
-    name: str
-    fallback_on_empty: bool
-    member: Callable[[int], ExtractProvider]
-    """Builds, or returns the cached, member at a chain position."""
-    order: _Order
-    """The members still to try, as (chain position, name), in call order."""
-    built: Mapping[int, ExtractProvider] = field(default_factory=dict)
-    """The members built so far, by chain position: a failure's says whether it held a credential to refuse."""
-
-
-def extract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+def extract_down_chain(walk: Walk, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
     """The first member's answer, with each URL it failed retried on the members after it."""
     response, rest = _first_answer(walk, request, urls)
     while rest and (retry := _failed_urls(response)):
@@ -61,7 +42,7 @@ def extract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[str]) ->
     return response
 
 
-async def aextract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+async def aextract_down_chain(walk: Walk, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
     """Async counterpart of :func:`extract_down_chain`."""
     response, rest = await _afirst_answer(walk, request, urls)
     while rest and (retry := _failed_urls(response)):
@@ -77,50 +58,16 @@ async def aextract_down_chain(walk: _Walk, request: ExtractRequest, urls: list[s
     return response
 
 
-def _first_answer(walk: _Walk, request: ExtractRequest, urls: list[str]) -> tuple[ExtractResponse, _Order]:
+def _first_answer(walk: Walk, request: ExtractRequest, urls: list[str]) -> tuple[ExtractResponse, Order]:
     """The first member's answer for ``urls``, and the members after it; raises when none answers."""
-    delegated = request.model_copy(update={"urls": urls})
-    failures: dict[str, WebRouterError] = {}
-    held: ExtractResponse | None = None
-    for index, (position, provider_name) in enumerate(walk.order):
-        if (late := _late_answer(held, walk.name, failures)) is not None:
-            return late, []
-        if not admitted("extract", provider_name, delegated):
-            continue
-        try:
-            response = hop("extract", provider_name, walk.member(position).extract, delegated)
-        except DeadlineExceededError as exc:
-            return _held_or_late(held, walk.name, failures, exc, provider_name, "extract"), []
-        except _RECOVERABLE as exc:
-            failed(failures, "extract", provider_name, exc, walk.built.get(position))
-            continue
-        if not (walk.fallback_on_empty and _empty_extract(response)):
-            return response, walk.order[index + 1 :]
-        held = response if held is None else held
-    return _held_or_raise(held, walk.name, failures), []
+    ran = run(walk, request.model_copy(update={"urls": urls}))
+    return ran.response, ran.rest
 
 
-async def _afirst_answer(walk: _Walk, request: ExtractRequest, urls: list[str]) -> tuple[ExtractResponse, _Order]:
+async def _afirst_answer(walk: Walk, request: ExtractRequest, urls: list[str]) -> tuple[ExtractResponse, Order]:
     """Async counterpart of :func:`_first_answer`."""
-    delegated = request.model_copy(update={"urls": urls})
-    failures: dict[str, WebRouterError] = {}
-    held: ExtractResponse | None = None
-    for index, (position, provider_name) in enumerate(walk.order):
-        if (late := _late_answer(held, walk.name, failures)) is not None:
-            return late, []
-        if not admitted("extract", provider_name, delegated):
-            continue
-        try:
-            response = await ahop("extract", provider_name, walk.member(position).aextract, delegated)
-        except DeadlineExceededError as exc:
-            return _held_or_late(held, walk.name, failures, exc, provider_name, "extract"), []
-        except _RECOVERABLE as exc:
-            failed(failures, "extract", provider_name, exc, walk.built.get(position))
-            continue
-        if not (walk.fallback_on_empty and _empty_extract(response)):
-            return response, walk.order[index + 1 :]
-        held = response if held is None else held
-    return _held_or_raise(held, walk.name, failures), []
+    ran = await arun(walk, request.model_copy(update={"urls": urls}))
+    return ran.response, ran.rest
 
 
 def _failed_urls(response: ExtractResponse) -> list[str]:

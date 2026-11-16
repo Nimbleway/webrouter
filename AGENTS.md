@@ -414,6 +414,8 @@ src/web_router/
     │                   the caller's `chain`, what a member's failure means
     ├── _chain_deadline.py a one-call chain out of time: the first empty
     │                   answer it holds, else the deadline naming each reason
+    ├── _attempt_loop.py the one loop every auto chain walks, sync and async: the hook
+    │                   before each member, hop or job submit, failures, empty answers held
     ├── _auto_extract.py which members of extract `auto` can serve a request: the
     │                   format and every option it sets; apart so auto.py stops growing
     ├── auto.py         the default for search, extract, research, browser and

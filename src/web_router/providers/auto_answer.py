@@ -29,25 +29,19 @@ from web_router.constants_answer import (
     MSG_AUTO_ANSWER_NO_MEMBER,
 )
 from web_router.exceptions import (
-    DeadlineExceededError,
     NoAnswerProviderError,
     UnsupportedParameterError,
-    WebRouterError,
 )
+from web_router.providers._attempt_loop import Walk, answered_unless, arun, held_or_raise, run
 from web_router.providers._chain import (
-    _RECOVERABLE,
     _ChainSpec,
     _empty_answer,
-    _held_or_raise,
     _keyed_chain,
     _members_and_chain,
     _quoted,
 )
-from web_router.providers._chain_deadline import _held_or_late, _late_answer
-from web_router.providers._hop import ahop, hop
 from web_router.providers._members import _Members
 from web_router.providers.answer import AnswerProvider
-from web_router.routing.attempts import admitted, failed, in_call_order, noted
 from web_router.types_answer import ANSWER_PARAMETERS, AnswerRequest, AnswerResponse
 
 
@@ -121,55 +115,25 @@ class AutoAnswerProvider(AnswerProvider):
 
         return self._members.member(position, self._chain, self._members_config, create_answer_provider)
 
+    def _walk(self, request: AnswerRequest) -> Walk:
+        # A member that refuses an option before sending is passed over without counting as a failure.
+        return Walk.over(
+            self._eligible(request),
+            tool="answer",
+            owner=self.name,
+            member=self._member,
+            method="answer",
+            exhausted=held_or_raise(self.name, MSG_AUTO_ANSWER_EXHAUSTED),
+            final=answered_unless(_empty_answer, self.fallback_on_empty),
+            refusals=(UnsupportedParameterError,),
+            built=self._members,
+        )
+
     def _answer(self, request: AnswerRequest) -> AnswerResponse:
-        failures: dict[str, WebRouterError] = {}
-        refused: list[UnsupportedParameterError] = []
-        held: AnswerResponse | None = None
-        for position, provider_name in in_call_order("answer", self._eligible(request)):
-            if (late := _late_answer(held, self.name, failures)) is not None:
-                return late
-            if not admitted("answer", provider_name, request):
-                continue
-            try:
-                response = hop("answer", provider_name, self._member(position).answer, request)
-            except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name, "answer")
-            except UnsupportedParameterError as exc:
-                refused.append(exc)
-                noted("answer", provider_name, exc)
-                continue
-            except _RECOVERABLE as exc:
-                failed(failures, "answer", provider_name, exc, self._members.get(position))
-                continue
-            if not (self.fallback_on_empty and _empty_answer(response)):
-                return response
-            held = response if held is None else held
-        return _held_or_raise(held, self.name, failures, MSG_AUTO_ANSWER_EXHAUSTED, refused)
+        return run(self._walk(request), request).response  # type: ignore[no-any-return]
 
     async def _aanswer(self, request: AnswerRequest) -> AnswerResponse:
-        failures: dict[str, WebRouterError] = {}
-        refused: list[UnsupportedParameterError] = []
-        held: AnswerResponse | None = None
-        for position, provider_name in in_call_order("answer", self._eligible(request)):
-            if (late := _late_answer(held, self.name, failures)) is not None:
-                return late
-            if not admitted("answer", provider_name, request):
-                continue
-            try:
-                response = await ahop("answer", provider_name, self._member(position).aanswer, request)
-            except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name, "answer")
-            except UnsupportedParameterError as exc:
-                refused.append(exc)
-                noted("answer", provider_name, exc)
-                continue
-            except _RECOVERABLE as exc:
-                failed(failures, "answer", provider_name, exc, self._members.get(position))
-                continue
-            if not (self.fallback_on_empty and _empty_answer(response)):
-                return response
-            held = response if held is None else held
-        return _held_or_raise(held, self.name, failures, MSG_AUTO_ANSWER_EXHAUSTED, refused)
+        return (await arun(self._walk(request), request)).response  # type: ignore[no-any-return]
 
     def require_members(self) -> None:
         """Raise :class:`NoAnswerProviderError`, naming the variables to set, when the chain is empty."""
