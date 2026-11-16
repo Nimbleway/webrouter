@@ -38,7 +38,7 @@ bring it to 26,289.
 """
 
 TOOL_BUDGET = 2_650
-"""Bytes any one tool may take: ``search``, the largest, is 2,566 with its data API options.
+"""Bytes any one tool may take: ``search``, the largest, is 2,606 with its data API options.
 
 Each search backend adds its name to ``search``'s ``provider`` list; Valyu, Seltz and
 Octen together bring it to about 2,620.
