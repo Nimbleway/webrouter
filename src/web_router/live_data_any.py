@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
-from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
@@ -33,11 +32,12 @@ from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.exceptions_typed import AllProvidersFailedError
 from web_router.live_data_backends import usable_backends_or_raise
 from web_router.live_data_catalogue import check_page
-from web_router.live_data_rank import Query, read_query, score
+from web_router.live_data_merge import by_score, in_turn
+from web_router.live_data_rank import read_query
 from web_router.live_data_search import asearch_live_data_sources, search_live_data_sources
 from web_router.providers.base import LiveDataProvider
 from web_router.routing.attempts import warn_if_refused
-from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
+from web_router.types_live_data import LiveDataSourcePage
 
 if TYPE_CHECKING:
     from web_router.client_live_data import _LiveDataLookup
@@ -155,7 +155,7 @@ def _merged(
     Taking turns means no backend crowds out the others in a listing; a
     query's matches are merged by :func:`~web_router.live_data_rank.score`,
     which every vendor's sources are scored on alike, with the turns as the
-    tie-break (see :func:`_by_score`).
+    tie-break (see :func:`~web_router.live_data_merge.by_score`).
 
     A backend that raised what a backend may raise is named in ``failures``,
     and a refused key logged as ``auto`` logs one; anything else is a bug and
@@ -178,7 +178,7 @@ def _merged(
         raise AllProvidersFailedError(LIVE_DATA_EVERY_BACKEND, message, errors)
     start = offset or 0
     lists = [page.sources for page in pages.values()]
-    taken = list(_by_score(lists, read_query(query)) if query else _in_turn(lists))
+    taken = list(by_score(lists, read_query(query)) if query else in_turn(lists))
     modes = {page.search for page in pages.values()}
     totals = [page.total for page in pages.values()]
     return LiveDataSourcePage(
@@ -192,30 +192,6 @@ def _merged(
         raw={name: page.raw for name, page in pages.items()},
         failures=failures,
     )
-
-
-def _in_turn(lists: Iterable[list[LiveDataSource]]) -> Iterable[LiveDataSource]:
-    """The first of each list, then the second of each, and so on: no backend crowds out the others."""
-    rows = [list(sources) for sources in lists]
-    for index in range(max((len(sources) for sources in rows), default=0)):
-        yield from (sources[index] for sources in rows if index < len(sources))
-
-
-def _by_score(lists: list[list[LiveDataSource]], asked: Query) -> Iterable[LiveDataSource]:
-    """Each backend's sources in its own order, merged by taking the best-scored next source of any of them.
-
-    A backend's own order is kept -- a local search's is already by score, a
-    vendor's own search is in the vendor's order -- so the first ``n`` merged
-    depend only on each backend's first ``n``: the same sources come back
-    whatever page is asked, with no repeat or gap between pages. Ties go to the
-    earlier position, then the earlier backend, as taking turns would.
-    """
-    scores = [[score(source, asked) for source in sources] for sources in lists]
-    at = [0] * len(lists)
-    while left := [index for index, sources in enumerate(lists) if at[index] < len(sources)]:
-        best = max(left, key=lambda index: (scores[index][at[index]], -at[index], -index))
-        yield lists[best][at[best]]
-        at[best] += 1
 
 
 __all__: list[str] = ["asearch_every_backend", "search_every_backend"]

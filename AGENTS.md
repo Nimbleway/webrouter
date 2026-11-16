@@ -136,6 +136,7 @@ src/web_router/
 ├── live_data_rank.py   a local match: the query read as site, kind and country, the gate and the score;
 │                       its words and weights are live_data_rank_vocab.py, a domain's site and
 │                       country live_data_rank_site.py
+├── live_data_merge.py  several backends' answers as one order: in turn, or merged by score
 ├── live_data_compat.py the old Template* names, importable from web_router with a warning
 ├── client_vendors.py   call_vendor(), vendor_request() and the catalog lookups, mixed into
 │                       both routers
