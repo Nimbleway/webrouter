@@ -82,7 +82,7 @@ def kind_of(source: LiveDataSource) -> str | None:
     product's reviews can be labelled a product page.
     """
     for text in (_name_and_title(source), source.entity_type):
-        found = _kind_in(words_of(text or ""))
+        found = next(iter(_kinds_in(words_of(text or ""))), None)
         if found:
             return found
     return None
@@ -133,10 +133,6 @@ def haystack(source: LiveDataSource) -> str:
 def _kinds_in(words: list[str]) -> list[str]:
     """Every kind ``words`` name, in :data:`KINDS`' order of precedence."""
     return [name for name, said in KINDS.items() if said.intersection(words)]
-
-
-def _kind_in(words: list[str]) -> str | None:
-    return next(iter(_kinds_in(words)), None)
 
 
 def _title(source: LiveDataSource) -> str | None:
