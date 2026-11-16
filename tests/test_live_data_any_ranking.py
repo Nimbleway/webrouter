@@ -1,8 +1,8 @@
 """How a search over every backend orders and pages what they answer: one scale, and pages that line up.
 
-The backends are in memory (``tests/_live_data_paged.py``), registered as
-custom backends; every built-in backend's variable is cleared, so no test
-reaches a real vendor.
+The backends are in memory: the ``fake`` and ``paged`` of
+``tests/_live_data_any_fixtures.py``, and the vendors below, registered as
+custom backends; no test reaches a real vendor.
 """
 
 from __future__ import annotations
@@ -12,19 +12,12 @@ from typing import ClassVar
 
 import pytest
 
+from tests._live_data_any_fixtures import no_vendor_keys_fixture, two_backends_fixture  # noqa: F401  (fixtures)
 from tests._live_data_paged import PagedProvider
 from web_router import WebRouter
-from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.live_data_search import NativeSourceSearch
 from web_router.registry import register_live_data_provider, unregister_live_data_provider
 from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
-
-
-@pytest.fixture(autouse=True)
-def no_vendor_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    for env_vars in LIVE_DATA_ENV_BY_PROVIDER.values():
-        for env_var in env_vars:
-            monkeypatch.delenv(env_var, raising=False)
 
 
 def _source(provider: str, name: str, domain: str) -> LiveDataSource:
@@ -106,3 +99,12 @@ def test_a_strong_match_on_one_backend_still_leads_a_weak_one_on_another(only: N
 
     # local ranks its amazon.com source first, and it leads native's weak first matches.
     assert names[:2] == ["local_best", "weak_one"]
+
+
+def test_a_query_ranks_every_backend_on_one_scale(two_backends: None) -> None:
+    """Taking turns would put paged's weak match second; scored alike, fake's two strong matches lead."""
+    page = WebRouter().live_data_sources(query="example", limit=3)
+
+    # Both of fake's are on example.com itself, with a schema and a sample; shop_reviews only mentions it.
+    assert page.names[:2] == ["books_pdp", "jobs_listing"]
+    assert "shop_reviews" not in page.names
