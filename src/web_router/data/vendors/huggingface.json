@@ -30,6 +30,9 @@
     "Rate limits are counted over 5-minute windows per user or organization; a 429 carries RateLimit headers.",
     "This entry covers the Hub only; Hugging Face Inference Providers route to other companies' models and are not listed here."
   ],
+  "sites": [
+    "huggingface.co"
+  ],
   "sources": [
     "https://huggingface.co/docs/hub/api",
     "https://huggingface.co/.well-known/openapi.md",

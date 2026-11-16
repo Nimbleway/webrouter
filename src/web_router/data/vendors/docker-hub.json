@@ -29,6 +29,9 @@
     "Rate-limited: a 429 carries Retry-After (seconds). These limits are separate from image pull limits.",
     "Lists page with page and page_size and return count, next and previous."
   ],
+  "sites": [
+    "hub.docker.com"
+  ],
   "sources": [
     "https://docs.docker.com/reference/api/hub/latest/",
     "https://docs.docker.com/reference/api/hub/latest.yaml"

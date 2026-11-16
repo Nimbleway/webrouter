@@ -11,6 +11,9 @@
     "Results change only after new articles are announced (after midnight), so cache a query for the day.",
     "At most 2,000 results per call and 30,000 per query overall; use OAI-PMH for bulk harvesting."
   ],
+  "sites": [
+    "arxiv.org"
+  ],
   "sources": [
     "https://info.arxiv.org/help/api/user-manual.html",
     "https://info.arxiv.org/help/api/index.html"

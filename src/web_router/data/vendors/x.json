@@ -29,6 +29,10 @@
     "Pagination is by next_token (search) or pagination_token (timelines) taken from meta in the previous answer.",
     "Access and rate limits depend on the developer account's plan (see pricing_url)."
   ],
+  "sites": [
+    "x.com",
+    "twitter.com"
+  ],
   "sources": [
     "https://docs.x.com/x-api",
     "https://docs.x.com/openapi.json"

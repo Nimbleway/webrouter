@@ -1,59 +1,76 @@
 ---
 title: "Live data"
-description: "Run a vendor's ready-made scraper for one site and get records with fixed fields: list a catalogue, describe a source, run it."
-mode: "wide"
+description: "Run a vendor's ready-made scraper for one site and get records with fixed fields back, fetched for this call."
+sidebarTitle: "Live data"
 icon: "table"
 ---
 
-A live data source is a vendor's ready-made scraper for one site -- a
-retailer's product page, a maps search, a job board's listing -- that turns
-the site into **records with fixed fields**, fetched for this call, rather
-than page text to read through. Three calls cover a vendor's catalogue: list
-it, describe one, run one. A source's name, inputs and fields are the
-vendor's own -- the same site has a different name on each -- but you never
-have to pick the vendor: leave `provider` out and the search runs on every
-backend you have a key for, and each source it returns names its own.
+A live data source is a vendor's ready-made scraper for one site: a retailer's
+product page, a maps search, a job board's listing. It turns the site into
+**records with fixed fields**, fetched for this call, rather than page text to
+read through.
+
+Three calls cover the catalogue: find a source, describe it, run it. With no
+`provider`, the search asks every vendor you have a key for at once.
 
 ```python
-page = router.live_data_sources(query="amazon product")  # every vendor with a key, asked at once
-source = page.sources[0]
-source.provider  # the vendor that holds it: "nimble", "apify", "brightdata" or "oxylabs"
+from web_router import WebRouter
+
+router = WebRouter()
+
+# 1. Find a source, on every vendor with a key
+page = router.live_data_sources(query="google maps")
+for source in page.sources:
+    print(source.provider, source.name, source.domain, source.description)
 page.failures  # each vendor that could not answer, and why; its sources are missing
 
-source = router.live_data_source(source)  # its schemas and samples, from its own vendor
-result = router.live_data(source, source.samples[0].input)  # run it there; no provider named
+# 2. Read what it takes, from its own vendor
+source = router.live_data_source(page.sources[0])
+source.input_schema  # JSON Schema of what a run passes as `inputs`
+source.samples       # runs the vendor recorded, to copy a first call from
+
+# 3. Run it there
+result = router.live_data(source, source.samples[0].input if source.samples else {})
+result.records     # one dict per record, shaped by the source's output
+result.data        # the first record, for sources that answer with one
+result.fetched_at  # when the vendor says it fetched the page; None when it does not say
 ```
 
-The merged page takes each vendor's sources in turn, so no one vendor's
-catalogue crowds out the others, and `limit` and `offset` page the merged
-list. Its `provider` is `"auto"`, `total` is counted only when every vendor
-answered with a count, and it raises only when every vendor failed. A run
-takes the `LiveDataSource` whole; a bare name needs `provider`, unless you
-have one live data backend. To work in one vendor's catalogue, name it:
+`provider` is optional on all three calls. A search with no `provider` merges
+the vendors' sources, taking each in turn so no one catalogue crowds out the
+others; `limit` and `offset` page the merged list. The page's `provider` is
+`"auto"`, and each source names the vendor that holds it in `source.provider`.
+The call raises only when every vendor failed, or with a `ConfigurationError`
+when no live data vendor has a key. There is no keyless tier.
+
+`live_data_source` and `live_data` take the `LiveDataSource` itself and run on
+its vendor. A bare name needs `provider`, unless you have one live data vendor,
+because a source's name, inputs and fields are the vendor's own: the same site
+has a different name on each. A `provider` that contradicts the source's own
+raises.
+
+To work in one vendor's catalogue, name it:
 
 ```python
-page = router.live_data_sources(provider="apify", limit=20)  # one page of the catalogue
-for source in page.sources:
-    print(source.name, source.domain, source.description)
-
-page = router.live_data_sources(provider="nimble", query="walmart product")  # find one by keyword
-page.search  # "native" where the vendor searched (Apify), "local" where it was matched here
-
+page = router.live_data_sources(provider="apify", query="google maps")
 source = router.live_data_source("compass~crawler-google-places", provider="apify")
-source.input_schema  # JSON Schema of what a run passes as `inputs`
-
 result = router.live_data(
     "compass~crawler-google-places",
     {"searchStringsArray": ["coffee in Tel Aviv"], "maxCrawledPlacesPerSearch": 10},
     provider="apify",
 )
-result.records  # one dict per place, shaped by the Actor's output
-result.data  # the first record, for sources that answer with one
-result.fetched_at  # when the vendor says it fetched the page; None when it does not say
 ```
 
-Every backend takes the same call -- a source's name and its inputs -- so
-switching vendor changes only those two:
+## Backends
+
+| Backend | Key | A source is named | Inputs |
+| --- | --- | --- | --- |
+| [Nimble](https://docs.nimbleway.com/api-reference/extract-templates-api/run-extract-template) (`nimble`) | `NIMBLE_API_KEY` | the Extract Template's name, `walmart_pdp` | the template's own (`product_id`, `url`…) |
+| [Apify](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) (`apify`) | `APIFY_TOKEN` | the Actor, `username~name` (or `username/name`) | the Actor's input, sent untouched |
+| [Bright Data](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) (`brightdata`) | `BRIGHTDATA_API_TOKEN` | the dataset id `gd_l7q7dkf244hwjntr0`, or the scraper's name, `amazon_products` | one input object, `{"url": ...}` or `{"keyword": ...}` |
+| [Oxylabs](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) (`oxylabs`) | `OXYLABS_WEB_API_KEY` | the scraper's path, `amazon/product` | the scraper's own (`query` or `url`, plus `domain`, `locale`…) |
+
+Switching vendor changes only the source's name and its inputs:
 
 ```python
 router.live_data("amazon_products", {"url": "https://www.amazon.com/dp/B0CHX1W1XY"}, provider="brightdata")
@@ -61,81 +78,112 @@ router.live_data("amazon_products_by_keyword", {"keyword": "earbuds"}, provider=
 router.live_data("amazon/product", {"query": "B0CHX1W1XY", "domain": "com"}, provider="oxylabs")
 ```
 
-| Backend | A source is named | Catalogue | Inputs | Notes |
-| --- | --- | --- | --- | --- |
-| `nimble` | the template's name, `walmart_pdp` | Nimble's templates, paged by Nimble | the template's own (`product_id`, `url`…) | one record per run; `format` returns the page beside it |
-| `apify` | `username~name` (or `username/name`) | the Apify Store, paged by Apify | the Actor's input, sent as the body untouched | every dataset item is a record; waits up to 300 s; `provider_options` go to the run's query (`memory`, `maxItems`, `maxTotalChargeUsd`) |
-| `brightdata` | the dataset id, `gd_l7q7dkf244hwjntr0`, or the scraper's name -- Bright Data's as written (`Amazon products`) or as listed (`amazon_products`); each discovery method is its own source, `amazon_products_by_keyword`. Names follow Bright Data's catalogue and gain the site if another scraper takes the same name; the `gd_` id never changes | every scraper and method, paged here (Bright Data answers with all of them; read once per provider) | one input object, e.g. `{"url": ...}` or `{"keyword": ...}` | past its synchronous window (about a minute) polls the snapshot for up to five minutes or the call's deadline, then raises `LiveDataJobError` naming it; a run's failed inputs land in its `extra["errors"]`; a listed or described source's `extra["dataset_id"]` names the scraper behind it |
-| `oxylabs` | the scraper's path after `/v1/scrape/`, `amazon/product` (the full path works too) | the Web API's own list, `GET /v1/scrapers`, paged here (read once per provider) | the scraper's own, typed in its description from Oxylabs' `OPTIONS` (`query` or `url`, plus `domain`, `locale`…) | asks for `output: ["json"]`, the scraper's fields; a scraper Oxylabs runs only as a job (`chatgpt`, `gemini`…) is polled for up to five minutes, or until just before the call's deadline; any error after the submit is a `LiveDataJobError` whose `job_id` names the job to read later; `metadata.timestamp` stays in `extra`, as it is not documented as the fetch time |
+<AccordionGroup>
+  <Accordion title="Nimble">
+    One record per run. `format="markdown"` or `"html"` returns the page beside
+    the records, in `result.document`; unset, no page comes back.
+  </Accordion>
+  <Accordion title="Apify">
+    Every dataset item is a record. A run waits up to 300 seconds.
+    `provider_options` go to the run's query string, for example `memory`,
+    `maxItems` or `maxTotalChargeUsd` to cap what the run may spend.
+  </Accordion>
+  <Accordion title="Bright Data">
+    Each discovery method is its own source: `amazon_products` collects by URL,
+    `amazon_products_by_keyword` discovers by keyword. A name gains its site if
+    another scraper takes the same one; the `gd_` id never changes, so pin that
+    in code. A scrape that outlasts Bright Data's synchronous window (about a
+    minute) is polled for up to five minutes or until the call's deadline. Any
+    error after that is a `LiveDataJobError` whose `job_id` names the snapshot,
+    so a billed run can still be read later. Inputs that failed inside a run
+    land in `result.extra["errors"]`.
+  </Accordion>
+  <Accordion title="Oxylabs">
+    Uses the Oxylabs Web API key, not the Realtime username and password that
+    Oxylabs' extract uses. Passed in code, it is `web_api_key` in
+    `provider_config["oxylabs"]`, since `api_key` there is extract's password. A scraper Oxylabs runs only as a job (`chatgpt`,
+    `gemini`…) is polled for up to five minutes or until the call's deadline.
+    Any error after the job is submitted is a `LiveDataJobError` whose `job_id`
+    names the job, so a billed run can still be read later.
+  </Accordion>
+</AccordionGroup>
 
-**Searching a catalogue.** `query` finds sources by keyword -- a site, a
-brand, the kind of page -- searched the way each vendor allows:
+Nimble was verified live on 2026-10-22, Apify and Bright Data on 2026-11-10.
+The Oxylabs Web API is written from its documentation and has not yet been
+called live.
 
-| Backend | How `query` is searched | Order |
-| --- | --- | --- |
-| `apify` | natively: the Store's own `search`, over an Actor's title, name, description, owner and readme | the Store's relevance |
-| `nimble` | locally: Nimble's template list takes no keywords, so the catalogue is read page by page and matched here | name and site matches first, then catalogue order |
-| `brightdata` | locally: Bright Data's dataset list takes no parameters | as above |
-| `oxylabs` | locally: the Web API lists its scrapers but takes no keywords | as above |
+## Finding a source
+
+`query` finds sources by keyword: a site, a brand, the kind of page. Each
+vendor is searched the way it allows:
+
+| Backend | How `query` is searched |
+| --- | --- |
+| `apify` | Natively, by the Apify Store's own search, in its relevance order |
+| `nimble`, `brightdata`, `oxylabs` | Locally: these catalogues take no keywords, so WebRouter reads the catalogue and matches here, name and site matches first |
+
+```python
+page = router.live_data_sources(provider="nimble", query="walmart product")
+page.search  # "native" or "local": how the query was searched
+page.total   # matches found; None if the catalogue was read only in part
+```
 
 A local search matches every word, ignoring case, on a source's name, site,
-kind of page and description, reads at most 5,000 sources, and pages its
-matches with `limit` and `offset`. `page.total` counts the matches, and is
-`None` if the catalogue was read only in part. `page.query` and `page.search`
-(`"native"` or `"local"`) say what was asked and how. A custom backend whose
-vendor searches its own catalogue derives from `NativeSourceSearch` as well
-and implements `_search`/`_asearch`.
+kind of page and description. It reads at most 5,000 sources and keeps the
+catalogue for ten minutes, so the next search on that backend reads nothing.
+Page through results with `limit` and `offset`. Leave `query` out to list the
+catalogue in the vendor's order.
 
-**A source's inputs are its own, not ours.** `inputs` is whatever its
-`input_schema` names: a URL for some sources, an id, a slug or a search term
-for others. That is why this is a method of its own rather than an option on
-`extract`, which is keyed by URL. Read the schema -- or `source.samples`, the
-runs the backend recorded -- before running a source you have not run
-before; the backend refuses inputs that do not match, and an unknown name
-raises `LiveDataSourceNotFoundError`. A schema is `None` where the backend
-publishes none and names fields without types where that is all it publishes
-(Bright Data): nothing is guessed. Oxylabs' input schema is built from the
-scraper's own `OPTIONS` answer, its untouched lines kept in `source.raw`.
+A custom backend whose vendor searches its own catalogue derives from
+`NativeSourceSearch` and implements `_search` and `_asearch`; its searches then
+report `"native"`.
 
-**Freshness is reported, not assumed.** Every backend here fetches on request.
-`fetched_at` is set only from the vendor's own timestamp, and stays `None`
-where the vendor documents none rather than being filled with the time the
+## Inputs
+
+A source's inputs are its own. `inputs` is whatever its `input_schema` names:
+a URL for some sources, an id, a slug or a search term for others. That is why
+live data is a method of its own rather than an option on
+[`extract`](/extract), which is keyed by URL.
+
+Read the schema, or `source.samples`, before running a source you have not run
+before. The backend refuses inputs that do not match, and an unknown name
+raises `LiveDataSourceNotFoundError`. A schema is `None` where the vendor
+publishes none, and names fields without types where that is all the vendor
+publishes (Bright Data). Nothing is guessed.
+
+## Freshness
+
+Every live data backend fetches the site on request. Stored or pre-collected
+datasets are not live data.
+
+`fetched_at` is set only from the vendor's own timestamp. Where the vendor
+documents none it stays `None`, rather than being filled with the time the
 answer arrived.
 
-A run the backend could not complete -- a page it could not fetch, a site
-that answered with an error page, a parse that failed -- **raises**
-`ProviderError` with the backend's reason. `format` asks for the page beside
-the records, on the backends that return one (Nimble); unset, no page comes
-back. `LiveDataSourcePage.total` and `offset` say where in the catalogue a
-page sits, when known. Every call tags its answer with `provider` and keeps
-the untouched payload in `raw`.
+## Errors and cost
 
-**Renamed from templates.** `templates()`, `template()` and `run_template()`,
-and the `Template*` types, are deprecated aliases of `live_data_sources()`,
-`live_data_source()`, `live_data()` and the `LiveData*` types: they still
-work, with a `DeprecationWarning`, until a later release removes them.
+A run the backend could not complete (a page it could not fetch, a site that
+answered with an error page, a parse that failed) raises `ProviderError` with
+the backend's reason. See [Errors](/errors).
 
-## Backends
+Listing and describing sources bill nothing on any backend. A run bills at the
+vendor's own rate; the dated, sourced rates are in
+[`PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md).
 
-Four backends serve live data. There is no keyless tier. Leave `provider` out
-and the search runs on every backend you have a key for; each source it
-returns names its own, so a run never needs one. See the detailed [Live data](/live-data)
-guide below.
+Every response names its `provider` and keeps the vendor's untouched payload in
+`raw`.
 
-| Pass | Name | Provider | Credentials | Page formats beside the records |
-| --- | --- | --- | --- | --- |
-| `Provider.NIMBLE` | `nimble` | [Nimble Extract Templates](https://docs.nimbleway.com/api-reference/extract/extract-templates) | `NIMBLE_API_KEY` | `markdown`, `html` |
-| `Provider.APIFY` | `apify` | [Apify Store Actors](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) | `APIFY_TOKEN` | — |
-| `Provider.BRIGHTDATA` | `brightdata` | [Bright Data scrapers](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) | `BRIGHTDATA_API_TOKEN` | — |
-| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web API dedicated scrapers](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) | `OXYLABS_WEB_API_KEY` (a Web API key, not the Realtime username and password extract uses; in `provider_config["oxylabs"]` it is `web_api_key`, as `api_key` there is extract's password) | — |
+## From the MCP server
 
-Nimble was verified live on 2026-10-22: a listing, a description and a run on
-a public test page. Apify and Bright Data were verified live on 2026-11-10:
-each one's catalogue, a search, a description and a run (Apify's Google Maps
-Actor, Bright Data's `amazon_products`). **The Oxylabs Web API is written from
-its documentation** and has not yet been called live. Their integration tests
-skip themselves until keys are available. Listing and describing bill nothing
-on any of them; what a run bills is each vendor's own rate, recorded dated and
-sourced in [`benchmarks/providers/PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md)
-from the price list `web_router.prices` reads (see
-[Estimated prices](/budgets#estimated-prices)). See [Live data](/live-data).
+The MCP server exposes the same three calls as tools: `live_data_sources`,
+`live_data_source` and `live_data`. Listing and describing take about a second
+and are free; a run takes seconds to a few minutes and is charged to the
+connection's budget. See [MCP server](/mcp).
+
+## Renamed from templates
+
+`templates()`, `template()` and `run_template()`, and the `Template*` types, are
+deprecated aliases of `live_data_sources()`, `live_data_source()`,
+`live_data()` and the `LiveData*` types. They still work, with a
+`DeprecationWarning`, until a later release removes them. The MCP tools were
+renamed with no alias.

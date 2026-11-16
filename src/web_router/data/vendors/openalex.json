@@ -31,6 +31,9 @@
     "page/per_page paging stops at 10,000 results (page * per_page); use cursor=* for more. per_page max is 100.",
     "group_by returns up to 200 groups per page and pages only by cursor."
   ],
+  "sites": [
+    "openalex.org"
+  ],
   "sources": [
     "https://help.openalex.org/how-to-use-the-api/api-overview",
     "https://help.openalex.org/api/authentication/",
