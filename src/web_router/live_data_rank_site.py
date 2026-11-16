@@ -48,7 +48,7 @@ def site_score(source: LiveDataSource, site_words: tuple[str, ...]) -> int:
     name = set(words_of(source.name)) | set(words_of(source.domain or ""))
     total = 0
     for word in site_words:
-        if word == site or (site is None and words_of(source.name)[:1] == [word]):
+        if word == site or (site is None and _own_name(source)[:1] == [word]):
             total += SITE_NAMED
         elif word in name:
             total += SITE_IN_NAME
@@ -67,7 +67,7 @@ def country_of(source: LiveDataSource) -> str | None:
     if ending:
         return COUNTRIES.get(ending, ending) if len(ending) == 2 and ending not in NOT_COUNTRIES else None
     # A slug like amazon_in_product_reviews names its country second.
-    named = words_of(source.name)
+    named = _own_name(source)
     return COUNTRIES.get(named[1]) if len(named) > 1 and len(named[1]) == 2 else None
 
 
@@ -77,6 +77,11 @@ def locale_score(source: LiveDataSource, asked: str | None) -> int:
     if asked is not None:
         return LOCALE_MATCH if country == asked else LOCALE_OTHER
     return LOCALE_MAIN if country is None else 0
+
+
+def _own_name(source: LiveDataSource) -> list[str]:
+    """The words of ``source``'s name after its owner's: an Apify actor is ``owner~amazon_uk_product``."""
+    return words_of(source.name.rpartition("~")[2])
 
 
 __all__: list[str] = ["country_of", "locale_score", "site_name", "site_score"]

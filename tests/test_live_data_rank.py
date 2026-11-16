@@ -8,6 +8,7 @@ here, so a rule that stops working fails by name.
 from __future__ import annotations
 
 from web_router.live_data_rank import kind_of, read_query, relevant, score
+from web_router.live_data_rank_site import country_of, site_score
 from web_router.live_data_search import ranked
 from web_router.providers import brightdata_shapes, oxylabs_scrapers
 from web_router.providers import nimble_live_data_map as nimble_map
@@ -118,6 +119,19 @@ def test_the_title_is_read_for_the_match_and_the_kind_alike() -> None:
 # -- what each weight decides -------------------------------------------------
 # Each test turns on one weight: setting it to 0 makes the two sources tie (the
 # input order then stands, and the losing source is put first) or flips them.
+
+
+def test_an_apify_actor_is_read_by_its_name_after_its_owner() -> None:
+    def scraper(name: str) -> LiveDataSource:
+        return LiveDataSource(provider="apify", name=name, description="Amazon UK product scraper")
+
+    owned, unowned = scraper("someone~amazon_uk_product"), scraper("amazon_uk_product")
+    query = read_query("amazon uk product")
+
+    assert country_of(owned) == "uk"
+    assert ranked([_source("amazon_pdp"), owned], "amazon uk product")[0] is owned
+    assert site_score(owned, query.site_words) == site_score(unowned, query.site_words)
+    assert country_of(_source("amazon_in_product_reviews", domain="")) == "in"
 
 
 def _names(sources: list[LiveDataSource], query: str) -> list[str]:
