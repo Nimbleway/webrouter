@@ -97,6 +97,8 @@ class Price(BaseModel):
     """The ``search_depth`` a tier's price assumes (``None``: none sent); the level a content stands for."""
     adds_usd: float | None = None
     """On a flag row: what the flag adds to the price of the mode it rides on, in ``price_usd``'s unit."""
+    writes: str | None = None
+    """On a flag row: the request field the flag sets, so two flags setting one field never combine."""
     latency_p50_s: float | None = None
     """Median seconds of one successful call in the benchmark runs below; ``None`` when unmeasured."""
     latency_p90_s: float | None = None
@@ -133,7 +135,7 @@ class Price(BaseModel):
         check_latency(
             self.latency_p50_s, self.latency_p90_s, self.latency_n, self.latency_runs, self.latency_measured, self.key
         )
-        check_row_mode(self.key, self.kind, self.depth_assumed, self.adds_usd)
+        check_row_mode(self.key, self.kind, self.depth_assumed, self.adds_usd, self.writes)
         return self
 
 
@@ -171,9 +173,8 @@ def _index() -> dict[tuple[str, str, str | None], Price]:
 def price(provider: str | Provider, method: str, mode: str | None = None) -> Price | None:
     """The row for ``(provider, method, mode)``, or ``None`` when the list has none.
 
-    ``mode=None`` is the call that sets no mode: the row whose ``mode`` is
-    ``None``, else the one marked ``default``. A mode with no row of its own
-    is ``None`` too -- never another mode's price.
+    ``mode=None`` is the call that sets no mode: the row whose ``mode`` is ``None``, else the one marked
+    ``default``. A mode with no row of its own is ``None`` too -- never another mode's price.
     """
     name = provider_name(provider)
     return _index().get((name, method, legacy_price_mode(name, mode)))
@@ -191,8 +192,7 @@ def estimate(provider: str | Provider, method: str, mode: str | None = None) -> 
 def estimate_latency(provider: str | Provider, method: str, mode: str | None = None) -> tuple[float, float] | None:
     """Measured ``(p50, p90)`` seconds of one successful call, or ``None`` when unmeasured or not in the list.
 
-    The figures are benchmark medians and 90th percentiles, not a
-    promise: a backend's latency drifts from run to run and with the query.
+    The figures are benchmark medians and 90th percentiles, not a promise: latency drifts by run and query.
     """
     row = price(provider, method, mode)
     if row is None or row.latency_p50_s is None or row.latency_p90_s is None:

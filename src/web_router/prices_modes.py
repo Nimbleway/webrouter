@@ -38,7 +38,7 @@ def declared(provider: str, method: str) -> Declarations:
         contents={
             row.mode: Content(as_depth=row.depth_assumed or "") for row in rows if row.kind == KIND_CONTENT and row.mode
         },
-        flags={row.mode: Flag() for row in rows if row.kind == KIND_FLAG and row.mode},
+        flags={row.mode: Flag(writes=row.writes) for row in rows if row.kind == KIND_FLAG and row.mode},
     )
 
 

@@ -110,6 +110,7 @@ def test_every_vendor_mode_row_says_what_it_is() -> None:
         {"mode": "acme-x", "kind": "depth"},
         {"mode": "lite", "kind": "effort"},
         {"mode": "acme-x", "kind": "tier", "adds_usd": 1.0},
+        {"mode": "acme-x", "kind": "tier", "writes": "type"},
         {"mode": "acme-x", "kind": "flag", "depth_assumed": "lite"},
         {"mode": "acme-x", "kind": "content"},
         {"mode": "acme-x", "kind": "tier", "depth_assumed": "high"},

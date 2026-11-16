@@ -1,20 +1,17 @@
 """Vendor modes: the parts a provider declares, and the one grammar every mode id is written in.
 
-An id is ``tool:provider[:mode]`` or ``provider[:mode]``. A mode is up to
-three slots joined with ``+``, always in this order: a tier, a depth, then
-flags sorted. A slot left empty is the backend's default.
+An id is ``tool:provider[:mode]`` or ``provider[:mode]``. A mode is up to three slots joined with ``+``, always in
+this order: a tier, a depth, then flags sorted. A slot left empty is the backend's default.
 
 - A **tier** (:class:`Tier`) writes fields depth never writes, so it combines with any depth.
-- The **depth** slot holds a normalized level, bare (``lite``, ``fast``, ``deep``;
-  ``low`` ... ``max`` for research), or a **content** (:class:`Content`), which
-  replaces what depth sends and names the level it stands for.
+- The **depth** slot holds a normalized level, bare (``lite``, ``fast``, ``deep``; ``low`` ... ``max`` for
+  research), or a **content** (:class:`Content`), which replaces what depth sends and names the level it stands for.
 - A **flag** (:class:`Flag`) writes a field nothing else writes, so it combines with anything.
 
-A vendor part is spelled with its provider's name first (``exa-instant``), so
-it can never be read as a normalized level, and the parser learns each part's
-slot from the provider's declarations. Input in any order comes out canonical
-(``exa-highlights+exa-instant`` is ``exa-instant+exa-highlights``). The old
-spellings parse for one release: ``tavily:ultra-fast@deep`` and ``:ultra-fast``.
+A vendor part is spelled with its provider's name first (``exa-instant``), so it can never be read as a normalized
+level, and the parser learns each part's slot from the provider's declarations. Input in any order comes out canonical
+(``exa-highlights+exa-instant`` is ``exa-instant+exa-highlights``). The old spellings parse for one release:
+``tavily:ultra-fast@deep`` and ``:ultra-fast``.
 """
 
 from __future__ import annotations
@@ -68,9 +65,11 @@ class Content:
 
 @dataclass(frozen=True)
 class Flag:
-    """A true add-on: ``wire`` changes a field nothing else writes, so it combines with any tier and depth."""
+    """A true add-on: ``wire`` sets one field (``writes`` names it), so it combines with any tier and depth; two
+    flags on one field never combine."""
 
     wire: Mapping[str, Any] = field(default_factory=dict)
+    writes: str | None = None
     does: str | None = None
 
 
@@ -138,7 +137,8 @@ def split_mode(provider: str, parts: Iterable[str], declared: Declared = NO_MODE
             raise InvalidParameterError(MODE_FIELD, MSG_MODE_EMPTY.format(text=PART_SEP.join(parts)))
         found[_slot(provider, part, declared)].append(part)
     for slot, names in found.items():
-        if len(names) > (len(set(names)) if slot == KIND_FLAG else 1):
+        keys = [declared.flags[n].writes or n for n in names] if slot == KIND_FLAG else names
+        if len(keys) > (len(set(keys)) if slot == KIND_FLAG else 1):
             raise InvalidParameterError(MODE_FIELD, MSG_MODE_TWICE.format(mode=PART_SEP.join(parts), slot=slot))
     tier, depth = (found[slot][0] if found[slot] else None for slot in ("tier", "depth"))
     return Slots(tier, depth, tuple(sorted(found[KIND_FLAG])))

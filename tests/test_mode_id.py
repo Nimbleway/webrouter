@@ -131,6 +131,15 @@ def test_the_benchmark_and_price_list_spellings_parse_to_the_canonical_mode() ->
     assert parse_id("tavily@deep", lambda _: tavily) == ModeId(None, "tavily", "deep")
 
 
+@pytest.mark.parametrize("pair", [("low", "medium"), ("medium", "low")])
+def test_two_flags_that_set_one_field_are_refused_in_either_order(pair: tuple[str, str]) -> None:
+    perplexity = prices_modes.declared("perplexity", "search")
+    with pytest.raises(InvalidParameterError, match="flag slot twice"):
+        parse_mode("perplexity", "+".join(f"perplexity-context-{size}" for size in pair), perplexity)
+    one = parse_mode("perplexity", f"perplexity-context-{pair[0]}+perplexity-fast", perplexity)
+    assert one == f"perplexity-fast+perplexity-context-{pair[0]}"
+
+
 def test_tavilys_own_fast_tier_is_not_the_normalized_fast() -> None:
     tavily = prices_modes.declared("tavily", "search")
     assert parse_mode("tavily", "fast", tavily) == "fast"

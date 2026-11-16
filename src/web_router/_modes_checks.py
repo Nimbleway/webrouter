@@ -72,11 +72,13 @@ def _row_problem(provider: str, mode: str | None, kind: str | None, depth_assume
     return None
 
 
-def check_row_mode(key: Any, kind: str | None, depth_assumed: str | None, adds_usd: float | None) -> None:
-    """Refuse a price row whose ``kind``, ``depth_assumed`` or ``adds_usd`` do not fit its mode."""
+def check_row_mode(
+    key: Any, kind: str | None, depth_assumed: str | None, adds_usd: float | None, writes: str | None = None
+) -> None:
+    """Refuse a price row whose ``kind``, ``depth_assumed``, ``adds_usd`` or ``writes`` do not fit its mode."""
     provider, _, mode = key
     problem = _row_problem(provider, mode, kind, depth_assumed)
-    if problem is None and adds_usd is not None and kind != KIND_FLAG:
+    if problem is None and (adds_usd is not None or writes is not None) and kind != KIND_FLAG:
         problem = ROW_ADDS
     if problem is None and adds_usd is not None and not (math.isfinite(adds_usd) and adds_usd >= 0):
         problem = ROW_ADDS_VALUE
