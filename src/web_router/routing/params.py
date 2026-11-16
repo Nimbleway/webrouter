@@ -38,10 +38,11 @@ from web_router.constants_params import (
     PARAMS_SOURCE_BUDGET,
     PRICED_QUERY,
 )
+from web_router.prices_modes import mode_price
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
 from web_router.routing.effort_table import RESEARCH, measured_efforts, noise_floor, table_set
-from web_router.routing.pricing import fit_reason, mode_cost, mode_p90
+from web_router.routing.pricing import fit_reason, mode_p90
 from web_router.types import Provider, ResearchEffort, ResearchRequest, provider_name
 
 EFFORTS: tuple[str, ...] = get_args(ResearchEffort)
@@ -101,7 +102,7 @@ def _default(provider: str, budget: Budget, reason: str) -> EffortChoice:
 
 def _cheapest_key(provider: str, effort: str) -> tuple[bool, float, float, int]:
     """Cost first, an unknown one last; then p90, an unknown one last; then the lower effort."""
-    cost, p90 = mode_cost(provider, RESEARCH, effort), mode_p90(provider, RESEARCH, effort)
+    cost, p90 = mode_price(provider, RESEARCH, effort), mode_p90(provider, RESEARCH, effort)
     return (cost is None, cost or 0.0, float("inf") if p90 is None else p90, EFFORTS.index(effort))
 
 

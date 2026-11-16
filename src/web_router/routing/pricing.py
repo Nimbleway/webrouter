@@ -47,14 +47,6 @@ from web_router.routing.effort_table import RESEARCH, effort_p90
 from web_router.types import BrowserRequest, ExtractRequest, ResearchRequest, SearchRequest
 
 
-def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
-    """The list price of one ``tool`` call on ``provider`` at ``mode``; ``None`` when unknown or only a floor.
-
-    A row billed by tokens is estimated at the benchmark's measured mean, at its default mode only.
-    """
-    return mode_price(provider, tool, mode)
-
-
 def cost_key(cost: float | None) -> tuple[bool, float]:
     """An estimate as a sort key, the one every cost order uses: known before unknown, then cheapest, $0 first."""
     return cost is None, cost or 0.0
@@ -123,7 +115,7 @@ def attempt_cost(attempt: Attempt) -> float | None:
     """The estimated list price of ``attempt`` in US dollars, or ``None`` when it cannot be known before the call."""
     if _unpriced_mode(attempt) or _more_results_than_priced(attempt):
         return None
-    cost = mode_cost(attempt.provider, attempt.tool, attempt_mode(attempt))
+    cost = mode_price(attempt.provider, attempt.tool, attempt_mode(attempt))
     if cost is not None and isinstance(attempt.request, ExtractRequest):
         return cost * len(attempt.request.urls)
     if cost and isinstance(attempt.request, BrowserRequest):

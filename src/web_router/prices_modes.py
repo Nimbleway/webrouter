@@ -51,8 +51,8 @@ def canonical_parts(provider: str, method: str, parts: Iterable[str]) -> str | N
 
 
 def _row_price(row: prices.Price, provider: str, method: str, mode: str | None, flagged: bool = False) -> float | None:
-    if getattr(row, "unit", None) == TOKEN_BILLED:
-        default = mode is None or getattr(row, "default", False)
+    if row.unit == TOKEN_BILLED:
+        default = mode is None or row.default
         return measured_cost(method, provider) if default and not flagged else None
     if row.estimate_is_floor:
         return None
