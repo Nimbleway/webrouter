@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-372 vendors, 2706 endpoints.
+372 vendors, 2705 endpoints.
 
 ### advertising
 
@@ -280,7 +280,7 @@ Web, news and archive search.
 | [Parallel](https://docs.parallel.ai/getting-started/overview) `parallel` | People and company discovery from Parallel Web Systems: entity search and FindAll runs. | 3 read | key in header | `PARALLEL_API_KEY` | docs 2026-11-08 |
 | [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
 | [Search1API](https://s1.dev/docs) `search1api` | Web, news and Maps search, page reading, screenshots, extraction and site crawling through one API. | 12 read | key in header | `SEARCH1API_KEY` | docs 2026-11-08 |
-| [Seltz](https://docs.seltz.ai/) `seltz` | Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports. | 7 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
+| [Seltz](https://docs.seltz.ai/) `seltz` | Cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports; web search is served by search(). | 6 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
 | [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
 | [Tavily](https://docs.tavily.com/documentation/api-reference) `tavily` | Tavily's site crawl and map APIs, and the account's credit usage. | 3 read | key in header | `TAVILY_API_KEY` | docs 2026-11-08 |

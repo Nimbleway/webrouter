@@ -2,7 +2,7 @@
   "vendor": "seltz",
   "name": "Seltz",
   "category": "search",
-  "summary": "Web search, cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports.",
+  "summary": "Cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports; web search is served by search().",
   "docs_url": "https://docs.seltz.ai/",
   "base_url": "https://api.seltz.ai",
   "auth": {
@@ -24,7 +24,8 @@
   },
   "notes": [
     "Prices follow tier (search, fetch), model (answer) and effort (agent); unknown tier names are rejected rather than defaulted. New keys come with 20,000 search credits (seltz.ai).",
-    "Creating, editing and deleting monitors are writes and are not in this entry."
+    "Creating, editing and deleting monitors are writes and are not in this entry.",
+    "Web search (POST /v1/search) is served by search(provider=\"seltz\"), so it is not listed here."
   ],
   "sources": [
     "https://docs.seltz.ai/",
@@ -33,70 +34,6 @@
   ],
   "curated": "2026-11-09",
   "endpoints": [
-    {
-      "id": "seltz.search",
-      "name": "Search the web for context",
-      "summary": "Ranked documents with content for a query, within one scope and optional date and domain filters.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/v1/search",
-      "params": {
-        "query": {
-          "in": "body",
-          "type": "string",
-          "description": "The search query.",
-          "required": true,
-          "example": "latest EU AI Act guidance"
-        },
-        "max_results": {
-          "in": "body",
-          "type": "integer",
-          "description": "Results to return, default 10; larger values are served as 1000."
-        },
-        "scope": {
-          "in": "body",
-          "type": "string",
-          "description": "One of web (beta), news, wikipedia, people, companies, financial-reports; omitted searches the default scope."
-        },
-        "tier": {
-          "in": "body",
-          "type": "string",
-          "description": "base (first-stage ranking) or pro (adds a reranking stage; the default). The value selects the price.",
-          "enum": [
-            "base",
-            "pro"
-          ]
-        },
-        "include_domains": {
-          "in": "body",
-          "type": "array",
-          "description": "Only results from these domains."
-        },
-        "exclude_domains": {
-          "in": "body",
-          "type": "array",
-          "description": "Exclude results from these domains."
-        },
-        "from_date": {
-          "in": "body",
-          "type": "string",
-          "description": "Published on or after: a date, a UTC datetime, or an offset like now-7d (units s, m, h, d, w, M, y)."
-        },
-        "to_date": {
-          "in": "body",
-          "type": "string",
-          "description": "Published on or before, same spellings as from_date."
-        }
-      },
-      "job": "web.search",
-      "docs_url": "https://docs.seltz.ai/api-reference/openapi.json",
-      "verified": {
-        "docs": "https://docs.seltz.ai/api-reference/openapi.json"
-      },
-      "notes": [
-        "A read over POST."
-      ]
-    },
     {
       "id": "seltz.answer",
       "name": "Answer a question with citations",

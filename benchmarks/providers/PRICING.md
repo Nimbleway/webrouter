@@ -229,6 +229,18 @@ month.
 | `valyu` | default (`search_type=web`) | Titles, URLs, a relevance score and the page body per result | $6.25 per 1k; searches of 10 web results: 0.1 credit per result, at $10 per 1,600 credits pay-as-you-go; dataset results cost more | [docs.valyu.ai](https://docs.valyu.ai/pricing) | 2026-11-12 |
 <!-- /prices -->
 
+### Seltz
+
+Per search, however many documents it returns ([pricing](https://docs.seltz.ai/pricing)): $5 per 1k on
+the Pro tier, which Seltz uses unless `tier` says otherwise, and $3 per 1k on Base. New accounts get $20
+of credit.
+
+<!-- prices: method=search provider=seltz -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `seltz` | default (`tier=pro`) | URLs, dates and the document body per result; no titles | $5 per 1k; Pro tier, the default; $3 per 1k with `tier=base` | [docs.seltz.ai](https://docs.seltz.ai/pricing) | 2026-11-12 |
+<!-- /prices -->
+
 ### Octen
 
 Per call ([pricing](https://docs.octen.ai/overview/pricing)): Web Search lists at $5 per 1k, currently

@@ -9,6 +9,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Added
 
 - Octen as a search backend: `search(provider="octen")`, over `POST /search`, reading `OCTEN_API_KEY`. It maps `max_results` (as `count`, at most 100), `include_domains`, `exclude_domains`, `locale` (as `language`, the 18 languages Octen lists; another raises before the call), `recency` (as `time_range`) and `search_depth` `fast` and `deep` (as `full_content`, at Octen's default of 2,048 tokens and at its 100,000 maximum); `lite`, `country` and `effort` raise. A result's content is its page body when one was asked for, otherwise Octen's query-relevant highlight; Octen returns no score. `auto` tries it after the keyless tier, with a key. Written from Octen's OpenAPI spec; not yet verified live. New: `Provider.OCTEN`.
+- Seltz as a search backend: `search(provider="seltz")`, over `POST /v1/search`, reading `SELTZ_API_KEY`. It maps `max_results`, `include_domains`, `exclude_domains` and `recency` (as `from_date`, an offset such as `now-7d`); `country`, `locale`, `search_depth` and `effort` raise. Seltz returns no title or score, so `title` is empty and `score` is `None`; `content` is the document body and `description` its first snippet, or the body's opening. `scope` and `tier` go through `provider_options`. `auto` tries it after the keyless tier, with a key. Written from Seltz's OpenAPI spec; not yet verified live. New: `Provider.SELTZ`.
 - Valyu as a search backend: `search(provider="valyu")`, over `POST /v1/search`, reading `VALYU_API_KEY`. It maps `max_results` (at most 20), `include_domains`, `exclude_domains`, `country` (the 36 countries Valyu lists; another raises before the call) and `recency`; `locale`, `search_depth` and `effort` raise. Every search is a web search (`search_type=web`), since Valyu's default also searches datasets priced up to 300 times a web result; `provider_options` overrides it. Each result carries its page body in markdown and Valyu's 0-1 `relevance_score` as `score`. `auto` tries it after the keyless tier, with a key. Written from Valyu's API reference; not yet verified live. New: `Provider.VALYU`.
 ### Changed
 
@@ -19,7 +20,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Removed
 
 - Vendor catalog: the `valyu.search` endpoint, now that `search(provider="valyu")` covers it; `vendor_endpoint("valyu.search")` and an MCP `call_vendor` naming it raise `VendorNotFoundError`. The catalog lists 2,707 endpoints.
-- Vendor catalog: the `octen.search.web` endpoint, now that `search(provider="octen")` covers it; `vendor_endpoint("octen.search.web")` and an MCP `call_vendor` naming it raise `VendorNotFoundError`. The catalog lists 2,706 endpoints.
+- Vendor catalog: the `seltz.search` endpoint, now that `search(provider="seltz")` covers it; `vendor_endpoint("seltz.search")` and an MCP `call_vendor` naming it raise `VendorNotFoundError`. The catalog lists 2,706 endpoints.
+- Vendor catalog: the `octen.search.web` endpoint, now that `search(provider="octen")` covers it; `vendor_endpoint("octen.search.web")` and an MCP `call_vendor` naming it raise `VendorNotFoundError`. The catalog lists 2,705 endpoints.
 
 ## [0.13.0] - 2026-11-16
 

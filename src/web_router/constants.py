@@ -70,6 +70,7 @@ PROVIDER_EXA = Provider.EXA.value
 PROVIDER_PARALLEL = Provider.PARALLEL.value
 PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
+PROVIDER_SELTZ = Provider.SELTZ.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
 PROVIDER_OCTEN = Provider.OCTEN.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
@@ -157,6 +158,7 @@ ENV_EXA_API_KEY = "EXA_API_KEY"
 ENV_PARALLEL_API_KEY = "PARALLEL_API_KEY"
 ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
+ENV_SELTZ_API_KEY = "SELTZ_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
 ENV_OCTEN_API_KEY = "OCTEN_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
@@ -186,6 +188,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_PARALLEL: ENV_PARALLEL_API_KEY,
     PROVIDER_PERPLEXITY: ENV_PERPLEXITY_API_KEY,
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
+    PROVIDER_SELTZ: ENV_SELTZ_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
     PROVIDER_OCTEN: ENV_OCTEN_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
@@ -228,10 +231,9 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each extract provider needs, all of them; ``()`` means none.
 
-A tuple rather than a single name because two backends need more than a key:
-Oxylabs authenticates with a username and password, and Bright Data needs the
-zone that routes the request beside its token. ``jina`` needs nothing -- a key
-only raises its rate limit -- and ``auto`` needs whatever its chain does.
+A tuple rather than a single name because two backends need more than a key: Oxylabs authenticates with a
+username and password, and Bright Data needs the zone that routes the request beside its token. ``jina`` needs
+nothing -- a key only raises its rate limit -- and ``auto`` needs whatever its chain does.
 """
 
 RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -559,10 +561,10 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu`` and ``octen`` joined
-after the scan that set the order, and the ranking set has no rows for them. A backend that joins later goes at the
-end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it ahead of the
-keyless tier only once frozen results rank it.
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz`` and
+``octen`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
+later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves
+it ahead of the keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
@@ -1118,10 +1120,8 @@ promptly.
 JOB_TIMEOUT_ERROR_SUFFIXES = ("TimeoutError", "TimeoutException")
 """How a poll's failure is recognized as a timed-out request: by the names of its exception classes.
 
-By name rather than by type because the job core imports no HTTP client or SDK:
-``TimeoutError`` (``asyncio``'s is the same class), httpx's
-``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in
-one of these.
+By name rather than by type because the job core imports no HTTP client or SDK: ``TimeoutError`` (``asyncio``'s
+is the same class), httpx's ``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in one of these.
 """
 
 JOB_POLL_BACKOFF = 1.5
