@@ -76,11 +76,12 @@ _SECOND_LEVEL: Final = frozenset({"co", "com", "org", "net", "gov", "ac"})
 _FILLER: Final = frozenset({"page", "pages", "results", "data", "scraper", "api", "the", "a", "an", "of", "for", "on"})
 """Query words that say nothing about which source: "amazon product page" asks what "amazon product" does."""
 
-_UNFINISHED: Final = frozenset({"test", "tmp", "temp", "copy", "debug", "draft", "old", "deprecated"})
-"""Words in a source's name that mark it as someone's experiment rather than the one to run."""
+_UNFINISHED: Final = frozenset({"test", "tmp", "temp", "copy", "debug", "draft", "deprecated"})
+"""Words in a source's name that mark it as someone's experiment rather than the one to run.
 
-_UNFINISHED_INSIDE: Final = ("test", "debug")
-"""Of those, the ones that mark a source even inside a longer word, as in gentest or debugrun."""
+Whole words only, a trailing number aside (``copy2``): inside a word they are
+part of real names -- latest, contest -- and "old" is a brand (old_navy).
+"""
 
 _WORD = re.compile(r"[a-z0-9]+")
 
@@ -274,9 +275,7 @@ def _quality(source: LiveDataSource) -> int:
         points += _SCHEMA
     if source.samples:
         points += _SAMPLE
-    if any(unfinished in word for word in _words(source.name) for unfinished in _UNFINISHED_INSIDE) or (
-        _UNFINISHED & set(_words(source.name))
-    ):
+    if _UNFINISHED.intersection(word.rstrip("0123456789") for word in _words(source.name)):
         points += _UNFINISHED_PENALTY
     return points
 

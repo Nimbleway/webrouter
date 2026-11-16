@@ -41,3 +41,15 @@ def test_a_country_alone_keeps_that_countrys_sources() -> None:
 
 def test_a_query_of_filler_words_only_matches_nothing() -> None:
     assert ranked([_source("amazon_pdp"), _source("amazon_uk_pdp", "www.amazon.co.uk")], "page data") == []
+
+
+def _quality(name: str) -> int:
+    """What ``name`` alone adds to a source's score: nothing in the query explains it, and the site is the same."""
+    return score(_source(name), read_query("")) - score(_source("x_product"), read_query(""))
+
+
+def test_a_test_or_copy_in_the_name_ranks_lower_as_a_whole_word_only() -> None:
+    for name in ("old_navy_product", "google_news_latest", "contest_entries", "latest_news"):
+        assert _quality(name) == 0, name
+    for name in ("amazon_pdp_test", "amazon_pdp_copy", "test_pdp_copy2"):
+        assert _quality(name) < 0, name
