@@ -11,7 +11,8 @@ this order: a tier, a depth, then flags sorted. A slot left empty is the backend
 A vendor part is spelled with its provider's name first (``exa-instant``), so it can never be read as a normalized
 level, and the parser learns each part's slot from the provider's declarations. Input in any order comes out canonical
 (``exa-highlights+exa-instant`` is ``exa-instant+exa-highlights``). The old spellings parse for one release:
-``tavily:ultra-fast@deep`` and ``:ultra-fast``.
+``tavily:ultra-fast@deep`` and ``:ultra-fast``. Nothing merges a part's ``wire`` into a request yet: a mode
+is named and priced here, not sent.
 """
 
 from __future__ import annotations
@@ -51,7 +52,6 @@ class Tier:
     """A vendor tier: ``wire`` is the payload change it makes, to fields depth never writes (Exa's ``type``)."""
 
     wire: Mapping[str, Any] = field(default_factory=dict)
-    does: str | None = None
 
 
 @dataclass(frozen=True)
@@ -60,7 +60,6 @@ class Content:
 
     as_depth: str
     wire: Mapping[str, Any] = field(default_factory=dict)
-    does: str | None = None
 
 
 @dataclass(frozen=True)
@@ -70,7 +69,6 @@ class Flag:
 
     wire: Mapping[str, Any] = field(default_factory=dict)
     writes: str | None = None
-    does: str | None = None
 
 
 class Declared(Protocol):

@@ -30,8 +30,8 @@ DEFAULT_PATH_ROUTERS = ("always:research:parallel:low", "always:answer:perplexit
 EFFORTS: tuple[str, ...] = get_args(ResearchEffort)
 """Research efforts, lowest first: the static order tries the cheaper effort before the dearer."""
 SEP = ":"
-PATH_PARTS = Declarations(flags={TOP_MODE: Flag(does="search, then read the top pages")})
-"""A path's one mode that is no vendor's: search then read; a research path's mode is its effort, a level."""
+PATH_PARTS = Declarations(flags={TOP_MODE: Flag()})
+"""A path's one mode that is no vendor's, search then read the top pages; a research path's mode is its effort."""
 
 MIXED_INTRO = (
     "A candidate here is a path: method, backend and mode (a research row's mode is its effort), as "
