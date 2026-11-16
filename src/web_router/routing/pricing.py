@@ -30,7 +30,6 @@ from __future__ import annotations
 import math
 
 from web_router import prices
-from web_router._chains import measured_cost
 from web_router.constants_budget import (
     BROWSER_UNBILLED_OPTIONS,
     COST_TOLERANCE_USD,
@@ -38,10 +37,10 @@ from web_router.constants_budget import (
     OVER_COST,
     OVER_TIME,
     SECONDS_PER_MINUTE,
-    TOKEN_BILLED,
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
+from web_router.prices_modes import mode_price
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
 from web_router.routing.effort_table import RESEARCH, effort_p90
@@ -53,12 +52,7 @@ def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
 
     A row billed by tokens is estimated at the benchmark's measured mean, at its default mode only.
     """
-    row = prices.price(provider, tool, mode)
-    if getattr(row, "unit", None) == TOKEN_BILLED and (mode is None or getattr(row, "default", False)):
-        return measured_cost(tool, provider)
-    if row is None or row.estimate_is_floor or row.estimate_usd is None:
-        return None
-    return row.estimate_usd
+    return mode_price(provider, tool, mode)
 
 
 def cost_key(cost: float | None) -> tuple[bool, float]:
