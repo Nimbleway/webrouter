@@ -149,14 +149,12 @@ class _HttpProvider(WarmClients, _BaseProvider):
             "base_url": url,
             "timeout": timeout,
             "headers": headers,
-            # Pinned rather than left to httpx's default, so the credential
-            # cannot travel to a host this provider never meant to call.
+            # Pinned, not httpx's default, so the credential never travels to a host this provider did not mean to call.
             "follow_redirects": follow_redirects,
             **compact(kwargs),
         }
-        # Built on first use, and only the one used: building both eagerly left a
-        # sync caller holding an async pool close() could not shut. The lock stops
-        # threads sharing one router from each building, and leaking, a client.
+        # Built on first use, and only the one used: building both eagerly left a sync caller holding an async pool
+        # close() could not shut. The lock stops threads sharing one router from each building, and leaking, a client.
         self._sync: httpx.Client | None = None
         self._async: httpx.AsyncClient | None = None
         self._client_lock = threading.Lock()
@@ -214,7 +212,11 @@ class _HttpProvider(WarmClients, _BaseProvider):
         except httpx.HTTPStatusError as exc:
             body = exc.response.text[:HTTP_ERROR_BODY_LIMIT]
             detail = MSG_HTTP_ERROR.format(status=exc.response.status_code, body=body)
-            raise ProviderError(self.name, detail, original=exc) from exc
+            raise ProviderError(self.name, detail, original=exc, kind=self._error_kind(exc)) from exc
+
+    def _error_kind(self, exc: httpx.HTTPStatusError) -> str | None:
+        """The failure's kind when the body says more than its status; ``None`` classifies it by status."""
+        return None
 
     def close(self) -> None:
         # Via the attribute, not the property: closing must never construct a client.
@@ -224,9 +226,8 @@ class _HttpProvider(WarmClients, _BaseProvider):
     async def aclose(self) -> None:
         if self._async is not None:
             await self._async.aclose()
-        # An async caller may still have built a sync client -- through the
-        # sync path, or a library that probed it -- and aclose() is the only
-        # shutdown they will call.
+        # An async caller may still have built a sync client -- through the sync path, or a library that probed it --
+        # and aclose() is the only shutdown they will call.
         self.close()
 
 
@@ -344,8 +345,7 @@ class HttpResearchProvider(_HttpProvider, ResearchProvider):
             **kwargs: As :class:`_HttpProvider`.
         """
         super().__init__(timeout=timeout, **kwargs)
-        # Kept beside the client's own: every request clamps down from here to
-        # whatever the caller has left, and never up.
+        # Kept beside the client's own: every request clamps down from here to whatever the caller has left, never up.
         self._research_timeout = timeout
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:

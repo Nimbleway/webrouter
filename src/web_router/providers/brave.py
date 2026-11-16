@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import Any, ClassVar, Literal
 
+import httpx
+
 from web_router.constants import (
     ENV_BRAVE_API_KEY,
     PROVIDER_BRAVE,
@@ -31,6 +33,7 @@ from web_router.constants_brave import (
     BRAVE_HIGHLIGHT_TAGS,
     BRAVE_QUERY_MAX_CHARS,
     BRAVE_QUERY_MAX_WORDS,
+    BRAVE_REFUSED_KEY_CODE,
     BRAVE_SEARCH_PARAM_NAMES,
     BRAVE_SEARCH_PARAMETERS,
     BRAVE_SEARCH_PATH,
@@ -39,13 +42,13 @@ from web_router.constants_brave import (
 )
 from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
-from web_router.providers._brave_errors import BraveTokenErrorsMixin
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
 from web_router.providers._search_text import lite_body, site_operators, unsited_domains
 from web_router.providers._utils import build_payload, mapped
 from web_router.providers.brave_answer import BraveAnswerProvider as BraveAnswerProvider
 from web_router.types import SearchDepth, SearchRequest, SearchResponse, SearchResult
+from web_router.types_errors import ERROR_KIND_AUTH
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "extra_snippets", "page_age"})
 
@@ -61,7 +64,7 @@ def _unmark(text: str) -> str:
     return text
 
 
-class BraveProvider(BraveTokenErrorsMixin, HttpSearchProvider):
+class BraveProvider(HttpSearchProvider):
     """Routes searches to the Brave Web Search API."""
 
     name: ClassVar[str] = PROVIDER_BRAVE
@@ -78,6 +81,10 @@ class BraveProvider(BraveTokenErrorsMixin, HttpSearchProvider):
     env_api_key: ClassVar[str] = ENV_BRAVE_API_KEY
     api_key_header: ClassVar[str] = BRAVE_API_KEY_HEADER
     http_method: ClassVar[Literal["GET", "POST"]] = "GET"
+
+    def _error_kind(self, exc: httpx.HTTPStatusError) -> str | None:
+        """``auth`` for a refused subscription token, which Brave answers with a 422, not a 401 or 403."""
+        return ERROR_KIND_AUTH if BRAVE_REFUSED_KEY_CODE in exc.response.text else None
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:

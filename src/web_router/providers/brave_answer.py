@@ -28,22 +28,23 @@ from web_router.constants_brave import (
     BRAVE_API_KEY_HEADER,
     BRAVE_BASE_URL,
     BRAVE_FINISH_LENGTH,
+    BRAVE_REFUSED_KEY_CODE,
     BRAVE_SSE_DONE,
     MSG_BRAVE_ANSWER_STREAM_CUT,
     MSG_BRAVE_ANSWER_STREAM_ERROR,
 )
 from web_router.exceptions import ProviderError
-from web_router.providers._brave_errors import BraveTokenErrorsMixin
 from web_router.providers._http import HttpAnswerProvider
 from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import build_payload
 from web_router.types import Citation
 from web_router.types_answer import AnswerRequest, AnswerResponse
+from web_router.types_errors import ERROR_KIND_AUTH
 
 _ANSWER_TAG = re.compile(r"<({names})>(.*?)</\1>".format(names="|".join(BRAVE_ANSWER_TAGS)), re.DOTALL)
 
 
-class BraveAnswerProvider(BraveTokenErrorsMixin, HttpAnswerProvider):
+class BraveAnswerProvider(HttpAnswerProvider):
     """Answers a question through Brave's Answers API, ``POST /res/v1/chat/completions``.
 
     Sent streamed with ``enable_citations``, the only way Brave returns its
@@ -67,6 +68,10 @@ class BraveAnswerProvider(BraveTokenErrorsMixin, HttpAnswerProvider):
     answer_path: ClassVar[str] = BRAVE_ANSWER_PATH
     env_api_key: ClassVar[str] = ENV_BRAVE_ANSWER_API_KEY
     api_key_header: ClassVar[str] = BRAVE_API_KEY_HEADER
+
+    def _error_kind(self, exc: httpx.HTTPStatusError) -> str | None:
+        """``auth`` for a refused subscription token, which Brave answers with a 422, not a 401 or 403."""
+        return ERROR_KIND_AUTH if BRAVE_REFUSED_KEY_CODE in exc.response.text else None
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
         return build_payload(
