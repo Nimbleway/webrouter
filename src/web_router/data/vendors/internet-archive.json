@@ -14,6 +14,9 @@
     "An item is addressed by its identifier; metadata.get lists its files.",
     "Wayback timestamps are yyyyMMddhhmmss, 1 to 14 digits (20060101 is fine)."
   ],
+  "sites": [
+    "archive.org"
+  ],
   "sources": [
     "https://archive.org/developers/",
     "https://archive.org/developers/md-read.html",

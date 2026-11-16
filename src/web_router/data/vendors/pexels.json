@@ -27,6 +27,9 @@
     "Terms: show a prominent link to Pexels wherever results are displayed, and credit the photographer when possible.",
     "Each photo carries src URLs per size (original, large2x, large, medium, small, portrait, landscape, tiny); each video carries video_files with quality, width, height and link. Lists carry next_page/prev_page URLs only when that page exists."
   ],
+  "sites": [
+    "pexels.com"
+  ],
   "sources": [
     "https://www.pexels.com/api/documentation/"
   ],
