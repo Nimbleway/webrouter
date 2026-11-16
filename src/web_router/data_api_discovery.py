@@ -13,7 +13,6 @@ from __future__ import annotations
 import contextlib
 import logging
 from typing import Any
-from urllib.parse import urlsplit
 
 from web_router.client_requests import build_search_request
 from web_router.constants_data_api import (
@@ -32,7 +31,7 @@ from web_router.types_data_api import DataApiMatch
 from web_router.vendors.catalog import VendorCatalog, get_catalog
 from web_router.vendors.credentials import CredentialSource, missing_credentials
 from web_router.vendors.schema import Vendor, VendorEndpoint
-from web_router.vendors.sites import vendors_for_site
+from web_router.vendors.sites import site_endpoints
 
 logger = logging.getLogger(__name__)
 
@@ -110,20 +109,15 @@ def with_matches(
 def site_matches(
     url: str, source: CredentialSource, *, configured_only: bool = False, catalog: VendorCatalog | None = None
 ) -> list[DataApiMatch]:
-    """The read endpoints of every data API that serves ``url``'s site: those whose words the URL's path holds first."""
-    catalog = catalog or get_catalog()
-    parts = urlsplit(url)
+    """The read endpoints of every data API that serves ``url``'s site, best first (see :func:`site_endpoints`)."""
     matches: list[DataApiMatch] = []
-    for owner in vendors_for_site(catalog, url):
-        ranked = catalog.find(f"{parts.path} {parts.query}", vendor=owner.vendor, kind="read")
-        endpoints = [*ranked, *(item for item in owner.endpoints if item.kind == "read" and item not in ranked)]
-        for endpoint in endpoints:
-            match = _match(owner, endpoint, source)
-            if configured_only and not match.configured:
-                continue
-            matches.append(match)
-            if len(matches) >= DATA_API_EXTRACT_LIMIT:
-                return matches
+    for owner, endpoint in site_endpoints(catalog or get_catalog(), url):
+        match = _match(owner, endpoint, source)
+        if configured_only and not match.configured:
+            continue
+        matches.append(match)
+        if len(matches) >= DATA_API_EXTRACT_LIMIT:
+            break
     return matches
 
 

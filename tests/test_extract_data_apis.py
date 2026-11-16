@@ -139,3 +139,45 @@ def test_vendors_for_site_takes_subdomains_and_not_lookalikes() -> None:
     catalog = reload_catalog()
     assert [vendor.vendor for vendor in vendors_for_site(catalog, "https://m.clips.test/x")] == ["clips"]
     assert vendors_for_site(catalog, "https://notclips.test/x") == []
+
+
+@pytest.mark.parametrize(
+    ("url", "first"),
+    [
+        ("https://clips.test/videos/abc?channels=foo", "clips.videos.list"),  # the path outranks the query
+        ("https://clips.test/videos/abc", "clips.videos.list"),
+        (
+            "https://clips.test/watch?channels=foo",
+            "clips.channels.list",
+        ),  # an unnamed path leaves it to the query
+        ("https://clips.test/watch?playlists=foo", "clips.playlists.list"),
+    ],
+)
+def test_the_path_ranks_first_and_the_query_only_orders_what_it_leaves(url: str, first: str) -> None:
+    assert site_matches(url, EnvCredentials())[0].endpoint == first
+
+
+def _reels_vendor(name: str, *resources: str) -> dict[str, Any]:
+    return {
+        **CLIPS,
+        "vendor": name,
+        "name": f"{name.title()} API",
+        "sites": ["reels.test"],
+        "auth": {"credentials": {}, "inject": []},
+        "endpoints": [_endpoint(f"{name}.{item}.list", "GET", f"/{item}", job=f"{item}.list") for item in resources],
+    }
+
+
+@pytest.mark.parametrize("with_zeta", [True, False])
+def test_endpoints_rank_across_every_vendor_serving_the_site(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, with_zeta: bool
+) -> None:
+    (tmp_path / "alpha.json").write_text(json.dumps(_reels_vendor("alpha", "aaa", "bbb", "ccc")))
+    if with_zeta:
+        (tmp_path / "zeta.json").write_text(json.dumps(_reels_vendor("zeta", "videos")))
+    reload_catalog()
+    endpoints = [match.endpoint for match in site_matches("https://reels.test/videos/abc", EnvCredentials())]
+    if with_zeta:  # the one the path names is not crowded out by the vendor that sorts first
+        assert endpoints == ["zeta.videos.list", "alpha.aaa.list", "alpha.bbb.list"]
+    else:
+        assert endpoints == ["alpha.aaa.list", "alpha.bbb.list", "alpha.ccc.list"]
