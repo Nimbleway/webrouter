@@ -100,7 +100,8 @@ router.live_data("amazon/product", {"query": "B0CHX1W1XY", "domain": "com"}, pro
   </Accordion>
   <Accordion title="Oxylabs">
     Uses the Oxylabs Web API key, not the Realtime username and password that
-    Oxylabs' extract uses. A scraper Oxylabs runs only as a job (`chatgpt`,
+    Oxylabs' extract uses. Passed in code, it is `web_api_key` in
+    `provider_config["oxylabs"]`, since `api_key` there is extract's password. A scraper Oxylabs runs only as a job (`chatgpt`,
     `gemini`…) is polled for up to five minutes or until the call's deadline.
     Any error after the job is submitted is a `LiveDataJobError` whose `job_id`
     names the job, so a billed run can still be read later.
@@ -132,6 +133,10 @@ kind of page and description. It reads at most 5,000 sources and keeps the
 catalogue for ten minutes, so the next search on that backend reads nothing.
 Page through results with `limit` and `offset`. Leave `query` out to list the
 catalogue in the vendor's order.
+
+A custom backend whose vendor searches its own catalogue derives from
+`NativeSourceSearch` and implements `_search` and `_asearch`; its searches then
+report `"native"`.
 
 ## Inputs
 
