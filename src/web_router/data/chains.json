@@ -32,6 +32,7 @@
       "exa-litellm",
       "tavily-litellm",
       "parallel-litellm",
+      "valyu",
       "seltz"
     ],
     "unmeasured": [
@@ -41,6 +42,7 @@
       "exa-litellm",
       "tavily-litellm",
       "parallel-litellm",
+      "valyu",
       "seltz"
     ],
     "too_few_questions": [],

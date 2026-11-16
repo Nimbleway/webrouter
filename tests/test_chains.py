@@ -25,6 +25,7 @@ README_NAMES = {
     "You.com": "you",
     "Keenable": "keenable",
     "DeepSeek": "deepseek",
+    "Valyu": "valyu",
     "Seltz": "seltz",
     "AgentCore": "agentcore",
     "Exa LiteLLM": "exa-litellm",
