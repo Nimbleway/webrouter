@@ -22,7 +22,7 @@ session logged into, whose cookies ride along; only Browserbase maps it.
 
 **`live_data`** — a vendor's ready-made scraper for one site (Nimble's
 Extract Templates, Apify's Store Actors, Bright Data's scrapers, Oxylabs'
-Web API scrapers), run for this call and answering with structured
+Web Scraper API sources and Web API scrapers), run for this call and answering with structured
 `records` shaped by the source's own output schema rather than page text. Its
 inputs are the source's own -- a URL for some, an id, a slug or a search term
 for others -- which is why it is a method and not an option on `extract`.
@@ -171,6 +171,7 @@ src/web_router/
 ├── constants_answer.py answer()'s messages and MCP tool text, imported from here by name
 ├── constants_live_data.py live data's messages, MCP tools, builtin providers and env table
 ├── constants_apify.py  Apify's paths; constants_live_data_vendors.py Bright Data's and Oxylabs'
+├── constants_oxylabs_classic.py Oxylabs' Web Scraper API as live data: its data file, parse statuses, messages
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
@@ -401,6 +402,8 @@ src/web_router/
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
     ├── brightdata_snapshots.py  waiting on the snapshot of a scrape that outlasted the synchronous window
+    ├── oxylabs_live_data_any.py live data: `oxylabs`, over whichever of the two APIs below has a credential
+    ├── oxylabs_classic.py       live data: the Web Scraper API's parsed sources, listed in data/oxylabs_classic_sources.json
     ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
     ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
     ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
@@ -1596,8 +1599,10 @@ when a caller names them: a preset's variable (`OPENAI_API_KEY`, `ANTHROPIC_API_
 `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), or the one `api_key_env`
 names, once, when the router is built; `KEY_HOMES` in `constants_decider.py` sends each preset variable
 only to its vendor's host. `.env` is gitignored — keep it that way. `LIVE_DATA_ENV_BY_PROVIDER`, in
-`constants_live_data.py`, is live data's table: Apify's token, Oxylabs' Web API key
-(not its extract credentials), and Nimble's and Bright Data's keys again: one key, several classes.
+`constants_live_data.py`, is live data's table: Apify's token, Oxylabs' Web API key, and Nimble's and
+Bright Data's keys again: one key, several classes. `LIVE_DATA_ALT_ENV_BY_PROVIDER` beside it holds a
+second set that configures a backend alone -- Oxylabs' extract username and password, which run its
+Web Scraper API's sources -- and `LIVE_DATA_CREDENTIAL_SETS` is the two read together.
 
 **The library never loads `.env` itself.** Only these entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,

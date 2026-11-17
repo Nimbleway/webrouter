@@ -1,0 +1,941 @@
+{
+  "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets",
+  "sources": [
+    {
+      "name": "amazon_bestsellers",
+      "site": "amazon",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/amazon/best-sellers",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "pages": {
+          "required": false,
+          "default": "1"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "domain": {
+          "required": false,
+          "default": "com"
+        },
+        "locale": {
+          "required": false,
+          "default": "marketplace default"
+        },
+        "currency": {
+          "required": false,
+          "default": "marketplace default"
+        }
+      },
+      "context": [
+        "currency"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "amazon_pricing",
+      "site": "amazon",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/amazon/pricing",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "pages": {
+          "required": false,
+          "default": "1"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "domain": {
+          "required": false,
+          "default": "com"
+        },
+        "locale": {
+          "required": false,
+          "default": "marketplace default"
+        },
+        "currency": {
+          "required": false,
+          "default": "marketplace default"
+        }
+      },
+      "context": [
+        "currency"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "amazon_product",
+      "site": "amazon",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/amazon/product",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "domain": {
+          "required": false,
+          "default": "com"
+        },
+        "locale": {
+          "required": false,
+          "default": "marketplace default"
+        },
+        "currency": {
+          "required": false,
+          "default": "marketplace default"
+        },
+        "autoselect_variant": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [
+        "autoselect_variant",
+        "currency"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "amazon_search",
+      "site": "amazon",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/amazon/search",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "pages": {
+          "required": false,
+          "default": "1"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "domain": {
+          "required": false,
+          "default": "com"
+        },
+        "locale": {
+          "required": false,
+          "default": "marketplace default"
+        },
+        "currency": {
+          "required": false,
+          "default": "marketplace default"
+        },
+        "sort_by": {
+          "required": false,
+          "default": null
+        },
+        "refinements": {
+          "required": false,
+          "default": null
+        },
+        "min_price": {
+          "required": false,
+          "default": null
+        },
+        "category_id": {
+          "required": false,
+          "default": null
+        },
+        "merchant_id": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [
+        "category_id",
+        "currency",
+        "merchant_id",
+        "min_price",
+        "refinements",
+        "sort_by"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "amazon_sellers",
+      "site": "amazon",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/amazon/sellers",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "domain": {
+          "required": false,
+          "default": "com"
+        },
+        "locale": {
+          "required": false,
+          "default": "marketplace default"
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "bestbuy_product",
+      "site": "best-buy",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/best-buy",
+      "parse": true,
+      "inputs": {
+        "product_id": {
+          "required": true,
+          "default": null
+        },
+        "domain": {
+          "required": false,
+          "default": null
+        },
+        "fulfillment_type": {
+          "required": false,
+          "default": "Filters the search results by availability. Available values: pickup (requires store_id), shipping (requires delivery_zip)."
+        },
+        "store_id": {
+          "required": false,
+          "default": "Store ID as an integer, the trailing number in the store's URL on stores.bestbuy.com, e.g. 552. On search pages it only takes effect together with fulfillment_type: pickup; on product pages it sets the pickup store."
+        },
+        "delivery_zip": {
+          "required": false,
+          "default": "ZIP code as a string, e.g. \"10001\". On search pages it only takes effect together with fulfillment_type: shipping; on product pages it sets the ship-to location."
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "bing_search",
+      "site": "bing",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/bing/search",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "render": {
+          "required": false,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "domain": {
+          "required": false,
+          "default": "com"
+        },
+        "locale": {
+          "required": false,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "pages": {
+          "required": false,
+          "default": "1"
+        },
+        "limit": {
+          "required": false,
+          "default": "10"
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "etsy_product",
+      "site": "etsy",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/etsy",
+      "parse": true,
+      "inputs": {
+        "product_id": {
+          "required": true,
+          "default": null
+        },
+        "store_id": {
+          "required": false,
+          "default": "Shop-location filter, as an integer. Use the location ID that Etsy adds to the search URL as locationQuery when you choose a shop location on the site, e.g. 2635167 for the United Kingdom or 6252001 for the United States."
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "google_ads",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/ads",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "render": {
+          "required": false,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "locale": {
+          "required": false,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "pages": {
+          "required": false,
+          "default": "1"
+        },
+        "udm": {
+          "required": false,
+          "default": null
+        },
+        "tbm": {
+          "required": false,
+          "default": null
+        },
+        "tbs": {
+          "required": false,
+          "default": null
+        },
+        "nfpr": {
+          "required": false,
+          "default": "false"
+        }
+      },
+      "context": [
+        "nfpr",
+        "tbm",
+        "tbs",
+        "udm"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "google_ai_mode",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/ai-mode",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {
+        "render": "html"
+      }
+    },
+    {
+      "name": "google_lens",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/lens",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "render": {
+          "required": false,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "locale": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "google_scholar",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/scholar",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        }
+      },
+      "context": [],
+      "fixed": {
+        "render": "html"
+      }
+    },
+    {
+      "name": "google_search",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/search/web-search",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "render": {
+          "required": false,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "locale": {
+          "required": false,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "pages": {
+          "required": false,
+          "default": "1"
+        },
+        "limit": {
+          "required": false,
+          "default": "10"
+        },
+        "limit_per_page": {
+          "required": false,
+          "default": null
+        },
+        "page": {
+          "required": false,
+          "default": "1"
+        },
+        "filter": {
+          "required": false,
+          "default": "1"
+        },
+        "safe_search": {
+          "required": false,
+          "default": "false"
+        },
+        "udm": {
+          "required": false,
+          "default": null
+        },
+        "tbm": {
+          "required": false,
+          "default": null
+        },
+        "tbs": {
+          "required": false,
+          "default": null
+        },
+        "fpstate": {
+          "required": false,
+          "default": null
+        },
+        "nfpr": {
+          "required": false,
+          "default": "false"
+        },
+        "expand_aio": {
+          "required": false,
+          "default": "false"
+        }
+      },
+      "context": [
+        "expand_aio",
+        "filter",
+        "fpstate",
+        "limit_per_page",
+        "nfpr",
+        "safe_search",
+        "tbm",
+        "tbs",
+        "udm"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "google_shopping_product",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/shopping/shopping-product",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "render": {
+          "required": false,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "locale": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "google_shopping_search",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/shopping/shopping-search",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "locale": {
+          "required": false,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "pages": {
+          "required": false,
+          "default": "1"
+        },
+        "sort_by": {
+          "required": false,
+          "default": "r"
+        },
+        "min_price": {
+          "required": false,
+          "default": null
+        },
+        "max_price": {
+          "required": false,
+          "default": null
+        },
+        "nfpr": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [
+        "max_price",
+        "min_price",
+        "nfpr",
+        "sort_by"
+      ],
+      "fixed": {
+        "render": "html"
+      }
+    },
+    {
+      "name": "google_travel_hotels",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/travel-hotels",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "render": {
+          "required": false,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "locale": {
+          "required": false,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "adults": {
+          "required": false,
+          "default": "2"
+        },
+        "children": {
+          "required": false,
+          "default": null
+        },
+        "hotel_classes": {
+          "required": false,
+          "default": null
+        },
+        "hotel_dates": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [
+        "adults",
+        "children",
+        "hotel_classes",
+        "hotel_dates"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "google_trends_explore",
+      "site": "google",
+      "category": "search-engines",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/trends-explore",
+      "parse": false,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "user_agent_type": {
+          "required": false,
+          "default": "desktop"
+        },
+        "geo_location": {
+          "required": false,
+          "default": null
+        },
+        "search_type": {
+          "required": false,
+          "default": "web_search"
+        },
+        "date_from": {
+          "required": false,
+          "default": null
+        },
+        "date_to": {
+          "required": false,
+          "default": null
+        },
+        "category_id": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [
+        "category_id",
+        "date_from",
+        "date_to",
+        "search_type"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "target_product",
+      "site": "target",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/target/product",
+      "parse": true,
+      "inputs": {
+        "product_id": {
+          "required": true,
+          "default": null
+        },
+        "fulfillment_type": {
+          "required": false,
+          "default": null
+        },
+        "store_id": {
+          "required": false,
+          "default": null
+        },
+        "delivery_zip": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "target_search",
+      "site": "target",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/target/search",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "fulfillment_type": {
+          "required": false,
+          "default": null
+        },
+        "store_id": {
+          "required": false,
+          "default": null
+        },
+        "delivery_zip": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "walmart_product",
+      "site": "walmart",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/walmart/product",
+      "parse": true,
+      "inputs": {
+        "product_id": {
+          "required": true,
+          "default": null
+        },
+        "domain": {
+          "required": false,
+          "default": null
+        },
+        "store_id": {
+          "required": false,
+          "default": null
+        },
+        "delivery_zip": {
+          "required": false,
+          "default": null
+        },
+        "fulfillment_type": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "walmart_search",
+      "site": "walmart",
+      "category": "e-commerce",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/e-commerce/walmart/search",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "start_page": {
+          "required": false,
+          "default": "1"
+        },
+        "domain": {
+          "required": false,
+          "default": null
+        },
+        "store_id": {
+          "required": false,
+          "default": null
+        },
+        "delivery_zip": {
+          "required": false,
+          "default": null
+        },
+        "fulfillment_type": {
+          "required": false,
+          "default": null
+        },
+        "fulfillment_speed": {
+          "required": false,
+          "default": null
+        },
+        "sort_by": {
+          "required": false,
+          "default": "best_match"
+        },
+        "min_price": {
+          "required": false,
+          "default": null
+        },
+        "max_price": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "youtube_channel",
+      "site": "youtube",
+      "category": "video-and-social-media",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/video-and-social-media/youtube/channel",
+      "parse": true,
+      "inputs": {
+        "channel_handle": {
+          "required": true,
+          "default": null
+        },
+        "limit": {
+          "required": false,
+          "default": "20"
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "youtube_metadata",
+      "site": "youtube",
+      "category": "video-and-social-media",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/video-and-social-media/youtube/metadata",
+      "parse": true,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {}
+    },
+    {
+      "name": "youtube_subtitles",
+      "site": "youtube",
+      "category": "video-and-social-media",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/video-and-social-media/youtube/subtitles",
+      "parse": false,
+      "inputs": {
+        "query": {
+          "required": true,
+          "default": null
+        },
+        "language_code": {
+          "required": false,
+          "default": null
+        },
+        "subtitle_origin": {
+          "required": false,
+          "default": null
+        }
+      },
+      "context": [
+        "language_code",
+        "subtitle_origin"
+      ],
+      "fixed": {}
+    },
+    {
+      "name": "youtube_video_trainability",
+      "site": "youtube",
+      "category": "video-and-social-media",
+      "docs": "https://developers.oxylabs.io/products/web-scraper-api/targets/video-and-social-media/youtube/video-trainability",
+      "parse": false,
+      "inputs": {
+        "video_id": {
+          "required": true,
+          "default": null
+        }
+      },
+      "context": [],
+      "fixed": {}
+    }
+  ]
+}

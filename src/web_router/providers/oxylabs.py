@@ -43,6 +43,11 @@ from web_router.types import (
 _MAPPED_RESULT_FIELDS = frozenset({"url", "content", "status_code", "type"})
 
 
+def basic_auth(username: str, password: str) -> str:
+    """The Web Scraper API's HTTP Basic credentials, not a bearer token: extract's and live data's alike."""
+    return "Basic " + b64encode(f"{username}:{password}".encode()).decode()
+
+
 class OxylabsExtractProvider(HttpExtractProvider):
     """Fetches page contents through the Oxylabs Web Scraper API."""
 
@@ -72,9 +77,7 @@ class OxylabsExtractProvider(HttpExtractProvider):
         super().__init__(**kwargs)
 
     def _auth_headers(self, key: str) -> dict[str, str]:
-        """Oxylabs takes HTTP Basic credentials, not a bearer token."""
-        credentials = b64encode(f"{self._username}:{key}".encode()).decode()
-        return {self.api_key_header: f"Basic {credentials}"}
+        return {self.api_key_header: basic_auth(self._username, key)}
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         body_format = self.format_of(request)

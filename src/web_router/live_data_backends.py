@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
+from web_router.constants_live_data import LIVE_DATA_CREDENTIAL_SETS, LIVE_DATA_ENV_BY_PROVIDER
 from web_router.constants_live_data_any import (
     MSG_LIVE_DATA_EVERY_BACKEND_FAILED,
     MSG_LIVE_DATA_NO_BACKEND,
@@ -68,7 +68,7 @@ def usable_backends_or_raise(router: _LiveDataLookup, failures: dict[str, str]) 
         return backends
     if failures:
         raise ConfigurationError(MSG_LIVE_DATA_EVERY_BACKEND_FAILED.format(failures=failures))
-    names = sorted({env_var for env_vars in LIVE_DATA_ENV_BY_PROVIDER.values() for env_var in env_vars})
+    names = sorted({var for sets in LIVE_DATA_CREDENTIAL_SETS.values() for env in sets for var in env})
     raise ConfigurationError(MSG_LIVE_DATA_NO_BACKEND.format(env_vars=", ".join(names)))
 
 
