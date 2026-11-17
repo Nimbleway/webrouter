@@ -30,13 +30,13 @@ from web_router.constants_mcp_router import (
     MCP_WHY_NOT_OBJECT,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.mcp.routing_keys import DECIDER_PRESETS, captured_key, hostname, target_url
+from web_router.mcp.routing_keys import DECIDER_PRESETS, builds_bare, captured_key, hostname, target_url
 
 
 def read_config(env: Mapping[str, str], name: str | None) -> dict[str, Any] | None:
     """The config ``WEB_ROUTER_MCP_ROUTER_CONFIG`` sets for router ``name``, keys captured from ``env``.
 
-    ``None`` when it is unset.
+    ``None`` when it is unset, unless ``name`` builds with no config: its key is read now all the same.
 
     Raises:
         ConfigurationError: for a value that is not a JSON object, or a key :func:`.routing_keys.captured_key`
@@ -44,7 +44,7 @@ def read_config(env: Mapping[str, str], name: str | None) -> dict[str, Any] | No
     """
     raw = env.get(ENV_MCP_ROUTER_CONFIG)
     if raw is None:
-        return None
+        return _captured({}, env, name) if builds_bare(name) else None
     try:
         parsed = json.loads(raw)
     except ValueError:
@@ -73,8 +73,20 @@ def _captured(value: Any, env: Mapping[str, str], name: str | None) -> Any:
         return [_captured(item, env, None) for item in value]
     if not isinstance(value, dict):
         return value
-    out = {key: _captured(item, env, None) for key, item in value.items()}
+    out = {
+        key: [_member(member, env) for member in item]
+        if key == FALLBACK_MEMBERS_KEY and isinstance(item, list)
+        else _captured(item, env, None)
+        for key, item in value.items()
+    }
     return captured_key(_own_name(value, name), out, env)
+
+
+def _member(member: Any, env: Mapping[str, str]) -> Any:
+    """A ``fallback`` member, keys captured: one named alone that reads a preset's key becomes ``{"name": ...}``."""
+    if isinstance(member, str) and builds_bare(member.strip()):
+        return captured_key(member.strip(), {FALLBACK_NAME_KEY: member.strip()}, env)
+    return _captured(member, env, None)
 
 
 def hosts_in(config: object, name: str | None = None) -> list[str]:

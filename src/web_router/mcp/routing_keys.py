@@ -55,6 +55,11 @@ def _preset(name: str | None, config: Mapping[str, Any]) -> tuple[str, str] | No
     return DECIDER_PRESETS.get(name or "", {}).get(preset) if isinstance(preset, str) else None
 
 
+def builds_bare(name: str | None) -> bool:
+    """Whether router ``name`` builds with no config, reading a preset's key: ``gemini``, on its default preset."""
+    return _preset(name, {}) is not None
+
+
 def target_url(name: str | None, config: Mapping[str, Any]) -> str | None:
     """The URL router ``name`` posts to: its preset's base URL, else the ``url`` or ``base_url`` it is given."""
     if (row := _preset(name, config)) is not None:

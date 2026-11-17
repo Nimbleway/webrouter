@@ -79,3 +79,25 @@ def test_named_for_the_mcp_server_it_shows_its_host_and_takes_the_key_from_the_p
     decider = routing.build()._owned_router.decider  # type: ignore[union-attr]
     assert decider._endpoint.headers["x-goog-api-key"] == TOKEN
     assert TOKEN not in str(section) + repr(routing)
+
+
+def test_named_for_the_mcp_server_with_no_config_its_key_is_still_taken_at_startup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    routing = McpRouting.from_environ({"WEB_ROUTER_MCP_ROUTER": "gemini", "GEMINI_API_KEY": TOKEN})
+    monkeypatch.setenv("GEMINI_API_KEY", "from-a-file")
+    decider = routing.build()._owned_router.decider  # type: ignore[union-attr]
+    assert decider._endpoint.headers["x-goog-api-key"] == TOKEN
+    assert routing.capabilities(None)["router"] == "gemini(generativelanguage.googleapis.com)"
+    with pytest.raises(ConfigurationError, match="GEMINI_API_KEY"):
+        McpRouting.from_environ({"WEB_ROUTER_MCP_ROUTER": "gemini"})
+
+
+def test_a_fallback_member_named_alone_has_its_key_taken_at_startup() -> None:
+    environ = {
+        "WEB_ROUTER_MCP_ROUTER": "fallback",
+        "WEB_ROUTER_MCP_ROUTER_CONFIG": json.dumps({"routers": ["gemini", "cheapest_first"]}),
+        "GEMINI_API_KEY": TOKEN,
+    }
+    config = McpRouting.from_environ(environ).router_config
+    assert config is not None and config["routers"] == [{"name": "gemini", "api_key": TOKEN}, "cheapest_first"]
