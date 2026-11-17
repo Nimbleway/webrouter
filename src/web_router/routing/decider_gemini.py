@@ -6,7 +6,8 @@ Experimental. Opt in by name, with ``GEMINI_API_KEY`` set::
 
 Each routed call asks the API up to two ``choice`` questions in one request:
 which backend, over the options with no vendor mode, and which vendor mode,
-over the mode options (shown only with ``route_modes=True``). Each option is an
+over the mode options (shown only with ``route_modes=True``, and only for a
+method in ``route_tools``: add ``"search"`` for search's modes). Each option is an
 id with its method, backend, estimated cost and p90 latency. The API answers a
 probability per option, normalized within each question; those are the scores,
 so :class:`~.decider_router.DeciderRouter` ranks a mode by its backend's
@@ -43,19 +44,17 @@ from web_router.constants_decider_gemini import (
 )
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.routing.decider import DeciderQuestion, DeciderReply
-from web_router.routing.decider_http import endpoint, post_json, preset_of, text
+from web_router.routing.decider_http import choice_answer, endpoint, post_json, preset_of, text
 from web_router.routing.decider_reply import score_order, unit_number
 from web_router.routing.decider_router import DeciderRouter, takes_config_of
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
 
 def split(options: Mapping[str, str]) -> dict[str, dict[str, str]]:
-    """The options per question, backends then modes, each cut to the first 255 in the static order."""
+    """The options per question in the static order: backends, then vendor modes."""
     asked: dict[str, dict[str, str]] = {GEMINI_BACKEND_QUESTION: {}, GEMINI_MODE_QUESTION: {}}
     for cid, about in options.items():
-        key = GEMINI_MODE_QUESTION if cid.count(CANDIDATE_ID_SEPARATOR) > 1 else GEMINI_BACKEND_QUESTION
-        if len(asked[key]) < GEMINI_MAX_OPTIONS:
-            asked[key][cid] = about
+        asked[GEMINI_MODE_QUESTION if cid.count(CANDIDATE_ID_SEPARATOR) > 1 else GEMINI_BACKEND_QUESTION][cid] = about
     return asked
 
 
@@ -68,8 +67,8 @@ def _normalized(probabilities: dict[str, Any]) -> dict[str, Any]:
     return {cid: p / total for cid, p in probabilities.items()} if total else probabilities
 
 
-def _ranked(scores: Mapping[str, Any]) -> list[str]:
-    """The ids by score, highest first, ties in the static order."""
+def _by_score(scores: Mapping[str, Any]) -> list[str]:
+    """The ids by score, highest first, ties in the order ``scores`` lists them: the static order."""
     return sorted(scores, key=lambda cid: score_order(scores[cid]), reverse=True)
 
 
@@ -137,28 +136,23 @@ class GeminiDecider:
         """Question ``key``'s probabilities, normalized, and its confidence.
 
         Raises:
-            RemoteRouterInvalid: for a reply without the question's probabilities, with none, or naming an option
-                it did not ask.
+            RemoteRouterInvalid: for a reply without the question's probabilities, or whose probabilities do not
+                name exactly the options it asked: the API answers one per option.
         """
-        answers = data.get("answers") if isinstance(data, dict) else None
-        answer = answers.get(key) if isinstance(answers, dict) else None
-        probabilities = answer.get("probabilities") if isinstance(answer, dict) else None
-        if (
-            not isinstance(answer, dict)
-            or not isinstance(probabilities, dict)
-            or not probabilities
-            or not set(probabilities) <= set(options)
-        ):
+        answer, probabilities = choice_answer(data, key, self._endpoint.host)
+        if set(probabilities) != set(options):
             raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY)
         return _normalized(probabilities), answer.get("confidence")
 
     async def adecide(self, question: DeciderQuestion) -> DeciderReply:
         """Ask both questions at once; rank backends, then modes, by the probability the API gives each.
 
-        The confidence is the first question asked's: the backend question's, else the mode question's.
+        An option past a question's limit scores 0, so it follows the ranked ones in the static order. The
+        confidence is the first question asked's: the backend question's, else the mode question's.
         """
         per_question = split(question.options)
-        asked = {key: options for key, options in per_question.items() if len(options) >= GEMINI_MIN_OPTIONS}
+        asked = {key: dict(list(options.items())[:GEMINI_MAX_OPTIONS]) for key, options in per_question.items()}
+        asked = {key: options for key, options in asked.items() if len(options) >= GEMINI_MIN_OPTIONS}
         scores = {key: dict.fromkeys(options, 1.0) for key, options in per_question.items() if len(options) == 1}
         said: list[Any] = [None]
         if asked:
@@ -167,9 +161,13 @@ class GeminiDecider:
             for key, options in asked.items():
                 scores[key], confidence = self._answer(data, key, options)
                 said.append(confidence)
-        backends = scores.get(GEMINI_BACKEND_QUESTION, {})
-        modes = scores.get(GEMINI_MODE_QUESTION, {})
-        return DeciderReply(ranked=_ranked(backends) + _ranked(modes), scores={**backends, **modes}, confidence=said[0])
+        ranked: list[str] = []
+        for key, options in per_question.items():
+            got = scores[key] = {cid: scores.get(key, {}).get(cid, 0.0) for cid in options}
+            ranked += _by_score(got)
+        return DeciderReply(
+            ranked=ranked, scores={cid: p for got in scores.values() for cid, p in got.items()}, confidence=said[0]
+        )
 
 
 @takes_config_of(GeminiDecider)

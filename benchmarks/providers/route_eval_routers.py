@@ -114,7 +114,7 @@ def named_router(name: str) -> UserRouter:
     Asked through its ``aroute``, else its ``route``, else called, and awaited when that returns an awaitable,
     with no deadline, as route-eval asks every router, on one event loop kept for the run and closed, with the
     router, when the process exits. What it raises, such as a decider's refused reply, is the replay's router
-    failure. What it bills its own vendor is not counted in the cost.
+    failure. What it bills its own vendor is not counted in the cost. Its ``fit``, if any, is kept.
     """
     built, _ = resolve_router(name, None)
     loop = asyncio.new_event_loop()
@@ -130,6 +130,8 @@ def named_router(name: str) -> UserRouter:
         result = aroute(req) if callable(aroute) else sync(req)
         return loop.run_until_complete(result) if inspect.isawaitable(result) else result
 
+    if hasattr(built, "fit"):
+        route.fit = built.fit  # type: ignore[attr-defined]
     return route
 
 

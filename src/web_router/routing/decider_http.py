@@ -23,6 +23,7 @@ from typing import Any
 from web_router._urls import host_of
 from web_router.constants_decider import (
     DECIDER_MAX_RESPONSE_BYTES,
+    DECIDER_WHY_REPLY,
     KEY_HOMES,
     MSG_DECIDER_BOTH,
     MSG_DECIDER_ENV_NAME,
@@ -164,3 +165,17 @@ def preset_of(name: str, presets: dict[str, Any], preset: object, base_url: obje
     if base_url is not None:
         raise ConfigurationError(MSG_DECIDER_BOTH.format(name=name))
     return presets[preset]
+
+
+def choice_answer(data: object, key: str, host: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The answer to ``choice`` question ``key`` in a decisions reply, and its probabilities.
+
+    Raises:
+        RemoteRouterInvalid: for a reply without that answer or without its probabilities as a mapping.
+    """
+    answers = data.get("answers") if isinstance(data, dict) else None
+    answer = answers.get(key) if isinstance(answers, dict) else None
+    probabilities = answer.get("probabilities") if isinstance(answer, dict) else None
+    if not isinstance(answer, dict) or not isinstance(probabilities, dict):
+        raise RemoteRouterInvalid(host, DECIDER_WHY_REPLY)
+    return answer, probabilities

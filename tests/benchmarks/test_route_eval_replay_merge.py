@@ -102,3 +102,44 @@ def test_a_named_router_that_is_a_plain_or_async_callable_is_called(route_eval: 
     finally:
         unregister_router("async_pick")
     assert not outcome.router_failed and outcome.served_by == "perplexity"
+
+
+class _Learner:
+    """A registered router with ``fit``, ``aroute`` and ``aclose``: notes the loop of each call."""
+
+    def __init__(self) -> None:
+        self.loops: list[object] = []
+        self.closed = False
+
+    def fit(self, questions: object) -> None:
+        """Learns nothing."""
+
+    async def aroute(self, req: object) -> RouteDecision:
+        import asyncio
+
+        self.loops.append(asyncio.get_running_loop())
+        return RouteDecision(providers={"search": ["perplexity"]})
+
+    async def aclose(self) -> None:
+        self.closed = True
+
+
+def test_a_named_router_keeps_its_fit_and_runs_on_one_loop_closed_at_exit(
+    route_eval: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from web_router.routing.registry import register_router, unregister_router
+
+    learner, at_exit = _Learner(), []
+    monkeypatch.setattr(sys.modules["route_eval_routers"].atexit, "register", at_exit.append)
+    register_router("learner", lambda **config: learner)
+    try:
+        router = route_eval.load_router("router:learner", "search")
+    finally:
+        unregister_router("learner")
+    assert router.fit == learner.fit
+    q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
+    for _ in range(2):
+        assert route_eval.replay(router, q, route_eval.static_router("search")).served_by == "perplexity"
+    assert len(learner.loops) == 2 and learner.loops[0] is learner.loops[1]
+    at_exit[0]()
+    assert learner.closed and learner.loops[0].is_closed()  # type: ignore[attr-defined]

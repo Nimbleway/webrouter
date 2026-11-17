@@ -64,9 +64,28 @@ async def test_past_the_option_limit_the_first_255_are_asked_and_the_rest_follow
     decision = await gemini_router(**LOCAL).aroute(req)
     assert list(server.body()["questions"]["backend"]["criteria"]) == [c.id for c in many[:255]]
     assert decision.providers is not None and decision.providers["search"][:2] == ["b254", "b000"]
-    assert len(decision.providers["search"]) == 255
+    assert decision.providers["search"][255:] == [c.provider for c in many[255:]], "scored 0, in the static order"
     walked = merge(req, decision, {"search": [c.provider for c in many]}).providers
     assert walked[:2] == ("b254", "b000") and walked[255:] == tuple(c.provider for c in many[255:])
+
+
+async def test_past_the_option_limit_the_modes_not_asked_still_run_after_the_ranked_ones(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    modes = tuple(Candidate(tool="search", provider="exa", mode=f"m{i:03}") for i in range(260))
+    backends = (Candidate(tool="search", provider="tavily"), Candidate(tool="search", provider="exa"))
+    server = serve(monkeypatch, gemini("search:exa", "search:exa:m001"))
+    decision = await gemini_router(**LOCAL).aroute(request(candidates=backends + modes))
+    assert len(server.body()["questions"]["mode"]["criteria"]) == 255
+    assert decision.attempts is not None and decision.attempts[0] == "search:exa:m001"
+    assert decision.attempts[-5:] == [c.id for c in modes[255:]]
+
+
+async def test_options_the_api_scores_alike_keep_the_static_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    tied = {"search:exa": 0.5, "search:tavily": 0.5}  # the reverse of the order asked
+    serve(monkeypatch, lambda req: respond({"answers": {"backend": {"probabilities": tied}}}))
+    decision = await gemini_router(**LOCAL).aroute(request(candidates=MODES[:2]))
+    assert decision.providers == {"search": ["tavily", "exa"]}
 
 
 async def test_probabilities_that_do_not_sum_to_one_are_normalized_before_the_product(
@@ -87,16 +106,17 @@ async def test_probabilities_that_do_not_sum_to_one_are_normalized_before_the_pr
     [
         {"backend": {"probabilities": {"search:nope": 1.0}}},
         {"backend": {"probabilities": {"search:exa:exa-deep": 1.0}}},
-        {"backend": {"probabilities": {"search:exa": 1.5}}},
-        {"backend": {"probabilities": {"search:exa": 0.5}, "confidence": 2}},
+        {"backend": {"probabilities": {"search:tavily": 0.0, "search:exa": 1.5}}},
+        {"backend": {"probabilities": {"search:tavily": 0.5, "search:exa": 0.5}, "confidence": 2}},
         {"mode": {"probabilities": {"search:exa:exa-deep": 1.0}}},
         {"backend": {"probabilities": {}}},
+        {"backend": {"probabilities": {"search:exa": 1.0}}},
     ],
-    ids=["unknown-id", "mode-asked-as-backend", "over-1", "confidence", "no-backend-answer", "empty"],
+    ids=["unknown-id", "mode-asked-as-backend", "over-1", "confidence", "no-backend-answer", "empty", "missing-one"],
 )
 def test_a_reply_out_of_shape_is_invalid(answers: object, monkeypatch: pytest.MonkeyPatch) -> None:
     serve(monkeypatch, lambda req: respond({"answers": answers}))
-    outcome = AttachedRouter(gemini_router(**LOCAL)).call(request(candidates=MODES))
+    outcome = AttachedRouter(gemini_router(**LOCAL)).call(request(candidates=MODES[:2]))
     assert outcome.failure == "router_invalid"
 
 

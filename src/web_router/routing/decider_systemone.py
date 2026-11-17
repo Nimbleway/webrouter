@@ -21,7 +21,6 @@ from dataclasses import asdict
 from typing import Any
 
 from web_router.constants_decider import (
-    DECIDER_WHY_REPLY,
     SYSTEMONE_DEFAULT_PATH,
     SYSTEMONE_PRESETS,
     SYSTEMONE_QUESTION,
@@ -30,10 +29,9 @@ from web_router.constants_decider import (
     SYSTEMONE_TIMEOUT_S,
 )
 from web_router.routing.decider import DeciderQuestion, DeciderReply
-from web_router.routing.decider_http import endpoint, post_json, preset_of, text
+from web_router.routing.decider_http import choice_answer, endpoint, post_json, preset_of, text
 from web_router.routing.decider_reply import score_order
 from web_router.routing.decider_router import DeciderRouter, takes_config_of
-from web_router.routing.remote_errors import RemoteRouterInvalid
 
 
 class SystemOneDecider:
@@ -93,11 +91,7 @@ class SystemOneDecider:
     async def adecide(self, question: DeciderQuestion) -> DeciderReply:
         """Ask, and rank the options by the probability the API gives each."""
         data = await post_json(self._endpoint, self.body(question), question.deadline_s or self.timeout_s)
-        answers = data.get("answers") if isinstance(data, dict) else None
-        answer = answers.get(SYSTEMONE_QUESTION) if isinstance(answers, dict) else None
-        probabilities = answer.get("probabilities") if isinstance(answer, dict) else None
-        if not isinstance(answer, dict) or not isinstance(probabilities, dict):
-            raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY)
+        answer, probabilities = choice_answer(data, SYSTEMONE_QUESTION, self._endpoint.host)
         ranked = sorted(probabilities, key=lambda cid: score_order(probabilities[cid]), reverse=True)
         return DeciderReply(ranked=ranked, scores=probabilities, confidence=answer.get("confidence"))
 

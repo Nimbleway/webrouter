@@ -420,7 +420,9 @@ httpx, so install the `remote` extra (`pip install "webrouter[remote]"`, or
   `gemini-decision-1`, `GEMINI_API_KEY`, sent only in the `x-goog-api-key`
   header), pinned so a new release changes nothing until you pass `model`;
   another server takes `base_url`, `path`, `model` and `api_key_env`.
-  `timeout_s` is 1 s, and `route_tools` every tool but search, unless set.
+  `timeout_s` is 1 s, and `route_tools` every tool but search, unless set: to
+  have it pick search's vendor modes, pass `route_modes=True` and
+  `router_config={"route_tools": ("search", ...)}`.
 
   ```python
   WebRouter(router="gemini")
