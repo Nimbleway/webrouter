@@ -58,6 +58,7 @@ from _frozen_checks import (
     require_same_answers,
 )
 from _frozen_mixed import MIXED, freeze_mixed, sample_index
+from _frozen_price import canonical_label
 from _frozen_price import price_mode as price_mode
 from _tools_effort_plan import QUESTIONS as MIXED_QUESTIONS
 
@@ -75,6 +76,12 @@ FIELDS = ("set", "question_id", "provider", "method", "mode", "grade", "latency_
 FROZEN_SETS: dict[str, dict[str, Any]] = {
     "sealqa-hard-254": {"questions": "sealqa-hard", "method": "search", "runs": ["sealqa-hard-254"]},
     "sealqa-hard-254-twin": {"questions": "sealqa-hard", "method": "search", "runs": ["sealqa-hard-254-twin"]},
+    # Vendor modes beside the same day's defaults. Apart from sealqa-hard-254: these scans withheld the set's own pages.
+    "sealqa-hard-254-modes": {
+        "questions": "sealqa-hard",
+        "method": "search",
+        "runs": ["sealqa-hard-254-defaults-1116", "sealqa-hard-254-modes"],
+    },
     "simpleqa-300-v2": {
         "questions": "simpleqa",
         "method": "search",
@@ -158,8 +165,10 @@ def freeze_set(
         check_same_questions(set_name, scan, first)
         check_same_answers(set_name, scan, first)
         check_same_setup(set_name, scan, first, COMBINE_KEYS[spec["method"]])
-        rows += [frozen_row(set_name, spec["method"], r) for r in source]
-        runs.append({"run": run, "started": setup.get("started"), "providers": setup["providers"], "rows": len(source)})
+        relabeled = ({**r, "provider": canonical_label(run, r["provider"])} for r in source)
+        rows += [frozen_row(set_name, spec["method"], r) for r in relabeled]
+        providers = [canonical_label(run, label) for label in setup["providers"]]
+        runs.append({"run": run, "started": setup.get("started"), "providers": providers, "rows": len(source)})
     assert first is not None
     check_no_repeats(set_name, rows)
     asked = {split_label(label)[0] for run in runs for label in run["providers"]}
