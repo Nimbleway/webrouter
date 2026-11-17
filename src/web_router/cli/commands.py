@@ -22,8 +22,14 @@ from web_router.registry import (
     configured_research_providers,
 )
 from web_router.registry_answer import configured_answer_providers
+from web_router.routing.contract import Budget
 
 Handler = Callable[[WebRouter, argparse.Namespace], Any]
+
+
+def _budget(args: argparse.Namespace) -> Budget | None:
+    """``--max-cost`` as the budget the method takes; the library refuses a non-finite or negative cap."""
+    return None if args.max_cost is None else Budget(max_cost_usd=args.max_cost)
 
 
 def _search(router: WebRouter, args: argparse.Namespace) -> Any:
@@ -37,8 +43,11 @@ def _search(router: WebRouter, args: argparse.Namespace) -> Any:
         country=args.country,
         locale=args.locale,
         recency=args.recency,
+        effort=args.effort,
         provider_options=pairs(args.option),
         timeout=args.timeout,
+        budget=_budget(args),
+        data_apis_only=args.data_apis_only,
     )
 
 
@@ -49,6 +58,7 @@ def _extract(router: WebRouter, args: argparse.Namespace) -> Any:
         format=args.format,
         provider_options=pairs(args.option),
         timeout=args.timeout,
+        budget=_budget(args),
     )
 
 
@@ -63,6 +73,7 @@ def _answer(router: WebRouter, args: argparse.Namespace) -> Any:
         recency=args.recency,
         provider_options=pairs(args.option),
         timeout=args.timeout,
+        budget=_budget(args),
     )
 
 
@@ -78,6 +89,7 @@ def _research(router: WebRouter, args: argparse.Namespace) -> Any:
         include_domains=args.include_domain,
         exclude_domains=args.exclude_domain,
         provider_options=pairs(args.option),
+        budget=_budget(args),
         **timeout,
     )
 
@@ -92,6 +104,7 @@ def _browse(router: WebRouter, args: argparse.Namespace) -> Any:
         max_steps=args.max_steps,
         allowed_domains=args.allowed_domain,
         provider_options=pairs(args.option),
+        budget=_budget(args),
         **timeout,
     )
 
@@ -101,7 +114,7 @@ def _live_data(router: WebRouter, args: argparse.Namespace) -> Any:
         return router.live_data_sources(provider=args.provider, query=args.query, limit=args.limit, offset=args.offset)
     if args.action == "source":
         return router.live_data_source(args.name, provider=args.provider)
-    inputs = {**(json_object(args.inputs, "--inputs") or {}), **(pairs(args.input) or {})}
+    inputs = {**(json_object(args.inputs, "--inputs") or {}), **(pairs(args.input, typed=False) or {})}
     return router.live_data(
         args.name,
         inputs or None,

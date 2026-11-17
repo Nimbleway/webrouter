@@ -75,11 +75,20 @@ line the parser refused.
 | `live-data run NAME` | `live_data()` | Seconds. One billed run on the vendor's account. |
 | `providers` | `configured_*_providers()` | Free. Reads the environment and calls nothing. |
 
-Every call command takes `-p/--provider` (omit it and the router picks a
-backend), `--timeout SECONDS` and `--option KEY=VALUE` for a backend-specific
-option, repeatable. The value is read as JSON when it parses, so `--option
-max_age=3600` sends a number. `web-router COMMAND --help` lists every flag, with
-the values each one accepts.
+Every command takes `-p/--provider`; omit it and the router picks a backend.
+`search`, `extract`, `answer`, `research` and `browse` also take:
+
+- `--timeout SECONDS`: the most the call may wait.
+- `--max-cost USD`: refuse a backend whose estimated cost would pass this, before
+  it runs, as a `Budget(max_cost_usd=...)` does.
+- `--option KEY=VALUE`: a backend-specific option, repeatable. The value is read
+  as JSON when it parses, so `--option max_age=3600` sends a number.
+
+`live-data run` takes `--option` too, but no timeout or cost cap, since the
+library's `live_data()` takes neither. Its `--input KEY=VALUE` always sends
+text, so an id such as `12345` stays a string; give typed values with
+`--inputs`. `web-router COMMAND --help` lists every flag, with the values each
+one accepts.
 
 A JSON argument (`--schema`, `--records`, `live-data run --inputs`) is given
 inline or read from a file with `@path`:

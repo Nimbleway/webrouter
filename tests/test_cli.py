@@ -13,6 +13,7 @@ from web_router.cli.args import CliInputError, pairs
 from web_router.cli.output import exit_code
 from web_router.constants_cli import EXIT_CONFIG, EXIT_FAILED, EXIT_OK, EXIT_USAGE
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.exceptions_provider import NoAnswerProviderError
 
 
 def _run(capsys: pytest.CaptureFixture[str], *argv: str) -> tuple[int, Any, Any]:
@@ -69,6 +70,9 @@ def test_usage_error_is_json_on_stderr_with_stdout_empty(capsys: pytest.CaptureF
         ("search", "q", "--option", "no-equals-sign"),
         ("research", "q", "--schema", "{not json"),
         ("research", "q", "--schema", "[1]"),
+        ("research", "q", "--schema", '{"maximum": Infinity}'),
+        ("search", "q", "-n", "0"),
+        ("search", "q", "--timeout", "inf"),
     ],
 )
 def test_refused_input_exits_with_usage(argv: tuple[str, ...], capsys: pytest.CaptureFixture[str]) -> None:
@@ -84,6 +88,18 @@ def test_providers_lists_each_method(capsys: pytest.CaptureFixture[str]) -> None
     assert "auto" in out["search"]
 
 
+def test_max_cost_refuses_a_backend_over_the_cap(fake_provider: Any, capsys: pytest.CaptureFixture[str]) -> None:
+    """The fake backend has no price, and a cost cap refuses a call it cannot price, before anything is sent."""
+    status, out, err = _run(capsys, "search", "q", "-p", "fake", "--max-cost", "1")
+    assert (status, out) == (EXIT_FAILED, None)
+    assert err["error"]["type"] == "BudgetExceededError"
+
+
+def test_pairs_keep_text_when_untyped_and_for_non_finite_numbers() -> None:
+    assert pairs(["id=12345"], typed=False) == {"id": "12345"}
+    assert pairs(["cap=Infinity"]) == {"cap": "Infinity"}
+
+
 def test_pairs_read_json_values_and_keep_text() -> None:
     assert pairs(["n=3", "mode=fast", 'flags={"a": true}']) == {"n": 3, "mode": "fast", "flags": {"a": True}}
     assert pairs(None) is None
@@ -95,6 +111,8 @@ def test_pairs_read_json_values_and_keep_text() -> None:
     ("error", "code"),
     [
         (ConfigurationError("no key"), EXIT_CONFIG),
+        (NoAnswerProviderError("auto", ["exa", "you"], [], ["EXA_API_KEY"]), EXIT_CONFIG),
+        (NoAnswerProviderError("auto", ["exa", "you"], ["exa", "you"], []), EXIT_USAGE),
         (ProviderError("fake", "backend down"), EXIT_FAILED),
         (RuntimeError("anything else"), EXIT_FAILED),
     ],

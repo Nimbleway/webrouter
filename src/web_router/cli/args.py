@@ -14,6 +14,7 @@ from web_router.constants_cli import (
     CLI_FILE_PREFIX,
     MSG_BAD_JSON,
     MSG_BAD_PAIR,
+    MSG_NOT_FINITE,
     MSG_NOT_LIST,
     MSG_NOT_OBJECT,
     MSG_UNREADABLE,
@@ -24,11 +25,26 @@ class CliInputError(ValueError):
     """An argument the command line could not turn into a value."""
 
 
-def pairs(values: list[str] | None) -> dict[str, Any] | None:
-    """``KEY=VALUE`` arguments as a dict, each value read as JSON when it parses and kept as text otherwise.
+class _NotFinite(ValueError):
+    """``NaN`` or ``Infinity``, which :func:`json.loads` accepts and no cap, count or timeout should."""
 
-    So ``--option max_age=3600`` sends a number and ``--option mode=fast`` a string,
-    the way a caller writing the dict by hand would have.
+
+def _refuse_constant(name: str) -> Any:
+    raise _NotFinite(name)
+
+
+def _loads(text: str) -> Any:
+    """JSON without ``NaN``/``Infinity``: those would lift a cap or a timeout rather than set one."""
+    return json.loads(text, parse_constant=_refuse_constant)
+
+
+def pairs(values: list[str] | None, *, typed: bool = True) -> dict[str, Any] | None:
+    """``KEY=VALUE`` arguments as a dict.
+
+    ``typed`` reads each value as JSON when it parses, so ``--option max_age=3600`` sends a number and
+    ``--option mode=fast`` a string, the way a caller writing the dict by hand would have; ``NaN`` and
+    ``Infinity`` stay text. Without it every value is text, as a live data source's id must stay
+    ``"12345"`` rather than become a number.
     """
     if not values:
         return None
@@ -37,9 +53,12 @@ def pairs(values: list[str] | None) -> dict[str, Any] | None:
         key, sep, text = value.partition("=")
         if not sep or not key:
             raise CliInputError(MSG_BAD_PAIR.format(value=value))
+        if not typed:
+            parsed[key] = text
+            continue
         try:
-            parsed[key] = json.loads(text)
-        except json.JSONDecodeError:
+            parsed[key] = _loads(text)
+        except ValueError:  # not JSON, or not finite: the text as given
             parsed[key] = text
     return parsed
 
@@ -55,7 +74,9 @@ def json_value(text: str | None, what: str) -> Any:
         except OSError as exc:
             raise CliInputError(MSG_UNREADABLE.format(path=path, error=exc.strerror or exc)) from None
     try:
-        return json.loads(text)
+        return _loads(text)
+    except _NotFinite as exc:
+        raise CliInputError(MSG_NOT_FINITE.format(what=what, value=exc)) from None
     except json.JSONDecodeError as exc:
         raise CliInputError(MSG_BAD_JSON.format(what=what, error=exc)) from None
 

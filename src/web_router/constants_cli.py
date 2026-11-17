@@ -63,20 +63,47 @@ HELP_COMMAND = {
     "browse": "A hosted browser agent carries out a task on the web (minutes, bills per run).",
     "live-data": "A vendor's ready-made scraper for one site: list sources, describe one, or run it.",
     "providers": "The backends this machine is configured for, per method. Free; calls nothing.",
+    "live-data sources": "List or search a vendor's catalogue of sources. Free.",
+    "live-data source": "Describe one source: its inputs and output schema. Free.",
+    "live-data run": "Run one source and return its records (bills per run).",
 }
-"""Each subcommand's one line in ``web-router --help``."""
+"""Each subcommand's one line in ``--help``; ``live-data``'s actions are keyed by their full command."""
 
-HELP_PROVIDER = "Backend to use, e.g. tavily. Omit it and the router picks one (auto)."
-HELP_OPTION = "A backend-specific option, KEY=VALUE; VALUE is read as JSON when it parses. Repeatable."
-HELP_TIMEOUT = "Seconds to wait before giving up."
-HELP_INCLUDE = "Only results from this domain. Repeatable."
-HELP_EXCLUDE = "No results from this domain. Repeatable."
-HELP_SCHEMA = "JSON Schema for a structured answer, inline or @file."
-HELP_RAW = "Include the backend's untouched payload (raw) in the output."
-HELP_PRETTY = "Indent the JSON output."
+HELP = {
+    "provider": "Backend to use, e.g. tavily. Omit it and the router picks one (auto).",
+    "option": "A backend-specific option, KEY=VALUE; VALUE is read as JSON when it parses. Repeatable.",
+    "timeout": "Seconds to wait before giving up.",
+    "max_cost": "Refuse a backend whose estimated cost would pass this many US dollars, before it runs.",
+    "include_domain": "Only results from this domain. Repeatable.",
+    "exclude_domain": "No results from this domain. Repeatable.",
+    "country": "Two-letter country to search from, e.g. US.",
+    "locale": "Language of the results, e.g. en.",
+    "recency": "Only results from this recent period.",
+    "max_results": "How many results to return.",
+    "depth": "Speed against thoroughness.",
+    "search_effort": "How much work the search does, on a backend that maps it.",
+    "data_apis_only": "List only the matching data API endpoints from the local catalogue; call no web backend.",
+    "format": "Page representation (default markdown).",
+    "research_effort": "How much work the run should do.",
+    "schema": "JSON Schema for a structured answer, inline or @file.",
+    "records": "Rows to enrich (needs --schema), inline or @file.",
+    "start_url": "The page the agent starts on.",
+    "max_steps": "Most actions the agent may take.",
+    "allowed_domain": "Keep the agent on this domain. Repeatable.",
+    "catalogue_query": "Search the catalogue, e.g. 'amazon product'.",
+    "limit": "Sources per page.",
+    "offset": "Sources to skip.",
+    "input": "One of the source's inputs, KEY=VALUE, sent as text. Repeatable; --inputs for typed values.",
+    "inputs": "All of the source's inputs as one JSON object, inline or @file.",
+    "live_format": "Also return the page in this format.",
+    "raw": "Include the backend's untouched payload (raw) in the output.",
+    "pretty": "Indent the JSON output.",
+}
+"""Every flag's help, keyed by what the flag sets."""
 
 MSG_BAD_PAIR = "expected KEY=VALUE, got {value!r}"
 MSG_BAD_JSON = "{what} is not valid JSON: {error}"
+MSG_NOT_FINITE = "{what} must be a finite number, got {value}"
 MSG_NOT_OBJECT = "{what} must be a JSON object"
 MSG_NOT_LIST = "{what} must be a JSON array of objects"
 MSG_UNREADABLE = "cannot read {path}: {error}"

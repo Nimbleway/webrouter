@@ -29,7 +29,8 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
 )
-from web_router.exceptions_provider import ProviderNotFoundError
+from web_router.exceptions_provider import NoAnswerProviderError, ProviderNotFoundError
+from web_router.exceptions_typed import InvalidParameterError
 
 # First match wins, so a subclass must come before its base.
 _EXIT_BY_ERROR: tuple[tuple[type[BaseException], int], ...] = (
@@ -39,6 +40,7 @@ _EXIT_BY_ERROR: tuple[tuple[type[BaseException], int], ...] = (
     (UnsupportedParameterError, EXIT_USAGE),
     (UnsupportedFormatError, EXIT_USAGE),
     (MissingParameterError, EXIT_USAGE),
+    (InvalidParameterError, EXIT_USAGE),
     (ProviderNotFoundError, EXIT_USAGE),
     (ConfigurationError, EXIT_CONFIG),
     (ProviderNotInstalledError, EXIT_CONFIG),
@@ -62,6 +64,9 @@ def write_error(error: BaseException, stream: IO[str]) -> int:
 
 def exit_code(error: BaseException) -> int:
     """The status an error exits with: usage, configuration, or the call itself failing."""
+    if isinstance(error, NoAnswerProviderError):
+        # No answer key at all is setup; several keys and no default is a choice the caller must make (-p).
+        return EXIT_USAGE if error.configured else EXIT_CONFIG
     for kind, code in _EXIT_BY_ERROR:
         if isinstance(error, kind):
             return code
