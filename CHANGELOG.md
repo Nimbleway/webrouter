@@ -21,6 +21,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Fixed
 
+- `plan()` and `run()` recognize HTTP(S) URLs with uppercase or mixed-case schemes, preserving the path and query and applying the URL policy as usual.
 - Nimble's public Extract Templates now carry their site, kind of page and description in a listing. Their listing rows carry no published version, and the metadata that describes them sits on the row itself, which was not read, so a local search could match them by name alone. `published` stays `False` on such a row, since the row does not say; `live_data_source()` reads the version.
 ### Removed
 
