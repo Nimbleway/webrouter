@@ -39,6 +39,13 @@ def test_a_pinned_response_carries_the_modes_estimated_price(monkeypatch: pytest
     assert (response.provider, response.cost_usd, response.cost_source) == ("exa", INSTANT, "estimated")
 
 
+def test_a_pinned_id_is_a_routers_search_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EXA_API_KEY", "k")
+    with WebRouter(provider="exa:exa-instant") as router:
+        _mocked(router, "exa:exa-instant")
+        assert router.search("q").cost_usd == INSTANT
+
+
 def test_a_budget_charges_the_pinned_modes_price(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EXA_API_KEY", "k")
     with WebRouter() as router:

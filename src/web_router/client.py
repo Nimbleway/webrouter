@@ -62,6 +62,7 @@ from web_router.constants import (
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
+from web_router.providers._pinning import backend_of
 from web_router.providers._runtime import Runtime
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -141,10 +142,9 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         self._runtime = Runtime.capped(max_concurrency)
         self._init_vendors(vendor_credentials)
         name = provider_name(provider)
-        # Either registry is enough to name a default: a router defaulted to a search-only backend still extracts
-        # through `provider=`, and the method that cannot serve the default says so when it is called.
+        # Either registry names a default (a pinned search id by its backend); a method that can't serve it says so.
         known = every_provider_name()
-        if name not in known:
+        if backend_of(name) not in known:
             raise ProviderNotFoundError(name, known)
 
         self.default_provider = name
