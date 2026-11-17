@@ -329,6 +329,10 @@ src/web_router/
 │                       values.py (credentials resolved), caller.py (sent),
 │                       response.py (the answer, masked), sites.py (the vendors
 │                       that serve a page's site, and their endpoints for it), types.py
+├── cli/                the `web-router` command line: a subcommand per method,
+│                       each calling the public method (commands.py), JSON on
+│                       stdout, a JSON error and an exit status on stderr
+│                       (output.py); its strings live in constants_cli.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
 │   ├── methods.py      the library method behind each provider-picking tool: its

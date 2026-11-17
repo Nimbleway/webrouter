@@ -1,0 +1,103 @@
+---
+title: "Command line"
+description: "The web-router command: search, extract, answer, research, browse and live data from a shell, printing JSON, for scripts and for agents that run commands rather than speak MCP."
+icon: "terminal"
+---
+
+`web-router` is every method as a shell command. It suits scripts, CI jobs and
+agents that run commands but do not speak MCP (Codex, OpenClaw, Pi, a plain
+shell loop). Each subcommand calls the public method a library caller would. It
+validates, routes and fails exactly as the library does.
+
+```bash
+pip install "webrouter[all]"
+
+web-router search "rust async runtimes" -n 5
+web-router extract https://example.com https://example.org --format markdown
+web-router answer "When was the Eiffel Tower completed?"
+web-router providers
+```
+
+With no key at all, `search` and `extract` still work through the keyless
+backends. Keys come from the environment only, as everywhere else in the
+library, and the command never reads a `.env` by itself. Load one into the
+command's environment:
+
+```bash
+uv run --env-file .env web-router research "state of solid-state batteries" --effort low
+```
+
+## Output
+
+stdout is one JSON object: the call's response, the same model the library
+returns, serialized. It goes on one line, so it pipes straight into `jq`.
+`--pretty` indents it.
+
+The backend's untouched payload (`raw`) is left out because it is often the bulk
+of the response and rarely what a reader wants. `--raw` puts it back.
+
+```bash
+web-router search "nvidia q3 earnings" -n 3 | jq -r '.results[].url'
+```
+
+## Errors and exit status
+
+On failure stdout stays empty, and stderr holds one JSON object:
+
+```json
+{"error": {"type": "ConfigurationError", "message": "No research backend is configured. ..."}}
+```
+
+The exit status says what kind of failure it was, so a script or an agent can
+branch without reading the message:
+
+| Status | Meaning | Examples |
+|---|---|---|
+| `0` | Success | |
+| `1` | The call ran and failed | a backend error, a timeout, nothing could serve it |
+| `2` | Refused before anything was sent | a bad flag, an unknown backend, an option the backend does not map, bad JSON |
+| `3` | This machine is not set up for it | a missing API key, an extra not installed |
+
+`type` is the library's exception class name. `UsageError` marks a command
+line the parser refused.
+
+## Commands
+
+| Command | Library method | Cost |
+|---|---|---|
+| `search QUERY` | `search()` | Seconds. Free on the keyless tier. |
+| `extract URL...` | `extract()` | Seconds. Free on the keyless tier. |
+| `answer QUERY` | `answer()` | Seconds. Bills per call, and each backend `auto` tries bills. |
+| `research QUERY` | `research()` | Minutes. Bills per run. |
+| `browse TASK` | `browse()` | Minutes. Bills per run. |
+| `live-data sources` | `live_data_sources()` | Free. Lists or searches (`-q`) a vendor's catalogue. |
+| `live-data source NAME` | `live_data_source()` | Free. A source's inputs and output schema. |
+| `live-data run NAME` | `live_data()` | Seconds. One billed run on the vendor's account. |
+| `providers` | `configured_*_providers()` | Free. Reads the environment and calls nothing. |
+
+Every call command takes `-p/--provider` (omit it and the router picks a
+backend), `--timeout SECONDS` and `--option KEY=VALUE` for a backend-specific
+option, repeatable. The value is read as JSON when it parses, so `--option
+max_age=3600` sends a number. `web-router COMMAND --help` lists every flag, with
+the values each one accepts.
+
+A JSON argument (`--schema`, `--records`, `live-data run --inputs`) is given
+inline or read from a file with `@path`:
+
+```bash
+web-router research "top 5 vector databases" --schema @schema.json
+web-router live-data sources -q "amazon product"     # find a source, note its name and provider
+web-router live-data source NAME -p PROVIDER          # its input_schema says what --input takes
+web-router live-data run NAME -p PROVIDER --input url=https://www.amazon.com/dp/...
+```
+
+## The command line or the MCP server?
+
+Both expose the same methods. The [MCP server](/mcp-server) suits a client that
+speaks MCP. It narrows each tool's options to the backends configured on your
+machine, shortens results to fit a context window, and keeps browser sessions
+open between calls.
+
+The command line suits anything that runs a shell. Each call is self-contained,
+so there are no `browser_*` commands: a browser session outlives a single
+process. Drive one from the library or the MCP server.

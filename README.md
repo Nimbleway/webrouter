@@ -191,6 +191,15 @@ claude mcp add web-router -- uvx --from "webrouter[mcp]" web-router-mcp
 The [MCP guide](https://docs.webrouter.net/mcp-server) covers Claude Desktop, Cursor and other clients,
 credentials, tool costs and browser guards.
 
+**Command line.** The same methods from a shell, printing JSON, for scripts and
+agents that run commands rather than speak MCP:
+
+```bash
+web-router search "rust async runtimes" -n 5 | jq -r '.results[].url'
+```
+
+See [Command line](https://docs.webrouter.net/cli) for every command and its exit codes.
+
 **Agent frameworks.** Ready-made `web_search` and `web_extract` tools, with a
 compact rendering for the model and the full response kept for you:
 

@@ -33,6 +33,13 @@ Calling the Python library instead? The methods match, under these names:
 | `fetch_raw` | the response's `raw` |
 | `load_env` | none: the library reads the process environment only |
 
+Working from a shell instead? The `web-router` command runs the same methods
+and prints the response as JSON: `web-router search|extract|answer|research|browse`,
+`web-router live-data sources|source|run`, and `web-router providers` for what is
+configured. A failure leaves stdout empty, prints `{"error": {...}}` on stderr
+and exits 1 (the call failed), 2 (refused before sending) or 3 (no key or extra).
+`web-router --help` lists every flag. The advice below holds for it unchanged.
+
 ## Choose the cheapest method that answers
 
 Work up this ladder and stop at the first rung that serves the task:
