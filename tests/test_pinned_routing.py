@@ -69,6 +69,16 @@ def test_a_chain_entry_with_a_depth_is_priced_as_pinning_would_set_its_mode(entr
     assert attempt_cost(attempt) == prices_modes.mode_price(backend, "search", mode)  # as the same pin, called direct
 
 
+def test_a_chain_entry_whose_request_is_already_pinned_keeps_that_mode() -> None:
+    request = SearchRequest(query="q", mode="exa-instant+lite")
+    assert priced_as(Attempt(tool="search", provider="exa:exa-instant", request=request)) == ("exa", "exa-instant+lite")
+
+
+def test_a_pin_the_price_list_does_not_name_stays_unpriced() -> None:
+    attempt = Attempt(tool="search", provider="exa:exa-unlisted", request=SearchRequest(query="q"))
+    assert (priced_as(attempt), attempt_cost(attempt)) == (("exa", "exa-unlisted"), None)
+
+
 def test_a_pinned_backend_is_built_with_its_backends_config() -> None:
     with WebRouter(provider_config={"exa": {"api_key": "from-config"}}) as router:
         assert router.get_provider("exa:exa-instant").api_key == "from-config"  # type: ignore[attr-defined]

@@ -43,9 +43,11 @@ A mode has up to three slots, joined with `+`, always in this order:
 2. a **depth**: a normalized level (`lite`, `fast`, `deep`; `low` to `max` for
    an effort), or a **content**: a vendor setting that replaces what a depth
    sends (Exa's highlights instead of page text), standing for one level;
-3. **flags**, sorted: add-ons that write a field nothing else writes (Brave's
-   extra snippets), so they combine with anything. Two flags on one field never
-   combine.
+3. **flags**, sorted: add-ons that write a field no tier writes (Brave's
+   extra snippets), so they combine with any tier. A flag combines with a depth
+   unless the depth sends its field another way: `deepseek-content` takes
+   `deep`, which sends the page body too, but not `lite`. Two flags on one field
+   never combine.
 
 Each vendor part is spelled with its backend's name first (`exa-instant`), so
 it can never be read as a normalized level. Input in any order comes out
@@ -61,7 +63,7 @@ twice, raises `InvalidParameterError`.
 | Tavily | `tavily-fast`, `tavily-ultra-fast` | | |
 | Parallel | `parallel-turbo`, `parallel-basic`, `parallel-advanced` | | |
 | Linkup | `linkup-flash`, `linkup-standard`, `linkup-deep` | | |
-| Perplexity | `perplexity-fast` | | `perplexity-context-low`, `perplexity-context-medium` |
+| Perplexity | `perplexity-fast` | | |
 | Keenable | `keenable-realtime` | | |
 | You.com | | `you-full-page-cache` (as `deep`) | |
 | Brave | | | `brave-extra-snippets` |
@@ -99,7 +101,8 @@ you set something it would overwrite:
   with `search_depth="deep"`), or other than the level a content stands for;
 - an option that writes the same field to another value: Exa's `effort` with an
   Exa tier, Tavily's `search_depth` with a Tavily tier, Parallel's or
-  Keenable's `effort` with one of their tiers.
+  Keenable's `effort` with one of their tiers, DeepSeek's `lite` with
+  `deepseek-content`.
 
 ## What it costs
 
@@ -118,10 +121,11 @@ cools every mode of that backend.
 ## Benchmarks
 
 A provider scan's setup is the same id (`--providers
-tavily,tavily:fast,tavily:tavily-ultra-fast`). The old spellings
-`tavily@deep` and `tavily:ultra-fast@deep` still parse; `tavily:ultra-fast`
-without `@` is no vendor mode, and `tavily:fast` is the `fast` depth, where an
-older scan meant Tavily's tier.
+tavily,tavily:fast,tavily:tavily-ultra-fast`). The old spelling `tavily@deep`
+still runs. `tavily:ultra-fast@deep` parses, so an older scan's rows still
+read, but a search with it is refused: Tavily's tier and `deep` both set
+`search_depth`. `tavily:ultra-fast` without `@` is no vendor mode, and
+`tavily:fast` is the `fast` depth, where an older scan meant Tavily's tier.
 
 ## Showing modes to a router
 

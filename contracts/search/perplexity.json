@@ -92,12 +92,6 @@
     "mode": {
       "perplexity-fast": {
         "body.search_type": "fast"
-      },
-      "perplexity-context-low": {
-        "body.search_context_size": "low"
-      },
-      "perplexity-context-medium": {
-        "body.search_context_size": "medium"
       }
     }
   },
@@ -105,9 +99,7 @@
   "offers": [
     "perplexity-fast",
     "lite",
-    "fast",
-    "perplexity-context-low",
-    "perplexity-context-medium"
+    "fast"
   ],
   "source": [
     "https://docs.perplexity.ai/api-reference/search-post"
@@ -121,9 +113,7 @@
     "recency": "live: 2026-11-09 search-options check: day, 10 of 10 results dated inside the window",
     "search_depth": "live: 2026-11-09 search-options check: fast (1,024 tokens) 817-3,909 characters; lite at 128 tokens gave 494-707, so it now asks for 100 (not re-run); 8,192 tokens stayed under 3,500, so deep stays refused",
     "effort": "live: 2026-11-09 search-options check: low (search_type=fast) and medium both answered, in 0.33 s and 0.37 s",
-    "mode.perplexity-fast": "docs: https://docs.perplexity.ai/api-reference/search-post",
-    "mode.perplexity-context-low": "docs: https://docs.perplexity.ai/api-reference/search-post",
-    "mode.perplexity-context-medium": "docs: https://docs.perplexity.ai/api-reference/search-post"
+    "mode.perplexity-fast": "docs: https://docs.perplexity.ai/api-reference/search-post"
   },
   "vendor_options": {
     "max_tokens": {

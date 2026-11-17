@@ -49,7 +49,9 @@ uv run --all-extras python benchmarks/providers/run.py --limit 300 \
     --providers perplexity,perplexity:perplexity-fast,nimble:lite,nimble,nimble:deep,tavily,tavily:fast,tavily:tavily-ultra-fast
 ```
 
-The old spellings (`tavily@deep`, `tavily:ultra-fast@deep`) still parse. Setups
+The old spelling `tavily@deep` still runs; `tavily:ultra-fast@deep` parses, to
+read older scans, but is refused as a setup (Tavily's tier and `deep` both set
+`search_depth`). Setups
 sharing a depth run in one `evaluate()`, so a crash keeps the depths before it;
 all of them use the same questions. A mode's contract
 (`contracts/search/<provider>.json`) records under `verified["mode.<part>"]`

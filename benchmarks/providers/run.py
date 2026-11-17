@@ -21,8 +21,9 @@ records how many results it withheld.
 
 A setup is a backend (``tavily``) or a backend pinned to a mode (``tavily:deep``,
 ``tavily:tavily-ultra-fast``, ``exa:exa-instant+lite``): the id ``provider=`` takes,
-read with the parts each provider class declares. The old ``tavily@deep`` and
-``tavily:ultra-fast@deep`` still parse. Setups run in one ``evaluate()`` per
+read with the parts each provider class declares. The old ``tavily@deep`` still runs;
+``tavily:ultra-fast@deep`` parses but is refused (Tavily's tier and ``deep`` both set
+``search_depth``). Setups run in one ``evaluate()`` per
 ``search_depth``, each search in its own pinned mode, on the same questions.
 
 Keys come from the repo's ``.env`` (or the environment): each backend's own,

@@ -52,15 +52,6 @@ LINKUP_TIERS: Mapping[str, Tier] = {
 PERPLEXITY_TIERS: Mapping[str, Tier] = {
     "perplexity-fast": Tier(wire={"search_type": "fast"}, does="Perplexity's fast search")
 }
-PERPLEXITY_FLAGS: Mapping[str, Flag] = {
-    "perplexity-context-low": Flag(
-        wire={"search_context_size": "low"}, writes="search_context_size", does="Short passages per page"
-    ),
-    "perplexity-context-medium": Flag(
-        wire={"search_context_size": "medium"}, writes="search_context_size", does="Medium passages per page"
-    ),
-}
-"""Shorter passages per page than the default ``high``; both write one field, so they never combine."""
 
 KEENABLE_TIERS: Mapping[str, Tier] = {
     "keenable-realtime": Tier(wire={"mode": "realtime"}, does="Keenable's realtime search, its fastest")
