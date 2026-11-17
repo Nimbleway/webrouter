@@ -77,12 +77,18 @@ def pinned_for(chain: Any, request: Any) -> Any:
 
 
 def _costed(response: Any, owner: Any, request: NormalizedRequest) -> Any:
-    """``response`` carrying the mode's estimated price when it states none, as a chain member's answer must."""
+    """``response`` carrying the mode's estimated price when it states none, as a chain member's answer must.
+
+    An unpriced mode sets the cost to ``None`` explicitly, so the router leaves it unknown instead of pricing the
+    answer at the backend's default row from a request that no longer names the mode.
+    """
     from web_router.routing.metered import estimated_cost  # the routing package imports the providers
 
-    if response.cost_usd is not None or (cost := estimated_cost(owner.pinned_method, owner.name, request)) is None:
+    if response.cost_usd is not None:
         return response
-    return response.model_copy(update={"cost_usd": cost, "cost_source": COST_ESTIMATED})
+    cost = estimated_cost(owner.pinned_method, owner.name, request)
+    source = None if cost is None else COST_ESTIMATED
+    return response.model_copy(update={"cost_usd": cost, "cost_source": source})
 
 
 @cache
