@@ -27,6 +27,9 @@ Keys are read from the environment, or passed explicitly through
 | Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
 | DeepSeek | `DEEPSEEK_API_KEY` | search, extract |
 | Valyu | `VALYU_API_KEY` | search |
+| Seltz | `SELTZ_API_KEY` | search |
+| Octen | `OCTEN_API_KEY` | search |
+| Keirolabs | `KEIROLABS_API_KEY` | search |
 | AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](https://github.com/Nimbleway/webrouter/blob/main/docs/agentcore-setup.md))* | search |
 | Firecrawl | `FIRECRAWL_API_KEY` | extract |
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
@@ -55,7 +58,7 @@ Keys are read from the environment, or passed explicitly through
 A key set once serves every method of a provider that has several. See
 [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example). The library reads the environment only; the
 MCP server is the one place a `.env` is read for you; see
-[the MCP guide](/mcp#then-add-whichever-keys-you-have).
+[the MCP guide](/mcp-server#then-add-whichever-keys-you-have).
 `configured_providers()` and
 `configured_extract_providers()` (and `configured_research_providers()`,
 `configured_browser_providers()` and `configured_browse_providers()`) report

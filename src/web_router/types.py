@@ -64,13 +64,11 @@ class Provider(str, Enum):
     discoverable from an editor rather than remembered. Backends added with :func:`web_router.register_provider`
     are named by string, which is why the string form is never going away.
 
-    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl``
-    and ``jina`` extract but do not search, and most search backends do not
-    extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``, ``kernel`` and
-    ``local`` only open browser sessions, ``browser-use`` and ``skyvern`` only run
-    browse tasks, and ``apify`` only runs live data. :func:`web_router.available_providers`
-    and its per-method counterparts list each method's own set. ``auto`` serves
-    every method by trying its backends in turn; ``max`` serves extract alone, by
+    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl`` and ``jina`` extract but do not
+    search, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
+    ``kernel`` and ``local`` only open browser sessions, ``browser-use`` and ``skyvern`` only run browse tasks, and
+    ``apify`` only runs live data. :func:`web_router.available_providers` and its per-method counterparts list each
+    method's own set. ``auto`` serves every method by trying its backends in turn; ``max`` serves extract alone, by
     trying every backend at once and returning the first document back.
     """
 
@@ -82,7 +80,10 @@ class Provider(str, Enum):
     PARALLEL = "parallel"
     PERPLEXITY = "perplexity"
     LINKUP = "linkup"
+    SELTZ = "seltz"
     WEBIQ = "webiq"
+    OCTEN = "octen"
+    KEIROLABS = "keirolabs"
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
     VALYU = "valyu"
@@ -126,8 +127,7 @@ class NormalizedRequest(BaseModel):
     :class:`ExtractRequest` -- and they share only this: a set of optional
     parameters a provider may or may not map, and an untranslated passthrough.
     :meth:`SearchProvider.validate <web_router.SearchProvider.validate>` reads
-    :meth:`specified_parameters` to reject a request carrying options the chosen
-    backend does not map.
+    :meth:`specified_parameters` to reject a request carrying options the chosen backend does not map.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -372,10 +372,9 @@ finished the work it was asked to do.
 class ResearchRequest(NormalizedRequest):
     """A normalized research request.
 
-    Only :attr:`query` is required. Setting :attr:`output_schema` asks for a
-    structured answer instead of prose, and adding :attr:`records` on top of it
-    turns the run into an enrichment: the same schema, filled in once per record
-    you already hold.
+    Only :attr:`query` is required. Setting :attr:`output_schema` asks for a structured answer instead of prose, and
+    adding :attr:`records` on top of it turns the run into an enrichment: the same schema, filled in once per record you
+    already hold.
     """
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})

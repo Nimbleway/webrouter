@@ -136,7 +136,11 @@ def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
 
     def price(provider: str, method: str, mode: str | None = None) -> SimpleNamespace | None:
         cost = table.get(provider)
-        return None if cost is None else SimpleNamespace(estimate_usd=cost, estimate_is_floor=False, mode=mode)
+        return (
+            None
+            if cost is None
+            else SimpleNamespace(unit="per_1k", default=False, estimate_usd=cost, estimate_is_floor=False, mode=mode)
+        )
 
     monkeypatch.setattr(prices, "price", price)
     monkeypatch.setattr(prices, "estimate_latency", lambda *args, **kwargs: None)

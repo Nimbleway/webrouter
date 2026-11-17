@@ -9,7 +9,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search and Keirolabs, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
@@ -183,6 +183,12 @@ src/web_router/
 │                       from data/prices.json; PRICING.md's tables are made from it
 ├── prices_latency.py   the check a row's measured latency passes, apart from
 │                       prices.py so it stays small; it never imports Price
+├── prices_modes.py     what a mode costs: its own row, else its tier's plus its
+│                       flags', else unknown; the parts the price list names
+├── modes.py            vendor modes: Tier, Content, Flag, the empty defaults every
+│                       provider inherits, and the one mode id parser
+├── _modes_checks.py    the checks a mode declaration and a price row's mode
+│                       fields pass, apart from modes.py so it stays small
 ├── data/prices.json    the price list itself (experimental), shipped in the wheel
 ├── data/chains.json    search's and answer's default `auto` orders (`make chains`)
 ├── data/efforts.json   each research effort's accuracy and p90 (`make efforts`)
@@ -307,6 +313,8 @@ src/web_router/
 │                       metadata, loopback and legacy-IPv4 host lists
 ├── constants_prices.py the price list's data path, unit divisors, messages and
 │                       PRICING.md wording, kept apart for the same reason
+├── constants_modes.py  the mode id grammar's separators, levels and messages,
+│                       kept apart for the same reason
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an

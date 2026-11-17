@@ -79,7 +79,7 @@ claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --
 
 `--project` keeps the working directory, so the server reads the `.env` of the
 project the user is in. For Claude Desktop, Cursor and other clients, see
-[the MCP guide](https://docs.webrouter.net/mcp). After adding keys, the server needs a restart, or
+[the MCP guide](https://docs.webrouter.net/mcp-server). After adding keys, the server needs a restart, or
 call its `load_env` tool with the path of the user's `.env`.
 
 The `web-router://capabilities` resource shows which backends are configured,
@@ -115,7 +115,7 @@ git pull && make setup
 
 - [README.md](README.md): the project overview, quickstart and links into the docs
 - [Documentation](https://docs.webrouter.net): getting started, core methods, providers and errors
-- [MCP server](https://docs.webrouter.net/mcp) — the MCP server in depth (source: `docs/mcp.mdx`)
+- [MCP server](https://docs.webrouter.net/mcp-server) — the MCP server in depth (source: `docs/mcp-server.mdx`)
 - [skills/web-router/SKILL.md](skills/web-router/SKILL.md) and the [agent system prompt](https://docs.webrouter.net/agent-prompt) (source: `docs/agent-prompt.mdx`) — how an agent should use the tools
 - [examples/](examples/) — runnable scripts (`uv run python examples/main.py`)
 - [CONTRIBUTING.md](CONTRIBUTING.md) — adding a provider and opening a pull request

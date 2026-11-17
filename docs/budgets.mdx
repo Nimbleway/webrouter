@@ -260,8 +260,10 @@ row = prices.price("exa", "search")  # the whole row: unit, note, source_url, ch
 `None` when the vendor publishes no price (`unit="unknown"`), bills by tokens
 (`unit="token_billed"`), or the list has no row for that mode -- never another
 mode's price. A mode is WebRouter's own `search_depth` or `effort` value, or a
-vendor mode sent through `provider_options` written with a leading `:`
-(`":ultra-fast"`); leave it unset for a call that sets none.
+vendor mode sent through `provider_options`, spelled with the backend's name
+first (`"tavily-ultra-fast"`); leave it unset for a call that sets none. The
+older spelling with a leading `:` (`":ultra-fast"`) still works for this
+release, with a `DeprecationWarning`.
 [`PRICING.md`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/PRICING.md) shows the same list as tables,
 with the notes behind each figure.
 

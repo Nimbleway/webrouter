@@ -18,7 +18,7 @@ from types import ModuleType
 
 BENCHMARKS = Path(__file__).resolve().parent.parent / "benchmarks" / "providers"
 FROZEN_SCRIPT = BENCHMARKS / "frozen.py"
-FROZEN_SIBLINGS = ("_common", "_frozen_checks", "_frozen_mixed", "_tools_effort_plan")
+FROZEN_SIBLINGS = ("_common", "_frozen_checks", "_frozen_mixed", "_frozen_price", "_tools_effort_plan")
 """What ``frozen.py`` imports from its folder by plain name."""
 
 

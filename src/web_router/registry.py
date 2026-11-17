@@ -1,15 +1,12 @@
 """Provider registry, one table per method.
 
-Providers are looked up by name and imported lazily, so installing web-router
-without a provider's optional dependency stays valid until that provider is
-actually requested.
+Providers are looked up by name and imported lazily, so installing web-router without a provider's optional
+dependency stays valid until that provider is actually requested.
 
-There is a table per method rather than per vendor, because a name does not
-imply a capability: ``brave`` searches and cannot extract, ``oxylabs`` extracts
-and cannot search, and ``nimble`` searches, extracts, runs templates
-and researches through four different classes.
-Asking the wrong table for a name reports it as unknown and lists the ones that
-method does serve, which is the honest answer.
+There is a table per method rather than per vendor, because a name does not imply a capability: ``brave``
+searches and cannot extract, ``oxylabs`` extracts and cannot search, and ``nimble`` searches, extracts, runs
+templates and researches through four different classes. Asking the wrong table for a name reports it as unknown
+and lists the ones that method does serve, which is the honest answer.
 """
 
 from __future__ import annotations
@@ -39,13 +36,16 @@ from web_router.constants import (
     PROVIDER_FIRECRAWL,
     PROVIDER_JINA,
     PROVIDER_KEENABLE,
+    PROVIDER_KEIROLABS,
     PROVIDER_LINKUP,
     PROVIDER_MAX,
     PROVIDER_NIMBLE,
+    PROVIDER_OCTEN,
     PROVIDER_OXYLABS,
     PROVIDER_PARALLEL,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
+    PROVIDER_SELTZ,
     PROVIDER_TAVILY,
     PROVIDER_VALYU,
     PROVIDER_WEBIQ,
@@ -84,7 +84,10 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_PARALLEL: ("web_router.providers.parallel_search", "ParallelProvider", EXTRA_SEARCH),
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityProvider", EXTRA_SEARCH),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupProvider", EXTRA_SEARCH),
+    PROVIDER_SELTZ: ("web_router.providers.seltz", "SeltzProvider", EXTRA_SEARCH),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQProvider", EXTRA_SEARCH),
+    PROVIDER_OCTEN: ("web_router.providers.octen", "OctenProvider", EXTRA_SEARCH),
+    PROVIDER_KEIROLABS: ("web_router.providers.keirolabs", "KeirolabsProvider", EXTRA_SEARCH),
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableProvider", EXTRA_SEARCH),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekProvider", EXTRA_SEARCH),
     PROVIDER_VALYU: ("web_router.providers.valyu", "ValyuProvider", EXTRA_SEARCH),
@@ -238,15 +241,13 @@ def _is_set(env_var: str) -> bool:
 def configured_providers() -> list[str]:
     """Every builtin search provider you currently have a credential for, plus the keyless ones.
 
-    Reports what the environment makes usable, which
-    :func:`available_providers` deliberately does not: that lists every name
-    the router knows, key or no key.
+    Reports what the environment makes usable, which :func:`available_providers` deliberately does not: that
+    lists every name the router knows, key or no key.
 
-    This reads environment variables only. A key passed as ``provider_config``
-    is invisible here, and a key that is present may still be rejected by the
-    service -- so treat this as "worth trying", not as a guarantee, and let the
-    provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside
-    its credential -- a LiteLLM proxy's URL -- is reported only when it has both.
+    This reads environment variables only. A key passed as ``provider_config`` is invisible here, and a key that is
+    present may still be rejected by the service -- so treat this as "worth trying", not as a guarantee, and let the
+    provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside its
+    credential -- a LiteLLM proxy's URL -- is reported only when it has both.
     """
     return sorted(
         name
@@ -282,9 +283,8 @@ def configured_live_data_providers() -> list[str]:
 def configured_research_providers() -> list[str]:
     """Every builtin research provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. Shorter than the other two
-    in practice: every research backend bills for the run, so there is no
-    keyless member to pad it out, and with no key at all this is empty but for
+    The same caveats as :func:`configured_providers`. Shorter than the other two in practice: every research backend
+    bills for the run, so there is no keyless member to pad it out, and with no key at all this is empty but for
     ``auto`` -- which will then say which variables would fix it.
     """
     return sorted(
@@ -295,9 +295,8 @@ def configured_research_providers() -> list[str]:
 def configured_browser_providers() -> list[str]:
     """Every builtin browser provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. A cloud browser bills
-    for every minute it is open; ``local`` needs no key and is always listed,
-    whether or not a browser is installed for it to launch.
+    The same caveats as :func:`configured_providers`. A cloud browser bills for every minute it is open; ``local`` needs
+    no key and is always listed, whether or not a browser is installed for it to launch.
     """
     return sorted(
         name for name, env_vars in BROWSER_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)

@@ -83,7 +83,7 @@ def test_deep_search_with_full_content_costs_more_than_fast() -> None:
 def test_exa_search_includes_the_page_text_it_is_asked_for() -> None:
     # Exa bills contents on top of the search; web-router always asks for text, so the stored base alone is too low.
     assert prices.estimate("exa", "search") == pytest.approx(0.017)
-    assert prices.estimate("exa", "search", ":deep-reasoning") == pytest.approx(0.025)
+    assert prices.estimate("exa", "search", "exa-deep-reasoning") == pytest.approx(0.025)
 
 
 def test_a_call_that_sets_no_mode_gets_the_default_row() -> None:

@@ -17,8 +17,9 @@ from typing import TYPE_CHECKING, Any, get_args
 from _frozen_checks import DEFAULT_MODE
 from _frozen_mixed import MIXED as MIXED
 from _tools_effort_plan import PATHS as PATH_METHODS
-from _tools_effort_plan import RESEARCH, SEARCH_EXTRACT
+from _tools_effort_plan import RESEARCH, SEARCH_EXTRACT, TOP_MODE
 
+from web_router.modes import Declarations, Flag, ModeId, parse_id
 from web_router.types import ResearchEffort
 
 if TYPE_CHECKING:
@@ -29,6 +30,8 @@ DEFAULT_PATH_ROUTERS = ("always:research:parallel:low", "always:answer:perplexit
 EFFORTS: tuple[str, ...] = get_args(ResearchEffort)
 """Research efforts, lowest first: the static order tries the cheaper effort before the dearer."""
 SEP = ":"
+PATH_PARTS = Declarations(flags={TOP_MODE: Flag()})
+"""A path's one mode that is no vendor's, search then read the top pages; a research path's mode is its effort."""
 
 MIXED_INTRO = (
     "A candidate here is a path: method, backend and mode (a research row's mode is its effort), as "
@@ -61,11 +64,17 @@ def path_id(row: Mapping[str, Any]) -> str:
     return SEP.join((row["method"], row["provider"], *mode))
 
 
+def parse_path(path: str) -> ModeId:
+    """A path id as ``(method, backend, mode)``, read by the library's one id parser."""
+    return parse_id(path, lambda _: PATH_PARTS, tools=PATH_METHODS)
+
+
 def path_key(path: str, orders: Mapping[str, Sequence[str]]) -> tuple[int, int, int, str]:
     """Where ``path`` sorts in the static order: by method, then the method's ``auto`` order, then effort."""
-    method, provider, *mode = path.split(SEP)
+    method, provider, mode = parse_path(path)
+    method = method or ""
     order = orders.get("search" if method == SEARCH_EXTRACT else method, ())
-    effort = mode[0] if mode else ""
+    effort = mode or ""
     return (
         PATH_METHODS.index(method) if method in PATH_METHODS else len(PATH_METHODS),
         order.index(provider) if provider in order else len(order),
@@ -83,9 +92,9 @@ def research_by_effort(
     backends: Mapping[str, Mapping[str, Any]], orders: Mapping[str, Sequence[str]]
 ) -> list[tuple[str, str, Mapping[str, Any]]]:
     """Each research path's ``(backend, effort, stats)``, in the static order: the effort table's rows."""
-    research = sorted((p for p in backends if p.split(SEP)[0] == RESEARCH), key=lambda p: path_key(p, orders))
+    research = sorted((p for p in backends if parse_path(p).tool == RESEARCH), key=lambda p: path_key(p, orders))
     rows = []
     for p in research:
-        _, provider, *mode = p.split(SEP)
-        rows.append((provider, mode[0] if mode else DEFAULT_MODE, backends[p]))
+        _, provider, mode = parse_path(p)
+        rows.append((provider, mode or DEFAULT_MODE, backends[p]))
     return rows

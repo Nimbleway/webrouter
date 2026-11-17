@@ -91,11 +91,11 @@ def measure(
     runs: Mapping[tuple[str, str, str], tuple[str, date]],
     *,
     pct: Any,
-    price_mode: Callable[[str, str], str | None],
+    price_mode: Callable[[str, str, str], str | None],
 ) -> tuple[dict[Key, dict[str, Any]], set[tuple[str, str, str]]]:
     """Each price row's latency fields, pooled over every frozen row it matches, and the frozen setups none matched.
 
-    ``price_mode`` is ``frozen.py``'s: a row's method and mode as the price list keys the mode.
+    ``price_mode`` is ``frozen.py``'s: a row's provider, method and mode as the price list keys the mode.
     """
     samples: dict[Key, list[float]] = {}
     sources: dict[Key, set[tuple[str, date]]] = {}
@@ -103,7 +103,7 @@ def measure(
     for row in rows:
         if row["method"] not in LATENCY_METHODS:
             continue
-        mode = price_mode(row["method"], row["mode"])
+        mode = price_mode(row["provider"], row["method"], row["mode"])
         priced = price(row["provider"], row["method"], mode)
         # Matched before the error filter, so a setup whose every call failed is still reported.
         if priced is None:

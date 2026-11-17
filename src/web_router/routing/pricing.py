@@ -30,7 +30,6 @@ from __future__ import annotations
 import math
 
 from web_router import prices
-from web_router._chains import measured_cost
 from web_router.constants_budget import (
     BROWSER_UNBILLED_OPTIONS,
     COST_TOLERANCE_USD,
@@ -38,27 +37,14 @@ from web_router.constants_budget import (
     OVER_COST,
     OVER_TIME,
     SECONDS_PER_MINUTE,
-    TOKEN_BILLED,
     UNKNOWN_P90,
     UNKNOWN_PRICE,
 )
+from web_router.prices_modes import mode_price
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import Budget
 from web_router.routing.effort_table import RESEARCH, effort_p90
 from web_router.types import BrowserRequest, ExtractRequest, ResearchRequest, SearchRequest
-
-
-def mode_cost(provider: str, tool: str, mode: str | None) -> float | None:
-    """The list price of one ``tool`` call on ``provider`` at ``mode``; ``None`` when unknown or only a floor.
-
-    A row billed by tokens is estimated at the benchmark's measured mean, at its default mode only.
-    """
-    row = prices.price(provider, tool, mode)
-    if getattr(row, "unit", None) == TOKEN_BILLED and (mode is None or getattr(row, "default", False)):
-        return measured_cost(tool, provider)
-    if row is None or row.estimate_is_floor or row.estimate_usd is None:
-        return None
-    return row.estimate_usd
 
 
 def cost_key(cost: float | None) -> tuple[bool, float]:
@@ -129,7 +115,7 @@ def attempt_cost(attempt: Attempt) -> float | None:
     """The estimated list price of ``attempt`` in US dollars, or ``None`` when it cannot be known before the call."""
     if _unpriced_mode(attempt) or _more_results_than_priced(attempt):
         return None
-    cost = mode_cost(attempt.provider, attempt.tool, attempt_mode(attempt))
+    cost = mode_price(attempt.provider, attempt.tool, attempt_mode(attempt))
     if cost is not None and isinstance(attempt.request, ExtractRequest):
         return cost * len(attempt.request.urls)
     if cost and isinstance(attempt.request, BrowserRequest):

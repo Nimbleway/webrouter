@@ -66,7 +66,7 @@ def cost_of(row: Mapping[str, Any]) -> float | None:
     row's effort); ``None`` when neither is known."""
     if row["cost_usd"] is not None:
         return float(row["cost_usd"])
-    return prices.estimate(row["provider"], row["method"], price_mode(row["method"], row["mode"]))
+    return prices.estimate(row["provider"], row["method"], price_mode(row["provider"], row["method"], row["mode"]))
 
 
 def cost_key(cost: float | None) -> tuple[bool, float]:

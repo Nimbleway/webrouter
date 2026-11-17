@@ -32,7 +32,10 @@
       "exa-litellm",
       "tavily-litellm",
       "parallel-litellm",
-      "valyu"
+      "valyu",
+      "seltz",
+      "octen",
+      "keirolabs"
     ],
     "unmeasured": [
       "keenable",
@@ -41,7 +44,10 @@
       "exa-litellm",
       "tavily-litellm",
       "parallel-litellm",
-      "valyu"
+      "valyu",
+      "seltz",
+      "octen",
+      "keirolabs"
     ],
     "too_few_questions": [],
     "no_row_served": [],

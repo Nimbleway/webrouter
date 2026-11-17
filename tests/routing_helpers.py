@@ -123,7 +123,14 @@ def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
         return (
             None
             if cost is None
-            else SimpleNamespace(estimate_usd=cost, estimate_is_floor=False, mode=mode, results_assumed=None)
+            else SimpleNamespace(
+                unit="per_1k",
+                default=False,
+                estimate_usd=cost,
+                estimate_is_floor=False,
+                mode=mode,
+                results_assumed=None,
+            )
         )
 
     def estimate_latency(provider: str, method: str, mode: str | None = None) -> tuple[float, float] | None:

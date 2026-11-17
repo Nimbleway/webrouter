@@ -70,7 +70,10 @@ PROVIDER_EXA = Provider.EXA.value
 PROVIDER_PARALLEL = Provider.PARALLEL.value
 PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
+PROVIDER_SELTZ = Provider.SELTZ.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
+PROVIDER_OCTEN = Provider.OCTEN.value
+PROVIDER_KEIROLABS = Provider.KEIROLABS.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
 PROVIDER_VALYU = Provider.VALYU.value
@@ -113,16 +116,15 @@ MAX_INHERITS_FROM_AUTO: tuple[str, ...] = ("chain", "members_config")
 DEFAULT_PROVIDER = PROVIDER_AUTO
 """Used when the caller names no provider anywhere.
 
-``auto`` needs no credential, so an unconfigured router still searches instead
-of raising about a key the caller never mentioned. Naming a provider explicitly
-keeps the old behaviour: a missing key for *that* provider is still an error.
+``auto`` needs no credential, so an unconfigured router still searches instead of raising about a key the caller
+never mentioned. Naming a provider explicitly keeps the old behaviour: a missing key for *that* provider is still
+an error.
 """
 
 # --- Install extras ---------------------------------------------------------
 
-# Extras are named after the methods you call, not the backends behind them, so
-# a provider maps to the extra that installs it rather than owning one of its
-# own. See the comment over [project.optional-dependencies] in pyproject.toml.
+# Extras are named after the methods you call, not the backends behind them, so a provider maps to the extra that
+# installs it rather than owning one of its own. See the comment over [project.optional-dependencies] in pyproject.toml.
 EXTRA_SEARCH = "search"
 EXTRA_EXTRACT = "extract"
 EXTRA_RESEARCH = "research"
@@ -134,18 +136,16 @@ EXTRA_ALL = "all"
 EXTRA_MCP = "mcp"
 """The one extra that is not named after a method.
 
-``search``, ``extract`` and ``research`` install backends for a method you
-call. ``mcp`` installs a way to *reach* those methods from somewhere else, so
-it names a transport instead -- the deliberate exception to the rule the
+``search``, ``extract`` and ``research`` install backends for a method you call. ``mcp`` installs a way to *reach*
+those methods from somewhere else, so it names a transport instead -- the deliberate exception to the rule the
 comment over [project.optional-dependencies] states.
 """
 
 EXTRA_AWS = "aws"
 """botocore, for the backends reached through an AWS account -- ``agentcore`` so far.
 
-The second exception to the method rule: botocore is a large install that
-signs requests for one cloud, and a ``search`` install that never touches AWS
-should not carry it. ``all`` includes it.
+The second exception to the method rule: botocore is a large install that signs requests for one cloud, and a
+``search`` install that never touches AWS should not carry it. ``all`` includes it.
 """
 
 # --- Credentials ------------------------------------------------------------
@@ -159,7 +159,10 @@ ENV_EXA_API_KEY = "EXA_API_KEY"
 ENV_PARALLEL_API_KEY = "PARALLEL_API_KEY"
 ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
+ENV_SELTZ_API_KEY = "SELTZ_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
+ENV_OCTEN_API_KEY = "OCTEN_API_KEY"
+ENV_KEIROLABS_API_KEY = "KEIROLABS_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
 ENV_VALYU_API_KEY = "VALYU_API_KEY"
@@ -187,7 +190,10 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_PARALLEL: ENV_PARALLEL_API_KEY,
     PROVIDER_PERPLEXITY: ENV_PERPLEXITY_API_KEY,
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
+    PROVIDER_SELTZ: ENV_SELTZ_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
+    PROVIDER_OCTEN: ENV_OCTEN_API_KEY,
+    PROVIDER_KEIROLABS: ENV_KEIROLABS_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
@@ -228,10 +234,9 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each extract provider needs, all of them; ``()`` means none.
 
-A tuple rather than a single name because two backends need more than a key:
-Oxylabs authenticates with a username and password, and Bright Data needs the
-zone that routes the request beside its token. ``jina`` needs nothing -- a key
-only raises its rate limit -- and ``auto`` needs whatever its chain does.
+A tuple rather than a single name because two backends need more than a key: Oxylabs authenticates with a
+username and password, and Bright Data needs the zone that routes the request beside its token. ``jina`` needs
+nothing -- a key only raises its rate limit -- and ``auto`` needs whatever its chain does.
 """
 
 RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -309,11 +314,10 @@ same request behaving differently for reasons the caller never chose.
 FOLLOW_REDIRECTS = False
 """Provider clients never follow redirects, and this is pinned rather than inherited.
 
-httpx replays request headers -- the auth header included -- to the redirect
-target, and does not strip them when that target is a different host. A search
-endpoint has no legitimate reason to redirect, so following one is either a
-misconfiguration or an attempt to collect the credential. Surfacing it as an
-error is the safe reading of both. See :data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
+httpx replays request headers -- the auth header included -- to the redirect target, and does not strip them when that
+target is a different host. A search endpoint has no legitimate reason to redirect, so following one is either a
+misconfiguration or an attempt to collect the credential. Surfacing it as an error is the safe reading of both. See
+:data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
 """
 
 MSG_HTTP_ERROR = "HTTP {status}: {body}"
@@ -428,16 +432,14 @@ TAVILY_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
     # much text each result carries, include_raw_content adds the page body.
     #
     # Two traps here, both of which have already caught this table once:
-    # `chunks_per_source` rode **kwargs here once and did nothing, which made
-    # `fast` an exact duplicate of `lite` (verified live: byte-identical
-    # snippets across every query tried). And Tavily has since grown its own
-    # `fast`/`ultra-fast` depths, which are latency tiers rather than content
-    # tiers; our `fast` must not be mapped onto them just because it matches.
+    # `chunks_per_source` rode **kwargs here once and did nothing, which made `fast` an exact duplicate of `lite`
+    # (verified live: byte-identical snippets across every query tried). And Tavily has since grown its own
+    # `fast`/`ultra-fast` depths, which are latency tiers rather than content tiers; our `fast` must not be mapped onto
+    # them just because it matches.
     #
-    # `advanced` buys a modest content bump over `basic` -- roughly +17% of
-    # snippet, and steadier across queries -- and costs two API credits rather
-    # than one. That is the honest middle rung: Tavily's own step change in
-    # volume is raw content, which is what `deep` asks for.
+    # `advanced` buys a modest content bump over `basic` -- roughly +17% of snippet, and steadier across queries -- and
+    # costs two API credits rather than one. That is the honest middle rung: Tavily's own step change in volume is raw
+    # content, which is what `deep` asks for.
     #
     # `lite` runs long of the shared definition (a snippet of about 500
     # characters): `basic` returns up to three chunks of about 500 each, so the
@@ -559,10 +561,10 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore`` and ``valyu`` joined after the
-scan that set the order, and the ranking set has no rows for them. A backend that joins later goes at the end of
-the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it ahead of the
-keyless tier only once frozen results rank it.
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen`` and
+``keirolabs`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
+later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it
+ahead of the keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
@@ -1118,10 +1120,8 @@ promptly.
 JOB_TIMEOUT_ERROR_SUFFIXES = ("TimeoutError", "TimeoutException")
 """How a poll's failure is recognized as a timed-out request: by the names of its exception classes.
 
-By name rather than by type because the job core imports no HTTP client or SDK:
-``TimeoutError`` (``asyncio``'s is the same class), httpx's
-``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in
-one of these.
+By name rather than by type because the job core imports no HTTP client or SDK: ``TimeoutError`` (``asyncio``'s
+is the same class), httpx's ``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in one of these.
 """
 
 JOB_POLL_BACKOFF = 1.5
