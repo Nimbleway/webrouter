@@ -14,7 +14,7 @@ EXIT_OK = 0
 EXIT_FAILED = 1
 """The call ran and failed: a backend error, a timeout, a router that found nothing to serve it."""
 EXIT_USAGE = 2
-"""Refused before anything was sent: a bad flag, an unknown backend, an option the backend does not map, bad JSON."""
+"""Refused before anything was sent: a bad flag, an unknown backend, an unmapped option, bad JSON, a cost cap."""
 EXIT_CONFIG = 3
 """This machine is not set up for the call: a missing key, or an extra not installed."""
 
@@ -43,7 +43,8 @@ output:
 exit codes:
   0  success
   1  the call ran and failed (backend error, timeout, nothing could serve it)
-  2  refused before anything was sent (bad flag, unknown backend, unsupported option, bad JSON)
+  2  refused before anything was sent (bad flag, unknown backend, unsupported option, bad JSON,
+     nothing fits --max-cost)
   3  not set up for it (missing API key, extra not installed)
 
 keys:

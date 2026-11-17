@@ -88,10 +88,22 @@ def test_providers_lists_each_method(capsys: pytest.CaptureFixture[str]) -> None
     assert "auto" in out["search"]
 
 
-def test_max_cost_refuses_a_backend_over_the_cap(fake_provider: Any, capsys: pytest.CaptureFixture[str]) -> None:
-    """The fake backend has no price, and a cost cap refuses a call it cannot price, before anything is sent."""
-    status, out, err = _run(capsys, "search", "q", "-p", "fake", "--max-cost", "1")
-    assert (status, out) == (EXIT_FAILED, None)
+@pytest.mark.parametrize(
+    ("argv", "backend"),
+    [
+        (("search", "q"), "fake_provider"),
+        (("answer", "q"), "fake_answer_provider"),
+        (("research", "q"), "fake_research_provider"),
+        (("browse", "a task", "--start-url", "https://example.com"), "fake_browse_provider"),
+    ],
+)
+def test_max_cost_refuses_before_any_call(
+    argv: tuple[str, ...], backend: str, request: pytest.FixtureRequest, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A fake backend has no price, and a cost cap refuses a call it cannot price, before anything is sent."""
+    request.getfixturevalue(backend)
+    status, out, err = _run(capsys, *argv, "-p", "fake", "--max-cost", "1")
+    assert (status, out) == (EXIT_USAGE, None)
     assert err["error"]["type"] == "BudgetExceededError"
 
 

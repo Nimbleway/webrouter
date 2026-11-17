@@ -29,6 +29,7 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
 )
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_provider import NoAnswerProviderError, ProviderNotFoundError
 from web_router.exceptions_typed import InvalidParameterError
 
@@ -41,6 +42,7 @@ _EXIT_BY_ERROR: tuple[tuple[type[BaseException], int], ...] = (
     (UnsupportedFormatError, EXIT_USAGE),
     (MissingParameterError, EXIT_USAGE),
     (InvalidParameterError, EXIT_USAGE),
+    (BudgetExceededError, EXIT_USAGE),  # raised before any backend starts, never after one ran
     (ProviderNotFoundError, EXIT_USAGE),
     (ConfigurationError, EXIT_CONFIG),
     (ProviderNotInstalledError, EXIT_CONFIG),
