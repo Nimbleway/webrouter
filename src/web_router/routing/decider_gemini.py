@@ -136,13 +136,15 @@ class GeminiDecider:
         """Question ``key``'s probabilities, normalized, and its confidence.
 
         Raises:
-            RemoteRouterInvalid: for a reply without the question's probabilities, or whose probabilities do not
-                name exactly the options it asked: the API answers one per option.
+            RemoteRouterInvalid: for a reply without the question's probabilities, whose probabilities do not
+                name exactly the options it asked (the API answers one per option), or whose confidence is not
+                a number from 0 to 1: each question's is checked, though only the first is reported.
         """
         answer, probabilities = choice_answer(data, key, self._endpoint.host)
-        if set(probabilities) != set(options):
+        confidence = answer.get("confidence")
+        if set(probabilities) != set(options) or not (confidence is None or unit_number(confidence)):
             raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY)
-        return _normalized(probabilities), answer.get("confidence")
+        return _normalized(probabilities), confidence
 
     async def adecide(self, question: DeciderQuestion) -> DeciderReply:
         """Ask both questions at once; rank backends, then modes, by the probability the API gives each.

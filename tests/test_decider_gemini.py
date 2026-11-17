@@ -147,3 +147,14 @@ async def test_the_confidence_is_the_backend_questions_even_when_it_gives_none(m
     serve(monkeypatch, handler)
     decision = await gemini_router(**LOCAL).aroute(request(candidates=MODES))
     assert decision.confidence is None and decision.attempts
+
+
+def test_a_mode_answer_with_a_confidence_out_of_range_is_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        answer = json.loads(gemini("search:exa", "search:exa:exa-deep")(req).read())
+        answer["answers"]["mode"]["confidence"] = 2
+        return respond(answer)
+
+    serve(monkeypatch, handler)
+    outcome = AttachedRouter(gemini_router(**LOCAL)).call(request(candidates=MODES))
+    assert outcome.failure == "router_invalid"
