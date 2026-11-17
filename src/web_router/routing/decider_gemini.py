@@ -137,8 +137,8 @@ class GeminiDecider:
         """Question ``key``'s probabilities, normalized, and its confidence.
 
         Raises:
-            RemoteRouterInvalid: for a reply without the question's probabilities, or naming an option it did
-                not ask.
+            RemoteRouterInvalid: for a reply without the question's probabilities, with none, or naming an option
+                it did not ask.
         """
         answers = data.get("answers") if isinstance(data, dict) else None
         answer = answers.get(key) if isinstance(answers, dict) else None
@@ -146,6 +146,7 @@ class GeminiDecider:
         if (
             not isinstance(answer, dict)
             or not isinstance(probabilities, dict)
+            or not probabilities
             or not set(probabilities) <= set(options)
         ):
             raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY)

@@ -88,8 +88,9 @@ async def test_probabilities_that_do_not_sum_to_one_are_normalized_before_the_pr
         {"backend": {"probabilities": {"search:exa": 1.5}}},
         {"backend": {"probabilities": {"search:exa": 0.5}, "confidence": 2}},
         {"mode": {"probabilities": {"search:exa:exa-deep": 1.0}}},
+        {"backend": {"probabilities": {}}},
     ],
-    ids=["unknown-id", "mode-asked-as-backend", "over-1", "confidence", "no-backend-answer"],
+    ids=["unknown-id", "mode-asked-as-backend", "over-1", "confidence", "no-backend-answer", "empty"],
 )
 def test_a_reply_out_of_shape_is_invalid(answers: object, monkeypatch: pytest.MonkeyPatch) -> None:
     serve(monkeypatch, lambda req: respond({"answers": answers}))
