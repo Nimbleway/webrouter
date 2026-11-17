@@ -104,8 +104,6 @@ highlights at the same rate. Results beyond 10 are +$1 per 1k.
 |---|---|---|---|---|---|---|
 | default | `perplexity` | `search_type=web` (the default) | General web search | $5 per 1k | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
 | `perplexity-fast` | `perplexity:perplexity-fast` (unverified) | `search_type=fast` | Lower latency, lower cost | $1 per 1k | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
-| `perplexity-context-low` | `perplexity:perplexity-context-low` (unverified) | `search_context_size=low` (high is the default) | Content per page | not stated for the Search API (the page prices context size for Sonar only) | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
-| `perplexity-context-medium` | `perplexity:perplexity-context-medium` (unverified) | `search_context_size=medium` (high is the default) | Content per page | not stated for the Search API (the page prices context size for Sonar only) | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 A request with several queries is billed as one request.

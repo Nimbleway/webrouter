@@ -33,7 +33,7 @@ from web_router.constants import (
     PERPLEXITY_SEARCH_PATH,
     PROVIDER_PERPLEXITY,
 )
-from web_router.constants_mode_parts import PERPLEXITY_FLAGS, PERPLEXITY_TIERS
+from web_router.constants_mode_parts import PERPLEXITY_TIERS
 from web_router.constants_perplexity import (
     MSG_PERPLEXITY_LOCALE,
     MSG_PERPLEXITY_SEARCH_DOMAINS,
@@ -80,7 +80,7 @@ class PerplexityProvider(HttpSearchProvider):
     """Routes searches to the Perplexity Search API."""
 
     name: ClassVar[str] = PROVIDER_PERPLEXITY
-    tiers, flags = PERPLEXITY_TIERS, PERPLEXITY_FLAGS
+    tiers = PERPLEXITY_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
         {*PERPLEXITY_SEARCH_NAMES, "include_domains", "exclude_domains", "locale", "recency", "search_depth", "effort"}
     )

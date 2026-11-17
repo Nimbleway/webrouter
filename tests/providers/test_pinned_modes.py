@@ -110,11 +110,7 @@ def test_a_content_never_combines_with_a_depth_but_takes_the_depth_it_stands_for
 @pytest.mark.parametrize(
     ("pin", "options", "expected"),
     [
-        (
-            "perplexity:perplexity-fast+lite+perplexity-context-low",
-            {},
-            {"search_type": "fast", "search_context_size": "low"},
-        ),
+        ("perplexity:perplexity-fast+lite", {}, {"search_type": "fast"}),
         ("brave:lite+brave-extra-snippets", {}, {"extra_snippets": True}),
         ("deepseek:deepseek-content", {"search_depth": "deep"}, {"need_content": True}),
         ("exa:exa-instant", {"search_depth": "fast"}, {"type": "instant"}),
@@ -127,11 +123,6 @@ def test_a_flag_or_tier_combines_with_any_depth_it_does_not_overwrite(
     assert expected.items() <= body.items()
 
 
-def test_two_flags_on_one_field_never_combine() -> None:
-    with pytest.raises(InvalidParameterError, match="twice"):
-        create_provider("perplexity:perplexity-context-low+perplexity-context-medium", api_key="k")
-
-
 def test_a_pin_names_a_search_backend_and_a_mode_it_declares() -> None:
     assert get_provider_class("search:exa:exa-instant").pinned == "exa-instant"
     assert get_provider_class("exa") is get_provider_class("EXA")
@@ -139,3 +130,5 @@ def test_a_pin_names_a_search_backend_and_a_mode_it_declares() -> None:
         get_provider_class("research:exa:exa-instant")
     with pytest.raises(InvalidParameterError, match="exa-turbo"):
         get_provider_class("exa:exa-turbo")
+    with pytest.raises(InvalidParameterError, match="perplexity-context-low"):
+        get_provider_class("perplexity:perplexity-context-low")  # /search has no context-size field
