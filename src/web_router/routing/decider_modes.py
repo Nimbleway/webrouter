@@ -39,7 +39,8 @@ def by_score(
 ) -> list[str]:
     """``ranked`` as attempts, best first: by ``backend x share`` when every ranked id has a score and every ranked
     mode's backend is ranked too, else in the decider's order. A backend whose modes are scored runs in them only;
-    ties keep the decider's order."""
+    ties keep the decider's order. Methods keep the order the decider first names them in, so a backend's score split
+    across its modes never hands the call to a method ranked below it."""
     if scores is None or any(cid not in scores for cid in ranked):
         return list(ranked)
     modes: dict[str, list[str]] = {}
@@ -57,4 +58,5 @@ def by_score(
         total = sum(scores[cid] for cid in ids)
         for cid in ids:
             ranked_by[cid] = scores[backend] * (scores[cid] / total if total else 0.0)
-    return sorted(ranked_by, key=lambda cid: (-ranked_by[cid], ranked.index(cid)))
+    methods = list(dict.fromkeys(candidates[cid].tool for cid in ranked))
+    return sorted(ranked_by, key=lambda cid: (methods.index(candidates[cid].tool), -ranked_by[cid], ranked.index(cid)))

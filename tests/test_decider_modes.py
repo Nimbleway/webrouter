@@ -62,6 +62,14 @@ def test_a_modes_share_is_of_its_backends_mode_scores() -> None:
     assert decision.attempts == [INSTANT, TAVILY, DEEP], "0.375, 0.30, 0.125"
 
 
+def test_a_backends_split_score_never_hands_the_call_to_a_method_ranked_below_it() -> None:
+    answer = Candidate(tool="answer", provider="perplexity")
+    scores = {EXA: 0.4, INSTANT: 0.5, DEEP: 0.5, "answer:perplexity": 0.3}
+    ranked = [EXA, "answer:perplexity", INSTANT, DEEP]
+    attempts = decision_for(_request((*CANDIDATES, answer)), ranked, scores, None, "fixed").attempts
+    assert attempts == [INSTANT, DEEP, "answer:perplexity"], "search first: 0.2 each, under answer's 0.3"
+
+
 @pytest.mark.parametrize(
     ("ranked", "scores"),
     [([INSTANT, TAVILY], {INSTANT: 0.9, TAVILY: 0.8}), ([TAVILY, INSTANT, EXA], {TAVILY: 0.9, EXA: 0.2})],

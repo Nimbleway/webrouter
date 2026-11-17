@@ -192,8 +192,9 @@ the backend's own id (`search:exa`) scores the backend, and each of its modes
 takes its share of that backend's mode scores. Attempts rank by the product,
 so with `search:exa` at 0.6, `search:tavily` at 0.4, and Exa's instant and
 deep modes at 0.7 and 0.3, the order is `exa-instant` (0.42), `tavily`
-(0.40), `exa-deep` (0.18). A backend whose modes are scored runs in those
-modes. Without a score for every ranked id, or for a ranked mode's backend,
+(0.40), `exa-deep` (0.18). Across methods, the order the decider first names
+them in is kept, so splitting a backend's score over its modes never moves the
+call to another method. A backend whose modes are scored runs in those modes. Without a score for every ranked id, or for a ranked mode's backend,
 the attempts keep the decider's order.
 
 `cheapest_first` shown modes answers `attempts` for the method the call runs:
