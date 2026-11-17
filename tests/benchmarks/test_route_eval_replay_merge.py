@@ -66,3 +66,19 @@ def test_a_decision_ranking_no_candidate_fails_as_the_same_list_does(route_eval:
     assert as_decision.served_by == as_list.served_by == "perplexity"
     other = route_eval.replay(lambda _: RouteDecision(providers={"answer": ["bogus"]}), q, static)
     assert not other.router_failed, "a ranking for another method names nothing for this one"
+
+
+def test_a_router_named_as_router_colon_name_is_built_and_asked(
+    route_eval: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.decider_helpers import TOKEN, gemini, respond, serve
+
+    monkeypatch.setenv("GEMINI_API_KEY", TOKEN)
+    answers = [gemini("search:perplexity"), lambda req: respond({}, status=503)]
+    server = serve(monkeypatch, lambda req: answers[len(server.requests) - 1](req))
+    router = route_eval.load_router("router:gemini", "search")
+    q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
+    outcome = route_eval.replay(router, q, route_eval.static_router("search"))
+    assert outcome.served_by == "perplexity" and not outcome.router_failed
+    failed = route_eval.replay(router, q, route_eval.static_router("search"))
+    assert failed.router_failed and failed.router_error is not None and "503" in failed.router_error

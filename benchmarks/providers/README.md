@@ -384,8 +384,10 @@ By default it scores `sealqa-hard-254` and `simpleqa-300-v2`, SimpleQA being
 the control set where routing should gain nothing, and `tools-effort-60`
 ([below](#tool-choice-and-effort)). A router is `static`
 (`auto`'s order today), `oracle` (the backend that got each question right,
-cheapest first: the ceiling), `always:<backend>`, or your own callable as
-`module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
+cheapest first: the ceiling), `always:<backend>`, a built-in or registered
+router by name as `router:<name>` (`router:gemini`, built with no
+`router_config`: it reads its preset's key and each question bills its vendor),
+or your own callable as `module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
 as the yardsticks. Your callable is a router of the library's contract
 (`web_router.routing`): it takes a `RouteRequest` -- one candidate per backend
 the set has rows for, with its list price and p90, and the method pinned -- and

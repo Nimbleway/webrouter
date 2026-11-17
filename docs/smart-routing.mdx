@@ -181,8 +181,8 @@ or an in-depth analysis is researched, or searched when no research backend is
 configured; anything else is searched. It reads English phrases, never single
 words like "why" or "list", and never picks `browse` or `answer`. It ranks no
 backends, so under a cost cap they run cheapest first. It also ships
-two model routers,
-`router="llm"` and `router="systemone"`: see
+three model routers,
+`router="llm"`, `router="systemone"` and `router="gemini"`: see
 [Decision APIs](/smart-routing#decision-apis).
 Six example routers, tested offline: [rules](https://github.com/Nimbleway/webrouter/blob/main/examples/router_rules.py), a
 [scikit-learn classifier](https://github.com/Nimbleway/webrouter/blob/main/examples/router_classifier.py), a
@@ -345,7 +345,7 @@ one, its qualified name is used, and with a `min_url_policy` attribute
 
 ## Decision APIs
 
-`DeciderRouter`, `router="llm"` and `router="systemone"`.
+`DeciderRouter`, `router="llm"`, `router="systemone"` and `router="gemini"`.
 
 A classifier, a model or a decision API answers one question: which of these
 options fits this prompt. A *decider* answers just that, and `DeciderRouter`
@@ -410,13 +410,30 @@ httpx, so install the `remote` extra (`pip install "webrouter[remote]"`, or
   WebRouter(router="systemone", router_config={"preset": "typesafe"})
   ```
 
+- **`router="gemini"`**: Google's Gemini Decisions API, asked up to two
+  `choice` questions in one request: which backend, and, with
+  `route_modes=True`, which vendor mode. Each question's probabilities are the
+  scores, so a mode ranks by its backend's probability times its share of that
+  backend's mode probabilities. A question takes at most 255 options: past
+  that, the first 255 in the static order are asked and the rest follow the
+  ranked ones in the static order. Preset: `google`, the default (model
+  `gemini-decision-1`, `GEMINI_API_KEY`, sent only in the `x-goog-api-key`
+  header), pinned so a new release changes nothing until you pass `model`;
+  another server takes `base_url`, `path`, `model` and `api_key_env`.
+  `timeout_s` is 1 s, and `route_tools` every tool but search, unless set.
+
+  ```python
+  WebRouter(router="gemini")
+  ```
+
 Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
-`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), read once
+`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `GEMINI_API_KEY`), read once
 when the router is built, and is sent only to that vendor's host: naming one
 for another `base_url` raises `ConfigurationError`, as does a key that is
 missing. Each call sends the server the prompt -- for an extract, its URLs
-whole, query strings included -- the budget, and the candidate ids, which name
+whole, query strings included -- the budget (except `gemini`, which sends
+none), and the candidate ids, which name
 your configured backends, with their estimated cost and p90 latency; never a
 provider key. The transport is the `remote` router's: `https` only (plain
 `http` only to this machine), no credentials, query or fragment in the URL,

@@ -16,7 +16,6 @@ server takes ``base_url``, ``path``, ``model`` and ``api_key_env``.
 
 from __future__ import annotations
 
-import math
 from collections.abc import Collection
 from dataclasses import asdict
 from typing import Any
@@ -32,14 +31,9 @@ from web_router.constants_decider import (
 )
 from web_router.routing.decider import DeciderQuestion, DeciderReply
 from web_router.routing.decider_http import endpoint, post_json, preset_of, text
-from web_router.routing.decider_reply import unit_number
+from web_router.routing.decider_reply import score_order
 from web_router.routing.decider_router import DeciderRouter, takes_config_of
 from web_router.routing.remote_errors import RemoteRouterInvalid
-
-
-def _order(value: object) -> float:
-    """A probability's sort key; anything but a number from 0 to 1 sorts last, for the reply check to refuse."""
-    return float(value) if unit_number(value) else -math.inf
 
 
 class SystemOneDecider:
@@ -104,7 +98,7 @@ class SystemOneDecider:
         probabilities = answer.get("probabilities") if isinstance(answer, dict) else None
         if not isinstance(answer, dict) or not isinstance(probabilities, dict):
             raise RemoteRouterInvalid(self._endpoint.host, DECIDER_WHY_REPLY)
-        ranked = sorted(probabilities, key=lambda cid: _order(probabilities[cid]), reverse=True)
+        ranked = sorted(probabilities, key=lambda cid: score_order(probabilities[cid]), reverse=True)
         return DeciderReply(ranked=ranked, scores=probabilities, confidence=answer.get("confidence"))
 
 

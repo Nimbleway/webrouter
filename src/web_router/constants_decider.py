@@ -1,4 +1,4 @@
-"""Deciders and the built-in ``llm`` and ``systemone`` routers: presets, limits and messages.
+"""Deciders and the built-in ``llm``, ``systemone`` and ``gemini`` routers: presets, limits and messages.
 
 Experimental: :mod:`web_router.routing` is new and may change before 1.0.
 Kept apart from :mod:`web_router.constants`, so that file stops growing.
@@ -85,6 +85,7 @@ KEY_HOMES: dict[str, str] = {
     "OPENROUTER_API_KEY": "openrouter.ai",
     "GROQ_API_KEY": "api.groq.com",
     "TYPESAFE_API_KEY": "api.typesafe.ai",
+    "GEMINI_API_KEY": "generativelanguage.googleapis.com",
 }
 """A preset's key variable -> the one host it is sent to: a vendor's key never goes to another server."""
 

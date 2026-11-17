@@ -94,7 +94,7 @@ def hosts_in(config: object, name: str | None = None) -> list[str]:
 def display_name(name: str, config: Mapping[str, Any] | None) -> str:
     """What the capabilities resource calls a built-in router, as the decision record names it once built.
 
-    ``fallback(<member>, ...)``; ``llm(<host>)`` and ``systemone(<host>)``, the host alone; else ``name(<scheme>://<host>)``.
+    ``fallback(<member>, ...)``; ``llm(<host>)``, ``systemone(<host>)`` and ``gemini(<host>)``, the host alone; else ``name(<scheme>://<host>)``.
     """
     config = config or {}
     members = config.get(FALLBACK_MEMBERS_KEY)

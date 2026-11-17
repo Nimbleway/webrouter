@@ -10,8 +10,11 @@ the router scores. Nothing is called; the numbers are the committed rows in
 
 A router is ``static`` (today's ``auto`` order; on a mixed set, search then
 read), ``oracle`` (the best backend or path for each question, known after the
-fact), ``always:<backend>`` (``always:<path>`` on a mixed set), or your own
-callable named ``module:attr`` or ``path/to/file.py:attr``. Yours is a
+fact), ``always:<backend>`` (``always:<path>`` on a mixed set), a built-in
+or registered router by name, ``router:<name>`` (such as ``router:gemini``,
+built with no ``router_config``, so it reads its preset's key and bills its
+vendor), or your own callable named ``module:attr`` or
+``path/to/file.py:attr``. Yours is a
 router of the library's contract: it takes a ``RouteRequest`` and returns a
 ``RouteDecision``, or ``{"decision": ..., "cost_usd": 0.0001}`` when it bills
 for itself, and the replay merges it as a routed call would. The request's

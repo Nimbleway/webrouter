@@ -1,4 +1,4 @@
-"""route-eval's routers: the static order, the oracle, one backend always, and a router of your own.
+"""route-eval's routers: the static order, the oracle, one backend always, a router by name, and one of your own.
 
 A yardstick router takes a :class:`~route_eval_sets.Question` and returns the
 candidate ids best first; your own takes a ``RouteRequest`` and returns a
@@ -8,6 +8,7 @@ sibling, by name, as ``_common`` is.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import importlib.util
 import sys
@@ -32,10 +33,12 @@ from web_router.constants_answer import AUTO_ANSWER_PREFERRED
 from web_router.providers.auto import AutoExtractProvider, AutoProvider
 from web_router.providers.auto_answer import AutoAnswerProvider
 from web_router.routing.contract import RouteRequest
+from web_router.routing.registry import resolve_router
 
 STATIC = "static"
 ORACLE = "oracle"
 ALWAYS = "always:"
+NAMED = "router:"
 
 STATIC_ORDER: dict[str, tuple[str, ...]] = {
     "search": tuple(name for name, _ in AutoProvider.default_chain(frozenset((*AUTO_PREFERRED, *AUTO_APPENDED)))),
@@ -54,8 +57,8 @@ read on a mixed set, to order its read and research paths.
 """
 
 MSG_BAD_ROUTER = (
-    "{spec!r}: a router is static, oracle, always:<backend> (always:<path> on a mixed set), module:attr or "
-    "path/file.py:attr"
+    "{spec!r}: a router is static, oracle, always:<backend> (always:<path> on a mixed set), router:<name>, "
+    "module:attr or path/file.py:attr"
 )
 
 Router = Callable[[Question], Any]
@@ -103,6 +106,21 @@ def adapt(user: UserRouter) -> Router:
     return route
 
 
+def named_router(name: str) -> UserRouter:
+    """A built-in or registered router by name, built with no ``router_config``, such as ``router:gemini``.
+
+    Asked through its ``aroute`` (else ``route``) with no deadline, as route-eval asks every router; what it
+    raises, such as a decider's refused reply, is the replay's router failure.
+    """
+    built, _ = resolve_router(name, None)
+
+    def route(req: RouteRequest) -> Any:
+        aroute = getattr(built, "aroute", None)
+        return asyncio.run(aroute(req)) if callable(aroute) else built.route(req)  # type: ignore[union-attr]
+
+    return route
+
+
 def load_router(spec: str, method: str) -> Router:
     """A router named on the command line."""
     if spec == STATIC:
@@ -111,6 +129,8 @@ def load_router(spec: str, method: str) -> Router:
         return oracle_router(method)
     if spec.startswith(ALWAYS):
         return always_router(spec.removeprefix(ALWAYS))
+    if spec.startswith(NAMED):
+        return adapt(named_router(spec.removeprefix(NAMED)))
     target, sep, attr = spec.rpartition(":")
     if not sep or not target or not attr:
         raise SystemExit(MSG_BAD_ROUTER.format(spec=spec))

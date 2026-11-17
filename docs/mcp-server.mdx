@@ -346,7 +346,7 @@ environment -- once, when the server starts:
   config entry `api_key_env` names the variable holding a key: its value is
   read once at startup and put in its place as `api_key`, so the router never
   reads the environment again. When the variable is unset, `remote` starts
-  with no key (`""`), while `llm` and `systemone` stop the server from
+  with no key (`""`), while `llm`, `systemone` and `gemini` stop the server from
   starting. For example, a router
   service with a local classifier service behind it:
 
@@ -363,7 +363,7 @@ environment -- once, when the server starts:
   `WEB_ROUTER_REMOTE_ROUTER_API_KEY`, read when it is built at startup.
 
   **A router's key comes from the server's own process environment only.**
-  An `llm` or `systemone` preset given no key reads its vendor's variable
+  An `llm`, `systemone` or `gemini` preset given no key reads its vendor's variable
   (`OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, `TYPESAFE_API_KEY` ...), which is
   often a provider credential too. The server captures it, and every
   `api_key_env`, as `api_key` at startup, before it reads any `.env` file, so
@@ -372,7 +372,7 @@ environment -- once, when the server starts:
   there stops the server, and a vendor's variable named for a router that
   posts to any other host is refused. The capabilities resource names a
   preset's host too, as the record does: `llm(api.openai.com)`,
-  `systemone(api.typesafe.ai)`. A value that is not
+  `systemone(api.typesafe.ai)`, `gemini(generativelanguage.googleapis.com)`. A value that is not
   a JSON object, or one set beside no built-in router, stops the server;
 - `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
   order, which is `search`.
@@ -422,7 +422,7 @@ wait no longer than it has left.
 
 - **The operator's ceiling**: `WEB_ROUTER_MCP_MAX_COST_USD` and
   `WEB_ROUTER_MCP_TIME_LIMIT_S`. It counts what the backends charge; a router
-  that bills for itself, such as `llm` or `systemone`, is billed by its vendor
+  that bills for itself, such as `llm`, `systemone` or `gemini`, is billed by its vendor
   and is not counted. With no `budget_start`, the whole connection
   is one task under it, its clock running from the connection's start. The
   agent cannot reset or raise it.
@@ -463,7 +463,7 @@ its `<module>:<attribute>` -- `remote(<scheme>://<host>)` for a service, never i
 `fallback(<member>, ...)` for a fallback, or
 `off`), where it runs (`router_runs`: `in_process` for the built-in router or
 none, `operator` with a `router_note` for yours, `remote` with a `router_note` naming each host prompts go to --
-a service, or a built-in `llm` or `systemone` router's vendor host --
+a service, or a built-in `llm`, `systemone` or `gemini` router's vendor host --
 `built_in` for a built-in router whose config names no URL),
 a `prompt_note` saying the
 prompt goes to the backend, and to each router service's host, the `url_policy` with a `url_policy_note` saying
