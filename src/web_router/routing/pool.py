@@ -1,7 +1,6 @@
 """A budget several calls spend from: what :meth:`~web_router.WebRouter.budget` holds.
 
-A pool keeps one :class:`~web_router.Budget` for every call
-made through its scope, and is the only state those calls share:
+A pool keeps one :class:`~web_router.Budget` for every call made through its scope, the only state they share:
 
 - each call's budget is the tighter of its own ``budget=`` and what the
   pools in force have left (:meth:`PoolChain.limit`): the dollars and the
@@ -133,18 +132,12 @@ class PoolChain:
         return None if ends is None else max(0.0, ends - time.monotonic())
 
     def reserve(self, cost: float) -> float | None:
-        """Reserve ``cost`` in every pool of the chain, or in none of them.
-
-        Every pool's lock is held at once, taken in one order shared by all
-        chains, so no other call sees a reservation that is about to be undone
-        and no two chains wait on each other.
+        """Reserve ``cost`` in every pool of the chain or in none, with every pool's lock held at once.
 
         Returns ``None`` once reserved; otherwise the dollars left in the
         innermost pool that refused, which ``cost`` does not fit.
         """
-        with ExitStack() as held:
-            for pool in sorted(self.pools, key=lambda pool: pool.order):
-                held.enter_context(pool._lock)
+        with self._held():
             for pool in self.pools:
                 left = pool._left()
                 if left is not None and over_cost(cost, left):
@@ -154,10 +147,18 @@ class PoolChain:
         return None
 
     def release(self, cost: float) -> None:
-        """Give back ``cost``, reserved for an attempt taken back, in every pool of the chain."""
-        for pool in self.pools:
-            with pool._lock:
+        """Give back ``cost``, reserved for an attempt taken back, in every pool of the chain at once."""
+        with self._held():
+            for pool in self.pools:
                 pool._reserved -= cost
+
+    def _held(self) -> ExitStack:
+        """Every pool's lock, taken in one order all chains share, so no other call sees a reservation half made
+        or half undone and no two chains wait on each other."""
+        held = ExitStack()
+        for pool in sorted(self.pools, key=lambda pool: pool.order):
+            held.enter_context(pool._lock)
+        return held
 
     def settle(self, cost: float) -> None:
         """Move ``cost``, what a call that has ended reserved, from reserved to spent in every pool of the chain."""

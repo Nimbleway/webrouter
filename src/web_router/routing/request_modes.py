@@ -23,8 +23,8 @@ def backends_only(req: RouteRequest) -> RouteRequest:
 
 
 def runnable(candidates: Sequence[Candidate]) -> bool:
-    """Whether ``candidates`` hold a backend to run: a router shown only vendor modes could order nothing yet."""
-    return any(candidate.mode is None for candidate in candidates)
+    """Whether ``candidates`` hold anything to run: a backend, or a vendor mode a router's ``attempts`` can name."""
+    return bool(candidates)
 
 
 def within(req: RouteRequest, limit: int) -> RouteRequest:

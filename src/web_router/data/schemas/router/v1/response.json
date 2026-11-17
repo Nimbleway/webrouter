@@ -75,7 +75,7 @@
         }
       ],
       "default": null,
-      "description": "Candidate ids to try, best first, a vendor mode's included; set, it replaces ``tools`` and ``providers``.",
+      "description": "Candidate ids to try, best first, vendor modes included; non-empty, they replace ``tools`` and ``providers``.",
       "title": "Attempts"
     },
     "exclude": {

@@ -42,6 +42,7 @@ from web_router.constants_merge import (
     LAST_RESORT_TOOL,
     MSG_EXCLUDE_NO_REASON,
     MSG_EXCLUSIONS_EMPTY,
+    MSG_MODE_NOT_RUN,
     MSG_TOOL_NO_CANDIDATE,
     MSG_UNKNOWN_ID,
     MSG_UNKNOWN_TOOL,
@@ -100,7 +101,7 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
         return request.pinned_tool
     if decision.attempts:
         return first_tool(request, decision, excluded) or LAST_RESORT_TOOL
-    left = {c.tool for c in request.candidates if c.id not in excluded}
+    left = {c.tool for c in request.candidates if c.mode is None and c.id not in excluded}  # a backend to run
     for tool in decision.tools or ():
         if tool not in TOOLS:
             ignored[tool] = MSG_UNKNOWN_TOOL.format(tool=tool)
@@ -112,18 +113,20 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
 
 
 def _ranked(
-    tool: str, request: RouteRequest, decision: RouteDecision, known: Collection[str], ignored: dict[str, str]
+    tool: str, request: RouteRequest, decision: RouteDecision, known: Mapping[str, str | None], ignored: dict[str, str]
 ) -> tuple[str, ...]:
-    """The router's backends for ``tool``, best first, or its attempts when set; an unknown one noted and left out."""
+    """The router's backends for ``tool``, best first, or its attempts when set; an unknown id, or a vendor mode's
+    id ranked as a backend, noted and left out."""
     if decision.attempts:
         return ranked_attempts(tool, request, decision, ignored)
     asked: Mapping[Any, Sequence[str]] = decision.providers or {}
     ranked = []
     for provider in dict.fromkeys(asked.get(tool, ())):
-        if candidate_id(tool, provider) in known:
+        cid = candidate_id(tool, provider)
+        if cid in known and known[cid] is None:
             ranked.append(provider)
         else:
-            ignored[candidate_id(tool, provider)] = MSG_UNKNOWN_ID.format(id=candidate_id(tool, provider))
+            ignored[cid] = (MSG_MODE_NOT_RUN if cid in known else MSG_UNKNOWN_ID).format(id=cid)
     return tuple(ranked)
 
 
@@ -173,7 +176,7 @@ def merge(
     decision = cast(RouteDecision, decision)
     if decides_nothing(decision):
         return _static(request, static_order, None, decision.reason)
-    known = {c.id for c in request.candidates}
+    known = {c.id: c.mode for c in request.candidates}
     ignored: dict[str, str] = {}
     excluded = _exclusions(decision, known, ignored)
     asked = _tool(request, decision, excluded, ignored)

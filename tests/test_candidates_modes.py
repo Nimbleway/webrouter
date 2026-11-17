@@ -53,7 +53,7 @@ def test_route_modes_shows_one_candidate_per_offered_mode_each_priced_on_its_own
         attempt = Attempt(tool="search", provider="exa", request=moded)
         assert (candidate.mode, candidate.est_cost_usd) == (moded.mode, attempt_cost(attempt))
         assert candidate.est_latency_s == attempt_p90(attempt)
-    assert candidates["search:exa:exa-instant"].est_cost_usd != candidates["search:exa"].est_cost_usd
+    assert (candidates["search:exa:exa-instant"].est_cost_usd, candidates["search:exa"].est_cost_usd) == (0.014, 0.017)
     ordered = list(candidates)
     assert ordered.index("search:tavily") > max(i for i, cid in enumerate(ordered) if cid.startswith("search:exa:"))
 
@@ -75,12 +75,13 @@ def test_a_built_in_decider_attached_is_shown_backends_only(keys: Any, decider: 
     assert WebRouter(router=DeciderRouter(fake))._route_modes is False
 
 
-def test_a_router_shown_only_modes_is_not_asked(keys: Any) -> None:
-    router, cap = Shown(), Budget(max_cost_usd=0.015)  # Exa's default is over it, its instant mode is not
+def test_a_router_shown_only_modes_is_asked_and_its_attempts_give_the_order(keys: Any) -> None:
+    router, cap = Shown(RouteDecision(attempts=["search:exa:exa-instant"])), Budget(max_cost_usd=0.015)
     with WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router, route_modes=True) as wr:
         found = build_candidates(wr, SEARCH, budget=cap, modes=True)
-        wr.plan("q", tool="search", budget=cap)
-    assert ids(found) == ["search:exa:exa-instant"] and router.reqs == []
+        plan = wr.plan("q", tool="search", budget=cap)
+    assert ids(found) == ["search:exa:exa-instant"], "Exa's default is over the cap, its instant mode is not"
+    assert router.ids == ids(found) and plan.providers["search"] == ("exa:exa-instant",)
 
 
 @pytest.mark.parametrize("value", ["yes", 1, [True]])
@@ -166,3 +167,12 @@ def test_a_tier_the_effort_asked_would_overwrite_is_dropped_as_pinning_it_refuse
     tiers = [f"search:exa:{tier}" for tier in get_provider_class("exa").tiers]
     assert not set(tiers) & set(ids(found)) and all("effort='medium'" in found.dropped[cid] for cid in tiers)
     assert "search:exa:exa-highlights" in ids(found), "a content writes no type: still offered"
+
+
+def test_a_bug_in_a_backends_payload_builder_surfaces_rather_than_hiding_its_modes(keys: Any) -> None:
+    def broken(self: Any, request: Any) -> dict[str, Any]:
+        raise KeyError("a bug, not a refusal")
+
+    keys.setattr(get_provider_class("exa"), "_build_payload", broken)
+    with pytest.raises(KeyError, match="a bug"):
+        build_candidates(WebRouter(provider_config=CHAIN), SEARCH, modes=True)

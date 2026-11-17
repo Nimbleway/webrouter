@@ -14,6 +14,7 @@ from typing import Any
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS, MSG_DROPPED_REFUSES_MODE
+from web_router.exceptions import WebRouterError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._modes import SEARCH, offers
 from web_router.providers._pinning import pinned_request
@@ -46,7 +47,7 @@ def mode_requests(router: Any, tool: str, request: NormalizedRequest, name: str)
         except InvalidParameterError as exc:
             entries.append((offered, MSG_DROPPED_REFUSES_MODE.format(why=exc)))
             continue
-        except Exception as exc:  # the backend's own refusal: named by class, since its text may quote the query
+        except WebRouterError as exc:  # the backend's own refusal: named by class, since its text may quote the query
             entries.append((offered, MSG_DROPPED_REFUSES_MODE.format(why=type(exc).__name__)))
             continue
         if moded.mode and payload != default:
@@ -57,10 +58,13 @@ def mode_requests(router: Any, tool: str, request: NormalizedRequest, name: str)
 def _payload(owner: Any, request: SearchRequest) -> dict[str, Any] | None:
     """The payload ``owner`` builds for ``request``, never sent; ``None`` when it builds none -- a backend of the
     caller's own may call its API another way -- or refuses the request itself, such as a query over its limit. The
-    call reports that when it runs; building candidates never raises on it."""
+    call reports a refusal when it runs, so building candidates does not raise on it; a bug in the builder does."""
+    build = getattr(owner, "_build_payload", None)
+    if build is None:
+        return None
     try:
-        return dict(owner._build_payload(request))
-    except Exception:
+        return dict(build(request))
+    except WebRouterError:
         return None
 
 

@@ -6,8 +6,7 @@ this order: a tier, a depth, then flags sorted. A slot left empty is the backend
 - A **tier** (:class:`Tier`) sets a vendor field (Exa's ``type``); a depth that writes the same field is refused.
 - The **depth** slot holds a normalized level, bare (``lite``, ``fast``, ``deep``; ``low`` ... ``max`` for
   research), or a **content** (:class:`Content`), which replaces what depth sends and names the level it stands for.
-- A **flag** (:class:`Flag`) writes a field no tier or other flag writes; a depth that sends that field another way
-  is refused (``deepseek-content`` takes ``deep``, not ``lite``).
+- A **flag** (:class:`Flag`) writes its own field; a depth sending it another way is refused (``deepseek-content``).
 
 A vendor part is spelled with its provider's name first (``exa-instant``), never read as a normalized level, and the
 parser learns each part's slot from the provider's declarations; its ``does`` tells a router what it changes. Input in

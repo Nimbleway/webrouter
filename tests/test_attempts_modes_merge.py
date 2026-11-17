@@ -38,6 +38,7 @@ def test_the_attempts_rank_the_method_modes_included_and_the_other_backends_foll
     assert merged.tool == "search", "attempts replace tools"
     assert merged.providers == ("exa:exa-instant", "exa:exa-deep", "tavily", "brave", "exa")
     assert merged.record()["merged"][:2] == [INSTANT, DEEP]
+    assert not {INSTANT, DEEP} & set(merged.notes.ignored), "a mode attempts run is not noted as not run"
 
 
 def test_the_first_attempt_picks_the_method_and_an_unknown_one_is_noted() -> None:
@@ -71,10 +72,17 @@ def test_attempts_alone_decide_something_and_must_be_a_list_of_ids() -> None:
     assert not well_formed(RouteDecision(attempts=INSTANT))  # a bare string is no ranking
 
 
+def test_empty_attempts_are_unset_so_the_decisions_providers_still_rank() -> None:
+    merged = _merged(RouteDecision(attempts=[], providers={"search": ["tavily"]}))
+    assert merged.providers[0] == "tavily" and not merged.notes.empty
+
+
 def test_attempts_count_as_a_ranking_so_the_cost_order_does_not_replace_the_static_order() -> None:
     found = CandidateSet(candidates=CANDIDATES, cost_order={"search": ["tavily", "exa", "brave"]})
     assert _base_order(found, RouteDecision(attempts=[INSTANT]))["search"] == ["exa", "tavily", "brave"]
     assert _base_order(found, RouteDecision())["search"] == ["tavily", "exa", "brave"], "ranked by none: cost order"
+    dropped = RouteDecision(attempts=["search:exa:dropped-by-the-cap"])
+    assert _base_order(found, dropped)["search"] == ["tavily", "exa", "brave"], "no attempt left: cost order"
 
 
 def test_under_a_cost_cap_the_routers_attempts_keep_their_order(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,3 +92,10 @@ def test_under_a_cost_cap_the_routers_attempts_keep_their_order(monkeypatch: pyt
         assert plan.providers["search"][:3] == ("exa:exa-deep", "exa:exa-instant", "tavily")
         response = wr.run(plan, budget=Budget(max_cost_usd=1.0))
     assert (calls.exa, response.provider) == (["deep", "instant"], "exa")
+
+
+def test_with_only_mode_candidates_the_attempts_give_a_runnable_order() -> None:
+    modes = tuple(c for c in CANDIDATES if c.mode is not None)
+    req = RouteRequest(prompt="q", candidates=modes, deadline_s=1.0)
+    merged = merge(req, RouteDecision(attempts=[DEEP, INSTANT]), STATIC, url_check=any_web_url)
+    assert (merged.tool, merged.providers) == ("search", ("exa:exa-deep", "exa:exa-instant"))

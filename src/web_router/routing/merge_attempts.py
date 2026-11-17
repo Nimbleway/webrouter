@@ -30,11 +30,6 @@ def backends(request: RouteRequest, tool: str, names: Sequence[str]) -> tuple[st
     return tuple(dict.fromkeys(by_entry.get(name, name) for name in names))
 
 
-def tool_of(cid: str) -> str:
-    """The method a candidate id names: ``search`` for ``search:exa:exa-instant``."""
-    return cid.partition(CANDIDATE_ID_SEPARATOR)[0]
-
-
 def is_excluded(candidate: Candidate, excluded: Collection[str]) -> bool:
     """Whether ``excluded`` names ``candidate``, or for a vendor mode, its backend."""
     return candidate.id in excluded or candidate_id(candidate.tool, candidate.provider) in excluded
