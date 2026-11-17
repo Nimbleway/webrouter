@@ -17,11 +17,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 1.816,
+      "latency_p90_s": 10.415,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "nimble",
@@ -66,11 +68,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 2.826,
+      "latency_p90_s": 7.475,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "tavily",
@@ -114,11 +118,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 2.53,
+      "latency_p90_s": 3.67,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "tavily",
@@ -136,11 +142,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 2.788,
+      "latency_p90_s": 4.111,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "tavily",
@@ -158,11 +166,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.64,
+      "latency_p90_s": 0.915,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "tavily",
@@ -180,11 +190,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.328,
+      "latency_p90_s": 0.679,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "exa",
@@ -229,11 +241,13 @@
       "depth_assumed": "lite",
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 2.23,
+      "latency_p90_s": 3.79,
+      "latency_n": 249,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "exa",
@@ -252,11 +266,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.454,
+      "latency_p90_s": 0.596,
+      "latency_n": 252,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "exa",
@@ -275,11 +291,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.452,
+      "latency_p90_s": 0.655,
+      "latency_n": 252,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "exa",
@@ -298,11 +316,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 1.981,
+      "latency_p90_s": 2.931,
+      "latency_n": 249,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "exa",
@@ -321,11 +341,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 3.962,
+      "latency_p90_s": 7.82,
+      "latency_n": 250,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "exa",
@@ -344,11 +366,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 5.756,
+      "latency_p90_s": 11.053,
+      "latency_n": 249,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "perplexity",
@@ -391,11 +415,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.301,
+      "latency_p90_s": 0.358,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "perplexity",
@@ -482,11 +508,13 @@
       "depth_assumed": null,
       "adds_usd": 0.0,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.828,
+      "latency_p90_s": 1.242,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "parallel",
@@ -529,11 +557,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.478,
+      "latency_p90_s": 0.634,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "parallel",
@@ -551,11 +581,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 2.21,
+      "latency_p90_s": 3.291,
+      "latency_n": 253,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "parallel",
@@ -573,11 +605,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 2.874,
+      "latency_p90_s": 3.933,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "you",
@@ -621,11 +655,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.857,
+      "latency_p90_s": 1.079,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "you",
@@ -644,11 +680,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 2.666,
+      "latency_p90_s": 6.841,
+      "latency_n": 247,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "you",
@@ -666,11 +704,13 @@
       "depth_assumed": "deep",
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.868,
+      "latency_p90_s": 1.23,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "you-mcp",
@@ -712,11 +752,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.333,
+      "latency_p90_s": 0.498,
+      "latency_n": 252,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "linkup",
@@ -759,11 +801,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 1.339,
+      "latency_p90_s": 1.575,
+      "latency_n": 251,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "linkup",
@@ -781,11 +825,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 11.596,
+      "latency_p90_s": 32.012,
+      "latency_n": 247,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "webiq",
@@ -828,13 +874,14 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": 0.317,
-      "latency_p90_s": 0.636,
-      "latency_n": 299,
+      "latency_p50_s": 0.315,
+      "latency_p90_s": 0.552,
+      "latency_n": 553,
       "latency_runs": [
+        "sealqa-hard-254-defaults-1116",
         "simpleqa-300-keenable"
       ],
-      "latency_measured": "2026-10-13"
+      "latency_measured": "2026-11-16"
     },
     {
       "provider": "keenable",
@@ -852,11 +899,13 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.296,
+      "latency_p90_s": 0.453,
+      "latency_n": 254,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "deepseek",
@@ -874,13 +923,14 @@
       "depth_assumed": null,
       "adds_usd": null,
       "writes": null,
-      "latency_p50_s": 0.535,
-      "latency_p90_s": 0.577,
-      "latency_n": 252,
+      "latency_p50_s": 0.552,
+      "latency_p90_s": 0.617,
+      "latency_n": 409,
       "latency_runs": [
+        "sealqa-hard-254-defaults-1116",
         "simpleqa-300-deepseek"
       ],
-      "latency_measured": "2026-10-19"
+      "latency_measured": "2026-11-16"
     },
     {
       "provider": "deepseek",
@@ -898,11 +948,13 @@
       "depth_assumed": null,
       "adds_usd": 0.0,
       "writes": null,
-      "latency_p50_s": null,
-      "latency_p90_s": null,
-      "latency_n": null,
-      "latency_runs": null,
-      "latency_measured": null
+      "latency_p50_s": 0.595,
+      "latency_p90_s": 0.676,
+      "latency_n": 157,
+      "latency_runs": [
+        "sealqa-hard-254-modes"
+      ],
+      "latency_measured": "2026-11-15"
     },
     {
       "provider": "valyu",
