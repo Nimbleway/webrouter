@@ -46,11 +46,6 @@ LINKUP_TIERS: Mapping[str, Tier] = {
 """Linkup's depths other than ``fast``, the one a search sends unset."""
 
 PERPLEXITY_TIERS: Mapping[str, Tier] = {"perplexity-fast": Tier(wire={"search_type": "fast"})}
-PERPLEXITY_FLAGS: Mapping[str, Flag] = {
-    "perplexity-context-low": Flag(wire={"search_context_size": "low"}, writes="search_context_size"),
-    "perplexity-context-medium": Flag(wire={"search_context_size": "medium"}, writes="search_context_size"),
-}
-"""Shorter passages per page than the default ``high``; both write one field, so they never combine."""
 
 KEENABLE_TIERS: Mapping[str, Tier] = {"keenable-realtime": Tier(wire={"mode": "realtime"})}
 """Keenable's fastest mode; unset, a search runs in ``pro``."""
