@@ -12,6 +12,7 @@ import asyncio
 import atexit
 import importlib
 import importlib.util
+import inspect
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -110,10 +111,10 @@ def adapt(user: UserRouter) -> Router:
 def named_router(name: str) -> UserRouter:
     """A built-in or registered router by name, built with no ``router_config``, such as ``router:gemini``.
 
-    Asked through its ``aroute``, else its ``route``, else called, with no deadline, as route-eval asks every
-    router, on one event loop kept for the run and closed, with the router, when the process exits. What it
-    raises, such as a decider's refused reply, is the replay's router failure. What it bills its own vendor is
-    not counted in the cost.
+    Asked through its ``aroute``, else its ``route``, else called, and awaited when that returns an awaitable,
+    with no deadline, as route-eval asks every router, on one event loop kept for the run and closed, with the
+    router, when the process exits. What it raises, such as a decider's refused reply, is the replay's router
+    failure. What it bills its own vendor is not counted in the cost.
     """
     built, _ = resolve_router(name, None)
     loop = asyncio.new_event_loop()
@@ -126,7 +127,8 @@ def named_router(name: str) -> UserRouter:
 
     def route(req: RouteRequest) -> Any:
         aroute, sync = getattr(built, "aroute", None), getattr(built, "route", built)
-        return loop.run_until_complete(aroute(req)) if callable(aroute) else sync(req)
+        result = aroute(req) if callable(aroute) else sync(req)
+        return loop.run_until_complete(result) if inspect.isawaitable(result) else result
 
     return route
 

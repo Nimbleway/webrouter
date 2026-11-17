@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
@@ -113,3 +115,15 @@ def test_a_timeout_or_server_error_leaves_the_static_order(
     serve(monkeypatch, handler)  # type: ignore[arg-type]
     outcome = AttachedRouter(gemini_router(**LOCAL)).call(request())
     assert outcome.failure == failure and outcome.decision is None
+
+
+async def test_the_confidence_is_the_backend_questions_even_when_it_gives_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        sent = gemini("search:exa", "search:exa:exa-deep")(req)
+        answer = json.loads(sent.read())
+        answer["answers"]["backend"]["confidence"] = None
+        return respond(answer)
+
+    serve(monkeypatch, handler)
+    decision = await gemini_router(**LOCAL).aroute(request(candidates=MODES))
+    assert decision.confidence is None and decision.attempts

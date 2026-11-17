@@ -84,8 +84,21 @@ def test_a_router_named_as_router_colon_name_is_built_and_asked(
     assert failed.router_failed and failed.router_error is not None and "503" in failed.router_error
 
 
-def test_a_named_router_that_is_a_plain_callable_is_called(route_eval: ModuleType) -> None:
-    router = route_eval.load_router("router:cheapest_first", "search")
+def test_a_named_router_that_is_a_plain_or_async_callable_is_called(route_eval: ModuleType) -> None:
+    from web_router.routing.registry import register_router, unregister_router
+
+    async def pick(req: object) -> RouteDecision:
+        return RouteDecision(providers={"search": ["perplexity"]})
+
     q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
-    outcome = route_eval.replay(router, q, route_eval.static_router("search"))
+    outcome = route_eval.replay(
+        route_eval.load_router("router:cheapest_first", "search"), q, route_eval.static_router("search")
+    )
     assert not outcome.router_failed and outcome.router_error is None
+    register_router("async_pick", lambda **config: pick)
+    try:
+        router = route_eval.load_router("router:async_pick", "search")
+        outcome = route_eval.replay(router, q, route_eval.static_router("search"))
+    finally:
+        unregister_router("async_pick")
+    assert not outcome.router_failed and outcome.served_by == "perplexity"

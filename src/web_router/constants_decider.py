@@ -6,6 +6,8 @@ Kept apart from :mod:`web_router.constants`, so that file stops growing.
 
 from __future__ import annotations
 
+from web_router.constants_decider_gemini import GEMINI_HOST, GEMINI_KEY_ENV
+
 LLM_ROUTER_NAME = "llm"
 """The registered name of the built-in router on any OpenAI-compatible chat-completions API."""
 
@@ -85,7 +87,7 @@ KEY_HOMES: dict[str, str] = {
     "OPENROUTER_API_KEY": "openrouter.ai",
     "GROQ_API_KEY": "api.groq.com",
     "TYPESAFE_API_KEY": "api.typesafe.ai",
-    "GEMINI_API_KEY": "generativelanguage.googleapis.com",
+    GEMINI_KEY_ENV: GEMINI_HOST,
 }
 """A preset's key variable -> the one host it is sent to: a vendor's key never goes to another server."""
 

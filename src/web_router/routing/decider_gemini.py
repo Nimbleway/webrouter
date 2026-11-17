@@ -155,22 +155,21 @@ class GeminiDecider:
     async def adecide(self, question: DeciderQuestion) -> DeciderReply:
         """Ask both questions at once; rank backends, then modes, by the probability the API gives each.
 
-        The confidence is the backend question's, else the mode question's when only it was asked.
+        The confidence is the first question asked's: the backend question's, else the mode question's.
         """
         per_question = split(question.options)
         asked = {key: options for key, options in per_question.items() if len(options) >= GEMINI_MIN_OPTIONS}
         scores = {key: dict.fromkeys(options, 1.0) for key, options in per_question.items() if len(options) == 1}
-        confidence = None
+        said: list[Any] = [None]
         if asked:
             data = await post_json(self._endpoint, self.body(question, asked), question.deadline_s or self.timeout_s)
+            said = []
             for key, options in asked.items():
-                scores[key], said = self._answer(data, key, options)
-                confidence = said if confidence is None else confidence
+                scores[key], confidence = self._answer(data, key, options)
+                said.append(confidence)
         backends = scores.get(GEMINI_BACKEND_QUESTION, {})
         modes = scores.get(GEMINI_MODE_QUESTION, {})
-        return DeciderReply(
-            ranked=_ranked(backends) + _ranked(modes), scores={**backends, **modes}, confidence=confidence
-        )
+        return DeciderReply(ranked=_ranked(backends) + _ranked(modes), scores={**backends, **modes}, confidence=said[0])
 
 
 @takes_config_of(GeminiDecider)
