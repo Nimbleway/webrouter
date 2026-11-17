@@ -9,6 +9,7 @@ sibling, by name, as ``_common`` is.
 from __future__ import annotations
 
 import asyncio
+import atexit
 import importlib
 import importlib.util
 import sys
@@ -33,7 +34,7 @@ from web_router.constants_answer import AUTO_ANSWER_PREFERRED
 from web_router.providers.auto import AutoExtractProvider, AutoProvider
 from web_router.providers.auto_answer import AutoAnswerProvider
 from web_router.routing.contract import RouteRequest
-from web_router.routing.registry import resolve_router
+from web_router.routing.registry import aclose_router, resolve_router
 
 STATIC = "static"
 ORACLE = "oracle"
@@ -109,14 +110,22 @@ def adapt(user: UserRouter) -> Router:
 def named_router(name: str) -> UserRouter:
     """A built-in or registered router by name, built with no ``router_config``, such as ``router:gemini``.
 
-    Asked through its ``aroute`` (else ``route``) with no deadline, as route-eval asks every router; what it
-    raises, such as a decider's refused reply, is the replay's router failure.
+    Asked through its ``aroute`` (else ``route``) with no deadline, as route-eval asks every router, on one event
+    loop kept for the run and closed, with the router, when the process exits. What it raises, such as a decider's
+    refused reply, is the replay's router failure. What it bills its own vendor is not counted in the cost.
     """
     built, _ = resolve_router(name, None)
+    loop = asyncio.new_event_loop()
+
+    def close() -> None:
+        loop.run_until_complete(aclose_router(built))
+        loop.close()
+
+    atexit.register(close)
 
     def route(req: RouteRequest) -> Any:
         aroute = getattr(built, "aroute", None)
-        return asyncio.run(aroute(req)) if callable(aroute) else built.route(req)  # type: ignore[union-attr]
+        return loop.run_until_complete(aroute(req)) if callable(aroute) else built.route(req)  # type: ignore[union-attr]
 
     return route
 

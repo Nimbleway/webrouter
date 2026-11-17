@@ -13,7 +13,7 @@ read), ``oracle`` (the best backend or path for each question, known after the
 fact), ``always:<backend>`` (``always:<path>`` on a mixed set), a built-in
 or registered router by name, ``router:<name>`` (such as ``router:gemini``,
 built with no ``router_config``, so it reads its preset's key and bills its
-vendor), or your own callable named ``module:attr`` or
+vendor, which the cost does not count), or your own callable named ``module:attr`` or
 ``path/to/file.py:attr``. Yours is a
 router of the library's contract: it takes a ``RouteRequest`` and returns a
 ``RouteDecision``, or ``{"decision": ..., "cost_usd": 0.0001}`` when it bills
