@@ -129,7 +129,8 @@ def test_a_row_whose_mode_fields_do_not_fit_is_refused(fields: dict[str, Any]) -
 def _registered() -> list[tuple[str, str, type[Any]]]:
     search = [(n, "search", registry.get_provider_class(n)) for n in sorted(registry._BUILTIN_PROVIDERS)]
     research = [(n, "research", registry.get_research_provider_class(n)) for n in registry._BUILTIN_RESEARCH_PROVIDERS]
-    return search + research
+    extract = [(n, "extract", registry.get_extract_provider_class(n)) for n in registry._BUILTIN_EXTRACT_PROVIDERS]
+    return search + research + extract
 
 
 @pytest.mark.parametrize(("name", "method", "provider"), _registered())
