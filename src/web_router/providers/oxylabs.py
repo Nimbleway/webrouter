@@ -30,6 +30,7 @@ from web_router.constants import (
     OXYLABS_UNIVERSAL_SOURCE,
     PROVIDER_OXYLABS,
 )
+from web_router.constants_mode_parts_extract import OXYLABS_EXTRACT_TIERS
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload, resolve_setting
 from web_router.types import (
@@ -47,6 +48,7 @@ class OxylabsExtractProvider(HttpExtractProvider):
     """Fetches page contents through the Oxylabs Web Scraper API."""
 
     name: ClassVar[str] = PROVIDER_OXYLABS
+    tiers = OXYLABS_EXTRACT_TIERS
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(OXYLABS_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = OXYLABS_EXTRACT_DEFAULT_FORMAT
@@ -80,6 +82,8 @@ class OxylabsExtractProvider(HttpExtractProvider):
         body_format = self.format_of(request)
         return build_payload(
             request,
+            None,
+            self,
             source=OXYLABS_UNIVERSAL_SOURCE,
             url=urls[0],
             # Asking for markdown adds a result rather than replacing one, so

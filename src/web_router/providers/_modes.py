@@ -11,7 +11,7 @@ for, or an option (``search_depth``, ``effort``) that sets a field the mode writ
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any, ClassVar, Literal, Protocol
 
 from web_router.constants_modes import (
@@ -40,7 +40,9 @@ class ModeOwner(Protocol):
     contents: ClassVar[Mapping[str, Content]]
     flags: ClassVar[Mapping[str, Flag]]
 
-    def _build_payload(self, request: Any) -> dict[str, Any]: ...
+    @property
+    def _build_payload(self) -> Callable[..., dict[str, Any]]:
+        """Called with a search request alone when a collision is probed; an extract's also takes its URLs."""
 
 
 def merged(ours: dict[str, Any], theirs: Mapping[str, Any]) -> dict[str, Any]:
@@ -86,10 +88,16 @@ def with_mode(payload: dict[str, Any], owner: ModeOwner, request: NormalizedRequ
 def _refuse_collisions(
     owner: ModeOwner, request: NormalizedRequest, mode: str, wire: dict[str, Any], has_content: bool
 ) -> None:
-    """Refuse an option the caller set that changes a field the wire writes, to a value the wire does not send."""
-    bare = request.model_copy(update={"mode": None, "provider_options": {}, **dict.fromkeys(PROBED)})
+    """Refuse an option the caller set that changes a field the wire writes, to a value the wire does not send.
+
+    Only the options the request has: an extract or an answer has neither, so nothing is probed.
+    """
+    probed = [option for option in PROBED if option in type(request).model_fields]
+    if not probed:
+        return
+    bare = request.model_copy(update={"mode": None, "provider_options": {}, **dict.fromkeys(probed)})
     base = owner._build_payload(bare)
-    for option in PROBED:
+    for option in probed:
         value = getattr(request, option, None)
         if value is None or (has_content and option == "search_depth"):
             continue

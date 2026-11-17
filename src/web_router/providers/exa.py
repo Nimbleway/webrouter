@@ -40,6 +40,7 @@ from web_router.constants_exa import (
     EXA_TYPE_FIELD,
 )
 from web_router.constants_mode_parts import EXA_CONTENT_PARTS, EXA_TIERS
+from web_router.constants_mode_parts_extract import EXA_EXTRACT_FLAGS
 from web_router.providers._clock import recency_start
 from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
@@ -127,6 +128,7 @@ class ExaExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_EXA
+    flags = EXA_EXTRACT_FLAGS
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(EXA_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = EXA_EXTRACT_DEFAULT_FORMAT
@@ -141,7 +143,7 @@ class ExaExtractProvider(HttpExtractProvider):
         # `urls` and `ids` are both accepted and the schema requires one of
         # them; Exa documents `urls` as "backwards compatible with the ids
         # parameter", so `ids` is the older spelling rather than the current one.
-        return build_payload(request, urls=urls, **EXA_EXTRACT_FORMATS[self.format_of(request)])
+        return build_payload(request, None, self, urls=urls, **EXA_EXTRACT_FORMATS[self.format_of(request)])
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         body_format = self.format_of(request)

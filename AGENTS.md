@@ -313,6 +313,8 @@ src/web_router/
 │                       kept apart for the same reason
 ├── constants_mode_parts.py each search backend's declared tiers, contents and
 │                       flags, and the wire each sends
+├── constants_mode_parts_extract.py the same for each extract backend: tiers
+│                       and flags, which never write the URLs
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an

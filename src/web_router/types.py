@@ -183,15 +183,13 @@ NORMALIZED_PARAMETERS: frozenset[str] = SearchRequest.normalized_parameters()
 class ExtractRequest(NormalizedRequest):
     """A normalized extract request.
 
-    Only :attr:`urls` is required. :attr:`format` left as ``None`` means
-    ``EXTRACT_DEFAULT_FORMAT`` (markdown) from every backend that can return it,
-    and that backend's own default from one that cannot (Exa's text);
-    :attr:`ExtractedDocument.format` names which came back. :attr:`profile` is
-    the same saved identity a :class:`BrowserRequest` starts from, so a login
-    made in a browser session serves the fetches that follow it.
+    Only :attr:`urls` is required. :attr:`format` left as ``None`` means ``EXTRACT_DEFAULT_FORMAT`` (markdown)
+    from every backend that can return it, and that backend's own default from one that cannot (Exa's text);
+    :attr:`ExtractedDocument.format` names which came back. :attr:`profile` is the same saved identity a
+    :class:`BrowserRequest` starts from, so a login made in a browser session serves the fetches that follow it.
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"urls", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"urls", "provider_options", "mode"})
 
     urls: Annotated[
         list[Annotated[str, Field(min_length=1)]],
@@ -199,10 +197,11 @@ class ExtractRequest(NormalizedRequest):
     ]
     format: ExtractFormat | None = Field(default=None, description="Which representation of each page to return.")
     profile: str | None = Field(default=None, description=EXTRACT_PROFILE_DESCRIPTION)
+    mode: str | None = Field(default=None, description="The vendor mode a pinned id set, e.g. 'tavily-advanced'.")
 
 
 EXTRACT_ALWAYS_SENT = ExtractRequest.always_sent
-"""Fields every extract provider handles itself: the URLs, and the untranslated passthrough."""
+"""Fields every extract provider handles itself: the URLs, the vendor mode a pin set, and the passthrough."""
 
 EXTRACT_PARAMETERS: frozenset[str] = ExtractRequest.normalized_parameters()
 """Every optional parameter an extract provider may declare support for."""

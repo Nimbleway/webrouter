@@ -51,6 +51,7 @@ from web_router.constants_linkup import (
     LINKUP_DEPTH_BY_EFFORT,
 )
 from web_router.constants_mode_parts import LINKUP_TIERS
+from web_router.constants_mode_parts_extract import LINKUP_EXTRACT_FLAGS, LINKUP_EXTRACT_TIERS
 from web_router.providers._clock import recency_start
 from web_router.providers._http import (
     HttpAnswerProvider,
@@ -154,6 +155,7 @@ class LinkupExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_LINKUP
+    tiers, flags = LINKUP_EXTRACT_TIERS, LINKUP_EXTRACT_FLAGS
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(LINKUP_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = LINKUP_EXTRACT_DEFAULT_FORMAT
@@ -165,7 +167,7 @@ class LinkupExtractProvider(HttpExtractProvider):
     api_key_prefix: ClassVar[str] = LINKUP_API_KEY_PREFIX
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
-        return build_payload(request, url=urls[0], **LINKUP_EXTRACT_FORMATS[self.format_of(request)])
+        return build_payload(request, None, self, url=urls[0], **LINKUP_EXTRACT_FORMATS[self.format_of(request)])
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         body_format = self.format_of(request)

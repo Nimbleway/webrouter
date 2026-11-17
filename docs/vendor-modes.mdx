@@ -35,7 +35,7 @@ router = WebRouter(
 
 ## The id
 
-An id is `provider[:mode]`, or `search:provider[:mode]` with the method named.
+An id is `provider[:mode]`, or `search:provider[:mode]` (`extract:provider[:mode]`) with the method named.
 A mode has up to three slots, joined with `+`, always in this order:
 
 1. a **tier**: a vendor setting (Exa's `type`). It combines with a depth unless
@@ -69,12 +69,30 @@ twice, raises `InvalidParameterError`.
 | Brave | | | `brave-extra-snippets` |
 | DeepSeek | | | `deepseek-content` |
 
+An extract backend declares tiers and flags only, since an extract has no
+depth; a mode never writes the URLs:
+
+| Backend | Tiers | Flags |
+|---|---|---|
+| Tavily | `tavily-advanced` | |
+| Linkup | `linkup-pro` | `linkup-render-js` |
+| Oxylabs | `oxylabs-render` | |
+| Nimble | `nimble-vx8`, `nimble-vx8-pro`, `nimble-vx10`, `nimble-vx10-pro`, `nimble-max` | |
+| Exa | | `exa-highlights`, `exa-summary` |
+| Browserbase | | `browserbase-proxies` |
+
+`extract(urls, provider="tavily:tavily-advanced")` pins one, as does the same id
+in an extract chain. When a chain retries the URLs one member failed on the
+members after it, each runs the retried URLs in its own pinned mode. Nimble
+publishes no price per driver, so its drivers other than `nimble-max` are
+unpriced, and never run under a cost cap.
+
 Each provider class carries its parts (`ExaProvider.tiers`, `.contents`,
 `.flags`), with the request-body change each one makes. Tavily's
 `tavily-fast` is Tavily's own tier, not web-router's `fast` depth, which sends
 `advanced`.
 
-A backend's contract (`contracts/search/<provider>.json`) lists the body change
+A backend's contract (`contracts/<method>/<provider>.json`) lists the body change
 of every part under `options.mode`, and the modes a router may pick under
 `offers`: each tier at the default depth, each depth level and content at the
 default tier, and each flag. `verified["mode.<part>"]` says whether a live call
@@ -102,19 +120,22 @@ you set something it would overwrite:
 - an option that writes the same field to another value: Exa's `effort` with an
   Exa tier, Tavily's `search_depth` with a Tavily tier, Parallel's or
   Keenable's `effort` with one of their tiers, DeepSeek's `lite` with
-  `deepseek-content`.
+  `deepseek-content`;
+- a level the request has no option for: an extract mode names no depth
+  (`tavily:tavily-advanced+lite`).
 
 ## What it costs
 
-A pinned search is priced as its mode, by the price list's order:
+A pinned search or extract is priced as its mode, by the price list's order:
 
 1. the row for the canonical mode;
 2. else its tier's row, when that row assumes the mode's depth, plus each
    flag's added price;
 3. else unknown.
 
-That price is the response's `cost_usd` (`cost_source="estimated"` unless the
-backend states one), and what a budget charges. An unknown price never fits
+An extract's price is per URL. That price is the response's `cost_usd`
+(`cost_source="estimated"` unless the backend states one), and what a budget
+charges. An unknown price never fits
 under a cost cap. Cooldowns stay keyed by backend: a rate limit on one mode
 cools every mode of that backend.
 
@@ -130,6 +151,6 @@ read, but a search with it is refused: Tavily's tier and `deep` both set
 ## Not yet
 
 Routing on modes is not on yet: a router picks backends at their default mode,
-and a vendor mode runs only when you pin it. Extract, answer, research and
-browse have no vendor modes yet. See [Smart routing](/smart-routing) for what a
+and a vendor mode runs only when you pin it. Answer, research and browse have
+no vendor modes yet. See [Smart routing](/smart-routing) for what a
 router picks today.

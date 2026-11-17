@@ -29,10 +29,22 @@
       "text": {
         "refused": "UnsupportedFormatError"
       }
+    },
+    "mode": {
+      "linkup-pro": {
+        "body.mode": "pro"
+      },
+      "linkup-render-js": {
+        "body.renderJs": true
+      }
     }
   },
   "not_mapped": [
     "profile"
+  ],
+  "offers": [
+    "linkup-pro",
+    "linkup-render-js"
   ],
   "default_format": "markdown",
   "batches_urls": false,
@@ -40,17 +52,11 @@
     "https://docs.linkup.so/pages/documentation/endpoints/fetch/reference"
   ],
   "verified": {
-    "format": "live: tests/providers/test_linkup.py::test_live_extract_returns_markdown_and_html"
+    "format": "live: tests/providers/test_linkup.py::test_live_extract_returns_markdown_and_html",
+    "mode.linkup-pro": "docs: https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md",
+    "mode.linkup-render-js": "docs: https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md"
   },
   "vendor_options": {
-    "renderJs": {
-      "status": "passthrough",
-      "note": "Boolean."
-    },
-    "mode": {
-      "status": "passthrough",
-      "note": "standard | pro."
-    },
     "extractImages": {
       "status": "passthrough",
       "note": "Boolean; images stay in ExtractedDocument.extra."
