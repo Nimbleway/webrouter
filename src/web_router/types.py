@@ -87,6 +87,7 @@ class Provider(str, Enum):
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
     VALYU = "valyu"
+    SPECSTREAM = "specstream"
     AGENTCORE = "agentcore"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
