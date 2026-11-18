@@ -8,7 +8,16 @@ from typing import Any
 import pytest
 
 from tests.conftest import FakeProvider
-from web_router import Budget, ProviderError, SpendEntry, WebRouter, spend_report
+from web_router import (
+    AsyncWebRouter,
+    Budget,
+    DeadlineExceededError,
+    InvalidParameterError,
+    ProviderError,
+    SpendEntry,
+    WebRouter,
+    spend_report,
+)
 from web_router.registry import register_provider, unregister_provider
 from web_router.spend_record import passed_entries
 from web_router.types import SearchRequest, SearchResponse
@@ -20,6 +29,19 @@ class _Broken(FakeProvider):
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         raise ProviderError("broken", "HTTP 404: not found")
+
+    async def _asearch(self, request: SearchRequest) -> SearchResponse:
+        raise ProviderError("broken", "HTTP 404: not found")
+
+
+ONLY_BROKEN = {"auto": {"chain": ["broken"]}}
+
+
+class _Late(FakeProvider):
+    name = "late"
+
+    def _search(self, request: SearchRequest) -> SearchResponse:
+        raise DeadlineExceededError("late", 5.0)
 
 
 class _Kept:
@@ -47,6 +69,58 @@ def test_an_attempt_that_failed_before_the_answer_has_its_own_line(chain: WebRou
     assert failed.error == "ProviderError"
     assert failed.decision_id == answered.decision_id is not None
     assert failed.cost_usd is None and failed.elapsed_s is not None
+
+
+def _logged(router: Any) -> _Kept:
+    sink = _Kept()
+    router.log_spend(sink)
+    return sink
+
+
+@pytest.mark.usefixtures("chain")
+def test_a_call_that_raised_has_a_failed_line() -> None:
+    router = WebRouter(provider_config=ONLY_BROKEN)
+    sink = _logged(router)
+    with pytest.raises(ProviderError):
+        router.search("q")
+    with pytest.raises(ProviderError):
+        router.run("q")  # planned on the way: the line names the method the plan chose
+    assert [(e.method, e.provider, e.outcome) for e in sink.entries] == [("search", "broken", "failed")] * 2
+    assert all(e.error and e.elapsed_s is not None and e.cost_usd is None for e in sink.entries)
+
+
+@pytest.mark.usefixtures("chain")
+async def test_an_async_call_that_raised_has_a_failed_line() -> None:
+    router = AsyncWebRouter(provider_config=ONLY_BROKEN)
+    sink = _logged(router)
+    with pytest.raises(ProviderError):
+        await router.search("q")
+    with pytest.raises(ProviderError):
+        await router.run("q")
+    assert [(e.method, e.outcome) for e in sink.entries] == [("search", "failed")] * 2
+
+
+def test_a_call_past_its_deadline_has_a_failed_line() -> None:
+    """The backend may have worked, and billed, until the deadline cut it off."""
+    register_provider("late", _Late)
+    try:
+        router = WebRouter(provider_config={"auto": {"chain": ["late"]}})
+        sink = _logged(router)
+        with pytest.raises(DeadlineExceededError):
+            router.search("q")
+    finally:
+        unregister_provider("late")
+    assert [(e.provider, e.outcome, e.error) for e in sink.entries] == [("auto", "failed", "timeout")]
+
+
+@pytest.mark.usefixtures("chain")
+def test_a_refused_argument_logs_nothing() -> None:
+    """Refused before any backend started: nothing was billed."""
+    router = WebRouter(provider_config=ONLY_BROKEN)
+    sink = _logged(router)
+    with pytest.raises(InvalidParameterError):
+        router.search("q", max_results=-1)
+    assert sink.entries == []
 
 
 def _record(hops: list[DecisionHop], tried: list[str]) -> DecisionRecord:
