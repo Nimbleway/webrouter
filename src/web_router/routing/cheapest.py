@@ -24,6 +24,7 @@ from web_router.constants_routing import CHEAPEST_REASON
 from web_router.routing.contract import Candidate, RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterLike
 from web_router.routing.pricing import cost_key
+from web_router.routing.request_modes import backends
 
 
 def cheapest_first(req: RouteRequest) -> RouteDecision:
@@ -38,9 +39,9 @@ def cheapest_first(req: RouteRequest) -> RouteDecision:
     tool = req.pinned_tool or LAST_RESORT_TOOL
     for candidates in by_tool.values():
         candidates.sort(key=lambda c: cost_key(c.est_cost_usd))  # stable: ties as offered
-    if any(candidate.mode is not None for candidate in by_tool[tool]):
+    if not all(candidate.is_backend for candidate in by_tool[tool]):
         return RouteDecision(attempts=[c.id for c in by_tool[tool]], reason=CHEAPEST_REASON)
-    providers = {tool: [c.provider for c in candidates if c.mode is None] for tool, candidates in by_tool.items()}
+    providers = {tool: [c.provider for c in backends(candidates)] for tool, candidates in by_tool.items()}
     return RouteDecision(providers=providers, reason=CHEAPEST_REASON)
 
 

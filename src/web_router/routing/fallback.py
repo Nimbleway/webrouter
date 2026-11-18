@@ -49,7 +49,7 @@ from web_router.routing.composite import CompositeDecision, composed, decides_no
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.fallback_members import Member, aclose_members, built_members, close_members
 from web_router.routing.invoke import RouterOutcome
-from web_router.routing.request_modes import backends_only
+from web_router.routing.request_modes import shown
 from web_router.routing.route_tools import ALL_TOOLS
 from web_router.types_decision import DecisionMember, MemberOutcome
 
@@ -110,7 +110,7 @@ class _Asking:
         vendor mode candidates only when it opts in to them."""
         left = self.left()
         self.cut = left < member.attached.timeout_s
-        req = self.req if member.modes else backends_only(self.req)
+        req = shown(self.req, member.modes)
         return replace(req, deadline_s=min(member.attached.timeout_s, left))
 
     def settle(self, member: Member, outcome: RouterOutcome) -> RouteDecision | None:

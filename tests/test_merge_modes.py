@@ -44,6 +44,24 @@ def test_a_deciders_question_offers_modes_too() -> None:
     assert list(question_for(MODE_ONLY_SEARCH).options) == ["search:exa:exa-instant", "answer:perplexity"]
 
 
+@pytest.mark.parametrize(
+    ("search", "planned"), [("exa-instant", ("extract", ("firecrawl",))), (None, ("search", ("exa",)))]
+)
+def test_an_extract_with_no_url_moves_to_search_only_when_search_has_a_backend(
+    search: str | None, planned: tuple[str, tuple[str, ...]]
+) -> None:
+    req = RouteRequest(
+        prompt="q",
+        candidates=(
+            Candidate(tool="search", provider="exa", mode=search),
+            Candidate(tool="extract", provider="firecrawl"),
+        ),
+        deadline_s=1.0,
+    )
+    merged = merge(req, RouteDecision(tools=["extract"]), STATIC)
+    assert (merged.tool, merged.providers) == planned
+
+
 def test_a_chain_entry_pinned_to_a_mode_keeps_its_place_when_modes_are_shown(monkeypatch: pytest.MonkeyPatch) -> None:
     set_keys(clear_keys(monkeypatch), "exa")
     pinned = {"auto": {"chain": {"search": ["exa", "exa:exa-instant"]}}}

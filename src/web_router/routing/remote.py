@@ -43,7 +43,7 @@ from web_router.routing.remote_errors import RemoteRouterError, RemoteRouterInva
 from web_router.routing.remote_redact import unechoed_decision
 from web_router.routing.remote_reply import check_head, read_capped
 from web_router.routing.remote_url import checked_url
-from web_router.routing.request_modes import backends_only
+from web_router.routing.request_modes import shown
 from web_router.routing.route_tools import checked_route_modes
 from web_router.routing.wire import WireError, WireVersionError, decision_from_wire, request_to_wire
 
@@ -111,7 +111,7 @@ class RemoteRouter(PoolCloser):
                 client.stream(
                     "POST",
                     self._url,
-                    json=request_to_wire(req if self.route_modes else backends_only(req)),
+                    json=request_to_wire(shown(req, self.route_modes)),
                     timeout=req.deadline_s,
                 ) as r,
             ):

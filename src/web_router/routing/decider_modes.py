@@ -46,13 +46,13 @@ def by_score(
     modes: dict[str, list[str]] = {}
     for cid in ranked:
         found = candidates[cid]
-        if found.mode is not None:
+        if not found.is_backend:
             modes.setdefault(candidate_id(found.tool, found.provider), []).append(cid)
     if any(backend not in scores for backend in modes):
         return list(ranked)
     ranked_by: dict[str, float] = {}
     for cid in ranked:
-        if candidates[cid].mode is None and cid not in modes:
+        if candidates[cid].is_backend and cid not in modes:
             ranked_by[cid] = scores[cid]
     for backend, ids in modes.items():
         total = sum(scores[cid] for cid in ids)

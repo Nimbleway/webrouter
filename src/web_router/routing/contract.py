@@ -69,12 +69,8 @@ class Budget:
     """Under a time cap, drop the candidates with no measured p90 latency instead of trying them."""
 
     def __post_init__(self) -> None:
-        """
-        Raises:
-            InvalidParameterError: a :class:`ValueError`, for a cap that is not a finite number of 0 or
-                more -- negative, text, a bool, NaN,
-                infinity, or too large for a float: it would cap nothing or everything, or fail later.
-        """
+        """Raise :class:`InvalidParameterError`, a :class:`ValueError`, for a cap that is not a finite number of 0 or
+        more -- negative, text, a bool, NaN, infinity, or too large for a float: it would cap nothing or everything."""
         for name in ("max_cost_usd", "time_limit_s"):
             value = getattr(self, name)
             if value is not None and not _finite_cap(value):
@@ -109,10 +105,13 @@ class Candidate:
 
     def __post_init__(self) -> None:
         expected = candidate_id(self.tool, self.provider, self.mode)
-        if not self.id:
-            object.__setattr__(self, "id", expected)
-        elif self.id != expected:
+        if self.id not in ("", expected):
             raise ValueError(MSG_CANDIDATE_ID.format(id=self.id, expected=expected))
+        object.__setattr__(self, "id", expected)
+
+    @property
+    def is_backend(self) -> bool:  # a backend at its default mode, the one a call runs; not a vendor mode
+        return self.mode is None
 
 
 @dataclass(frozen=True, kw_only=True)

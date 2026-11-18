@@ -15,11 +15,20 @@ from dataclasses import replace
 from web_router.routing.contract import Candidate, RouteRequest
 
 
+def backends(candidates: Sequence[Candidate]) -> tuple[Candidate, ...]:
+    """The backends among ``candidates``, in their order: the vendor modes left out."""
+    return tuple(candidate for candidate in candidates if candidate.is_backend)
+
+
 def backends_only(req: RouteRequest) -> RouteRequest:
     """``req`` without its vendor mode candidates: what a router that did not opt in is shown."""
-    if all(candidate.mode is None for candidate in req.candidates):
-        return req
-    return replace(req, candidates=tuple(c for c in req.candidates if c.mode is None))
+    kept = backends(req.candidates)
+    return req if len(kept) == len(req.candidates) else replace(req, candidates=kept)
+
+
+def shown(req: RouteRequest, modes: bool) -> RouteRequest:
+    """What a router is shown: ``req`` when it opts in to vendor modes, its backends only when it does not."""
+    return req if modes else backends_only(req)
 
 
 def runnable(candidates: Sequence[Candidate]) -> bool:
@@ -42,4 +51,4 @@ def _rank(candidates: tuple[Candidate, ...]) -> Callable[[int], tuple[bool, int,
     for candidate in candidates:
         place.append(places.get(candidate.tool, 0))
         places[candidate.tool] = place[-1] + 1
-    return lambda at: (candidates[at].mode is not None, place[at], at)
+    return lambda at: (not candidates[at].is_backend, place[at], at)

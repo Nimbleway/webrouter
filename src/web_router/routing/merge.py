@@ -70,7 +70,7 @@ def _order(
     A vendor mode runs only where ``ranked`` names it: the static order names backends alone.
     """
     pool = entries(request, tool, excluded)
-    names = [name for name, candidate in pool.items() if candidate.mode is None]
+    names = [name for name, candidate in pool.items() if candidate.is_backend]
     return tuple(dict.fromkeys(p for p in (*ranked, *static.get(tool, ()), *names) if p in pool))
 
 
@@ -101,7 +101,7 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
         return request.pinned_tool
     if decision.attempts:
         return first_tool(request, decision, excluded) or LAST_RESORT_TOOL
-    left = {c.tool for c in request.candidates if c.mode is None and c.id not in excluded}  # a backend to run
+    left = {c.tool for c in request.candidates if c.is_backend and c.id not in excluded}  # a backend to run
     for tool in decision.tools or ():
         if tool not in TOOLS:
             ignored[tool] = MSG_UNKNOWN_TOOL.format(tool=tool)
@@ -113,7 +113,7 @@ def _tool(request: RouteRequest, decision: RouteDecision, excluded: Collection[s
 
 
 def _ranked(
-    tool: str, request: RouteRequest, decision: RouteDecision, known: Mapping[str, str | None], ignored: dict[str, str]
+    tool: str, request: RouteRequest, decision: RouteDecision, known: Mapping[str, bool], ignored: dict[str, str]
 ) -> tuple[str, ...]:
     """The router's backends for ``tool``, best first, or its attempts when set; an unknown id, or a vendor mode's
     id ranked as a backend, noted and left out."""
@@ -123,7 +123,7 @@ def _ranked(
     ranked = []
     for provider in dict.fromkeys(asked.get(tool, ())):
         cid = candidate_id(tool, provider)
-        if cid in known and known[cid] is None:
+        if known.get(cid):  # a backend: a vendor mode is not run by name
             ranked.append(provider)
         else:
             ignored[cid] = (MSG_MODE_NOT_RUN if cid in known else MSG_UNKNOWN_ID).format(id=cid)
@@ -176,7 +176,7 @@ def merge(
     decision = cast(RouteDecision, decision)
     if decides_nothing(decision):
         return _static(request, static_order, None, decision.reason)
-    known = {c.id: c.mode for c in request.candidates}
+    known = {c.id: c.is_backend for c in request.candidates}
     ignored: dict[str, str] = {}
     excluded = _exclusions(decision, known, ignored)
     asked = _tool(request, decision, excluded, ignored)

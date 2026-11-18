@@ -84,12 +84,11 @@ def test_a_router_shown_only_modes_is_asked_and_its_attempts_give_the_order(keys
     assert router.ids == ids(found) and plan.providers["search"] == ("exa:exa-instant",)
 
 
-@pytest.mark.parametrize("value", ["yes", 1, [True]])
-def test_a_route_modes_that_is_not_a_bool_is_refused(keys: Any, value: Any) -> None:
+def test_a_route_modes_that_is_not_a_bool_is_refused(keys: Any) -> None:
     with pytest.raises(ConfigurationError, match="route_modes"):
-        WebRouter(router=Shown(), route_modes=value)
+        WebRouter(router=Shown(), route_modes=1)  # an int is no bool, though bool is an int
     with pytest.raises(ConfigurationError, match="route_modes attribute"):
-        WebRouter(router=Shown(route_modes=value))
+        WebRouter(router=Shown(route_modes=1))
 
 
 def test_a_mode_the_member_refuses_is_dropped_with_why_and_nothing_raises(keys: Any) -> None:

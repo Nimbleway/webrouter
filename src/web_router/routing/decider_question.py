@@ -33,7 +33,7 @@ def describe(candidate: Candidate) -> str:
         "cost": DECIDER_COST_UNKNOWN if cost is None else DECIDER_COST.format(cost=cost),
         "latency": DECIDER_LATENCY_UNKNOWN if latency is None else DECIDER_LATENCY.format(latency=latency),
     }
-    if candidate.mode is None:
+    if candidate.is_backend or not candidate.mode:  # the second narrows the type: a mode is never ""
         return DECIDER_OPTION.format(**shown)
     return DECIDER_MODE_OPTION.format(**shown, mode=candidate.mode, does=mode_does(candidate.provider, candidate.mode))
 
@@ -69,7 +69,7 @@ def decision_for(
     if not ranked:
         return RouteDecision(confidence=confidence)
     by_id = {c.id: c for c in req.candidates}
-    if any(by_id[cid].mode is not None for cid in ranked):
+    if not all(by_id[cid].is_backend for cid in ranked):
         attempts = by_score(by_id, ranked, scores)
         return RouteDecision(attempts=attempts, confidence=confidence, reason=_reason(name, attempts[0], scores))
     providers: dict[ToolName, list[str]] = {}

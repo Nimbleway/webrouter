@@ -20,8 +20,9 @@ from web_router.routing.contract import Candidate, RouteDecision, RouteRequest, 
 
 def entry(candidate: Candidate) -> str:
     """How the merged order names ``candidate``: its backend, or ``backend:mode`` for a vendor mode."""
-    mode = candidate.mode
-    return candidate.provider if mode is None else f"{candidate.provider}{CANDIDATE_ID_SEPARATOR}{mode}"
+    if candidate.is_backend:
+        return candidate.provider
+    return f"{candidate.provider}{CANDIDATE_ID_SEPARATOR}{candidate.mode}"
 
 
 def backends(request: RouteRequest, tool: str, names: Sequence[str]) -> tuple[str, ...]:

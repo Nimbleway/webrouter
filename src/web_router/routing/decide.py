@@ -46,7 +46,7 @@ def static_order(found: CandidateSet) -> dict[ToolName, list[str]]:
     """Each method's backends by name, in its ``auto`` order: the order with no router. Vendor modes are left out."""
     order: dict[ToolName, list[str]] = {}
     for candidate in found.candidates:
-        if candidate.mode is None:
+        if candidate.is_backend:
             order.setdefault(candidate.tool, []).append(candidate.provider)
     return order
 
