@@ -93,15 +93,19 @@ def json_value(text: str | None, what: str) -> Any:
 
 def json_object(text: str | None, what: str) -> dict[str, Any] | None:
     """A JSON argument that must be an object, such as a JSON Schema."""
+    if text is None:
+        return None
     value = json_value(text, what)
-    if value is not None and not isinstance(value, dict):
+    if not isinstance(value, dict):  # an explicit null too: it is not an omitted schema
         raise CliInputError(MSG_NOT_OBJECT.format(what=what))
     return value
 
 
 def json_records(text: str | None, what: str) -> list[dict[str, Any]] | None:
     """A JSON argument that must be a list of objects, such as the rows research enriches."""
+    if text is None:
+        return None
     value = json_value(text, what)
-    if value is not None and not (isinstance(value, list) and all(isinstance(row, dict) for row in value)):
+    if not (isinstance(value, list) and all(isinstance(row, dict) for row in value)):
         raise CliInputError(MSG_NOT_LIST.format(what=what))
     return value

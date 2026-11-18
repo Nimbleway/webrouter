@@ -83,3 +83,23 @@ def test_a_flag_that_is_not_a_number_is_refused(argv: tuple[str, ...], capsys: p
     status, out, err = _run(capsys, *argv)
     assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "UsageError")
     assert "invalid" in err["error"]["message"]
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("research", "q", "-p", "fake", "--schema", "null"),
+        ("research", "q", "-p", "fake", "--records", "null"),
+        ("live-data", "run", "NAME", "-p", "fake", "--inputs", "null"),
+    ],
+)
+def test_an_explicit_null_is_refused_not_read_as_omitted(
+    argv: tuple[str, ...],
+    fake_research_provider: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    made = _spy(monkeypatch, FakeResearchProvider)
+    status, out, err = _run(capsys, *argv)
+    assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")
+    assert not any(instance.requests for instance in made)
