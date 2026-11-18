@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from web_router.exceptions_typed import AllProvidersFailedError, ExtractFailedError
 from web_router.integrations._input import checked, screened, unknown_tool
 from web_router.integrations._messages import MSG_DID_NOT_RUN, MSG_FAILED, MSG_NO_URL_ALLOWED
 from web_router.integrations._render import (
@@ -20,9 +21,9 @@ from web_router.integrations._render import (
     render_search,
 )
 from web_router.integrations._specs import TOOLS
-from web_router.integrations.errors import short_error
+from web_router.integrations.errors import TOOL_FAILURES, short_error
 from web_router.routing.merge_urls import UrlCheck
-from web_router.types import ExtractResponse, SearchResponse
+from web_router.types import ExtractFailure, ExtractResponse, SearchResponse
 from web_router.types_answer import AnswerResponse
 
 
@@ -82,15 +83,36 @@ def rendered(
 def failed(planned: Planned, exc: BaseException, result_chars: int) -> str:
     """What the model reads of a call that failed: one short line, and for an extract each URL as a partial one has.
 
-    Every URL that was sent failed with the call's own kind -- a call reads no
-    page only when none of them came back.
+    Each URL keeps its own kind where the error recorded one (:func:`_page_failures`); the rest take the call's.
     """
     error = failed_text(planned.name, exc, result_chars)
     if planned.method != "extract":
         return error
+    own = _page_failures(exc, planned.urls)
     kind, status = getattr(exc, "kind", None), getattr(exc, "status_code", None)
-    rows = [failure_row(url, kind, getattr(exc, "retryable", None), status) for url in planned.urls]
+    rows = [
+        failure_row(url, own[url].kind, own[url].retryable, own[url].status_code)
+        if url in own
+        else failure_row(url, kind, getattr(exc, "retryable", None), status)
+        for url in planned.urls
+    ]
     return render_extract_failure(error, [*rows, *planned.refused])
+
+
+def _page_failures(exc: BaseException, urls: list[str]) -> dict[str, ExtractFailure]:
+    """Each URL's own failure: an extract's, else the failed call's for every URL it carried.
+
+    Under ``auto`` every member was sent the same URLs, so each URL keeps the latest tried member's failure, as a
+    partly successful ``auto`` extract reports it; a member that could not be tried at all says nothing about one.
+    """
+    if isinstance(exc, ExtractFailedError):
+        return {failure.url: failure for failure in exc.url_failures}
+    if isinstance(exc, AllProvidersFailedError):
+        found: dict[str, ExtractFailure] = {}
+        for member in exc.failures.values():
+            found.update(_page_failures(member, urls))
+        return found
+    return {url: ExtractFailure.from_error(url, exc) for url in urls} if isinstance(exc, TOOL_FAILURES) else {}
 
 
 def failed_text(name: str, exc: BaseException, result_chars: int) -> str:

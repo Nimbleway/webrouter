@@ -206,6 +206,28 @@ tools = web_router_tools(WebRouter(), max_results=5)  # LangChain
 Claude and OpenAI agents the same tools as plain tool definitions. See
 [Agent integrations](https://docs.webrouter.net/integrations).
 
+## Data flow
+
+WebRouter runs inside your process, or as an MCP server you start yourself.
+There is no WebRouter service in between, and nothing to sign up for.
+
+- **Each call goes straight from your machine to the backend that serves it**,
+  carrying your query or URL and that backend's own key. A key is sent only to
+  its own provider.
+- **Which backends:** the ones you hold a key for, and, when `auto` has none
+  left for a method, the free tiers listed in
+  [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials).
+  Name a provider to keep a call on that backend alone.
+- **Beyond the backends:** `call_vendor` reaches the vendor API you name, with
+  that vendor's credentials; `WEB_ROUTER_MCP_ROUTER=remote` sends a prompt to
+  the router service at the URL you set; and `evaluate()` downloads the
+  question set you pick and calls the judge model you configure.
+- **No telemetry.** The package sends no usage data and does not call home.
+- **Keys stay in the process.** They are read from the environment (and, for
+  the MCP server, from a `.env` it is pointed at), held in memory, and kept out
+  of logs and tool results. The server writes no key to disk: `load_env`'s
+  `remember` records the file's path, never its contents.
+
 ## Compare providers on your own queries
 
 ```python

@@ -97,8 +97,8 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
     return CallToolResult(content=content, structured_content=json.loads(text))
 
 
-def build_server(tools: WebRouterTools) -> Server[object]:
-    """Wire the handlers onto a low-level server for one session's tools."""
+def build_server(tools: WebRouterTools, *, remote: bool = False) -> Server[object]:
+    """Wire the handlers onto a low-level server for one session's tools; ``remote`` when served over HTTP."""
 
     async def on_list_tools(
         context: ServerRequestContext[object],
@@ -130,7 +130,7 @@ def build_server(tools: WebRouterTools) -> Server[object]:
     return Server(
         MCP_SERVER_NAME,
         version=__version__,
-        instructions=tools.instructions(),
+        instructions=tools.instructions(remote=remote),
         on_list_tools=on_list_tools,
         on_call_tool=on_call_tool,
         on_list_resources=on_list_resources,

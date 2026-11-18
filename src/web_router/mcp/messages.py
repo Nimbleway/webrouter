@@ -8,9 +8,10 @@ import traceback
 
 from mcp_types import CallToolResult, TextContent
 
-from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_PROVIDER_CONFIG_ASIDE, MCP_PROVIDER_CONFIG_CLAUSE
+from web_router.constants_mcp import MCP_PROVIDER_CONFIG_ASIDE, MCP_PROVIDER_CONFIG_CLAUSE
 from web_router.constants_mcp_context import MCP_MSG_ERROR_FACTS
 from web_router.exceptions import WebRouterError
+from web_router.mcp.key_text import key_hint
 from web_router.mcp.masking import mask_configured_text
 from web_router.mcp.shaping import redact, redaction_note
 from web_router.types_errors import is_retryable
@@ -64,4 +65,4 @@ def _for_mcp(message: str) -> str:
     """
     message = re.sub(MCP_PROVIDER_CONFIG_ASIDE, "", message)
     rewritten, count = re.subn(MCP_PROVIDER_CONFIG_CLAUSE, "", message)
-    return rewritten + MCP_MSG_KEY_HINT if count else message
+    return rewritten + key_hint() if count else message

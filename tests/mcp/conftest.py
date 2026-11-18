@@ -23,6 +23,7 @@ from web_router.constants import (
 )
 from web_router.constants_mcp_env import MCP_ENV_SWITCHES
 from web_router.mcp.env_credentials import credential_variables
+from web_router.mcp.http_transport import HTTP_OFF_SWITCHES, http_env_defaults
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import call_tool
 from web_router.mcp.tools import WebRouterTools
@@ -167,3 +168,16 @@ async def ok_on(tools: WebRouterTools, name: str, **arguments: Any) -> dict[str,
     failed, payload = await outcome(tools, name, **arguments)
     assert not failed, payload
     return dict(payload)
+
+
+@pytest.fixture
+def stdio_switches(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The switches HTTP turns off, at their stdio defaults and recorded, so HTTP defaults a test sets are undone."""
+    for name, _ in HTTP_OFF_SWITCHES:
+        monkeypatch.setenv(name, "")
+
+
+@pytest.fixture
+def http_switches(stdio_switches: None) -> None:
+    """The switches as ``--transport http`` sets them."""
+    http_env_defaults()

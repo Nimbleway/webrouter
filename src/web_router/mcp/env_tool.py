@@ -17,7 +17,6 @@ from web_router.constants_mcp_env import (
     MCP_ARG_FORGET,
     MCP_ARG_PATH,
     MCP_ARG_REMEMBER,
-    MCP_LOAD_ENV_OFF,
     MCP_LOAD_ENV_REMEMBER,
     MCP_MSG_ENV_BAD_ARGUMENTS,
     MCP_MSG_ENV_FORGOTTEN,
@@ -27,6 +26,7 @@ from web_router.constants_mcp_env import (
 from web_router.mcp import methods
 from web_router.mcp.env_policy import switch
 from web_router.mcp.env_warnings import loose_permissions
+from web_router.mcp.key_text import load_env_served
 
 if TYPE_CHECKING:
     from web_router.mcp.tools import WebRouterTools
@@ -40,7 +40,7 @@ def load_env_entry(tools: WebRouterTools) -> dict[str, Callable[[Mapping[str, An
     Raises:
         ConfigurationError: for a value :data:`ENV_MCP_LOAD_ENV` does not take.
     """
-    if switch(ENV_MCP_LOAD_ENV) == MCP_LOAD_ENV_OFF:
+    if not load_env_served():
         return {}
     return {MCP_TOOL_LOAD_ENV: partial(load_env_tool, tools)}
 
