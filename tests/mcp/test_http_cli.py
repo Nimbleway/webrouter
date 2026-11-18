@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from web_router import mcp_cli
+from web_router.constants_mcp_env import (
+    ENV_MCP_LOAD_ENV,
+    ENV_MCP_PRIVATE_URLS,
+    MCP_LOAD_ENV_OFF,
+    MCP_PRIVATE_URLS_OFF,
+)
 from web_router.constants_mcp_http import ENV_MCP_TOKEN, MCP_HTTP_DEFAULT_HOST, MCP_HTTP_DEFAULT_PORT
 from web_router.mcp import http_transport
+from web_router.mcp.env_policy import switch
 
 
 def _never_serves(*args: object) -> None:
@@ -58,3 +67,16 @@ def test_the_command_passes_the_bind_it_was_given(
     mcp_cli.main(["--transport", "http", *argv])
 
     assert served == [expected]
+
+
+def test_the_http_command_turns_load_env_and_private_addresses_off(
+    monkeypatch: pytest.MonkeyPatch, stdio_switches: None, isolated_home: Path
+) -> None:
+    served: list[object] = []
+    monkeypatch.setattr(http_transport.anyio, "run", lambda *args: served.append(args))
+
+    http_transport.main(MCP_HTTP_DEFAULT_HOST, MCP_HTTP_DEFAULT_PORT)
+
+    assert served
+    assert switch(ENV_MCP_LOAD_ENV) == MCP_LOAD_ENV_OFF
+    assert switch(ENV_MCP_PRIVATE_URLS) == MCP_PRIVATE_URLS_OFF
