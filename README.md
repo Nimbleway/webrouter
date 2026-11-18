@@ -195,7 +195,7 @@ credentials, tool costs and browser guards.
 agents that run commands rather than speak MCP:
 
 ```bash
-web-router search "rust async runtimes" -n 5 | jq -r '.results[].url'
+webrouter search "rust async runtimes" -n 5 | jq -r '.results[].url'
 ```
 
 See [Command line](https://docs.webrouter.net/cli) for every command and its exit codes.

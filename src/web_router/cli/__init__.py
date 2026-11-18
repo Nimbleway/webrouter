@@ -1,12 +1,12 @@
-"""The ``web-router`` command line: every router method as a subcommand that prints JSON.
+"""The ``webrouter`` command line: every router method as a subcommand that prints JSON.
 
 For agents and scripts that run shell commands rather than speak MCP. Each
 subcommand calls the public method a library caller would, so it validates,
 routes and fails exactly as the library does::
 
-    $ web-router search "rust async runtimes" -n 5
-    $ web-router extract https://example.com --format markdown
-    $ web-router providers
+    $ webrouter search "rust async runtimes" -n 5
+    $ webrouter extract https://example.com --format markdown
+    $ webrouter providers
 
 stdout carries one JSON object, the response; an error leaves stdout empty and
 prints ``{"error": {"type", "message"}}`` on stderr, with an exit status that
@@ -51,5 +51,5 @@ def run(argv: Sequence[str] | None = None) -> int:
 
 
 def main() -> None:
-    """The ``web-router`` console script."""
+    """The ``webrouter`` console script."""
     sys.exit(run())

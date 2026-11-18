@@ -1,4 +1,4 @@
-"""The ``web-router`` argument parser: one subcommand per router method.
+"""The ``webrouter`` argument parser: one subcommand per router method.
 
 Choices come from the library's own ``Literal`` types, so a value the router
 would refuse is refused here first, and ``--help`` lists what each flag takes.

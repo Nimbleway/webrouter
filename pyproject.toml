@@ -156,7 +156,7 @@ remote = [
 all = ["webrouter[search,extract,research,answer,browser,aws,remote,vendors,mcp]"]
 
 [project.scripts]
-web-router = "web_router.cli:main"
+webrouter = "web_router.cli:main"
 web-router-mcp = "web_router.mcp_cli:main"
 
 [project.urls]

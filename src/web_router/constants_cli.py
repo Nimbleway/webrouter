@@ -1,4 +1,4 @@
-"""What the ``web-router`` command line prints and how it exits.
+"""What the ``webrouter`` command line prints and how it exits.
 
 Kept apart from :mod:`web_router.constants`, so that file stops growing. Every
 string a caller reads lives here, so the command's help, its errors and its
@@ -7,7 +7,7 @@ exit codes can be checked in one place.
 
 from __future__ import annotations
 
-CLI_PROG = "web-router"
+CLI_PROG = "webrouter"
 """The console script's name, as ``--help`` and every usage error print it."""
 
 EXIT_OK = 0
@@ -48,7 +48,7 @@ exit codes:
   3  not set up for it (missing API key, extra not installed)
 
 keys:
-  Read from the environment only. Run `web-router providers` to see which backends are configured, and see
+  Read from the environment only. Run `webrouter providers` to see which backends are configured, and see
   .env.example for every variable. With no key at all, search and extract still work through keyless backends.
 
 cost:

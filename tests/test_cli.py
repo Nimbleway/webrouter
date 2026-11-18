@@ -1,4 +1,4 @@
-"""The ``web-router`` command line: JSON on stdout, a JSON error on stderr, an exit status to branch on."""
+"""The ``webrouter`` command line: JSON on stdout, a JSON error on stderr, an exit status to branch on."""
 
 from __future__ import annotations
 
