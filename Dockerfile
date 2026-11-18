@@ -7,8 +7,14 @@
 # request must send "Authorization: Bearer <token>". Provider keys come from the environment you pass with -e
 # or --env-file; the image holds none and reads no .env. See docs/mcp-server.mdx.
 
-FROM python:3.12-slim AS build
-COPY --from=ghcr.io/astral-sh/uv:0.12.1 /uv /bin/uv
+# Base images pinned by digest (tag kept for reading), so a rebuild gets the same bytes; bump both on purpose.
+ARG PYTHON_IMAGE=python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.12.1@sha256:cf4eedcaa81655197f625739489effcbe71b61ceb1506f332c3facae5deceded
+
+FROM ${UV_IMAGE} AS uv
+
+FROM ${PYTHON_IMAGE} AS build
+COPY --from=uv /uv /bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md LICENSE ./
@@ -16,7 +22,7 @@ RUN uv sync --frozen --no-dev --extra mcp --no-install-project
 COPY src ./src
 RUN uv sync --frozen --no-dev --extra mcp --no-editable
 
-FROM python:3.12-slim
+FROM ${PYTHON_IMAGE}
 LABEL io.modelcontextprotocol.server.name="io.github.Nimbleway/webrouter" \
       org.opencontainers.image.source="https://github.com/Nimbleway/webrouter" \
       org.opencontainers.image.licenses="Apache-2.0" \
