@@ -204,7 +204,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, ExtractProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)  # a pin: its backend
         with self._providers_lock:
             if key not in self._extract_instances:
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
@@ -219,7 +219,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, ResearchProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._research_instances:
                 self._research_instances[key] = create_research_provider(key, **self._config_for(key))
@@ -234,7 +234,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, BrowserProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._browser_instances:
                 self._browser_instances[key] = create_browser_provider(key, **self._config_for(key))
@@ -249,7 +249,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, BrowseProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._browse_instances:
                 self._browse_instances[key] = create_browse_provider(key, **self._config_for(key))
