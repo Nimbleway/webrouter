@@ -1,7 +1,7 @@
 """Pinning a vendor mode: ``provider="exa:exa-instant"``, or the same id as a chain entry.
 
 A pinned id builds the backend's class with the mode stamped on every request of its method (a
-search, an extract): the depth slot fills ``search_depth`` (or ``effort``), and the request's
+search, an extract, an answer, a browse task): the depth slot fills ``search_depth`` (or ``effort``), and the request's
 ``mode`` is the canonical string, so the price list prices it -- before the call, where a budget
 charges it, and on the answer. A pinned id without a config of its own is built with its
 backend's. :mod:`web_router.providers._modes` merges the mode into the payload and refuses what
@@ -80,11 +80,12 @@ def _costed(response: Any, owner: Any, request: NormalizedRequest) -> Any:
     """``response`` carrying the mode's estimated price when it states none, as a chain member's answer must.
 
     An unpriced mode sets the cost to ``None`` explicitly, so the router leaves it unknown instead of pricing the
-    answer at the backend's default row from a request that no longer names the mode.
+    answer at the backend's default row from a request that no longer names the mode. A started browse job states
+    no cost, so it is returned as it is.
     """
     from web_router.routing.metered import estimated_cost  # the routing package imports the providers
 
-    if response.cost_usd is not None:
+    if not hasattr(response, "cost_usd") or response.cost_usd is not None:
         return response
     cost = estimated_cost(owner.pinned_method, owner.name, request)
     source = None if cost is None else COST_ESTIMATED

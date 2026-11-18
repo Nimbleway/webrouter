@@ -319,6 +319,10 @@ src/web_router/
 │                       flags, and the wire each sends
 ├── constants_mode_parts_extract.py the same for each extract backend: tiers
 │                       and flags, which never write the URLs
+├── constants_mode_parts_answer.py the same for each answer backend: tiers,
+│                       which never write the question
+├── constants_mode_parts_browse.py the same for each browse backend: tiers,
+│                       which never write the task or start_url
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an

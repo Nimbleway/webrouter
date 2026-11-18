@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from web_router import prices, prices_modes, registry
+from web_router import prices, prices_modes, registry, registry_answer
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.modes import Flag, ModeDeclarations, Tier, parse_id
 from web_router.prices import Price
@@ -130,7 +130,11 @@ def _registered() -> list[tuple[str, str, type[Any]]]:
     search = [(n, "search", registry.get_provider_class(n)) for n in sorted(registry._BUILTIN_PROVIDERS)]
     research = [(n, "research", registry.get_research_provider_class(n)) for n in registry._BUILTIN_RESEARCH_PROVIDERS]
     extract = [(n, "extract", registry.get_extract_provider_class(n)) for n in registry._BUILTIN_EXTRACT_PROVIDERS]
-    return search + research + extract
+    answer = [
+        (n, "answer", registry_answer.get_answer_provider_class(n)) for n in registry_answer._BUILTIN_ANSWER_PROVIDERS
+    ]
+    browse = [(n, "browse", registry.get_browse_provider_class(n)) for n in registry._BUILTIN_BROWSE_PROVIDERS]
+    return search + research + extract + answer + browse
 
 
 @pytest.mark.parametrize(("name", "method", "provider"), _registered())

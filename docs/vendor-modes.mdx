@@ -35,7 +35,7 @@ router = WebRouter(
 
 ## The id
 
-An id is `provider[:mode]`, or `search:provider[:mode]` (`extract:provider[:mode]`) with the method named.
+An id is `provider[:mode]`, or `search:provider[:mode]` (`extract:`, `answer:`, `browse:`) with the method named.
 A mode has up to three slots, joined with `+`, always in this order:
 
 1. a **tier**: a vendor setting (Exa's `type`). It combines with a depth unless
@@ -87,6 +87,33 @@ members after it, each runs the retried URLs in its own pinned mode. Nimble
 publishes no price per driver, so its drivers other than `nimble-max` are
 unpriced, and never run under a cost cap.
 
+An answer backend declares tiers only; a mode never writes the question:
+
+| Backend | Tiers |
+|---|---|
+| Exa | `exa-fast`, `exa-pro`, `exa-research` (`model`) |
+| Linkup | `linkup-flash`, `linkup-standard`, `linkup-deep` (`depth`; unset is `fast`) |
+| Perplexity | `perplexity-low`, `perplexity-medium`, `perplexity-high` (`effort`; unset is `fast`) |
+
+`answer(question, provider="linkup:linkup-deep")` pins one, as does the same id
+in an answer chain. Linkup prices each depth; Exa publishes one `/answer` price
+that names no model, so its tiers are unpriced (the response still states its
+own cost), and Perplexity bills tokens, so its tiers are unknown before the
+call.
+
+A browse backend declares tiers only; a mode never writes the task or
+`start_url`:
+
+| Backend | Tiers |
+|---|---|
+| Browser Use | `browser-use-<model>` for `gpt-5.6-luna`, `gemini-flash-lite-latest`, `gemini-flash-latest`, `gemini-3-flash-preview`, `o3`, `claude-sonnet-5`, `claude-sonnet-4-5-20250929`, `claude-opus-4-8` (`llm`) |
+| Skyvern | `skyvern-2.0`, `skyvern-3.0`, `skyvern-openai-cua`, `skyvern-anthropic-cua`, `skyvern-ui-tars` (`engine`) |
+
+`browse(task, provider="browser-use:browser-use-o3")` and `submit_browse` pin
+one. Browser Use prices each model per agent step and Skyvern sells credits by
+plan, so no browse tier has a price before the task runs, and none runs under a
+cost cap.
+
 Each provider class carries its parts (`ExaProvider.tiers`, `.contents`,
 `.flags`), with the request-body change each one makes. Tavily's
 `tavily-fast` is Tavily's own tier, not web-router's `fast` depth, which sends
@@ -121,12 +148,12 @@ you set something it would overwrite:
   Exa tier, Tavily's `search_depth` with a Tavily tier, Parallel's or
   Keenable's `effort` with one of their tiers, DeepSeek's `lite` with
   `deepseek-content`;
-- a level the request has no option for: an extract mode names no depth
-  (`tavily:tavily-advanced+lite`).
+- a level the request has no option for: an extract, answer or browse mode
+  names no depth (`tavily:tavily-advanced+lite`).
 
 ## What it costs
 
-A pinned search or extract is priced as its mode, by the price list's order:
+A pinned search, extract, answer or browse task is priced as its mode, by the price list's order:
 
 1. the row for the canonical mode;
 2. else its tier's row, when that row assumes the mode's depth, plus each
@@ -151,6 +178,6 @@ read, but a search with it is refused: Tavily's tier and `deep` both set
 ## Not yet
 
 Routing on modes is not on yet: a router picks backends at their default mode,
-and a vendor mode runs only when you pin it. Answer, research and browse have
-no vendor modes yet. See [Smart routing](/smart-routing) for what a
+and a vendor mode runs only when you pin it. Research has no vendor modes
+yet. See [Smart routing](/smart-routing) for what a
 router picks today.

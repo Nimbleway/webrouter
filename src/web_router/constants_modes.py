@@ -28,8 +28,15 @@ LEVELS: frozenset[str] = frozenset(DEPTH_LEVELS + EFFORT_LEVELS)
 TOOLS: tuple[str, ...] = ("search", "extract", "live_data", "answer", "research", "open_browser", "browse")
 """The router methods an id's first part may name."""
 
-PINNED_CALLS: dict[str, tuple[str, str]] = {"search": ("search", "asearch"), "extract": ("extract", "aextract")}
-"""The methods a mode may be pinned on, and the provider calls a pinned class stamps the mode on."""
+PINNED_CALLS: dict[str, tuple[str, str]] = {
+    "search": ("search", "asearch"),
+    "extract": ("extract", "aextract"),
+    "answer": ("answer", "aanswer"),
+    "browse": ("submit", "asubmit"),
+}
+"""The methods a mode may be pinned on, and the provider calls a pinned class stamps the mode on.
+
+A browse task starts in ``submit``, which ``browse`` waits on, so the job it hands back keeps the pinned request."""
 
 KIND_TIER = "tier"
 KIND_CONTENT = "content"

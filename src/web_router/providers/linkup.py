@@ -51,6 +51,7 @@ from web_router.constants_linkup import (
     LINKUP_DEPTH_BY_EFFORT,
 )
 from web_router.constants_mode_parts import LINKUP_TIERS
+from web_router.constants_mode_parts_answer import LINKUP_ANSWER_TIERS
 from web_router.constants_mode_parts_extract import LINKUP_EXTRACT_FLAGS, LINKUP_EXTRACT_TIERS
 from web_router.providers._clock import recency_start
 from web_router.providers._http import (
@@ -291,11 +292,12 @@ class LinkupAnswerProvider(HttpAnswerProvider):
 
     ``include_domains`` and ``exclude_domains`` map as on search; ``recency``
     sets ``fromDate`` that far back from today. ``depth`` is required and sent
-    as on search (see ``LINKUP_DEFAULT_DEPTH``); a deeper one goes through
-    ``provider_options``.
+    as on search (see ``LINKUP_DEFAULT_DEPTH``); another one is a vendor mode
+    (``linkup:linkup-deep``).
     """
 
     name: ClassVar[str] = PROVIDER_LINKUP
+    tiers = LINKUP_ANSWER_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset({*LINKUP_ANSWER_PARAM_NAMES, "recency"})
 
     base_url: ClassVar[str] = LINKUP_BASE_URL
@@ -309,6 +311,7 @@ class LinkupAnswerProvider(HttpAnswerProvider):
         return build_payload(
             request,
             LINKUP_ANSWER_PARAM_NAMES,
+            self,
             q=request.query,
             depth=LINKUP_DEFAULT_DEPTH,
             outputType=LINKUP_ANSWER_OUTPUT_TYPE,

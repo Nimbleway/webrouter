@@ -636,15 +636,13 @@ from its clock, and Browser Use's ``isSuccess`` is its agent's opinion of its ow
 class BrowseRequest(NormalizedRequest):
     """A normalized browse task: instructions for an agent driving a hosted browser.
 
-    Only :attr:`task` is required. :attr:`start_url` is optional in the model
-    but not on every backend -- one that cannot find its own way to a first page
-    raises :class:`~web_router.MissingParameterError` before the task starts
-    rather than having the URL folded into the task text. There is no ``model``
-    field: the LLM behind one vendor's agent is not comparable to another's, so
-    it goes through ``provider_options``.
+    Only :attr:`task` is required. :attr:`start_url` is optional in the model but not on every backend -- one
+    that cannot find its own way to a first page raises :class:`~web_router.MissingParameterError` before the task
+    starts rather than having the URL folded into the task text. There is no ``model`` field: the LLM behind one
+    vendor's agent is not comparable to another's, so it is a vendor mode (``browser-use:browser-use-o3``).
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"task", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"task", "provider_options", "mode"})
 
     task: Annotated[NonBlankText, Field(description="What the agent should do, in plain words.")]
     start_url: str | None = Field(default=None, description="The page the agent starts on.")
@@ -662,10 +660,11 @@ class BrowseRequest(NormalizedRequest):
         # "no restriction" to another, so it is refused rather than guessed at.
         Field(default=None, min_length=1, description="Keep the agent on these domains."),
     ] = None
+    mode: str | None = Field(default=None, description="The vendor mode a pinned id set, e.g. 'skyvern-2.0'.")
 
 
 BROWSE_ALWAYS_SENT = BrowseRequest.always_sent
-"""Fields every browse provider handles itself: the task, and the untranslated passthrough."""
+"""Fields every browse provider handles itself: the task, the vendor mode a pin set, and the passthrough."""
 
 BROWSE_PARAMETERS: frozenset[str] = BrowseRequest.normalized_parameters()
 """Every optional parameter a browse provider may declare support for."""

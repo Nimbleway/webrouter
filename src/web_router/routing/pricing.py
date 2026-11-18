@@ -106,16 +106,14 @@ def mode_p90(provider: str, tool: str, mode: str | None) -> float | None:
 
 
 def attempt_mode(attempt: Attempt) -> str | None:
-    """The price list's mode for ``attempt``: a search's pinned mode, else its depth; an extract's pinned mode;
-    a research run's effort."""
+    """The price list's mode for ``attempt``: a search's pinned mode, else its depth; a research run's effort; any
+    other request's pinned mode (an extract, an answer, a browse task), when it has one."""
     request = attempt.request
     if isinstance(request, SearchRequest):
         return request.mode or request.search_depth
-    if isinstance(request, ExtractRequest):
-        return request.mode
     if isinstance(request, ResearchRequest):
         return request.effort
-    return None
+    return getattr(request, "mode", None)
 
 
 def priced_as(attempt: Attempt) -> tuple[str, str | None]:

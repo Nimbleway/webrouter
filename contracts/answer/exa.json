@@ -18,7 +18,19 @@
   "always_sent": {
     "body.query": "probe query"
   },
-  "options": {},
+  "options": {
+    "mode": {
+      "exa-fast": {
+        "body.model": "exa-fast"
+      },
+      "exa-pro": {
+        "body.model": "exa-pro"
+      },
+      "exa-research": {
+        "body.model": "exa-research"
+      }
+    }
+  },
   "not_mapped": [
     "country",
     "exclude_domains",
@@ -26,11 +38,20 @@
     "locale",
     "recency"
   ],
+  "offers": [
+    "exa-fast",
+    "exa-pro",
+    "exa-research"
+  ],
   "source": [
     "https://docs.exa.ai/reference/answer",
     "https://exa.ai/docs/reference/pricing"
   ],
-  "verified": {},
+  "verified": {
+    "mode.exa-fast": "docs: https://exa.ai/docs/reference/answer",
+    "mode.exa-pro": "docs: https://exa.ai/docs/reference/answer",
+    "mode.exa-research": "docs: https://exa.ai/docs/reference/answer"
+  },
   "vendor_options": {
     "userLocation": {
       "status": "passthrough",
@@ -43,10 +64,6 @@
     "outputSchema": {
       "status": "not_supported",
       "note": "Structured output; answer has no output_schema in this release. An object answer stays in raw."
-    },
-    "model": {
-      "status": "passthrough",
-      "note": "exa, exa-pro, exa-research or exa-fast; unset is Exa's default."
     },
     "systemPrompt": {
       "status": "passthrough",
