@@ -29,7 +29,8 @@ async def fetch_raw_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) ->
     # A browse payload is the one that is not handed back verbatim: it can
     # carry the session the agent ran in, and a live view or a key-bearing
     # CDP URL is control of a billed browser, not data about the task.
-    raw, count = redact(mask_configured(record.raw))
+    raw, count = redact(record.raw)
+    raw = mask_configured(raw)  # after redaction, so a masked short key cannot hide a URL from it
     payload: dict[str, Any] = {"handle": record.handle, "tool": record.tool, "raw": raw}
     if count:
         payload["note"] = redaction_note(count).strip()

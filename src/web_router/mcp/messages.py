@@ -17,13 +17,14 @@ def error_text(exc: Exception) -> str:
     Every tool's error is redacted, here rather than in each handler, so no
     failure path can miss it: a browse backend's own error can quote the
     session URL, and a vendor's HTTP error body rides on any method's message.
-    Every configured credential's value is masked first, wherever it sits, so
+    Every configured credential's value is masked too, wherever it sits, so
     a backend that echoes a key in plain text does not hand it on.
     An ordinary message passes through untouched. A backend's failure ends in
     its ``kind`` and ``retryable``, which the text alone would leave a model to guess.
     """
-    message, count = redact(_for_mcp(mask_configured_text(str(exc))))
-    return str(message) + redaction_note(count) + _facts(exc)
+    message, count = redact(_for_mcp(str(exc)))
+    # Masked after redaction: a short key masked first could break a URL the redactor must still recognise.
+    return mask_configured_text(str(message)) + redaction_note(count) + _facts(exc)
 
 
 def _facts(exc: Exception) -> str:

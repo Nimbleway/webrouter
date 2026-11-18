@@ -139,3 +139,11 @@ async def test_fetch_raw_masks_a_short_key_as_a_whole_word_only(no_keys: None, m
     raw = (await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle))["raw"]
 
     assert raw == {"echo": f"key {VENDOR_MASK}", "word": "abc12suffix"}
+
+
+def test_a_short_key_never_hides_a_session_url(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(ENV_BRAVE_API_KEY, "https")
+
+    text = error_text(ProviderError("brave", "session at https://cdp.example.com/?token=sessionsecret9 ended"))
+
+    assert "sessionsecret9" not in text
