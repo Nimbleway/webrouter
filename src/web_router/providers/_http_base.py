@@ -20,6 +20,7 @@ from web_router.constants import (
 )
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._clamp import clamped
+from web_router.providers._deadline_body import bound_body
 from web_router.providers._utils import WarmClients, compact, resolve_api_key
 from web_router.providers.base import _BaseProvider
 
@@ -115,8 +116,17 @@ class _HttpProvider(WarmClients, _BaseProvider):
     def _client(self) -> httpx.Client:
         with self._client_lock:
             if self._sync is None:
-                self._sync = httpx.Client(**self._client_kwargs)
+                self._sync = httpx.Client(**{**self._client_kwargs, "event_hooks": self._sync_hooks()})
         return self._sync
+
+    def _sync_hooks(self) -> dict[str, list[Any]]:
+        """The caller's event hooks, with the deadline's body bound first so a hook reading the body is bounded too.
+
+        Sync only: the async client is cancelled at the deadline, body included.
+        """
+        hooks = {kind: list(found) for kind, found in (self._client_kwargs.get("event_hooks") or {}).items()}
+        hooks["response"] = [bound_body, *hooks.get("response", [])]
+        return hooks
 
     @property
     def _async_client(self) -> httpx.AsyncClient:
