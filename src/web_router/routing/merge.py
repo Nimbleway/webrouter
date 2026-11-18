@@ -51,7 +51,7 @@ from web_router.constants_merge import (
 )
 from web_router.routing.composite import decides_nothing
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName, candidate_id
-from web_router.routing.merge_attempts import backends, entries, first_tool, ranked_attempts
+from web_router.routing.merge_attempts import backends, entries, first_tool, only_in_modes, ranked_attempts
 from web_router.routing.merge_extract import extract_or_search, lost_its_urls, prompt_request
 from web_router.routing.merge_params import checked_params
 from web_router.routing.merge_shape import TOOLS, well_formed
@@ -188,9 +188,9 @@ def merge(
         ranked = _ranked(tool, request, decision, known, ignored)
         providers, kept = _never_empty(tool, request, ranked, excluded, static_order, ignored)
         base = (requests or {}).get(tool) or prompt_request(tool, request)
-        params = checked_params(
-            tool, decision, backends(request, tool, providers), base, request.budget, caller_set, url_check, ignored
-        )
+        on = backends(request, tool, providers)
+        moded = only_in_modes(request, tool, providers)
+        params = checked_params(tool, decision, on, base, request.budget, caller_set, url_check, ignored, moded)
         if not lost_its_urls(tool, request, params, ignored):
             return settled(tool, ranked, providers, kept, params, ignored, decision.reason)
         tool = LAST_RESORT_TOOL

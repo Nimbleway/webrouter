@@ -80,3 +80,11 @@ def test_a_refused_mode_under_a_cap_is_not_reported_as_a_budget_skip(monkeypatch
         assert admits(instant)
         refunded(instant)  # sent, and refused: the call ends with its own error, not the budget's
         raise refused
+
+
+def test_a_depth_is_not_priced_on_a_backend_that_runs_only_in_modes() -> None:
+    decision = RouteDecision(attempts=[INSTANT], params={"search": {"search_depth": "deep"}})
+    merged = _merged((EXA_INSTANT,), decision, Budget(max_cost_usd=0.015))
+    assert merged.params == {"search_depth": "deep"}  # type: ignore[attr-defined]
+    bare = _merged((EXA,), RouteDecision(attempts=["search:exa"], params=decision.params), Budget(max_cost_usd=0.015))
+    assert "params.search.search_depth" in bare.notes.ignored, "control: the default mode is priced"  # type: ignore[attr-defined]

@@ -29,6 +29,12 @@ def backends(request: RouteRequest, tool: str, names: Sequence[str]) -> tuple[st
     return tuple(dict.fromkeys(by_entry.get(name, name) for name in names))
 
 
+def only_in_modes(request: RouteRequest, tool: str, names: Sequence[str]) -> frozenset[str]:
+    """The backends ``names`` run only in vendor modes: named in a mode, never bare."""
+    bare = {c.provider for c in request.candidates if c.tool == tool and c.is_backend}
+    return frozenset(backends(request, tool, names)) - {name for name in names if name in bare}
+
+
 def is_excluded(candidate: Candidate, excluded: Collection[str]) -> bool:
     """Whether ``excluded`` names ``candidate``, or for a vendor mode, its backend."""
     return candidate.id in excluded or candidate_id(candidate.tool, candidate.provider) in excluded
