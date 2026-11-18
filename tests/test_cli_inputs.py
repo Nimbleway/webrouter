@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 from pathlib import Path
 from typing import Any
@@ -11,8 +12,8 @@ import pytest
 from tests.conftest import FakeBrowseProvider, FakeResearchProvider
 from tests.test_cli import _run, _spy
 from web_router.cli.args import pairs
-from web_router.cli.output import to_json
-from web_router.constants_cli import EXIT_OK, EXIT_USAGE
+from web_router.cli.output import to_json, write_error
+from web_router.constants_cli import EXIT_FAILED, EXIT_OK, EXIT_USAGE
 from web_router.types import ResearchResponse
 
 
@@ -108,3 +109,14 @@ def test_an_explicit_null_is_refused_not_read_as_omitted(
 def test_an_integer_too_long_to_read_is_refused(capsys: pytest.CaptureFixture[str]) -> None:
     status, out, err = _run(capsys, "research", "q", "--schema", '{"maximum": ' + "9" * 5000 + "}")
     assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")
+
+
+def test_a_stream_that_cannot_encode_text_gets_escaped_json() -> None:
+    out, err = (io.TextIOWrapper(io.BytesIO(), encoding="ascii") for _ in range(2))
+    response = ResearchResponse(provider="fake", query="café", answer="naïve")
+    out.write(to_json(response, raw=False, pretty=False, stream=out))  # unescaped, this raises
+    assert write_error(ValueError("déjà vu"), err) == EXIT_FAILED
+    out.flush()
+    err.flush()
+    assert json.loads(out.buffer.getvalue())["answer"] == "naïve"  # type: ignore[attr-defined]
+    assert json.loads(err.buffer.getvalue())["error"]["message"] == "déjà vu"  # type: ignore[attr-defined]

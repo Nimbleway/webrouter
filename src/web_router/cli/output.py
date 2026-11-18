@@ -7,7 +7,9 @@ parse whichever stream it reads without guessing which one it got.
 
 from __future__ import annotations
 
+import codecs
 import json
+import sys
 from typing import IO, Any
 
 from pydantic import BaseModel
@@ -52,11 +54,25 @@ _EXIT_BY_ERROR: tuple[tuple[type[BaseException], int], ...] = (
 )
 
 
-def to_json(value: Any, *, raw: bool, pretty: bool) -> str:
-    """A response as JSON: a pydantic model through its own serializer, the backend's payload only when asked."""
+def to_json(value: Any, *, raw: bool, pretty: bool, stream: IO[str] | None = None) -> str:
+    """A response as JSON: a pydantic model through its own serializer, the backend's payload only when asked.
+
+    Text goes out as written unless ``stream`` (stdout by default) cannot encode it, as an ASCII locale cannot;
+    then non-ASCII characters are escaped, which is still the same JSON, rather than failing on the way out.
+    """
     if isinstance(value, BaseModel):
         value = value.model_dump(mode="json", exclude=None if raw else _excluded(value))
-    return json.dumps(value, indent=CLI_JSON_INDENT if pretty else None, ensure_ascii=False, default=str)
+    indent = CLI_JSON_INDENT if pretty else None
+    return json.dumps(value, indent=indent, ensure_ascii=_ascii_only(stream or sys.stdout), default=str)
+
+
+def _ascii_only(stream: IO[str]) -> bool:
+    """Whether ``stream`` cannot take every character, so JSON must escape what is not ASCII."""
+    encoding = getattr(stream, "encoding", None) or "utf-8"
+    try:
+        return not codecs.lookup(encoding).name.startswith("utf")
+    except LookupError:
+        return True
 
 
 def _excluded(value: Any) -> Any:
@@ -84,7 +100,7 @@ def write_error(error: BaseException, stream: IO[str]) -> int:
     """Print ``error`` as the JSON envelope on ``stream`` and return the status to exit with."""
     kind = CLI_USAGE_ERROR if isinstance(error, UsageError) else type(error).__name__
     envelope = {"error": {"type": kind, "message": str(error) or kind}}
-    print(json.dumps(envelope, ensure_ascii=False), file=stream)
+    print(json.dumps(envelope, ensure_ascii=_ascii_only(stream)), file=stream)
     return exit_code(error)
 
 
