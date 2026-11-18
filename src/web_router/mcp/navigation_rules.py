@@ -11,6 +11,7 @@ import os
 from web_router._hosts import is_loopback, is_private
 from web_router.constants import ENV_MCP_BROWSER_ALLOW_FILE_URLS, MCP_TRUE_VALUES
 from web_router.constants_mcp_env import ENV_MCP_PRIVATE_URLS, MCP_MSG_BROWSER_REFUSED_PRIVATE, MCP_PRIVATE_URLS_OFF
+from web_router.constants_urls import LOCALHOST_SUFFIX
 from web_router.mcp.env_policy import switch
 
 
@@ -29,7 +30,10 @@ def private_allowed() -> bool:
 
 
 def private_refusal(host: str) -> str | None:
-    """Why ``host`` -- a name or a resolved address -- is refused when private addresses are off, or ``None``."""
-    if is_loopback(host) or is_private(host):
+    """Why ``host`` -- a name or a resolved address -- is refused when private addresses are off, or ``None``.
+
+    Any ``*.localhost`` name counts as loopback: Chromium answers it with loopback itself, without asking DNS.
+    """
+    if is_loopback(host) or host.endswith(LOCALHOST_SUFFIX) or is_private(host):
         return MCP_MSG_BROWSER_REFUSED_PRIVATE.format(env_var=ENV_MCP_PRIVATE_URLS)
     return None

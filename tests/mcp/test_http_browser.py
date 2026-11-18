@@ -16,6 +16,7 @@ CDP = "http://127.0.0.1:9222"
 PRIVATE = [
     "http://127.0.0.1:8080/admin",
     "http://localhost:3000/",
+    "http://anything.localhost:8080/",  # Chromium answers *.localhost with loopback, without DNS
     "http://[::1]/",
     "http://10.0.0.5/",
     "http://192.168.1.1/",
