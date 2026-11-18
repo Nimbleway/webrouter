@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 from typing import NoReturn, get_args
 
-from web_router.constants_cli import CLI_DESCRIPTION, CLI_EPILOG, CLI_PROG, HELP, HELP_COMMAND
+from web_router.constants_cli import CLI_DESCRIPTION, CLI_EPILOG, CLI_PROG, HELP, HELP_COMMAND, MSG_NEGATIVE
 from web_router.types import ExtractFormat
 from web_router.types_options import Recency, ResearchEffort, SearchDepth
 
@@ -26,6 +26,17 @@ class _Parser(argparse.ArgumentParser):
 
     def error(self, message: str) -> NoReturn:
         raise UsageError(f"{self.prog}: {message}")
+
+
+def _non_negative_int(text: str) -> int:
+    """A count or a position: refused here, before anything is sent, rather than forwarded to a vendor."""
+    try:
+        value = int(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid int value: {text!r}") from None
+    if value < 0:
+        raise argparse.ArgumentTypeError(MSG_NEGATIVE.format(value=value))
+    return value
 
 
 def _output_flags(parser: argparse.ArgumentParser, *, default: object) -> None:
@@ -133,8 +144,8 @@ def _live_data(commands: _Commands[_Parser]) -> None:
     )
     sources = _subcommand(actions, "sources", help_key="live-data sources")
     sources.add_argument("-q", "--query", help=HELP["catalogue_query"])
-    sources.add_argument("--limit", type=int, metavar="N", help=HELP["limit"])
-    sources.add_argument("--offset", type=int, metavar="N", help=HELP["offset"])
+    sources.add_argument("--limit", type=_non_negative_int, metavar="N", help=HELP["limit"])
+    sources.add_argument("--offset", type=_non_negative_int, metavar="N", help=HELP["offset"])
     source = _subcommand(actions, "source", help_key="live-data source")
     source.add_argument("name")
     run = _subcommand(actions, "run", help_key="live-data run")

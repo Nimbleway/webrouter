@@ -9,7 +9,7 @@ import pytest
 
 from web_router.cli import run
 from web_router.client import WebRouter
-from web_router.constants_cli import EXIT_OK
+from web_router.constants_cli import EXIT_OK, EXIT_USAGE
 from web_router.types_live_data_source import LiveDataSource, LiveDataSourcePage
 
 
@@ -46,3 +46,15 @@ def test_sources_leave_out_each_sources_raw_too(calls: list[Any], capsys: pytest
     with_raw = _out(capsys, "--raw", "live-data", "sources")
     assert "raw" not in plain and "raw" not in plain["sources"][0]
     assert with_raw["raw"] == {"top": 1} and with_raw["sources"][0]["raw"] == {"big": 1}
+
+
+@pytest.mark.parametrize("flag", ["--limit", "--offset"])
+def test_a_negative_page_is_refused_before_any_call(
+    flag: str, calls: list[Any], capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert run(["live-data", "sources", "-p", "fake", flag, "-1"]) == EXIT_USAGE
+    out, err = capsys.readouterr()
+    assert out == "" and json.loads(err)["error"]["type"] == "UsageError"
+    assert calls == []
+    _out(capsys, "live-data", "sources", "-p", "fake", flag, "0")
+    assert calls[0][2]["limit" if flag == "--limit" else "offset"] == 0
