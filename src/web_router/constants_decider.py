@@ -46,6 +46,8 @@ LLM_TIMEOUT_S = 3.0
 
 HTTP_DECIDER_TIMEOUT_S = 1.0
 """Seconds the ``systemone`` and ``gemini`` routers wait when ``router_config`` sets no ``timeout_s``."""
+SYSTEMONE_TIMEOUT_S = HTTP_DECIDER_TIMEOUT_S
+"""The name 0.13 shipped for it, kept for code that imports it."""
 
 LLM_ROUTE_TOOLS = ("research", "browse")
 """The tools the ``llm`` router orders when neither the caller nor ``router_config`` names any: at a p50 over a
