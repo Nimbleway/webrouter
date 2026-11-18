@@ -5,14 +5,22 @@ Offline: the fake Exa and Tavily of :mod:`tests.attempts_helpers` answer; nothin
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from tests.attempts_helpers import INSTANT, TAVILY, fake_backends, routed
-from web_router import Budget, Candidate, RouteDecision, RouteRequest
+from tests.candidates_helpers import clear_keys, set_keys
+from web_router import AllProvidersFailedError, Budget, Candidate, RouteDecision, RouteRequest
+from web_router.providers._pinning import pinned_request
+from web_router.registry import get_provider_class
+from web_router.routing.attempts import Attempt, admits, refunded
+from web_router.routing.budget import budget_scope
 from web_router.routing.candidates import CandidateSet
 from web_router.routing.decide import _base_order
 from web_router.routing.merge import merge
 from web_router.routing.url_policy import any_web_url
+from web_router.types import SearchRequest
 
 EXA, EXA_INSTANT = (
     Candidate(tool="search", provider="exa"),
@@ -53,3 +61,22 @@ def test_an_excluded_attempt_is_no_ranking_so_the_cost_order_applies(excluded: s
     decision = RouteDecision(attempts=[INSTANT], exclude={excluded: "no"})
     assert _base_order(found, decision)["search"] == ["tavily", "exa", "brave"]
     assert _base_order(found, RouteDecision(attempts=[INSTANT]))["search"] == ["exa", "tavily", "brave"], "control"
+
+
+def test_a_refused_mode_under_a_cap_is_not_reported_as_a_budget_skip(monkeypatch: pytest.MonkeyPatch) -> None:
+    set_keys(clear_keys(monkeypatch), "exa")
+    exa = get_provider_class("exa")()
+    request = SearchRequest(query="q")
+    default = Attempt(tool="search", provider="exa", request=request)
+    instant = Attempt(
+        tool="search", provider="exa", request=pinned_request(exa, request, "exa-instant"), mode="exa-instant"
+    )
+    refused = AllProvidersFailedError("auto", "exa:exa-instant: HTTP 422", {})
+    with (
+        pytest.raises(AllProvidersFailedError),
+        budget_scope(Budget(max_cost_usd=0.015), "search", SimpleNamespace(name="auto"), request),
+    ):
+        assert not admits(default), "the default mode is over the cap"
+        assert admits(instant)
+        refunded(instant)  # sent, and refused: the call ends with its own error, not the budget's
+        raise refused
