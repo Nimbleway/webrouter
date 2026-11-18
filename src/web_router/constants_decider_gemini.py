@@ -24,9 +24,6 @@ GEMINI_AUTH_HEADER = "x-goog-api-key"
 GEMINI_AUTH_VALUE = "{key}"
 """The API takes its key in its own header, never in ``Authorization`` or the URL."""
 
-GEMINI_TIMEOUT_S = 1.0
-"""Seconds the ``gemini`` router waits when ``router_config`` sets no ``timeout_s``."""
-
 GEMINI_ROUTE_TOOLS = ("answer", "extract", "research", "browse")
 """The tools the ``gemini`` router orders by default: every tool but search, which it would slow down."""
 

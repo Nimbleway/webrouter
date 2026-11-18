@@ -23,7 +23,7 @@ default, its model pinned, so a new release changes nothing until you change
 from __future__ import annotations
 
 import math
-from collections.abc import Collection, Mapping
+from collections.abc import Mapping
 from typing import Any
 
 from web_router.constants_decider import DECIDER_WHY_REPLY
@@ -40,13 +40,13 @@ from web_router.constants_decider_gemini import (
     GEMINI_PRESETS,
     GEMINI_ROUTE_TOOLS,
     GEMINI_ROUTER_NAME,
-    GEMINI_TIMEOUT_S,
 )
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.routing.decider import DeciderQuestion, DeciderReply
-from web_router.routing.decider_http import choice_answer, endpoint, post_json, preset_of, text
-from web_router.routing.decider_reply import score_order, unit_number
+from web_router.routing.decider_http import choice_answer, post_json
+from web_router.routing.decider_reply import rank, unit_number
 from web_router.routing.decider_router import DeciderRouter, takes_config_of
+from web_router.routing.http_decider import HttpDecider
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
 
@@ -67,58 +67,15 @@ def _normalized(probabilities: dict[str, Any]) -> dict[str, Any]:
     return {cid: p / total for cid, p in probabilities.items()} if total else probabilities
 
 
-def _by_score(scores: Mapping[str, Any]) -> list[str]:
-    """The ids by score, highest first, ties in the order ``scores`` lists them: the static order."""
-    return sorted(scores, key=lambda cid: score_order(scores[cid]), reverse=True)
-
-
-class GeminiDecider:
+class GeminiDecider(HttpDecider):
     """Asks the Gemini Decisions API which backend and which mode, one request per routed call, never retried."""
 
-    route_modes = False
-    """Shown backends only until modes are on by default; a caller's ``route_modes=True`` shows it each mode too."""
-
-    def __init__(
-        self,
-        *,
-        preset: str | None = None,
-        base_url: str | None = None,
-        path: str | None = None,
-        model: str | None = None,
-        api_key_env: str | None = None,
-        api_key: str | None = None,
-        timeout_s: float = GEMINI_TIMEOUT_S,
-        route_tools: Collection[str] | None = None,
-    ) -> None:
-        """
-        Raises:
-            ConfigurationError: for an unknown preset, a preset and a base URL together, no model, or
-                any endpoint or key :func:`~.decider_http.endpoint` refuses.
-        """
-        named = GEMINI_DEFAULT_PRESET if preset is None and base_url is None else preset
-        row = preset_of(GEMINI_ROUTER_NAME, GEMINI_PRESETS, named, base_url)
-        if row is not None:
-            base_url, preset_path, preset_model, default_env = row
-            path = preset_path if path is None else path
-            model = preset_model if model is None else model
-            api_key_env = default_env if api_key_env is None else api_key_env
-        self.model = text(model, GEMINI_ROUTER_NAME, "model")
-        route = text(GEMINI_DEFAULT_PATH if path is None else path, GEMINI_ROUTER_NAME, "path")
-        self._endpoint = endpoint(
-            GEMINI_ROUTER_NAME,
-            base_url,
-            "/" + route.lstrip("/"),
-            api_key=api_key,
-            api_key_env=api_key_env,
-            timeout_s=timeout_s,
-            auth=(GEMINI_AUTH_HEADER, GEMINI_AUTH_VALUE),
-        )
-        self.timeout_s = self._endpoint.timeout_s
-        self.name = f"{GEMINI_ROUTER_NAME}({self._endpoint.domain})"
-        self.route_tools = GEMINI_ROUTE_TOOLS if route_tools is None else route_tools
-
-    def __repr__(self) -> str:
-        return f"GeminiDecider({self._endpoint.host!r}, model={self.model!r}, timeout_s={self.timeout_s})"
+    router_name = GEMINI_ROUTER_NAME
+    presets = GEMINI_PRESETS
+    default_path = GEMINI_DEFAULT_PATH
+    default_route_tools = GEMINI_ROUTE_TOOLS
+    default_preset = GEMINI_DEFAULT_PRESET
+    auth = (GEMINI_AUTH_HEADER, GEMINI_AUTH_VALUE)
 
     def body(self, question: DeciderQuestion, asked: Mapping[str, Mapping[str, str]]) -> dict[str, Any]:
         """The request: the prompt as the input, and one ``choice`` question per entry of ``asked``."""
@@ -166,7 +123,7 @@ class GeminiDecider:
         ranked: list[str] = []
         for key, options in per_question.items():
             got = scores[key] = {cid: scores.get(key, {}).get(cid, 0.0) for cid in options}
-            ranked += _by_score(got)
+            ranked += rank(got)
         return DeciderReply(
             ranked=ranked, scores={cid: p for got in scores.values() for cid, p in got.items()}, confidence=said[0]
         )

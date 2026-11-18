@@ -42,6 +42,11 @@ def score_order(value: object) -> float:
     return float(value) if unit_number(value) else -math.inf
 
 
+def rank(scores: Mapping[str, object]) -> list[str]:
+    """The ids by score, highest first, ties in the order ``scores`` lists them."""
+    return sorted(scores, key=lambda cid: score_order(scores[cid]), reverse=True)
+
+
 def checked_reply(reply: object, options: Mapping[str, str], name: str) -> DeciderReply:
     """``reply`` once its ranking, scores and confidence fit the question's ``options``.
 

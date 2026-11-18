@@ -44,8 +44,8 @@ DECIDER_MAX_RESPONSE_BYTES = 256 * 1024
 LLM_TIMEOUT_S = 3.0
 """Seconds the ``llm`` router waits for its model when ``router_config`` sets no ``timeout_s``."""
 
-SYSTEMONE_TIMEOUT_S = 1.0
-"""Seconds the ``systemone`` router waits when ``router_config`` sets no ``timeout_s``."""
+HTTP_DECIDER_TIMEOUT_S = 1.0
+"""Seconds the ``systemone`` and ``gemini`` routers wait when ``router_config`` sets no ``timeout_s``."""
 
 LLM_ROUTE_TOOLS = ("research", "browse")
 """The tools the ``llm`` router orders when neither the caller nor ``router_config`` names any: at a p50 over a
