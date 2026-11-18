@@ -143,3 +143,13 @@ def test_a_named_router_keeps_its_fit_and_runs_on_one_loop_closed_at_exit(
     assert len(learner.loops) == 2 and learner.loops[0] is learner.loops[1]
     at_exit[0]()
     assert learner.closed and learner.loops[0].is_closed()  # type: ignore[attr-defined]
+
+
+def test_a_named_router_on_a_set_without_question_text_is_refused(route_eval: ModuleType) -> None:
+    from route_eval_sets import Question
+
+    bare, asked = Question("q1", None, {}), Question("q2", "who won", {})
+    with pytest.raises(SystemExit, match="--joined"):
+        route_eval.check_prompts(("static", "router:gemini"), [asked, bare])
+    route_eval.check_prompts(("router:gemini",), [asked])
+    route_eval.check_prompts(("static", "oracle"), [bare])

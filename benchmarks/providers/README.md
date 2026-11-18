@@ -389,7 +389,8 @@ the control set where routing should gain nothing, and `tools-effort-60`
 cheapest first: the ceiling), `always:<backend>`, a built-in or registered
 router by name as `router:<name>` (`router:gemini`, built with no
 `router_config`: it reads its preset's key and each question bills its vendor,
-which the cost columns do not count),
+which the cost columns do not count; it routes on each question's text, so it
+needs `--joined`),
 or your own callable as `module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
 as the yardsticks. Your callable is a router of the library's contract
 (`web_router.routing`): it takes a `RouteRequest` -- one candidate per backend

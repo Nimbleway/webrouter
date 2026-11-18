@@ -14,7 +14,7 @@ import importlib
 import importlib.util
 import inspect
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +61,10 @@ read on a mixed set, to order its read and research paths.
 MSG_BAD_ROUTER = (
     "{spec!r}: a router is static, oracle, always:<backend> (always:<path> on a mixed set), router:<name>, "
     "module:attr or path/file.py:attr"
+)
+MSG_NAMED_NO_PROMPT = (
+    "{spec!r}: a router by name routes on each question's text, and this set has none: "
+    "pass --joined with the folder `frozen.py join` wrote"
 )
 
 Router = Callable[[Question], Any]
@@ -133,6 +137,14 @@ def named_router(name: str) -> UserRouter:
     if hasattr(built, "fit"):
         route.fit = built.fit  # type: ignore[attr-defined]
     return route
+
+
+def check_prompts(specs: Sequence[str], questions: Sequence[Question]) -> None:
+    """Refuse a ``router:<name>`` on a set without every question's text: a built-in router, such as a
+    decider, would be asked about an empty prompt, which its API refuses, and score only failures."""
+    named = next((spec for spec in specs if spec.startswith(NAMED)), None)
+    if named is not None and not all(q.prompt for q in questions):
+        raise SystemExit(MSG_NAMED_NO_PROMPT.format(spec=named))
 
 
 def load_router(spec: str, method: str) -> Router:
