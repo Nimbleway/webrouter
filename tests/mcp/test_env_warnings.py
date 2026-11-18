@@ -13,6 +13,7 @@ from tests.mcp.conftest import ok_on
 from tests.mcp.env_helpers import KEY, write
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
+    ENV_AGENTCORE_GATEWAY_URL,
     ENV_BRAVE_API_KEY,
     ENV_JINA_API_KEY,
     ENV_MCP_ENV_FILE,
@@ -121,3 +122,20 @@ async def test_fetch_raw_masks_a_configured_key_but_leaves_a_free_setting(
     raw = (await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle))["raw"]
 
     assert raw == {"echo": f"token {VENDOR_MASK}", "site": "us5.datadoghq.com"}
+
+
+def test_an_error_keeps_a_setting_that_is_no_secret(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(ENV_AGENTCORE_GATEWAY_URL, "not-a-url-at-all")
+
+    assert "not-a-url-at-all" in error_text(ProviderError("agentcore", "got 'not-a-url-at-all'"))
+
+
+async def test_fetch_raw_masks_a_short_key_as_a_whole_word_only(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A payload is data: a short key is masked where it stands alone, never inside a longer word."""
+    monkeypatch.setenv(ENV_BRAVE_API_KEY, "abc12")
+    tools = WebRouterTools(AsyncWebRouter("auto"))
+    record = tools.store.add(MCP_TOOL_SEARCH, raw={"echo": "key abc12", "word": "abc12suffix"})
+
+    raw = (await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle))["raw"]
+
+    assert raw == {"echo": f"key {VENDOR_MASK}", "word": "abc12suffix"}

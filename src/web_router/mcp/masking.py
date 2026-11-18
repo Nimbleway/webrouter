@@ -13,16 +13,22 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from web_router.constants import ENV_AGENTCORE_GATEWAY_URL
 from web_router.mcp.env_credentials import OPTIONAL_KEYS, credential_variables, free_variables
 from web_router.vendors.masking import mask, mask_answer
+
+_NOT_SECRET = frozenset({ENV_AGENTCORE_GATEWAY_URL})
+"""Variables a file may set that are no secret: AgentCore's gateway URL is an address, signed for with the AWS
+credential, and an error about a malformed one must show it."""
 
 
 def configured_secrets() -> list[str]:
     """The value of every credential variable set here, less a vendor's settings -- a region like ``us5`` is no secret.
 
-    An optional key, such as Jina's, bills nothing but is still a key, so it is masked.
+    An optional key, such as Jina's, bills nothing but is still a key, so it is masked;
+    a setting in :data:`_NOT_SECRET` is not, so an error can still show it.
     """
-    names = credential_variables() - (free_variables() - set(OPTIONAL_KEYS))
+    names = credential_variables() - (free_variables() - set(OPTIONAL_KEYS)) - _NOT_SECRET
     return [value for name in sorted(names) if (value := os.environ.get(name))]
 
 
