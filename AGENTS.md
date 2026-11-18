@@ -449,6 +449,7 @@ src/web_router/
     ├── you_research.py research, a polled background task
     ├── you_answer.py   answer, in one call
     ├── _mcp.py         the keyless MCP search transport: one JSON-RPC tools/call
+    ├── _sse.py         an event stream's data: lines, cut only where the stream ends one (CR, LF)
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
     ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel_search.py
