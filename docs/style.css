@@ -30,3 +30,7 @@ html.dark #sidebar {
   .nimble-mark>*{pointer-events:auto}
   .nimble-mark:hover .nimble-mark-text,.nimble-mark:focus-visible .nimble-mark-text{max-width:8rem}
 }
+
+/* Wide tables scroll sideways: keep the first column (the row labels) in view, on the page color. */
+.mdx-content table :is(th,td):first-child{position:sticky;left:var(--page-padding,0);z-index:1;background-color:rgb(var(--background-light))}
+html.dark .mdx-content table :is(th,td):first-child{background-color:rgb(var(--background-dark))}
