@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.constants import MSG_INTEGRATION_NO_EXTRACT_PROVIDER, PROVIDER_AUTO
 from web_router.exceptions import ConfigurationError
@@ -65,3 +67,24 @@ def answer_provider_for(
         if isinstance(auto, AutoAnswerProvider):
             auto.require_members()
     return name
+
+
+def backends(
+    methods: Sequence[str],
+    provider: str | Provider | None,
+    extract_provider: str | Provider | None,
+    answer_provider: str | Provider | None,
+    router: WebRouter | AsyncWebRouter,
+) -> tuple[str | None, str | None]:
+    """The extract and answer tools' backends, resolved once; a tool not exposed keeps the name it was given."""
+    extract = (
+        extract_provider_for(provider, extract_provider, router)
+        if "extract" in methods
+        else tool_provider(extract_provider)
+    )
+    answer = (
+        answer_provider_for(provider, answer_provider, router)
+        if "answer" in methods
+        else tool_provider(answer_provider)
+    )
+    return extract, answer

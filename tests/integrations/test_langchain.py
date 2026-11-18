@@ -73,7 +73,7 @@ class HalfExtractProvider(FakeExtractProvider):
         return ExtractResponse(
             provider=self.name,
             documents=[self._document(request, first)],
-            failures=[ExtractFailure(url=url, error="HTTP 404") for url in rest],
+            failures=[ExtractFailure(url=url, error="HTTP 404", status_code=404) for url in rest],
         )
 
     def _document(self, request: ExtractRequest, url: str) -> Any:
@@ -129,8 +129,7 @@ def test_a_backend_failure_reaches_the_model_as_a_message_not_an_exception() -> 
     message = _call(WebRouterSearch(router=WebRouter(), provider="down"), query="q")
 
     assert message.status == "error"
-    assert message.content.startswith("web_search failed:")
-    assert "HTTP 503" in message.content
+    assert message.content == "web_search failed: down: the backend failed (kind=upstream, retryable=true)."
 
 
 def test_an_option_the_provider_does_not_map_raises_to_the_caller() -> None:
@@ -164,7 +163,8 @@ def test_an_extract_names_the_urls_it_could_not_read() -> None:
 
     shown = json.loads(message.content)
     assert [d["url"] for d in shown["documents"]] == ["https://a.example"]
-    assert shown["failures"] == [{"url": "https://b.example", "error": "HTTP 404"}]
+    [row] = shown["failures"]
+    assert row == row | {"url": "https://b.example", "kind": "target", "retryable": False, "status_code": 404}
 
 
 def test_an_extract_takes_a_bounded_number_of_urls_from_the_model() -> None:

@@ -16,10 +16,16 @@ class ToolResult:
     """The text for the model -- a compact rendering, or a one-line error."""
 
     is_error: bool = False
-    """True when the backend failed; the model reads why and may try again."""
+    """True when the call did not run or failed; the model reads why and may try again."""
 
     response: SearchResponse | ExtractResponse | AnswerResponse | None = field(default=None, repr=False)
     """The untouched response, for the caller: the model reads only ``content``."""
+
+    error: BaseException | None = field(default=None, repr=False)
+    """The failure behind an error result, with the backend's own text, for the caller's logs.
+
+    ``None`` when the model's own input was refused: nothing was sent.
+    """
 
     @property
     def provider(self) -> str | None:

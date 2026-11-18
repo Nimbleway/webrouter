@@ -18,20 +18,20 @@ from web_router.client import AsyncWebRouter, WebRouter
 from web_router.constants import (
     INTEGRATION_DOCUMENT_CHARS,
     INTEGRATION_METHODS,
-    INTEGRATION_MSG_TOOL_ERROR,
     INTEGRATION_RESULT_CHARS,
     MSG_INTEGRATION_UNKNOWN_METHOD,
-    MSG_INTEGRATION_UNKNOWN_TOOL,
 )
 from web_router.constants_invoke import MSG_TOOLS_SYNC_IN_LOOP
-from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.exceptions import ConfigurationError
 from web_router.integrations._guide import routing_guide
-from web_router.integrations._input import invalid
-from web_router.integrations._options import answer_provider_for, extract_provider_for, tool_provider
-from web_router.integrations._render import render_answer, render_extract, render_search
+from web_router.integrations._messages import INTEGRATION_TIMEOUT, INTEGRATION_URL_POLICY
+from web_router.integrations._options import backends, tool_provider
+from web_router.integrations._plan import failed, plan, rendered
 from web_router.integrations._result import ToolResult
 from web_router.integrations._specs import KNOWN_METHODS, TOOLS, ToolSpec
+from web_router.integrations.errors import TOOL_FAILURES
 from web_router.routing._runner import _on_private_loop
+from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.types import ExtractFormat, Provider, Recency, ResearchEffort, SearchDepth
 
 ResultT = TypeVar("ResultT", bound=ToolResult)
@@ -41,9 +41,10 @@ class WebRouterTools(Generic[ResultT]):
     """web-router's search, extract and answer as a model's tools, with the executor that runs them.
 
     Options are the caller's, fixed here and sent unchanged on every call. A
-    backend failure comes back as an error result the model can react to;
-    every other error is the caller's setup -- a missing key, an option the
-    provider does not map -- and raises, because no retry by the model fixes it.
+    backend failure, a call out of time and input the model got wrong come
+    back as a short error result the model can react to; every other error is
+    the caller's setup -- a missing key, an option the provider does not map --
+    and raises, because no retry by the model fixes it.
     """
 
     _result: type[ResultT]
@@ -68,6 +69,8 @@ class WebRouterTools(Generic[ResultT]):
         format: ExtractFormat | None = None,
         result_chars: int = INTEGRATION_RESULT_CHARS,
         document_chars: int = INTEGRATION_DOCUMENT_CHARS,
+        timeout: float | None = INTEGRATION_TIMEOUT,
+        url_policy: UrlPolicy | None = INTEGRATION_URL_POLICY,
     ) -> None:
         """
         Args:
@@ -85,28 +88,24 @@ class WebRouterTools(Generic[ResultT]):
                 also answers, else the router's default answer backend. The
                 answer tool sends only the question: the search options above
                 are not passed to it.
+            timeout: Seconds a call may take before the model reads a ``timeout`` error; ``None`` lifts it.
+            url_policy: ``"public_only"`` refuses (never sends) a model's URL whose host is private,
+                loopback, link-local or a metadata address; ``None`` sends any http(s) URL.
 
         Raises:
             ConfigurationError: The extract tool is exposed and neither
-                ``provider`` nor the router's default extracts.
+                ``provider`` nor the router's default extracts, or
+                ``url_policy`` is not one the router knows.
             NoAnswerProviderError: The answer tool is exposed, no backend is
                 named, and the router has no single answer backend to use.
         """
-        unknown = [m for m in methods if m not in KNOWN_METHODS]
-        if unknown:
+        if unknown := [m for m in methods if m not in KNOWN_METHODS]:
             raise ValueError(MSG_INTEGRATION_UNKNOWN_METHOD.format(known=KNOWN_METHODS, method=unknown[0]))
         self.router = router if router is not None else WebRouter()
         self.methods = tuple(m for m in KNOWN_METHODS if m in methods)
         self.provider = tool_provider(provider)
-        self.extract_provider = (
-            extract_provider_for(provider, extract_provider, self.router)
-            if "extract" in self.methods
-            else tool_provider(extract_provider)
-        )
-        self.answer_provider = (
-            answer_provider_for(provider, answer_provider, self.router)
-            if "answer" in self.methods
-            else tool_provider(answer_provider)
+        self.extract_provider, self.answer_provider = backends(
+            self.methods, provider, extract_provider, answer_provider, self.router
         )
         self.search_options: dict[str, Any] = {
             "provider": self.provider,
@@ -119,6 +118,12 @@ class WebRouterTools(Generic[ResultT]):
             "recency": recency,
             "effort": effort,
         }
+        self._options = {
+            "search": {**self.search_options, "timeout": timeout},
+            "answer": {"provider": self.answer_provider, "timeout": timeout},
+            "extract": {"provider": self.extract_provider, "format": format, "timeout": timeout},
+        }
+        self._url_check = url_check(url_policy)
         self.format = format
         self.result_chars = result_chars
         self.document_chars = document_chars
@@ -135,52 +140,34 @@ class WebRouterTools(Generic[ResultT]):
     def _specs(self) -> list[ToolSpec]:
         return [TOOLS[m] for m in self.methods]
 
-    def _call(self, name: str, tool_input: dict[str, Any]) -> ResultT:
+    def _call(self, name: str, tool_input: object) -> ResultT:
         router = self.router
         if isinstance(router, AsyncWebRouter):
             if _loop_running():  # blocking here would stall that loop for the whole call
                 raise ConfigurationError(MSG_TOOLS_SYNC_IN_LOOP)
             result: ResultT = _on_private_loop(self._acall(name, tool_input)).result()  # one loop for every call
             return result
-        method = self._method(name)
-        if problem := invalid(method, name, tool_input):
-            return self._result(problem, is_error=True)
+        planned = plan(name, tool_input, self.methods, self._url_check)
+        if isinstance(planned, str):
+            return self._result(planned, is_error=True)
         try:
-            if method == "search":
-                search = router.search(tool_input["query"], **self.search_options)
-                return self._result(render_search(search, self.result_chars), response=search)
-            if method == "answer":
-                answer = router.answer(tool_input["query"], provider=self.answer_provider)
-                return self._result(render_answer(answer, self.result_chars), response=answer)
-            extract = router.extract(tool_input["urls"], provider=self.extract_provider, format=self.format)
-            return self._result(render_extract(extract, self.document_chars), response=extract)
-        except ProviderError as exc:
-            return self._result(INTEGRATION_MSG_TOOL_ERROR.format(tool=name, error=exc), is_error=True)
+            response = getattr(router, planned.method)(planned.target, **self._options[planned.method])
+        except TOOL_FAILURES as exc:
+            return self._result(failed(planned, exc, self.result_chars), is_error=True, error=exc)
+        return self._result(rendered(planned, response, self.result_chars, self.document_chars), response=response)
 
-    async def _acall(self, name: str, tool_input: dict[str, Any]) -> ResultT:
+    async def _acall(self, name: str, tool_input: object) -> ResultT:
         router = self.router
         if isinstance(router, WebRouter):
             return await asyncio.to_thread(self._call, name, tool_input)
-        method = self._method(name)
-        if problem := invalid(method, name, tool_input):
-            return self._result(problem, is_error=True)
+        planned = plan(name, tool_input, self.methods, self._url_check)
+        if isinstance(planned, str):
+            return self._result(planned, is_error=True)
         try:
-            if method == "search":
-                search = await router.search(tool_input["query"], **self.search_options)
-                return self._result(render_search(search, self.result_chars), response=search)
-            if method == "answer":
-                answer = await router.answer(tool_input["query"], provider=self.answer_provider)
-                return self._result(render_answer(answer, self.result_chars), response=answer)
-            extract = await router.extract(tool_input["urls"], provider=self.extract_provider, format=self.format)
-            return self._result(render_extract(extract, self.document_chars), response=extract)
-        except ProviderError as exc:
-            return self._result(INTEGRATION_MSG_TOOL_ERROR.format(tool=name, error=exc), is_error=True)
-
-    def _method(self, name: str) -> str:
-        for method in self.methods:
-            if TOOLS[method].name == name:
-                return method
-        raise ValueError(MSG_INTEGRATION_UNKNOWN_TOOL.format(name=name, names=", ".join(self.names)))
+            response = await getattr(router, planned.method)(planned.target, **self._options[planned.method])
+        except TOOL_FAILURES as exc:
+            return self._result(failed(planned, exc, self.result_chars), is_error=True, error=exc)
+        return self._result(rendered(planned, response, self.result_chars, self.document_chars), response=response)
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__} methods={self.methods} provider={self.provider!r}>"
