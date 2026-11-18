@@ -73,7 +73,6 @@ from web_router.constants import (
     MCP_TOOL_DESCRIPTIONS,
     MCP_TOOL_EXTRACT,
     MCP_TOOL_FETCH_RAW,
-    MCP_TOOL_LOAD_ENV,
     MCP_TOOL_PROPERTIES,
     MCP_TOOL_REQUIRED,
     MCP_TOOL_RESEARCH,
@@ -96,7 +95,7 @@ from web_router.mcp.answer_tool import answer_tool
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
-from web_router.mcp.env_tool import load_env_tool
+from web_router.mcp.env_tool import load_env_entry
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
 from web_router.mcp.raw_tool import fetch_raw_tool
@@ -186,7 +185,7 @@ class WebRouterTools:
                 MCP_TOOL_BROWSE: self._browse,
                 MCP_TOOL_BROWSE_STATUS: self._browse_status,
                 MCP_TOOL_FETCH_RAW: partial(fetch_raw_tool, self),
-                MCP_TOOL_LOAD_ENV: partial(load_env_tool, self),
+                **load_env_entry(self),  # none when the operator turned load_env off
                 **{name: functools.partial(handler, self) for name, handler in SESSION_TOOLS.items()},
                 MCP_TOOL_BROWSER_OPEN: self._browser_open,
                 MCP_TOOL_BROWSER_GOTO: self._browser_goto,

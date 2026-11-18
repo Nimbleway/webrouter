@@ -12,6 +12,7 @@ import stat
 from pathlib import Path
 
 from web_router.constants import (
+    MCP_ENV_FILE,
     MCP_ENV_FILE_MAX_BYTES,
     MCP_ENV_REASON_NO_DOTENV,
     MCP_ENV_REASON_NOT_A_FILE,
@@ -23,6 +24,7 @@ from web_router.constants import (
     MCP_MSG_ENV_NO_CREDENTIALS,
 )
 from web_router.constants_mcp import MCP_MSG_ENV_MISSING, MCP_MSG_ENV_UNREADABLE
+from web_router.constants_mcp_env import MCP_ENV_STATUS_REFUSED, MCP_MSG_ENV_NOT_A_DOTENV_NAME
 from web_router.mcp.env_credentials import credential_variables
 
 
@@ -89,3 +91,21 @@ def _unreadable(path: Path, reason: str) -> EnvFileError:
     return EnvFileError(
         MCP_MSG_ENV_UNREADABLE.format(path=path, reason=reason), status=MCP_ENV_STATUS_UNREADABLE, reason=reason
     )
+
+
+def is_dotenv_name(name: str) -> bool:
+    """Whether a file's name is one a ``.env`` goes by: ``.env``, ``.env.<name>`` or ``<name>.env``."""
+    return name.startswith(MCP_ENV_FILE) or name.endswith(MCP_ENV_FILE)
+
+
+def require_dotenv_name(given: str, target: Path) -> None:
+    """Refuse, before opening anything, a path whose name -- or, through a link, whose target's -- is not a ``.env``'s.
+
+    One refusal for every such path, whether a file is there or not, so a model
+    steered to probe the machine learns nothing about what exists.
+
+    Raises:
+        EnvFileError: for any such path.
+    """
+    if not (is_dotenv_name(target.name) and is_dotenv_name(target.resolve().name)):
+        raise EnvFileError(MCP_MSG_ENV_NOT_A_DOTENV_NAME.format(path=given), status=MCP_ENV_STATUS_REFUSED)

@@ -21,6 +21,7 @@ from web_router.constants import (
     ENV_MCP_ENV_FILE,
     ENV_XDG_CONFIG_HOME,
 )
+from web_router.constants_mcp_env import MCP_ENV_SWITCHES
 from web_router.mcp.env_credentials import credential_variables
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import call_tool
@@ -85,7 +86,8 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_keys: None
     work.mkdir()
     for name, value in home_variables(home).items():
         monkeypatch.setenv(name, value)
-    monkeypatch.delenv(ENV_MCP_ENV_FILE, raising=False)
+    for name in (ENV_MCP_ENV_FILE, *MCP_ENV_SWITCHES):
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.chdir(work)
     return home
 
