@@ -2,14 +2,34 @@
 
 from __future__ import annotations
 
+import logging
 import re
+import traceback
+
+from mcp_types import CallToolResult, TextContent
 
 from web_router.constants_mcp import MCP_PROVIDER_CONFIG_ASIDE, MCP_PROVIDER_CONFIG_CLAUSE
 from web_router.constants_mcp_context import MCP_MSG_ERROR_FACTS
+from web_router.exceptions import WebRouterError
 from web_router.mcp.key_text import key_hint
 from web_router.mcp.masking import mask_configured_text
 from web_router.mcp.shaping import redact, redaction_note
 from web_router.types_errors import is_retryable
+
+_LOG = logging.getLogger(__name__)
+
+
+def failure_result(exc: Exception) -> CallToolResult:
+    """A failed call as the tool error the model reads; a bug is logged too, with its stack but not its raw text.
+
+    ``WebRouterError`` and ``ValueError`` are the library's failures and bad arguments. Anything else is a bug,
+    so the operator gets its traceback, frames only: the exception's own text can quote a key, so it is masked.
+    """
+    text = error_text(exc)
+    if not isinstance(exc, WebRouterError | ValueError):
+        frames = "".join(traceback.format_tb(exc.__traceback__))
+        _LOG.error("A tool raised %s: %s\n%s", type(exc).__name__, text, frames)
+    return CallToolResult(content=[TextContent(text=text)], is_error=True)
 
 
 def error_text(exc: Exception) -> str:

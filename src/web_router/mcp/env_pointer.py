@@ -6,6 +6,7 @@ Split from :mod:`web_router.mcp.env`. The record is written owner-only
 
 from __future__ import annotations
 
+import errno
 import os
 import sys
 from pathlib import Path
@@ -22,6 +23,8 @@ from web_router.mcp.env_read import absolute
 
 _OWNER_ONLY = 0o600
 _OWNER_ONLY_DIR = 0o700
+_NO_FOLLOW = getattr(os, "O_NOFOLLOW", 0)
+"""A symlink planted at the record's path is refused, not followed to whatever file it names."""
 
 
 def user_config_dir() -> Path:
@@ -60,15 +63,25 @@ def remember(target: Path) -> Path:
     pointer = pointer_file()
     try:
         pointer.parent.mkdir(mode=_OWNER_ONLY_DIR, parents=True, exist_ok=True)
-        descriptor = os.open(pointer, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, _OWNER_ONLY)
+        if pointer.is_symlink():  # O_NOFOLLOW refuses it too; this says why where the platform has no such flag
+            raise OSError(errno.ELOOP, os.strerror(errno.ELOOP))
+        descriptor = os.open(pointer, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | _NO_FOLLOW, _OWNER_ONLY)
         with os.fdopen(descriptor, "w", encoding="utf-8") as record:
+            # A record left by an older version keeps its old mode through O_CREAT; this narrows it.
+            _narrow(record.fileno(), pointer)
             record.write(f"{target}\n")
-        # A record left by an older version keeps its old mode through O_CREAT; this narrows it.
-        os.chmod(pointer, _OWNER_ONLY)
     except OSError as exc:
         reason = exc.strerror or type(exc).__name__
         raise ValueError(MCP_MSG_ENV_REMEMBER_FAILED.format(pointer=pointer, reason=reason)) from exc
     return pointer
+
+
+def _narrow(descriptor: int, pointer: Path) -> None:
+    """Make the open record owner-only, through its descriptor where the platform allows, so no link is followed."""
+    if hasattr(os, "fchmod"):
+        os.fchmod(descriptor, _OWNER_ONLY)
+    else:  # Windows: no fchmod, and no symlink reached this far
+        os.chmod(pointer, _OWNER_ONLY)
 
 
 def forget() -> Path | None:
