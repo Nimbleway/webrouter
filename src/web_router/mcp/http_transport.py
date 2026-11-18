@@ -3,12 +3,12 @@
 The tools, handlers and shutdown are :mod:`web_router.mcp.server`'s; this adds the three things a network
 listener needs that a stdio pipe does not:
 
-- It binds to loopback unless ``--host`` names another address, and then refuses to start without a bearer
-  token (:data:`~web_router.constants_mcp_http.ENV_MCP_TOKEN`), so a shared server is never open to anyone
-  who can reach it.
+- It binds to ``127.0.0.1`` unless ``--host`` names another; off the tokenless hosts it refuses to start
+  without a bearer token (:data:`~web_router.constants_mcp_http.ENV_MCP_TOKEN`), so a shared server is
+  never open to anyone who can reach it.
 - With a token set, every request must carry it, compared in constant time.
-- ``load_env`` is off unless the operator turned it on, so a client cannot point the server at files on the
-  host it runs on. Keys come from the server's own environment.
+- ``load_env`` and the browser's private addresses are off unless the operator turned them on, so a client
+  cannot reach the server's files or its own network. Keys come from the server's own environment.
 
 Every client shares one :class:`~web_router.mcp.tools.WebRouterTools`: one router, one budget, one set of
 browser sessions.
@@ -50,7 +50,6 @@ from web_router.constants_mcp_http import (
 )
 from web_router.exceptions import ConfigurationError
 from web_router.mcp.env import EnvSources
-from web_router.mcp.key_text import server_instructions
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import _shutdown, build_server
 from web_router.mcp.tools import WebRouterTools
@@ -69,7 +68,7 @@ class HttpSettings:
         """Settings for ``host`` and ``port``, with a blank ``token`` read as none.
 
         Raises:
-            ConfigurationError: for an address other than loopback with no token.
+            ConfigurationError: for a host other than the tokenless ones with no token.
         """
         token = (token or "").strip() or None
         if token is None and not tokenless_host(host):
@@ -87,12 +86,16 @@ def tokenless_host(host: str) -> bool:
     return host in MCP_HTTP_TOKENLESS_HOSTS
 
 
+HTTP_OFF_SWITCHES = ((ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_OFF), (ENV_MCP_PRIVATE_URLS, MCP_PRIVATE_URLS_OFF))
+"""The switches HTTP turns off unless the operator set them, each with its off value."""
+
+
 def http_env_defaults(environ: MutableMapping[str, str] = os.environ) -> None:
     """Turn ``load_env`` and the browser's private addresses off, each unless the operator set it themselves.
 
     Over HTTP both would reach the server's machine, not the user's: its files, and its own network.
     """
-    for name, off in ((ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_OFF), (ENV_MCP_PRIVATE_URLS, MCP_PRIVATE_URLS_OFF)):
+    for name, off in HTTP_OFF_SWITCHES:
         if not environ.get(name, "").strip():
             environ[name] = off
 
@@ -125,9 +128,7 @@ def build_app(tools: WebRouterTools, settings: HttpSettings) -> ASGIApp:
     cannot reach it through DNS rebinding. With one, the token is the guard (such a page cannot send it), and
     the check is off, so a reverse proxy may forward its own public hostname.
     """
-    server = build_server(tools)
-    # Over HTTP the model's client is elsewhere: no visible local browser to offer, and keys come from the operator.
-    server.instructions = tools.env.noted(server_instructions(keyed=tools.keyed(), remote=True))
+    server = build_server(tools, remote=True)  # the client is elsewhere: no local window, keys from the operator
     security = TransportSecuritySettings(enable_dns_rebinding_protection=False) if settings.token else None
     app = server.streamable_http_app(
         streamable_http_path=MCP_HTTP_PATH, host=settings.host, transport_security=security

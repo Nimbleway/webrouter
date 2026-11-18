@@ -25,18 +25,8 @@ PRIVATE = [
 PUBLIC = "https://example.com/"
 
 
-@pytest.fixture
-def stdio(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(ENV_MCP_PRIVATE_URLS, "")  # blank reads as the default; recorded so the test undoes it
-
-
-@pytest.fixture
-def http(stdio: None) -> None:
-    http_env_defaults()
-
-
 @pytest.mark.parametrize("url", PRIVATE)
-def test_over_http_a_private_address_is_refused(http: None, url: str) -> None:
+def test_over_http_a_private_address_is_refused(http_switches: None, url: str) -> None:
     reason = NavigationPolicy.for_session(CDP).refusal(url)
 
     assert reason is not None
@@ -44,11 +34,11 @@ def test_over_http_a_private_address_is_refused(http: None, url: str) -> None:
 
 
 @pytest.mark.parametrize("url", PRIVATE)
-def test_under_stdio_a_private_address_still_opens(stdio: None, url: str) -> None:
+def test_under_stdio_a_private_address_still_opens(stdio_switches: None, url: str) -> None:
     assert NavigationPolicy.for_session(CDP).refusal(url) is None
 
 
-def test_over_http_a_name_that_resolves_privately_is_refused(http: None) -> None:
+def test_over_http_a_name_that_resolves_privately_is_refused(http_switches: None) -> None:
     policy = NavigationPolicy.for_session(CDP)
 
     assert policy.refusal("http://intranet.example/") is None  # a name is judged by what it resolves to
@@ -56,18 +46,22 @@ def test_over_http_a_name_that_resolves_privately_is_refused(http: None) -> None
     assert policy.resolved_refusal(PUBLIC, ["93.184.216.34"]) is None
 
 
-def test_over_http_a_public_address_still_opens(http: None) -> None:
+def test_over_http_a_public_address_still_opens(http_switches: None) -> None:
     assert NavigationPolicy.for_session(CDP).refusal(PUBLIC) is None
 
 
-def test_the_operator_can_keep_private_addresses_on_over_http(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_operator_can_keep_private_addresses_on_over_http(
+    monkeypatch: pytest.MonkeyPatch, stdio_switches: None
+) -> None:
     monkeypatch.setenv(ENV_MCP_PRIVATE_URLS, MCP_PRIVATE_URLS_ON)
     http_env_defaults()
 
     assert NavigationPolicy.for_session(CDP).refusal(PRIVATE[0]) is None
 
 
-def test_a_value_the_switch_does_not_take_stops_the_session(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_value_the_switch_does_not_take_stops_the_session(
+    monkeypatch: pytest.MonkeyPatch, stdio_switches: None
+) -> None:
     monkeypatch.setenv(ENV_MCP_PRIVATE_URLS, "sometimes")
 
     with pytest.raises(ConfigurationError, match=ENV_MCP_PRIVATE_URLS):

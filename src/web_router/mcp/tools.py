@@ -246,9 +246,9 @@ class WebRouterTools:
         """Whether any backend is configured here that needed a credential to be."""
         return any(methods.keyed(method) for method in methods.EACH_METHOD)
 
-    def instructions(self) -> str:
+    def instructions(self, *, remote: bool = False) -> str:
         """The server's instructions, saying what the model can do about it when no key reached the server."""
-        return self.env.noted(server_instructions(keyed=self.keyed()))
+        return self.env.noted(server_instructions(keyed=self.keyed(), remote=remote))
 
     def tools_changed(self) -> bool:
         """Whether the tool list changed since this was last asked -- true once, so the client is told once."""

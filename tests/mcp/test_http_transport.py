@@ -87,8 +87,9 @@ def test_loopback_runs_without_a_token(host: str) -> None:
     assert HttpSettings.resolve(host, 8000, None).token is None
 
 
-def test_load_env_is_off_under_http_unless_the_operator_set_it(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(ENV_MCP_LOAD_ENV, "")
+def test_load_env_is_off_under_http_unless_the_operator_set_it(
+    monkeypatch: pytest.MonkeyPatch, stdio_switches: None
+) -> None:
     http_env_defaults()
     assert switch(ENV_MCP_LOAD_ENV) == MCP_LOAD_ENV_OFF
 
@@ -97,8 +98,7 @@ def test_load_env_is_off_under_http_unless_the_operator_set_it(monkeypatch: pyte
     assert os.environ[ENV_MCP_LOAD_ENV] == MCP_LOAD_ENV_LOAD
 
 
-def test_an_http_session_does_not_list_load_env(monkeypatch: pytest.MonkeyPatch, tools: WebRouterTools) -> None:
-    monkeypatch.setenv(ENV_MCP_LOAD_ENV, "")  # blank reads as the default; recorded for undo
+def test_an_http_session_does_not_list_load_env(stdio_switches: None, tools: WebRouterTools) -> None:
     assert MCP_TOOL_LOAD_ENV in {tool.name for tool in tools.list_tools()}
 
     http_env_defaults()  # before the session is built, as the command runs it

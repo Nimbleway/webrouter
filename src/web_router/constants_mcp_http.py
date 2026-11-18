@@ -19,7 +19,7 @@ MCP_HTTP_TOKENLESS_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 """The hosts the SDK guards with its Host/Origin check, exactly as written, so the only ones without a token."""
 
 ENV_MCP_TOKEN = "WEB_ROUTER_MCP_TOKEN"
-"""The bearer token every HTTP request must carry; required to listen on anything but loopback."""
+"""The bearer token every HTTP request must carry; required to listen anywhere but the tokenless hosts."""
 
 MCP_HTTP_BEARER = "bearer"
 MCP_HTTP_AUTHORIZATION = b"authorization"

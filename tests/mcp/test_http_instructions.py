@@ -7,28 +7,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from tests.mcp.conftest import FAKE
 from tests.mcp.http_helpers import initialize
 from web_router.client import AsyncWebRouter
-from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV
-from web_router.mcp.http_transport import HttpSettings, build_app, http_env_defaults
+from web_router.mcp.http_transport import HttpSettings, build_app
 from web_router.mcp.key_text import env_hint, key_hint, no_backend_hint, server_instructions
 from web_router.mcp.tools import WebRouterTools
 
 LOAD_ENV = "load_env"
 LOCAL_WINDOW = "visible window on their machine"
-
-
-@pytest.fixture
-def stdio(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(ENV_MCP_LOAD_ENV, "")  # blank reads as the default, which serves load_env
-
-
-@pytest.fixture
-def http(stdio: None) -> None:
-    http_env_defaults()
 
 
 def _hints() -> list[str]:
@@ -40,7 +27,7 @@ def _hints() -> list[str]:
     ]
 
 
-def test_stdio_still_offers_load_env_and_a_local_window(stdio: None, fake_provider: object) -> None:
+def test_stdio_still_offers_load_env_and_a_local_window(stdio_switches: None, fake_provider: object) -> None:
     text = WebRouterTools(AsyncWebRouter(FAKE)).instructions()
 
     assert LOAD_ENV in text
@@ -48,12 +35,12 @@ def test_stdio_still_offers_load_env_and_a_local_window(stdio: None, fake_provid
     assert all(LOAD_ENV in hint for hint in _hints())
 
 
-def test_with_load_env_off_no_hint_names_it(http: None) -> None:
+def test_with_load_env_off_no_hint_names_it(http_switches: None) -> None:
     assert not any(LOAD_ENV in hint for hint in _hints())
     assert "TAVILY_API_KEY" in no_backend_hint(["TAVILY_API_KEY"])
 
 
-async def test_an_http_client_is_told_neither(http: None, fake_provider: object) -> None:
+async def test_an_http_client_is_told_neither(http_switches: None, fake_provider: object) -> None:
     app = build_app(WebRouterTools(AsyncWebRouter(FAKE)), HttpSettings.resolve("127.0.0.1", 8000, None))
 
     [response] = await initialize(app, {})
