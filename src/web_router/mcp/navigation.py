@@ -188,6 +188,9 @@ class NavigationGuard:
                         current = reason
                         break
         if blocked is None and current is None:
+            blocked, self._blocked = self._blocked, None  # a hop flagged, or a page moved, while names resolved
+            current = self._where_refused(self._page)
+        if blocked is None and current is None:
             return None
         with contextlib.suppress(Exception):
             await self._page.goto(MCP_BROWSER_BLANK_URL, timeout=BROWSER_ACTION_TIMEOUT * MS_PER_SECOND)
