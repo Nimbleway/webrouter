@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import FakeAnswerProvider, FakeBrowseProvider, FakeProvider, FakeResearchProvider
 from web_router.cli import run
 from web_router.cli.args import CliInputError, pairs
 from web_router.cli.output import exit_code
@@ -88,23 +89,57 @@ def test_providers_lists_each_method(capsys: pytest.CaptureFixture[str]) -> None
     assert "auto" in out["search"]
 
 
+def _spy(monkeypatch: pytest.MonkeyPatch, cls: type[Any]) -> list[Any]:
+    """Every instance of ``cls`` the router builds, so a test can read the requests each one was sent."""
+    made: list[Any] = []
+    original = cls.__init__
+
+    def init(self: Any, **kwargs: Any) -> None:
+        original(self, **kwargs)
+        made.append(self)
+
+    monkeypatch.setattr(cls, "__init__", init)
+    return made
+
+
 @pytest.mark.parametrize(
-    ("argv", "backend"),
+    ("argv", "backend", "cls"),
     [
-        (("search", "q"), "fake_provider"),
-        (("answer", "q"), "fake_answer_provider"),
-        (("research", "q"), "fake_research_provider"),
-        (("browse", "a task", "--start-url", "https://example.com"), "fake_browse_provider"),
+        (("search", "q"), "fake_provider", FakeProvider),
+        (("answer", "q"), "fake_answer_provider", FakeAnswerProvider),
+        (("research", "q"), "fake_research_provider", FakeResearchProvider),
+        (("browse", "a task", "--start-url", "https://example.com"), "fake_browse_provider", FakeBrowseProvider),
     ],
 )
 def test_max_cost_refuses_before_any_call(
-    argv: tuple[str, ...], backend: str, request: pytest.FixtureRequest, capsys: pytest.CaptureFixture[str]
+    argv: tuple[str, ...],
+    backend: str,
+    cls: type[Any],
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A fake backend has no price, and a cost cap refuses a call it cannot price, before anything is sent."""
     request.getfixturevalue(backend)
+    made = _spy(monkeypatch, cls)
+    assert _run(capsys, *argv, "-p", "fake")[0] == EXIT_OK
+    assert any(instance.requests for instance in made)  # the spy sees a request when one is sent
+    made.clear()
     status, out, err = _run(capsys, *argv, "-p", "fake", "--max-cost", "1")
     assert (status, out) == (EXIT_USAGE, None)
     assert err["error"]["type"] == "BudgetExceededError"
+    assert not any(instance.requests for instance in made)
+
+
+@pytest.mark.parametrize("cap", ["inf", "nan", "-1"])
+def test_a_cost_cap_that_caps_nothing_is_refused(
+    cap: str, fake_provider: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    made = _spy(monkeypatch, FakeProvider)
+    status, out, err = _run(capsys, "search", "q", "-p", "fake", f"--max-cost={cap}")
+    assert (status, out) == (EXIT_USAGE, None)
+    assert err["error"]["type"] == "InvalidParameterError"
+    assert not any(instance.requests for instance in made)
 
 
 def test_pairs_keep_text_when_untyped_and_for_non_finite_numbers() -> None:
