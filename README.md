@@ -12,6 +12,7 @@ One typed interface for search, extract, answer, research, live data and browser
   <a href="https://github.com/Nimbleway/webrouter/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-202c26" alt="License: Apache 2.0"></a>
   <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-202c26" alt="Python 3.11 to 3.13"></a>
   <a href="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml"><img src="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://glama.ai/mcp/servers/Nimbleway/webrouter"><img src="https://glama.ai/mcp/servers/Nimbleway/webrouter/badges/score.svg" alt="WebRouter MCP server on Glama"></a>
   <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white" alt="Join WebRouter on Discord"></a>
 </p>
 
