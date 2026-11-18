@@ -20,14 +20,16 @@ import hmac
 import ipaddress
 import os
 import sys
-from collections.abc import MutableMapping
+from collections.abc import AsyncIterator, MutableMapping
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from functools import partial
+from typing import Any
 
 import anyio
 import uvicorn
 from starlette.responses import JSONResponse
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import ASGIApp, Lifespan, Receive, Scope, Send
 
 from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_OFF
 from web_router.constants_mcp_http import (
@@ -113,7 +115,26 @@ def build_app(tools: WebRouterTools, settings: HttpSettings) -> ASGIApp:
     DNS rebinding.
     """
     app = build_server(tools).streamable_http_app(streamable_http_path=MCP_HTTP_PATH, host=settings.host)
+    app.router.lifespan_context = _releasing(app.router.lifespan_context, tools)
     return BearerAuth(app, settings.token) if settings.token else app
+
+
+def _releasing(lifespan: Lifespan[Any], tools: WebRouterTools) -> Lifespan[Any]:
+    """``lifespan``, then every browser session and provider released as the app shuts down.
+
+    Uvicorn re-raises a SIGTERM or SIGINT once ``serve()`` returns, which can end the process before any
+    code after it runs; its lifespan shutdown runs before that, so the release happens here.
+    """
+
+    @asynccontextmanager
+    async def run(app: Any) -> AsyncIterator[None]:
+        try:
+            async with lifespan(app):
+                yield
+        finally:
+            await _shutdown(tools)
+
+    return run
 
 
 async def serve_http(
@@ -138,7 +159,7 @@ async def serve_http(
             await uvicorn.Server(config).serve()  # uvicorn handles SIGINT and SIGTERM itself
             group.cancel_scope.cancel()
     finally:
-        await _shutdown(tools)
+        await _shutdown(tools)  # again, for a server that stopped before its lifespan ran
 
 
 def main(host: str, port: int) -> None:

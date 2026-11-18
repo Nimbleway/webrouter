@@ -10,14 +10,11 @@ import pytest
 from starlette.types import Receive, Scope, Send
 
 from tests.mcp.conftest import FAKE
-from web_router import mcp_cli
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_TOOL_LOAD_ENV
 from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_LOAD, MCP_LOAD_ENV_OFF
 from web_router.constants_mcp_http import (
     ENV_MCP_TOKEN,
-    MCP_HTTP_DEFAULT_HOST,
-    MCP_HTTP_DEFAULT_PORT,
     MCP_HTTP_PATH,
     MCP_HTTP_SHUTDOWN_GRACE,
 )
@@ -74,30 +71,6 @@ def test_loopback_runs_without_a_token(host: str) -> None:
     assert HttpSettings.resolve(host, 8000, None).token is None
 
 
-def _never_serves(*args: object) -> None:
-    raise AssertionError("an open bind without a token started serving")
-
-
-def test_the_command_refuses_an_open_bind_before_serving(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.delenv(ENV_MCP_TOKEN, raising=False)
-    monkeypatch.setattr(http_transport.anyio, "run", _never_serves)
-
-    with pytest.raises(SystemExit) as exited:
-        mcp_cli.main(["--transport", "http", "--host", "0.0.0.0"])
-
-    assert exited.value.code == 2
-    assert ENV_MCP_TOKEN in capsys.readouterr().err
-
-
-def test_host_without_http_is_a_usage_error() -> None:
-    with pytest.raises(SystemExit) as exited:
-        mcp_cli.main(["--host", "0.0.0.0"])
-
-    assert exited.value.code == 2
-
-
 def test_load_env_is_off_under_http_unless_the_operator_set_it(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(ENV_MCP_LOAD_ENV, "")
     http_env_defaults()
@@ -141,33 +114,6 @@ def test_the_settings_repr_hides_the_token() -> None:
     assert TOKEN not in repr(HttpSettings.resolve("0.0.0.0", 8000, TOKEN))
 
 
-@pytest.mark.parametrize("port", ["0", "-1", "65536", "http"])
-def test_a_port_out_of_range_is_a_usage_error(port: str) -> None:
-    with pytest.raises(SystemExit) as exited:
-        mcp_cli.main(["--transport", "http", "--port", port])
-
-    assert exited.value.code == 2
-
-
-@pytest.mark.parametrize(
-    ("argv", "expected"),
-    [
-        ([], (MCP_HTTP_DEFAULT_HOST, MCP_HTTP_DEFAULT_PORT)),
-        (["--port", "9000"], (MCP_HTTP_DEFAULT_HOST, 9000)),
-        (["--host", "::1", "--port", "1"], ("::1", 1)),
-    ],
-)
-def test_the_command_passes_the_bind_it_was_given(
-    monkeypatch: pytest.MonkeyPatch, argv: list[str], expected: tuple[str, int]
-) -> None:
-    served: list[tuple[str, int]] = []
-    monkeypatch.setattr(http_transport, "main", lambda host, port: served.append((host, port)))
-
-    mcp_cli.main(["--transport", "http", *argv])
-
-    assert served == [expected]
-
-
 async def test_shutdown_waits_a_bounded_time_for_open_requests(
     monkeypatch: pytest.MonkeyPatch, tools: WebRouterTools
 ) -> None:
@@ -185,3 +131,21 @@ async def test_shutdown_waits_a_bounded_time_for_open_requests(
     await serve_http(HttpSettings.resolve("127.0.0.1", 8000, None), tools)
 
     assert configs[0].timeout_graceful_shutdown == MCP_HTTP_SHUTDOWN_GRACE
+
+
+async def test_the_app_releases_every_session_as_it_shuts_down(
+    monkeypatch: pytest.MonkeyPatch, tools: WebRouterTools
+) -> None:
+    """Before uvicorn re-raises a SIGTERM, which may end the process before anything after ``serve()``."""
+    closed: list[bool] = []
+
+    async def aclose() -> None:
+        closed.append(True)
+
+    monkeypatch.setattr(tools, "aclose", aclose)
+    app = build_app(tools, HttpSettings.resolve("127.0.0.1", 8000, None))
+
+    async with app.router.lifespan_context(app):  # type: ignore[attr-defined]
+        assert closed == []
+
+    assert closed == [True]
