@@ -57,15 +57,20 @@ tighter time cap holds, and the response's `decision` records each attempt.
 
 `timeout=` bounds the whole call, not each backend `auto` tries. A first
 backend that hangs uses all of it, and the next is never started. To move on
-sooner, cap a backend's own requests with `timeout` in `provider_config`:
+sooner, set a backend's own HTTP timeout with `timeout` in `provider_config`:
 
 ```python
 router = WebRouter(provider_config={"nimble": {"timeout": 4}})
-router.extract(url, timeout=20)  # nimble gives up after 4 s; the next backend gets the rest
+router.extract(url, timeout=20)  # a nimble request that stalls 4 s fails; the next backend gets the rest
 ```
 
+That timeout limits each wait on the network (connecting, each read), not the
+whole request: a backend that keeps sending a little at a time stays in flight
+until the call's own `timeout=`.
+
 The router never retries a backend that failed: `auto` moves on to the next
-one, and a call with `provider=` raises.
+one, and a call with `provider=` reports the failure (an extract lists the URLs
+it could not read in `failures`; the other methods raise).
 
 A sync batch extract sends its requests one after another: on a backend that
 takes one URL per request, twenty URLs take about twenty times as long as one.
