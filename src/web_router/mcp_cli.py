@@ -18,6 +18,8 @@ from collections.abc import Sequence
 from web_router.constants import EXTRA_MCP
 from web_router.constants_mcp_http import (
     MCP_CLI_DESCRIPTION,
+    MCP_CLI_HELP_HOST,
+    MCP_CLI_HELP_PORT,
     MCP_HTTP_DEFAULT_HOST,
     MCP_HTTP_DEFAULT_PORT,
     MCP_HTTP_PORT_RANGE,
@@ -43,8 +45,8 @@ def _port(value: str) -> int:
 def _arguments(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="web-router-mcp", description=MCP_CLI_DESCRIPTION)
     parser.add_argument("--transport", choices=MCP_TRANSPORTS, default=MCP_TRANSPORT_STDIO)
-    parser.add_argument("--host", help=f"HTTP bind address (default {MCP_HTTP_DEFAULT_HOST})")
-    parser.add_argument("--port", type=_port, help=f"HTTP port (default {MCP_HTTP_DEFAULT_PORT})")
+    parser.add_argument("--host", help=MCP_CLI_HELP_HOST.format(default=MCP_HTTP_DEFAULT_HOST))
+    parser.add_argument("--port", type=_port, help=MCP_CLI_HELP_PORT.format(default=MCP_HTTP_DEFAULT_PORT))
     args = parser.parse_args(argv)
     if args.transport == MCP_TRANSPORT_STDIO and (args.host is not None or args.port is not None):
         parser.error(MCP_MSG_HTTP_STDIO_FLAGS)

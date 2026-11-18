@@ -43,3 +43,5 @@ MCP_MSG_HTTP_BAD_PORT = "--port takes a number from {low} to {high}, not {value!
 MCP_MSG_HTTP_STDIO_FLAGS = "--host and --port apply to --transport http only."
 
 MCP_CLI_DESCRIPTION = "Run the web-router MCP server over stdio (the default) or streamable HTTP."
+MCP_CLI_HELP_HOST = "HTTP bind address (default {default})"
+MCP_CLI_HELP_PORT = "HTTP port (default {default})"
