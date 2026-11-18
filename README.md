@@ -69,6 +69,12 @@ print(results.provider, [doc.url for doc in pages.documents])
 pip install "webrouter[all]"     # or: uv add "webrouter[all]"
 ```
 
+Or try the command line with no install and no key:
+
+```bash
+uvx --from "webrouter[search,extract]" webrouter search "rust async runtimes" -n 5
+```
+
 Python 3.11 or later. Extras per method (`search`, `extract`, `research`,
 `answer`, `browser`, `mcp`, ...) keep the install small; see the
 [Quickstart](https://docs.webrouter.net/quickstart).

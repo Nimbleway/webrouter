@@ -18,8 +18,16 @@ webrouter answer "When was the Eiffel Tower completed?"
 webrouter providers
 ```
 
-With no key at all, `search` and `extract` still work through the keyless
-backends. Keys come from the environment only, as everywhere else in the
+To try it without installing anything, run it through `uvx` with the extras the
+command needs. With no key, `search` and `extract` work through the keyless
+backends:
+
+```bash
+uvx --from "webrouter[search,extract]" webrouter search "rust async runtimes" -n 5
+```
+
+A bare `uvx webrouter` installs the core package alone, which has no search or
+extract backend, so it exits 3 and names the extra to add. Keys come from the environment only, as everywhere else in the
 library, and the command never reads a `.env` by itself. Load one into the
 command's environment:
 
@@ -34,7 +42,9 @@ returns, serialized. It goes on one line, so it pipes straight into `jq`.
 `--pretty` indents it.
 
 The backend's untouched payload (`raw`) is left out because it is often the bulk
-of the response and rarely what a reader wants. `--raw` puts it back.
+of the response and rarely what a reader wants, on the response and on each
+item in it, such as every source `live-data sources` lists. `--raw` puts it
+back. A `browse` response never carries it, so `--raw` adds nothing there.
 
 ```bash
 webrouter search "nvidia q3 earnings" -n 3 | jq -r '.results[].url'
@@ -79,7 +89,8 @@ line the parser refused.
 Every command takes `-p/--provider`; omit it and the router picks a backend.
 `search`, `extract`, `answer`, `research` and `browse` also take:
 
-- `--timeout SECONDS`: the most the call may wait.
+- `--timeout SECONDS`: the most the call may wait. Left out, `research` waits up
+  to 10 minutes and `browse` up to 15, the library's defaults.
 - `--max-cost USD`: refuse a backend whose estimated cost would pass this, before
   it runs, as a `Budget(max_cost_usd=...)` does.
 - `--option KEY=VALUE`: a backend-specific option, repeatable. The value is read
