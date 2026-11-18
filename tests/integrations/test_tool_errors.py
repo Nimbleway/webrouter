@@ -11,6 +11,7 @@ import pytest
 from tests.conftest import FakeExtractProvider, FakeProvider
 from web_router import AsyncWebRouter, WebRouter
 from web_router.exceptions import ConfigurationError, DeadlineExceededError, ProviderError
+from web_router.exceptions_typed import InvalidParameterError
 from web_router.integrations._messages import INTEGRATION_TIMEOUT
 from web_router.integrations.anthropic import WebRouterTools
 from web_router.registry import (
@@ -183,3 +184,9 @@ async def test_the_async_executor_gives_the_model_the_same_text() -> None:
         result = await WebRouterTools(router, provider="noisy").acall("web_router_search", {"query": "q"})
 
     assert result.is_error and result.content == sync.content
+
+
+@pytest.mark.parametrize("timeout", [float("inf"), float("nan"), -1.0])
+def test_a_timeout_the_router_would_refuse_is_refused_when_the_tools_are_built(timeout: float) -> None:
+    with pytest.raises(InvalidParameterError, match="timeout"):
+        WebRouterTools(router=WebRouter(), timeout=timeout)

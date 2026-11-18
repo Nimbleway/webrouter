@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from web_router.client import AsyncWebRouter, WebRouter
+from web_router.client_requests import with_timeout
 from web_router.constants import MSG_INTEGRATION_NO_EXTRACT_PROVIDER, MSG_INTEGRATION_UNKNOWN_METHOD, PROVIDER_AUTO
 from web_router.exceptions import ConfigurationError
 from web_router.integrations._specs import KNOWN_METHODS
@@ -105,7 +106,11 @@ def call_options(
     """The search options as the caller set them, and each method's router keywords with ``timeout`` added.
 
     The search options stay without ``timeout``: they are what a ``SearchRequest`` takes.
+
+    Raises:
+        InvalidParameterError: for a ``timeout`` the router would refuse, here rather than on every call.
     """
+    with_timeout(None, timeout)
     return search, {
         "search": {**search, "timeout": timeout},
         "answer": {**answer, "timeout": timeout},
