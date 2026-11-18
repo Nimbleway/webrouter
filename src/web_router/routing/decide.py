@@ -23,6 +23,7 @@ from web_router.routing.composite import members_of, none_answered
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
+from web_router.routing.merge_attempts import is_excluded
 from web_router.routing.merge_shape import well_formed
 from web_router.routing.record import stamp
 from web_router.types_decision import DecisionRecord
@@ -59,9 +60,10 @@ def _base_order(found: CandidateSet, decision: object) -> dict[ToolName, list[st
     order = static_order(found)
     providers: Mapping[Any, Any] = getattr(decision, "providers", None) or {}
     attempts = getattr(decision, "attempts", None)
-    # Set, a decision's attempts replace its providers: a method they name a candidate of is ranked.
+    # Set, a decision's attempts replace its providers: a method they name a candidate of, not excluded, is ranked.
     if attempts:
-        ranked = {c.tool for c in found.candidates if c.id in attempts}
+        excluded = getattr(decision, "exclude", None) or {}
+        ranked = {c.tool for c in found.candidates if c.id in attempts and not is_excluded(c, excluded)}
     else:
         ranked = {t for t, n in providers.items() if n}
     order.update({tool: list(names) for tool, names in found.cost_order.items() if tool not in ranked})

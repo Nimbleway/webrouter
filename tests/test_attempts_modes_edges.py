@@ -9,6 +9,8 @@ import pytest
 
 from tests.attempts_helpers import INSTANT, TAVILY, fake_backends, routed
 from web_router import Budget, Candidate, RouteDecision, RouteRequest
+from web_router.routing.candidates import CandidateSet
+from web_router.routing.decide import _base_order
 from web_router.routing.merge import merge
 from web_router.routing.url_policy import any_web_url
 
@@ -43,3 +45,11 @@ def test_an_empty_answer_in_a_mode_moves_on_without_calling_the_backend_again(mo
     with routed(INSTANT) as wr:
         response = wr.search("q")
     assert (calls.exa, response.provider) == (["instant"], "tavily")
+
+
+@pytest.mark.parametrize("excluded", ["search:exa", INSTANT], ids=["backend", "mode"])
+def test_an_excluded_attempt_is_no_ranking_so_the_cost_order_applies(excluded: str) -> None:
+    found = CandidateSet(candidates=(EXA, EXA_INSTANT, *OTHERS), cost_order={"search": ["tavily", "exa", "brave"]})
+    decision = RouteDecision(attempts=[INSTANT], exclude={excluded: "no"})
+    assert _base_order(found, decision)["search"] == ["tavily", "exa", "brave"]
+    assert _base_order(found, RouteDecision(attempts=[INSTANT]))["search"] == ["exa", "tavily", "brave"], "control"
