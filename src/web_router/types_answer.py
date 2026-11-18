@@ -26,7 +26,7 @@ class AnswerRequest(NormalizedRequest):
     provider call, as for a search.
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options", "mode"})
 
     query: Annotated[NonBlankText, Field(description="The question to answer.")]
     include_domains: list[str] | None = Field(default=None, description="Restrict sources to these domains.")
@@ -34,10 +34,11 @@ class AnswerRequest(NormalizedRequest):
     country: str | None = Field(default=None, description="Country code for geo-targeting, e.g. 'US'.")
     locale: str | None = Field(default=None, description="Language code, e.g. 'en'.")
     recency: Recency | None = Field(default=None, description=RECENCY_DESCRIPTION)
+    mode: str | None = Field(default=None, description="The vendor mode a pinned id set, e.g. 'linkup-deep'.")
 
 
 ANSWER_ALWAYS_SENT = AnswerRequest.always_sent
-"""Fields every answer provider handles itself: the query, and the untranslated passthrough."""
+"""Fields every answer provider handles itself: the query, the vendor mode a pin set, and the passthrough."""
 
 ANSWER_PARAMETERS: frozenset[str] = AnswerRequest.normalized_parameters()
 """Every optional parameter an answer provider may declare support for."""

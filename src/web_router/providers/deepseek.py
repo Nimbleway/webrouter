@@ -32,6 +32,7 @@ from web_router.constants_deepseek import (
     DEEPSEEK_SEARCH_PATH,
     MSG_DEEPSEEK_QUERY_TOO_LONG,
 )
+from web_router.constants_mode_parts import DEEPSEEK_FLAGS
 from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
@@ -66,6 +67,7 @@ class DeepSeekProvider(HttpSearchProvider):
     """
 
     name: ClassVar[str] = PROVIDER_DEEPSEEK
+    flags = DEEPSEEK_FLAGS
     supported_parameters: ClassVar[frozenset[str]] = DEEPSEEK_SEARCH_PARAMETERS
     depth_levels: ClassVar[frozenset[SearchDepth]] = DEEPSEEK_DEPTH_LEVELS
     refusal_reasons: ClassVar[dict[str, str]] = dict.fromkeys(("include_domains", "exclude_domains"), MSG_SITE_DOMAINS)
@@ -87,6 +89,8 @@ class DeepSeekProvider(HttpSearchProvider):
             )
         return build_payload(
             request,
+            None,
+            self,
             query=query,
             count=min(request.max_results, DEEPSEEK_MAX_COUNT) if request.max_results else None,
             **(DEEPSEEK_DEEP if request.search_depth == "deep" else {}),

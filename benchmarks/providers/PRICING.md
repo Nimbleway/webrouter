@@ -23,16 +23,16 @@ than estimated, and one that bills by tokens has no per-call figure
 before quoting a figure, and update the row's `checked` date when you do.
 
 **Mode** is the data's key: `default` for a call that sets nothing,
-web-router's own `search_depth` or `effort` value, or a vendor mode from
-`modes.json` spelled with the backend's name first (`tavily-ultra-fast`), as
+web-router's own `search_depth` or `effort` value, or a vendor mode a provider
+class declares, spelled with the backend's name first (`tavily-ultra-fast`), as
 `web_router.modes` reads a mode id. Marked "(default)", it is what a
 call that sets nothing gets.
 
-**How a setup reaches a mode.** `provider@lite|fast|deep` uses web-router's
-normalized `search_depth`, where the backend maps it. `provider:mode` sends a
-vendor mode from [`modes.json`](modes.json) through `provider_options`. A mode
-marked unverified has not yet been shown by a live call to do what its docs
-say.
+**How a setup reaches a mode.** A setup is the id `provider=` pins:
+`provider:lite|fast|deep` uses web-router's normalized `search_depth`, where the
+backend maps it, and `provider:<vendor part>` (`tavily:tavily-ultra-fast`) sends
+the wire the provider class declares for it. A mode marked unverified has not
+yet been shown by a live call to do what its docs say.
 
 ## Search
 
@@ -41,9 +41,9 @@ say.
 <!-- prices: method=search provider=nimble -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| `lite` | `nimble@lite` | `search_depth=lite` | Titles, URLs, snippets | $1.10 per 1k | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
-| `fast` (default) | `nimble`, `nimble@fast` | `search_depth=standard` (the default) | ~2K characters per result | $5 per 1k; standard depth | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
-| `deep` | `nimble@deep` (standard), `nimble:full-content@lite` | `+ full_content=true` | The whole page, scraped live | $15 per 1k; estimate is the derived upper bound: Nimble states $5 per 1k at standard depth plus $1 per 1k URLs for `full_content`, which web-router always sends at this depth, and Nimble does not state its default result count, so this assumes 10 results: $5 + 10 × $1 = $15 per 1k (derived, not stated by Nimble) | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
+| `lite` | `nimble:lite` | `search_depth=lite` | Titles, URLs, snippets | $1.10 per 1k | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
+| `fast` (default) | `nimble`, `nimble:fast` | `search_depth=standard` (the default) | ~2K characters per result | $5 per 1k; standard depth | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
+| `deep` | `nimble:deep` | `+ full_content=true` | The whole page, scraped live | $15 per 1k; estimate is the derived upper bound: Nimble states $5 per 1k at standard depth plus $1 per 1k URLs for `full_content`, which web-router always sends at this depth, and Nimble does not state its default result count, so this assumes 10 results: $5 + 10 × $1 = $15 per 1k (derived, not stated by Nimble) | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 **Standard is $5.00 (checked 2026-10-02).** nimbleway.com/pricing headlines
@@ -66,11 +66,11 @@ A credit costs $0.008 on pay-as-you-go ([api credits](https://docs.tavily.com/do
 <!-- prices: method=search provider=tavily -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| `lite` (default) | `tavily`, `tavily@lite` | `search_depth=basic` (the default) | Several snippets per URL | $8 per 1k; 1 credit at $0.008 | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
-| `fast` | `tavily@fast` | `search_depth=advanced` | Most relevant snippets, slower | $16 per 1k; 2 credits | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
-| `deep` | `tavily@deep` | `advanced + include_raw_content` | Adds the page body | $16 per 1k; 2 credits | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
-| `tavily-fast` | `tavily:fast` (unverified) | `search_depth=fast` | Lower latency | $8 per 1k; 1 credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
-| `tavily-ultra-fast` | `tavily:ultra-fast` (unverified) | `search_depth=ultra-fast` | Lowest latency, one summary per URL | $8 per 1k; 1 credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `lite` (default) | `tavily`, `tavily:lite` | `search_depth=basic` (the default) | Several snippets per URL | $8 per 1k; 1 credit at $0.008 | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `fast` | `tavily:fast` | `search_depth=advanced` | Most relevant snippets, slower | $16 per 1k; 2 credits | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `deep` | `tavily:deep` | `advanced + include_raw_content` | Adds the page body | $16 per 1k; 2 credits | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `tavily-fast` | `tavily:tavily-fast` (unverified) | `search_depth=fast` | Lower latency | $8 per 1k; 1 credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `tavily-ultra-fast` | `tavily:tavily-ultra-fast` (unverified) | `search_depth=ultra-fast` | Lowest latency, one summary per URL | $8 per 1k; 1 credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
 <!-- /prices -->
 
 `auto_parameters=true` (Tavily picks the settings) costs 2 credits. Plans:
@@ -83,12 +83,12 @@ $220, Growth 100,000 for $500.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `exa` | `type=auto` (the default) | Balances quality and speed | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `exa-highlights` | `exa:highlights` | `contents.highlights` instead of text | Query-relevant highlights instead of page text | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `exa-instant` | `exa:instant` (unverified) | `type=instant` | Fastest | $14 per 1k; estimate is the derived upper bound: Exa states $4 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $9–14 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `exa-fast` | `exa:fast` (unverified) | `type=fast` | Low latency | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `exa-deep-lite` | `exa:deep-lite` (unverified) | `type=deep-lite` | Light research with synthesis, ~4s | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `exa-deep` | `exa:deep` (unverified) | `type=deep` | Multi-step research | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `exa-deep-reasoning` | not in modes.json | `type=deep-reasoning` | Stronger reasoning | $25 per 1k; estimate is the derived upper bound: Exa states $15 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $20–25 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-highlights` | `exa:exa-highlights` | `contents.highlights` instead of text | Query-relevant highlights instead of page text | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-instant` | `exa:exa-instant` (unverified) | `type=instant` | Fastest | $14 per 1k; estimate is the derived upper bound: Exa states $4 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $9–14 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-fast` | `exa:exa-fast` (unverified) | `type=fast` | Low latency | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-deep-lite` | `exa:exa-deep-lite` (unverified) | `type=deep-lite` | Light research with synthesis, ~4s | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-deep` | `exa:exa-deep` (unverified) | `type=deep` | Multi-step research | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-deep-reasoning` | `exa:exa-deep-reasoning` (unverified) | `type=deep-reasoning` | Stronger reasoning | $25 per 1k; estimate is the derived upper bound: Exa states $15 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $20–25 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 Contents are billed per page per content type, $1 per 1k each: text, highlights
@@ -103,9 +103,7 @@ highlights at the same rate. Results beyond 10 are +$1 per 1k.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `perplexity` | `search_type=web` (the default) | General web search | $5 per 1k | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
-| `perplexity-fast` | `perplexity:fast` (unverified) | `search_type=fast` | Lower latency, lower cost | $1 per 1k | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
-| `perplexity-context-low` | `perplexity:context-low` (unverified) | `search_context_size=low` (high is the default) | Content per page | not stated for the Search API (the page prices context size for Sonar only) | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
-| `perplexity-context-medium` | `perplexity:context-medium` (unverified) | `search_context_size=medium` (high is the default) | Content per page | not stated for the Search API (the page prices context size for Sonar only) | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
+| `perplexity-fast` | `perplexity:perplexity-fast` (unverified) | `search_type=fast` | Lower latency, lower cost | $1 per 1k | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 A request with several queries is billed as one request.
@@ -116,7 +114,7 @@ A request with several queries is billed as one request.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `brave` | Search plan | Full web results | $5 per 1k; $5 free credit per month | [brave.com](https://brave.com/search/api/) | 2026-10-07 |
-| `brave-extra-snippets` | `brave:extra-snippets` (unverified) | `extra_snippets=true` | Up to 5 extra excerpts per result | $5 per 1k; included in the search price | [api-dashboard.search.brave.com](https://api-dashboard.search.brave.com/app/documentation/web-search/query) | 2026-10-07 |
+| `brave-extra-snippets` | `brave:brave-extra-snippets` (unverified) | `extra_snippets=true` | Up to 5 extra excerpts per result | $5 per 1k; included in the search price | [api-dashboard.search.brave.com](https://api-dashboard.search.brave.com/app/documentation/web-search/query) | 2026-10-07 |
 <!-- /prices -->
 
 The Answers plan (summarized, cited answers) is priced under [Answer](#answer).
@@ -128,9 +126,9 @@ The LLM Context endpoint (ranked page chunks for an LLM) has no stated price.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `parallel` | `mode=fast` on `/v1/search` | What web-router calls: fast pinned, Parallel's replacement for the beta default; latency measured on /v1beta | fast lists $1 per 1k; left unknown until route-eval re-runs on /v1, since a price reorders auto's chain | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
-| `parallel-turbo` | `parallel:turbo` (unverified) | `mode=turbo` (v1) | ~200 ms, English and Japanese only | $1 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
-| `parallel-basic` | `parallel:basic` (unverified) | `mode=basic` (v1) | Longer snippets, ~1 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
-| `parallel-advanced` | `parallel:advanced` (unverified) | `mode=advanced` (v1, the default) | Advanced retrieval, ~3 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `parallel-turbo` | `parallel:parallel-turbo` (unverified) | `mode=turbo` (v1) | ~200 ms, English and Japanese only | $1 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `parallel-basic` | `parallel:parallel-basic` (unverified) | `mode=basic` (v1) | Longer snippets, ~1 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `parallel-advanced` | `parallel:parallel-advanced` (unverified) | `mode=advanced` (/v1's own default; web-router sends `fast`) | Advanced retrieval, ~3 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
 <!-- /prices -->
 
 web-router calls `/v1/search` with `mode=fast` pinned: unset, `/v1` runs
@@ -146,10 +144,10 @@ across Parallel's APIs rather than Search alone.
 <!-- prices: method=search provider=you,you-mcp -->
 | Backend | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|---|
-| you | `lite` (default) | `you`, `you@lite` | No extraction (the default) | Snippets | $5 per 1k | [you.com](https://you.com/pricing) | 2026-10-07 |
-| you | `fast` | `you@fast` | `extraction_mode=highlights` | Query-relevant passages | $5 per 1k; no separate charge stated | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
-| you | `deep` | `you@deep` | `extraction_mode=full_page` | The whole page | $15 per 1k; estimate is the derived upper bound: You.com states $5 per 1k plus $1 per 1k pages fetched live, `full_page` can fetch every result live, and an unset `max_results` gets You.com's default of 10 results, so $5 + 10 × $1 = $15 per 1k (derived, not stated by You.com) | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
-| you | `you-full-page-cache` | `you:full-page-cache` (unverified) | `full_page` from cache only | The whole page, cached copies only | $5 per 1k; cached pages are free | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
+| you | `lite` (default) | `you`, `you:lite` | No extraction (the default) | Snippets | $5 per 1k | [you.com](https://you.com/pricing) | 2026-10-07 |
+| you | `fast` | `you:fast` | `extraction_mode=highlights` | Query-relevant passages | $5 per 1k; no separate charge stated | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
+| you | `deep` | `you:deep` | `extraction_mode=full_page` | The whole page | $15 per 1k; estimate is the derived upper bound: You.com states $5 per 1k plus $1 per 1k pages fetched live, `full_page` can fetch every result live, and an unset `max_results` gets You.com's default of 10 results, so $5 + 10 × $1 = $15 per 1k (derived, not stated by You.com) | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
+| you | `you-full-page-cache` | `you:you-full-page-cache` (unverified) | `full_page` from cache only | The whole page, cached copies only | $5 per 1k; cached pages are free | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
 | you-mcp | default | `you-mcp` | Free MCP (`you-mcp`) | Search through the keyless endpoint | free; 100 queries a day | [you.com](https://you.com/docs/build-with-agents/mcp-server) | 2026-10-07 |
 <!-- /prices -->
 
@@ -161,10 +159,10 @@ for; `sourcedAnswer` and `structured` add $0.001 at every depth. 4,000 queries a
 <!-- prices: method=search provider=linkup -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| `linkup-flash` | `linkup:flash` | `depth=flash` | Snippets, about 0.5 s | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
+| `linkup-flash` | `linkup:linkup-flash` | `depth=flash` | Snippets, about 0.5 s | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
 | default | `linkup` | `depth=fast` (sent on every search) | Snippets, about 1 s; Linkup's recommended default | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
-| `linkup-standard` | `linkup:standard` | `depth=standard` | Snippets, one agentic pass for multi-topic queries | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
-| `linkup-deep` | `linkup:deep` | `depth=deep` | Snippets, several search iterations, 6 to 16 s | $50 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
+| `linkup-standard` | `linkup:linkup-standard` | `depth=standard` | Snippets, one agentic pass for multi-topic queries | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
+| `linkup-deep` | `linkup:linkup-deep` | `depth=deep` | Snippets, several search iterations, 6 to 16 s | $50 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
 <!-- /prices -->
 
 Latencies are from the 2026-09-30 live checks. All four depths returned snippets
@@ -196,7 +194,7 @@ capped at 1,000 requests an hour per IP ([rate limits](https://docs.keenable.ai/
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `keenable` | `mode=pro` (Keenable's default; web-router sends none) | Titles, URLs, a snippet per result | one credit per search; 100k requests a month free, then not published; $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
-| `keenable-realtime` | `keenable:realtime` | `mode=realtime` | The same, faster; billed as its own SKU | one credit per search; 100k requests a month free, then not published; $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
+| `keenable-realtime` | `keenable:keenable-realtime` | `mode=realtime` | The same, faster; billed as its own SKU | one credit per search; 100k requests a month free, then not published; $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
 <!-- /prices -->
 
 ### DeepSeek
@@ -212,7 +210,7 @@ requests a second.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `deepseek` | default (`need_content` false) | Titles, URLs, a snippet and a summary per result | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
-| `deepseek-content` | `deepseek:content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
+| `deepseek-content` | `deepseek:deepseek-content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 <!-- /prices -->
 
 ### Valyu
@@ -252,8 +250,8 @@ of balance, and a payment method is required to use the API.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `octen` | default (highlights, no `full_content`) | Titles, URLs, dates and a query-relevant highlight per result | $1 per 1k; 80% off the $5 list price; full content $0.50 per 1k results on top | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
-| `fast` | `octen@fast` | `full_content.enable=true` | Adds each result's page body | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
-| `deep` | `octen@deep` | `full_content` up to 100,000 tokens | Adds a longer page body per result | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+| `fast` | `octen:fast` | `full_content.enable=true` | Adds each result's page body | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+| `deep` | `octen:deep` | `full_content` up to 100,000 tokens | Adds a longer page body per result | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
 <!-- /prices -->
 
 ### Keirolabs
@@ -309,21 +307,33 @@ key at the proxy's own cost map. These are LiteLLM's published defaults; an oper
 ## Extract (page reading)
 
 <!-- prices: method=extract -->
-| Backend | What web-router sends | Estimated price | Source | Checked |
-|---|---|---|---|---|
-| nimble | html (default) or markdown, no rendering | $1 per 1k; per URL; rendering and higher drivers cost more, per-driver prices not published | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
-| tavily | markdown | $8 per 1k; estimate is the worst case, one credit ($0.008) per URL: Tavily bills 1 credit per 5 successful URLs (advanced 2 per 5) and failed URLs are free, but does not say how a partial group of five is billed, so a request with 1–4 URLs may cost a whole credit; full groups of five cost $1.60 per 1k | [docs.tavily.com](https://docs.tavily.com/documentation/api-credits) | 2026-10-07 |
-| exa | text | $1 per 1k; per page per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| firecrawl | markdown (default) or html | $5 per 1k; 1 credit per page; top-ups 1,000–5,000 credits per $5 depending on plan; the estimate takes the top, $5 per 1k | [www.firecrawl.dev](https://www.firecrawl.dev/pricing.md) | 2026-10-07 |
-| brightdata | html (default) or markdown | $1.50 per 1k; pay-as-you-go, successes only | [brightdata.com](https://brightdata.com/pricing/web-unlocker) | 2026-10-07 |
-| oxylabs | html (default) or markdown, no rendering | $1.15 per 1k; $0.95–1.15 per 1k results by plan, the estimate takes the top; rendering $1.25–1.35 | [oxylabs.io](https://oxylabs.io/products/scraper-api/web/pricing) | 2026-10-07 |
-| jina | markdown, keyless | billed by tokens; free at 20 requests a minute keyless; with a key, billed by output tokens: 10M free (non-commercial), then $50 per 1B tokens (Standard) or $500 per 11B (Premium), varies by location | [jina.ai](https://jina.ai/reader) | 2026-10-07 |
-| parallel | not used for extract in web-router | $1 per 1k; per result | [parallel.ai](https://parallel.ai/pricing) | 2026-10-07 |
-| webiq | markdown or text, `maxLength` 500,000 | Browse; not published: limited access for select enterprise customers, by request | [webiq.microsoft.ai](https://webiq.microsoft.ai) | 2026-11-01 |
-| keenable | markdown, `max_chars` 500,000 | one credit per fetch, 100k requests a month free, then not published; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
-| deepseek | markdown | $0.75 per 1k; successful fetches only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
-| linkup | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | $0.001 per request; $1 per 1k; `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) | 2026-10-07 |
-| browserbase | markdown | $1 per 1k; Fetch API calls past the included 1,000 (Free and Developer $20/mo); $0.50 per 1k past 10,000 on Startup ($99/mo); $4 per 1k with proxies, which web-router never turns on itself | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-08 |
+| Backend | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|---|
+| nimble | default | — | html (default) or markdown, no rendering | — | $1 per 1k; per URL; rendering and higher drivers cost more, per-driver prices not published | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
+| nimble | `nimble-vx8` | `nimble:nimble-vx8` (unverified) | `driver=vx8` | Headless browser | per-driver prices not published | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-11-17 |
+| nimble | `nimble-vx8-pro` | `nimble:nimble-vx8-pro` (unverified) | `driver=vx8-pro` | Headful browser | per-driver prices not published | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-11-17 |
+| nimble | `nimble-vx10` | `nimble:nimble-vx10` (unverified) | `driver=vx10` | Stealth headless browser | per-driver prices not published | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-11-17 |
+| nimble | `nimble-vx10-pro` | `nimble:nimble-vx10-pro` (unverified) | `driver=vx10-pro` | Stealth headful browser | per-driver prices not published | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-11-17 |
+| nimble | `nimble-max` | `nimble:nimble-max` (unverified) | `driver=max` | Every driver at once, the first success wins | $2.50 per 1k; only the success is charged | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-11-17 |
+| tavily | default | — | markdown | — | $8 per 1k; estimate is the worst case, one credit ($0.008) per URL: Tavily bills 1 credit per 5 successful URLs (advanced 2 per 5) and failed URLs are free, but does not say how a partial group of five is billed, so a request with 1–4 URLs may cost a whole credit; full groups of five cost $1.60 per 1k | [docs.tavily.com](https://docs.tavily.com/documentation/api-credits) | 2026-10-07 |
+| tavily | `tavily-advanced` | `tavily:tavily-advanced` (unverified) | `extract_depth=advanced` | Tables and embedded content too | $16 per 1k; worst case, two credits ($0.016) per URL: Tavily bills 2 credits per 5 successful URLs at advanced; full groups of five cost $3.20 per 1k | [docs.tavily.com](https://docs.tavily.com/documentation/api-credits) | 2026-11-17 |
+| exa | default | — | text | — | $1 per 1k; per page per content type | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| exa | `exa-highlights` | `exa:exa-highlights` (unverified) | `highlights=true` | Highlights beside the text | $2 per 1k; $1 per 1k pages per content type, text included | [exa.ai](https://exa.ai/pricing) | 2026-11-17 |
+| exa | `exa-summary` | `exa:exa-summary` (unverified) | `summary=true` | A summary beside the text | $2 per 1k; $1 per 1k pages per content type, text included | [exa.ai](https://exa.ai/pricing) | 2026-11-17 |
+| firecrawl | default | — | markdown (default) or html | — | $5 per 1k; 1 credit per page; top-ups 1,000–5,000 credits per $5 depending on plan; the estimate takes the top, $5 per 1k | [www.firecrawl.dev](https://www.firecrawl.dev/pricing.md) | 2026-10-07 |
+| brightdata | default | — | html (default) or markdown | — | $1.50 per 1k; pay-as-you-go, successes only | [brightdata.com](https://brightdata.com/pricing/web-unlocker) | 2026-10-07 |
+| oxylabs | default | — | html (default) or markdown, no rendering | — | $1 per 1k; custom-domain scraping without JavaScript, $0.75–1.00 per 1k results by volume; the estimate takes the top | [oxylabs.io](https://oxylabs.io/products/scraper-api/web/pricing) | 2026-11-18 |
+| oxylabs | `oxylabs-render` | `oxylabs:oxylabs-render` (unverified) | `render=html` | The page rendered in a browser first | $1.50 per 1k; custom-domain JavaScript rendering, $1.22–1.50 per 1k results by volume; the estimate takes the top | [oxylabs.io](https://oxylabs.io/products/scraper-api/web/pricing) | 2026-11-17 |
+| jina | default | — | markdown, keyless | — | billed by tokens; free at 20 requests a minute keyless; with a key, billed by output tokens: 10M free (non-commercial), then $50 per 1B tokens (Standard) or $500 per 11B (Premium), varies by location | [jina.ai](https://jina.ai/reader) | 2026-10-07 |
+| parallel | default | — | not used for extract in web-router | — | $1 per 1k; per result | [parallel.ai](https://parallel.ai/pricing) | 2026-10-07 |
+| webiq | default | — | markdown or text, `maxLength` 500,000 | — | Browse; not published: limited access for select enterprise customers, by request | [webiq.microsoft.ai](https://webiq.microsoft.ai) | 2026-11-01 |
+| keenable | default | — | markdown, `max_chars` 500,000 | — | one credit per fetch, 100k requests a month free, then not published; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
+| deepseek | default | — | markdown | — | $0.75 per 1k; successful fetches only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
+| linkup | default | — | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | — | $0.001 per request; $1 per 1k; `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) | 2026-10-07 |
+| linkup | `linkup-pro` | `linkup:linkup-pro` (unverified) | `mode=pro` | Higher success on hard pages | $0.005 per request; $5 per 1k; with `renderJs` $0.01 | [docs.linkup.so](https://docs.linkup.so/pages/documentation/development/pricing) | 2026-11-17 |
+| linkup | `linkup-render-js` | `linkup:linkup-render-js` (unverified) | `renderJs=true` | JavaScript rendered first | $0.005 per request; $5 per 1k at `mode=standard`; with `mode=pro` $0.01, so it adds $0.005 to `linkup-pro` | [docs.linkup.so](https://docs.linkup.so/pages/documentation/development/pricing) | 2026-11-17 |
+| browserbase | default | — | markdown | — | $1 per 1k; Fetch API calls past the included 1,000 (Free and Developer $20/mo); $0.50 per 1k past 10,000 on Startup ($99/mo); $4 per 1k with proxies, which web-router never turns on itself | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-08 |
+| browserbase | `browserbase-proxies` | `browserbase:browserbase-proxies` (unverified) | `proxies=true` | Fetched through Browserbase's proxies | $4 per 1k; $4 per 1k with proxies against $1 without | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-17 |
 <!-- /prices -->
 
 ## Templates (Extract Templates)
@@ -352,14 +362,23 @@ What one `answer()` costs at list price, checked 2026-11-01. The answer scan
 carries one; this table is for reading the others.
 
 <!-- prices: method=answer -->
-| Backend | What web-router sends | Estimated price | Source | Checked |
-|---|---|---|---|---|
-| linkup | `/v1/search`, `outputType=sourcedAnswer`, `depth=fast` | $6 per 1k; $5 per 1k at `fast`, plus $0.001 a call for `sourcedAnswer` | [www.linkup.so](https://www.linkup.so/pricing) | 2026-11-01 |
-| exa | `/answer`, the query alone | $5 per 1k; its response states the cost under `costDollars` ($0.005 an answer in the answer scan) | [exa.ai](https://exa.ai/docs/reference/pricing) | 2026-11-01 |
-| parallel | Chat API (beta), `model=lite` | not checked here; see the vendor's page | [parallel.ai](https://parallel.ai/pricing) | — |
-| you | `/v1/answer` on `api.you.com` | $5 per 1k; its response states no cost | [you.com](https://you.com/docs/additional-resources/changelog/2026/8/5.md) | 2026-11-01 |
-| perplexity | `/v1/responses`, `effort=fast` | billed by tokens; tokens plus tools: $0.001 a web search, and the `fast` model's tokens; its response states the total under `usage.cost`: $0.0012 an answer on average over the answer scan of 300 SimpleQA questions on 2026-11-01 | [docs.perplexity.ai](https://docs.perplexity.ai/docs/agent-api/presets.md) | 2026-11-01 |
-| brave | `/res/v1/chat/completions`, `model=brave`, streamed with `enable_citations` | $4 per 1k; plus tokens ($5 per million); its stream states the cost in a `<usage>` tag: $0.054 for one question on 2026-11-03 (9,887 input tokens), not measured over the scan | [brave.com](https://brave.com/search/api/) | 2026-11-01 |
+| Backend | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|---|
+| linkup | default | — | `/v1/search`, `outputType=sourcedAnswer`, `depth=fast` | — | $6 per 1k; $5 per 1k at `fast`, plus $0.001 a call for `sourcedAnswer` | [www.linkup.so](https://www.linkup.so/pricing) | 2026-11-01 |
+| linkup | `linkup-flash` | `linkup:linkup-flash` (unverified) | `depth=flash` | Lowest latency | $6 per 1k; $0.006 a `sourcedAnswer` at `flash` | [docs.linkup.so](https://docs.linkup.so/pages/documentation/development/pricing) | 2026-11-18 |
+| linkup | `linkup-standard` | `linkup:linkup-standard` (unverified) | `depth=standard` | One agentic pass for multi-topic questions | $6 per 1k; $0.006 a `sourcedAnswer` at `standard` | [docs.linkup.so](https://docs.linkup.so/pages/documentation/development/pricing) | 2026-11-18 |
+| linkup | `linkup-deep` | `linkup:linkup-deep` (unverified) | `depth=deep` | Several search iterations | $55 per 1k; $0.055 a `sourcedAnswer` at `deep` | [docs.linkup.so](https://docs.linkup.so/pages/documentation/development/pricing) | 2026-11-18 |
+| exa | default | — | `/answer`, the query alone | — | $5 per 1k; its response states the cost under `costDollars` ($0.005 an answer in the answer scan) | [exa.ai](https://exa.ai/docs/reference/pricing) | 2026-11-01 |
+| exa | `exa-fast` | `exa:exa-fast` (unverified) | `model=exa-fast` | Exa's fast answer model | the pricing page lists `/answer` at $5 per 1k and names no model; its response states the cost under `costDollars` | [exa.ai](https://exa.ai/docs/reference/pricing) | 2026-11-18 |
+| exa | `exa-pro` | `exa:exa-pro` (unverified) | `model=exa-pro` | Exa's pro answer model | the pricing page lists `/answer` at $5 per 1k and names no model; its response states the cost under `costDollars` | [exa.ai](https://exa.ai/docs/reference/pricing) | 2026-11-18 |
+| exa | `exa-research` | `exa:exa-research` (unverified) | `model=exa-research` | Exa's research answer model | the pricing page lists `/answer` at $5 per 1k and names no model; its response states the cost under `costDollars` | [exa.ai](https://exa.ai/docs/reference/pricing) | 2026-11-18 |
+| parallel | default | — | Chat API (beta), `model=lite` | — | not checked here; see the vendor's page | [parallel.ai](https://parallel.ai/pricing) | — |
+| you | default | — | `/v1/answer` on `api.you.com` | — | $5 per 1k; its response states no cost | [you.com](https://you.com/docs/additional-resources/changelog/2026/8/5.md) | 2026-11-01 |
+| perplexity | default | — | `/v1/responses`, `effort=fast` | — | billed by tokens; tokens plus tools: $0.001 a web search, and the `fast` model's tokens; its response states the total under `usage.cost`: $0.0012 an answer on average over the answer scan of 300 SimpleQA questions on 2026-11-01 | [docs.perplexity.ai](https://docs.perplexity.ai/docs/agent-api/presets.md) | 2026-11-01 |
+| perplexity | `perplexity-low` | `perplexity:perplexity-low` (unverified) | `effort=low` | More search and reasoning than `fast` | billed by tokens; tokens plus tools at this effort; no per-call price is published, and its response states the total under `usage.cost` | [docs.perplexity.ai](https://docs.perplexity.ai/docs/agent-api/presets.md) | 2026-11-18 |
+| perplexity | `perplexity-medium` | `perplexity:perplexity-medium` (unverified) | `effort=medium` | Deeper than `low` | billed by tokens; tokens plus tools at this effort; no per-call price is published, and its response states the total under `usage.cost` | [docs.perplexity.ai](https://docs.perplexity.ai/docs/agent-api/presets.md) | 2026-11-18 |
+| perplexity | `perplexity-high` | `perplexity:perplexity-high` (unverified) | `effort=high` | The deepest one-call answer | billed by tokens; tokens plus tools at this effort; no per-call price is published, and its response states the total under `usage.cost` | [docs.perplexity.ai](https://docs.perplexity.ai/docs/agent-api/presets.md) | 2026-11-18 |
+| brave | default | — | `/res/v1/chat/completions`, `model=brave`, streamed with `enable_citations` | — | $4 per 1k; plus tokens ($5 per million); its stream states the cost in a `<usage>` tag: $0.054 for one question on 2026-11-03 (9,887 input tokens), not measured over the scan | [brave.com](https://brave.com/search/api/) | 2026-11-01 |
 <!-- /prices -->
 
 ## Research
@@ -426,11 +445,24 @@ Billed by the browser-hour while a session is open, plus proxy traffic. The
 ## Browse tasks (hosted browser agents)
 
 <!-- prices: method=browse -->
-| Backend | What web-router sends | Estimated price | Source | Checked |
-|---|---|---|---|---|
-| browser-use | legacy v2 `/api/v2/tasks` | $0.01 per run; per task, plus per agent step by model: `browser-use-2.0` (the default) $0.006, `gemini-flash-lite-latest` $0.005, `gemini-flash-latest` $0.0075, `o3` $0.03, Claude Sonnet $0.05; browser time $0.02 per hour and residential proxy $5 per GB are billed on top for Cloud | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-10-07 |
-| skyvern | `/v1/run/tasks` | credits by plan: 5,000 free once; Hobby $29/mo for 30k; Pro $149/mo for 150k (residential proxy, advanced captcha). No dollar price per action or overage published, and the pages disagree on what a credit buys | [www.skyvern.com](https://www.skyvern.com/pricing) | 2026-10-07 |
-| browserbase | Agents API `/v1/agents/runs` | 3 / 15 / 50 runs included (Free / Developer / Startup), custom on Scale; no price per run past those, and model tokens are billed at "market price" with no figure | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-10-07 |
+| Backend | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|---|
+| browser-use | default | — | legacy v2 `/api/v2/tasks` | — | $0.01 per run; per task, plus per agent step by model: `browser-use-2.0` (the default) $0.006, `gemini-flash-lite-latest` $0.005, `gemini-flash-latest` $0.0075, `o3` $0.03, Claude Sonnet $0.05; browser time $0.02 per hour and residential proxy $5 per GB are billed on top for Cloud | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-10-07 |
+| browser-use | `browser-use-gpt-5.6-luna` | `browser-use:browser-use-gpt-5.6-luna` (unverified) | `llm=gpt-5.6-luna` | The agent on `gpt-5.6-luna` | $0.004 per agent step on the v2 API; the steps a task takes are not known before it runs, and browser time and proxies are billed on top | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-11-18 |
+| browser-use | `browser-use-gemini-flash-lite-latest` | `browser-use:browser-use-gemini-flash-lite-latest` (unverified) | `llm=gemini-flash-lite-latest` | The agent on `gemini-flash-lite-latest` | $0.005 per agent step on the v2 API; the steps a task takes are not known before it runs, and browser time and proxies are billed on top | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-11-18 |
+| browser-use | `browser-use-gemini-flash-latest` | `browser-use:browser-use-gemini-flash-latest` (unverified) | `llm=gemini-flash-latest` | The agent on `gemini-flash-latest` | $0.0075 per agent step on the v2 API; the steps a task takes are not known before it runs, and browser time and proxies are billed on top | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-11-18 |
+| browser-use | `browser-use-gemini-3-flash-preview` | `browser-use:browser-use-gemini-3-flash-preview` (unverified) | `llm=gemini-3-flash-preview` | The agent on `gemini-3-flash-preview` | $0.01 per agent step on the v2 API; the steps a task takes are not known before it runs, and browser time and proxies are billed on top | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-11-18 |
+| browser-use | `browser-use-o3` | `browser-use:browser-use-o3` (unverified) | `llm=o3` | The agent on `o3` | $0.03 per agent step on the v2 API; the steps a task takes are not known before it runs, and browser time and proxies are billed on top | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-11-18 |
+| browser-use | `browser-use-claude-sonnet-5` | `browser-use:browser-use-claude-sonnet-5` (unverified) | `llm=claude-sonnet-5` | The agent on `claude-sonnet-5` | $0.03 per agent step on the v2 API; the steps a task takes are not known before it runs, and browser time and proxies are billed on top | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-11-18 |
+| browser-use | `browser-use-claude-sonnet-4-5-20250929` | `browser-use:browser-use-claude-sonnet-4-5-20250929` (unverified) | `llm=claude-sonnet-4-5-20250929` | The agent on `claude-sonnet-4-5-20250929` | $0.05 per agent step on the v2 API; the steps a task takes are not known before it runs, and browser time and proxies are billed on top | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-11-18 |
+| browser-use | `browser-use-claude-opus-4-8` | `browser-use:browser-use-claude-opus-4-8` (unverified) | `llm=claude-opus-4-8` | The agent on `claude-opus-4-8` | $0.10 per agent step on the v2 API; the steps a task takes are not known before it runs, and browser time and proxies are billed on top | [docs.browser-use.com](https://docs.browser-use.com/cloud/legacy/agent) | 2026-11-18 |
+| skyvern | default | — | `/v1/run/tasks` | — | credits by plan: 5,000 free once; Hobby $29/mo for 30k; Pro $149/mo for 150k (residential proxy, advanced captcha). No dollar price per action or overage published, and the pages disagree on what a credit buys | [www.skyvern.com](https://www.skyvern.com/pricing) | 2026-10-07 |
+| skyvern | `skyvern-2.0` | `skyvern:skyvern-2.0` (unverified) | `engine=skyvern-2.0` | Skyvern's V2 agent | credits by plan (Hobby $29/mo for 30k, Pro $149/mo for 150k); no dollar price per engine, step or run is published | [www.skyvern.com](https://www.skyvern.com/pricing) | 2026-11-18 |
+| skyvern | `skyvern-3.0` | `skyvern:skyvern-3.0` (unverified) | `engine=skyvern-3.0` | Skyvern's V3 agent | credits by plan (Hobby $29/mo for 30k, Pro $149/mo for 150k); no dollar price per engine, step or run is published | [www.skyvern.com](https://www.skyvern.com/pricing) | 2026-11-18 |
+| skyvern | `skyvern-openai-cua` | `skyvern:skyvern-openai-cua` (unverified) | `engine=openai-cua` | OpenAI's computer-use model | credits by plan (Hobby $29/mo for 30k, Pro $149/mo for 150k); no dollar price per engine, step or run is published | [www.skyvern.com](https://www.skyvern.com/pricing) | 2026-11-18 |
+| skyvern | `skyvern-anthropic-cua` | `skyvern:skyvern-anthropic-cua` (unverified) | `engine=anthropic-cua` | Anthropic's computer-use model | credits by plan (Hobby $29/mo for 30k, Pro $149/mo for 150k); no dollar price per engine, step or run is published | [www.skyvern.com](https://www.skyvern.com/pricing) | 2026-11-18 |
+| skyvern | `skyvern-ui-tars` | `skyvern:skyvern-ui-tars` (unverified) | `engine=ui-tars` | The UI-TARS model | credits by plan (Hobby $29/mo for 30k, Pro $149/mo for 150k); no dollar price per engine, step or run is published | [www.skyvern.com](https://www.skyvern.com/pricing) | 2026-11-18 |
+| browserbase | default | — | Agents API `/v1/agents/runs` | — | 3 / 15 / 50 runs included (Free / Developer / Startup), custom on Scale; no price per run past those, and model tokens are billed at "market price" with no figure | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 The model a browse agent runs on goes through `provider_options`, so its price

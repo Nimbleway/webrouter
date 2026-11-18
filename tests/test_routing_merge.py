@@ -173,7 +173,7 @@ def test_the_record_fills_the_decision_records_fields() -> None:
 
 @pytest.mark.parametrize(
     "decision",
-    [RouteDecision(), RouteDecision(reason="no opinion"), RouteDecision(tools=[], providers={"search": []})],
+    [RouteDecision(), RouteDecision(reason="none"), RouteDecision(tools=[], providers={"search": []}, attempts=[])],
 )
 def test_an_empty_decision_gets_the_static_order_recorded_as_router_empty_not_a_failure(
     decision: RouteDecision,

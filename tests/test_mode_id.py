@@ -10,7 +10,7 @@ import pytest
 
 from web_router import prices_modes
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.modes import Content, Flag, ModeDeclarations, ModeId, Tier, parse_id, parse_mode
+from web_router.modes import Content, Declarations, Flag, ModeDeclarations, ModeId, Tier, parse_id, parse_mode
 from web_router.providers.base import SearchProvider
 
 
@@ -133,11 +133,11 @@ def test_the_benchmark_and_price_list_spellings_parse_to_the_canonical_mode() ->
 
 @pytest.mark.parametrize("pair", [("low", "medium"), ("medium", "low")])
 def test_two_flags_that_set_one_field_are_refused_in_either_order(pair: tuple[str, str]) -> None:
-    perplexity = prices_modes.declared("perplexity", "search")
+    sizes = {f"acme-size-{s}": Flag(wire={"size": s}, writes="size") for s in ("low", "medium")}
+    acme = Declarations(tiers=Acme.tiers, flags=sizes)
     with pytest.raises(InvalidParameterError, match="flag slot twice"):
-        parse_mode("perplexity", "+".join(f"perplexity-context-{size}" for size in pair), perplexity)
-    one = parse_mode("perplexity", f"perplexity-context-{pair[0]}+perplexity-fast", perplexity)
-    assert one == f"perplexity-fast+perplexity-context-{pair[0]}"
+        parse_mode("acme", "+".join(f"acme-size-{size}" for size in pair), acme)
+    assert parse_mode("acme", f"acme-size-{pair[0]}+acme-turbo", acme) == f"acme-turbo+acme-size-{pair[0]}"
 
 
 def test_tavilys_own_fast_tier_is_not_the_normalized_fast() -> None:

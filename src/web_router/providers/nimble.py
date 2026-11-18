@@ -40,6 +40,7 @@ from web_router.constants import (
     RESEARCH_HTTP_TIMEOUT,
 )
 from web_router.constants_extract import MSG_EXTRACT_FETCHED_NOTHING
+from web_router.constants_mode_parts_extract import NIMBLE_EXTRACT_TIERS
 from web_router.exceptions import ProviderError
 from web_router.providers._deadline import research_budget
 from web_router.providers._nimble_clients import _NimbleClients, _NimbleKeyless
@@ -114,6 +115,7 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
     """Fetches page contents through the Nimble Extract API."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
+    tiers = NIMBLE_EXTRACT_TIERS
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(NIMBLE_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = NIMBLE_EXTRACT_DEFAULT_FORMAT
@@ -130,7 +132,9 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """Translate a normalized request into Nimble ``extract.run()`` keyword arguments."""
-        return build_payload(request, url=urls[0], formats=[NIMBLE_EXTRACT_FORMATS[self.format_of(request)]])
+        return build_payload(
+            request, None, self, url=urls[0], formats=[NIMBLE_EXTRACT_FORMATS[self.format_of(request)]]
+        )
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         # Nimble echoes the URL it resolved to, which is the better label; this

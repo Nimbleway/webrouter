@@ -3,7 +3,7 @@
 Experimental. A name maps to a factory, called with ``router_config``'s
 entries as keyword arguments when a router is built; what it returns is
 attached as any ``router=`` object is. ``rules``, the routers' default,
-``remote``, ``llm``, ``systemone``, ``fallback``, which asks a list of
+``remote``, ``llm``, ``systemone``, ``gemini``, ``fallback``, which asks a list of
 routers in turn, and ``cheapest_first`` are built in and imported only when
 used; registering a name overrides a built-in one of that name, and
 unregistering it brings the built-in back.
@@ -22,6 +22,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from web_router.constants_decider import LLM_ROUTER_NAME, SYSTEMONE_ROUTER_NAME
+from web_router.constants_decider_gemini import GEMINI_ROUTER_NAME
 from web_router.constants_fallback import FALLBACK_ROUTER_NAME
 from web_router.constants_invoke import (
     MSG_ROUTER_BUILT_NONE,
@@ -46,6 +47,7 @@ _BUILTIN_ROUTERS: dict[str, tuple[str, str]] = {
     REMOTE_ROUTER_NAME: ("web_router.routing.remote", "RemoteRouter"),
     LLM_ROUTER_NAME: ("web_router.routing.decider_llm", "llm_router"),
     SYSTEMONE_ROUTER_NAME: ("web_router.routing.decider_systemone", "systemone_router"),
+    GEMINI_ROUTER_NAME: ("web_router.routing.decider_gemini", "gemini_router"),
     FALLBACK_ROUTER_NAME: ("web_router.routing.fallback", "FallbackRouter"),
     CHEAPEST_ROUTER_NAME: ("web_router.routing.cheapest", "cheapest_router"),
 }

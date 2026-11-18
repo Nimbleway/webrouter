@@ -1,10 +1,12 @@
-"""Deciders and the built-in ``llm`` and ``systemone`` routers: presets, limits and messages.
+"""Deciders and the built-in ``llm``, ``systemone`` and ``gemini`` routers: presets, limits and messages.
 
 Experimental: :mod:`web_router.routing` is new and may change before 1.0.
 Kept apart from :mod:`web_router.constants`, so that file stops growing.
 """
 
 from __future__ import annotations
+
+from web_router.constants_decider_gemini import GEMINI_HOST, GEMINI_KEY_ENV
 
 LLM_ROUTER_NAME = "llm"
 """The registered name of the built-in router on any OpenAI-compatible chat-completions API."""
@@ -23,6 +25,10 @@ DECIDER_PINNED = " The method is fixed to {tool}: rank its backends only."
 """Added to the instructions when the caller pinned the method."""
 
 DECIDER_OPTION = "{tool} on {provider}, {cost}, {latency}"
+DECIDER_MODE_OPTION = "{tool} on {provider} in mode {mode} ({does}), {cost}, {latency}"
+"""A vendor mode's option: named, so two modes of one backend never read the same, and what its parts do."""
+DECIDER_DEPTH_DOES = "{level} depth"
+"""A normalized depth level in a mode, which no backend declares a ``does`` for."""
 DECIDER_COST = "${cost:g}"
 DECIDER_COST_UNKNOWN = "unknown cost"
 DECIDER_LATENCY = "p90 {latency:g}s"
@@ -38,8 +44,10 @@ DECIDER_MAX_RESPONSE_BYTES = 256 * 1024
 LLM_TIMEOUT_S = 3.0
 """Seconds the ``llm`` router waits for its model when ``router_config`` sets no ``timeout_s``."""
 
-SYSTEMONE_TIMEOUT_S = 1.0
-"""Seconds the ``systemone`` router waits when ``router_config`` sets no ``timeout_s``."""
+HTTP_DECIDER_TIMEOUT_S = 1.0
+"""Seconds the ``systemone`` and ``gemini`` routers wait when ``router_config`` sets no ``timeout_s``."""
+SYSTEMONE_TIMEOUT_S = HTTP_DECIDER_TIMEOUT_S
+"""The name 0.13 shipped for it, kept for code that imports it."""
 
 LLM_ROUTE_TOOLS = ("research", "browse")
 """The tools the ``llm`` router orders when neither the caller nor ``router_config`` names any: at a p50 over a
@@ -81,6 +89,7 @@ KEY_HOMES: dict[str, str] = {
     "OPENROUTER_API_KEY": "openrouter.ai",
     "GROQ_API_KEY": "api.groq.com",
     "TYPESAFE_API_KEY": "api.typesafe.ai",
+    GEMINI_KEY_ENV: GEMINI_HOST,
 }
 """A preset's key variable -> the one host it is sent to: a vendor's key never goes to another server."""
 

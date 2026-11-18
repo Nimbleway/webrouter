@@ -16,6 +16,7 @@ from pydantic import ConfigDict
 from web_router._urls import shown
 from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
 from web_router.exceptions_typed import InvalidParameterError
+from web_router.routing.entry_names import entry_name
 from web_router.types_decision import DecisionRecord
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
@@ -26,9 +27,10 @@ _WIRE_CONFIG = ConfigDict(use_attribute_docstrings=True)
 """How pydantic reads these types for the wire format's JSON Schema: each field's docstring is its description."""
 
 
-def candidate_id(tool: str, provider: str) -> str:
-    """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``."""
-    return f"{tool}{CANDIDATE_ID_SEPARATOR}{provider}"
+def candidate_id(tool: str, provider: str, mode: str | None = None) -> str:
+    """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``, or with its vendor
+    mode, ``tool:provider:mode``, as ``search:exa:exa-instant``."""
+    return f"{tool}{CANDIDATE_ID_SEPARATOR}{entry_name(provider, mode)}"
 
 
 def _finite_cap(value: object) -> bool:
@@ -67,12 +69,8 @@ class Budget:
     """Under a time cap, drop the candidates with no measured p90 latency instead of trying them."""
 
     def __post_init__(self) -> None:
-        """
-        Raises:
-            InvalidParameterError: a :class:`ValueError`, for a cap that is not a finite number of 0 or
-                more -- negative, text, a bool, NaN,
-                infinity, or too large for a float: it would cap nothing or everything, or fail later.
-        """
+        """Raise :class:`InvalidParameterError`, a :class:`ValueError`, for a cap that is not a finite number of 0 or
+        more -- negative, text, a bool, NaN, infinity, or too large for a float: it would cap nothing or everything."""
         for name in ("max_cost_usd", "time_limit_s"):
             value = getattr(self, name)
             if value is not None and not _finite_cap(value):
@@ -81,7 +79,7 @@ class Budget:
 
 @dataclass(frozen=True, kw_only=True)
 class Candidate:
-    """One (tool, provider) pair that could serve the call, with what it is estimated to cost and take."""
+    """One (tool, provider) pair, or one of its vendor modes, that could serve the call, with its cost and time."""
 
     __pydantic_config__: ClassVar[ConfigDict] = _WIRE_CONFIG
 
@@ -91,6 +89,10 @@ class Candidate:
     provider: str
     """The backend that would serve it, by registry name."""
 
+    mode: str | None = None
+    """The backend's vendor mode, canonical (``exa-instant+lite``); ``None`` for its default. Offered only to a router
+    that opts in with ``route_modes``."""
+
     est_cost_usd: float | None = None
     """Its estimated cost in US dollars, at list price, or a token-billed backend's measured mean; ``None`` unknown."""
 
@@ -98,14 +100,18 @@ class Candidate:
     """Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured."""
 
     id: str = ""
-    """``tool:provider``, the name every decision field uses: filled in when left empty, refused when it differs."""
+    """``tool:provider``, or ``tool:provider:mode`` with a mode: the name every decision field uses. Filled in when
+    left empty, refused when it differs."""
 
     def __post_init__(self) -> None:
-        expected = candidate_id(self.tool, self.provider)
-        if not self.id:
-            object.__setattr__(self, "id", expected)
-        elif self.id != expected:
+        expected = candidate_id(self.tool, self.provider, self.mode)
+        if self.id not in ("", expected):
             raise ValueError(MSG_CANDIDATE_ID.format(id=self.id, expected=expected))
+        object.__setattr__(self, "id", expected)
+
+    @property
+    def is_backend(self) -> bool:  # a backend at its default mode, the one a call runs; not a vendor mode
+        return self.mode is None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -151,6 +157,9 @@ class RouteDecision:
 
     providers: Mapping[ToolName, Sequence[str]] | None = None
     """Per method, the backends to try, best first."""
+
+    attempts: Sequence[str] | None = None
+    """Candidate ids to try, best first, vendor modes included; non-empty, they replace ``tools`` and ``providers``."""
 
     exclude: Mapping[str, str] = field(default_factory=dict)
     """Candidates never to try, by id, each with the reason."""

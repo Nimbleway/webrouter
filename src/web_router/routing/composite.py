@@ -49,9 +49,10 @@ def members_of(decision: object) -> list[DecisionMember] | None:
 
 
 def decides_nothing(decision: RouteDecision) -> bool:
-    """A decision that decides nothing: no method, no backend, no exclusion and no option."""
+    """A decision that decides nothing: no method, no backend, no attempt, no exclusion and no option."""
     providers, params = decision.providers or {}, decision.params or {}
-    return not (decision.tools or any(providers.values()) or decision.exclude or any(params.values()))
+    ranks = decision.tools or any(providers.values()) or decision.attempts
+    return not (ranks or decision.exclude or any(params.values()))
 
 
 def none_answered(decision: object) -> str | None:

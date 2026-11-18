@@ -124,6 +124,144 @@
       ],
       "resolved": 254
     },
+    "sealqa-hard-254-modes": {
+      "questions": "sealqa-hard",
+      "dataset": "SealQA Seal-Hard (vtllms/sealqa, pinned)",
+      "method": "search",
+      "limit": 254,
+      "seed": 0,
+      "max_results": 5,
+      "judge": "openai:gpt-4o",
+      "question_count": 254,
+      "answers_sha256": "b885250eac2a179e125b6971f2776222ab01a7479d2a6ecbe33b64748c714b0d",
+      "row_count": 9144,
+      "providers": [
+        "brave",
+        "deepseek",
+        "exa",
+        "keenable",
+        "linkup",
+        "nimble",
+        "parallel",
+        "perplexity",
+        "tavily",
+        "webiq",
+        "you"
+      ],
+      "failed_rows": {
+        "brave": {
+          "brave-extra-snippets": 0,
+          "default": 0
+        },
+        "deepseek": {
+          "deepseek-content": 97,
+          "default": 97
+        },
+        "exa": {
+          "default": 0,
+          "exa-deep": 4,
+          "exa-deep-lite": 5,
+          "exa-deep-reasoning": 5,
+          "exa-fast": 2,
+          "exa-highlights": 5,
+          "exa-instant": 2
+        },
+        "keenable": {
+          "default": 0,
+          "keenable-realtime": 0
+        },
+        "linkup": {
+          "default": 0,
+          "linkup-deep": 7,
+          "linkup-flash": 2,
+          "linkup-standard": 3
+        },
+        "nimble": {
+          "deep": 0,
+          "default": 0,
+          "lite": 0
+        },
+        "parallel": {
+          "default": 0,
+          "parallel-advanced": 0,
+          "parallel-basic": 1,
+          "parallel-turbo": 0
+        },
+        "perplexity": {
+          "default": 0,
+          "perplexity-fast": 0
+        },
+        "tavily": {
+          "deep": 0,
+          "default": 0,
+          "fast": 0,
+          "tavily-fast": 0,
+          "tavily-ultra-fast": 0
+        },
+        "webiq": {
+          "default": 254
+        },
+        "you": {
+          "deep": 7,
+          "default": 0,
+          "fast": 0,
+          "you-full-page-cache": 0
+        }
+      },
+      "runs": [
+        {
+          "run": "sealqa-hard-254-defaults-1116",
+          "started": "2026-11-16T06:45:15+00:00",
+          "providers": [
+            "perplexity",
+            "nimble",
+            "linkup",
+            "tavily",
+            "brave",
+            "parallel",
+            "you",
+            "webiq",
+            "exa",
+            "keenable",
+            "deepseek"
+          ],
+          "rows": 2794
+        },
+        {
+          "run": "sealqa-hard-254-modes",
+          "started": "2026-11-15T23:40:02+00:00",
+          "providers": [
+            "exa:exa-instant",
+            "exa:exa-fast",
+            "exa:exa-deep-lite",
+            "exa:exa-deep",
+            "exa:exa-deep-reasoning",
+            "tavily:tavily-fast",
+            "tavily:tavily-ultra-fast",
+            "parallel:parallel-turbo",
+            "parallel:parallel-basic",
+            "parallel:parallel-advanced",
+            "linkup:linkup-flash",
+            "linkup:linkup-standard",
+            "linkup:linkup-deep",
+            "perplexity:perplexity-fast",
+            "keenable:keenable-realtime",
+            "nimble:lite",
+            "nimble:deep",
+            "tavily:fast",
+            "tavily:deep",
+            "you:fast",
+            "you:deep",
+            "exa:exa-highlights",
+            "you:you-full-page-cache",
+            "brave:brave-extra-snippets",
+            "deepseek:deepseek-content"
+          ],
+          "rows": 6350
+        }
+      ],
+      "resolved": 254
+    },
     "simpleqa-300-v2": {
       "questions": "simpleqa",
       "dataset": "SimpleQA (openai/simple-evals)",
