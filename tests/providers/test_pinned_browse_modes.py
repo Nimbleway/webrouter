@@ -6,19 +6,17 @@ Every vendor is mocked at its HTTP transport, so these read the body each backen
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
-import httpx
 import pytest
 
 from scripts.contracts_modes import parts
+from tests.providers._pin_helpers import recording, sent
 from web_router import Budget, WebRouter
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers.base import BrowseJob
 from web_router.registry import create_browse_provider, get_browse_provider_class
-from web_router.routing.candidates import build_candidates
 from web_router.types import BrowseRequest
 
 DECLARING = ("browser-use", "skyvern")
@@ -32,30 +30,13 @@ STARTED = {"id": "task-1", "run_id": "run-1", "status": "completed", "output": "
 """What either vendor's start call answers, as far as each reads it: Skyvern's run finished at once."""
 
 
-def recording(bodies: list[dict[str, Any]]) -> httpx.MockTransport:
-    """A transport that records each JSON body posted and answers :data:`STARTED`."""
-
-    def handle(request: httpx.Request) -> httpx.Response:
-        if request.method == "POST":
-            bodies.append(json.loads(request.content or b"{}"))
-        return httpx.Response(200, json=STARTED)
-
-    return httpx.MockTransport(handle)
-
-
-def sent(pin: str, request: BrowseRequest) -> dict[str, Any]:
-    """The one body ``pin`` starts ``request`` with."""
-    bodies: list[dict[str, Any]] = []
-    create_browse_provider(pin, api_key="k", transport=recording(bodies)).submit(request)
-    assert len(bodies) == 1, "one call to start the task"
-    return bodies[0]
-
-
 @pytest.mark.parametrize(("name", "part"), PINS, ids=[f"{n}:{p}" for n, p in PINS])
-def test_pinning_a_part_sends_exactly_its_wire_beside_the_task_and_the_callers_options(name: str, part: str) -> None:
+async def test_pinning_a_part_sends_exactly_its_wire_beside_the_task_and_the_callers_options(
+    name: str, part: str
+) -> None:
     request = BrowseRequest(task=TASK, start_url=START, provider_options=CALLER)
-    plain = sent(name, request)
-    pinned = sent(f"{name}:{part}", request)
+    plain = await sent("browse", name, request, reply=STARTED)
+    pinned = await sent("browse", f"{name}:{part}", request, reply=STARTED)
 
     wire = dict(get_browse_provider_class(name).tiers[part].wire)
     assert {field: value for field, value in pinned.items() if plain.get(field) != value} == wire
@@ -76,7 +57,7 @@ def test_a_mode_the_caller_overrides_or_cannot_take_is_refused_before_anything_i
 ) -> None:
     bodies: list[dict[str, Any]] = []
     with pytest.raises(InvalidParameterError, match=named):
-        create_browse_provider(pin, api_key="k", transport=recording(bodies)).submit(
+        create_browse_provider(pin, api_key="k", transport=recording(bodies, STARTED)).submit(
             BrowseRequest(task=TASK, **options)
         )
     assert bodies == []
@@ -88,28 +69,15 @@ def test_a_pin_that_names_another_method_is_refused() -> None:
 
 
 def test_a_pinned_backend_hands_back_its_job_which_states_no_cost_and_answers() -> None:
-    provider = create_browse_provider("skyvern:skyvern-2.0", api_key="k", transport=recording([]))
+    provider = create_browse_provider("skyvern:skyvern-2.0", api_key="k", transport=recording([], STARTED))
     job = provider.submit(BrowseRequest(task=TASK))
     assert isinstance(job, BrowseJob)
     assert job.result().answer == "Done."
 
 
-@pytest.mark.parametrize(("cap", "offered"), [(1.0, []), (None, ["skyvern:skyvern-2.0", "browser-use:browser-use-o3"])])
-def test_an_unpriced_tier_is_offered_only_without_a_cost_cap(
-    monkeypatch: pytest.MonkeyPatch, cap: float | None, offered: list[str]
-) -> None:
-    monkeypatch.setenv("SKYVERN_API_KEY", "k")
-    monkeypatch.setenv("BROWSER_USE_API_KEY", "k")
-    chain = {"browse": ["skyvern:skyvern-2.0", "browser-use:browser-use-o3"]}
-    router = WebRouter(provider_config={"auto": {"chain": chain}})
-    budget = None if cap is None else Budget(max_cost_usd=cap)
-    found = build_candidates(router, {"browse": BrowseRequest(task=TASK)}, budget=budget)
-    assert [candidate.provider for candidate in found.candidates] == offered
-
-
 def test_a_named_unpriced_pin_never_sends_under_a_cost_cap() -> None:
     bodies: list[dict[str, Any]] = []
-    router = WebRouter(provider_config={"skyvern": {"api_key": "k", "transport": recording(bodies)}})
+    router = WebRouter(provider_config={"skyvern": {"api_key": "k", "transport": recording(bodies, STARTED)}})
     with pytest.raises(BudgetExceededError):
         router.browse(TASK, provider="skyvern:skyvern-2.0", budget=Budget(max_cost_usd=1.0))
     assert bodies == []

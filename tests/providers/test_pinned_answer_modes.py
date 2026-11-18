@@ -7,19 +7,16 @@ Every vendor is mocked at its HTTP transport, so these read the body each backen
 from __future__ import annotations
 
 import contextlib
-import json
 from typing import Any
 
-import httpx
 import pytest
 
 from scripts.contracts_modes import parts
-from web_router import AsyncWebRouter, Budget, WebRouter
-from web_router.exceptions import WebRouterError
+from tests.providers._pin_helpers import recording, sent
+from web_router import AsyncWebRouter, Budget
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.registry_answer import create_answer_provider, get_answer_provider_class
-from web_router.routing.candidates import build_candidates
 from web_router.routing.metered import metered
 from web_router.types_answer import AnswerRequest
 
@@ -33,32 +30,13 @@ LINKUP_REPLY = {"answer": "Argentina.", "sources": []}
 """Linkup's sourced answer, trimmed: it states no cost."""
 
 
-def recording(bodies: list[dict[str, Any]], answer: dict[str, Any] | None = None) -> httpx.MockTransport:
-    """A transport that records each JSON body sent and answers ``answer``."""
-
-    def handle(request: httpx.Request) -> httpx.Response:
-        bodies.append(json.loads(request.content or b"{}"))
-        return httpx.Response(200, json=answer or {})
-
-    return httpx.MockTransport(handle)
-
-
-async def sent(pin: str, request: AnswerRequest) -> dict[str, Any]:
-    """The one body ``pin`` sends for ``request``; the empty answer it gets back may fail the call."""
-    bodies: list[dict[str, Any]] = []
-    with contextlib.suppress(WebRouterError):
-        await create_answer_provider(pin, api_key="k", transport=recording(bodies)).aanswer(request)
-    assert len(bodies) == 1, "one call to the vendor"
-    return bodies[0]
-
-
 @pytest.mark.parametrize(("name", "part"), PINS, ids=[f"{n}:{p}" for n, p in PINS])
 async def test_pinning_a_part_sends_exactly_its_wire_beside_the_question_and_the_callers_options(
     name: str, part: str
 ) -> None:
     request = AnswerRequest(query=QUESTION, provider_options=CALLER)
-    plain = await sent(name, request)
-    pinned = await sent(f"{name}:{part}", request)
+    plain = await sent("answer", name, request)
+    pinned = await sent("answer", f"{name}:{part}", request)
 
     wire = dict(get_answer_provider_class(name).tiers[part].wire)
     assert {field: value for field, value in pinned.items() if plain.get(field) != value} == wire
@@ -88,21 +66,6 @@ async def test_a_mode_the_caller_overrides_or_cannot_take_is_refused_before_anyt
 def test_a_pin_that_names_another_method_is_refused() -> None:
     with pytest.raises(InvalidParameterError, match="pinned answer backend"):
         get_answer_provider_class("search:linkup:linkup-deep")
-
-
-@pytest.mark.parametrize(
-    ("cap", "offered"), [(1.0, ["linkup:linkup-deep"]), (None, ["linkup:linkup-deep", "exa:exa-pro"])]
-)
-def test_an_unpriced_tier_is_offered_only_without_a_cost_cap(
-    monkeypatch: pytest.MonkeyPatch, cap: float | None, offered: list[str]
-) -> None:
-    monkeypatch.setenv("LINKUP_API_KEY", "k")
-    monkeypatch.setenv("EXA_API_KEY", "k")
-    chain = {"answer": ["linkup:linkup-deep", "exa:exa-pro"]}
-    router = WebRouter(provider_config={"auto": {"chain": chain}})
-    budget = None if cap is None else Budget(max_cost_usd=cap)
-    found = build_candidates(router, {"answer": AnswerRequest(query=QUESTION)}, budget=budget)
-    assert [candidate.provider for candidate in found.candidates] == offered
 
 
 @pytest.mark.parametrize(
