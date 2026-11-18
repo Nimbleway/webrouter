@@ -50,7 +50,7 @@ def test_an_attempt_that_failed_before_the_answer_has_its_own_line(chain: WebRou
 
 
 def _record(hops: list[DecisionHop], tried: list[str]) -> DecisionRecord:
-    attempts = [DecisionAttempt(id=id, est_cost_usd=0.01, seconds=0.5) for id in tried]
+    attempts = [DecisionAttempt(id=id, est_cost_usd=0.01, seconds=n + 0.5) for n, id in enumerate(tried)]
     return DecisionRecord(decision_id="d1", hops=hops, attempts=attempts)
 
 
@@ -62,9 +62,10 @@ def test_a_candidate_skipped_before_it_started_has_no_line() -> None:
 
 def test_an_empty_answer_the_call_moved_past_is_logged_as_empty() -> None:
     record = _record([DecisionHop(id="search:exa"), DecisionHop(id="search:exa", error="timeout")], ["search:exa"] * 2)
-    assert [(e.provider, e.outcome, e.error) for e in passed_entries(record, "search")] == [
-        ("exa", "empty", None),
-        ("exa", "failed", "timeout"),
+    """Each hop takes its own attempt, in order, even when one backend was tried twice."""
+    assert [(e.provider, e.outcome, e.error, e.elapsed_s) for e in passed_entries(record, "search")] == [
+        ("exa", "empty", None, 0.5),
+        ("exa", "failed", "timeout", 1.5),
     ]
 
 
