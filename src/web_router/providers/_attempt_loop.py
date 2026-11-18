@@ -34,12 +34,13 @@ from typing import Any, Generic, TypeVar
 from web_router.constants import AUTO_AGGREGATE_FAILURE
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.providers._attempt_step import Failures, Tried, failure, label, prepared, priced, refused
-from web_router.providers._chain import _RECOVERABLE, _held_or_raise
+from web_router.providers._attempt_step import Failures, Tried, failure, prepared, priced, refused
+from web_router.providers._chain import RECOVERABLE, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
 from web_router.routing.attempts import in_call_order
 from web_router.routing.contract import ToolName
+from web_router.routing.entry_names import entry_name
 
 _Res = TypeVar("_Res")
 
@@ -125,12 +126,12 @@ def run(walk: Walk, request: Any) -> Ran[Any]:
             call = getattr(walk.member(position), walk.method)
             response = hop(walk.tool, name, call, attempt.request) if walk.hops else call(attempt.request)
         except _deadline(walk) as exc:
-            return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, label(name, mode), walk.tool))
+            return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, entry_name(name, mode), walk.tool))
         except walk.refusals as exc:
             refused(walk, tried, attempt, exc)
             continue
-        except _RECOVERABLE as exc:
-            failure(walk, tried, position, attempt, exc)
+        except RECOVERABLE as exc:
+            failure(walk, tried, position, exc, name, mode, attempt)
             continue
         if walk.final(response := priced(response, walk.member(position), attempt)):
             return Ran(response, name, walk.order[index + 1 :])
@@ -150,12 +151,12 @@ async def arun(walk: Walk, request: Any) -> Ran[Any]:
             call = getattr(walk.member(position), f"a{walk.method}")
             response = await (ahop(walk.tool, name, call, attempt.request) if walk.hops else call(attempt.request))
         except _deadline(walk) as exc:
-            return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, label(name, mode), walk.tool))
+            return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, entry_name(name, mode), walk.tool))
         except walk.refusals as exc:
             refused(walk, tried, attempt, exc)
             continue
-        except _RECOVERABLE as exc:
-            failure(walk, tried, position, attempt, exc)
+        except RECOVERABLE as exc:
+            failure(walk, tried, position, exc, name, mode, attempt)
             continue
         if walk.final(response := priced(response, walk.member(position), attempt)):
             return Ran(response, name, walk.order[index + 1 :])

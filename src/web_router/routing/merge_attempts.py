@@ -14,15 +14,13 @@ from __future__ import annotations
 from collections.abc import Collection, Sequence
 
 from web_router.constants_merge import MSG_UNKNOWN_ID
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.routing.contract import Candidate, RouteDecision, RouteRequest, candidate_id
+from web_router.routing.entry_names import entry_name
 
 
 def entry(candidate: Candidate) -> str:
     """How the merged order names ``candidate``: its backend, or ``backend:mode`` for a vendor mode."""
-    if candidate.is_backend:
-        return candidate.provider
-    return f"{candidate.provider}{CANDIDATE_ID_SEPARATOR}{candidate.mode}"
+    return entry_name(candidate.provider, candidate.mode)
 
 
 def backends(request: RouteRequest, tool: str, names: Sequence[str]) -> tuple[str, ...]:

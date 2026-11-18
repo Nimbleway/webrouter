@@ -211,6 +211,8 @@ src/web_router/
 ├── routing/            the router contract (experimental): what a router is shown
 │   │                   and what it may answer, one module per part
 │   ├── contract.py     ToolName, Budget, Candidate, RouteRequest, RouteDecision, Plan
+│   ├── entry_names.py  a candidate named without its method (`exa:exa-instant`):
+│   │                   entry_name() builds one, split_entry() reads one
 │   ├── attempts.py     the seam in auto's fallback loops: a per-call order and
 │   │                   a hook before each attempt, held in a context variable
 │   ├── budget.py       budget_scope(), which every budget= call runs in: its deadline,

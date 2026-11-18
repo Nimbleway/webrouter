@@ -23,8 +23,8 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from web_router.constants_errors import MSG_KEY_REFUSED
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.routing.contract import ToolName, candidate_id
+from web_router.routing.entry_names import split_entry
 from web_router.types import NormalizedRequest
 from web_router.types_errors import CHAIN_STOPPING_KINDS, ERROR_KIND_AUTH
 
@@ -56,8 +56,8 @@ class Attempt:
 AttemptHook = Callable[[Attempt], bool]
 """Called before each attempt; ``False`` passes over the member without calling it."""
 
-FailureHook = Callable[[ToolName, str, BaseException], None]
-"""Called when a member fails and ``auto`` moves on: the method, the member's name, and the failure."""
+FailureHook = Callable[[ToolName, str, BaseException | str], None]
+"""Called when ``auto`` moves past a member: the method, its name, and the failure, or a passed-over one's hop code."""
 
 RefundHook = Callable[[Attempt], None]
 """Called when a backend refused an attempt's vendor mode: the attempt is taken back, as never charged."""
@@ -135,8 +135,8 @@ def in_call_order(tool: ToolName, eligible: list[tuple[int, str]]) -> list[tuple
     names = {name for _, name in eligible}
     ordered: list[tuple[int, str, str | None]] = []
     for entry in dict.fromkeys(route.order[tool]):
-        name, _, mode = (entry, "", "") if entry in names else entry.partition(CANDIDATE_ID_SEPARATOR)
-        ordered.extend((position, name, mode or None) for position, member in eligible if member == name)
+        name, mode = split_entry(entry, names)
+        ordered.extend((position, name, mode) for position, member in eligible if member == name)
     return ordered
 
 
@@ -185,7 +185,7 @@ def warn_if_refused(provider: str, exc: BaseException, member: object = None) ->
         logger.warning(MSG_KEY_REFUSED, provider, getattr(exc, "status_code", None))
 
 
-def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
+def noted(tool: ToolName, provider: str, exc: BaseException | str) -> None:
     """Tell the call's failure hook, if any, that ``exc`` moved ``auto`` past ``provider``: a deadline, a refusal."""
     route = _ROUTE.get()
     if route is not None and route.on_failure is not None:

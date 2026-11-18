@@ -36,7 +36,8 @@ from __future__ import annotations
 import itertools
 import threading
 import time
-from contextlib import ExitStack
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 
 from web_router.constants_budget import STATUS_DIGITS
@@ -132,11 +133,8 @@ class PoolChain:
         return None if ends is None else max(0.0, ends - time.monotonic())
 
     def reserve(self, cost: float) -> float | None:
-        """Reserve ``cost`` in every pool of the chain or in none, with every pool's lock held at once.
-
-        Returns ``None`` once reserved; otherwise the dollars left in the
-        innermost pool that refused, which ``cost`` does not fit.
-        """
+        """Reserve ``cost`` in every pool of the chain or in none, under every pool's lock: ``None`` once reserved,
+        else the dollars left in the innermost pool that refused, which ``cost`` does not fit."""
         with self._held():
             for pool in self.pools:
                 left = pool._left()
@@ -152,13 +150,14 @@ class PoolChain:
             for pool in self.pools:
                 pool._reserved -= cost
 
-    def _held(self) -> ExitStack:
+    @contextmanager
+    def _held(self) -> Iterator[None]:
         """Every pool's lock, taken in one order all chains share, so no other call sees a reservation half made
-        or half undone and no two chains wait on each other."""
-        held = ExitStack()
-        for pool in sorted(self.pools, key=lambda pool: pool.order):
-            held.enter_context(pool._lock)
-        return held
+        or half undone and no two chains wait on each other; a lock taken is given back if a later one fails."""
+        with ExitStack() as held:
+            for pool in sorted(self.pools, key=lambda pool: pool.order):
+                held.enter_context(pool._lock)
+            yield
 
     def settle(self, cost: float) -> None:
         """Move ``cost``, what a call that has ended reserved, from reserved to spent in every pool of the chain."""

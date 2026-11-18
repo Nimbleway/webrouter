@@ -61,7 +61,7 @@ def pinned_for(chain: Any, request: Any) -> Any:
     return pinned_request(chain, request, pinned) if pinned and isinstance(request, SearchRequest) else request
 
 
-def _costed(response: Any, owner: Any, request: SearchRequest) -> Any:
+def costed(response: Any, owner: Any, request: SearchRequest) -> Any:
     """``response`` carrying the mode's estimated price when it states none, as a chain member's answer must."""
     from web_router.routing.metered import estimated_cost  # the routing package imports the providers
 
@@ -77,11 +77,11 @@ class _PinnedSearch:
 
     def search(self, request: SearchRequest) -> Any:
         request = pinned_request(self, request, self.pinned)
-        return _costed(super().search(request), self, request)  # type: ignore[misc]
+        return costed(super().search(request), self, request)  # type: ignore[misc]
 
     async def asearch(self, request: SearchRequest) -> Any:
         request = pinned_request(self, request, self.pinned)
-        return _costed(await super().asearch(request), self, request)  # type: ignore[misc]
+        return costed(await super().asearch(request), self, request)  # type: ignore[misc]
 
 
 @cache

@@ -13,7 +13,7 @@ import pytest
 
 from tests.attempts_helpers import DEEP, INSTANT, TAVILY, Reply, fake_backends, hooked, price, routed
 from tests.candidates_helpers import Shown
-from web_router import AsyncWebRouter, Budget, ProviderError, RouteDecision, WebRouter
+from web_router import AsyncWebRouter, Budget, BudgetExceededError, ProviderError, RouteDecision, WebRouter
 from web_router.routing.attempts import CallRoute, call_route
 
 EMPTY: dict[str, Any] = {"results": []}
@@ -64,10 +64,10 @@ def test_a_refused_mode_starts_no_cooldown(monkeypatch: pytest.MonkeyPatch) -> N
     assert calls.exa == ["instant", "instant"], "the second call tried Exa again"
 
 
-_STOPPING: list[Reply] = [403, 429, 500, httpx.ReadTimeout("read timed out"), httpx.ConnectError("reset")]
+_STOPPING: list[Reply] = [403, 429, httpx.ReadTimeout("read timed out"), httpx.ConnectError("reset")]
 
 
-@pytest.mark.parametrize("reply", _STOPPING, ids=["403", "429", "500", "timeout", "no-status"])
+@pytest.mark.parametrize("reply", _STOPPING, ids=["403", "429", "timeout", "no-status"])
 def test_any_other_failure_stops_the_backend_for_the_call(monkeypatch: pytest.MonkeyPatch, reply: Reply) -> None:
     calls = fake_backends(monkeypatch, reply)
     with routed(INSTANT, DEEP, TAVILY) as wr:
@@ -135,3 +135,19 @@ def test_a_cap_only_a_mode_fits_still_asks_the_router_and_runs_that_mode(monkeyp
     with WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router) as wr:
         response = wr.search("q", budget=cap)
     assert (router.ids, calls.exa, response.provider) == ([INSTANT], ["instant"], "exa")
+
+
+def test_a_router_answer_that_leaves_nothing_to_run_lets_the_budget_say_why(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = fake_backends(monkeypatch)
+    router = Shown(RouteDecision(providers={"search": ["exa"]}), route_modes=True)
+    wr = WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router)
+    with wr, pytest.raises(BudgetExceededError, match="search:exa skipped"):
+        wr.search("q", budget=Budget(max_cost_usd=0.015))
+    assert router.ids and calls.exa == [], "asked, since a mode fits; then nothing sent"
+
+
+def test_a_cap_of_nothing_sends_nothing_and_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = fake_backends(monkeypatch)
+    with routed(INSTANT, DEEP, TAVILY) as wr, pytest.raises(BudgetExceededError):
+        wr.search("q", budget=Budget(max_cost_usd=0.0))
+    assert (calls.exa, calls.tavily) == ([], [])

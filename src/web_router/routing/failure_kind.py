@@ -18,7 +18,6 @@ no cause chain, so a status it cannot read stops the backend.
 
 from __future__ import annotations
 
-from web_router.exceptions import WebRouterError
 from web_router.types_errors import ERROR_KIND_BAD_REQUEST
 
 REFUSED_STATUSES = frozenset({400, 422})
@@ -42,14 +41,3 @@ def mode_refused(exc: BaseException) -> bool:
         return False
     text = str(exc).lower()
     return not any(marker in text for marker in OUT_OF_CREDITS_MARKERS)
-
-
-class BackendStopped(WebRouterError):
-    """An attempt passed over because an earlier attempt of its backend failed in this call; never raised."""
-
-    hop_code = BACKEND_FAILED
-    """What the decision record's hop says for it."""
-
-    def __init__(self, provider: str) -> None:
-        super().__init__(f"[{provider}] {BACKEND_FAILED}")
-        self.provider = provider

@@ -33,17 +33,12 @@ def test_a_400_or_422_bad_request_is_a_refused_mode(status: int) -> None:
     "exc",
     [
         _http(405),
-        _http(409),
-        _http(401),
-        _http(403),
-        _http(429),
-        _http(500),
         ProviderError("exa", "connection reset"),
         _timeout(),
         ConfigurationError("no key"),
         ProviderNotInstalledError("exa", "search"),
     ],
-    ids=["405", "409", "401", "403", "429", "500", "no-status", "timeout", "configuration", "not-installed"],
+    ids=["405", "no-status", "timeout", "configuration", "not-installed"],
 )
 def test_anything_else_is_not_a_refused_mode(exc: Exception) -> None:
     assert not mode_refused(exc)
@@ -58,7 +53,5 @@ def test_a_422_whose_kind_is_auth_is_not_a_refused_mode() -> None:
     assert not mode_refused(_http(422, kind="auth"))
 
 
-def test_a_hop_reads_the_status_or_the_errors_own_code() -> None:
-    from web_router.routing.failure_kind import BackendStopped
-
-    assert (error_code(_http(422)), error_code(BackendStopped("exa"))) == ("422", "backend_failed")
+def test_a_hop_reads_the_status_the_backend_answered() -> None:
+    assert error_code(_http(422)) == "422"

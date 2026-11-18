@@ -32,10 +32,7 @@ def stamp(prompt: str) -> dict[str, Any]:
 
 
 def error_code(exc: BaseException) -> str:
-    """A failure as a hop records it: its own ``hop_code`` when it has one, the HTTP status when the backend answered
-    with one, else the error's class."""
-    if isinstance(code := getattr(exc, "hop_code", None), str):
-        return code
+    """A failure as a hop records it: the HTTP status when the backend answered with one, else the error's class."""
     original = getattr(exc, "original", None)
     for source in (getattr(original, "response", None), original, exc):
         status = getattr(source, "status_code", None)

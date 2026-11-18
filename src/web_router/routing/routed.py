@@ -133,13 +133,14 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         outcome: RouterOutcome | None,
     ) -> tuple[CallRoute | None, _RequestT, DecisionRecord | None]:
         """The order in force, the request and the record: the router's merged, else the budget's effort and order."""
-        if routed is None or outcome is None:
-            request, mapped = unrouted(chain, request, budget)
-            route, ordered = cost_route(chain, _TOOL_OF[type(request)], request, budget)
-            if ordered is not None:
-                mapped = ordered if mapped is None else mapped.model_copy(update={"merged": ordered.merged})
-            return route, request, mapped
-        return self._merged(routed, outcome, request)
+        merged = None if routed is None or outcome is None else self._merged(routed, outcome, request)
+        if merged is not None and any(merged[0].order.values()):  # else nothing to run: the budget says why, below
+            return merged
+        request, mapped = unrouted(chain, request, budget)
+        route, ordered = cost_route(chain, _TOOL_OF[type(request)], request, budget)
+        if ordered is not None:
+            mapped = ordered if mapped is None else mapped.model_copy(update={"merged": ordered.merged})
+        return route, request, mapped
 
     def _merged(
         self, routed: tuple[RouteRequest, CandidateSet], outcome: RouterOutcome, request: _RequestT
@@ -150,8 +151,7 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         out = decided(
             req, found, outcome, router=self._attached().name, caller_set=caller_set, url_check=self._router_url_check
         )
-        if out.params:
-            request = request.model_copy(update=dict(out.params))
+        request = request.model_copy(update=dict(out.params)) if out.params else request
         return CallRoute(order={out.tool: out.providers}, router_params=frozenset(out.params)), request, out.record
 
 

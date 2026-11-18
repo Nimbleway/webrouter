@@ -214,7 +214,7 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...] = ()) -> CallRoute:
             enclosing.undo(attempt)
         return False
 
-    def note(tool: ToolName, provider: str, exc: BaseException) -> None:
+    def note(tool: ToolName, provider: str, exc: BaseException | str) -> None:
         if outer_failed is not None:
             outer_failed(tool, provider, exc)
         ledger.failed(tool, provider, exc)

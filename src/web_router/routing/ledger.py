@@ -156,10 +156,10 @@ class Ledger:
             return SKIP_OVER_TIME.format(p90=p90, left=time_left)
         return None if code is None else _SKIPS[code]
 
-    def failed(self, tool: str, provider: str, exc: BaseException) -> None:
-        """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code`."""
+    def failed(self, tool: str, provider: str, exc: BaseException | str) -> None:
+        """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code` or the code given."""
         with self._lock:
-            self.trail.fail(candidate_id(tool, provider), error_code(exc))
+            self.trail.fail(candidate_id(tool, provider), exc if isinstance(exc, str) else error_code(exc))
 
     def contributed(self, tool: str, provider: str) -> None:
         """Note that ``provider`` read part of the answer though another member's response carries it."""
