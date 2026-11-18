@@ -72,19 +72,21 @@ beside the same backends at their defaults, run the same day (2026-11-16). Compa
 mode with that day's default, not with `sealqa-hard-254`: every default rose
 since October (Perplexity 48 to 85), and these scans withheld the set's own
 pages from the judge, which October's did not. With 254 questions, a gap under
-about 8 correct (3 points) is noise. Price is the list price per 1,000 searches;
-p90 is what `make latency` wrote to `prices.json` (a default's pools its earlier
+about 8 correct (3 points) is noise. Price is the list price per 1,000
+searches at the scan's 5 results; where it grows with results (Exa, Nimble
+`deep`, You.com `deep`), the 10-result upper bound in `prices.json` follows in
+brackets. p90 is what `make latency` wrote to `prices.json` (a default's pools its earlier
 runs too). A failed search counts as a miss.
 
 | Backend | Setup | Correct | vs default | $/1k | p90 |
 | --- | --- | --- | --- | --- | --- |
-| Exa | default | 63 | | 17 | 6.3s |
-| | `exa-deep-reasoning` | 88 | +25 | 25 | 11.1s |
-| | `exa-deep` | 86 | +23 | 22 | 7.8s |
-| | `exa-highlights` | 76 | +13 | 17 | 3.8s |
-| | `exa-deep-lite` | 66 | +3 | 22 | 2.9s |
-| | `exa-fast` | 59 | -4 | 17 | 0.7s |
-| | `exa-instant` | 51 | -12 | 14 | 0.6s |
+| Exa | default | 63 | | 12 (17) | 6.3s |
+| | `exa-deep-reasoning` | 88 | +25 | 20 (25) | 11.1s |
+| | `exa-deep` | 86 | +23 | 17 (22) | 7.8s |
+| | `exa-highlights` | 76 | +13 | 12 (17) | 3.8s |
+| | `exa-deep-lite` | 66 | +3 | 17 (22) | 2.9s |
+| | `exa-fast` | 59 | -4 | 12 (17) | 0.7s |
+| | `exa-instant` | 51 | -12 | 9 (14) | 0.6s |
 | Parallel | default | 68 | | unknown | 3.1s |
 | | `parallel-advanced` | 85 | +17 | 5 | 3.9s |
 | | `parallel-basic` | 64 | -4 | 5 | 3.3s |
@@ -103,9 +105,9 @@ runs too). A failed search counts as a miss.
 | You.com | default (`lite`) | 42 | | 5 | 0.8s |
 | | `fast` | 66 | +24 | 5 | 1.1s |
 | | `you-full-page-cache` | 44 | +2 | 5 | 1.2s |
-| | `deep` | 41 | -1 | 15 | 6.8s |
+| | `deep` | 41 | -1 | 10 (15) | 6.8s |
 | Nimble | default (`fast`) | 53 | | 5 | 1.3s |
-| | `deep` | 40 | -13 | 15 | 7.5s |
+| | `deep` | 40 | -13 | 10 (15) | 7.5s |
 | | `lite` | 21 | -32 | 1.1 | 10.4s |
 | Keenable | default | 53 | | unknown | 0.6s |
 | | `keenable-realtime` | 58 | +5 | unknown | 0.5s |
