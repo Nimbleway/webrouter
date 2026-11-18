@@ -70,8 +70,8 @@ def _order(
     A vendor mode runs only where ``ranked`` names it: the static order names backends alone, and leaves out a
     backend ``ranked`` names only in its modes.
     """
-    pool = entries(request, tool, excluded)
-    moded = {pool[name].provider for name in ranked if name in pool and not pool[name].is_backend}
+    pool, named = entries(request, tool, excluded), entries(request, tool, ())  # named: excluded or not
+    moded = {named[name].provider for name in ranked if name in named and not named[name].is_backend}
     rest = [p for p in (*static.get(tool, ()), *pool) if p in pool and pool[p].is_backend and p not in moded]
     return tuple(dict.fromkeys(p for p in (*ranked, *rest) if p in pool))
 

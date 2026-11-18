@@ -48,6 +48,11 @@ def test_a_backend_named_in_a_mode_is_not_appended_again_at_its_default_mode() -
     assert both.providers == ("exa:exa-instant", "exa", "brave", "tavily"), "named bare too: it runs bare"  # type: ignore[attr-defined]
 
 
+def test_a_backend_whose_only_named_mode_is_excluded_does_not_run_bare() -> None:
+    merged = _merged((EXA, EXA_INSTANT, *OTHERS), RouteDecision(attempts=[INSTANT], exclude={INSTANT: "too thin"}))
+    assert merged.providers == ("brave", "tavily")  # type: ignore[attr-defined]
+
+
 def test_an_empty_answer_in_a_mode_moves_on_without_calling_the_backend_again(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = fake_backends(monkeypatch, {"results": []})
     with routed(INSTANT) as wr:
