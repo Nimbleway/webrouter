@@ -850,7 +850,11 @@ web-router-mcp --transport http --host 0.0.0.0 --port 9000
 
 - **It binds to `127.0.0.1` by default.** Any other address needs an explicit
   `--host`, and then the server refuses to start unless `WEB_ROUTER_MCP_TOKEN`
-  is set, since anyone who could reach it could spend your keys.
+  is set, since anyone who could reach it could spend your keys. Only
+  `127.0.0.1`, `::1` and `localhost`, spelled exactly so, run without one:
+  those are the hosts where it also turns away requests whose `Host` or
+  `Origin` names another site, so a web page cannot reach it through DNS
+  rebinding.
 - **With a token, every request must carry it** as
   `Authorization: Bearer <token>`; anything else gets a 401. Set one on
   loopback too if other users share the machine. Generate one with

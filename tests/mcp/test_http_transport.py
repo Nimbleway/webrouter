@@ -10,6 +10,7 @@ import pytest
 from starlette.types import Receive, Scope, Send
 
 from tests.mcp.conftest import FAKE
+from tests.mcp.http_helpers import initialize
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_TOOL_LOAD_ENV
 from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_LOAD, MCP_LOAD_ENV_OFF
@@ -17,6 +18,7 @@ from web_router.constants_mcp_http import (
     ENV_MCP_TOKEN,
     MCP_HTTP_PATH,
     MCP_HTTP_SHUTDOWN_GRACE,
+    MCP_HTTP_TOKENLESS_HOSTS,
 )
 from web_router.exceptions import ConfigurationError
 from web_router.mcp import http_transport
@@ -59,14 +61,27 @@ async def test_the_served_app_requires_the_token(tools: WebRouterTools) -> None:
     assert await _status(app, {}) == 401
 
 
-@pytest.mark.parametrize("host", ["0.0.0.0", "::", "192.168.1.5", "example.com"])
+@pytest.mark.parametrize(
+    "host",
+    [
+        "0.0.0.0",
+        "::",
+        "192.168.1.5",
+        "example.com",
+        "127.0.0.2",
+        "LOCALHOST",
+        "[::1]",
+        "::ffff:127.0.0.1",
+        "::ffff:7f00:1",
+    ],
+)
 @pytest.mark.parametrize("token", [None, "", "   "])
 def test_an_address_off_loopback_needs_a_token(host: str, token: str | None) -> None:
     with pytest.raises(ConfigurationError, match=ENV_MCP_TOKEN):
         HttpSettings.resolve(host, 8000, token)
 
 
-@pytest.mark.parametrize("host", ["127.0.0.1", "127.0.0.2", "::1", "[::1]", "localhost", "LOCALHOST"])
+@pytest.mark.parametrize("host", sorted(MCP_HTTP_TOKENLESS_HOSTS))
 def test_loopback_runs_without_a_token(host: str) -> None:
     assert HttpSettings.resolve(host, 8000, None).token is None
 
@@ -93,18 +108,8 @@ def test_an_http_session_does_not_list_load_env(monkeypatch: pytest.MonkeyPatch,
 
 async def test_an_authorized_client_opens_a_session(tools: WebRouterTools) -> None:
     served = build_app(tools, HttpSettings.resolve("127.0.0.1", 8000, None))
-    app = BearerAuth(served, TOKEN)
-    initialize = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "initialize",
-        "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}},
-    }
-    headers = {"Authorization": f"Bearer {TOKEN}", "Accept": "application/json, text/event-stream"}
-    async with served.router.lifespan_context(served):  # type: ignore[attr-defined]
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as client:
-            response = await client.post(MCP_HTTP_PATH, headers=headers, json=initialize)
+
+    [response] = await initialize(served, {"Authorization": f"Bearer {TOKEN}"}, app=BearerAuth(served, TOKEN))
 
     assert response.status_code == 200
     assert '"serverInfo"' in response.text
@@ -149,3 +154,16 @@ async def test_the_app_releases_every_session_as_it_shuts_down(
         assert closed == []
 
     assert closed == [True]
+
+
+@pytest.mark.parametrize("host", sorted(MCP_HTTP_TOKENLESS_HOSTS))
+async def test_a_tokenless_host_turns_away_a_foreign_host_header(tools: WebRouterTools, host: str) -> None:
+    """The token rule and the SDK's DNS-rebinding check cover the same hosts."""
+    app = build_app(tools, HttpSettings.resolve(host, 8000, None))
+    foreign = {"Host": "attacker.example:8000", "Origin": "http://attacker.example:8000"}
+    bound = {"Host": f"[{host}]:8000" if ":" in host else f"{host}:8000"}
+
+    rejected, accepted = await initialize(app, foreign, bound)
+
+    assert rejected.status_code == 421
+    assert accepted.status_code != 421

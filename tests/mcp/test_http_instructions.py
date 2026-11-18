@@ -7,26 +7,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import httpx
 import pytest
 
 from tests.mcp.conftest import FAKE
+from tests.mcp.http_helpers import initialize
 from web_router.client import AsyncWebRouter
 from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV
-from web_router.constants_mcp_http import MCP_HTTP_PATH
 from web_router.mcp.http_transport import HttpSettings, build_app, http_env_defaults
 from web_router.mcp.key_text import env_hint, key_hint, no_backend_hint, server_instructions
 from web_router.mcp.tools import WebRouterTools
 
 LOAD_ENV = "load_env"
 LOCAL_WINDOW = "visible window on their machine"
-
-INITIALIZE = {
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "initialize",
-    "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}},
-}
 
 
 @pytest.fixture
@@ -62,13 +54,9 @@ def test_with_load_env_off_no_hint_names_it(http: None) -> None:
 
 
 async def test_an_http_client_is_told_neither(http: None, fake_provider: object) -> None:
-    tools = WebRouterTools(AsyncWebRouter(FAKE))
-    app = build_app(tools, HttpSettings.resolve("127.0.0.1", 8000, None))
-    headers = {"Accept": "application/json, text/event-stream"}
-    async with app.router.lifespan_context(app):  # type: ignore[attr-defined]
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as client:
-            response = await client.post(MCP_HTTP_PATH, headers=headers, json=INITIALIZE)
+    app = build_app(WebRouterTools(AsyncWebRouter(FAKE)), HttpSettings.resolve("127.0.0.1", 8000, None))
+
+    [response] = await initialize(app, {})
 
     assert '"instructions"' in response.text
     assert LOAD_ENV not in response.text

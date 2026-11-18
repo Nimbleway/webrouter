@@ -17,7 +17,6 @@ browser sessions.
 from __future__ import annotations
 
 import hmac
-import ipaddress
 import os
 import sys
 from collections.abc import AsyncIterator, MutableMapping
@@ -37,9 +36,9 @@ from web_router.constants_mcp_http import (
     MCP_HTTP_AUTHORIZATION,
     MCP_HTTP_BEARER,
     MCP_HTTP_CHALLENGE,
-    MCP_HTTP_LOCALHOST,
     MCP_HTTP_PATH,
     MCP_HTTP_SHUTDOWN_GRACE,
+    MCP_HTTP_TOKENLESS_HOSTS,
     MCP_MSG_HTTP_NEEDS_TOKEN,
     MCP_MSG_HTTP_UNAUTHORIZED,
 )
@@ -73,13 +72,13 @@ class HttpSettings:
 
 
 def is_loopback(host: str) -> bool:
-    """Whether ``host`` is ``localhost`` or a loopback IP address; a name that needs DNS is not."""
-    if host.lower() == MCP_HTTP_LOCALHOST:
-        return True
-    try:
-        return ipaddress.ip_address(host.strip("[]")).is_loopback
-    except ValueError:
-        return False
+    """Whether ``host`` is one the SDK protects against DNS rebinding; any other needs a token.
+
+    Narrower than loopback: ``127.0.0.2``, ``LOCALHOST`` or ``::ffff:127.0.0.1`` also bind to this machine,
+    but the SDK checks ``Host`` and ``Origin`` only for these three spellings, so a web page could reach a
+    tokenless server on any other. The package's other loopback helpers answer different questions.
+    """
+    return host in MCP_HTTP_TOKENLESS_HOSTS
 
 
 def http_env_defaults(environ: MutableMapping[str, str] = os.environ) -> None:
