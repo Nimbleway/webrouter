@@ -19,7 +19,7 @@ from web_router import (
     spend_report,
 )
 from web_router.registry import register_provider, unregister_provider
-from web_router.spend_record import passed_entries
+from web_router.spend_record import passed_entries, raised_entries
 from web_router.types import SearchRequest, SearchResponse
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
 
@@ -148,12 +148,25 @@ def test_a_report_counts_failed_attempts_apart_from_calls() -> None:
     entries = [
         SpendEntry(at=at, method="search", provider="exa", cost_usd=0.01, cost_source="reported", elapsed_s=2.0),
         SpendEntry(at=at, method="search", provider="exa", outcome="failed", error="503", elapsed_s=1.0),
+        SpendEntry(at=at, method="search", provider="exa", outcome="failed", cost_usd=0.02, cost_source="reported"),
     ]
     (row,) = spend_report(entries, ["provider"])
-    assert (row.calls, row.failed_attempts, row.cost_usd, row.unpriced_calls, row.elapsed_s) == (1, 1, 0.01, 0, 2.0)
+    assert (row.calls, row.failed_attempts, row.unpriced_calls, row.elapsed_s) == (1, 2, 0, 2.0)
+    assert (row.cost_usd, row.reported_usd) == pytest.approx((0.03, 0.03)), "a failed attempt's known cost counts"
     by_outcome = spend_report(entries, ["outcome"])
     counts = [(r.key["outcome"], r.calls, r.failed_attempts) for r in by_outcome]
-    assert counts == [("answered", 1, 0), ("failed", 0, 1)]
+    assert counts == [("answered", 1, 0), ("failed", 0, 2)]
+
+
+def test_an_extract_whose_every_call_failed_has_a_line_per_call() -> None:
+    error = ProviderError("jina", "nothing returned")
+    error.call_errors = (TimeoutError("read"), ProviderError("jina", "HTTP 404"))
+    entries = raised_entries(error, "extract", 3.0)
+    assert [(e.provider, e.error, e.elapsed_s) for e in entries] == [
+        ("jina", "TimeoutError", None),
+        ("jina", entries[1].error, 3.0),
+    ]
+    assert entries[1].error and entries[1].error != "TimeoutError"
 
 
 def test_a_line_written_before_outcomes_reads_as_answered() -> None:

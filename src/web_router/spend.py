@@ -32,7 +32,7 @@ from typing import Any, Literal, Protocol, runtime_checkable
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from web_router.constants_cost import COST_REPORTED
-from web_router.constants_spend import MSG_SPEND_LINE_SKIPPED, MSG_SPEND_REPORT_KEY, SPEND_REPORT_KEYS
+from web_router.constants_spend import MSG_SPEND_LINE_SKIPPED, MSG_SPEND_REPORT_KEY, OUTCOME_ANSWERED, SPEND_REPORT_KEYS
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.types_cost import CostSource
 
@@ -64,7 +64,7 @@ class SpendEntry(BaseModel):
     )
     elapsed_s: float | None = Field(default=None, allow_inf_nan=False, description="Wall-clock seconds the call took.")
     decision_id: str | None = Field(default=None, description="The decision record's id, when it has one.")
-    outcome: SpendOutcome = Field(default="answered", description="answered, failed or empty.")
+    outcome: SpendOutcome = Field(default=OUTCOME_ANSWERED, description="answered, failed or empty.")
     error: str | None = Field(default=None, description="Why a failed attempt failed: its HTTP status or error kind.")
 
     @field_validator("at")
@@ -96,7 +96,7 @@ class SpendRow(BaseModel):
     key: dict[str, str] = Field(description="The group's value for each key the report grouped by.")
     calls: int = Field(default=0, description="Calls answered.")
     failed_attempts: int = Field(default=0, description="Attempts that failed or answered empty.")
-    cost_usd: float = Field(default=0.0, description="Every known cost in the group, summed.")
+    cost_usd: float = Field(default=0.0, description="Every known cost in the group, failed attempts' too, summed.")
     reported_usd: float = Field(default=0.0, description="The part of cost_usd the backends stated.")
     estimated_usd: float = Field(default=0.0, description="The part of cost_usd estimated from list prices.")
     unpriced_calls: int = Field(default=0, description="Calls with no known cost, left out of cost_usd.")
@@ -169,13 +169,13 @@ def _value(entry: SpendEntry, key: str) -> str:
 
 
 def _add(row: SpendRow, entry: SpendEntry) -> None:
-    if entry.outcome != "answered":  # its cost and time are in its call's own line, or were never known
-        row.failed_attempts += 1
-        return
-    row.calls += 1
-    row.elapsed_s += entry.elapsed_s or 0.0
+    answered = entry.outcome == OUTCOME_ANSWERED
+    row.calls += answered
+    row.failed_attempts += not answered
+    if answered:  # an attempt's seconds are already in its call's own line
+        row.elapsed_s += entry.elapsed_s or 0.0
     if entry.cost_usd is None:
-        row.unpriced_calls += 1
+        row.unpriced_calls += answered
         return
     row.cost_usd += entry.cost_usd
     if entry.cost_source == COST_REPORTED:

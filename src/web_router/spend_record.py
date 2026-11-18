@@ -18,7 +18,7 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from web_router.constants_cost import COST_ESTIMATED
-from web_router.constants_spend import MSG_SPEND_SINK_FAILED
+from web_router.constants_spend import MSG_SPEND_SINK_FAILED, OUTCOME_EMPTY, OUTCOME_FAILED
 from web_router.exceptions import BrowseTimeoutError, DeadlineExceededError, ProviderError, ResearchTimeoutError
 from web_router.spend import SpendEntry, SpendSink
 from web_router.types_decision import DecisionRecord
@@ -92,7 +92,7 @@ def passed_entries(decision: DecisionRecord | None, method: str) -> list[SpendEn
                 provider=hop.id.partition(":")[2] or hop.id,
                 elapsed_s=attempt.seconds,
                 decision_id=decision.decision_id if decision else None,
-                outcome="empty" if hop.error is None else "failed",
+                outcome=OUTCOME_EMPTY if hop.error is None else OUTCOME_FAILED,
                 error=hop.error,
             )
         )
@@ -100,22 +100,24 @@ def passed_entries(decision: DecisionRecord | None, method: str) -> list[SpendEn
 
 
 def raised_entries(exc: Exception, method: str, elapsed_s: float) -> list[SpendEntry]:
-    """A ``failed`` entry per backend a call that raised ``exc`` tried, with its HTTP status or error kind.
+    """A ``failed`` entry per backend call a call that raised ``exc`` made, with its HTTP status or error kind.
 
-    A chain whose every backend failed names each one's own error; the call's seconds go on the last line.
+    A chain whose every backend failed names each one's own error, and an extract whose every call failed keeps
+    each call's; the call's seconds go on the last line.
     """
-    failures = getattr(exc, "failures", None) or {getattr(exc, "provider", ""): exc}
-    last = len(failures) - 1
+    provider = getattr(exc, "provider", "")
+    calls = [(provider, each) for each in getattr(exc, "call_errors", ())]
+    failures = list((getattr(exc, "failures", None) or {}).items()) or calls or [(provider, exc)]
     return [
         SpendEntry(
             at=datetime.now(UTC),
             method=method,
             provider=str(name or ""),
-            elapsed_s=elapsed_s if n == last else None,
-            outcome="failed",
+            elapsed_s=elapsed_s if n == len(failures) - 1 else None,
+            outcome=OUTCOME_FAILED,
             error=_error_of(each),
         )
-        for n, (name, each) in enumerate(failures.items())
+        for n, (name, each) in enumerate(failures)
     ]
 
 
