@@ -40,11 +40,11 @@ from web_router.constants import (
     OPENAI_TOOL_MESSAGE_ROLE,
     OPENAI_TOOL_TYPE,
 )
-from web_router.integrations import _tools
-from web_router.integrations._tools import routing_guide
+from web_router.integrations import _result, _tools
+from web_router.integrations._guide import routing_guide
 
 
-class ToolResult(_tools.ToolResult):
+class ToolResult(_result.ToolResult):
     """One tool call's outcome: what the model reads, and everything it does not.
 
     ``is_error`` is for the caller; the model has only ``content``, which

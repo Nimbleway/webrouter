@@ -12,59 +12,27 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from typing import Any, Generic, TypeVar
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.constants import (
     INTEGRATION_DOCUMENT_CHARS,
-    INTEGRATION_EXTRACT_MAX_URLS,
     INTEGRATION_METHODS,
     INTEGRATION_MSG_TOOL_ERROR,
     INTEGRATION_RESULT_CHARS,
-    INTEGRATION_ROUTING_GUIDE_INTRO,
-    INTEGRATION_ROUTING_GUIDE_METHODS,
-    INTEGRATION_ROUTING_GUIDE_OUTRO,
-    MSG_INTEGRATION_BAD_INPUT,
     MSG_INTEGRATION_UNKNOWN_METHOD,
     MSG_INTEGRATION_UNKNOWN_TOOL,
 )
 from web_router.constants_invoke import MSG_TOOLS_SYNC_IN_LOOP
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.integrations._guide import routing_guide
+from web_router.integrations._input import invalid
 from web_router.integrations._options import answer_provider_for, extract_provider_for, tool_provider
 from web_router.integrations._render import render_answer, render_extract, render_search
+from web_router.integrations._result import ToolResult
 from web_router.integrations._specs import KNOWN_METHODS, TOOLS, ToolSpec
 from web_router.routing._runner import _on_private_loop
-from web_router.types import (
-    ExtractFormat,
-    ExtractResponse,
-    Provider,
-    Recency,
-    ResearchEffort,
-    SearchDepth,
-    SearchResponse,
-)
-from web_router.types_answer import AnswerResponse
-
-
-@dataclass
-class ToolResult:
-    """One tool call's outcome: what the model reads, and everything it does not."""
-
-    content: str
-    """The text for the model -- a compact rendering, or a one-line error."""
-
-    is_error: bool = False
-    """True when the backend failed; the model reads why and may try again."""
-
-    response: SearchResponse | ExtractResponse | AnswerResponse | None = field(default=None, repr=False)
-    """The untouched response, for the caller: the model reads only ``content``."""
-
-    @property
-    def provider(self) -> str | None:
-        """Who served the call -- for ``auto``, the member that answered."""
-        return self.response.provider if self.response is not None else None
-
+from web_router.types import ExtractFormat, Provider, Recency, ResearchEffort, SearchDepth
 
 ResultT = TypeVar("ResultT", bound=ToolResult)
 
@@ -175,7 +143,7 @@ class WebRouterTools(Generic[ResultT]):
             result: ResultT = _on_private_loop(self._acall(name, tool_input)).result()  # one loop for every call
             return result
         method = self._method(name)
-        if problem := _invalid(method, name, tool_input):
+        if problem := invalid(method, name, tool_input):
             return self._result(problem, is_error=True)
         try:
             if method == "search":
@@ -194,7 +162,7 @@ class WebRouterTools(Generic[ResultT]):
         if isinstance(router, WebRouter):
             return await asyncio.to_thread(self._call, name, tool_input)
         method = self._method(name)
-        if problem := _invalid(method, name, tool_input):
+        if problem := invalid(method, name, tool_input):
             return self._result(problem, is_error=True)
         try:
             if method == "search":
@@ -216,34 +184,6 @@ class WebRouterTools(Generic[ResultT]):
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__} methods={self.methods} provider={self.provider!r}>"
-
-
-def routing_guide(methods: Sequence[str] = INTEGRATION_METHODS) -> str:
-    """The system prompt that tells an agent when to reach for which web-router tool.
-
-    One paragraph per method in ``methods``, cheapest first, between a line on
-    the principle -- the cheapest tool that answers -- and one on treating web
-    content as data. The Claude and OpenAI tools share their names, so the
-    guide reads the same for both.
-    """
-    names = {method: spec.name for method, spec in TOOLS.items()}
-    paragraphs = [INTEGRATION_ROUTING_GUIDE_METHODS[m].format(**names) for m in KNOWN_METHODS if m in methods]
-    return "\n\n".join([INTEGRATION_ROUTING_GUIDE_INTRO, *paragraphs, INTEGRATION_ROUTING_GUIDE_OUTRO])
-
-
-def _invalid(method: str, name: str, tool_input: dict[str, Any]) -> str | None:
-    """What the model reads when its input breaks the tool's schema; ``None`` when it fits."""
-    if method in ("search", "answer"):
-        query = tool_input.get("query")
-        ok = isinstance(query, str) and bool(query.strip())
-    else:
-        urls = tool_input.get("urls")
-        ok = (
-            isinstance(urls, list)
-            and 1 <= len(urls) <= INTEGRATION_EXTRACT_MAX_URLS
-            and all(isinstance(url, str) and url for url in urls)
-        )
-    return None if ok else MSG_INTEGRATION_BAD_INPUT[method].format(tool=name, max_urls=INTEGRATION_EXTRACT_MAX_URLS)
 
 
 def _loop_running() -> bool:
