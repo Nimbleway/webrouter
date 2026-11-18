@@ -86,7 +86,7 @@ line the parser refused.
 | `live-data run NAME` | `live_data()` | Seconds. One billed run on the vendor's account. |
 | `providers` | `configured_*_providers()` | Free. Reads the environment and calls nothing. |
 
-Every command takes `-p/--provider`; omit it and the router picks a backend.
+Every command but `providers` takes `-p/--provider`; omit it and the router picks a backend.
 `search`, `extract`, `answer`, `research` and `browse` also take:
 
 - `--timeout SECONDS`: the most the call may wait. Left out, `research` waits up
