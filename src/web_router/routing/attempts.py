@@ -23,7 +23,8 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from web_router.constants_errors import MSG_KEY_REFUSED
-from web_router.routing.contract import ToolName
+from web_router.routing.contract import ToolName, candidate_id
+from web_router.routing.entry_names import split_entry
 from web_router.types import NormalizedRequest
 from web_router.types_errors import CHAIN_STOPPING_KINDS, ERROR_KIND_AUTH
 
@@ -41,14 +42,25 @@ class Attempt:
     """The member, by registry name."""
 
     request: NormalizedRequest
-    """The request the member would be sent."""
+    """The request the member would be sent: in :attr:`mode`, when it has one."""
+
+    mode: str | None = None
+    """The vendor mode a router's ``attempts`` named for it; ``None`` for the backend's default."""
+
+    @property
+    def id(self) -> str:
+        """The candidate it is, by id: ``search:exa``, or with its mode ``search:exa:exa-instant``."""
+        return candidate_id(self.tool, self.provider, self.mode)
 
 
 AttemptHook = Callable[[Attempt], bool]
 """Called before each attempt; ``False`` passes over the member without calling it."""
 
-FailureHook = Callable[[ToolName, str, BaseException], None]
-"""Called when a member fails and ``auto`` moves on: the method, the member's name, and the failure."""
+FailureHook = Callable[[ToolName, str, BaseException | str], None]
+"""Called when ``auto`` moves past a member: the method, its name, and the failure, or a passed-over one's hop code."""
+
+RefundHook = Callable[[Attempt], None]
+"""Called when a backend refused an attempt's vendor mode: the attempt is taken back, as never charged."""
 
 AnswerHook = Callable[[ToolName, str], None]
 """Called when a member read part of a call's answer though another's response carries it: the method, the name."""
@@ -60,7 +72,11 @@ class CallRoute:
 
     order: Mapping[ToolName, Sequence[str]] = field(default_factory=dict)
     """Per method, the members to try, by name, in order. A member left out is not tried; a method
-    left out keeps its configured chain."""
+    left out keeps its configured chain. ``exa:exa-instant`` names member ``exa`` in that vendor mode, unless a
+    member has that name itself."""
+
+    router_params: frozenset[str] = frozenset()
+    """The options a router set on the request: an attempt's vendor mode replaces ``search_depth`` and ``effort``."""
 
     before_attempt: AttemptHook | None = None
     """Called before each attempt. ``None`` admits every member."""
@@ -70,6 +86,9 @@ class CallRoute:
 
     on_answer: AnswerHook | None = None
     """Called when a member ``auto`` retried a batch's failed URLs on read some of them. ``None`` notes nothing."""
+
+    on_refund: RefundHook | None = None
+    """Called when a backend refused an attempt's vendor mode. ``None`` takes nothing back."""
 
 
 _ROUTE: ContextVar[CallRoute | None] = ContextVar("web_router_call_route", default=None)
@@ -93,7 +112,9 @@ def current_route() -> CallRoute | None:
 def in_force_with(route: CallRoute) -> CallRoute:
     """``route``'s order, kept with the hook already in force -- the budget's -- so both hold."""
     in_force = current_route()
-    return route if in_force is None else replace(in_force, order={**in_force.order, **route.order})
+    if in_force is None:
+        return route
+    return replace(in_force, order={**in_force.order, **route.order}, router_params=route.router_params)
 
 
 def in_route(route: CallRoute | None) -> AbstractContextManager[None]:
@@ -101,26 +122,40 @@ def in_route(route: CallRoute | None) -> AbstractContextManager[None]:
     return nullcontext() if route is None else call_route(in_force_with(route))
 
 
-def in_call_order(tool: ToolName, eligible: list[tuple[int, str]]) -> list[tuple[int, str]]:
-    """``eligible`` -- ``(position, name)`` pairs in chain order -- in the call's order for ``tool``.
+def in_call_order(tool: ToolName, eligible: list[tuple[int, str]]) -> list[tuple[int, str, str | None]]:
+    """``eligible`` -- ``(position, name)`` pairs in chain order -- in the call's order for ``tool``, each with the
+    vendor mode to run it in (``None``, its default).
 
-    Members that share a name keep their chain order among themselves.
+    Members that share a name keep their chain order among themselves. A repeated name keeps its first place; a
+    member the order names in several modes runs in each, in the order's.
     """
     route = _ROUTE.get()
     if route is None or tool not in route.order:
-        return eligible
-    rank = {
-        name: index for index, name in enumerate(dict.fromkeys(route.order[tool]))
-    }  # a repeat keeps its first place
-    return sorted((member for member in eligible if member[1] in rank), key=lambda member: rank[member[1]])
+        return [(position, name, None) for position, name in eligible]
+    names = {name for _, name in eligible}
+    ordered: list[tuple[int, str, str | None]] = []
+    for entry in dict.fromkeys(route.order[tool]):
+        name, mode = split_entry(entry, names)
+        ordered.extend((position, name, mode) for position, member in eligible if member == name)
+    return ordered
 
 
 def admitted(tool: ToolName, provider: str, request: NormalizedRequest) -> bool:
     """Whether the call's hook lets ``auto`` try ``provider`` next. With no hook, always."""
+    return admits(Attempt(tool=tool, provider=provider, request=request))
+
+
+def admits(attempt: Attempt) -> bool:
+    """Whether the call's hook lets ``auto`` make ``attempt`` next. With no hook, always."""
     route = _ROUTE.get()
-    if route is None or route.before_attempt is None:
-        return True
-    return route.before_attempt(Attempt(tool=tool, provider=provider, request=request))
+    return route is None or route.before_attempt is None or route.before_attempt(attempt)
+
+
+def refunded(attempt: Attempt) -> None:
+    """Tell the call's refund hook, if any, that a backend refused ``attempt``'s vendor mode."""
+    route = _ROUTE.get()
+    if route is not None and route.on_refund is not None:
+        route.on_refund(attempt)
 
 
 def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseException, member: object = None) -> None:
@@ -150,7 +185,7 @@ def warn_if_refused(provider: str, exc: BaseException, member: object = None) ->
         logger.warning(MSG_KEY_REFUSED, provider, getattr(exc, "status_code", None))
 
 
-def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
+def noted(tool: ToolName, provider: str, exc: BaseException | str) -> None:
     """Tell the call's failure hook, if any, that ``exc`` moved ``auto`` past ``provider``: a deadline, a refusal."""
     route = _ROUTE.get()
     if route is not None and route.on_failure is not None:

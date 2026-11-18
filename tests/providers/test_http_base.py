@@ -85,8 +85,8 @@ def test_caller_headers_do_not_displace_the_auth_header(monkeypatch: pytest.Monk
 
 
 # -- Redirects ----------------------------------------------------------------
-# httpx replays request headers to the redirect target and does not strip them
-# when that target is another host, so a followed redirect is a credential leak.
+# On a redirect to another host, httpx drops a standard Authorization header but
+# keeps a custom one such as X-API-Key, so a followed redirect could leak a key.
 
 
 def test_redirects_are_off_by_default_rather_than_left_to_httpx(keyed: AcmeProvider) -> None:

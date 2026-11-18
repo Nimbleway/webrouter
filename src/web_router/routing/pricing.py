@@ -106,13 +106,14 @@ def mode_p90(provider: str, tool: str, mode: str | None) -> float | None:
 
 
 def attempt_mode(attempt: Attempt) -> str | None:
-    """The price list's mode for ``attempt``: a search's pinned mode, else its depth; a research run's effort."""
+    """The price list's mode for ``attempt``: a search's pinned mode, else its depth; a research run's effort; any
+    other request's pinned mode (an extract, an answer, a browse task), when it has one."""
     request = attempt.request
     if isinstance(request, SearchRequest):
         return request.mode or request.search_depth
     if isinstance(request, ResearchRequest):
         return request.effort
-    return None
+    return getattr(request, "mode", None)
 
 
 def priced_as(attempt: Attempt) -> tuple[str, str | None]:
@@ -169,3 +170,9 @@ def attempt_p90(attempt: Attempt) -> float | None:
         return None
     provider, mode = priced_as(attempt)
     return mode_p90(provider, attempt.tool, mode)
+
+
+def usd(value: float) -> str:
+    """Dollars as the price list states them, never rounded to cents: ``$0.025``, ``$0.0011``, ``$1.00``."""
+    whole, _, cents = f"{value:.6f}".rstrip("0").partition(".")
+    return f"${whole}.{cents.ljust(2, '0')}"

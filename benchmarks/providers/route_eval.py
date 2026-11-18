@@ -10,13 +10,16 @@ the router scores. Nothing is called; the numbers are the committed rows in
 
 A router is ``static`` (today's ``auto`` order; on a mixed set, search then
 read), ``oracle`` (the best backend or path for each question, known after the
-fact), ``always:<backend>`` (``always:<path>`` on a mixed set), or your own
-callable named ``module:attr`` or ``path/to/file.py:attr``. Yours is a
+fact), ``always:<backend>`` (``always:<path>`` on a mixed set), a built-in
+or registered router by name, ``router:<name>`` (such as ``router:gemini``,
+built with no ``router_config``, so it reads its preset's key and bills its
+vendor, which the cost does not count), or your own callable named ``module:attr`` or
+``path/to/file.py:attr``. Yours is a
 router of the library's contract: it takes a ``RouteRequest`` and returns a
 ``RouteDecision``, or ``{"decision": ..., "cost_usd": 0.0001}`` when it bills
 for itself, and the replay merges it as a routed call would. The request's
 ``prompt`` is empty unless ``--joined`` names the folder ``frozen.py join``
-wrote. If it has a ``fit`` method, it is called with the training questions
+wrote, which a ``router:<name>`` needs. If it has a ``fit`` method, it is called with the training questions
 before scoring.
 
 Experimental until 1.0: the router interface and the report may change.
@@ -44,7 +47,7 @@ from route_eval_rank import rank_backends as rank_backends
 from route_eval_replay import Outcome as Outcome
 from route_eval_replay import replay as replay
 from route_eval_report import markdown as markdown
-from route_eval_routers import ORACLE, STATIC, STATIC_ORDER, static_router
+from route_eval_routers import ORACLE, STATIC, STATIC_ORDER, check_prompts, static_router
 from route_eval_routers import adapt as adapt
 from route_eval_routers import always_router as always_router
 from route_eval_routers import load_router as load_router
@@ -130,6 +133,7 @@ def evaluate_set(
     ranked_with = floor_for(method) if floor is None else Floor(method, floor, None)
     if specs is None:
         specs = DEFAULT_PATH_ROUTERS if method == MIXED else DEFAULT_ROUTERS
+    check_prompts((*specs, *against), questions)
     train, test = split(questions, seed, test_fraction)
     _check_split(name, test_fraction, len(questions), len(train), len(test))
     candidates = sorted({p for q in questions for p in q.rows})

@@ -7,8 +7,8 @@ Reads ``BROWSER_USE_API_KEY`` unless a key is passed explicitly.
 
 v2 rather than v4, because v2 takes a start URL, a schema, a step limit and a
 domain list as fields of its own; each is mapped, and each was checked against
-a live task on 2026-10-21. The model and the session settings are reachable
-through ``provider_options``.
+a live task on 2026-10-21. The model is a vendor mode (``browser-use:browser-use-o3``);
+the session settings are reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ from web_router.constants import (
     ENV_BROWSER_USE_API_KEY,
     PROVIDER_BROWSER_USE,
 )
+from web_router.constants_mode_parts_browse import BROWSER_USE_TIERS
 from web_router.providers._http import HttpBrowseProvider
 from web_router.providers._utils import build_payload
 from web_router.types import BrowseRequest, BrowseResponse, BrowseStep, JobState
@@ -47,6 +48,7 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
     """
 
     name: ClassVar[str] = PROVIDER_BROWSER_USE
+    tiers = BROWSER_USE_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
         {"start_url", "output_schema", "max_steps", "allowed_domains"}
     )
@@ -104,6 +106,7 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
         return build_payload(
             request,
             BROWSER_USE_FIELDS,
+            self,
             task=request.task,
             **({BROWSER_USE_SCHEMA_FIELD: json.dumps(schema)} if schema is not None else {}),
         )

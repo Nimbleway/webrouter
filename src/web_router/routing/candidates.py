@@ -31,12 +31,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS, MSG_DROPPED_REFUSES_EFFORT
+from web_router.routing.candidate_modes import mode_requests
 from web_router.routing.candidates_priced import Found, price_members
-from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
+from web_router.routing.contract import Budget, Candidate, ToolName
 from web_router.routing.cost_order import cost_route
 from web_router.routing.effort_call import choose_effort
 from web_router.routing.eligible import eligible_members
@@ -113,6 +115,7 @@ def build_candidates(
     *,
     budget: Budget | None = None,
     provider: str | Provider | None = None,
+    modes: bool = False,
 ) -> CandidateSet:
     """Every (tool, provider) ``router`` can serve ``requests`` with, within ``budget``.
 
@@ -127,6 +130,7 @@ def build_candidates(
         budget: What is left of the call's budget. ``None`` caps nothing.
         provider: The backend the caller named. One other than ``auto``
             leaves nothing for a router to choose, so there are no candidates.
+        modes: Follow each backend with a candidate per vendor mode it offers (:mod:`.candidate_modes`).
     """
     if provider is not None and provider_name(provider) != PROVIDER_AUTO:
         return CandidateSet()
@@ -140,13 +144,12 @@ def build_candidates(
             unbuilt |= {name: MSG_DROPPED_REFUSES_EFFORT.format(effort=chosen.effort) for name, _ in eligible}
             eligible = taken
         found.priced[tool] = request
-        price_members(tool, request, eligible, budget, found)
+        expand = partial(mode_requests, router, tool, request) if modes else None
+        price_members(tool, request, eligible, budget, found, expand)
         costed, _ = cost_route(getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget)
         if costed is not None:
             found.cost_order[tool] = list(costed.order[tool])
-        for name, why in unbuilt.items():
-            if (unbuilt_id := candidate_id(tool, name)) not in found.seen:  # built at another place
-                found.dropped[unbuilt_id] = why
+        found.unbuilt(tool, unbuilt)
     return CandidateSet(
         candidates=tuple(found.kept),
         dropped=found.dropped,

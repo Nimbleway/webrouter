@@ -43,6 +43,8 @@ from web_router.routing.remote_errors import RemoteRouterError, RemoteRouterInva
 from web_router.routing.remote_redact import unechoed_decision
 from web_router.routing.remote_reply import check_head, read_capped
 from web_router.routing.remote_url import checked_url
+from web_router.routing.request_modes import shown
+from web_router.routing.route_tools import checked_route_modes
 from web_router.routing.wire import WireError, WireVersionError, decision_from_wire, request_to_wire
 
 if TYPE_CHECKING:
@@ -62,6 +64,7 @@ class RemoteRouter(PoolCloser):
         api_key: str | None = None,
         timeout_s: float = REMOTE_TIMEOUT_S,
         route_tools: Collection[str] | None = None,
+        route_modes: bool = False,
     ) -> None:
         """
         Args:
@@ -72,10 +75,13 @@ class RemoteRouter(PoolCloser):
             timeout_s: Seconds to wait for the service, cut to what the call has left. 1 s unless set.
             route_tools: The tools this router is consulted on when the caller passes no ``route_tools``; all
                 five unless set. Checked when it is attached.
+            route_modes: Whether the service is sent a candidate per vendor mode, ``search:exa:exa-instant``; only
+                backends unless set, whatever the caller's ``route_modes``.
 
         Raises:
             ConfigurationError: for httpx not installed, a URL :func:`~.remote_url.checked_url` refuses, a
-                ``timeout_s`` that is not a positive number, or a key that is not visible ASCII.
+                ``timeout_s`` that is not a positive number, a key that is not visible ASCII, or a ``route_modes``
+                that is not a bool.
         """
         self._httpx = load_httpx()
         self._url = checked_url(url, self._httpx)
@@ -83,6 +89,7 @@ class RemoteRouter(PoolCloser):
         self.router_name = REMOTE_DISPLAY_NAME.format(host=self.host)
         self.timeout_s = checked_timeout(timeout_s)
         self.route_tools = route_tools
+        self.route_modes = checked_route_modes(route_modes)
         key = bearer_key(api_key)
         self._request_headers = request_headers(key)
         self._key = key
@@ -101,7 +108,12 @@ class RemoteRouter(PoolCloser):
         try:
             async with (
                 self._client() as client,
-                client.stream("POST", self._url, json=request_to_wire(req), timeout=req.deadline_s) as r,
+                client.stream(
+                    "POST",
+                    self._url,
+                    json=request_to_wire(shown(req, self.route_modes)),
+                    timeout=req.deadline_s,
+                ) as r,
             ):
                 check_head(r, self.host)
                 body = await read_capped(r, self.host)

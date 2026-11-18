@@ -6,7 +6,7 @@ file or ``load_env``, which fill provider credentials -- and a preset's
 variable, such as ``DEEPSEEK_API_KEY``, is a provider credential too. So each
 key a router would read is read here, before any file is loaded, and put in
 its config as ``api_key``: the variable ``api_key_env`` names, or for an
-``llm`` or ``systemone`` preset given no key, the preset's own variable. A
+``llm``, ``systemone`` or ``gemini`` preset given no key, the preset's own variable. A
 vendor's variable is captured only for a router posting to that vendor's host.
 """
 
@@ -23,6 +23,7 @@ from web_router.constants_decider import (
     SYSTEMONE_PRESETS,
     SYSTEMONE_ROUTER_NAME,
 )
+from web_router.constants_decider_gemini import GEMINI_DEFAULT_PRESET, GEMINI_PRESETS, GEMINI_ROUTER_NAME
 from web_router.constants_mcp_router import (
     ENV_MCP_ROUTER_CONFIG,
     MCP_CONFIG_KEY,
@@ -38,14 +39,25 @@ from web_router.exceptions import ConfigurationError
 DECIDER_PRESETS: dict[str, dict[str, tuple[str, str]]] = {
     LLM_ROUTER_NAME: {preset: (row[0], row[1]) for preset, row in LLM_PRESETS.items()},
     SYSTEMONE_ROUTER_NAME: {preset: (row[0], row[3]) for preset, row in SYSTEMONE_PRESETS.items()},
+    GEMINI_ROUTER_NAME: {preset: (row[0], row[3]) for preset, row in GEMINI_PRESETS.items()},
 }
 """Each decider's presets as (base URL, key variable), read from the deciders' own tables."""
 
 
 def _preset(name: str | None, config: Mapping[str, Any]) -> tuple[str, str] | None:
-    """The (base URL, key variable) of the preset ``config`` names for router ``name``; ``None`` for none."""
+    """The (base URL, key variable) of the preset ``config`` names for router ``name``; ``None`` for none.
+
+    ``gemini`` given neither a preset nor a base URL uses its default preset, as the router does.
+    """
     preset = config.get("preset")
+    if name == GEMINI_ROUTER_NAME and preset is None and config.get("base_url") is None:
+        preset = GEMINI_DEFAULT_PRESET
     return DECIDER_PRESETS.get(name or "", {}).get(preset) if isinstance(preset, str) else None
+
+
+def builds_bare(name: str | None) -> bool:
+    """Whether router ``name`` builds with no config, reading a preset's key: ``gemini``, on its default preset."""
+    return _preset(name, {}) is not None
 
 
 def target_url(name: str | None, config: Mapping[str, Any]) -> str | None:
@@ -90,8 +102,8 @@ def captured_key(name: str | None, config: dict[str, Any], env: Mapping[str, str
 
     Raises:
         ConfigurationError: for an ``api_key_env`` that is not a string, a vendor's variable for a router posting
-            elsewhere, or an ``llm`` or ``systemone`` router whose variable is unset. ``remote`` with its variable
-            unset sends no key.
+            elsewhere, or an ``llm``, ``systemone`` or ``gemini`` router whose variable is unset. ``remote`` with
+            its variable unset sends no key.
     """
     variable = _variable(name, config)
     if variable is None:  # no key to read, or an explicit one: nothing is left to read the environment
