@@ -58,3 +58,19 @@ def test_a_negative_page_is_refused_before_any_call(
     assert calls == []
     _out(capsys, "live-data", "sources", "-p", "fake", flag, "0")
     assert calls[0][2]["limit" if flag == "--limit" else "offset"] == 0
+
+
+def test_run_inputs_stay_text_and_merge_with_inputs_json(calls: list[Any], capsys: pytest.CaptureFixture[str]) -> None:
+    _out(capsys, "live-data", "run", "NAME", "-p", "fake", "--input", "id=12345", "--inputs", '{"x": 1}')
+    method, args, kwargs = calls[0]
+    assert (method, args) == ("run", ("NAME", {"x": 1, "id": "12345"}))
+    assert kwargs["provider"] == "fake"
+
+
+def test_sources_and_source_pass_their_arguments(calls: list[Any], capsys: pytest.CaptureFixture[str]) -> None:
+    _out(capsys, "live-data", "sources", "-p", "fake", "-q", "amazon", "--limit", "5", "--offset", "10")
+    _out(capsys, "live-data", "source", "NAME", "-p", "fake")
+    assert calls == [
+        ("sources", (), {"provider": "fake", "query": "amazon", "limit": 5, "offset": 10}),
+        ("source", ("NAME",), {"provider": "fake"}),
+    ]

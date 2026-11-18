@@ -166,3 +166,13 @@ def test_pairs_read_json_values_and_keep_text() -> None:
 )
 def test_exit_status_says_what_kind_of_failure(error: BaseException, code: int) -> None:
     assert exit_code(error) == code
+
+
+def test_research_records_must_be_a_list_of_objects(
+    fake_research_provider: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    sent = _spy(monkeypatch, FakeResearchProvider)
+    status, _, err = _run(capsys, "research", "q", "-p", "fake", "--records", "[1]")
+    assert (status, err["error"]["type"], sent) == (EXIT_USAGE, "CliInputError", [])
+    assert _run(capsys, "research", "q", "-p", "fake", "--records", '[{"a": 1}]')[0] == EXIT_OK
+    assert any(r.records == [{"a": 1}] for made in sent for r in made.requests)
