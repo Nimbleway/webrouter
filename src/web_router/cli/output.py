@@ -52,8 +52,29 @@ _EXIT_BY_ERROR: tuple[tuple[type[BaseException], int], ...] = (
 def to_json(value: Any, *, raw: bool, pretty: bool) -> str:
     """A response as JSON: a pydantic model through its own serializer, the backend's payload only when asked."""
     if isinstance(value, BaseModel):
-        value = value.model_dump(mode="json", exclude=None if raw else set(CLI_OUTPUT_EXCLUDED))
+        value = value.model_dump(mode="json", exclude=None if raw else _excluded(value))
     return json.dumps(value, indent=CLI_JSON_INDENT if pretty else None, ensure_ascii=False, default=str)
+
+
+def _excluded(value: Any) -> Any:
+    """The fields to leave out of ``value``, at every depth: a model's own ``raw``, never a user's key of that name.
+
+    Built from the models themselves, so a ``raw`` inside a record or an input dict stays.
+    """
+    if isinstance(value, BaseModel):
+        fields: dict[Any, Any] = {}
+        for name in type(value).model_fields:
+            nested = True if name in CLI_OUTPUT_EXCLUDED else _excluded(getattr(value, name))
+            if nested:
+                fields[name] = nested
+        return fields or None
+    if isinstance(value, (list, tuple)):
+        items = {index: nested for index, item in enumerate(value) if (nested := _excluded(item))}
+        return items or None
+    if isinstance(value, dict):
+        entries = {key: nested for key, item in value.items() if (nested := _excluded(item))}
+        return entries or None
+    return None
 
 
 def write_error(error: BaseException, stream: IO[str]) -> int:

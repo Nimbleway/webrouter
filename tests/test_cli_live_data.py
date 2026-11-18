@@ -1,0 +1,48 @@
+"""``webrouter live-data``: what it sends the router, and what it prints back."""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+import pytest
+
+from web_router.cli import run
+from web_router.client import WebRouter
+from web_router.constants_cli import EXIT_OK
+from web_router.types_live_data_source import LiveDataSource, LiveDataSourcePage
+
+
+@pytest.fixture
+def calls(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, tuple[Any, ...], dict[str, Any]]]:
+    """Each live data method the command calls, with its arguments; none of them reaches a backend."""
+    seen: list[tuple[str, tuple[Any, ...], dict[str, Any]]] = []
+    page = LiveDataSourcePage(
+        provider="fake",
+        sources=[LiveDataSource(provider="fake", name="x", raw={"big": 1})],
+        raw={"top": 1},
+    )
+
+    def record(method: str, result: Any) -> Any:
+        def call(_self: WebRouter, *args: Any, **kwargs: Any) -> Any:
+            seen.append((method, args, kwargs))
+            return result
+
+        return call
+
+    monkeypatch.setattr(WebRouter, "live_data_sources", record("sources", page))
+    monkeypatch.setattr(WebRouter, "live_data_source", record("source", page.sources[0]))
+    monkeypatch.setattr(WebRouter, "live_data", record("run", {"records": []}))
+    return seen
+
+
+def _out(capsys: pytest.CaptureFixture[str], *argv: str) -> Any:
+    assert run(list(argv)) == EXIT_OK
+    return json.loads(capsys.readouterr().out)
+
+
+def test_sources_leave_out_each_sources_raw_too(calls: list[Any], capsys: pytest.CaptureFixture[str]) -> None:
+    plain = _out(capsys, "live-data", "sources")
+    with_raw = _out(capsys, "--raw", "live-data", "sources")
+    assert "raw" not in plain and "raw" not in plain["sources"][0]
+    assert with_raw["raw"] == {"top": 1} and with_raw["sources"][0]["raw"] == {"big": 1}
