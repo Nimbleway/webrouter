@@ -867,6 +867,8 @@ web-router-mcp --transport http --host 0.0.0.0 --port 9000
   sessions.
 - **It speaks plain HTTP.** Off a trusted network, put it behind a reverse
   proxy that terminates TLS, so the token never crosses the network in clear.
+  With a token set the server accepts whatever `Host` the proxy forwards: the
+  token, which a rebinding page cannot send, is the guard.
 
 Point a client at it with the token as a header. In Claude Code:
 

@@ -19,15 +19,16 @@ INITIALIZE = {
 ACCEPT = {"Accept": "application/json, text/event-stream"}
 
 
-async def initialize(served: Any, *requests: Mapping[str, str], app: Any = None) -> list[httpx.Response]:
-    """POST ``initialize`` once per header set in ``requests`` to ``app`` (``served`` itself by default).
+async def initialize(app: Any, *requests: Mapping[str, str]) -> list[httpx.Response]:
+    """POST ``initialize`` to ``app`` once per header set in ``requests``, with the served app's lifespan running.
 
-    ``served`` is the Starlette app :func:`~web_router.mcp.http_transport.build_app` returned without a token,
-    whose lifespan runs around the requests; ``app`` may wrap it, as the token check does.
+    ``app`` is what :func:`~web_router.mcp.http_transport.build_app` returned: the served Starlette app, or
+    the token check wrapped around it.
     """
+    served = getattr(app, "app", app)
     responses = []
     async with served.router.lifespan_context(served):
-        transport = httpx.ASGITransport(app=app or served)
+        transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as client:
             for headers in requests:
                 responses.append(await client.post(MCP_HTTP_PATH, headers={**ACCEPT, **headers}, json=INITIALIZE))

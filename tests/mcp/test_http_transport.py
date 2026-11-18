@@ -108,9 +108,9 @@ def test_an_http_session_does_not_list_load_env(monkeypatch: pytest.MonkeyPatch,
 
 
 async def test_an_authorized_client_opens_a_session(tools: WebRouterTools) -> None:
-    served = build_app(tools, HttpSettings.resolve("127.0.0.1", 8000, None))
+    app = build_app(tools, HttpSettings.resolve("127.0.0.1", 8000, TOKEN))
 
-    [response] = await initialize(served, {"Authorization": f"Bearer {TOKEN}"}, app=BearerAuth(served, TOKEN))
+    [response] = await initialize(app, {"Authorization": f"Bearer {TOKEN}"})
 
     assert response.status_code == 200
     assert '"serverInfo"' in response.text
@@ -178,3 +178,14 @@ async def test_a_tokenless_host_turns_away_a_foreign_host_header(tools: WebRoute
 
     assert rejected.status_code == 421
     assert accepted.status_code != 421
+
+
+async def test_with_a_token_a_proxied_host_gets_through(tools: WebRouterTools) -> None:
+    """A TLS proxy in front forwards its own public hostname; the token, not the Host check, guards it."""
+    app = build_app(tools, HttpSettings.resolve("127.0.0.1", 8000, TOKEN))
+    proxied = {"Host": "mcp.team.example", "Origin": "https://mcp.team.example"}
+
+    with_token, without = await initialize(app, {**proxied, "Authorization": f"Bearer {TOKEN}"}, proxied)
+
+    assert with_token.status_code == 200
+    assert without.status_code == 401

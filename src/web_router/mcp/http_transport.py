@@ -27,6 +27,7 @@ from typing import Any
 
 import anyio
 import uvicorn
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Lifespan, Receive, Scope, Send
 
@@ -91,7 +92,7 @@ class BearerAuth:
     """ASGI middleware that answers 401 to any HTTP request without ``Authorization: Bearer <token>``."""
 
     def __init__(self, app: ASGIApp, token: str) -> None:
-        self._app = app
+        self.app = app
         self._token = token.encode()
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -99,7 +100,7 @@ class BearerAuth:
             response = JSONResponse({"error": MCP_MSG_HTTP_UNAUTHORIZED}, status_code=401, headers=MCP_HTTP_CHALLENGE)
             await response(scope, receive, send)
             return
-        await self._app(scope, receive, send)
+        await self.app(scope, receive, send)
 
     def _authorized(self, scope: Scope) -> bool:
         header = dict(scope.get("headers", [])).get(MCP_HTTP_AUTHORIZATION, b"")
@@ -111,13 +112,17 @@ class BearerAuth:
 def build_app(tools: WebRouterTools, settings: HttpSettings) -> ASGIApp:
     """The server's streamable HTTP app at :data:`MCP_HTTP_PATH`, behind the token when one is set.
 
-    On a loopback host the SDK also checks ``Host`` and ``Origin``, so a web page cannot reach it through
-    DNS rebinding.
+    Without a token -- only on the tokenless hosts -- the SDK checks ``Host`` and ``Origin``, so a web page
+    cannot reach it through DNS rebinding. With one, the token is the guard (such a page cannot send it), and
+    the check is off, so a reverse proxy may forward its own public hostname.
     """
     server = build_server(tools)
     # Over HTTP the model's client is elsewhere: no visible local browser to offer, and keys come from the operator.
     server.instructions = tools.env.noted(server_instructions(keyed=tools.keyed(), remote=True))
-    app = server.streamable_http_app(streamable_http_path=MCP_HTTP_PATH, host=settings.host)
+    security = TransportSecuritySettings(enable_dns_rebinding_protection=False) if settings.token else None
+    app = server.streamable_http_app(
+        streamable_http_path=MCP_HTTP_PATH, host=settings.host, transport_security=security
+    )
     app.router.lifespan_context = _releasing(app.router.lifespan_context, tools)
     return BearerAuth(app, settings.token) if settings.token else app
 
