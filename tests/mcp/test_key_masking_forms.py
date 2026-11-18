@@ -84,9 +84,10 @@ async def test_fetch_raw_masks_a_key_base64_encoded_or_json_escaped(
     tools = WebRouterTools(AsyncWebRouter("auto"))
     record = tools.store.add(MCP_TOOL_SEARCH, raw={"echo": echo})
 
-    raw = (await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle))["raw"]
+    echoed = (await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle))["raw"]["echo"]
 
-    assert not _unmasked(str(raw))
+    assert not _unmasked(echoed)
+    assert VENDOR_MASK in echoed
 
 
 async def test_fetch_raw_masks_a_key_that_is_a_dict_key(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
