@@ -34,7 +34,8 @@
       "parallel-litellm",
       "valyu",
       "seltz",
-      "octen"
+      "octen",
+      "keirolabs"
     ],
     "unmeasured": [
       "keenable",
@@ -45,7 +46,8 @@
       "parallel-litellm",
       "valyu",
       "seltz",
-      "octen"
+      "octen",
+      "keirolabs"
     ],
     "too_few_questions": [],
     "no_row_served": [],

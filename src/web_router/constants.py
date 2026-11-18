@@ -73,6 +73,7 @@ PROVIDER_LINKUP = Provider.LINKUP.value
 PROVIDER_SELTZ = Provider.SELTZ.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
 PROVIDER_OCTEN = Provider.OCTEN.value
+PROVIDER_KEIROLABS = Provider.KEIROLABS.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
 PROVIDER_VALYU = Provider.VALYU.value
@@ -161,6 +162,7 @@ ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
 ENV_SELTZ_API_KEY = "SELTZ_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
 ENV_OCTEN_API_KEY = "OCTEN_API_KEY"
+ENV_KEIROLABS_API_KEY = "KEIROLABS_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
 ENV_VALYU_API_KEY = "VALYU_API_KEY"
@@ -191,6 +193,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_SELTZ: ENV_SELTZ_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
     PROVIDER_OCTEN: ENV_OCTEN_API_KEY,
+    PROVIDER_KEIROLABS: ENV_KEIROLABS_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
@@ -311,11 +314,10 @@ same request behaving differently for reasons the caller never chose.
 FOLLOW_REDIRECTS = False
 """Provider clients never follow redirects, and this is pinned rather than inherited.
 
-httpx replays request headers -- the auth header included -- to the redirect
-target, and does not strip them when that target is a different host. A search
-endpoint has no legitimate reason to redirect, so following one is either a
-misconfiguration or an attempt to collect the credential. Surfacing it as an
-error is the safe reading of both. See :data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
+httpx replays request headers -- the auth header included -- to the redirect target, and does not strip them when that
+target is a different host. A search endpoint has no legitimate reason to redirect, so following one is either a
+misconfiguration or an attempt to collect the credential. Surfacing it as an error is the safe reading of both. See
+:data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
 """
 
 MSG_HTTP_ERROR = "HTTP {status}: {body}"
@@ -430,16 +432,14 @@ TAVILY_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
     # much text each result carries, include_raw_content adds the page body.
     #
     # Two traps here, both of which have already caught this table once:
-    # `chunks_per_source` rode **kwargs here once and did nothing, which made
-    # `fast` an exact duplicate of `lite` (verified live: byte-identical
-    # snippets across every query tried). And Tavily has since grown its own
-    # `fast`/`ultra-fast` depths, which are latency tiers rather than content
-    # tiers; our `fast` must not be mapped onto them just because it matches.
+    # `chunks_per_source` rode **kwargs here once and did nothing, which made `fast` an exact duplicate of `lite`
+    # (verified live: byte-identical snippets across every query tried). And Tavily has since grown its own
+    # `fast`/`ultra-fast` depths, which are latency tiers rather than content tiers; our `fast` must not be mapped onto
+    # them just because it matches.
     #
-    # `advanced` buys a modest content bump over `basic` -- roughly +17% of
-    # snippet, and steadier across queries -- and costs two API credits rather
-    # than one. That is the honest middle rung: Tavily's own step change in
-    # volume is raw content, which is what `deep` asks for.
+    # `advanced` buys a modest content bump over `basic` -- roughly +17% of snippet, and steadier across queries -- and
+    # costs two API credits rather than one. That is the honest middle rung: Tavily's own step change in volume is raw
+    # content, which is what `deep` asks for.
     #
     # `lite` runs long of the shared definition (a snippet of about 500
     # characters): `basic` returns up to three chunks of about 500 each, so the
@@ -561,10 +561,10 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz`` and
-``octen`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
-later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves
-it ahead of the keyless tier only once frozen results rank it.
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen`` and
+``keirolabs`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
+later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it
+ahead of the keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (

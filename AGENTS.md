@@ -9,7 +9,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search and Keirolabs, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
@@ -134,6 +134,10 @@ src/web_router/
 │                       deprecated template names, mixed into both routers
 ├── live_data_search.py live_data_sources(query=...): NativeSourceSearch for vendors that
 │                       search their own catalogue, a local match for the rest
+├── live_data_rank.py   a local match: the query read as site, kind and country, the gate and the score;
+│                       its words and weights are live_data_rank_vocab.py, a domain's site and
+│                       country live_data_rank_site.py
+├── live_data_merge.py  several backends' answers as one order: in turn, or merged by score
 ├── live_data_compat.py the old Template* names, importable from web_router with a warning
 ├── client_vendors.py   call_vendor(), vendor_request() and the catalog lookups, mixed into
 │                       both routers
