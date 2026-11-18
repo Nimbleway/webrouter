@@ -109,8 +109,8 @@ runs too). A failed search counts as a miss.
 | Nimble | default (`fast`) | 53 | | 5 | 1.3s |
 | | `deep` | 40 | -13 | 10 (15) | 7.5s |
 | | `lite` | 21 | -32 | 1.1 | 10.4s |
-| Keenable | default | 53 | | unknown | 0.6s |
-| | `keenable-realtime` | 58 | +5 | unknown | 0.5s |
+| Keenable | default | 53 | | 4 | 0.6s |
+| | `keenable-realtime` | 58 | +5 | 4 | 0.5s |
 | Brave | default | 48 | | 5 | 0.9s |
 | | `brave-extra-snippets` | 48 | 0 | 5 | 1.2s |
 | DeepSeek | default | 42 | | 0.75 | 0.6s |
@@ -151,7 +151,7 @@ slower):
 | Tavily | `fast`, `tavily-fast` |
 | You.com | `fast` |
 | Perplexity, Nimble, Brave, DeepSeek | none: the default only |
-| Keenable | none until it has a published price |
+| Keenable | `keenable-realtime` |
 
 ## Adding backends to a finished scan
 
