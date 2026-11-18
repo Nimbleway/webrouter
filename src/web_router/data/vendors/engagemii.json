@@ -24,7 +24,7 @@
     ]
   },
   "notes": [
-    "Unit-based: every company record returned costs 1 unit (10 cents, or 4 cents from 5,000 units); /info and /orders are free, and nothing is charged on an error. Every verified account gets 20 free lookups a month.",
+    "Unit-based: every company record returned costs 1 unit; units are bought 5,000 for $250 (5 cents a unit) and never expire; /info and /orders are free, and nothing is charged on an error. Free lookups are used first: a data account gets 20, one time; an agency account gets 1 as a sample, then 2 a month while the Agency plan is paid; a brand account gets none.",
     "60 requests a minute per key across all endpoints. Every answer carries X-RateLimit-Remaining and X-RateLimit-Reset; past the limit the answer is 429 rate_limited with Retry-After.",
     "A record has the same columns as an Engagemii data file: the 0 to 10 AI visibility score with its on-page and off-page parts, AI engine reads, AI naming, the agent readiness and AI adoption indexes, category, location, tech stack and social profiles. Column meanings: https://engagemii.com/aeo/data/dictionary."
   ],
