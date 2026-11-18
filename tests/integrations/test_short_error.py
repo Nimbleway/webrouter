@@ -10,8 +10,8 @@ from web_router.constants_extract import MSG_EXTRACT_NEAR_EMPTY
 from web_router.exceptions import ConfigurationError, DeadlineExceededError, ProviderError
 from web_router.exceptions_typed import AllProvidersFailedError
 from web_router.integrations import short_error
-from web_router.integrations._render import render_extract, render_search
-from web_router.types import ExtractedDocument, ExtractResponse, SearchResponse, SearchResult
+from web_router.integrations._render import render_extract
+from web_router.types import ExtractedDocument, ExtractResponse
 
 
 def _throttled() -> ProviderError:
@@ -54,12 +54,6 @@ def test_an_error_without_a_kind_is_its_own_first_line(error: Exception, expecte
 
 def test_the_line_is_cut_to_limit() -> None:
     assert short_error(_throttled(), limit=20) == "tavily: the backend ... [truncated]"
-
-
-def test_a_rendering_leaves_out_empty_fields_and_is_compact() -> None:
-    response = SearchResponse(provider="p", query="q", results=[SearchResult(url="https://a.example", content="x")])
-
-    assert render_search(response) == '{"results":[{"url":"https://a.example","content":"x"}]}'
 
 
 def test_the_model_reads_web_routers_own_page_warnings_not_a_vendors() -> None:

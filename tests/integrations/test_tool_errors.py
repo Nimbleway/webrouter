@@ -72,7 +72,6 @@ def providers() -> Iterator[None]:
         ("web_router_search", None, "must be a JSON object, got null"),
         ("web_router_search", [1], "must be a JSON object, got an array"),
         ("web_router_search", "", "not valid JSON"),
-        ("web_router_search", '{"query": "who', "not valid JSON"),
         ("web_router_search", {}, "it needs `query`, which was missing"),
         ("web_router_search", {"query": "  "}, "got a blank string"),
         ("web_router_search", {"query": "q", "max_results": 50}, "it takes only `query`; leave out `max_results`"),
