@@ -62,12 +62,23 @@ def _base_order(found: CandidateSet, decision: object) -> dict[ToolName, list[st
     attempts = getattr(decision, "attempts", None)
     # Set, a decision's attempts replace its providers: a method they name a candidate of, not excluded, is ranked.
     if attempts:
-        excluded = getattr(decision, "exclude", None) or {}
+        excluded = _excluded(found, getattr(decision, "exclude", None) or {})
         ranked = {c.tool for c in found.candidates if c.id in attempts and not is_excluded(c, excluded)}
     else:
         ranked = {t for t, n in providers.items() if n}
     order.update({tool: list(names) for tool, names in found.cost_order.items() if tool not in ranked})
     return order
+
+
+def _excluded(found: CandidateSet, exclude: Mapping[str, str]) -> set[str]:
+    """The exclusions the merge keeps: each with a reason, and none of a method they would leave no candidate."""
+    given = {cid for cid, why in exclude.items() if why.strip()}
+    emptied = {
+        t
+        for t in {c.tool for c in found.candidates}
+        if all(is_excluded(c, given) for c in found.candidates if c.tool == t)
+    }
+    return {cid for cid in given if cid.partition(":")[0] not in emptied}
 
 
 def decided(

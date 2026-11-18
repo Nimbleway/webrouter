@@ -63,6 +63,16 @@ def test_an_excluded_attempt_is_no_ranking_so_the_cost_order_applies(excluded: s
     assert _base_order(found, RouteDecision(attempts=[INSTANT]))["search"] == ["exa", "tavily", "brave"], "control"
 
 
+@pytest.mark.parametrize("exclude", [{INSTANT: " "}, {"search:exa": "no", "search:tavily": "no", "search:brave": "no"}])
+def test_an_exclusion_the_merge_ignores_does_not_unrank_an_attempt(exclude: dict[str, str]) -> None:
+    found = CandidateSet(candidates=(EXA, EXA_INSTANT, *OTHERS), cost_order={"search": ["tavily", "exa", "brave"]})
+    assert _base_order(found, RouteDecision(attempts=[INSTANT], exclude=exclude))["search"] == [
+        "exa",
+        "tavily",
+        "brave",
+    ]
+
+
 def test_a_refused_mode_under_a_cap_is_not_reported_as_a_budget_skip(monkeypatch: pytest.MonkeyPatch) -> None:
     set_keys(clear_keys(monkeypatch), "exa")
     exa = get_provider_class("exa")()
