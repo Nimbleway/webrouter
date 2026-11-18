@@ -7,9 +7,10 @@ input models; importing either needs langchain-core.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Literal, TypeVar
+from functools import partial
+from typing import Any, Literal, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from web_router.client import AsyncWebRouter, WebRouter
 from web_router.constants import (
@@ -21,7 +22,7 @@ from web_router.constants import (
     MSG_LANGCHAIN_NOT_INSTALLED,
 )
 from web_router.constants_answer import INTEGRATION_ANSWER_QUERY_DESCRIPTION
-from web_router.integrations._messages import INTEGRATION_TIMEOUT
+from web_router.integrations._messages import INTEGRATION_TIMEOUT, MSG_DID_NOT_RUN
 from web_router.integrations._plan import Planned, failed, planned_extract
 from web_router.integrations.errors import TOOL_FAILURES
 from web_router.routing.url_policy import UrlPolicy, url_check
@@ -37,11 +38,15 @@ T = TypeVar("T")
 class SearchInput(BaseModel):
     """What the model supplies to :class:`WebRouterSearch`."""
 
+    model_config = ConfigDict(extra="forbid")
+
     query: str = Field(min_length=1, description=INTEGRATION_SEARCH_QUERY_DESCRIPTION)
 
 
 class ExtractInput(BaseModel):
     """What the model supplies to :class:`WebRouterExtract`."""
+
+    model_config = ConfigDict(extra="forbid")
 
     urls: list[str] = Field(
         min_length=1, max_length=INTEGRATION_EXTRACT_MAX_URLS, description=INTEGRATION_EXTRACT_URLS_DESCRIPTION
@@ -50,6 +55,8 @@ class ExtractInput(BaseModel):
 
 class AnswerInput(BaseModel):
     """What the model supplies to :class:`WebRouterAnswer`."""
+
+    model_config = ConfigDict(extra="forbid")
 
     query: str = Field(min_length=1, description=INTEGRATION_ANSWER_QUERY_DESCRIPTION)
 
@@ -72,6 +79,14 @@ class _WebRouterTool(BaseTool):
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
 
     handle_tool_error: bool = True
+
+    handle_validation_error: bool | str | Callable[..., str] | None = True
+    """Input that breaks the schema -- a missing field, an extra one -- reaches the model as what was wrong."""
+
+    def model_post_init(self, context: Any, /) -> None:
+        super().model_post_init(context)
+        if self.handle_validation_error is True:  # LangChain's own text names no field: ours says which and why
+            self.handle_validation_error = partial(_did_not_run, self.name)
 
     def _sync_router(self) -> WebRouter:
         if self.router is None:
@@ -101,7 +116,14 @@ class _WebRouterTool(BaseTool):
 
     def _failed(self, exc: BaseException, planned: Planned | None) -> ToolException:
         """What the model reads: the Claude and OpenAI tools' text, from the error's fields, never the vendor's."""
-        return ToolException(failed(planned or Planned(self.name, "search"), exc, INTEGRATION_RESULT_CHARS))
+        limit = getattr(self, "result_chars", INTEGRATION_RESULT_CHARS)
+        return ToolException(failed(planned or Planned(self.name, "search"), exc, limit))
+
+
+def _did_not_run(tool: str, exc: ValidationError) -> str:
+    """The schema's complaints, one per field, as the Claude and OpenAI tools say theirs."""
+    why = "; ".join(f"`{'.'.join(map(str, e['loc'])) or 'input'}`: {e['msg'].lower()}" for e in exc.errors())
+    return MSG_DID_NOT_RUN.format(tool=tool, why=why + ".")
 
 
 __all__ = ["AnswerInput", "BaseTool", "ExtractInput", "SearchInput", "_WebRouterTool"]

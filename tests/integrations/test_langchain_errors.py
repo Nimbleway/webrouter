@@ -71,3 +71,24 @@ def test_url_policy_none_sends_it() -> None:
     status, _ = _content(WebRouterExtract(router=router, provider="fake", url_policy=None), urls=["http://10.0.0.1/"])
 
     assert status == "success" and router.get_extract_provider("fake").calls == [["http://10.0.0.1/"]]
+
+
+@pytest.mark.parametrize(
+    ("args", "says"),
+    [
+        ({"query": "q", "max_results": 50}, "web_search did not run: `max_results`: extra inputs are not permitted."),
+        ({}, "web_search did not run: `query`: field required."),
+    ],
+)
+def test_input_that_breaks_the_schema_is_an_error_message_naming_it_and_nothing_is_sent(
+    args: dict[str, object], says: str
+) -> None:
+    status, content = _content(WebRouterSearch(router=WebRouter(), provider="noisy"), **args)
+
+    assert (status, content) == ("error", says)
+
+
+def test_a_failure_is_cut_to_the_tools_result_chars() -> None:
+    _, content = _content(WebRouterSearch(router=WebRouter(), provider="noisy", result_chars=30), query="q")
+
+    assert content.endswith("[truncated]") and len(content) < 80

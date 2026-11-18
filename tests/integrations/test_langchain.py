@@ -11,7 +11,6 @@ import pytest
 pytest.importorskip("langchain_core")
 
 from langchain_core.messages import ToolMessage
-from pydantic import ValidationError
 
 from tests.conftest import FakeExtractProvider, FakeProvider
 from web_router import AsyncWebRouter, WebRouter
@@ -168,10 +167,12 @@ def test_an_extract_names_the_urls_it_could_not_read() -> None:
 
 
 def test_an_extract_takes_a_bounded_number_of_urls_from_the_model() -> None:
-    tool = WebRouterExtract(router=WebRouter(), provider="fake")
-
-    with pytest.raises(ValidationError):
-        tool.invoke({"urls": [f"https://{n}.example" for n in range(6)]})
+    router = WebRouter()
+    shown = WebRouterExtract(router=router, provider="fake").invoke(
+        {"urls": [f"https://{n}.example" for n in range(6)]}
+    )
+    assert shown.startswith("web_extract did not run: `urls`: list should have at most 5 items")
+    assert router.get_extract_provider("fake").calls == []
 
 
 def test_the_toolkit_shares_one_router_and_extracts_through_the_same_name_when_it_can() -> None:
