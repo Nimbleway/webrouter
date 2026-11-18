@@ -31,6 +31,11 @@ html.dark #sidebar {
   .nimble-mark:hover .nimble-mark-text,.nimble-mark:focus-visible .nimble-mark-text{max-width:8rem}
 }
 
-/* Wide tables scroll sideways: keep the first column (the row labels) in view, on the page color. */
-.mdx-content table :is(th,td):first-child{position:sticky;left:var(--page-padding,0);z-index:1;background-color:rgb(var(--background-light))}
-html.dark .mdx-content table :is(th,td):first-child{background-color:rgb(var(--background-dark))}
+/* Wide tables scroll sideways: keep the first column (the row labels) in view, on the page color.
+   The ::before strip covers the page gutter to its left, so scrolled cells do not show there. */
+.mdx-content table :is(th,td):first-child{position:sticky;left:var(--page-padding,0px);z-index:1}
+.mdx-content table :is(th,td):first-child,
+.mdx-content table :is(th,td):first-child::before{background-color:rgb(var(--background-light))}
+html.dark .mdx-content table :is(th,td):first-child,
+html.dark .mdx-content table :is(th,td):first-child::before{background-color:rgb(var(--background-dark))}
+.mdx-content table :is(th,td):first-child::before{content:"";position:absolute;top:0;bottom:0;right:100%;width:var(--page-padding,0px)}
