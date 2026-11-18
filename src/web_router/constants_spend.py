@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-SPEND_REPORT_KEYS = ("day", "provider", "method", "cost_source")
+SPEND_REPORT_KEYS = ("day", "provider", "method", "cost_source", "outcome")
 """What :func:`~web_router.spend_report` can group by."""
 
 MSG_SPEND_REPORT_KEY = "A spend report groups by {keys}; got {key!r}."

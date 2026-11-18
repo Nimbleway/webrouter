@@ -1,7 +1,8 @@
-"""What a router writes to its spend log after each call it answers: one :class:`~web_router.SpendEntry`.
+"""What a router writes to its spend log after each call: :class:`~web_router.SpendEntry` lines.
 
 Apart from :mod:`web_router.spend` so the log and its report stay small; the
-routers' ``_routed`` calls :func:`log_spent` with the response it returns.
+routers' ``_routed`` calls :func:`log_spent` with the response it returns, one
+line for the answer and one for each attempt its decision record moved past.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from pydantic import BaseModel
 from web_router.constants_cost import COST_ESTIMATED
 from web_router.constants_spend import MSG_SPEND_SINK_FAILED
 from web_router.spend import SpendEntry, SpendSink
+from web_router.types_decision import DecisionRecord
 
 logger = logging.getLogger("web_router")
 
@@ -52,11 +54,37 @@ def spend_entry(response: BaseModel, method: str) -> SpendEntry:
     )
 
 
+def passed_entries(decision: DecisionRecord | None, method: str) -> list[SpendEntry]:
+    """An entry per attempt ``decision`` moved past, failed or empty; candidates skipped unstarted have none."""
+    tried = list((decision.attempts if decision else None) or [])
+    entries = []
+    for hop in (decision.hops if decision else None) or []:
+        attempt = next((each for each in tried if each.id == hop.id), None)
+        if attempt is None:  # skipped before it started: nothing ran, nothing billed
+            continue
+        tried.remove(attempt)
+        entries.append(
+            SpendEntry(
+                at=datetime.now(UTC),
+                method=method,
+                provider=hop.id.partition(":")[2] or hop.id,
+                elapsed_s=attempt.seconds,
+                decision_id=decision.decision_id if decision else None,
+                outcome="empty" if hop.error is None else "failed",
+                error=hop.error,
+            )
+        )
+    return entries
+
+
 def log_spent(sink: SpendSink | None, response: BaseModel, method: str) -> None:
-    """Record ``response`` in ``sink``, if there is one; a sink that fails is warned about, never raised."""
+    """Record ``response`` in ``sink``, after the attempts it moved past; a failing sink is only warned about."""
     if sink is None:
         return
+    decision = getattr(response, "decision", None)
+    passed = passed_entries(decision if isinstance(decision, DecisionRecord) else None, method)
     try:
-        sink.record(spend_entry(response, method))
+        for entry in [*passed, spend_entry(response, method)]:
+            sink.record(entry)
     except Exception as exc:  # a broken log must never cost the caller the answer it paid for
         logger.warning(MSG_SPEND_SINK_FAILED, type(sink).__name__, type(exc).__name__, exc, exc_info=True)
