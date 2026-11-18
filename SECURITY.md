@@ -48,9 +48,10 @@ account. See [the MCP guide](https://docs.webrouter.net/mcp-server#loading-keys-
 ### Redirects are not followed
 
 Providers that talk to a REST endpoint send the credential as a request header.
-`httpx` replays request headers to a redirect target and **does not strip them
-when that target is a different host**, so following a redirect would hand the
-new host your API key.
+When a redirect leads to a different host, `httpx` drops the standard
+`Authorization` header but **keeps custom headers such as `X-API-Key`**, and
+several providers send their key in one. Following a redirect would hand such a
+key to the new host.
 
 web-router therefore pins `follow_redirects=False` on every client it builds
 itself — every backend it calls over HTTP directly, which is all but the two

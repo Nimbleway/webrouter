@@ -1190,8 +1190,9 @@ lossy.
 
 **Never let a credential follow a redirect.** `_HttpProvider` pins
 `follow_redirects=False` and refuses `follow_redirects=True` on a provider that
-sends a key. `httpx` replays request headers to the redirect target without
-stripping them cross-host, so following one hands that host the key. Do not
+sends a key. On a cross-host redirect `httpx` drops a standard `Authorization`
+header but keeps a custom one such as `X-API-Key`, so following one hands that
+host any key sent that way. Do not
 "simplify" this by dropping the pin and relying on the `httpx` default, and do
 not relax the refusal. A provider with an unusual auth scheme overrides
 `_auth_headers` rather than building the header itself, so it cannot opt out of
