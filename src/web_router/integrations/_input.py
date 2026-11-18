@@ -13,6 +13,10 @@ from typing import Any
 
 from web_router.constants import INTEGRATION_EXTRACT_MAX_URLS
 from web_router.integrations._messages import (
+    GOT_AMONG,
+    GOT_BLANK,
+    GOT_COUNT,
+    JSON_TYPES,
     LANGCHAIN_NAMES,
     MSG_LANGCHAIN_NAME,
     MSG_MISSING,
@@ -59,30 +63,34 @@ def checked(method: str, tool_input: object) -> tuple[dict[str, Any], str | None
 def _bad_query(query: object) -> str | None:
     if isinstance(query, str) and query.strip():
         return None
-    return MSG_QUERY.format(got="a blank string" if isinstance(query, str) else _json_type(query))
+    return MSG_QUERY.format(got=GOT_BLANK if isinstance(query, str) else _json_type(query))
 
 
 def _bad_urls(urls: object) -> str | None:
     if not isinstance(urls, list):
         return MSG_URLS.format(max_urls=INTEGRATION_EXTRACT_MAX_URLS, got=_json_type(urls))
     if not 1 <= len(urls) <= INTEGRATION_EXTRACT_MAX_URLS:
-        return MSG_URLS.format(max_urls=INTEGRATION_EXTRACT_MAX_URLS, got=f"{len(urls)} of them")
+        return MSG_URLS.format(max_urls=INTEGRATION_EXTRACT_MAX_URLS, got=GOT_COUNT.format(count=len(urls)))
     if bad := [url for url in urls if not (isinstance(url, str) and url.strip())]:
-        return MSG_URLS.format(max_urls=INTEGRATION_EXTRACT_MAX_URLS, got=f"{_json_type(bad[0])} among them")
+        return MSG_URLS.format(max_urls=INTEGRATION_EXTRACT_MAX_URLS, got=GOT_AMONG.format(got=_json_type(bad[0])))
     return None
 
 
 def _json_type(value: object) -> str:
     """``value``'s JSON type as a model would name it: ``null``, ``an array``, ``a string`` and so on."""
-    if value is None:
-        return "null"
-    if isinstance(value, bool):
-        return "a boolean"
-    if isinstance(value, int | float):
-        return "a number"
-    if isinstance(value, str):
-        return "an empty string" if not value.strip() else "a string"
-    return "an array" if isinstance(value, list) else "an object"
+    if isinstance(value, str) and not value.strip():
+        return JSON_TYPES["empty"]
+    kind = next((name for name, types in _PYTHON_TYPES if isinstance(value, types)), "object")
+    return JSON_TYPES[kind]
+
+
+_PYTHON_TYPES: tuple[tuple[str, type | tuple[type, ...]], ...] = (
+    ("null", type(None)),
+    ("boolean", bool),  # before number: a bool is an int
+    ("number", (int, float)),
+    ("string", str),
+    ("array", list),
+)
 
 
 def screened(urls: list[str], check: UrlCheck) -> tuple[list[str], list[dict[str, Any]]]:

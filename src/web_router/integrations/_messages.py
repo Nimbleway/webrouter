@@ -41,6 +41,20 @@ MSG_QUERY: Final = "`query` must be a non-empty string, got {got}."
 MSG_URLS: Final = "`urls` must be a list of 1 to {max_urls} URL strings, got {got}."
 MSG_NO_URL_ALLOWED: Final = "every URL was refused; see failures."
 
+JSON_TYPES: Final[dict[str, str]] = {
+    "null": "null",
+    "boolean": "a boolean",
+    "number": "a number",
+    "string": "a string",
+    "empty": "an empty string",
+    "array": "an array",
+    "object": "an object",
+}
+"""A value's JSON type as a model would name it, for the ``got`` of a message above."""
+GOT_BLANK: Final = "a blank string"
+GOT_COUNT: Final = "{count} of them"
+GOT_AMONG: Final = "{got} among them"
+
 FACTS: Final = "kind={kind}, retryable={retryable}"
 FACT_STATUS: Final = ", status={status}"
 FACT_RETRY_AFTER: Final = ", retry_after={seconds:g}s"
