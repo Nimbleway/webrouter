@@ -20,6 +20,8 @@ from web_router.constants_mcp_http import (
     MCP_CLI_DESCRIPTION,
     MCP_HTTP_DEFAULT_HOST,
     MCP_HTTP_DEFAULT_PORT,
+    MCP_HTTP_PORT_RANGE,
+    MCP_MSG_HTTP_BAD_PORT,
     MCP_MSG_HTTP_STDIO_FLAGS,
     MCP_TRANSPORT_HTTP,
     MCP_TRANSPORT_STDIO,
@@ -31,11 +33,18 @@ from web_router.constants_providers import MSG_EXTRA_MISSING
 _MCP_EXTRA_MODULES = frozenset({"mcp", "mcp_types", "dotenv", "anyio", "uvicorn", "starlette"})
 
 
+def _port(value: str) -> int:
+    low, high = MCP_HTTP_PORT_RANGE
+    if not value.isdigit() or not low <= int(value) <= high:
+        raise argparse.ArgumentTypeError(MCP_MSG_HTTP_BAD_PORT.format(low=low, high=high, value=value))
+    return int(value)
+
+
 def _arguments(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog="web-router-mcp", description=MCP_CLI_DESCRIPTION)
     parser.add_argument("--transport", choices=MCP_TRANSPORTS, default=MCP_TRANSPORT_STDIO)
     parser.add_argument("--host", help=f"HTTP bind address (default {MCP_HTTP_DEFAULT_HOST})")
-    parser.add_argument("--port", type=int, help=f"HTTP port (default {MCP_HTTP_DEFAULT_PORT})")
+    parser.add_argument("--port", type=_port, help=f"HTTP port (default {MCP_HTTP_DEFAULT_PORT})")
     args = parser.parse_args(argv)
     if args.transport == MCP_TRANSPORT_STDIO and (args.host is not None or args.port is not None):
         parser.error(MCP_MSG_HTTP_STDIO_FLAGS)
@@ -57,6 +66,6 @@ def main(argv: Sequence[str] | None = None) -> None:
         print(MSG_EXTRA_MISSING.format(what="The MCP server", module=top, extra=EXTRA_MCP), file=sys.stderr)
         raise SystemExit(1) from None
     if args.transport == MCP_TRANSPORT_HTTP:
-        serve(args.host or MCP_HTTP_DEFAULT_HOST, args.port or MCP_HTTP_DEFAULT_PORT)
+        serve(args.host or MCP_HTTP_DEFAULT_HOST, MCP_HTTP_DEFAULT_PORT if args.port is None else args.port)
     else:
         serve_stdio()

@@ -109,3 +109,34 @@ def test_an_http_session_does_not_list_load_env(monkeypatch: pytest.MonkeyPatch,
 
     served = WebRouterTools(AsyncWebRouter(FAKE))
     assert MCP_TOOL_LOAD_ENV not in {tool.name for tool in served.list_tools()}
+
+
+async def test_an_authorized_client_opens_a_session(tools: WebRouterTools) -> None:
+    served = build_app(tools, HttpSettings.resolve("127.0.0.1", 8000, None))
+    app = BearerAuth(served, TOKEN)
+    initialize = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}},
+    }
+    headers = {"Authorization": f"Bearer {TOKEN}", "Accept": "application/json, text/event-stream"}
+    async with served.router.lifespan_context(served):  # type: ignore[attr-defined]
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://127.0.0.1:8000") as client:
+            response = await client.post(MCP_HTTP_PATH, headers=headers, json=initialize)
+
+    assert response.status_code == 200
+    assert '"serverInfo"' in response.text
+
+
+def test_the_settings_repr_hides_the_token() -> None:
+    assert TOKEN not in repr(HttpSettings.resolve("0.0.0.0", 8000, TOKEN))
+
+
+@pytest.mark.parametrize("port", ["0", "-1", "65536", "http"])
+def test_a_port_out_of_range_is_a_usage_error(port: str) -> None:
+    with pytest.raises(SystemExit) as exited:
+        mcp_cli.main(["--transport", "http", "--port", port])
+
+    assert exited.value.code == 2

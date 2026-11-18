@@ -21,7 +21,7 @@ import ipaddress
 import os
 import sys
 from collections.abc import MutableMapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 
 import anyio
@@ -32,9 +32,12 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_OFF
 from web_router.constants_mcp_http import (
     ENV_MCP_TOKEN,
+    MCP_HTTP_AUTHORIZATION,
     MCP_HTTP_BEARER,
+    MCP_HTTP_CHALLENGE,
     MCP_HTTP_LOCALHOST,
     MCP_HTTP_PATH,
+    MCP_HTTP_SHUTDOWN_GRACE,
     MCP_MSG_HTTP_NEEDS_TOKEN,
     MCP_MSG_HTTP_UNAUTHORIZED,
 )
@@ -51,7 +54,7 @@ class HttpSettings:
 
     host: str
     port: int
-    token: str | None = None
+    token: str | None = field(default=None, repr=False)  # a secret: never in a repr or a traceback
 
     @classmethod
     def resolve(cls, host: str, port: int, token: str | None) -> HttpSettings:
@@ -91,15 +94,13 @@ class BearerAuth:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and not self._authorized(scope):
-            response = JSONResponse(
-                {"error": MCP_MSG_HTTP_UNAUTHORIZED}, status_code=401, headers={"WWW-Authenticate": "Bearer"}
-            )
+            response = JSONResponse({"error": MCP_MSG_HTTP_UNAUTHORIZED}, status_code=401, headers=MCP_HTTP_CHALLENGE)
             await response(scope, receive, send)
             return
         await self._app(scope, receive, send)
 
     def _authorized(self, scope: Scope) -> bool:
-        header = dict(scope.get("headers", [])).get(b"authorization", b"")
+        header = dict(scope.get("headers", [])).get(MCP_HTTP_AUTHORIZATION, b"")
         scheme, _, presented = header.partition(b" ")
         # compare_digest takes as long whatever the bytes, so a wrong token says nothing about the right one.
         return scheme.lower() == MCP_HTTP_BEARER.encode() and hmac.compare_digest(presented.strip(), self._token)
@@ -124,7 +125,13 @@ async def serve_http(
 ) -> None:
     """Serve HTTP until a shutdown signal, then release every browser session and close every provider."""
     tools = tools if tools is not None else WebRouterTools(env=env, routing=routing)
-    config = uvicorn.Config(build_app(tools, settings), host=settings.host, port=settings.port, lifespan="on")
+    config = uvicorn.Config(
+        build_app(tools, settings),
+        host=settings.host,
+        port=settings.port,
+        lifespan="on",
+        timeout_graceful_shutdown=MCP_HTTP_SHUTDOWN_GRACE,  # an open stream must not hold the browsers open
+    )
     try:
         async with anyio.create_task_group() as group:
             group.start_soon(tools.browsers.run_reaper)

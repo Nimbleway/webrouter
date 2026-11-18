@@ -21,6 +21,13 @@ ENV_MCP_TOKEN = "WEB_ROUTER_MCP_TOKEN"
 """The bearer token every HTTP request must carry; required to listen on anything but loopback."""
 
 MCP_HTTP_BEARER = "bearer"
+MCP_HTTP_AUTHORIZATION = b"authorization"
+MCP_HTTP_CHALLENGE = {"WWW-Authenticate": "Bearer"}
+
+MCP_HTTP_SHUTDOWN_GRACE = 5
+"""Seconds open requests and streams get to finish on shutdown before the browsers and providers are closed."""
+
+MCP_HTTP_PORT_RANGE = (1, 65535)
 
 MCP_MSG_HTTP_NEEDS_TOKEN = (
     "Refusing to listen on {host} without a token: anyone who can reach that address could spend your keys. "
@@ -29,6 +36,8 @@ MCP_MSG_HTTP_NEEDS_TOKEN = (
 )
 
 MCP_MSG_HTTP_UNAUTHORIZED = "Missing or wrong bearer token."
+
+MCP_MSG_HTTP_BAD_PORT = "--port takes a number from {low} to {high}, not {value!r}."
 
 MCP_MSG_HTTP_STDIO_FLAGS = "--host and --port apply to --transport http only."
 
