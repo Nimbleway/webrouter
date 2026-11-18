@@ -582,11 +582,14 @@ on modes adds over routing on backends. On seed 0, held out:
 | `static` | 31% (39/127) | $0.0050 | 0.4s |
 | `fitted`, backends | 31% (39/127) | $0.0050 | 0.4s |
 | `fitted`, `--modes` | 26% (33/127) | $0.0050 | 3.1s |
+| `oracle`, backends | 59% (75/127) | $0.0045 | 0.6s |
+| `oracle`, `--modes` | 72% (91/127) | $0.0042 | 0.7s |
 
 With modes, `parallel:parallel-advanced` is the most accurate on the training
 half (41%, beyond the floor) and leads the order, but scores 26% held out: one
 order learned from 127 questions does not beat Perplexity's default on the
-other 127.
+other 127. The oracle's ceiling rises 13 points with modes: the gain is there
+per question, for a router that tells the questions apart.
 
 ### The default `auto` orders: `make chains`
 

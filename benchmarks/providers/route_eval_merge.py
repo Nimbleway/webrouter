@@ -34,7 +34,7 @@ from frozen import price_mode
 from route_eval_paths import MIXED, SEP
 
 from web_router import prices
-from web_router.routing.contract import Candidate, RouteDecision, RouteRequest
+from web_router.routing.contract import Candidate, RouteDecision, RouteRequest, candidate_id
 from web_router.routing.entry_names import split_entry
 from web_router.routing.merge import FallbackReason, Merged, merge
 
@@ -144,6 +144,14 @@ def _path_of(merged: Merged, provider: str, ids: Sequence[str], method: str) -> 
     return next((found[mode] for mode in modes if mode in found), None)
 
 
+def _as_decision(ranking: list[str], method: str) -> RouteDecision:
+    """A ranking as a decision: its backends as ``providers``, or as ``attempts`` once it names a vendor mode,
+    which only ``attempts`` run (``exa:exa-deep`` as ``search:exa:exa-deep``)."""
+    if not any(SEP in p for p in ranking):
+        return RouteDecision(providers={method: ranking})  # type: ignore[dict-item]
+    return RouteDecision(attempts=[candidate_id(method, *split_entry(p, ())) for p in ranking])
+
+
 def walk(
     answer: Any, q: Question, fallback_order: Callable[[Question], list[str]], failure: FallbackReason | None
 ) -> tuple[list[str | None], bool]:
@@ -160,7 +168,7 @@ def walk(
         known = [p for p in dict.fromkeys(answer) if p in q.rows]
         return list(dict.fromkeys((*known, *static))), not known
     ranking = isinstance(answer, list)
-    decision = RouteDecision(providers={method: answer}) if ranking else answer  # type: ignore[dict-item]
+    decision = _as_decision(answer, method) if ranking else answer
     merged = merge(request_for(q), decision, _by_tool(static, method), failure=failure)  # type: ignore[arg-type]
     asked = decision.providers if isinstance(decision, RouteDecision) and not ranking else None
     named = ranking or bool((asked or {}).get(merged.tool))

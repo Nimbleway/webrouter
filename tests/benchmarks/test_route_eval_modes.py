@@ -67,3 +67,12 @@ def test_fitted_routes_on_modes_only_when_shown_them(route_eval: ModuleType, tmp
     assert held["accuracy"] > shown["routers"]["static"]["held_out"]["accuracy"]
     assert shown["recommended_order"][0] == "exa:exa-deep"
     assert ", vendor modes as candidates" in route_eval.markdown([shown], 0.05, {})
+
+
+def test_a_ranking_that_names_a_mode_runs_it(route_eval: ModuleType, tmp_path: Path) -> None:
+    _moded_set(tmp_path)
+    _, moded = route_eval.load_set("tiny", tmp_path, modes=True)
+    q, static = moded[20], route_eval.static_router("search")
+    assert route_eval.replay(route_eval.always_router("exa:exa-deep"), q, static).served_by == "exa:exa-deep"
+    assert route_eval.replay(route_eval.oracle_router("search"), q, static).served_by == "exa:exa-deep"
+    assert route_eval.replay(route_eval.always_router("exa"), q, static).served_by == "exa"
