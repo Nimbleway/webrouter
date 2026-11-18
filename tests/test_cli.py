@@ -16,7 +16,7 @@ from web_router.cli.output import exit_code
 from web_router.client import WebRouter
 from web_router.constants_cli import EXIT_CONFIG, EXIT_FAILED, EXIT_INTERRUPTED, EXIT_OK, EXIT_USAGE
 from web_router.exceptions import ConfigurationError, ProviderError
-from web_router.exceptions_provider import NoAnswerProviderError
+from web_router.exceptions_provider import LiveDataBackendChoiceError, NoAnswerProviderError
 from web_router.types import SearchResult
 
 
@@ -163,6 +163,7 @@ def test_pairs_read_json_values_and_keep_text() -> None:
         (ConfigurationError("no key"), EXIT_CONFIG),
         (NoAnswerProviderError("auto", ["exa", "you"], [], ["EXA_API_KEY"]), EXIT_CONFIG),
         (NoAnswerProviderError("auto", ["exa", "you"], ["exa", "you"], []), EXIT_USAGE),
+        (LiveDataBackendChoiceError("books_pdp", ["apify", "nimble"]), EXIT_USAGE),
         (ProviderError("fake", "backend down"), EXIT_FAILED),
         (RuntimeError("anything else"), EXIT_FAILED),
         (KeyboardInterrupt(), EXIT_INTERRUPTED),

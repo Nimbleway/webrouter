@@ -33,7 +33,11 @@ from web_router.exceptions import (
     UnsupportedParameterError,
 )
 from web_router.exceptions_budget import BudgetExceededError
-from web_router.exceptions_provider import NoAnswerProviderError, ProviderNotFoundError
+from web_router.exceptions_provider import (
+    LiveDataBackendChoiceError,
+    NoAnswerProviderError,
+    ProviderNotFoundError,
+)
 from web_router.exceptions_typed import InvalidParameterError
 
 # First match wins, so a subclass must come before its base. A pydantic ValidationError is not here: the
@@ -49,6 +53,7 @@ _EXIT_BY_ERROR: tuple[tuple[type[BaseException], int], ...] = (
     (InvalidParameterError, EXIT_USAGE),
     (BudgetExceededError, EXIT_USAGE),  # raised before any backend starts, never after one ran
     (ProviderNotFoundError, EXIT_USAGE),
+    (LiveDataBackendChoiceError, EXIT_USAGE),  # several backends could serve it; -p picks one
     (ConfigurationError, EXIT_CONFIG),
     (ProviderNotInstalledError, EXIT_CONFIG),
 )
