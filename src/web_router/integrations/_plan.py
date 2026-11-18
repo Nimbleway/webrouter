@@ -21,7 +21,7 @@ from web_router.integrations._render import (
     render_search,
 )
 from web_router.integrations._specs import TOOLS
-from web_router.integrations.errors import short_error
+from web_router.integrations.errors import TOOL_FAILURES, short_error
 from web_router.routing.merge_urls import UrlCheck
 from web_router.types import ExtractFailure, ExtractResponse, SearchResponse
 from web_router.types_answer import AnswerResponse
@@ -88,7 +88,7 @@ def failed(planned: Planned, exc: BaseException, result_chars: int) -> str:
     error = failed_text(planned.name, exc, result_chars)
     if planned.method != "extract":
         return error
-    own = _page_failures(exc)
+    own = _page_failures(exc, planned.urls)
     kind, status = getattr(exc, "kind", None), getattr(exc, "status_code", None)
     rows = [
         failure_row(url, own[url].kind, own[url].retryable, own[url].status_code)
@@ -99,12 +99,20 @@ def failed(planned: Planned, exc: BaseException, result_chars: int) -> str:
     return render_extract_failure(error, [*rows, *planned.refused])
 
 
-def _page_failures(exc: BaseException) -> dict[str, ExtractFailure]:
-    """Each URL's own failure: an extract's, or for ``auto`` the latest member's that recorded one for it."""
+def _page_failures(exc: BaseException, urls: list[str]) -> dict[str, ExtractFailure]:
+    """Each URL's own failure: an extract's, else the failed call's for every URL it carried.
+
+    Under ``auto`` every member was sent the same URLs, so each URL keeps the latest tried member's failure, as a
+    partly successful ``auto`` extract reports it; a member that could not be tried at all says nothing about one.
+    """
     if isinstance(exc, ExtractFailedError):
         return {failure.url: failure for failure in exc.url_failures}
-    members = exc.failures.values() if isinstance(exc, AllProvidersFailedError) else ()
-    return {url: failure for member in members for url, failure in _page_failures(member).items()}
+    if isinstance(exc, AllProvidersFailedError):
+        found: dict[str, ExtractFailure] = {}
+        for member in exc.failures.values():
+            found.update(_page_failures(member, urls))
+        return found
+    return {url: ExtractFailure.from_error(url, exc) for url in urls} if isinstance(exc, TOOL_FAILURES) else {}
 
 
 def failed_text(name: str, exc: BaseException, result_chars: int) -> str:

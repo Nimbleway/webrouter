@@ -10,6 +10,7 @@ import pytest
 
 from tests.conftest import FakeExtractProvider
 from web_router import AllProvidersFailedError, ExtractFailedError, ProviderError, WebRouter
+from web_router.exceptions import ConfigurationError, DeadlineExceededError
 from web_router.integrations import anthropic, openai
 from web_router.integrations._plan import Planned, failed
 from web_router.registry import register_extract_provider, unregister_extract_provider
@@ -72,14 +73,25 @@ def test_the_langchain_tool_lists_each_pages_kind() -> None:
     assert message.status == "error" and _rows(message.content) == EXPECTED
 
 
+def _auto(**members: Exception) -> str:
+    error = AllProvidersFailedError("auto", "every backend failed", members)
+    return failed(Planned("web_router_extract", "extract", urls=[BLOCKED, GONE, "https://other.example/"]), error, 500)
+
+
 def test_under_auto_each_url_keeps_the_latest_members_own_failure() -> None:
+    refused = ProviderError("d", "HTTP 401 Unauthorized", kind="auth")
     earlier = ExtractFailedError("a", "x", [ExtractFailure(url=BLOCKED, error="HTTP 404", status_code=404)])
     latest = ExtractFailedError("b", "x", [ExtractFailure(url=BLOCKED, error="challenge page", kind="upstream")])
     gone = ExtractFailedError("c", "x", [ExtractFailure(url=GONE, error="HTTP 404", status_code=404)])
-    refused = ProviderError("d", "HTTP 401 Unauthorized", kind="auth")
-    members = {"a": earlier, "b": latest, "c": gone, "d": refused}
-    error = AllProvidersFailedError("auto", "every backend failed", members)
 
-    shown = failed(Planned("web_router_extract", "extract", urls=[BLOCKED, GONE, "https://other.example/"]), error, 500)
+    shown = _auto(d=refused, a=earlier, b=latest, c=gone)
 
-    assert _rows(shown) == [*EXPECTED, ("https://other.example/", "upstream", True, None)]
+    assert _rows(shown) == [*EXPECTED, ("https://other.example/", "auth", False, None)]
+
+
+def test_under_auto_a_later_member_that_failed_its_whole_call_replaces_an_earlier_pages_kind() -> None:
+    earlier = ExtractFailedError("a", "x", [ExtractFailure(url=BLOCKED, error="HTTP 404", status_code=404)])
+
+    shown = _auto(a=earlier, b=DeadlineExceededError("b", 1.0), c=ConfigurationError("no key for c"))
+
+    assert {row[1] for row in _rows(shown)} == {"timeout"}
