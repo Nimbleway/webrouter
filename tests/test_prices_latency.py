@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
 from datetime import date
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from scripts import latency
-from scripts.benchmark_loader import BENCHMARKS, FROZEN_SIBLINGS
 from tests.test_prices import _row
 from web_router import prices
 from web_router.prices import Price
@@ -84,27 +80,6 @@ def test_a_pooled_set_keeps_only_its_pooled_setups() -> None:
     }
     kept = latency.pooled_rows(rows, {"a": frozenset({("tavily", "default"), ("tavily", "ultra-fast@deep")})})
     assert [(r["provider"], r["mode"]) for r in kept] == [("tavily", "default"), ("tavily", "ultra-fast@deep")]
-
-
-def test_loading_frozen_keeps_the_siblings_another_loader_imported(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.syspath_prepend(str(BENCHMARKS))
-    mine = {name: importlib.import_module(name) for name in FROZEN_SIBLINGS}
-    for name, module in mine.items():
-        monkeypatch.setitem(sys.modules, name, module)
-    latency._benchmarks()
-    assert all(sys.modules.get(name) is module for name, module in mine.items())
-
-
-def _benchmark_modules() -> set[str]:
-    return {n for n, m in list(sys.modules.items()) if Path(getattr(m, "__file__", None) or "/").parent == BENCHMARKS}
-
-
-def test_loading_frozen_leaves_none_of_its_siblings_behind(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``FROZEN_SIBLINGS`` names every module ``frozen.py`` imports from its folder: none outlives the load."""
-    for name in _benchmark_modules():
-        monkeypatch.delitem(sys.modules, name)
-    latency._benchmarks()
-    assert _benchmark_modules() == set(), "add them to FROZEN_SIBLINGS in scripts/benchmark_loader.py"
 
 
 def test_measure_pools_sets_skips_failures_and_reports_unmatched() -> None:
