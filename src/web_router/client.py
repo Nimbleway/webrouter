@@ -62,6 +62,7 @@ from web_router.constants import (
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
+from web_router.providers._pinning import backend_of
 from web_router.providers._runtime import Runtime
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -141,10 +142,9 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         self._runtime = Runtime.capped(max_concurrency)
         self._init_vendors(vendor_credentials)
         name = provider_name(provider)
-        # Either registry is enough to name a default: a router defaulted to a search-only backend still extracts
-        # through `provider=`, and the method that cannot serve the default says so when it is called.
+        # Either registry names a default (a pinned search id by its backend); a method that can't serve it says so.
         known = every_provider_name()
-        if name not in known:
+        if backend_of(name) not in known:
             raise ProviderNotFoundError(name, known)
 
         self.default_provider = name
@@ -204,7 +204,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, ExtractProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)  # a pin: its backend
         with self._providers_lock:
             if key not in self._extract_instances:
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
@@ -219,7 +219,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, ResearchProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._research_instances:
                 self._research_instances[key] = create_research_provider(key, **self._config_for(key))
@@ -234,7 +234,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, BrowserProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._browser_instances:
                 self._browser_instances[key] = create_browser_provider(key, **self._config_for(key))
@@ -249,7 +249,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, BrowseProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._browse_instances:
                 self._browse_instances[key] = create_browse_provider(key, **self._config_for(key))

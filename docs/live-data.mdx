@@ -120,7 +120,7 @@ vendor is searched the way it allows:
 | Backend | How `query` is searched |
 | --- | --- |
 | `apify` | Natively, by the Apify Store's own search, in its relevance order |
-| `nimble`, `brightdata`, `oxylabs` | Locally: these catalogues take no keywords, so WebRouter reads the catalogue and matches here, name and site matches first |
+| `nimble`, `brightdata`, `oxylabs` | Locally: these catalogues take no keywords, so WebRouter reads the catalogue, matches here and ranks by site, kind of page, country and quality |
 
 ```python
 page = router.live_data_sources(provider="nimble", query="walmart product")
@@ -128,11 +128,29 @@ page.search  # "native" or "local": how the query was searched
 page.total   # matches found; None if the catalogue was read only in part
 ```
 
-A local search matches every word, ignoring case, on a source's name, site,
-kind of page and description. It reads at most 5,000 sources and keeps the
-catalogue for ten minutes, so the next search on that backend reads nothing.
-Page through results with `limit` and `offset`. Leave `query` out to list the
-catalogue in the vendor's order.
+A local search reads a query as a site, a kind of page and, optionally, a
+country: in `"amazon uk product"`, `amazon` is the site, `product` the kind
+and `uk` the country. Every site word must appear, ignoring case, in a
+source's name, site, kind of page or description. The kind is matched as a
+kind, not as text (product, search, category, reviews, offers or article,
+read from the source's name and else from its vendor's label), so
+`"amazon product"` leaves out a reviews page that mentions products, and
+keeps a source that does not say its kind, below the ones that do. A query
+that names only a country (`"uk"`) keeps that country's sources, and one of
+filler words only (`"page data"`) matches none.
+
+Matches are ranked by how the site matches (its own domain first), the
+kind, the main site before other countries unless the query names one, and
+then quality, read only from what any vendor's source can carry: a schema,
+a sample, and no `test` or `copy` in the name. With no `provider`, every
+vendor's matches are merged on that one scale, Apify's included: each
+vendor's own order is kept and the best-scored next match of any vendor
+comes next, so pages line up with no repeat or gap.
+
+A local search reads at most 5,000 sources and keeps the catalogue for ten
+minutes, so the next search on that backend reads nothing. Page through
+results with `limit` and `offset`. Leave `query` out to list the catalogue
+in the vendor's order.
 
 A custom backend whose vendor searches its own catalogue derives from
 `NativeSourceSearch` and implements `_search` and `_asearch`; its searches then

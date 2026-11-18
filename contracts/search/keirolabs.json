@@ -1,0 +1,45 @@
+{
+  "provider": "keirolabs",
+  "method": "search",
+  "class": "web_router.providers.keirolabs.KeirolabsProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.keirolabs.cloud",
+    "paths": {
+      "search_path": "/api/v2/search/lite"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "KEIROLABS_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.maxResults": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency",
+    "search_depth"
+  ],
+  "source": [
+    "https://platform.keirolabs.cloud/docs/",
+    "https://keirolabs.cloud/pricing"
+  ],
+  "verified": {
+    "max_results": "live: tests/providers/test_keirolabs.py::test_live_search_returns_results"
+  },
+  "vendor_options": {}
+}

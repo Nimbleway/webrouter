@@ -83,6 +83,7 @@ class Provider(str, Enum):
     SELTZ = "seltz"
     WEBIQ = "webiq"
     OCTEN = "octen"
+    KEIROLABS = "keirolabs"
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
     VALYU = "valyu"
@@ -371,10 +372,9 @@ finished the work it was asked to do.
 class ResearchRequest(NormalizedRequest):
     """A normalized research request.
 
-    Only :attr:`query` is required. Setting :attr:`output_schema` asks for a
-    structured answer instead of prose, and adding :attr:`records` on top of it
-    turns the run into an enrichment: the same schema, filled in once per record
-    you already hold.
+    Only :attr:`query` is required. Setting :attr:`output_schema` asks for a structured answer instead of prose, and
+    adding :attr:`records` on top of it turns the run into an enrichment: the same schema, filled in once per record you
+    already hold.
     """
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
