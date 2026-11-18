@@ -31,11 +31,11 @@ from __future__ import annotations
 from typing import Any
 
 from web_router.constants import ANTHROPIC_TOOL_TYPE
-from web_router.integrations import _tools
-from web_router.integrations._tools import routing_guide
+from web_router.integrations import _result, _tools
+from web_router.integrations._guide import routing_guide
 
 
-class ToolResult(_tools.ToolResult):
+class ToolResult(_result.ToolResult):
     """One tool call's outcome: what the model reads, and everything it does not."""
 
     def event_fields(self) -> dict[str, Any]:

@@ -991,11 +991,6 @@ INTEGRATION_DOCUMENT_CHARS = 8000
 
 INTEGRATION_TRUNCATION_MARKER = " ... [truncated]"
 
-INTEGRATION_JSON_INDENT = 1
-
-INTEGRATION_MSG_TOOL_ERROR = "{tool} failed: {error}"
-"""What the model reads when a call fails: enough to retry differently or give up, and nothing it has to parse."""
-
 MSG_INTEGRATION_NO_EXTRACT_PROVIDER = (
     "The extract tool has no backend: {default!r}, the router's default, does not extract, and no "
     "extract_provider was given. Pass extract_provider=, one of: {available}."
@@ -1029,19 +1024,6 @@ INTEGRATION_METHODS: tuple[str, ...] = ("search", "extract")
 
 Research and browse are billed runs that take minutes; they join once the
 routing guide can say when one is worth it.
-"""
-
-MSG_INTEGRATION_UNKNOWN_TOOL = "web-router has no tool named {name!r}; it serves {names}."
-
-MSG_INTEGRATION_BAD_INPUT: dict[str, str] = {
-    "search": "{tool} did not run: it needs a non-empty string `query`.",
-    "extract": "{tool} did not run: it needs `urls`, a list of 1 to {max_urls} URL strings.",
-    "answer": "{tool} did not run: it needs a non-empty string `query`.",
-}
-"""What the model reads when its own tool input is malformed -- its mistake to fix, so an error result, not a raise.
-
-It says the call did not run in words, because an OpenAI tool output has no
-error flag: the text is all the model has to tell a refusal from an answer.
 """
 
 MSG_INTEGRATION_UNKNOWN_METHOD = "web-router's tools serve {known}, not {method!r}."
