@@ -18,6 +18,8 @@ from web_router import (
     WebRouter,
     spend_report,
 )
+from web_router.exceptions import ConfigurationError
+from web_router.exceptions_typed import AllProvidersFailedError
 from web_router.registry import register_provider, unregister_provider
 from web_router.spend_record import passed_entries, raised_entries
 from web_router.types import SearchRequest, SearchResponse
@@ -164,9 +166,25 @@ def test_an_extract_whose_every_call_failed_has_a_line_per_call() -> None:
     entries = raised_entries(error, "extract", 3.0)
     assert [(e.provider, e.error, e.elapsed_s) for e in entries] == [
         ("jina", "TimeoutError", None),
-        ("jina", entries[1].error, 3.0),
+        ("jina", "upstream", 3.0),
     ]
-    assert entries[1].error and entries[1].error != "TimeoutError"
+
+
+def test_a_member_the_chain_never_called_has_no_line() -> None:
+    """Unconfigured, not installed, or cooling down: no request went out, so nothing was billed."""
+    cooling = ProviderError("exa", "cooling down", kind="rate_limit")
+    throttled = ProviderError("you", "HTTP 429", original=RuntimeError("429"), kind="rate_limit")
+    failures = {
+        "tavily": ConfigurationError("no key"),
+        "exa": cooling,
+        "you": throttled,
+        "jina": ProviderError("jina", "HTTP 404"),
+    }
+    entries = raised_entries(AllProvidersFailedError("auto", "all failed", failures), "search", 2.0)
+    assert [(e.provider, e.error, e.elapsed_s) for e in entries] == [
+        ("you", "rate_limit", None),
+        ("jina", "upstream", 2.0),
+    ]
 
 
 def test_a_line_written_before_outcomes_reads_as_answered() -> None:

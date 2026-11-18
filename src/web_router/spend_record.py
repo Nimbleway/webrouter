@@ -19,9 +19,17 @@ from pydantic import BaseModel
 
 from web_router.constants_cost import COST_ESTIMATED
 from web_router.constants_spend import MSG_SPEND_SINK_FAILED, OUTCOME_EMPTY, OUTCOME_FAILED
-from web_router.exceptions import BrowseTimeoutError, DeadlineExceededError, ProviderError, ResearchTimeoutError
+from web_router.exceptions import (
+    BrowseTimeoutError,
+    ConfigurationError,
+    DeadlineExceededError,
+    ProviderError,
+    ProviderNotInstalledError,
+    ResearchTimeoutError,
+)
 from web_router.spend import SpendEntry, SpendSink
 from web_router.types_decision import DecisionRecord
+from web_router.types_errors import ERROR_KIND_RATE_LIMIT
 
 logger = logging.getLogger("web_router")
 
@@ -103,11 +111,12 @@ def raised_entries(exc: Exception, method: str, elapsed_s: float) -> list[SpendE
     """A ``failed`` entry per backend call a call that raised ``exc`` made, with its HTTP status or error kind.
 
     A chain whose every backend failed names each one's own error, and an extract whose every call failed keeps
-    each call's; the call's seconds go on the last line.
+    each call's; a member the chain never called has none. The call's seconds go on the last line.
     """
     provider = getattr(exc, "provider", "")
     calls = [(provider, each) for each in getattr(exc, "call_errors", ())]
-    failures = list((getattr(exc, "failures", None) or {}).items()) or calls or [(provider, exc)]
+    named = list((getattr(exc, "failures", None) or {}).items()) or calls or [(provider, exc)]
+    failures = [(name, each) for name, each in named if not _never_called(each)]
     return [
         SpendEntry(
             at=datetime.now(UTC),
@@ -119,6 +128,16 @@ def raised_entries(exc: Exception, method: str, elapsed_s: float) -> list[SpendE
         )
         for n, (name, each) in enumerate(failures)
     ]
+
+
+def _never_called(exc: BaseException) -> bool:
+    """A member ``auto`` passed over without a request: unconfigured, not installed, or cooling down.
+
+    A cooldown's refusal is the one rate-limit error with no backend error under it.
+    """
+    if isinstance(exc, ConfigurationError | ProviderNotInstalledError):
+        return True
+    return isinstance(exc, ProviderError) and exc.kind == ERROR_KIND_RATE_LIMIT and exc.original is None
 
 
 def _error_of(exc: BaseException) -> str:
