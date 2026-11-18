@@ -143,8 +143,9 @@ would overwrite, a `provider_options` key it writes -- is left out, recorded
 with why, and a budget prefilters modes as it does backends. A router that
 declares a `route_modes` attribute opts itself in; yours, when you pass one,
 wins. The built-in routers declare `False`. The `remote` router is shown modes
-only when its `router_config` sets `"route_modes": True`, whatever you pass,
-and a `fallback` member that does not opt in is shown backends only. A remote
+only when its `router_config` sets `"route_modes": True`: your `True` does not
+opt it in, and your `False` turns modes off for it too. A `fallback` member
+that does not opt in is shown backends only. A remote
 request carries at most 64 candidates in all: past that, the modes lowest in
 their method's order are left out.
 
