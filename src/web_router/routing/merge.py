@@ -12,8 +12,8 @@ exactly as a routed call would run it. The rules:
 2. **Order.** The backends the router ranked for that method, in its order,
    then every other candidate in the static order. A decision's ``attempts``,
    when set, replace ``tools`` and ``providers``: the method is the first
-   attempt's, and its attempts, vendor modes included, rank it
-   (:mod:`.merge_attempts`).
+   attempt's, and its attempts, vendor modes included, rank it; a backend they
+   name only in its modes is not appended at its default mode (:mod:`.merge_attempts`).
 3. **Exclusions.** Only ``decision.exclude`` removes a candidate, each with
    its reason; one with an empty reason is set aside and noted. Exclusions
    that would leave the method no backend are ignored.
@@ -67,11 +67,13 @@ def _order(
 ) -> tuple[str, ...]:
     """``ranked`` first, then the static order, then any backend the static order leaves out; none excluded.
 
-    A vendor mode runs only where ``ranked`` names it: the static order names backends alone.
+    A vendor mode runs only where ``ranked`` names it: the static order names backends alone, and leaves out a
+    backend ``ranked`` names only in its modes.
     """
     pool = entries(request, tool, excluded)
-    names = [name for name, candidate in pool.items() if candidate.is_backend]
-    return tuple(dict.fromkeys(p for p in (*ranked, *static.get(tool, ()), *names) if p in pool))
+    moded = {pool[name].provider for name in ranked if name in pool and not pool[name].is_backend}
+    rest = [p for p in (*static.get(tool, ()), *pool) if p in pool and pool[p].is_backend and p not in moded]
+    return tuple(dict.fromkeys(p for p in (*ranked, *rest) if p in pool))
 
 
 def _static(request: RouteRequest, static: Mapping[Any, Any], why: FallbackReason | None, reason: str | None) -> Merged:

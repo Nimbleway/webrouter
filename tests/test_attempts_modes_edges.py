@@ -5,7 +5,9 @@ Offline: the fake Exa and Tavily of :mod:`tests.attempts_helpers` answer; nothin
 
 from __future__ import annotations
 
-from tests.attempts_helpers import INSTANT, TAVILY
+import pytest
+
+from tests.attempts_helpers import INSTANT, TAVILY, fake_backends, routed
 from web_router import Budget, Candidate, RouteDecision, RouteRequest
 from web_router.routing.merge import merge
 from web_router.routing.url_policy import any_web_url
@@ -27,3 +29,17 @@ def test_a_backend_wide_exclusion_holds_when_only_its_modes_are_offered() -> Non
     merged = _merged((EXA_INSTANT, *OTHERS), RouteDecision(attempts=[INSTANT, TAVILY], exclude={"search:exa": "slow"}))
     assert merged.providers == ("tavily", "brave")  # type: ignore[attr-defined]
     assert "search:exa" not in merged.notes.ignored  # type: ignore[attr-defined]
+
+
+def test_a_backend_named_in_a_mode_is_not_appended_again_at_its_default_mode() -> None:
+    merged = _merged((EXA, EXA_INSTANT, *OTHERS), RouteDecision(attempts=[INSTANT]))
+    assert merged.providers == ("exa:exa-instant", "brave", "tavily")  # type: ignore[attr-defined]
+    both = _merged((EXA, EXA_INSTANT, *OTHERS), RouteDecision(attempts=[INSTANT, "search:exa"]))
+    assert both.providers == ("exa:exa-instant", "exa", "brave", "tavily"), "named bare too: it runs bare"  # type: ignore[attr-defined]
+
+
+def test_an_empty_answer_in_a_mode_moves_on_without_calling_the_backend_again(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = fake_backends(monkeypatch, {"results": []})
+    with routed(INSTANT) as wr:
+        response = wr.search("q")
+    assert (calls.exa, response.provider) == (["instant"], "tavily")

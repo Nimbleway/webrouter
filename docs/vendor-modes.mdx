@@ -210,7 +210,8 @@ RouteDecision(attempts=["search:exa:exa-instant", "search:exa:exa-deep", "search
 Each attempt runs in its own mode. The mode replaces any `search_depth` or
 `effort` the router set in `params`; every other option still applies, and a
 `search_depth` you set binds every attempt. The call's backends that
-`attempts` does not name run after them, at their default mode. Excluding
+`attempts` does not name in any mode run after them, at their default mode:
+a backend named only in its modes runs in those modes alone. Excluding
 `search:exa` excludes every Exa mode; excluding `search:exa:exa-deep`
 excludes that one only. Under a cost cap the router's order is kept.
 
