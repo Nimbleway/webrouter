@@ -89,7 +89,10 @@ async def test_fetch_raw_masks_a_key_that_is_a_dict_key(no_keys: None, monkeypat
     assert raw == {"tokens": {VENDOR_MASK: "active", f"Bearer {VENDOR_MASK}": 1}}
 
 
-async def test_any_exception_a_tool_raises_is_masked(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_any_exception_a_tool_raises_is_masked(
+    no_keys: None, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The model reads the masked text; the operator's log gets the traceback, masked too."""
     monkeypatch.setenv(ENV_BRAVE_API_KEY, KEY)
     tools = WebRouterTools(AsyncWebRouter("auto"))
 
@@ -102,6 +105,9 @@ async def test_any_exception_a_tool_raises_is_masked(no_keys: None, monkeypatch:
     assert result.is_error
     assert KEY not in result.content[0].text
     assert VENDOR_MASK in result.content[0].text
+    logged = caplog.text
+    assert "in raises" in logged and "RuntimeError" in logged
+    assert KEY not in logged
 
 
 async def test_a_failure_carried_inside_a_result_is_masked(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:

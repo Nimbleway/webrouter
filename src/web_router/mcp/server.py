@@ -60,7 +60,7 @@ from web_router.constants import (
 )
 from web_router.mcp.env import EnvSources
 from web_router.mcp.masking import mask_configured, render_masked
-from web_router.mcp.messages import error_text
+from web_router.mcp.messages import failure_result
 from web_router.mcp.resources import list_resource_templates, list_resources, read_resource
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import ToolOutput
@@ -84,7 +84,7 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
         payload = await tools.call(name, arguments)
     except Exception as exc:
         # Any failure, a bug's too: its text can quote a key, so every one goes through error_text's masking.
-        return CallToolResult(content=[TextContent(text=error_text(exc))], is_error=True)
+        return failure_result(exc)
     output = payload if isinstance(payload, ToolOutput) else ToolOutput(payload=payload)
     text = render_masked(output.payload)
     content: list[ContentBlock] = [TextContent(text=text)]
