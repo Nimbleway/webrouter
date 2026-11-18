@@ -45,3 +45,6 @@ MSG_SYNC_ROUTER_IN_LOOP: Final = (
     "WebRouter.{method}() was called inside a running event loop, which it blocks until the call returns. "
     "Use AsyncWebRouter and await it there, or run the call on a worker thread (asyncio.to_thread)."
 )
+
+MSG_BODY_PAST_DEADLINE: Final = "the response body was still arriving when the call's deadline passed"
+"""The read timeout a sync HTTP call raises when its body is still arriving at the deadline."""
