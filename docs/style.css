@@ -22,4 +22,11 @@ html.dark #sidebar {
 .nimble-mark:hover,.nimble-mark:focus-visible{opacity:1}
 .nimble-mark-icon{width:16px;height:16px;background-color:currentColor;-webkit-mask:url(/logo/nimble.svg) center/contain no-repeat;mask:url(/logo/nimble.svg) center/contain no-repeat}
 .nimble-mark-text{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .25s}
-.nimble-mark:hover .nimble-mark-text,.nimble-mark:focus-visible .nimble-mark-text{max-width:8rem}
+/* The mark keeps its open width at rest, so the footer row never moves when the label slides in.
+   Only the icon and label take the pointer, not the empty reserved space.
+   Below 640px the open label does not fit the row, so it stays closed. */
+@media (min-width:640px){
+  .nimble-mark{width:calc(16px + .4rem + 8rem);justify-content:flex-end;pointer-events:none}
+  .nimble-mark>*{pointer-events:auto}
+  .nimble-mark:hover .nimble-mark-text,.nimble-mark:focus-visible .nimble-mark-text{max-width:8rem}
+}
