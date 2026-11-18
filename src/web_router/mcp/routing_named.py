@@ -73,17 +73,21 @@ def _captured(value: Any, env: Mapping[str, str], name: str | None) -> Any:
         return [_captured(item, env, None) for item in value]
     if not isinstance(value, dict):
         return value
+    own = _own_name(value, name)
     out = {
         key: [_member(member, env) for member in item]
-        if key == FALLBACK_MEMBERS_KEY and isinstance(item, list)
+        if key == FALLBACK_MEMBERS_KEY and own == FALLBACK_ROUTER_NAME and isinstance(item, list)
         else _captured(item, env, None)
         for key, item in value.items()
     }
-    return captured_key(_own_name(value, name), out, env)
+    return captured_key(own, out, env)
 
 
 def _member(member: Any, env: Mapping[str, str]) -> Any:
-    """A ``fallback`` member, keys captured: one named alone that reads a preset's key becomes ``{"name": ...}``."""
+    """A ``fallback`` member, keys captured: one named alone that reads a preset's key becomes ``{"name": ...}``.
+
+    Only a ``fallback`` router's own ``routers`` list is read so: another router's setting of that name is its own.
+    """
     if isinstance(member, str) and builds_bare(member.strip()):
         return captured_key(member.strip(), {FALLBACK_NAME_KEY: member.strip()}, env)
     return _captured(member, env, None)
