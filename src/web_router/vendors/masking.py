@@ -42,13 +42,17 @@ def mask_answer(value: Any, secrets: Sequence[str]) -> Any:
     whole word (``Bearer abc123``), so that a login like ``user`` does not
     turn every ``username`` into ``***name``. Keys are left alone.
     """
-    masked = answer_masker(secrets)
+    return map_strings(value, answer_masker(secrets))
+
+
+def map_strings(value: Any, apply: Callable[[str], str], *, keys: bool = False) -> Any:
+    """A copy of ``value`` with ``apply`` run on every string in it, and on every dict key too when ``keys``."""
 
     def walk(item: Any) -> Any:
         if isinstance(item, str):
-            return masked(item)
+            return apply(item)
         if isinstance(item, dict):
-            return {key: walk(inner) for key, inner in item.items()}
+            return {apply(key) if keys and isinstance(key, str) else key: walk(inner) for key, inner in item.items()}
         if isinstance(item, list):
             return [walk(inner) for inner in item]
         return item

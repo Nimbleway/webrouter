@@ -19,7 +19,7 @@ from web_router.constants_vendors import VENDOR_MASK, VENDOR_MASK_INSIDE_MIN
 from web_router.mcp.env_credentials import OPTIONAL_KEYS, credential_variables, free_variables
 from web_router.mcp.masking_forms import encoded_pattern, mask_encoded
 from web_router.mcp.shaping import render
-from web_router.vendors.masking import answer_masker, mask
+from web_router.vendors.masking import answer_masker, map_strings, mask
 
 _NOT_SECRET = frozenset({ENV_AGENTCORE_GATEWAY_URL})
 """Variables a file may set that are no secret: AgentCore's gateway URL is an address, signed for with the AWS
@@ -57,16 +57,7 @@ def mask_configured(value: Any) -> Any:
     def text(item: str) -> str:
         return mask_encoded(plain(item), encoded, VENDOR_MASK)
 
-    def walk(item: Any) -> Any:
-        if isinstance(item, str):
-            return text(item)
-        if isinstance(item, dict):
-            return {text(key) if isinstance(key, str) else key: walk(inner) for key, inner in item.items()}
-        if isinstance(item, list | tuple):
-            return [walk(inner) for inner in item]
-        return item
-
-    return walk(value)
+    return map_strings(value, text, keys=True)
 
 
 def render_masked(payload: Any) -> str:
@@ -75,4 +66,5 @@ def render_masked(payload: Any) -> str:
     A result can carry a failure's text too -- an extract's per-URL error, a job's status detail -- and an object
     renders as its ``str``, so the rendered JSON is what gets masked.
     """
-    return render(mask_configured(json.loads(render(payload))))
+    text = render(payload)
+    return render(mask_configured(json.loads(text))) if configured_secrets() else text

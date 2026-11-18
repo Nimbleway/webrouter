@@ -40,7 +40,8 @@ def _base64_forms(secret: str) -> set[str]:
     data = secret.encode()
     forms: set[str] = set()
     for encode in (base64.b64encode, base64.urlsafe_b64encode):
-        forms.add(encode(data).decode("ascii"))
+        whole = encode(data).decode("ascii")
+        forms |= {whole, whole.rstrip("=")}  # unpadded too, as a JWT or URL-safe token writes it
         for shift in range(_B64_ALIGNMENTS):
             encoded = encode(bytes(shift) + data).decode("ascii")
             start, end = -(-shift * 8 // 6), (shift + len(data)) * 8 // 6

@@ -59,6 +59,13 @@ def test_an_error_masks_a_key_base64_encoded_or_json_escaped(
     assert VENDOR_MASK in text
 
 
+def test_an_unpadded_base64_key_is_masked_to_its_last_character(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(ENV_BRAVE_API_KEY, KEY)
+    unpadded = base64.urlsafe_b64encode(KEY.encode()).decode().rstrip("=")
+
+    assert f"token {VENDOR_MASK} expired" in error_text(ProviderError("brave", f"token {unpadded} expired"))
+
+
 @pytest.mark.parametrize("echo", ENCODED)
 async def test_fetch_raw_masks_a_key_base64_encoded_or_json_escaped(
     no_keys: None, monkeypatch: pytest.MonkeyPatch, echo: str
