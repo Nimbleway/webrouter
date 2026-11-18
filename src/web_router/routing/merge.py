@@ -178,7 +178,8 @@ def merge(
         return _static(request, static_order, None, decision.reason)
     known = {c.id: c.is_backend for c in request.candidates}
     ignored: dict[str, str] = {}
-    excluded = _exclusions(decision, known, ignored)
+    backend_ids = {candidate_id(c.tool, c.provider) for c in request.candidates}  # excludes its modes too
+    excluded = _exclusions(decision, {*known, *backend_ids}, ignored)
     asked = _tool(request, decision, excluded, ignored)
     tool = cast(ToolName, extract_or_search(asked, request, decision, caller_set, url_check, ignored))
     while True:  # at most twice: an extract that lost its URLs to the checks runs once more as search
