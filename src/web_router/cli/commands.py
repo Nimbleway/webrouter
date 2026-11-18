@@ -11,7 +11,7 @@ import argparse
 from collections.abc import Callable
 from typing import Any
 
-from web_router.cli.args import json_object, json_records, pairs
+from web_router.cli.args import CliInputError, json_object, json_records, pairs
 from web_router.client import WebRouter
 from web_router.registry_methods import configured_by_method
 from web_router.routing.contract import Budget
@@ -25,6 +25,17 @@ def _budget(args: argparse.Namespace) -> Budget | None:
 
 
 def _search(router: WebRouter, args: argparse.Namespace) -> Any:
+    try:
+        return _search_call(router, args)
+    except ValueError as exc:
+        # With --data-apis-only nothing is sent, so a plain ValueError (a web option set beside it, data APIs
+        # turned off) is a refusal, not a failed call. Its subclasses keep their own status.
+        if args.data_apis_only and type(exc) is ValueError:
+            raise CliInputError(str(exc)) from exc
+        raise
+
+
+def _search_call(router: WebRouter, args: argparse.Namespace) -> Any:
     return router.search(
         args.query,
         provider=args.provider,

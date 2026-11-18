@@ -132,3 +132,11 @@ def test_search_can_leave_out_data_apis_or_keep_the_configured_ones(
     _, keyed, _ = _run(capsys, "search", "datadog monitors", "-p", "fake", "--configured-only")
     assert listed["data_apis"]
     assert left_out["data_apis"] == [] and keyed["data_apis"] == []
+
+
+@pytest.mark.parametrize("extra", [("--depth", "deep"), ("-p", "fake"), ("--country", "US"), ("--no-data-apis",)])
+def test_data_apis_only_refuses_what_it_cannot_honour(
+    extra: tuple[str, ...], fake_provider: Any, capsys: pytest.CaptureFixture[str]
+) -> None:
+    status, out, err = _run(capsys, "search", "datadog monitors", "--data-apis-only", *extra)
+    assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")
