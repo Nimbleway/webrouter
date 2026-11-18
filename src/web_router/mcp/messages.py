@@ -9,7 +9,7 @@ import traceback
 from mcp_types import CallToolResult, TextContent
 
 from web_router.constants_mcp import MCP_PROVIDER_CONFIG_ASIDE, MCP_PROVIDER_CONFIG_CLAUSE
-from web_router.constants_mcp_context import MCP_MSG_ERROR_FACTS
+from web_router.constants_mcp_context import MCP_LOG_TOOL_RAISED, MCP_MSG_ERROR_FACTS
 from web_router.exceptions import WebRouterError
 from web_router.mcp.key_text import key_hint
 from web_router.mcp.masking import mask_configured_text
@@ -28,7 +28,7 @@ def failure_result(exc: Exception) -> CallToolResult:
     text = error_text(exc)
     if not isinstance(exc, WebRouterError | ValueError):
         frames = "".join(traceback.format_tb(exc.__traceback__))
-        _LOG.error("A tool raised %s: %s\n%s", type(exc).__name__, text, frames)
+        _LOG.error(MCP_LOG_TOOL_RAISED, type(exc).__name__, text, frames)
     return CallToolResult(content=[TextContent(text=text)], is_error=True)
 
 
