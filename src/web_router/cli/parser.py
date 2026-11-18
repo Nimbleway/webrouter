@@ -8,9 +8,18 @@ Every help string is in :data:`~web_router.constants_cli.HELP`.
 from __future__ import annotations
 
 import argparse
+import math
 from typing import Any, NoReturn, get_args
 
-from web_router.constants_cli import CLI_DESCRIPTION, CLI_EPILOG, CLI_PROG, HELP, HELP_COMMAND, MSG_NEGATIVE
+from web_router.constants_cli import (
+    CLI_DESCRIPTION,
+    CLI_EPILOG,
+    CLI_PROG,
+    HELP,
+    HELP_COMMAND,
+    MSG_NEGATIVE,
+    MSG_NOT_POSITIVE,
+)
 from web_router.types import ExtractFormat
 from web_router.types_options import Recency, ResearchEffort, SearchDepth
 
@@ -44,6 +53,17 @@ def _non_negative_int(text: str) -> int:
         raise argparse.ArgumentTypeError(f"invalid int value: {text!r}") from None
     if value < 0:
         raise argparse.ArgumentTypeError(MSG_NEGATIVE.format(value=value))
+    return value
+
+
+def _positive_finite_float(text: str) -> float:
+    """A wait in seconds: finite and above 0. research and browse would start a billed run on any other."""
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid float value: {text!r}") from None
+    if not (math.isfinite(value) and value > 0):
+        raise argparse.ArgumentTypeError(MSG_NOT_POSITIVE.format(value=text))
     return value
 
 
@@ -86,7 +106,7 @@ def _command(commands: _Commands[_Parser], name: str) -> _Parser:
     sub = _subcommand(commands, name)
     sub.add_argument("-p", "--provider", help=HELP["provider"])
     sub.add_argument("--option", action="append", metavar="KEY=VALUE", help=HELP["option"])
-    sub.add_argument("--timeout", type=float, metavar="SECONDS", help=HELP["timeout"])
+    sub.add_argument("--timeout", type=_positive_finite_float, metavar="SECONDS", help=HELP["timeout"])
     sub.add_argument("--max-cost", type=float, metavar="USD", help=HELP["max_cost"])
     _output_flags(sub, default=argparse.SUPPRESS)
     return sub
