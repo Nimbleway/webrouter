@@ -18,11 +18,12 @@ a compact JSON rendering, cut to a per-result budget, and the tool message's
 ``artifact`` carries the untouched :class:`SearchResponse` or
 :class:`ExtractResponse` (or :class:`AnswerResponse`), so nothing the backend
 returned is lost to the caller.
-A backend failure -- a ``ProviderError``, which is also what a URL the model
-got wrong comes back as -- reaches the model as a one-line message it can react
-to rather than ending the run. Every other error is the caller's setup (a
-missing key, an option the provider does not map) and raises, because no
-retry by the model would fix it and a message would hide it.
+A backend failure or a call past ``timeout`` reaches the model as the short
+message the Claude and OpenAI tools give, built from the error's fields rather
+than the vendor's text, instead of ending the run. A URL whose host is
+private, loopback or a metadata address is refused unless ``url_policy=None``.
+Every other error is the caller's setup (a missing key, an option the provider
+does not map) and raises, because no retry by the model would fix it.
 """
 
 from __future__ import annotations
@@ -41,10 +42,11 @@ from web_router.constants import (
     LANGCHAIN_SEARCH_TOOL_NAME,
 )
 from web_router.constants_answer import INTEGRATION_ANSWER_TOOL_DESCRIPTION, LANGCHAIN_ANSWER_TOOL_NAME
-from web_router.exceptions import ProviderError
 from web_router.integrations._langchain_base import AnswerInput, BaseTool, ExtractInput, SearchInput, _WebRouterTool
+from web_router.integrations._messages import INTEGRATION_URL_POLICY
 from web_router.integrations._options import extract_provider_for, tool_provider
 from web_router.integrations._render import render_answer, render_extract, render_search
+from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
     ExtractFormat,
     ExtractResponse,
@@ -93,23 +95,18 @@ class WebRouterSearch(_WebRouterTool):
             "recency": self.recency,
             "effort": self.effort,
             "provider_options": self.provider_options,
+            "timeout": self.timeout,
         }
 
     def _run(self, query: str, **_: Any) -> tuple[str, SearchResponse]:
-        try:
-            response = self._sync_router().search(query, **self._options())
-        except ProviderError as exc:
-            raise self._failed(exc) from exc
+        response = self._guarded(lambda: self._sync_router().search(query, **self._options()))
         return render_search(response, self.result_chars), response
 
     async def _arun(self, query: str, **kwargs: Any) -> tuple[str, SearchResponse]:
         if self.async_router is None:
             result: tuple[str, SearchResponse] = await super()._arun(query, **kwargs)
             return result
-        try:
-            response = await self.async_router.search(query, **self._options())
-        except ProviderError as exc:
-            raise self._failed(exc) from exc
+        response = await self._aguarded(self.async_router.search(query, **self._options()))
         return render_search(response, self.result_chars), response
 
 
@@ -117,7 +114,8 @@ class WebRouterExtract(_WebRouterTool):
     """Page contents through web-router, as a LangChain tool.
 
     A URL that could not be read is named in what the model sees rather than
-    failing the call, as a partly failed extract stays partly successful.
+    failing the call, as a partly failed extract stays partly successful; one
+    ``url_policy`` refuses is named the same way and never sent.
     """
 
     name: str = LANGCHAIN_EXTRACT_TOOL_NAME
@@ -126,6 +124,7 @@ class WebRouterExtract(_WebRouterTool):
 
     format: ExtractFormat | None = None
     provider_options: dict[str, Any] | None = None
+    url_policy: UrlPolicy | None = INTEGRATION_URL_POLICY
     document_chars: int = INTEGRATION_DOCUMENT_CHARS
     """Characters of each page the model reads; the artifact keeps the whole of it."""
 
@@ -133,21 +132,19 @@ class WebRouterExtract(_WebRouterTool):
         return {"provider": self.provider, "format": self.format, "provider_options": self.provider_options}
 
     def _run(self, urls: list[str], **_: Any) -> tuple[str, ExtractResponse]:
-        try:
-            response = self._sync_router().extract(urls, **self._options())
-        except ProviderError as exc:
-            raise self._failed(exc) from exc
-        return render_extract(response, self.document_chars), response
+        planned = self._planned(urls, self.url_policy)
+        extract = self._sync_router().extract
+        response = self._guarded(lambda: extract(planned.urls, timeout=self.timeout, **self._options()), planned)
+        return render_extract(response, self.document_chars, planned.refused), response
 
     async def _arun(self, urls: list[str], **kwargs: Any) -> tuple[str, ExtractResponse]:
         if self.async_router is None:
             result: tuple[str, ExtractResponse] = await super()._arun(urls, **kwargs)
             return result
-        try:
-            response = await self.async_router.extract(urls, **self._options())
-        except ProviderError as exc:
-            raise self._failed(exc) from exc
-        return render_extract(response, self.document_chars), response
+        planned = self._planned(urls, self.url_policy)
+        extract = self.async_router.extract(planned.urls, timeout=self.timeout, **self._options())
+        response = await self._aguarded(extract, planned)
+        return render_extract(response, self.document_chars, planned.refused), response
 
 
 class WebRouterAnswer(_WebRouterTool):
@@ -167,23 +164,18 @@ class WebRouterAnswer(_WebRouterTool):
     result_chars: int = INTEGRATION_RESULT_CHARS
     """Characters of each citation's snippet the model reads; the artifact keeps the whole of it."""
 
+    def _options(self) -> dict[str, Any]:
+        return {"provider": self.provider, "provider_options": self.provider_options, "timeout": self.timeout}
+
     def _run(self, query: str, **_: Any) -> tuple[str, AnswerResponse]:
-        try:
-            response = self._sync_router().answer(query, provider=self.provider, provider_options=self.provider_options)
-        except ProviderError as exc:
-            raise self._failed(exc) from exc
+        response = self._guarded(lambda: self._sync_router().answer(query, **self._options()))
         return render_answer(response, self.result_chars), response
 
     async def _arun(self, query: str, **kwargs: Any) -> tuple[str, AnswerResponse]:
         if self.async_router is None:
             result: tuple[str, AnswerResponse] = await super()._arun(query, **kwargs)
             return result
-        try:
-            response = await self.async_router.answer(
-                query, provider=self.provider, provider_options=self.provider_options
-            )
-        except ProviderError as exc:
-            raise self._failed(exc) from exc
+        response = await self._aguarded(self.async_router.answer(query, **self._options()))
         return render_answer(response, self.result_chars), response
 
 
