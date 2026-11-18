@@ -8,7 +8,7 @@ Every help string is in :data:`~web_router.constants_cli.HELP`.
 from __future__ import annotations
 
 import argparse
-from typing import NoReturn, get_args
+from typing import Any, NoReturn, get_args
 
 from web_router.constants_cli import CLI_DESCRIPTION, CLI_EPILOG, CLI_PROG, HELP, HELP_COMMAND, MSG_NEGATIVE
 from web_router.types import ExtractFormat
@@ -22,7 +22,15 @@ class UsageError(Exception):
 
 
 class _Parser(argparse.ArgumentParser):
-    """Raises instead of printing and exiting, so a usage error reaches stderr in the same JSON as any other."""
+    """Raises instead of printing and exiting, so a usage error reaches stderr in the same JSON as any other.
+
+    Abbreviations are off: ``--pre`` would otherwise be read as ``--pretty``, and a flag added later could
+    change what a script's short spelling means.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
 
     def error(self, message: str) -> NoReturn:
         raise UsageError(f"{self.prog}: {message}")
@@ -139,9 +147,9 @@ def _browse(commands: _Commands[_Parser]) -> None:
 
 def _live_data(commands: _Commands[_Parser]) -> None:
     """``live-data sources|source|run``. No ``--timeout`` or ``--max-cost``: the library's live data takes neither."""
-    actions = _subcommand(commands, "live-data").add_subparsers(
-        dest="action", required=True, metavar="ACTION", parser_class=_Parser
-    )
+    live_data = _subcommand(commands, "live-data")
+    _output_flags(live_data, default=argparse.SUPPRESS)
+    actions = live_data.add_subparsers(dest="action", required=True, metavar="ACTION", parser_class=_Parser)
     sources = _subcommand(actions, "sources", help_key="live-data sources")
     sources.add_argument("-q", "--query", help=HELP["catalogue_query"])
     sources.add_argument("--limit", type=_non_negative_int, metavar="N", help=HELP["limit"])
