@@ -15,8 +15,9 @@ import pytest
 from nimble_python import AsyncNimble
 
 from scripts.contracts_modes import parts
-from web_router import Budget, WebRouter
+from web_router import AsyncWebRouter, Budget, WebRouter
 from web_router.exceptions import WebRouterError
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers.auto import AutoExtractProvider
 from web_router.providers.nimble import NimbleExtractProvider
@@ -33,14 +34,24 @@ CALLER = {"caller_key": 1}
 NIMBLE_CALLER = {"country": "US"}
 
 
-def built(pin: str, bodies: list[dict[str, Any]], answer: dict[str, Any] | None = None) -> Any:
-    """``pin`` built against a mock transport that records each JSON body and answers ``answer``."""
+NIMBLE_REPLY = {"task_id": "t", "url": URL, "status": "success", "status_code": 200, "data": {"markdown": "# Page"}}
+"""One page Nimble's realtime extract read."""
+
+
+def recording(bodies: list[dict[str, Any]], answer: dict[str, Any] | None = None) -> httpx.MockTransport:
+    """A transport that records each JSON body sent and answers ``answer``."""
 
     def handle(request: httpx.Request) -> httpx.Response:
         bodies.append(json.loads(request.content or b"{}"))
         return httpx.Response(200, json=answer or {})
 
-    transport = httpx.MockTransport(handle)
+    return httpx.MockTransport(handle)
+
+
+def built(pin: str, bodies: list[dict[str, Any]], answer: dict[str, Any] | None = None) -> Any:
+    """``pin`` built against a mock transport that records each JSON body and answers ``answer``."""
+
+    transport = recording(bodies, answer)
     name = pin.split(":")[0]
     if name == "tavily":
         return create_extract_provider(pin, api_key="k", client=httpx.AsyncClient(transport=transport))
@@ -140,3 +151,14 @@ async def test_a_chain_prices_a_pinned_answer_at_its_mode_and_leaves_an_unpriced
     chain_request = ExtractRequest(urls=[URL])  # a chain meters with its own request, which names no mode
     assert metered(response, "extract", chain_request, 0.0).cost_usd == cost
     assert combined_cost("extract", [(response, chain_request)])["cost_usd"] == cost
+
+
+@pytest.mark.parametrize(("cap", "sends"), [(0.001, 0), (0.01, 1)])
+async def test_a_named_pin_is_priced_at_its_mode_before_the_budget_lets_it_send(cap: float, sends: int) -> None:
+    bodies: list[dict[str, Any]] = []
+    client = AsyncNimble(api_key="k", http_client=httpx.AsyncClient(transport=recording(bodies, NIMBLE_REPLY)))
+    router = AsyncWebRouter(provider_config={"nimble": {"async_client": client}})
+    refused = pytest.raises(BudgetExceededError) if sends == 0 else contextlib.nullcontext()
+    with refused:  # nimble-max is $0.0025 a page; Nimble's default row, $0.001, would slip under the lower cap
+        await router.extract(URL, provider="nimble:nimble-max", budget=Budget(max_cost_usd=cap))
+    assert len(bodies) == sends
