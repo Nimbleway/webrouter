@@ -321,6 +321,8 @@ src/web_router/
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an
 │                       unnamed answer() uses
+├── registry_methods.py which backends each method can use here, one table
+│                       for the command line and the MCP server
 ├── exceptions.py       WebRouterError and subclasses
 ├── exceptions_vendors.py VendorNotFoundError and VendorWriteRefusedError, apart on the
 │                       terms exceptions_budget.py is
