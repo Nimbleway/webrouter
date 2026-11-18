@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import httpx
 import pytest
@@ -13,11 +14,17 @@ from web_router import mcp_cli
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_TOOL_LOAD_ENV
 from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_LOAD, MCP_LOAD_ENV_OFF
-from web_router.constants_mcp_http import ENV_MCP_TOKEN, MCP_HTTP_PATH
+from web_router.constants_mcp_http import (
+    ENV_MCP_TOKEN,
+    MCP_HTTP_DEFAULT_HOST,
+    MCP_HTTP_DEFAULT_PORT,
+    MCP_HTTP_PATH,
+    MCP_HTTP_SHUTDOWN_GRACE,
+)
 from web_router.exceptions import ConfigurationError
 from web_router.mcp import http_transport
 from web_router.mcp.env_policy import switch
-from web_router.mcp.http_transport import BearerAuth, HttpSettings, build_app, http_env_defaults
+from web_router.mcp.http_transport import BearerAuth, HttpSettings, build_app, http_env_defaults, serve_http
 from web_router.mcp.tools import WebRouterTools
 
 TOKEN = "s3cret-token"
@@ -140,3 +147,41 @@ def test_a_port_out_of_range_is_a_usage_error(port: str) -> None:
         mcp_cli.main(["--transport", "http", "--port", port])
 
     assert exited.value.code == 2
+
+
+@pytest.mark.parametrize(
+    ("argv", "expected"),
+    [
+        ([], (MCP_HTTP_DEFAULT_HOST, MCP_HTTP_DEFAULT_PORT)),
+        (["--port", "9000"], (MCP_HTTP_DEFAULT_HOST, 9000)),
+        (["--host", "::1", "--port", "1"], ("::1", 1)),
+    ],
+)
+def test_the_command_passes_the_bind_it_was_given(
+    monkeypatch: pytest.MonkeyPatch, argv: list[str], expected: tuple[str, int]
+) -> None:
+    served: list[tuple[str, int]] = []
+    monkeypatch.setattr(http_transport, "main", lambda host, port: served.append((host, port)))
+
+    mcp_cli.main(["--transport", "http", *argv])
+
+    assert served == [expected]
+
+
+async def test_shutdown_waits_a_bounded_time_for_open_requests(
+    monkeypatch: pytest.MonkeyPatch, tools: WebRouterTools
+) -> None:
+    configs: list[Any] = []
+
+    class _Server:
+        def __init__(self, config: Any) -> None:
+            configs.append(config)
+
+        async def serve(self) -> None:
+            return None
+
+    monkeypatch.setattr(http_transport.uvicorn, "Server", _Server)
+
+    await serve_http(HttpSettings.resolve("127.0.0.1", 8000, None), tools)
+
+    assert configs[0].timeout_graceful_shutdown == MCP_HTTP_SHUTDOWN_GRACE
