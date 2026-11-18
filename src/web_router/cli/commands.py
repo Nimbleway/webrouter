@@ -39,7 +39,9 @@ def _search(router: WebRouter, args: argparse.Namespace) -> Any:
         provider_options=pairs(args.option),
         timeout=args.timeout,
         budget=_budget(args),
+        data_apis=args.data_apis,
         data_apis_only=args.data_apis_only,
+        configured_only=args.configured_only,
     )
 
 

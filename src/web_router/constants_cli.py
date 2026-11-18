@@ -87,6 +87,8 @@ HELP = {
     "depth": "Speed against thoroughness.",
     "search_effort": "How much work the search does, on a backend that maps it.",
     "data_apis_only": "List only the matching data API endpoints from the local catalogue; call no web backend.",
+    "no_data_apis": "Leave out data_apis, the catalogue endpoints matching the query that a search lists by default.",
+    "configured_only": "List only the data API endpoints this machine holds credentials for.",
     "format": "Page representation (default markdown).",
     "research_effort": "How much work the run should do.",
     "schema": "JSON Schema for a structured answer, inline or @file.",

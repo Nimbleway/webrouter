@@ -133,6 +133,8 @@ def _search(commands: _Commands[_Parser]) -> None:
     sub.add_argument("--depth", choices=get_args(SearchDepth), help=HELP["depth"])
     sub.add_argument("--effort", choices=get_args(ResearchEffort), help=HELP["search_effort"])
     sub.add_argument("--data-apis-only", action="store_true", help=HELP["data_apis_only"])
+    sub.add_argument("--no-data-apis", dest="data_apis", action="store_false", help=HELP["no_data_apis"])
+    sub.add_argument("--configured-only", action="store_true", help=HELP["configured_only"])
     _filters(sub)
 
 

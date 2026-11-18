@@ -120,3 +120,15 @@ def test_a_stream_that_cannot_encode_text_gets_escaped_json() -> None:
     err.flush()
     assert json.loads(out.buffer.getvalue())["answer"] == "naïve"  # type: ignore[attr-defined]
     assert json.loads(err.buffer.getvalue())["error"]["message"] == "déjà vu"  # type: ignore[attr-defined]
+
+
+def test_search_can_leave_out_data_apis_or_keep_the_configured_ones(
+    fake_provider: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("DATADOG_API_KEY", raising=False)
+    monkeypatch.delenv("DD_API_KEY", raising=False)
+    _, listed, _ = _run(capsys, "search", "datadog monitors", "-p", "fake")
+    _, left_out, _ = _run(capsys, "search", "datadog monitors", "-p", "fake", "--no-data-apis")
+    _, keyed, _ = _run(capsys, "search", "datadog monitors", "-p", "fake", "--configured-only")
+    assert listed["data_apis"]
+    assert left_out["data_apis"] == [] and keyed["data_apis"] == []
