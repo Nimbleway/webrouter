@@ -8,6 +8,7 @@ import pytest
 
 from tests.conftest import FakeBrowseProvider, FakeResearchProvider
 from tests.test_cli import _run, _spy
+from web_router.cli.args import pairs
 from web_router.constants_cli import EXIT_OK, EXIT_USAGE
 
 
@@ -35,3 +36,13 @@ def test_a_wait_that_is_not_a_finite_positive_number_starts_nothing(
     assert not any(instance.requests for instance in made)
     assert _run(capsys, command, "x", "-p", "fake", "--timeout", "5")[0] == EXIT_OK
     assert any(instance.requests for instance in made)
+
+
+def test_a_number_too_large_for_a_float_stays_text_or_is_refused(capsys: pytest.CaptureFixture[str]) -> None:
+    assert pairs(["cap=1e400", 'deep={"a": [1e400]}', "ok=1e300"]) == {
+        "cap": "1e400",
+        "deep": '{"a": [1e400]}',
+        "ok": 1e300,
+    }
+    status, out, err = _run(capsys, "research", "q", "--schema", '{"maximum": 1e400}')
+    assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")

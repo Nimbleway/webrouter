@@ -7,6 +7,7 @@ which exits with the usage status before any backend is called.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -33,18 +34,26 @@ def _refuse_constant(name: str) -> Any:
     raise _NotFinite(name)
 
 
+def _finite_float(text: str) -> float:
+    """A JSON number as a float, refused when it overflows to infinity (``1e400``), as ``Infinity`` is."""
+    value = float(text)
+    if not math.isfinite(value):
+        raise _NotFinite(text)
+    return value
+
+
 def _loads(text: str) -> Any:
-    """JSON without ``NaN``/``Infinity``: those would lift a cap or a timeout rather than set one."""
-    return json.loads(text, parse_constant=_refuse_constant)
+    """JSON without ``NaN``, ``Infinity`` or a number too large for a float: each would lift a cap or a timeout."""
+    return json.loads(text, parse_constant=_refuse_constant, parse_float=_finite_float)
 
 
 def pairs(values: list[str] | None, *, typed: bool = True) -> dict[str, Any] | None:
     """``KEY=VALUE`` arguments as a dict.
 
     ``typed`` reads each value as JSON when it parses, so ``--option max_age=3600`` sends a number and
-    ``--option mode=fast`` a string, the way a caller writing the dict by hand would have; ``NaN`` and
-    ``Infinity`` stay text. Without it every value is text, as a live data source's id must stay
-    ``"12345"`` rather than become a number.
+    ``--option mode=fast`` a string, the way a caller writing the dict by hand would have; ``NaN``,
+    ``Infinity`` and a number that overflows (``1e400``) stay text. Without it every value is text, as a
+    live data source's id must stay ``"12345"`` rather than become a number.
     """
     if not values:
         return None
