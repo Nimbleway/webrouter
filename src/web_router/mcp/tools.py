@@ -47,11 +47,8 @@ from web_router.constants import (
     MCP_MSG_BROWSER_ALREADY_ENDED,
     MCP_MSG_BROWSER_LOWERED,
     MCP_MSG_BROWSER_OPENED,
-    MCP_MSG_ENV_HINT,
-    MCP_MSG_INSTRUCTIONS_NO_KEYS,
     MCP_MSG_MISSING_ARGUMENT,
     MCP_MSG_NO_BACKEND,
-    MCP_MSG_NO_BACKEND_HINT,
     MCP_MSG_NOT_A_JOB,
     MCP_MSG_RESEARCH_PENDING,
     MCP_MSG_SNAPSHOT_TRUNCATED,
@@ -85,7 +82,6 @@ from web_router.constants_mcp import (
     MCP_MSG_NOTHING_CONFIGURED,
     MCP_MSG_UNKNOWN_ARGUMENTS,
     MCP_NO_ARGUMENTS,
-    MCP_SERVER_INSTRUCTIONS,
 )
 from web_router.constants_mcp_context import MCP_OUTPUT_SCHEMAS
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
@@ -96,6 +92,7 @@ from web_router.mcp.browsers import BrowserSessions, check_target, playwright_in
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.env_tool import load_env_entry
+from web_router.mcp.key_text import env_hint, no_backend_hint, server_instructions
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
 from web_router.mcp.raw_tool import fetch_raw_tool
@@ -232,7 +229,7 @@ class WebRouterTools:
         """
         env = self.env.report()
         if not self.keyed():
-            env["hint"] = MCP_MSG_ENV_HINT.format(env_var=ENV_MCP_ENV_FILE, user_dir=user_config_dir())
+            env["hint"] = env_hint(ENV_MCP_ENV_FILE, user_config_dir())
         return {
             **methods.configured(),
             "default_provider": self.router.default_provider,
@@ -251,7 +248,7 @@ class WebRouterTools:
 
     def instructions(self) -> str:
         """The server's instructions, saying what the model can do about it when no key reached the server."""
-        return self.env.noted(MCP_SERVER_INSTRUCTIONS + ("" if self.keyed() else MCP_MSG_INSTRUCTIONS_NO_KEYS))
+        return self.env.noted(server_instructions(keyed=self.keyed()))
 
     def tools_changed(self) -> bool:
         """Whether the tool list changed since this was last asked -- true once, so the client is told once."""
@@ -522,7 +519,7 @@ class WebRouterTools:
         if method is not None and not methods.usable(method):
             description += MCP_MSG_NO_BACKEND
             if names := methods.env_vars(method):
-                description += MCP_MSG_NO_BACKEND_HINT.format(env_vars=", ".join(names))
+                description += no_backend_hint(names)
         return description
 
     def _schema(self, tool: str) -> dict[str, Any]:

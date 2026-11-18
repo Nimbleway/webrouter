@@ -45,6 +45,7 @@ from web_router.constants_mcp_http import (
 )
 from web_router.exceptions import ConfigurationError
 from web_router.mcp.env import EnvSources
+from web_router.mcp.key_text import server_instructions
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.server import _shutdown, build_server
 from web_router.mcp.tools import WebRouterTools
@@ -114,7 +115,10 @@ def build_app(tools: WebRouterTools, settings: HttpSettings) -> ASGIApp:
     On a loopback host the SDK also checks ``Host`` and ``Origin``, so a web page cannot reach it through
     DNS rebinding.
     """
-    app = build_server(tools).streamable_http_app(streamable_http_path=MCP_HTTP_PATH, host=settings.host)
+    server = build_server(tools)
+    # Over HTTP the model's client is elsewhere: no visible local browser to offer, and keys come from the operator.
+    server.instructions = tools.env.noted(server_instructions(keyed=tools.keyed(), remote=True))
+    app = server.streamable_http_app(streamable_http_path=MCP_HTTP_PATH, host=settings.host)
     app.router.lifespan_context = _releasing(app.router.lifespan_context, tools)
     return BearerAuth(app, settings.token) if settings.token else app
 
