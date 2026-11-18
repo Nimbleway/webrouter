@@ -29,9 +29,7 @@ names and paths are.
 
 from __future__ import annotations
 
-import io
 import os
-import stat
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -40,30 +38,24 @@ from typing import Any
 from web_router.constants import (
     ENV_MCP_ENV_FILE,
     MCP_ENV_FILE,
-    MCP_ENV_FILE_MAX_BYTES,
     MCP_ENV_POINTER_FILE,
-    MCP_ENV_REASON_NO_DOTENV,
-    MCP_ENV_REASON_NOT_A_FILE,
-    MCP_ENV_REASON_NOT_TEXT,
-    MCP_ENV_REASON_TOO_LARGE,
     MCP_ENV_SOURCE_CWD,
     MCP_ENV_SOURCE_EXPLICIT,
     MCP_ENV_SOURCE_REMEMBERED,
     MCP_ENV_SOURCE_USER,
-    MCP_ENV_STATUS_MISSING,
     MCP_ENV_STATUS_NO_CREDENTIALS,
     MCP_ENV_STATUS_NOTHING_NEW,
-    MCP_ENV_STATUS_UNREADABLE,
     MCP_ENV_STATUS_USED,
-    MCP_MSG_ENV_NO_CREDENTIALS,
     MCP_MSG_ENV_REMEMBER_FAILED,
     MCP_USER_CONFIG_DIR,
     MCP_USER_CONFIG_ROOT_BY_PLATFORM,
     MCP_USER_CONFIG_ROOT_DEFAULT,
 )
-from web_router.constants_mcp import MCP_MSG_ENV_MISSING, MCP_MSG_ENV_UNREADABLE
 from web_router.mcp.env_credentials import EnvLoad, apply_credentials, credential_variables
 from web_router.mcp.env_foreign import foreign_files, foreign_warning, noted_instructions
+from web_router.mcp.env_read import EnvFileError, absolute, read_credentials
+
+__all__ = ["EnvFileError", "EnvLoad", "EnvLookup", "EnvSources", "read_credentials", "user_config_dir"]
 
 
 def _set_in_environment() -> tuple[str, ...]:
@@ -81,15 +73,6 @@ def user_config_dir() -> Path:
     configured = os.environ.get(env_var, "") if env_var else ""
     root = configured if os.path.isabs(configured) else os.path.expanduser(default)
     return Path(root) / MCP_USER_CONFIG_DIR
-
-
-class EnvFileError(ValueError):
-    """A file the server was pointed at and could not use. Its message names the path and why, never a value."""
-
-    def __init__(self, message: str, *, status: str, reason: str | None = None) -> None:
-        super().__init__(message)
-        self.status = status
-        self.reason = reason
 
 
 @dataclass(frozen=True)
@@ -145,7 +128,7 @@ class EnvSources:
                 text, or one that sets no credential.
             ValueError: when ``remember`` is set and the path cannot be recorded.
         """
-        target = _absolute(path)
+        target = absolute(path)
         values = read_credentials(target)
         pointer = _remember(target) if remember else None
         applied = apply_credentials(target, values, remembered=pointer)
@@ -178,58 +161,12 @@ class EnvSources:
         }
 
 
-def read_credentials(path: Path) -> dict[str, str]:
-    """The provider credentials ``path`` sets, and nothing else it holds.
-
-    Refuses anything that is not a small text file before reading it, since a
-    model can name any path on the machine.
-
-    Raises:
-        EnvFileError: for a path with no file, one that cannot be read as
-            text, or one that sets no credential.
-    """
-    try:
-        info = path.stat()
-    except (FileNotFoundError, NotADirectoryError):
-        raise EnvFileError(MCP_MSG_ENV_MISSING.format(path=path), status=MCP_ENV_STATUS_MISSING) from None
-    except OSError as exc:
-        raise _unreadable(path, exc.strerror or type(exc).__name__) from exc
-    if not stat.S_ISREG(info.st_mode):
-        raise _unreadable(path, MCP_ENV_REASON_NOT_A_FILE)
-    if info.st_size > MCP_ENV_FILE_MAX_BYTES:
-        raise _unreadable(path, MCP_ENV_REASON_TOO_LARGE.format(limit=MCP_ENV_FILE_MAX_BYTES))
-    try:
-        text = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        # Not chained: the decode error quotes a byte of the file.
-        raise _unreadable(path, MCP_ENV_REASON_NOT_TEXT) from None
-    except OSError as exc:
-        raise _unreadable(path, exc.strerror or type(exc).__name__) from exc
-    try:
-        from dotenv import dotenv_values
-    except ImportError:
-        # The mcp extra installs it; without it only exported variables reach the server.
-        raise _unreadable(path, MCP_ENV_REASON_NO_DOTENV) from None
-    # Not interpolated: `${OTHER}` would copy a secret the file never held into
-    # a provider's key, and send it to that provider with every call.
-    values = dotenv_values(stream=io.StringIO(text), interpolate=False)
-    wanted = sorted(credential_variables())
-    # An empty assignment -- a copied .env.example -- carries no credential.
-    found = {name: value for name in wanted if (value := values.get(name))}
-    if not found:
-        raise EnvFileError(
-            MCP_MSG_ENV_NO_CREDENTIALS.format(path=path, names=", ".join(wanted)),
-            status=MCP_ENV_STATUS_NO_CREDENTIALS,
-        )
-    return found
-
-
 def _candidates() -> list[tuple[str, Path]]:
     """Every place the startup lookup reads, in order."""
     places: list[tuple[str, Path]] = []
     explicit = os.environ.get(ENV_MCP_ENV_FILE)
     if explicit:
-        places.append((MCP_ENV_SOURCE_EXPLICIT, _absolute(explicit)))
+        places.append((MCP_ENV_SOURCE_EXPLICIT, absolute(explicit)))
     config = user_config_dir()
     places.append((MCP_ENV_SOURCE_USER, config / MCP_ENV_FILE))
     remembered = _remembered(config / MCP_ENV_POINTER_FILE)
@@ -245,7 +182,7 @@ def _remembered(pointer: Path) -> Path | None:
         recorded = pointer.read_text(encoding="utf-8").strip()
     except (OSError, UnicodeDecodeError):
         return None
-    return _absolute(recorded) if recorded else None
+    return absolute(recorded) if recorded else None
 
 
 def _remember(target: Path) -> Path:
@@ -258,16 +195,6 @@ def _remember(target: Path) -> Path:
         reason = exc.strerror or type(exc).__name__
         raise ValueError(MCP_MSG_ENV_REMEMBER_FAILED.format(pointer=pointer, reason=reason)) from exc
     return pointer
-
-
-def _absolute(raw: str) -> Path:
-    return Path(os.path.abspath(os.path.expanduser(raw)))
-
-
-def _unreadable(path: Path, reason: str) -> EnvFileError:
-    return EnvFileError(
-        MCP_MSG_ENV_UNREADABLE.format(path=path, reason=reason), status=MCP_ENV_STATUS_UNREADABLE, reason=reason
-    )
 
 
 def _lookup_report(lookup: EnvLookup) -> dict[str, Any]:
