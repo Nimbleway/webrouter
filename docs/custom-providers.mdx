@@ -67,7 +67,7 @@ class AcmeExtractProvider(HttpExtractProvider):
     env_api_key = "ACME_API_KEY"
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict:
-        return build_payload(request, url=urls[0], as_=ACME_FORMATS[self.format_of(request)])
+        return build_payload(request, url=urls[0], **{"as": ACME_FORMATS[self.format_of(request)]})
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict) -> ExtractResponse:
         return ExtractResponse(

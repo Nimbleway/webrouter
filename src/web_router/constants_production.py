@@ -23,6 +23,8 @@ COOLDOWN_FALLBACK_S: Final = 10.0
 COOLDOWN_MAX_S: Final = 600.0
 """The longest a backend cools down, whatever its ``Retry-After`` says: a router outlives one burst."""
 
+HOP_CODE_COOLING_DOWN: Final = "cooling_down"
+"""What a decision record's hop says for a backend ``auto`` passed over while it cooled down."""
 MSG_COOLING_DOWN: Final = (
     "cooling down after a {status} for {seconds:.1f}s more; auto passed it over without calling it"
 )
@@ -43,3 +45,6 @@ MSG_SYNC_ROUTER_IN_LOOP: Final = (
     "WebRouter.{method}() was called inside a running event loop, which it blocks until the call returns. "
     "Use AsyncWebRouter and await it there, or run the call on a worker thread (asyncio.to_thread)."
 )
+
+MSG_BODY_PAST_DEADLINE: Final = "the response body was still arriving when the call's deadline passed"
+"""The read timeout a sync HTTP call raises when its body is still arriving at the deadline."""

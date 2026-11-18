@@ -10,16 +10,9 @@ from typing import Any
 
 import pytest
 
+from tests.spend_helpers import Kept
 from web_router import AsyncWebRouter, Budget, InvalidParameterError, SpendEntry, SpendLog, WebRouter, spend_report
 from web_router.exceptions import ConfigurationError
-
-
-class _Kept:
-    def __init__(self) -> None:
-        self.entries: list[SpendEntry] = []
-
-    def record(self, entry: SpendEntry) -> None:
-        self.entries.append(entry)
 
 
 class _Broken:
@@ -48,7 +41,7 @@ def test_a_path_logs_every_answered_call_as_a_json_line(tmp_path: Path, fake_pro
 
 async def test_the_async_router_logs_to_any_sink(fake_provider: Any) -> None:
     router = AsyncWebRouter("fake")
-    sink = _Kept()
+    sink = Kept()
     assert router.log_spend(sink) is sink
     await router.search("q")
     assert [(entry.method, entry.provider) for entry in sink.entries] == [("search", "fake")]
@@ -56,7 +49,7 @@ async def test_the_async_router_logs_to_any_sink(fake_provider: Any) -> None:
 
 def test_calls_through_a_budget_scope_are_logged(fake_provider: Any) -> None:
     router = WebRouter("fake")
-    sink = _Kept()
+    sink = Kept()
     router.log_spend(sink)
     with router.budget(Budget(time_limit_s=60)) as b:
         b.search("q")
@@ -65,7 +58,7 @@ def test_calls_through_a_budget_scope_are_logged(fake_provider: Any) -> None:
 
 def test_none_stops_logging(fake_provider: Any) -> None:
     router = WebRouter("fake")
-    sink = _Kept()
+    sink = Kept()
     router.log_spend(sink)
     assert router.log_spend(None) is None
     router.search("q")

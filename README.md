@@ -51,7 +51,8 @@ print(results.provider, [doc.url for doc in pages.documents])
 - **Routing based on published benchmarks.** `auto` tries the providers you hold keys for in the
   order committed benchmark results rank them, and falls back on an error or an
   empty answer. `response.provider` always says who answered.
-- **Cost control.** Every response says what it cost and how long it took. Cap
+- **Cost control.** Search, extract, answer, research and browse responses say
+  how long they took and, where the backend's price is known, what they cost. Cap
   a call or a whole session in dollars and seconds, try the free backends
   first, and keep a log of what you spent ([budgets](#budgets-and-cost-control)).
 - **Keyless to start.** Search, extract and a local browser work with no API
