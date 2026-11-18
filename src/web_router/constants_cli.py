@@ -17,6 +17,8 @@ EXIT_USAGE = 2
 """Refused before anything was sent: a bad flag, an unknown backend, an unmapped option, bad JSON, a cost cap."""
 EXIT_CONFIG = 3
 """This machine is not set up for the call: a missing key, or an extra not installed."""
+EXIT_INTERRUPTED = 130
+"""Stopped with Ctrl-C, 128 plus SIGINT as a shell reports it; a call may have started, so it may have billed."""
 
 CLI_JSON_INDENT = 2
 """Indent under ``--pretty``; without it the output is one line, which is what a pipe or an agent wants."""
@@ -46,6 +48,7 @@ exit codes:
   2  refused before anything was sent (bad flag, unknown backend, unsupported option, bad JSON,
      nothing fits --max-cost)
   3  not set up for it (missing API key, extra not installed)
+  130  stopped with Ctrl-C (a call may already have started)
 
 keys:
   Read from the environment only. Run `webrouter providers` to see which backends are configured, and see

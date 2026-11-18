@@ -57,6 +57,7 @@ branch without reading the message:
 | `1` | The call ran and failed | a backend error, a timeout, nothing could serve it |
 | `2` | Refused before anything was sent | a bad flag, an unknown backend, an option the backend does not map, bad JSON, nothing fits `--max-cost` |
 | `3` | This machine is not set up for it | a missing API key, an extra not installed |
+| `130` | Stopped with Ctrl-C | a call may already have started, and billed |
 
 `type` is the library's exception class name. `UsageError` marks a command
 line the parser refused.

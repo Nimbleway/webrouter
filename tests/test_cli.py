@@ -7,14 +7,17 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from tests.conftest import FakeAnswerProvider, FakeBrowseProvider, FakeProvider, FakeResearchProvider
 from web_router.cli import run
 from web_router.cli.args import CliInputError, pairs
 from web_router.cli.output import exit_code
-from web_router.constants_cli import EXIT_CONFIG, EXIT_FAILED, EXIT_OK, EXIT_USAGE
+from web_router.client import WebRouter
+from web_router.constants_cli import EXIT_CONFIG, EXIT_FAILED, EXIT_INTERRUPTED, EXIT_OK, EXIT_USAGE
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.exceptions_provider import NoAnswerProviderError
+from web_router.types import SearchResult
 
 
 def _run(capsys: pytest.CaptureFixture[str], *argv: str) -> tuple[int, Any, Any]:
@@ -162,6 +165,7 @@ def test_pairs_read_json_values_and_keep_text() -> None:
         (NoAnswerProviderError("auto", ["exa", "you"], ["exa", "you"], []), EXIT_USAGE),
         (ProviderError("fake", "backend down"), EXIT_FAILED),
         (RuntimeError("anything else"), EXIT_FAILED),
+        (KeyboardInterrupt(), EXIT_INTERRUPTED),
     ],
 )
 def test_exit_status_says_what_kind_of_failure(error: BaseException, code: int) -> None:
@@ -176,3 +180,20 @@ def test_research_records_must_be_a_list_of_objects(
     assert (status, err["error"]["type"], sent) == (EXIT_USAGE, "CliInputError", [])
     assert _run(capsys, "research", "q", "-p", "fake", "--records", '[{"a": 1}]')[0] == EXIT_OK
     assert any(r.records == [{"a": 1}] for made in sent for r in made.requests)
+
+
+def test_a_reply_that_fails_to_parse_is_a_failed_call() -> None:
+    with pytest.raises(ValidationError) as caught:
+        SearchResult.model_validate({})
+    assert exit_code(caught.value) == EXIT_FAILED
+
+
+def test_ctrl_c_prints_the_envelope_not_a_traceback(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def interrupt(*_args: Any, **_kwargs: Any) -> Any:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(WebRouter, "search", interrupt)
+    status, out, err = _run(capsys, "search", "q")
+    assert (status, out, err["error"]["type"]) == (EXIT_INTERRUPTED, None, "KeyboardInterrupt")

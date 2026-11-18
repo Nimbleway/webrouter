@@ -38,7 +38,7 @@ def run(argv: Sequence[str] | None = None) -> int:
     router = WebRouter()
     try:
         response = HANDLERS[args.command](router, args)
-    except Exception as exc:  # every failure becomes the JSON envelope and an exit status, never a traceback
+    except (Exception, KeyboardInterrupt) as exc:  # every failure, Ctrl-C too, is the JSON envelope, never a traceback
         return write_error(exc, sys.stderr)
     finally:
         router.close()

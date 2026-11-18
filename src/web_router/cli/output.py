@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import IO, Any
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from web_router.cli.args import CliInputError
 from web_router.cli.parser import UsageError
@@ -20,6 +20,7 @@ from web_router.constants_cli import (
     CLI_USAGE_ERROR,
     EXIT_CONFIG,
     EXIT_FAILED,
+    EXIT_INTERRUPTED,
     EXIT_USAGE,
 )
 from web_router.exceptions import (
@@ -33,11 +34,13 @@ from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_provider import NoAnswerProviderError, ProviderNotFoundError
 from web_router.exceptions_typed import InvalidParameterError
 
-# First match wins, so a subclass must come before its base.
+# First match wins, so a subclass must come before its base. A pydantic ValidationError is not here: the
+# library turns a caller's bad value into InvalidParameterError, so one reaching the command is a backend
+# reply that failed to parse, from a call that ran.
 _EXIT_BY_ERROR: tuple[tuple[type[BaseException], int], ...] = (
+    (KeyboardInterrupt, EXIT_INTERRUPTED),
     (UsageError, EXIT_USAGE),
     (CliInputError, EXIT_USAGE),
-    (ValidationError, EXIT_USAGE),
     (UnsupportedParameterError, EXIT_USAGE),
     (UnsupportedFormatError, EXIT_USAGE),
     (MissingParameterError, EXIT_USAGE),
@@ -80,7 +83,7 @@ def _excluded(value: Any) -> Any:
 def write_error(error: BaseException, stream: IO[str]) -> int:
     """Print ``error`` as the JSON envelope on ``stream`` and return the status to exit with."""
     kind = CLI_USAGE_ERROR if isinstance(error, UsageError) else type(error).__name__
-    envelope = {"error": {"type": kind, "message": str(error)}}
+    envelope = {"error": {"type": kind, "message": str(error) or kind}}
     print(json.dumps(envelope, ensure_ascii=False), file=stream)
     return exit_code(error)
 
