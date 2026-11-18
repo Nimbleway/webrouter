@@ -11,6 +11,7 @@ from web_router.constants_mcp_env import ENV_MCP_PRIVATE_URLS, MCP_PRIVATE_URLS_
 from web_router.exceptions import ConfigurationError
 from web_router.mcp.http_transport import http_env_defaults
 from web_router.mcp.navigation import NavigationPolicy
+from web_router.mcp.navigation_rules import private_refusal
 
 CDP = "http://127.0.0.1:9222"
 PRIVATE = [
@@ -49,6 +50,13 @@ def test_over_http_a_name_that_resolves_privately_is_refused(http_switches: None
 
 def test_over_http_a_public_address_still_opens(http_switches: None) -> None:
     assert NavigationPolicy.for_session(CDP).refusal(PUBLIC) is None
+    assert NavigationPolicy.for_session(CDP).refusal("http://localhost.example.com/") is None
+
+
+@pytest.mark.parametrize("host", ["x.localhost", "A.LOCALHOST", "localhost.", "x.localhost."])
+def test_over_http_a_localhost_name_is_refused_before_any_lookup(http_switches: None, host: str) -> None:
+    """Chromium answers every *.localhost name with loopback itself, so no DNS answer is needed to refuse it."""
+    assert private_refusal(host) is not None
 
 
 def test_the_operator_can_keep_private_addresses_on_over_http(

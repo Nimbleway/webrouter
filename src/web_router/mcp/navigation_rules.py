@@ -34,6 +34,7 @@ def private_refusal(host: str) -> str | None:
 
     Any ``*.localhost`` name counts as loopback: Chromium answers it with loopback itself, without asking DNS.
     """
-    if is_loopback(host) or host.endswith(LOCALHOST_SUFFIX) or is_private(host):
+    name = host.lower().rstrip(".")
+    if is_loopback(name) or name.endswith(LOCALHOST_SUFFIX) or is_private(host):
         return MCP_MSG_BROWSER_REFUSED_PRIVATE.format(env_var=ENV_MCP_PRIVATE_URLS)
     return None
