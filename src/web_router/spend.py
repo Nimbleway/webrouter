@@ -100,7 +100,13 @@ class SpendRow(BaseModel):
     reported_usd: float = Field(default=0.0, description="The part of cost_usd the backends stated.")
     estimated_usd: float = Field(default=0.0, description="The part of cost_usd estimated from list prices.")
     unpriced_calls: int = Field(default=0, description="Calls with no known cost, left out of cost_usd.")
-    elapsed_s: float = Field(default=0.0, description="Seconds the answered calls took, failed attempts included.")
+    elapsed_s: float = Field(
+        default=0.0,
+        description=(
+            "Seconds the answered calls took, the failed attempts they moved past included. "
+            "A failed line's seconds stay on that line and are not summed here."
+        ),
+    )
 
 
 class SpendLog:
