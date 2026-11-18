@@ -70,6 +70,18 @@ MCP_CWD_ENV_ON = "on"
 MCP_CWD_ENV_OFF = "off"
 MCP_CWD_ENV_DEFAULT = MCP_CWD_ENV_ON
 
+ENV_MCP_PRIVATE_URLS = "WEB_ROUTER_MCP_PRIVATE_URLS"
+"""Whether the browser tools may open loopback and private-network addresses: on by default, off over HTTP,
+where the browser runs on a shared server and those addresses are the server's own network."""
+
+MCP_PRIVATE_URLS_ON = "on"
+MCP_PRIVATE_URLS_OFF = "off"
+MCP_PRIVATE_URLS_DEFAULT = MCP_PRIVATE_URLS_ON
+
+MCP_MSG_BROWSER_REFUSED_PRIVATE = (
+    "that is a loopback or private-network address, which this server may not open ({env_var}=off)"
+)
+
 MCP_ENV_SWITCHES: dict[str, tuple[tuple[str, ...], str]] = {
     ENV_MCP_LOAD_ENV: ((MCP_LOAD_ENV_REMEMBER, MCP_LOAD_ENV_LOAD, MCP_LOAD_ENV_OFF), MCP_LOAD_ENV_DEFAULT),
     ENV_MCP_REMEMBERED_ENV: (
@@ -77,6 +89,7 @@ MCP_ENV_SWITCHES: dict[str, tuple[tuple[str, ...], str]] = {
         MCP_REMEMBERED_DEFAULT,
     ),
     ENV_MCP_CWD_ENV: ((MCP_CWD_ENV_ON, MCP_CWD_ENV_OFF), MCP_CWD_ENV_DEFAULT),
+    ENV_MCP_PRIVATE_URLS: ((MCP_PRIVATE_URLS_ON, MCP_PRIVATE_URLS_OFF), MCP_PRIVATE_URLS_DEFAULT),
 }
 """Each switch's accepted values and its default, which is today's behaviour. Unset or blank is the default."""
 

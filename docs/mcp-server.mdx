@@ -648,6 +648,10 @@ point a browser on this machine at — but it also means a page can steer the
 model toward one, and what it serves enters the transcript. Run the server
 (and pick `local` sessions) on a machine whose network holds nothing a
 page-steered model should not read.
+Over HTTP the browser runs on the server, not the user's machine, so these are
+refused there too: `WEB_ROUTER_MCP_PRIVATE_URLS` is `off` unless the operator
+sets it, and loopback and private-network addresses -- a name that resolves to
+one included -- are turned away like the metadata ranges.
 
 The policy is enforced at these points:
 
@@ -862,6 +866,9 @@ web-router-mcp --transport http --host 0.0.0.0 --port 9000
 - **`load_env` is off** unless you set `WEB_ROUTER_MCP_LOAD_ENV` yourself, so
   a client cannot point the server at files on its host. Keys come from the
   server's environment, or a `.env` it finds at startup.
+- **The browser stays off the server's own network**: loopback and
+  private-network addresses are refused, since the browser runs on the server
+  (`WEB_ROUTER_MCP_PRIVATE_URLS=on` allows them again).
 - **Every client shares one session**: one router, one budget
   (`WEB_ROUTER_MCP_MAX_COST_USD` caps them all together) and one set of browser
   sessions.
@@ -901,6 +908,7 @@ the cloud browsers are.
 | --- | --- | --- |
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
 | `WEB_ROUTER_MCP_LOAD_ENV`, `WEB_ROUTER_MCP_REMEMBERED_ENV`, `WEB_ROUTER_MCP_CWD_ENV` | `remember` (`off` under HTTP), `anywhere`, `on` | Where keys may come from: what `load_env` may do, where a remembered `.env` is read, and whether the working directory's is. See [Using this safely with untrusted pages](#using-this-safely-with-untrusted-pages). |
+| `WEB_ROUTER_MCP_PRIVATE_URLS` | `on` (`off` under HTTP) | Whether the browser tools may open loopback and private-network addresses. See [Where the browser may go](#where-the-browser-may-go). Read from the real environment only. |
 | `WEB_ROUTER_MCP_TOKEN` | unset | Under `--transport http`, the bearer token every request must carry; required to listen anywhere but loopback. See [Serve over HTTP for a team](#serve-over-http-for-a-team). Read from the real environment only. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |

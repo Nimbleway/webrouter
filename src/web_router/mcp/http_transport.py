@@ -31,7 +31,12 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Lifespan, Receive, Scope, Send
 
-from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_OFF
+from web_router.constants_mcp_env import (
+    ENV_MCP_LOAD_ENV,
+    ENV_MCP_PRIVATE_URLS,
+    MCP_LOAD_ENV_OFF,
+    MCP_PRIVATE_URLS_OFF,
+)
 from web_router.constants_mcp_http import (
     ENV_MCP_TOKEN,
     MCP_HTTP_AUTHORIZATION,
@@ -83,9 +88,13 @@ def tokenless_host(host: str) -> bool:
 
 
 def http_env_defaults(environ: MutableMapping[str, str] = os.environ) -> None:
-    """Turn ``load_env`` off unless the operator set :data:`ENV_MCP_LOAD_ENV` themselves."""
-    if not environ.get(ENV_MCP_LOAD_ENV, "").strip():
-        environ[ENV_MCP_LOAD_ENV] = MCP_LOAD_ENV_OFF
+    """Turn ``load_env`` and the browser's private addresses off, each unless the operator set it themselves.
+
+    Over HTTP both would reach the server's machine, not the user's: its files, and its own network.
+    """
+    for name, off in ((ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_OFF), (ENV_MCP_PRIVATE_URLS, MCP_PRIVATE_URLS_OFF)):
+        if not environ.get(name, "").strip():
+            environ[name] = off
 
 
 class BearerAuth:
