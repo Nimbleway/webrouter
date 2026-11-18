@@ -14,10 +14,16 @@ import stat
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from web_router.constants import ENV_MCP_ENV_FILE, MCP_ENV_SOURCE_EXPLICIT, MCP_ENV_STATUS_USED
+from web_router.constants import (
+    ENV_MCP_ENV_FILE,
+    MCP_ENV_SOURCE_EXPLICIT,
+    MCP_ENV_STATUS_NOTHING_NEW,
+    MCP_ENV_STATUS_USED,
+)
 from web_router.constants_mcp import ENV_MCP_MAX_COST_USD
 from web_router.constants_mcp_env import (
     MCP_LOG_ENV_EXPLICIT_MISSING,
+    MCP_LOG_ENV_LOOSE_PERMISSIONS,
     MCP_LOG_ENV_REMEMBERED,
     MCP_LOG_NO_CEILING,
     MCP_MSG_ENV_LOOSE_PERMISSIONS,
@@ -29,6 +35,8 @@ if TYPE_CHECKING:
     from web_router.mcp.env import EnvSources
 
 _LOG = logging.getLogger(__name__)
+_READ = frozenset({MCP_ENV_STATUS_USED, MCP_ENV_STATUS_NOTHING_NEW})
+"""The statuses of a file that held credentials: whether or not they were new, the file holds keys."""
 
 
 def log_startup(sources: EnvSources) -> None:
@@ -38,8 +46,8 @@ def log_startup(sources: EnvSources) -> None:
     for lookup in sources.searched:
         if lookup.source == MCP_ENV_SOURCE_EXPLICIT and sources.explicit_missing:
             _LOG.warning(MCP_LOG_ENV_EXPLICIT_MISSING, ENV_MCP_ENV_FILE, lookup.path)
-        if lookup.status == MCP_ENV_STATUS_USED and (note := loose_permissions(lookup.path)):
-            _LOG.warning("web-router: %s", note)
+        if lookup.status in _READ and (note := loose_permissions(lookup.path)):
+            _LOG.warning(MCP_LOG_ENV_LOOSE_PERMISSIONS, note)
     keyed = any(methods.keyed(method) for method in methods.EACH_METHOD)
     if keyed and not os.environ.get(ENV_MCP_MAX_COST_USD, "").strip():
         _LOG.warning(MCP_LOG_NO_CEILING, ENV_MCP_MAX_COST_USD)

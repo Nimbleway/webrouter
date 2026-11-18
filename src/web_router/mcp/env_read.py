@@ -95,7 +95,7 @@ def _unreadable(path: Path, reason: str) -> EnvFileError:
 
 def is_dotenv_name(name: str) -> bool:
     """Whether a file's name is one a ``.env`` goes by: ``.env``, ``.env.<name>`` or ``<name>.env``."""
-    return name.startswith(MCP_ENV_FILE) or name.endswith(MCP_ENV_FILE)
+    return name == MCP_ENV_FILE or name.startswith(f"{MCP_ENV_FILE}.") or name.endswith(MCP_ENV_FILE)
 
 
 def require_dotenv_name(given: str, target: Path) -> None:

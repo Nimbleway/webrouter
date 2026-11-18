@@ -62,6 +62,11 @@ def test_load_env_opens_only_a_file_named_as_a_dotenv_with_one_refusal_for_all(i
     assert not is_set(ENV_BRAVE_API_KEY)
 
 
+@pytest.mark.parametrize("name", [".environment", ".envrc", "env"])
+def test_a_name_that_only_starts_like_a_dotenv_is_refused(isolated_home: Path, name: str) -> None:
+    assert _refusal(write(isolated_home / name, f"{ENV_BRAVE_API_KEY}={KEY}\n")).status == MCP_ENV_STATUS_REFUSED
+
+
 @pytest.mark.parametrize("name", [".env", ".env.local", "work.env"])
 def test_every_usual_dotenv_name_loads(isolated_home: Path, name: str) -> None:
     path = write(isolated_home / name, f"{ENV_BRAVE_API_KEY}={KEY}\n")
@@ -193,7 +198,3 @@ async def test_load_env_says_when_others_can_read_the_file(isolated_home: Path) 
     failed, payload = await outcome(_tools(), MCP_TOOL_LOAD_ENV, path=str(path))
 
     assert not failed and f"chmod 600 {path}" in payload["note"]
-    path.chmod(0o600)
-    os.environ.pop(ENV_BRAVE_API_KEY)
-    failed, payload = await outcome(_tools(), MCP_TOOL_LOAD_ENV, path=str(path))
-    assert "chmod" not in payload.get("note", "")

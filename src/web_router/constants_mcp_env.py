@@ -114,6 +114,8 @@ MCP_LOG_ENV_REMEMBERED = (
 MCP_LOG_ENV_EXPLICIT_MISSING = (
     "web-router: %s names no readable file (%s); the server went on to read the other places it looks."
 )
+MCP_LOG_ENV_LOOSE_PERMISSIONS = "web-router: %s"
+
 MCP_LOG_NO_CEILING = (
     "web-router: billed keys are configured and %s is unset, so nothing caps what one connection spends."
 )

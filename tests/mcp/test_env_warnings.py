@@ -14,6 +14,7 @@ from tests.mcp.env_helpers import KEY, write
 from web_router.client import AsyncWebRouter
 from web_router.constants import (
     ENV_BRAVE_API_KEY,
+    ENV_JINA_API_KEY,
     ENV_MCP_ENV_FILE,
     MCP_ENV_FILE,
     MCP_TOOL_FETCH_RAW,
@@ -65,7 +66,12 @@ def test_a_missing_explicit_file_is_said_with_where_the_search_went(
 
 @pytest.mark.skipif(os.name != "posix", reason="file modes are POSIX")
 @pytest.mark.parametrize(("mode", "said"), [(0o644, True), (0o600, False)])
-def test_a_key_file_others_can_read_is_said(isolated_home: Path, warned: Any, mode: int, said: bool) -> None:
+@pytest.mark.parametrize("exported", [False, True], ids=["new", "nothing new"])
+def test_a_key_file_others_can_read_is_said(
+    isolated_home: Path, warned: Any, monkeypatch: pytest.MonkeyPatch, mode: int, said: bool, exported: bool
+) -> None:
+    if exported:
+        monkeypatch.setenv(ENV_BRAVE_API_KEY, "exported")
     write(Path.cwd() / MCP_ENV_FILE, f"{ENV_BRAVE_API_KEY}={KEY}\n").chmod(mode)
 
     EnvSources.at_startup()
@@ -86,10 +92,11 @@ def test_billed_keys_with_no_ceiling_are_said(
 
 
 @pytest.mark.parametrize("echo", ["invalid key {key}", "Authorization: Bearer {key}", "url?k={key}&x=1"])
+@pytest.mark.parametrize("variable", [ENV_BRAVE_API_KEY, ENV_JINA_API_KEY], ids=["billed", "optional"])
 def test_an_error_that_echoes_a_configured_key_in_plain_text_masks_it(
-    no_keys: None, monkeypatch: pytest.MonkeyPatch, echo: str
+    no_keys: None, monkeypatch: pytest.MonkeyPatch, echo: str, variable: str
 ) -> None:
-    monkeypatch.setenv(ENV_BRAVE_API_KEY, KEY)
+    monkeypatch.setenv(variable, KEY)
 
     text = error_text(ProviderError("brave", echo.format(key=KEY)))
 

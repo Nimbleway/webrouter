@@ -13,13 +13,16 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from web_router.mcp.env_credentials import credential_variables, free_variables
+from web_router.mcp.env_credentials import OPTIONAL_KEYS, credential_variables, free_variables
 from web_router.vendors.masking import mask_answer
 
 
 def configured_secrets() -> list[str]:
-    """The value of every credential variable set here, less the free ones -- a region like ``us5`` is no secret."""
-    names = credential_variables() - free_variables()
+    """The value of every credential variable set here, less a vendor's settings -- a region like ``us5`` is no secret.
+
+    An optional key, such as Jina's, bills nothing but is still a key, so it is masked.
+    """
+    names = credential_variables() - (free_variables() - set(OPTIONAL_KEYS))
     return [value for name in sorted(names) if (value := os.environ.get(name))]
 
 
