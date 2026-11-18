@@ -89,6 +89,8 @@ def json_value(text: str | None, what: str) -> Any:
         raise CliInputError(MSG_NOT_FINITE.format(what=what, value=exc)) from None
     except json.JSONDecodeError as exc:
         raise CliInputError(MSG_BAD_JSON.format(what=what, error=exc)) from None
+    except ValueError as exc:  # an integer past Python's digit limit: still the caller's text
+        raise CliInputError(MSG_BAD_JSON.format(what=what, error=exc)) from None
 
 
 def json_object(text: str | None, what: str) -> dict[str, Any] | None:

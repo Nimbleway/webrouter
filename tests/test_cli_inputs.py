@@ -103,3 +103,8 @@ def test_an_explicit_null_is_refused_not_read_as_omitted(
     status, out, err = _run(capsys, *argv)
     assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")
     assert not any(instance.requests for instance in made)
+
+
+def test_an_integer_too_long_to_read_is_refused(capsys: pytest.CaptureFixture[str]) -> None:
+    status, out, err = _run(capsys, "research", "q", "--schema", '{"maximum": ' + "9" * 5000 + "}")
+    assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")
