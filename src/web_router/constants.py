@@ -35,6 +35,7 @@ from web_router.constants_mcp import (
     MCP_TOOL_WEB_RUN,
     MCP_WEB_RUN_PROPERTIES,
 )
+from web_router.constants_mcp_env import MCP_DESC_LOAD_ENV, MCP_LOAD_ENV_PROPERTIES
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
 from web_router.constants_vendors_mcp import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
@@ -3691,20 +3692,6 @@ MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_HANDLE: {"type": "string", "description": "The handle an earlier result carried."},
 }
 
-MCP_ARG_PATH = "path"
-MCP_ARG_REMEMBER = "remember"
-
-MCP_LOAD_ENV_PROPERTIES: dict[str, dict[str, Any]] = {
-    MCP_ARG_PATH: {
-        "type": "string",
-        "description": "The .env file's path on this machine, as the user gave it, e.g. '~/work/.env'; '~' expands.",
-    },
-    MCP_ARG_REMEMBER: {
-        "type": "boolean",
-        "description": "Read this file on every start too. Only when the user asks for that.",
-    },
-}
-
 MCP_ARG_SESSION_ID = "session_id"
 MCP_ARG_FORMAT = "format"
 MCP_ARG_REF = "ref"
@@ -3879,7 +3866,7 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_BROWSE: ("task",),
     MCP_TOOL_BROWSE_STATUS: (MCP_ARG_HANDLE,),
     MCP_TOOL_FETCH_RAW: (MCP_ARG_HANDLE,),
-    MCP_TOOL_LOAD_ENV: (MCP_ARG_PATH,),
+    MCP_TOOL_LOAD_ENV: (),
     MCP_TOOL_BROWSER_OPEN: (),
     MCP_TOOL_BROWSER_GOTO: (MCP_ARG_SESSION_ID, "url"),
     MCP_TOOL_BROWSER_SNAPSHOT: (MCP_ARG_SESSION_ID,),
@@ -3924,12 +3911,6 @@ MCP_DESC_BROWSE_STATUS = (
 MCP_DESC_FETCH_RAW = (
     "The backend's full, unshaped payload for a handle: instant, but can be very large. Use it when a "
     "result was cut and you need the rest. Session URLs and credentials in browser payloads are redacted."
-)
-
-MCP_DESC_LOAD_ENV = (
-    "Load API keys from a .env file the user names, so their backends work at once. Ask where it is; "
-    "never ask for a key. Only provider credentials are read, an already-set variable wins, and only "
-    "names are returned. Set `remember` (read it on every start) only when the user asks."
 )
 
 MCP_DESC_BROWSER_OPEN = (
@@ -4026,8 +4007,6 @@ MCP_MSG_ENV_REMEMBER_FAILED = (
     "The path could not be recorded in {pointer} ({reason}), so nothing was loaded. Call load_env again "
     "without `remember` to load it for this session only."
 )
-
-MCP_MSG_ENV_BAD_ARGUMENTS = "load_env takes `path` as a string and `remember` as a boolean."
 
 MCP_MSG_ENV_NOTHING_NEW = (
     "Every credential in the file was already set, and a value already set is kept, so nothing changed."
