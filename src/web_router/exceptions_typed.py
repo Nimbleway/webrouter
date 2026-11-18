@@ -10,7 +10,7 @@ from typing import Any
 
 from web_router.constants_errors import MSG_INVALID_PARAMETER
 from web_router.exceptions import ProviderError, WebRouterError
-from web_router.types_errors import ERROR_KIND_UPSTREAM
+from web_router.types_errors import ERROR_KIND_UPSTREAM, ExtractFailure
 
 
 class InvalidParameterError(WebRouterError, ValueError):
@@ -49,6 +49,22 @@ class AllProvidersFailedError(ProviderError):
         delays = [d for d in (getattr(exc, "retry_after", None) for exc in self.failures.values()) if d is not None]
         self.retry_after = max(delays) if delays else None
         self.retryable = any(getattr(exc, "retryable", False) for exc in self.failures.values())
+
+
+class ExtractFailedError(ProviderError):
+    """An extract read no page, and the URLs failed in calls or answers of their own: :attr:`url_failures` has each one.
+
+    The same per-URL records a partly successful extract returns in
+    ``ExtractResponse.failures``, each with its own ``kind`` and ``retryable``,
+    so one URL blocked and another gone are told apart. A :class:`ProviderError`,
+    so an ``except`` for that still catches it; its :attr:`kind` sums the URLs up.
+    """
+
+    def __init__(
+        self, provider: str, message: str, failures: Sequence[ExtractFailure], *, original: BaseException | None = None
+    ) -> None:
+        super().__init__(provider, message, original=original, kind=ExtractFailure.batch_kind(failures))
+        self.url_failures = list(failures)
 
 
 def shared_status(statuses: Iterable[int | None]) -> int | None:
