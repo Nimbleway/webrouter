@@ -60,12 +60,14 @@ class Merchant:
         status: int = 200,
         store_result: dict[str, Any] | None = None,
         sse: bool = False,
+        notice_status: int = 202,
     ) -> None:
         self.latest = pointer() if latest is None else latest
         self.domain_record = record() if domain_record is None else domain_record
         self.domain_status = status
         self.store_result = store_result if store_result is not None else {"structuredContent": {"products": [PRODUCT]}}
         self.sse = sse
+        self.notice_status = notice_status
         self.index = {
             "sites": [
                 {"domain": DOMAIN, "platform": "shopify", "commerce_tests": {"search_keyword": "pass"}},
@@ -98,7 +100,7 @@ class Merchant:
     def _store(self, body: dict[str, Any]) -> httpx.Response:
         method = body.get("method")
         if method == "notifications/initialized":
-            return httpx.Response(202)
+            return httpx.Response(self.notice_status)
         result: dict[str, Any] = {"protocolVersion": "2025-11-25"} if method == "initialize" else self.store_result
         reply = {"jsonrpc": "2.0", "id": body.get("id"), "result": result}
         headers = {"mcp-session-id": "s-1"}

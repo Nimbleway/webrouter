@@ -33,6 +33,7 @@ from web_router.exceptions import ProviderError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers.merchant_mcp import (
+    ensure_ok,
     envelope,
     initialize,
     negotiated_version,
@@ -96,7 +97,7 @@ class MerchantLiveDataProvider(HttpLiveDataProvider, RegistryReader):
         agreed = negotiated_version(result_of(opened), version)
         headers = {**headers, MCP_VERSION_HEADER: agreed, **session(opened)}
         done = envelope(None, "notifications/initialized", {})
-        self._client.post(plan.endpoint, json=done, headers=headers, **self._clamped())
+        ensure_ok(self._client.post(plan.endpoint, json=done, headers=headers, **self._clamped()))
         call = search(inputs, self.agent_profile_url, request.provider_options)
         reply = self._client.post(plan.endpoint, json=call, headers=headers, **self._clamped())
         return self._response(plan, request, agreed, result_of(reply))
@@ -114,7 +115,7 @@ class MerchantLiveDataProvider(HttpLiveDataProvider, RegistryReader):
         agreed = negotiated_version(result_of(opened), version)
         headers = {**headers, MCP_VERSION_HEADER: agreed, **session(opened)}
         done = envelope(None, "notifications/initialized", {})
-        await self._async_client.post(plan.endpoint, json=done, headers=headers, **self._clamped())
+        ensure_ok(await self._async_client.post(plan.endpoint, json=done, headers=headers, **self._clamped()))
         call = search(inputs, self.agent_profile_url, request.provider_options)
         reply = await self._async_client.post(plan.endpoint, json=call, headers=headers, **self._clamped())
         return self._response(plan, request, agreed, result_of(reply))

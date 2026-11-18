@@ -196,6 +196,24 @@ def test_a_store_error_raises_and_is_never_an_empty_result() -> None:
         ask(merchant)
 
 
+@pytest.mark.parametrize("asynchronous", [False, True])
+def test_a_store_that_refuses_the_initialized_notice_stops_the_call_before_the_search(asynchronous: bool) -> None:
+    merchant = Merchant(notice_status=429)
+    if asynchronous:
+        import asyncio
+
+        async def run() -> None:
+            async with AsyncWebRouter("nimble", provider_config=router_config(merchant)) as router:
+                await router.live_data(DOMAIN, {"query": "shoe"}, provider="merchant")
+
+        with pytest.raises(ProviderError, match="HTTP 429"):
+            asyncio.run(run())
+    else:
+        with pytest.raises(ProviderError, match="HTTP 429"):
+            ask(merchant)
+    assert merchant.store_calls() == ["initialize", "notifications/initialized"], "the search was never sent"
+
+
 def test_a_reply_with_no_product_list_raises_rather_than_returning_nothing() -> None:
     with pytest.raises(ProviderError, match="no product list"):
         ask(Merchant(store_result={"content": [{"type": "text", "text": "hello"}]}))

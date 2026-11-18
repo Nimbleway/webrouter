@@ -37,10 +37,15 @@ def initialize(version: str) -> dict[str, Any]:
     return envelope(1, "initialize", params)
 
 
-def result_of(response: httpx.Response) -> dict[str, Any]:
-    """The ``result`` of an MCP reply, whether it came as plain JSON or as one server-sent event."""
+def ensure_ok(response: httpx.Response) -> None:
+    """A store that answers with an HTTP error stops the call; nothing after it is sent."""
     if response.status_code >= httpx.codes.BAD_REQUEST:
         raise ProviderError(PROVIDER_MERCHANT, f"HTTP {response.status_code}", kind=ERROR_KIND_UPSTREAM)
+
+
+def result_of(response: httpx.Response) -> dict[str, Any]:
+    """The ``result`` of an MCP reply, whether it came as plain JSON or as one server-sent event."""
+    ensure_ok(response)
     text = response.text
     if response.headers.get("content-type", "").startswith(CONTENT_TYPE_EVENT_STREAM):
         lines = [line[len(MCP_SSE_DATA_PREFIX) :] for line in text.splitlines() if line.startswith(MCP_SSE_DATA_PREFIX)]
