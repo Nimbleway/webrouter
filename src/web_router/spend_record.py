@@ -27,13 +27,19 @@ from web_router.exceptions import (
     ProviderNotInstalledError,
     ResearchTimeoutError,
 )
+from web_router.providers._cooldown import CoolingDownError
 from web_router.spend import SpendEntry, SpendSink
 from web_router.types_decision import DecisionRecord
-from web_router.types_errors import ERROR_KIND_RATE_LIMIT
 
 logger = logging.getLogger("web_router")
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
+
+_NEVER_CALLED = (ConfigurationError, ProviderNotInstalledError, CoolingDownError)
+"""What a member fails with when no request went out: unconfigured, not installed, or cooling down."""
+
+_NEVER_CALLED_HOPS = frozenset(getattr(kind, "hop_code", kind.__name__) for kind in _NEVER_CALLED)
+"""The same, as a decision record's hop names them."""
 
 _MAY_HAVE_BILLED = (ProviderError, DeadlineExceededError, ResearchTimeoutError, BrowseTimeoutError)
 """What a call raises after a backend may have started work, and billed for it; a refused argument never did."""
@@ -61,7 +67,7 @@ class SpendSinkHolder:
             yield
         except _MAY_HAVE_BILLED as exc:
             named = method() if callable(method) else method
-            _record(self._spend_sink, raised_entries(exc, named or "run", time.monotonic() - started))
+            record_lines(self._spend_sink, raised_entries(exc, named or "run", time.monotonic() - started))
             raise
 
 
@@ -90,7 +96,7 @@ def passed_entries(decision: DecisionRecord | None, method: str) -> list[SpendEn
     entries = []
     for hop in (decision.hops if decision else None) or []:
         attempt = next((each for each in tried if each.id == hop.id), None)
-        if attempt is None:  # skipped before it started: nothing ran, nothing billed
+        if attempt is None or hop.error in _NEVER_CALLED_HOPS:  # no request went out: nothing billed
             continue
         tried.remove(attempt)
         entries.append(
@@ -116,7 +122,7 @@ def raised_entries(exc: Exception, method: str, elapsed_s: float) -> list[SpendE
     provider = getattr(exc, "provider", "")
     calls = [(provider, each) for each in getattr(exc, "call_errors", ())]
     named = list((getattr(exc, "failures", None) or {}).items()) or calls or [(provider, exc)]
-    failures = [(name, each) for name, each in named if not _never_called(each)]
+    failures = [(name, each) for name, each in named if not isinstance(each, _NEVER_CALLED)]
     return [
         SpendEntry(
             at=datetime.now(UTC),
@@ -130,16 +136,6 @@ def raised_entries(exc: Exception, method: str, elapsed_s: float) -> list[SpendE
     ]
 
 
-def _never_called(exc: BaseException) -> bool:
-    """A member ``auto`` passed over without a request: unconfigured, not installed, or cooling down.
-
-    A cooldown's refusal is the one rate-limit error with no backend error under it.
-    """
-    if isinstance(exc, ConfigurationError | ProviderNotInstalledError):
-        return True
-    return isinstance(exc, ProviderError) and exc.kind == ERROR_KIND_RATE_LIMIT and exc.original is None
-
-
 def _error_of(exc: BaseException) -> str:
     status = getattr(exc, "status_code", None)
     return str(status) if status is not None else getattr(exc, "kind", None) or type(exc).__name__
@@ -151,15 +147,15 @@ def log_spent(sink: SpendSink | None, response: BaseModel, method: str) -> None:
         return
     decision = getattr(response, "decision", None)
     passed = passed_entries(decision if isinstance(decision, DecisionRecord) else None, method)
-    _record(sink, [*passed, spend_entry(response, method)])
+    record_lines(sink, [*passed, spend_entry(response, method)])
 
 
-def _record(sink: SpendSink | None, entries: Iterable[SpendEntry]) -> None:
+def record_lines(sink: SpendSink | None, entries: Iterable[SpendEntry]) -> None:
     """Write ``entries`` to ``sink``, if there is one; a sink that fails is warned about, never raised."""
     if sink is None:
         return
-    try:
-        for entry in entries:
+    for entry in entries:
+        try:
             sink.record(entry)
-    except Exception as exc:  # a broken log must never cost the caller the answer it paid for
-        logger.warning(MSG_SPEND_SINK_FAILED, type(sink).__name__, type(exc).__name__, exc, exc_info=True)
+        except Exception as exc:  # a broken log must never cost the caller the answer it paid for, nor other lines
+            logger.warning(MSG_SPEND_SINK_FAILED, type(sink).__name__, type(exc).__name__, exc, exc_info=True)
