@@ -314,10 +314,10 @@ same request behaving differently for reasons the caller never chose.
 FOLLOW_REDIRECTS = False
 """Provider clients never follow redirects, and this is pinned rather than inherited.
 
-httpx replays request headers -- the auth header included -- to the redirect target, and does not strip them when that
-target is a different host. A search endpoint has no legitimate reason to redirect, so following one is either a
-misconfiguration or an attempt to collect the credential. Surfacing it as an error is the safe reading of both. See
-:data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
+On a redirect to a different host, httpx drops the standard ``Authorization`` header but keeps custom credential
+headers such as ``X-API-Key``, which several providers send their key in. A search endpoint has no legitimate
+reason to redirect, so following one is either a misconfiguration or an attempt to collect the credential.
+Surfacing it as an error is the safe reading of both. See :data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
 """
 
 MSG_HTTP_ERROR = "HTTP {status}: {body}"
@@ -2803,9 +2803,9 @@ NIMBLE_LIVE_DATA_FAILED_STATUS_FLOOR = 400
 
 MSG_REDIRECTS_WITH_CREDENTIAL = (
     "Provider {provider!r} refuses follow_redirects=True while it is sending a credential. "
-    "httpx replays request headers to the redirect target without stripping them, so a redirect "
-    "to another host would hand that host your API key. Point base_url at the host you mean to "
-    "call instead."
+    "On a redirect to another host, httpx drops a standard Authorization header but keeps a custom "
+    "one such as X-API-Key, so a redirect could hand that host your API key. Point base_url at the "
+    "host you mean to call instead."
 )
 
 MSG_DEADLINE_EXCEEDED = "Provider {provider!r} had not answered within the call's {seconds:g}s deadline."

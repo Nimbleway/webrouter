@@ -23,7 +23,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Fixed
 
 - Docs: the configuration page lists `extract` for `BROWSERBASE_API_KEY`, which already serves Browserbase Fetch, and the browser page's Steel note now splits its options into those verified live, those mapped from Steel's documentation and awaiting a live run, and those reachable only through `provider_options`, instead of saying none were mapped.
-- Docs: the reason provider clients never follow redirects is stated precisely. On a redirect to another host, `httpx` drops the standard `Authorization` header but keeps custom credential headers such as `X-API-Key`; the earlier wording said it kept both. The policy is unchanged (configuration page, `SECURITY.md`, `CONTRIBUTING.md`, `AGENTS.md`).
+- Docs: the reason provider clients never follow redirects is stated precisely. On a redirect to another host, `httpx` drops the standard `Authorization` header but keeps custom credential headers such as `X-API-Key`; the earlier wording said it kept both. The policy is unchanged (configuration page, `SECURITY.md`, `CONTRIBUTING.md`, `AGENTS.md`, and the `ConfigurationError` raised when `follow_redirects=True` is refused).
 - Nimble's public Extract Templates now carry their site, kind of page and description in a listing. Their listing rows carry no published version, and the metadata that describes them sits on the row itself, which was not read, so a local search could match them by name alone. `published` stays `False` on such a row, since the row does not say; `live_data_source()` reads the version.
 ### Removed
 
