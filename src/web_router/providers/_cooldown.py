@@ -28,6 +28,7 @@ from web_router.constants_production import (
     MSG_COOLING_DOWN,
 )
 from web_router.exceptions import ProviderError
+from web_router.providers._pinning import backend_of
 from web_router.types_errors import ERROR_KIND_RATE_LIMIT as _RATE_LIMIT
 
 if TYPE_CHECKING:
@@ -67,7 +68,7 @@ class Cooldowns:
             self._start(provider, COOLDOWN_DEFAULT_S[status], status)
 
     def _start(self, provider: str, seconds: float, status: int | None) -> None:
-        now = time.monotonic()
+        now, provider = time.monotonic(), backend_of(provider)  # a pinned mode cools its whole backend
         with self._lock:
             current = self._until.get(provider)
             if current is None or current[0] < now + seconds:
@@ -77,6 +78,7 @@ class Cooldowns:
 
     def remaining(self, provider: str) -> tuple[float, int | None] | None:
         """Seconds left on ``provider``'s cooldown and the status that set it; ``None`` once it has run out."""
+        provider = backend_of(provider)
         with self._lock:
             entry = self._until.get(provider)
             if entry is None:

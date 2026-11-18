@@ -24,6 +24,7 @@ from web_router.constants import (
     TAVILY_PARAMS_BY_DEPTH,
     TAVILY_SDK_SEARCH_TIMEOUT,
 )
+from web_router.constants_mode_parts import TAVILY_TIERS
 from web_router.constants_tavily import (
     MSG_TAVILY_COUNTRY,
     TAVILY_COUNTRIES,
@@ -50,12 +51,13 @@ from web_router.types import (
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "content", "raw_content", "score", "published_date"})
 
 
-def search_fields(request: SearchRequest, *, timeout: float | None = None) -> dict[str, Any]:
+def search_fields(request: SearchRequest, *, timeout: float | None = None, modes: Any = None) -> dict[str, Any]:
     """Tavily's search fields for ``request``: its SDK's ``search()`` keywords, which are its REST body's fields."""
     depth = mapped(TAVILY_PARAMS_BY_DEPTH, request.search_depth)
     return build_payload(
         request,
         TAVILY_PARAM_NAMES,
+        modes,
         query=request.query,
         timeout=timeout,
         country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
@@ -72,6 +74,7 @@ class TavilyProvider(TavilyClientsMixin, SearchProvider):
     """Routes searches to the Tavily Search API."""
 
     name: ClassVar[str] = PROVIDER_TAVILY
+    tiers = TAVILY_TIERS
     supported_parameters: ClassVar[frozenset[str]] = TAVILY_SEARCH_PARAMETERS
     refusal_reasons: ClassVar[dict[str, str]] = {"country": MSG_TAVILY_COUNTRY}
 
@@ -124,7 +127,7 @@ class TavilyProvider(TavilyClientsMixin, SearchProvider):
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
-        return clamped_timeout(search_fields(request, timeout=self._timeout), TAVILY_SDK_SEARCH_TIMEOUT)
+        return clamped_timeout(search_fields(request, timeout=self._timeout, modes=self), TAVILY_SDK_SEARCH_TIMEOUT)
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         results = []

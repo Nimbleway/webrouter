@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib
 import os
+from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from web_router.constants import (
@@ -58,6 +59,7 @@ from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as 
 from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
 from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
+from web_router.providers._pinning import pinned_class
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:
@@ -347,13 +349,9 @@ def _resolve(
 
 
 def get_provider_class(name: str | Provider) -> type[SearchProvider]:
-    """Resolve a search provider name to its class, importing the module on first use."""
-    return _resolve(
-        name,
-        builtin=_BUILTIN_PROVIDERS,
-        custom=_CUSTOM_PROVIDERS,
-        available=available_providers(),
-    )
+    """Resolve a search provider name to its class, importing the module on first use; ``exa:exa-instant`` pins."""
+    resolve = partial(_resolve, builtin=_BUILTIN_PROVIDERS, custom=_CUSTOM_PROVIDERS, available=available_providers())
+    return pinned_class(name, resolve)
 
 
 def get_extract_provider_class(name: str | Provider) -> type[ExtractProvider]:

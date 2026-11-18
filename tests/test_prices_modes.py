@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
+from functools import partial
 from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
 from web_router import prices, prices_modes, registry
-from web_router.modes import Flag, ModeDeclarations, Tier
+from web_router.exceptions_typed import InvalidParameterError
+from web_router.modes import Flag, ModeDeclarations, Tier, parse_id
 from web_router.prices import Price
 
 ACME = "https://acme.example/pricing"
@@ -141,3 +144,22 @@ def test_a_declared_part_with_no_row_is_reported(acme: None) -> None:
         {"name": "acme", "tiers": {"acme-turbo": Tier(), "acme-ghost": Tier()}, "flags": {"acme-extras": Flag()}},
     )
     assert prices_modes.unpriced_parts("acme", "search", declared) == ["acme-ghost"]
+
+
+def test_an_old_vendor_spelling_without_a_depth_mark_is_no_id() -> None:
+    """``tavily:ultra-fast`` names no part: only ``@`` marks the benchmarks' old spelling, and ``fast`` is a level."""
+    declared = partial(prices_modes.declared, method="search")
+    with pytest.raises(InvalidParameterError, match="ultra-fast"):
+        parse_id("tavily:ultra-fast", declared)
+    assert parse_id("tavily:fast", declared).mode == "fast"
+    assert parse_id("tavily:ultra-fast@deep", declared).mode == "tavily-ultra-fast+deep"
+
+
+@pytest.mark.parametrize("row", [row for row in prices.prices() if row.method == "search" and row.setup])
+def test_every_setup_a_price_row_names_parses_to_its_mode(row: prices.Price) -> None:
+    ids = re.findall(r"`([^`]+)`", row.setup or "")
+    assert ids, f"{row.provider} {row.mode}: name the setup as a backticked id"
+    for text in ids:
+        found = parse_id(text, partial(prices_modes.declared, method="search"))
+        assert found.provider == row.provider
+        assert found.mode in ({row.mode, None} if row.default else {row.mode}), f"{text} is not {row.mode}"
