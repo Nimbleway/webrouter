@@ -66,6 +66,16 @@ def test_an_unpadded_base64_key_is_masked_to_its_last_character(no_keys: None, m
     assert f"token {VENDOR_MASK} expired" in error_text(ProviderError("brave", f"token {unpadded} expired"))
 
 
+@pytest.mark.parametrize("user", ["", "u", "us"])
+def test_an_error_masks_a_short_key_inside_a_basic_header(
+    no_keys: None, monkeypatch: pytest.MonkeyPatch, user: str
+) -> None:
+    monkeypatch.setenv(ENV_BRAVE_API_KEY, "abcd")
+    header = base64.b64encode(f"{user}:abcd".encode()).decode()
+
+    assert header not in error_text(ProviderError("brave", f"Authorization: Basic {header}"))
+
+
 @pytest.mark.parametrize("echo", ENCODED)
 async def test_fetch_raw_masks_a_key_base64_encoded_or_json_escaped(
     no_keys: None, monkeypatch: pytest.MonkeyPatch, echo: str

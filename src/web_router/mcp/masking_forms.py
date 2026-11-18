@@ -14,8 +14,9 @@ from collections.abc import Sequence
 _B64_ALIGNMENTS = 3
 """Base64 encodes three bytes as four characters, so a key starts in one of three alignments."""
 
-_B64_CORE_MIN = 6
-"""A base64 core shorter than this could match ordinary text, so it is not masked."""
+_B64_CORE_MIN = 4
+"""A base64 core shorter than this could match almost any text, so it is not masked. Four keeps a key of four
+characters or more covered in an error, where any key is masked; a payload only matches keys of eight or more."""
 
 
 def encoded_pattern(secrets: Sequence[str]) -> re.Pattern[str] | None:
