@@ -100,7 +100,8 @@ def _merged(
 
     Each page ``retried`` returned is matched to the URL it was sent for (:func:`~._url_match.owners`); a blank
     one was not read, and a page or failure no sent URL can be told for is left out: the caller never asked for
-    it, and a later member would fetch it. The cost is both calls' (:func:`~web_router.routing.metered.combined_cost`).
+    it, and a later member would fetch it. A page of ``first`` sorts by the URL it answers too (:func:`_asked`),
+    not by what its backend echoed. The cost is both calls' (:func:`~web_router.routing.metered.combined_cost`).
     """
     sent = _failed_urls(first)  # only these went on the retry: not a 404 or other page-own failure
     blank = MSG_EXTRACT_RETRY_BLANK.format(provider=retried.provider)
@@ -128,8 +129,8 @@ def _merged(
         for failure in first.failures
         if failure.url in again or failure.url not in found
     ]
-    position = {url: index for index, url in enumerate(urls)}
-    placed = [*((document, document.url) for document in first.documents), *read]
+    position: dict[str | None, int] = {url: index for index, url in enumerate(urls)}
+    placed = [*zip(first.documents, _asked(first, urls), strict=True), *read]
     documents = [document for document, url in sorted(placed, key=lambda pair: position.get(pair[1], len(urls)))]
     return first.model_copy(
         update={
@@ -139,6 +140,25 @@ def _merged(
             **combined_cost("extract", [(first, _for(request, urls)), (retried, _for(request, sent))]),
         }
     )
+
+
+def _asked(first: ExtractResponse, urls: list[str]) -> list[str | None]:
+    """The requested URL each page of ``first`` answers, so a page echoed under another URL keeps its place.
+
+    Nimble and Keenable echo the URL they resolved to (a slash added to a bare host, a redirect followed, a
+    fragment dropped), and Jina adds the slash. Told as :func:`~._url_match.owners` tells it; the pages it cannot
+    tell (two that both answer where a redirect landed) take the URLs ``first`` neither failed nor matched, in
+    turn, when there is one for each: a one-URL-per-call member answers in the order asked. Otherwise such a page
+    has no place and sorts last.
+    """
+    failed = [failure.url for failure in first.failures]
+    named = owners([document.url for document in first.documents], urls, failed)
+    taken = {*failed, *named}
+    left = [url for url in urls if url not in taken]
+    if named.count(None) != len(left):
+        return named
+    turn = iter(left)
+    return [owner or next(turn) for owner in named]
 
 
 def _for(request: ExtractRequest, urls: list[str]) -> ExtractRequest:
