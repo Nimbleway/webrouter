@@ -1,4 +1,4 @@
-"""A missing optional dependency names the extra that installs it, and ``all`` carries the MCP server."""
+"""A missing optional dependency names the extra that installs it; `all` and `mcp` carry what they promise."""
 
 from __future__ import annotations
 
@@ -64,3 +64,10 @@ def test_all_installs_the_mcp_server_and_the_console_script_can_name_its_extra()
 
     assert "mcp" in all_extra.split("[")[1].rstrip("]").split(",")
     assert project["scripts"]["web-router-mcp"] == "web_router.mcp_cli:main"
+
+
+def test_the_mcp_extra_carries_the_browser_tools() -> None:
+    """A plain ``webrouter[mcp]`` install lists every tool, the browser_* ones included."""
+    (bundled, *_) = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["optional-dependencies"]["mcp"]
+
+    assert "browser" in bundled.split("[")[1].rstrip("]").split(",")

@@ -64,7 +64,10 @@ try:
     WebRouter().search("...")
 except AllProvidersFailedError as exc:
     for backend, error in exc.failures.items():
-        print(backend, error.kind, error.status_code)
+        if isinstance(error, ProviderError):
+            print(backend, error.kind, error.status_code)
+        else:  # a backend that could not be tried at all, such as a ConfigurationError
+            print(backend, error)
 except ProviderError as exc:
     if exc.retryable:
         ...  # back off for exc.retry_after seconds, then try again
