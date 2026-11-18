@@ -652,6 +652,9 @@ every error the model reads says in its text that the call failed or did not
 run. Add research or browse to them only with a routing-guide paragraph saying
 when each is worth its bill.
 
+Benchmark quirks (rate tiers, no resume, combining scans):
+`.claude/skills/running-webrouter-benchmarks/SKILL.md`.
+
 `benchmarks/agent/` is a consumer of the library, like `examples/`: it
 drives Claude agents on Managed Agents through the Claude tools, OpenAI
 models on the Responses API through the OpenAI tools, or both in one run —
