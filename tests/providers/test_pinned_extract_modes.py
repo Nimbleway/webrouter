@@ -20,11 +20,10 @@ from web_router.exceptions import WebRouterError
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers.auto import AutoExtractProvider
-from web_router.providers.nimble import NimbleExtractProvider
 from web_router.registry import create_extract_provider, get_extract_provider_class
 from web_router.routing.candidates import build_candidates
 from web_router.routing.metered import combined_cost, metered
-from web_router.types import ExtractRequest, ExtractResponse
+from web_router.types import ExtractRequest
 
 DECLARING = ("tavily", "linkup", "oxylabs", "nimble", "exa", "browserbase")
 PINS = [(name, part) for name in DECLARING for part in parts(get_extract_provider_class(name))]
@@ -139,15 +138,14 @@ def test_an_unpriced_tier_is_offered_only_without_a_cost_cap(
     assert [candidate.provider for candidate in found.candidates] == offered
 
 
-@pytest.mark.parametrize(("pin", "cost"), [("nimble:nimble-vx8", None), ("nimble:nimble-max", 0.0025)])
+@pytest.mark.parametrize(
+    ("pin", "cost", "source"), [("nimble:nimble-vx8", None, None), ("nimble:nimble-max", 0.0025, "estimated")]
+)
 async def test_a_chain_prices_a_pinned_answer_at_its_mode_and_leaves_an_unpriced_one_unknown(
-    monkeypatch: pytest.MonkeyPatch, pin: str, cost: float | None
+    pin: str, cost: float | None, source: str | None
 ) -> None:
-    async def answered(self: Any, request: ExtractRequest) -> ExtractResponse:
-        return ExtractResponse(provider="nimble")
-
-    monkeypatch.setattr(NimbleExtractProvider, "aextract", answered)
-    response = await built(pin, []).aextract(ExtractRequest(urls=[URL]))
+    response = await built(pin, [], NIMBLE_REPLY).aextract(ExtractRequest(urls=[URL]))
+    assert (response.cost_usd, response.cost_source) == (cost, source)
     chain_request = ExtractRequest(urls=[URL])  # a chain meters with its own request, which names no mode
     assert metered(response, "extract", chain_request, 0.0).cost_usd == cost
     assert combined_cost("extract", [(response, chain_request)])["cost_usd"] == cost
