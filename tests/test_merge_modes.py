@@ -3,10 +3,15 @@ a backend there, since only ``attempts`` run a mode; a decider is offered modes 
 
 from __future__ import annotations
 
+import pytest
+
+from tests.candidates_helpers import Shown, clear_keys, set_keys
 from tests.merge_helpers import STATIC
-from web_router import Candidate, RouteDecision, RouteRequest
+from web_router import Candidate, RouteDecision, RouteRequest, WebRouter
+from web_router.routing.candidates import build_candidates
 from web_router.routing.decider_question import question_for
 from web_router.routing.merge import merge
+from web_router.types import SearchRequest
 
 MODE_ONLY_SEARCH = RouteRequest(
     prompt="q",
@@ -37,3 +42,13 @@ def test_a_mode_id_ranked_as_a_backend_is_noted_not_dropped_silently() -> None:
 
 def test_a_deciders_question_offers_modes_too() -> None:
     assert list(question_for(MODE_ONLY_SEARCH).options) == ["search:exa:exa-instant", "answer:perplexity"]
+
+
+def test_a_chain_entry_pinned_to_a_mode_keeps_its_place_when_modes_are_shown(monkeypatch: pytest.MonkeyPatch) -> None:
+    set_keys(clear_keys(monkeypatch), "exa")
+    pinned = {"auto": {"chain": {"search": ["exa", "exa:exa-instant"]}}}
+    found = build_candidates(WebRouter(provider_config=pinned), {"search": SearchRequest(query="q")}, modes=True)
+    entry = [c for c in found.candidates if c.id == "search:exa:exa-instant"]
+    assert [(c.provider, c.mode) for c in entry] == [("exa:exa-instant", None)], "the pinned entry, not the mode"
+    with WebRouter(provider_config=pinned, router=Shown(), route_modes=True) as wr:
+        assert wr.plan("q", tool="search").providers == {"search": ("exa", "exa:exa-instant")}

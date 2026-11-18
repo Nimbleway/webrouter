@@ -56,12 +56,15 @@ def price_members(
     modes: Callable[[str], Sequence[ModeEntry]] | None = None,
 ) -> None:
     """Price and time each of ``tool``'s eligible members on ``request``, each followed by the ``modes`` it offers;
-    keep the ones ``budget`` leaves in."""
+    keep the ones ``budget`` leaves in. A mode whose id names a chain entry pinned to it, such as
+    ``exa:exa-instant``, is left to that entry: the entry is the candidate a decision can run."""
+    members = {candidate_id(tool, name) for name, _ in eligible}
     for name, keyless in eligible:
         if candidate_id(tool, name) in found.seen:
             continue  # a member listed twice is one candidate, at its first place
         for mode, at in [(None, request), *(modes(name) if modes else ())]:
-            _place(tool, name, mode, at, keyless, budget, found)
+            if mode is None or candidate_id(tool, name, mode) not in members:
+                _place(tool, name, mode, at, keyless, budget, found)
 
 
 def _place(

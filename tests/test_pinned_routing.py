@@ -8,7 +8,7 @@ from typing import Any, ClassVar
 import httpx
 import pytest
 
-from web_router import Budget, WebRouter, prices_modes
+from web_router import AsyncWebRouter, Budget, WebRouter, prices_modes
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.modes import Content, Flag, ModeDeclarations, Tier
@@ -47,10 +47,22 @@ def test_a_pinned_id_is_a_routers_search_default(monkeypatch: pytest.MonkeyPatch
         assert router.search("q").cost_usd == INSTANT
 
 
-def test_a_pinned_default_serves_other_methods_through_its_backend(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("EXA_API_KEY", "k")
-    with WebRouter(provider="exa:exa-instant") as router:
-        assert router.get_extract_provider().name == "exa"
+@pytest.mark.parametrize(
+    ("getter", "default", "backend", "env"),
+    [
+        ("get_extract_provider", "exa:exa-instant", "exa", "EXA_API_KEY"),
+        ("get_research_provider", "parallel:parallel-turbo", "parallel", "PARALLEL_API_KEY"),
+        # No browser backend declares a mode: the getter takes any pin's backend, which is what is under test.
+        ("get_browser_provider", "browserbase:pinned", "browserbase", "BROWSERBASE_API_KEY"),
+        ("get_browse_provider", "browserbase:pinned", "browserbase", "BROWSERBASE_API_KEY"),
+    ],
+)
+def test_a_pinned_default_serves_other_methods_through_its_backend(
+    monkeypatch: pytest.MonkeyPatch, getter: str, default: str, backend: str, env: str
+) -> None:
+    monkeypatch.setenv(env, "k")
+    with WebRouter(provider=default) as router:
+        assert getattr(router, getter)().name == backend
 
 
 def test_a_budget_charges_the_pinned_modes_price(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -93,19 +105,47 @@ def test_a_pin_the_price_list_does_not_name_stays_unpriced() -> None:
     assert (priced_as(attempt), attempt_cost(attempt)) == (("exa", "exa-unlisted"), None)
 
 
-def test_a_chain_passes_over_a_pinned_member_the_calls_effort_refuses(monkeypatch: pytest.MonkeyPatch) -> None:
+CHAIN = {"auto": {"chain": {"search": ["exa:exa-instant", "exa"]}}}
+
+
+@pytest.fixture
+def exa_sent(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
+    """Every body sent to Exa, sync or async, each answered with no results."""
     monkeypatch.setenv("EXA_API_KEY", "k")
     sent: list[Any] = []
 
-    def answer(client: httpx.Client, method: str, path: str, **kwargs: Any) -> httpx.Response:
+    def answer(method: str, path: str, **kwargs: Any) -> httpx.Response:
         sent.append(kwargs.get("json"))
         return httpx.Response(200, json={"results": []}, request=httpx.Request(method, "https://api.exa.ai" + path))
 
-    monkeypatch.setattr(httpx.Client, "request", answer)
-    chain = {"auto": {"chain": {"search": ["exa:exa-instant", "exa"]}}}
-    with WebRouter(provider="auto", provider_config=chain) as router:
+    async def aanswer(client: httpx.AsyncClient, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        return answer(method, path, **kwargs)
+
+    monkeypatch.setattr(httpx.Client, "request", lambda client, method, path, **kwargs: answer(method, path, **kwargs))
+    monkeypatch.setattr(httpx.AsyncClient, "request", aanswer)
+    return sent
+
+
+def test_a_chain_passes_over_a_pinned_member_the_calls_effort_refuses(exa_sent: list[Any]) -> None:
+    with WebRouter(provider="auto", provider_config=CHAIN) as router:
         response = router.search("q", effort="high")
-    assert len(sent) == 1 and sent[0]["type"] != "instant" and response.cost_usd != INSTANT  # plain exa answered
+    assert len(exa_sent) == 1 and exa_sent[0]["type"] != "instant" and response.cost_usd != INSTANT  # plain exa
+
+
+async def test_an_async_chain_passes_over_a_pinned_member_the_calls_effort_refuses(exa_sent: list[Any]) -> None:
+    async with AsyncWebRouter(provider="auto", provider_config=CHAIN) as router:
+        response = await router.search("q", effort="high")
+    assert len(exa_sent) == 1 and exa_sent[0]["type"] != "instant" and response.cost_usd != INSTANT
+
+
+def test_a_chain_whose_every_member_refuses_raises_the_refusal_and_sends_nothing(exa_sent: list[Any]) -> None:
+    chain = {"auto": {"chain": {"search": ["exa:exa-instant", "exa:exa-instant"]}}}
+    with (
+        WebRouter(provider="auto", provider_config=chain) as router,
+        pytest.raises(InvalidParameterError, match="effort"),
+    ):
+        router.search("q", effort="high")
+    assert exa_sent == []
 
 
 def test_the_same_pin_called_directly_still_refuses_the_effort(monkeypatch: pytest.MonkeyPatch) -> None:
