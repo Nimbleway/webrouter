@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-372 vendors, 2705 endpoints.
+373 vendors, 2709 endpoints.
 
 ### advertising
 
@@ -177,6 +177,7 @@ Companies, funding, jobs, technographics and business registries.
 | [Crunchbase](https://data.crunchbase.com/docs/using-the-api) `crunchbase` | Company, funding, investor and people data from the Crunchbase REST API (v4): entity lookup, search and autocomplete. | 6 read | key in header | `CRUNCHBASE_API_KEY` | docs 2026-11-08 |
 | [Crustdata](https://docs.crustdata.com) `crustdata` | Company and people search, enrichment, job listings and web search from Crustdata's datasets. | 11 read | key in header | `CRUSTDATA_API_KEY` | docs 2026-11-08 |
 | [Diffbot](https://www.diffbot.com/docs/) `diffbot` | Diffbot Knowledge Graph: search organizations, people and articles with DQL, and enhance records from partial data. | 4 read | key in query | `DIFFBOT_TOKEN` | docs 2026-11-08 |
+| [Engagemii](https://engagemii.com/aeo/data/api) `engagemii` | Company records with AI visibility scores, AI engine reads, category, location, tech stack and social profiles from the Engagemii index. | 4 read | key in header | `ENGAGEMII_DATA_KEY` | docs 2026-11-17 |
 | [Extruct AI](https://docs.extruct.ai/api-reference/introduction) `extruct` | Company search by natural-language description, lookalikes of a reference company, company profiles, and async Deep Search and Deep Research tasks. | 9 read | key in header | `EXTRUCT_API_TOKEN` | docs 2026-11-09 |
 | [Fantastic.jobs](https://developer.fantastic.jobs) `fantasticjobs` | A job-postings feed from 58 ATS platforms and LinkedIn, Wellfound and Y Combinator, with AI-derived salary, seniority and remote fields and company details. | 6 read | key in header | `FANTASTICJOBS_API_KEY` | docs 2026-11-09 |
 | [Fiber AI](https://api.fiber.ai/llms.txt) `fiber-ai` | B2B company and people search, LinkedIn live enrichment, and email and phone reveal. | 13 read | key in header | `FIBER_API_KEY` | docs 2026-11-08 |
