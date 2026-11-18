@@ -1,16 +1,14 @@
 """Linkup providers, over the Search, Fetch and Research APIs.
 
-Talks to the REST endpoints directly: Linkup's SDK would add a dependency for the
-handful of fields used here. Install with the ``search`` extra,
-``[extract]``, ``[research]`` or ``[answer]``. Reads ``LINKUP_API_KEY`` unless a
-key is passed explicitly.
+Talks to the REST endpoints directly (an SDK would add a dependency for a handful of fields). Install with the
+``search``, ``extract``, ``research`` or ``answer`` extra. Reads ``LINKUP_API_KEY`` unless a key is passed.
 
 A search maps ``max_results``, the domain filters, ``recency`` (as ``fromDate``)
 and ``effort`` (as ``depth``); an extract maps ``format``; a research run maps
 ``effort``; an answer maps the domain filters and ``recency``. A search refuses
 ``search_depth``, because Linkup's ``depth`` is retrieval effort rather than page
 content (see ``LINKUP_DEFAULT_DEPTH``). Everything else -- an end date, images, a
-research ``mode`` -- is reachable through ``provider_options``.
+research ``mode`` -- is reachable through ``provider_options``. A search's other depths are modes (``linkup-deep``).
 """
 
 from __future__ import annotations
@@ -52,6 +50,9 @@ from web_router.constants_linkup import (
     LINKUP_ANSWER_PARAM_NAMES,
     LINKUP_DEPTH_BY_EFFORT,
 )
+from web_router.constants_mode_parts import LINKUP_TIERS
+from web_router.constants_mode_parts_answer import LINKUP_ANSWER_TIERS
+from web_router.constants_mode_parts_extract import LINKUP_EXTRACT_FLAGS, LINKUP_EXTRACT_TIERS
 from web_router.providers._clock import recency_start
 from web_router.providers._http import (
     HttpAnswerProvider,
@@ -97,14 +98,13 @@ def _citation(source: dict[str, Any], *, field: str | None = None) -> Citation:
 class LinkupProvider(HttpSearchProvider):
     """Routes searches to the Linkup Search API.
 
-    Linkup returns a snippet per result and no date or relevance score, so
-    ``published_date`` and ``score`` stay ``None``. An image result, which
-    Linkup returns only when ``includeImages`` is sent through
-    ``provider_options``, carries a title and a URL and no text; it is kept
-    rather than dropped, with ``type`` in ``extra`` saying what it is.
+    Linkup returns a snippet per result and no date or relevance score, so ``published_date`` and ``score`` stay
+    ``None``. An image result, which Linkup returns only when ``includeImages`` is sent through ``provider_options``,
+    carries a title and a URL and no text; it is kept rather than dropped, with ``type`` in ``extra`` saying so.
     """
 
     name: ClassVar[str] = PROVIDER_LINKUP
+    tiers = LINKUP_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset({*LINKUP_PARAM_NAMES, "recency", "effort"})
 
     base_url: ClassVar[str] = LINKUP_BASE_URL
@@ -118,6 +118,7 @@ class LinkupProvider(HttpSearchProvider):
         return build_payload(
             request,
             LINKUP_PARAM_NAMES,
+            self,
             q=request.query,
             depth=LINKUP_DEPTH_BY_EFFORT[request.effort] if request.effort else LINKUP_DEFAULT_DEPTH,
             outputType=LINKUP_SEARCH_OUTPUT_TYPE,
@@ -155,6 +156,7 @@ class LinkupExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_LINKUP
+    tiers, flags = LINKUP_EXTRACT_TIERS, LINKUP_EXTRACT_FLAGS
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(LINKUP_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = LINKUP_EXTRACT_DEFAULT_FORMAT
@@ -166,7 +168,7 @@ class LinkupExtractProvider(HttpExtractProvider):
     api_key_prefix: ClassVar[str] = LINKUP_API_KEY_PREFIX
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
-        return build_payload(request, url=urls[0], **LINKUP_EXTRACT_FORMATS[self.format_of(request)])
+        return build_payload(request, None, self, url=urls[0], **LINKUP_EXTRACT_FORMATS[self.format_of(request)])
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         body_format = self.format_of(request)
@@ -290,11 +292,12 @@ class LinkupAnswerProvider(HttpAnswerProvider):
 
     ``include_domains`` and ``exclude_domains`` map as on search; ``recency``
     sets ``fromDate`` that far back from today. ``depth`` is required and sent
-    as on search (see ``LINKUP_DEFAULT_DEPTH``); a deeper one goes through
-    ``provider_options``.
+    as on search (see ``LINKUP_DEFAULT_DEPTH``); another one is a vendor mode
+    (``linkup:linkup-deep``).
     """
 
     name: ClassVar[str] = PROVIDER_LINKUP
+    tiers = LINKUP_ANSWER_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset({*LINKUP_ANSWER_PARAM_NAMES, "recency"})
 
     base_url: ClassVar[str] = LINKUP_BASE_URL
@@ -308,6 +311,7 @@ class LinkupAnswerProvider(HttpAnswerProvider):
         return build_payload(
             request,
             LINKUP_ANSWER_PARAM_NAMES,
+            self,
             q=request.query,
             depth=LINKUP_DEFAULT_DEPTH,
             outputType=LINKUP_ANSWER_OUTPUT_TYPE,

@@ -315,6 +315,14 @@ src/web_router/
 │                       PRICING.md wording, kept apart for the same reason
 ├── constants_modes.py  the mode id grammar's separators, levels and messages,
 │                       kept apart for the same reason
+├── constants_mode_parts.py each search backend's declared tiers, contents and
+│                       flags, and the wire each sends
+├── constants_mode_parts_extract.py the same for each extract backend: tiers
+│                       and flags, which never write the URLs
+├── constants_mode_parts_answer.py the same for each answer backend: tiers,
+│                       which never write the question
+├── constants_mode_parts_browse.py the same for each browse backend: tiers,
+│                       which never write the task or start_url
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an
@@ -377,6 +385,8 @@ src/web_router/
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
     │                   coercion, body selection
+    ├── _modes.py       vendor modes on the wire: pinning (`exa:exa-instant`), the
+    │                   merge into a payload, refusals, and what a backend offers
     ├── _search_text.py a body cut to a snippet; domain filters as site:
     │                   operators, and the domain lists a backend refuses
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
@@ -652,6 +662,9 @@ every error the model reads says in its text that the call failed or did not
 run. Add research or browse to them only with a routing-guide paragraph saying
 when each is worth its bill.
 
+Benchmark quirks (rate tiers, no resume, combining scans):
+`.claude/skills/running-webrouter-benchmarks/SKILL.md`.
+
 `benchmarks/agent/` is a consumer of the library, like `examples/`: it
 drives Claude agents on Managed Agents through the Claude tools, OpenAI
 models on the Responses API through the OpenAI tools, or both in one run —
@@ -707,11 +720,11 @@ any, and a bot wall with text counts, which its report says — so it ranks who
 brings a page back, not whose page is best; scoring text against ground truth
 is work for a scorer that carries it, which this repository does not. Its URL
 sets under `urls/` are `url,category` lists only, no ground truth, and
-`--combine` merges scans only of the same file, format and timeout. A setup may name a normalized
-depth (`tavily@deep`, one `evaluate()` per depth) or a vendor mode from
-`modes.json` (`tavily:ultra-fast`), sent through `provider_options` by a
-wrapper that calls the backend's public `asearch`; mark a mode `verified` only
-after a live call shows it changing the response. `answer.py` is the answer scan: every configured answer backend through the
+`--combine` merges scans only of the same file, format and timeout. A setup is
+the id `provider=` pins: a normalized depth (`tavily:deep`, one `evaluate()` per
+depth) or a vendor mode the provider class declares (`tavily:tavily-ultra-fast`),
+run by a wrapper that calls the backend's public `asearch`; mark a mode
+`verified` in its contract only after a live call shows it changing the response. `answer.py` is the answer scan: every configured answer backend through the
 public `answer()` on the same questions, each backend's own answer graded by the
 same judge as the search scan -- nothing synthesized, since the backend wrote the answer
 -- so its `report.md` is a third place a judged accuracy appears, and it names
@@ -1186,8 +1199,9 @@ lossy.
 
 **Never let a credential follow a redirect.** `_HttpProvider` pins
 `follow_redirects=False` and refuses `follow_redirects=True` on a provider that
-sends a key. `httpx` replays request headers to the redirect target without
-stripping them cross-host, so following one hands that host the key. Do not
+sends a key. On a cross-host redirect `httpx` drops a standard `Authorization`
+header but keeps a custom one such as `X-API-Key`, so following one hands that
+host any key sent that way. Do not
 "simplify" this by dropping the pin and relying on the `httpx` default, and do
 not relax the refusal. A provider with an unusual auth scheme overrides
 `_auth_headers` rather than building the header itself, so it cannot opt out of

@@ -1,6 +1,6 @@
 """Generate ``contracts/``: what each provider sends its vendor, read from the code.
 
-Each provider is built with a throwaway key and its request is built once per option value;
+Each provider is built with a throwaway key and its request is built once per option value and vendor mode;
 the contract records which wire fields each value sets, or that it is refused. ``source``,
 ``verified`` and ``vendor_options`` are written by hand and kept across regenerations.
 
@@ -23,6 +23,7 @@ from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
+from scripts.contracts_modes import MODE, add_modes, kept_verified
 from web_router import registry, registry_answer
 from web_router.constants import (
     ANSWER_ENV_BY_PROVIDER,
@@ -304,6 +305,7 @@ def generate(method: str, name: str) -> dict[str, Any]:
                 },
                 "not_mapped": sorted(option for option in options if option not in cls.supported_parameters),
             }
+            add_modes(contract, cls, lambda part: _probe(provider, method, MODE, part))
     finally:
         provider.close()
     if method == "extract":
@@ -325,10 +327,7 @@ def render(method: str, name: str) -> str:
         if field in existing:
             contract[field] = existing[field]
     if "verified" in contract:
-        dropped = sorted(set(contract["verified"]) - set(contract["options"]))
-        if dropped:
-            print(f"{method}/{name}: no longer maps {', '.join(dropped)}; dropping its verified entry", file=sys.stderr)
-        contract["verified"] = {k: v for k, v in contract["verified"].items() if k in contract["options"]}
+        contract["verified"] = kept_verified(contract, f"{method}/{name}")
     text = json.dumps(contract, indent=2, ensure_ascii=False) + "\n"
     if PROBE_KEY in text:
         raise SystemExit(f"{method}/{name}: the probe credential reached the payload")

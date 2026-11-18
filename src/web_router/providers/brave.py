@@ -37,6 +37,7 @@ from web_router.constants_brave import (
     MSG_BRAVE_QUERY_TOO_LONG,
     MSG_BRAVE_SEARCH_VALUES,
 )
+from web_router.constants_mode_parts import BRAVE_FLAGS
 from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
@@ -65,6 +66,7 @@ class BraveProvider(HttpSearchProvider):
     """Routes searches to the Brave Web Search API."""
 
     name: ClassVar[str] = PROVIDER_BRAVE
+    flags = BRAVE_FLAGS
     supported_parameters: ClassVar[frozenset[str]] = BRAVE_SEARCH_PARAMETERS
     # A description and at most five extra snippets, cut to a snippet for lite: never a body or a page.
     depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset({"lite"})
@@ -99,6 +101,7 @@ class BraveProvider(HttpSearchProvider):
         return build_payload(
             request,
             BRAVE_SEARCH_PARAM_NAMES,
+            self,
             q=query,
             country=request.country.upper() if request.country else None,
             search_lang=language.lower() if language else None,

@@ -74,34 +74,32 @@ def test_scans_of_the_same_questions_and_judge_combine_and_others_are_refused(sc
         scan.combine([first, other_judge])
 
 
-MODES = {"tavily": {"ultra-fast": {"provider_options": {"search_depth": "ultra-fast"}, "note": "latency tier"}}}
+def test_a_setup_is_an_id_read_with_the_parts_the_provider_class_declares(scan: ModuleType) -> None:
+    assert str(scan.parse_setup("tavily")) == "tavily"
+    assert str(scan.parse_setup("tavily:deep")) == "tavily:deep"
+    assert str(scan.parse_setup("tavily:tavily-ultra-fast")) == "tavily:tavily-ultra-fast"
+    assert str(scan.parse_setup("exa:exa-highlights+exa-instant")) == "exa:exa-instant+exa-highlights"
+    assert str(scan.parse_setup("tavily@deep")) == "tavily:deep"
+    assert str(scan.parse_setup("tavily:ultra-fast@deep")) == "tavily:tavily-ultra-fast+deep"
+    with pytest.raises(SystemExit, match="'tavily:turbo'"):
+        scan.parse_setup("tavily:turbo")
+    with pytest.raises(SystemExit, match="'nobody'"):
+        scan.parse_setup("nobody:fast")
 
 
-def test_a_setup_names_a_backend_a_normalized_depth_or_a_vendor_mode(scan: ModuleType) -> None:
-    assert scan.parse_setup("tavily", MODES) == ("tavily", None, {})
-    assert scan.parse_setup("tavily@deep", MODES) == ("tavily", "deep", {})
-    assert scan.parse_setup("tavily:ultra-fast", MODES) == ("tavily", None, {"search_depth": "ultra-fast"})
-    with pytest.raises(SystemExit, match="depth"):
-        scan.parse_setup("tavily@huge", MODES)
-    with pytest.raises(SystemExit, match="it has: ultra-fast"):
-        scan.parse_setup("tavily:turbo", MODES)
-
-
-async def test_a_vendor_mode_adds_its_options_to_every_search_and_answers_under_its_own_name(
-    scan: ModuleType,
-) -> None:
+async def test_a_setup_searches_through_its_backend_and_answers_under_its_own_label(scan: ModuleType) -> None:
     from tests.conftest import FakeProvider
     from web_router.types import SearchRequest
 
     inner = FakeProvider()
-    mode = type(
+    setup = type(
         "fake:turbo", (scan.VendorMode,), {"name": "fake:turbo", "supported_parameters": inner.supported_parameters}
-    )(inner, {"turbo": True})
+    )(inner)
 
-    await mode.asearch(SearchRequest(query="q", provider_options={"kept": 1}))
+    await setup.asearch(SearchRequest(query="q", provider_options={"kept": 1}))
 
-    assert mode.name == "fake:turbo"
-    assert inner.requests[-1].provider_options == {"kept": 1, "turbo": True}
+    assert setup.name == "fake:turbo"
+    assert inner.requests[-1].provider_options == {"kept": 1}
 
 
 def test_a_backend_that_failed_most_of_a_topic_cannot_lead_it(scan: ModuleType) -> None:

@@ -68,12 +68,22 @@
       "max": {
         "body.mode": "pro"
       }
+    },
+    "mode": {
+      "keenable-realtime": {
+        "body.mode": "realtime"
+      }
     }
   },
   "not_mapped": [
     "country",
     "exclude_domains",
     "locale"
+  ],
+  "offers": [
+    "keenable-realtime",
+    "lite",
+    "fast"
   ],
   "source": [
     "https://docs.keenable.ai/api-reference/search"
@@ -83,7 +93,8 @@
     "search_depth": "live: tests/providers/test_keenable.py::test_live_keyless_options_shape_the_results",
     "include_domains": "live: tests/providers/test_keenable.py::test_live_keyless_options_shape_the_results",
     "recency": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable",
-    "effort": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable (keyed on 2026-11-09: all four levels answered)"
+    "effort": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable (keyed on 2026-11-09: all four levels answered)",
+    "mode.keenable-realtime": "docs: https://docs.keenable.ai/api-reference/search"
   },
   "vendor_options": {
     "acquired_after": {
