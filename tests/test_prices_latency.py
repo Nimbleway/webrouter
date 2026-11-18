@@ -49,9 +49,9 @@ def test_latency_is_unknown_where_nothing_measured_it() -> None:
     ("method", "mode", "expected"),
     [
         ("search", "default", None),
-        ("search", "@deep", "deep"),
-        ("search", "ultra-fast", "tavily-ultra-fast"),
+        *[("search", old, new) for old, new in (("ultra-fast", "tavily-ultra-fast"), ("@deep", "deep"))],
         ("search", "ultra-fast@deep", "tavily-ultra-fast+deep"),
+        *[("search", canonical, canonical) for canonical in ("tavily-ultra-fast", "fast", "tavily-fast+deep")],
         ("research", "low", "low"),
         ("research", "default", None),
     ],

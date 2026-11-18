@@ -479,3 +479,8 @@ copies. The wire format does not carry it, so a router service cannot set it.
 
 The price list every candidate is priced from is `web_router.prices`: see
 [Estimated prices](/budgets#estimated-prices).
+
+A candidate is a backend at its default mode. A backend's own tiers and
+add-ons (Exa's `instant` search type, Brave's extra snippets) are
+[vendor modes](/vendor-modes): you can pin one with `provider="exa:exa-instant"`,
+but a router does not pick modes yet.

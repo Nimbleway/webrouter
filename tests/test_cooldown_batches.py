@@ -60,3 +60,10 @@ def test_a_shorter_throttle_does_not_shorten_a_running_cooldown(caplog: pytest.L
     left = cooldowns.remaining("a")
     assert left is not None and left[0] > 25
     assert "cools down for 5.0s" not in caplog.text, "the log names the cooldown still running"
+
+
+@pytest.mark.parametrize(("throttled", "other"), [("exa:exa-instant", "exa"), ("exa", "search:exa:exa-fast")])
+def test_a_throttle_on_one_mode_cools_every_mode_of_its_backend(throttled: str, other: str) -> None:
+    cooldowns = Cooldowns()
+    cooldowns.note(throttled, _throttle(429))
+    assert cooldowns.remaining(other) is not None and cooldowns.remaining("tavily") is None

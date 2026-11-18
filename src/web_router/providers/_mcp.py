@@ -26,6 +26,7 @@ from web_router.constants import (
 )
 from web_router.constants_errors import RATE_LIMIT_MARKERS
 from web_router.exceptions import ProviderError
+from web_router.modes import ModeDeclarations
 from web_router.types import SearchRequest
 from web_router.types_errors import ERROR_KIND_RATE_LIMIT
 
@@ -39,6 +40,7 @@ class McpSearchMixin:
 
     name: ClassVar[str]
     mcp_tool: ClassVar[str]
+    tiers, contents, flags = ModeDeclarations.tiers, ModeDeclarations.contents, ModeDeclarations.flags  # not sent
     env_api_key: ClassVar[str | None] = None
 
     def __init__(self, **kwargs: Any) -> None:

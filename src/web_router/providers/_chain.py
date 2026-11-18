@@ -1,10 +1,9 @@
 """What every ``auto`` chain is made of, shared by the modules that build one.
 
-A chain is the backends one method's ``auto`` tries, in order, each a name
-beside the kwargs to build it with. Resolving one -- the default for the
-current environment, or the caller's ``chain`` as a list or keyed by method --
-and deciding what a member's failure means for the next are the same for
-every method, so they live here once. The chains themselves are in
+A chain is the backends one method's ``auto`` tries, in order, each a name (or a pinned id,
+``exa:exa-instant``) beside the kwargs to build it with. Resolving one -- the default for the current
+environment, or the caller's ``chain`` as a list or keyed by method -- and deciding what a member's failure
+means for the next are the same for every method, so they live here once. The chains themselves are in
 :mod:`web_router.providers.auto` and :mod:`web_router.providers.auto_template`.
 """
 
@@ -38,6 +37,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.exceptions_typed import AllProvidersFailedError
+from web_router.providers._pinning import backend_of, config_of
 from web_router.types import ExtractResponse, SearchResponse
 from web_router.types import provider_name as _lookup_name
 from web_router.types_answer import AnswerResponse
@@ -114,7 +114,7 @@ def _refuse_a_key_beside_a_client(
         ConfigurationError: naming the backend.
     """
     for name, options in chain:
-        if name not in AUTO_CLIENT_PROVIDERS:
+        if backend_of(name) not in AUTO_CLIENT_PROVIDERS:
             continue
         merged = _member_options(members_config, name, options)
         if merged.get(AUTO_CLIENT_OPTION) is not None and merged.get("api_key") is not None:
@@ -124,8 +124,8 @@ def _refuse_a_key_beside_a_client(
 def _member_options(
     members_config: Mapping[str, Mapping[str, Any]], name: str, options: Mapping[str, Any]
 ) -> dict[str, Any]:
-    """A member's constructor kwargs: its own config, the chain's ``(name, kwargs)`` laid over it."""
-    return {**members_config.get(name, {}), **options}
+    """A member's constructor kwargs: its own config (a pinned id's, its backend's), the chain's kwargs over it."""
+    return {**config_of(members_config, name), **options}
 
 
 def _configured_in(members_config: Mapping[str, Mapping[str, Any]]) -> frozenset[str]:

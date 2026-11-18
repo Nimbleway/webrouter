@@ -157,11 +157,10 @@ class NormalizedRequest(BaseModel):
 class SearchRequest(NormalizedRequest):
     """A normalized search request.
 
-    Only :attr:`query` is required. Fields left as ``None`` are omitted from the
-    provider call so each backend applies its own default rather than ours.
+    Only :attr:`query` is required. A field left as ``None`` is not sent: each backend applies its own default.
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options", "mode"})
 
     query: Annotated[NonBlankText, Field(description="The search query.")]
     max_results: Annotated[int | None, Field(default=None, ge=1, description=MAX_RESULTS_DESCRIPTION)] = None
@@ -172,10 +171,11 @@ class SearchRequest(NormalizedRequest):
     locale: str | None = Field(default=None, description="Language code, e.g. 'en'.")
     recency: Recency | None = Field(default=None, description=RECENCY_DESCRIPTION)
     effort: ResearchEffort | None = Field(default=None, description=SEARCH_EFFORT_DESCRIPTION)
+    mode: str | None = Field(default=None, description="The vendor mode a pinned id set, e.g. 'exa-instant+lite'.")
 
 
 ALWAYS_SENT = SearchRequest.always_sent
-"""Fields every search provider handles itself: the query, and the untranslated passthrough."""
+"""Fields every search provider handles itself: the query, the vendor mode a pin set, and the passthrough."""
 
 NORMALIZED_PARAMETERS: frozenset[str] = SearchRequest.normalized_parameters()
 """Every optional parameter a search provider may declare support for."""

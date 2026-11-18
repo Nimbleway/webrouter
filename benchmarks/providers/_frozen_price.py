@@ -19,15 +19,19 @@ def price_mode(provider: str, method: str, mode: str) -> str | None:
     """A frozen row's ``mode`` as ``web_router.prices`` keys it, for its cost and its latency alike.
 
     ``default`` (the scan asked for none) is ``None``; a research row's mode is
-    its effort, keyed as it is; ``@deep`` is the ``search_depth`` ``deep``;
-    ``ultra-fast`` on tavily is the vendor part ``tavily-ultra-fast``, and
-    ``ultra-fast@deep`` is ``tavily-ultra-fast+deep``, which has no row of its
-    own. A part the price list does not name is kept, so it matches nothing.
+    its effort, keyed as it is. A canonical mode (``tavily-fast``, ``fast``,
+    ``exa-instant+lite``) is kept as it is, so an older scan's bare ``tavily:fast``
+    (Tavily's tier then) now reads as the ``fast`` depth. The old spellings still read:
+    ``@deep`` is the ``search_depth`` ``deep``; ``ultra-fast`` on tavily is the
+    vendor part ``tavily-ultra-fast``, and ``ultra-fast@deep`` is
+    ``tavily-ultra-fast+deep``. A part the price list does not name is kept, so it matches nothing.
     """
     if mode == DEFAULT_MODE:
         return None
     if method == RESEARCH:
         return mode
     vendor, _, depth = mode.partition(DEPTH_MARK)
+    if not depth and (canonical := canonical_parts(provider, method, vendor.split(PART_SEP))):
+        return canonical
     parts = legacy_parts(provider, vendor, depth)
     return canonical_parts(provider, method, parts) or PART_SEP.join(parts)

@@ -72,10 +72,22 @@
       "year": {
         "body.freshness": "year"
       }
+    },
+    "mode": {
+      "you-full-page-cache": {
+        "body.extraction.extraction_mode": "full_page",
+        "body.extraction.extraction_source": "cache"
+      }
     }
   },
   "not_mapped": [
     "effort"
+  ],
+  "offers": [
+    "lite",
+    "fast",
+    "deep",
+    "you-full-page-cache"
   ],
   "source": [
     "https://you.com/docs/api-reference/search/v1-search"
@@ -87,7 +99,8 @@
     "exclude_domains": "live: 2026-11-09 search-options check: no wikipedia.org result",
     "country": "live: 2026-11-09 search-options check: BR with locale=pt-BR accepted",
     "locale": "live: 2026-11-09 search-options check: pt-BR (sent as PT-BR) with country=BR accepted",
-    "recency": "live: 2026-11-09 search-options check: week, 10 of 10 results dated inside the window"
+    "recency": "live: 2026-11-09 search-options check: week, 10 of 10 results dated inside the window",
+    "mode.you-full-page-cache": "docs: https://you.com/docs/api-reference/search/v1-search"
   },
   "vendor_options": {
     "boost_domains": {

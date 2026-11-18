@@ -31,6 +31,7 @@ from typing import Any, Generic, TypeVar
 
 from web_router.constants import AUTO_AGGREGATE_FAILURE
 from web_router.exceptions import DeadlineExceededError, WebRouterError
+from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._chain import _RECOVERABLE, _held_or_raise, _nothing_started
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
@@ -41,6 +42,12 @@ _Res = TypeVar("_Res")
 
 Order = list[tuple[int, str]]
 """The members to try, as (chain position, name), in call order."""
+
+MODE_CLASHES: tuple[type[WebRouterError], ...] = (InvalidParameterError,)
+"""A pinned member refusing the call's options before sending (``exa:exa-instant`` with ``effort``): try the next.
+
+Called directly, the same pin raises; in a chain whose every member refuses, the first refusal is raised as it came.
+"""
 
 Failures = dict[str, WebRouterError]
 Exhausted = Callable[[Any, Failures, list[WebRouterError]], Any]

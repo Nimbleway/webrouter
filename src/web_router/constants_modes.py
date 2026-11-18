@@ -53,3 +53,8 @@ ROW_VENDOR = "a {kind} row's mode starts with the provider's name, as {prefix!r}
 ROW_ADDS = "adds_usd and writes belong on a flag row only"
 ROW_ADDS_VALUE = "adds_usd is a finite amount, not negative"
 ROW_DEPTH = "depth_assumed is a search_depth level, on a tier or content row only; a content row needs it"
+MSG_PIN_TOOL = "{text!r} names {tool!r}: a pinned search backend is search:provider:mode or provider:mode"
+MSG_PIN_OPTION = "mode {mode!r} writes {field!r}, which provider_options sets too: drop one"
+MSG_PIN_DEPTH = "mode {mode!r} stands for search_depth={depth!r}, not {asked!r}: drop one"
+MSG_PIN_EFFORT = "mode {mode!r} stands for effort={effort!r}, not {asked!r}: drop one"
+MSG_PIN_WRITES = "mode {mode!r} writes {field!r}, which {option}={value!r} sets to another value: drop one"

@@ -40,20 +40,24 @@ A setup can be more than a backend name:
 | Setup | What it runs |
 | --- | --- |
 | `tavily` | The backend's own default mode |
-| `tavily@deep` | web-router's normalized `search_depth` (`lite`, `fast`, `deep`), where the backend maps it |
-| `tavily:ultra-fast` | A vendor mode web-router doesn't normalize, sent through `provider_options` from [`modes.json`](modes.json) |
-| `nimble:full-content@lite` | Both at once |
+| `tavily:deep` | web-router's normalized `search_depth` (`lite`, `fast`, `deep`), where the backend maps it |
+| `tavily:tavily-ultra-fast` | A vendor mode the provider class declares (a tier, content or flag), pinned as `provider=` pins it |
+| `exa:exa-instant+lite` | A tier and a depth at once |
 
 ```bash
 uv run --all-extras python benchmarks/providers/run.py --limit 300 \
-    --providers perplexity,perplexity:fast,nimble@lite,nimble,nimble@deep,tavily,tavily@fast,tavily:ultra-fast
+    --providers perplexity,perplexity:perplexity-fast,nimble:lite,nimble,nimble:deep,tavily,tavily:fast,tavily:tavily-ultra-fast
 ```
 
-Each depth runs as its own `evaluate()`, because the library sends one depth to
-every backend in a comparison; all of them use the same questions. A mode in
-`modes.json` records whether a live call has shown it changing what comes
-back (`verified`, `observed`); a mode that is accepted but changes nothing
-scores the same as the default and costs a run for nothing.
+The old spelling `tavily@deep` still runs; `tavily:ultra-fast@deep` parses, to
+read older scans, but is refused as a setup (Tavily's tier and `deep` both set
+`search_depth`). Setups
+sharing a depth run in one `evaluate()`, so a crash keeps the depths before it;
+all of them use the same questions. A mode's contract
+(`contracts/search/<provider>.json`) records under `verified["mode.<part>"]`
+whether a live call has shown it changing what comes back; a mode that is
+accepted but changes nothing scores the same as the default and costs a run
+for nothing.
 
 [`PRICING.md`](PRICING.md) lists every mode's list price with its source and
 the date it was checked, for reading accuracy against cost. Its tables are

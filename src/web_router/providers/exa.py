@@ -39,6 +39,7 @@ from web_router.constants_exa import (
     EXA_TYPE_BY_EFFORT,
     EXA_TYPE_FIELD,
 )
+from web_router.constants_mode_parts import EXA_CONTENT_PARTS, EXA_TIERS
 from web_router.providers._clock import recency_start
 from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
@@ -65,6 +66,8 @@ class ExaProvider(HttpSearchProvider):
     """Routes searches to the Exa Search API."""
 
     name: ClassVar[str] = PROVIDER_EXA
+    tiers = EXA_TIERS
+    contents = EXA_CONTENT_PARTS
     supported_parameters: ClassVar[frozenset[str]] = frozenset({*EXA_PARAM_NAMES, "recency", "search_depth", "effort"})
 
     base_url: ClassVar[str] = EXA_BASE_URL
@@ -77,6 +80,7 @@ class ExaProvider(HttpSearchProvider):
         return build_payload(
             request,
             EXA_PARAM_NAMES,
+            self,
             query=request.query,
             contents=EXA_CONTENTS_BY_DEPTH[request.search_depth] if request.search_depth else EXA_CONTENTS,
             **{

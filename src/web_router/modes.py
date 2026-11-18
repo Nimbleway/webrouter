@@ -3,16 +3,17 @@
 An id is ``tool:provider[:mode]`` or ``provider[:mode]``. A mode is up to three slots joined with ``+``, always in
 this order: a tier, a depth, then flags sorted. A slot left empty is the backend's default.
 
-- A **tier** (:class:`Tier`) writes fields depth never writes, so it combines with any depth.
+- A **tier** (:class:`Tier`) sets a vendor field (Exa's ``type``); a depth that writes the same field is refused.
 - The **depth** slot holds a normalized level, bare (``lite``, ``fast``, ``deep``; ``low`` ... ``max`` for
   research), or a **content** (:class:`Content`), which replaces what depth sends and names the level it stands for.
-- A **flag** (:class:`Flag`) writes a field nothing else writes, so it combines with anything.
+- A **flag** (:class:`Flag`) writes a field no tier or other flag writes; a depth that sends that field another way
+  is refused (``deepseek-content`` takes ``deep``, not ``lite``).
 
 A vendor part is spelled with its provider's name first (``exa-instant``), so it can never be read as a normalized
 level, and the parser learns each part's slot from the provider's declarations. Input in any order comes out canonical
 (``exa-highlights+exa-instant`` is ``exa-instant+exa-highlights``). The old spellings parse for one release:
-``tavily:ultra-fast@deep`` and ``:ultra-fast``. Nothing merges a part's ``wire`` into a request yet: a mode
-is named and priced here, not sent.
+``tavily:ultra-fast@deep`` and ``:ultra-fast``. :mod:`web_router.providers._modes` merges a part's ``wire`` into
+the request a pinned id sends.
 """
 
 from __future__ import annotations
@@ -64,8 +65,8 @@ class Content:
 
 @dataclass(frozen=True)
 class Flag:
-    """A true add-on: ``wire`` sets one field (``writes`` names it), so it combines with any tier and depth; two
-    flags on one field never combine."""
+    """An add-on: ``wire`` sets one field (``writes`` names it), so it combines with any tier, and with a depth unless
+    that depth sends the field another way; two flags on one field never combine."""
 
     wire: Mapping[str, Any] = field(default_factory=dict)
     writes: str | None = None
@@ -176,7 +177,7 @@ def parse_id(
 ) -> ModeId:
     """``tool:provider[:mode]`` or ``provider[:mode]``, its mode canonical; ``declared_for(provider)`` gives the parts.
 
-    The benchmarks' ``tavily:ultra-fast@deep`` and ``tavily@deep`` parse too.
+    Only an id with ``@`` is an old spelling (``tavily:ultra-fast@deep``); ``tavily:ultra-fast`` raises.
     """
     head, mark, depth = text.partition(LEGACY_DEPTH_MARK)
     parts = head.split(ID_SEP)
