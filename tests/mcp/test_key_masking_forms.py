@@ -150,3 +150,25 @@ def test_remember_refuses_a_symlink_planted_at_the_record(isolated_home: Path) -
 
     assert elsewhere.read_text(encoding="utf-8") == "untouched\n"
     assert pointer_file().is_symlink()
+
+
+URLSAFE_KEY = "key-for-urlsafe>>>???"
+"""A key whose base64 holds ``+`` and ``/`` at every alignment, so its URL-safe form differs from the standard one."""
+
+
+@pytest.mark.parametrize("user", ["", "u", "us"])
+async def test_a_key_is_masked_in_its_url_safe_base64_form(
+    no_keys: None, monkeypatch: pytest.MonkeyPatch, user: str
+) -> None:
+    monkeypatch.setenv(ENV_BRAVE_API_KEY, URLSAFE_KEY)
+    echo = base64.urlsafe_b64encode(f"{user}:{URLSAFE_KEY}".encode()).decode()
+    assert echo != base64.b64encode(f"{user}:{URLSAFE_KEY}".encode()).decode()
+    tools = WebRouterTools(AsyncWebRouter("auto"))
+    record = tools.store.add(MCP_TOOL_SEARCH, raw={"echo": echo})
+
+    error = error_text(ProviderError("brave", f"token {echo}"))
+    echoed = (await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle))["raw"]["echo"]
+
+    for masked in (error, echoed):
+        assert echo not in masked
+        assert VENDOR_MASK in masked
