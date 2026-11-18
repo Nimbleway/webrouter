@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -45,4 +46,11 @@ def test_a_number_too_large_for_a_float_stays_text_or_is_refused(capsys: pytest.
         "ok": 1e300,
     }
     status, out, err = _run(capsys, "research", "q", "--schema", '{"maximum": 1e400}')
+    assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")
+
+
+def test_a_file_that_is_not_text_is_refused(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    schema = tmp_path / "bad.json"
+    schema.write_bytes(b"\xff\xfe{}")
+    status, out, err = _run(capsys, "research", "q", "--schema", f"@{schema}")
     assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")

@@ -80,8 +80,9 @@ def json_value(text: str | None, what: str) -> Any:
         path = Path(text[len(CLI_FILE_PREFIX) :]).expanduser()
         try:
             text = path.read_text(encoding="utf-8")
-        except OSError as exc:
-            raise CliInputError(MSG_UNREADABLE.format(path=path, error=exc.strerror or exc)) from None
+        except (OSError, UnicodeDecodeError) as exc:  # missing, unreadable, or not UTF-8 text: the caller's file
+            reason = exc.strerror if isinstance(exc, OSError) and exc.strerror else exc
+            raise CliInputError(MSG_UNREADABLE.format(path=path, error=reason)) from None
     try:
         return _loads(text)
     except _NotFinite as exc:
