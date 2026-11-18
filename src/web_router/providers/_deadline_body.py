@@ -13,9 +13,8 @@ from collections.abc import Iterator
 
 import httpx
 
+from web_router.constants_production import MSG_BODY_PAST_DEADLINE
 from web_router.providers._deadline import Deadline, current_deadline
-
-MSG_BODY_PAST_DEADLINE = "the response body was still arriving when the call's deadline passed"
 
 
 class _BoundedBody(httpx.SyncByteStream):
