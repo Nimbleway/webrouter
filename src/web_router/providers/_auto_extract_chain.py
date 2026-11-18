@@ -150,15 +150,24 @@ def _asked(first: ExtractResponse, urls: list[str]) -> list[str | None]:
     tell (two that both answer where a redirect landed) take the URLs ``first`` neither failed nor matched, in
     turn, when there is one for each: a one-URL-per-call member answers in the order asked. Otherwise such a page
     has no place and sorts last.
+
+    A place a page did not get from its own URL is a deduction, and it holds only while the pages stand in the
+    order they came in. A member that read one URL and echoed another one asked for would have it swap two pages,
+    so each page then keeps only what its own URL tells (:func:`~._url_match.asked_for`).
     """
+    echoed = [document.url for document in first.documents]
     failed = [failure.url for failure in first.failures]
-    named = owners([document.url for document in first.documents], urls, failed)
+    named = owners(echoed, urls, failed)
     taken = {*failed, *named}
     left = [url for url in urls if url not in taken]
-    if named.count(None) != len(left):
+    if named.count(None) == len(left):
+        turn = iter(left)
+        named = [owner or next(turn) for owner in named]
+    position = {url: index for index, url in enumerate(urls)}
+    places = [position[owner] for owner in named if owner is not None]
+    if places == sorted(places):
         return named
-    turn = iter(left)
-    return [owner or next(turn) for owner in named]
+    return [next(iter(asked_for(url, urls)), None) for url in echoed]
 
 
 def _for(request: ExtractRequest, urls: list[str]) -> ExtractRequest:
