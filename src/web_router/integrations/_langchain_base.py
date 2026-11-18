@@ -23,7 +23,7 @@ from web_router.constants import (
 )
 from web_router.constants_answer import INTEGRATION_ANSWER_QUERY_DESCRIPTION
 from web_router.integrations._messages import INTEGRATION_TIMEOUT, MSG_DID_NOT_RUN
-from web_router.integrations._plan import Planned, failed, planned_extract
+from web_router.integrations._plan import Planned, failed, failed_text, planned_extract
 from web_router.integrations.errors import TOOL_FAILURES
 from web_router.routing.url_policy import UrlPolicy, url_check
 
@@ -117,7 +117,7 @@ class _WebRouterTool(BaseTool):
     def _failed(self, exc: BaseException, planned: Planned | None) -> ToolException:
         """What the model reads: the Claude and OpenAI tools' text, from the error's fields, never the vendor's."""
         limit = getattr(self, "result_chars", INTEGRATION_RESULT_CHARS)
-        return ToolException(failed(planned or Planned(self.name, "search"), exc, limit))
+        return ToolException(failed(planned, exc, limit) if planned else failed_text(self.name, exc, limit))
 
 
 def _did_not_run(tool: str, exc: ValidationError) -> str:

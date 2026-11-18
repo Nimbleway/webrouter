@@ -85,9 +85,14 @@ def failed(planned: Planned, exc: BaseException, result_chars: int) -> str:
     Every URL that was sent failed with the call's own kind -- a call reads no
     page only when none of them came back.
     """
-    error = MSG_FAILED.format(tool=planned.name, why=short_error(exc, limit=result_chars))
+    error = failed_text(planned.name, exc, result_chars)
     if planned.method != "extract":
         return error
     kind, status = getattr(exc, "kind", None), getattr(exc, "status_code", None)
     rows = [failure_row(url, kind, getattr(exc, "retryable", None), status) for url in planned.urls]
     return render_extract_failure(error, [*rows, *planned.refused])
+
+
+def failed_text(name: str, exc: BaseException, result_chars: int) -> str:
+    """The one line a failed call's model reads: ``<tool> failed:`` and :func:`short_error`."""
+    return MSG_FAILED.format(tool=name, why=short_error(exc, limit=result_chars))
