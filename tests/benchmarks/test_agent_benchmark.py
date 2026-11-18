@@ -1963,7 +1963,7 @@ def test_a_sealqa_agent_run_withholds_its_paper_and_passes_an_unrelated_one(
     bench: tuple[ModuleType, ModuleType], monkeypatch: pytest.MonkeyPatch, fake_provider: Any
 ) -> None:
     _, run = bench
-    from web_router.constants import SEALQA_WITHHELD_MARKERS
+    from web_router.constants_evals import SEALQA_WITHHELD_MARKERS
     from web_router.evals import Dataset, Question
     from web_router.types import SearchResult
 

@@ -169,6 +169,8 @@ src/web_router/
 │                       a provider's own go in constants_<provider>.py (older
 │                       providers' are still here)
 ├── constants_answer.py answer()'s messages and MCP tool text, imported from here by name
+├── constants_evals.py the question sets' sources, names and columns, and the
+│                       messages their loaders raise
 ├── constants_live_data.py live data's messages, MCP tools, builtin providers and env table
 ├── constants_apify.py  Apify's paths; constants_live_data_vendors.py Bright Data's and Oxylabs'
 ├── constants_you.py    You.com research's endpoints, efforts and status table,

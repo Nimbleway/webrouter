@@ -91,7 +91,7 @@ from dotenv import load_dotenv
 from report import write as write_report  # benchmarks/agent/report.py, beside this script
 
 from web_router import AsyncWebRouter
-from web_router.constants import EVALS_CSV_SET
+from web_router.constants_evals import EVALS_CSV_SET
 from web_router.evals import AnthropicJudge, Dataset, Judge, OpenAIJudge, Question
 from web_router.exceptions import ProviderError
 from web_router.integrations.anthropic import WebRouterTools as ClaudeTools

@@ -11,7 +11,7 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from web_router.constants import EVALS_CSV_SET
+from web_router.constants_evals import EVALS_CSV_SET
 from web_router.evals import Dataset
 
 DEFAULT_LIMIT = 300

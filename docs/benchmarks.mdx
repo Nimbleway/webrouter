@@ -158,7 +158,10 @@ its own pages and copies before judging, so a backend is not scored on finding t
 key (each row's `withheld` counts them). `Dataset.for_set(name)` loads any of
 these by the name the benchmarks use (`simpleqa`, `simpleqa-verified`, `frames`,
 `sealqa-0`, `sealqa-hard`), or `csv` with a `path`. Your own questions
-come from a CSV with a header, and any `Judge` subclass can stand in for the
+come from a CSV with a header; `answer_column=None` reads one with no answers,
+each `Question`'s `answer` then `None`. `evaluate()` grades against gold, so it
+refuses such a set before any search: for now, judge `benchmark()`'s rows with
+your own grader. Any `Judge` subclass can stand in for the
 built-in one — another vendor, a local model:
 
 ```python

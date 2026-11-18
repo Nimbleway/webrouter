@@ -1,4 +1,4 @@
-"""Question sets with gold answers: SimpleQA, SimpleQA Verified, FRAMES, SealQA, or a CSV of your own.
+"""Question sets: SimpleQA, SimpleQA Verified, FRAMES, SealQA, or a CSV of yours, with gold answers or none.
 
 Sampling mirrors ``SimpleQAEval`` in openai/simple-evals -- ``random.Random(seed).sample(rows, limit)``
 on the stdlib RNG -- so ``limit=500`` with the default seed is the same 500 questions every published
@@ -20,15 +20,7 @@ from urllib.parse import unquote, urlsplit
 from pydantic import BaseModel, ConfigDict, Field
 
 from web_router.constants import (
-    EVALS_CSV_SET,
-    EVALS_QUESTION_SETS,
-    EVALS_URL_DECODE_PASSES,
     EXTRA_EVALS,
-    FRAMES_ANSWER_COLUMN,
-    FRAMES_METADATA_COLUMNS,
-    FRAMES_NAME,
-    FRAMES_QUESTION_COLUMN,
-    FRAMES_URL,
     MSG_EVALS_BAD_LIMIT,
     MSG_EVALS_BLANK_VALUE,
     MSG_EVALS_CSV_NEEDS_PATH,
@@ -36,6 +28,17 @@ from web_router.constants import (
     MSG_EVALS_NEEDS_PYARROW,
     MSG_EVALS_UNKNOWN_SET,
     MSG_EVALS_UNKNOWN_SPLIT,
+    SIMPLEQA_SEED,
+)
+from web_router.constants_evals import (
+    EVALS_CSV_SET,
+    EVALS_QUESTION_SETS,
+    EVALS_URL_DECODE_PASSES,
+    FRAMES_ANSWER_COLUMN,
+    FRAMES_METADATA_COLUMNS,
+    FRAMES_NAME,
+    FRAMES_QUESTION_COLUMN,
+    FRAMES_URL,
     SEALQA_METADATA_COLUMNS,
     SEALQA_SPLITS,
     SEALQA_URL,
@@ -44,7 +47,6 @@ from web_router.constants import (
     SIMPLEQA_DOWNLOAD_TIMEOUT,
     SIMPLEQA_NAME,
     SIMPLEQA_QUESTION_COLUMN,
-    SIMPLEQA_SEED,
     SIMPLEQA_URL,
     SIMPLEQA_VERIFIED_NAME,
     SIMPLEQA_VERIFIED_URL,
@@ -53,12 +55,12 @@ from web_router.exceptions import ConfigurationError
 
 
 class Question(BaseModel):
-    """One question and the answer the dataset holds as gold."""
+    """One question and the answer the dataset holds as gold, or none in an unlabeled set."""
 
     model_config = ConfigDict(extra="forbid")
 
     question: str = Field(min_length=1)
-    answer: str = Field(min_length=1)
+    answer: str | None = Field(default=None, min_length=1, description="The gold answer; None in an unlabeled set.")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Whatever else the row carried.")
 
 
@@ -126,25 +128,26 @@ class Dataset(BaseModel):
         rows: list[dict[str, Any]],
         *,
         question_column: str = SIMPLEQA_QUESTION_COLUMN,
-        answer_column: str = SIMPLEQA_ANSWER_COLUMN,
+        answer_column: str | None = SIMPLEQA_ANSWER_COLUMN,
         source: str = "the rows",
     ) -> Dataset:
-        """Build from dict rows, keeping every column but the two named under ``metadata``."""
+        """Build from dict rows, keeping every column but the two named under ``metadata``.
+
+        ``answer_column=None`` reads an unlabeled set; a named one must hold an answer on every row.
+        """
+        named = (question_column,) if answer_column is None else (question_column, answer_column)
         questions: list[Question] = []
         for index, row in enumerate(rows, start=1):
-            for column in (question_column, answer_column):
+            for column in named:
                 if column not in row:
                     raise ValueError(MSG_EVALS_MISSING_COLUMN.format(path=source, column=column, columns=sorted(row)))
                 # A short CSV row reads as None, which str() below would turn
                 # into the gold answer "None"; a blank cell is as meaningless.
                 if row[column] is None or not str(row[column]).strip():
                     raise ValueError(MSG_EVALS_BLANK_VALUE.format(path=source, row=index, column=column))
-            metadata = {
-                key: _parse_cell(value) for key, value in row.items() if key not in (question_column, answer_column)
-            }
-            questions.append(
-                Question(question=str(row[question_column]), answer=str(row[answer_column]), metadata=metadata)
-            )
+            metadata = {key: _parse_cell(value) for key, value in row.items() if key not in named}
+            answer = None if answer_column is None else str(row[answer_column])
+            questions.append(Question(question=str(row[question_column]), answer=answer, metadata=metadata))
         return cls(name=name, questions=questions)
 
     @classmethod
@@ -153,12 +156,13 @@ class Dataset(BaseModel):
         path: str | Path,
         *,
         question_column: str = SIMPLEQA_QUESTION_COLUMN,
-        answer_column: str = SIMPLEQA_ANSWER_COLUMN,
+        answer_column: str | None = SIMPLEQA_ANSWER_COLUMN,
         name: str | None = None,
         limit: int | None = None,
         seed: int = SIMPLEQA_SEED,
     ) -> Dataset:
-        """Read a CSV with a header: one question per row, the two named columns holding question and gold."""
+        """Read a CSV with a header: one question per row, the two named columns holding question and gold, or
+        ``answer_column=None`` for an unlabeled set."""
         path = Path(path)
         with path.open(newline="", encoding="utf-8") as handle:
             rows = list(csv.DictReader(handle))
@@ -174,12 +178,13 @@ class Dataset(BaseModel):
         *,
         path: str | Path | None = None,
         question_column: str = SIMPLEQA_QUESTION_COLUMN,
-        answer_column: str = SIMPLEQA_ANSWER_COLUMN,
+        answer_column: str | None = SIMPLEQA_ANSWER_COLUMN,
         limit: int | None = None,
         seed: int = SIMPLEQA_SEED,
     ) -> Dataset:
         """A question set by name -- ``simpleqa``, ``simpleqa-verified``, ``frames``, ``sealqa-0``, ``sealqa-hard``,
-        or ``csv``, your own file at ``path`` read by the two named columns.
+        or ``csv``, your own file at ``path`` read by the two named columns (``answer_column=None`` for one with no
+        answers).
 
         For a named set, ``path`` is a local copy of its file in place of the download.
 
