@@ -66,17 +66,17 @@ class HttpSettings:
             ConfigurationError: for an address other than loopback with no token.
         """
         token = (token or "").strip() or None
-        if token is None and not is_loopback(host):
+        if token is None and not tokenless_host(host):
             raise ConfigurationError(MCP_MSG_HTTP_NEEDS_TOKEN.format(host=host, env=ENV_MCP_TOKEN))
         return cls(host=host, port=port, token=token)
 
 
-def is_loopback(host: str) -> bool:
-    """Whether ``host`` is one the SDK protects against DNS rebinding; any other needs a token.
+def tokenless_host(host: str) -> bool:
+    """Whether the server may listen on ``host`` without a token: only where the SDK guards against DNS rebinding.
 
     Narrower than loopback: ``127.0.0.2``, ``LOCALHOST`` or ``::ffff:127.0.0.1`` also bind to this machine,
     but the SDK checks ``Host`` and ``Origin`` only for these three spellings, so a web page could reach a
-    tokenless server on any other. The package's other loopback helpers answer different questions.
+    tokenless server on any other. So this is not the package's ``is_loopback``, which answers another question.
     """
     return host in MCP_HTTP_TOKENLESS_HOSTS
 
@@ -123,17 +123,20 @@ def build_app(tools: WebRouterTools, settings: HttpSettings) -> ASGIApp:
 
 
 def _releasing(lifespan: Lifespan[Any], tools: WebRouterTools) -> Lifespan[Any]:
-    """``lifespan``, then every browser session and provider released as the app shuts down.
+    """``lifespan``, with the idle-browser reaper running inside it, then every session and provider released.
 
     Uvicorn re-raises a SIGTERM or SIGINT once ``serve()`` returns, which can end the process before any
-    code after it runs; its lifespan shutdown runs before that, so the release happens here.
+    code after it runs; its lifespan shutdown runs before that, so the release happens here. The reaper is
+    stopped first, as stdio stops it, so it is not releasing a session while the providers close.
     """
 
     @asynccontextmanager
     async def run(app: Any) -> AsyncIterator[None]:
         try:
-            async with lifespan(app):
+            async with lifespan(app), anyio.create_task_group() as group:
+                group.start_soon(tools.browsers.run_reaper)
                 yield
+                group.cancel_scope.cancel()
         finally:
             await _shutdown(tools)
 
@@ -157,10 +160,7 @@ async def serve_http(
         timeout_graceful_shutdown=MCP_HTTP_SHUTDOWN_GRACE,  # an open stream must not hold the browsers open
     )
     try:
-        async with anyio.create_task_group() as group:
-            group.start_soon(tools.browsers.run_reaper)
-            await uvicorn.Server(config).serve()  # uvicorn handles SIGINT and SIGTERM itself
-            group.cancel_scope.cancel()
+        await uvicorn.Server(config).serve()  # uvicorn handles SIGINT and SIGTERM itself
     finally:
         await _shutdown(tools)  # again, for a server that stopped before its lifespan ran
 

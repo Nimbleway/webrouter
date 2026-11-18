@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+import anyio
 import httpx
 import pytest
 from starlette.types import Receive, Scope, Send
@@ -141,19 +142,29 @@ async def test_shutdown_waits_a_bounded_time_for_open_requests(
 async def test_the_app_releases_every_session_as_it_shuts_down(
     monkeypatch: pytest.MonkeyPatch, tools: WebRouterTools
 ) -> None:
-    """Before uvicorn re-raises a SIGTERM, which may end the process before anything after ``serve()``."""
-    closed: list[bool] = []
+    """The reaper runs while the app does and stops first; then everything is released, before uvicorn
+    re-raises a SIGTERM, which may end the process before anything after ``serve()``."""
+    events: list[str] = []
+
+    async def reaper() -> None:
+        events.append("reaping")
+        try:
+            await anyio.sleep_forever()
+        finally:
+            events.append("reaper stopped")
 
     async def aclose() -> None:
-        closed.append(True)
+        events.append("released")
 
+    monkeypatch.setattr(tools.browsers, "run_reaper", reaper)
     monkeypatch.setattr(tools, "aclose", aclose)
     app = build_app(tools, HttpSettings.resolve("127.0.0.1", 8000, None))
 
     async with app.router.lifespan_context(app):  # type: ignore[attr-defined]
-        assert closed == []
+        await anyio.sleep(0)
+        assert events == ["reaping"]
 
-    assert closed == [True]
+    assert events == ["reaping", "reaper stopped", "released"]
 
 
 @pytest.mark.parametrize("host", sorted(MCP_HTTP_TOKENLESS_HOSTS))
