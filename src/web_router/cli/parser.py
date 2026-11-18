@@ -17,6 +17,7 @@ from web_router.constants_cli import (
     CLI_PROG,
     HELP,
     HELP_COMMAND,
+    MSG_BAD_NUMBER,
     MSG_NEGATIVE,
     MSG_NOT_POSITIVE,
 )
@@ -50,7 +51,7 @@ def _non_negative_int(text: str) -> int:
     try:
         value = int(text)
     except ValueError:
-        raise argparse.ArgumentTypeError(f"invalid int value: {text!r}") from None
+        raise argparse.ArgumentTypeError(MSG_BAD_NUMBER.format(kind="int", value=text)) from None
     if value < 0:
         raise argparse.ArgumentTypeError(MSG_NEGATIVE.format(value=value))
     return value
@@ -61,7 +62,7 @@ def _positive_finite_float(text: str) -> float:
     try:
         value = float(text)
     except ValueError:
-        raise argparse.ArgumentTypeError(f"invalid float value: {text!r}") from None
+        raise argparse.ArgumentTypeError(MSG_BAD_NUMBER.format(kind="float", value=text)) from None
     if not (math.isfinite(value) and value > 0):
         raise argparse.ArgumentTypeError(MSG_NOT_POSITIVE.format(value=text))
     return value

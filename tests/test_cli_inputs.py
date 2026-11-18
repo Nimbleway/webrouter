@@ -69,3 +69,17 @@ def test_a_users_own_raw_key_is_kept_in_output() -> None:
     printed = json.loads(to_json(response, raw=False, pretty=False))
     assert "raw" not in printed  # the model's own payload goes
     assert printed["structured"] == {"raw": 1, "rows": [{"raw": 2}]}  # the caller's data stays
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ("search", "q", "--timeout", "abc"),
+        ("live-data", "sources", "--limit", "x"),
+        ("live-data", "sources", "--offset", "1.5"),
+    ],
+)
+def test_a_flag_that_is_not_a_number_is_refused(argv: tuple[str, ...], capsys: pytest.CaptureFixture[str]) -> None:
+    status, out, err = _run(capsys, *argv)
+    assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "UsageError")
+    assert "invalid" in err["error"]["message"]
