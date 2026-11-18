@@ -40,7 +40,7 @@ provider does not map -- and raises, because no retry by the model fixes it.
 
 
 def short_error(exc: BaseException, *, limit: int = INTEGRATION_RESULT_CHARS) -> str:
-    """``exc`` in one line of at most ``limit`` characters: who failed, why, and whether to try again.
+    """``exc`` in one line, cut at ``limit`` characters and marked where cut: who failed, why, and whether to retry.
 
     A backend's failure is told from its fields -- ``kind``, ``retryable``,
     ``status_code``, ``retry_after`` and, for ``auto``, each member's kind --
