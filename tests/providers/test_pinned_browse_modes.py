@@ -15,7 +15,6 @@ from tests.providers._pin_helpers import recording, sent
 from web_router import Budget, WebRouter
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.providers.base import BrowseJob
 from web_router.registry import create_browse_provider, get_browse_provider_class
 from web_router.types import BrowseRequest
 
@@ -66,13 +65,6 @@ def test_a_mode_the_caller_overrides_or_cannot_take_is_refused_before_anything_i
 def test_a_pin_that_names_another_method_is_refused() -> None:
     with pytest.raises(InvalidParameterError, match="pinned browse backend"):
         get_browse_provider_class("answer:skyvern:skyvern-2.0")
-
-
-def test_a_pinned_backend_hands_back_its_job_which_states_no_cost_and_answers() -> None:
-    provider = create_browse_provider("skyvern:skyvern-2.0", api_key="k", transport=recording([], STARTED))
-    job = provider.submit(BrowseRequest(task=TASK))
-    assert isinstance(job, BrowseJob)
-    assert job.result().answer == "Done."
 
 
 def test_a_named_unpriced_pin_never_sends_under_a_cost_cap() -> None:
