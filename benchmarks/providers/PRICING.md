@@ -254,6 +254,18 @@ of balance, and a payment method is required to use the API.
 | `deep` | `octen:deep` | `full_content` up to 100,000 tokens | Adds a longer page body per result | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
 <!-- /prices -->
 
+### Keirolabs
+
+Per search, however many results it returns ([pricing](https://keirolabs.cloud/pricing)): $0.10 per 1k on
+the Essential plan ($29.99 a month, 300,000 searches included), $0.06 per 1k on Pro and $0.03 per 1k on
+Startup.
+
+<!-- prices: method=search provider=keirolabs -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `keirolabs` | default (lite search) | Titles, URLs and a snippet per result; no page body or date | $0.10 per 1k; Essential plan ($29.99 a month, 300k searches included); $0.06 per 1k on Pro, $0.03 per 1k on Startup | [keirolabs.cloud](https://keirolabs.cloud/pricing) | 2026-11-12 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the

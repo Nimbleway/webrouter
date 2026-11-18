@@ -1,44 +1,24 @@
 """Live data without naming a vendor: one search over every configured backend, and runs routed by their source.
 
-Two in-memory backends stand in for the vendors: ``fake`` (``tests/_live_data_fake.py``)
-and ``paged`` (``tests/_live_data_paged.py``), both registered as custom
-backends, which are always tried. Every built-in backend's variable is
-cleared, so no test reaches a real vendor.
+The backends are the in-memory ``fake`` and ``paged`` of
+``tests/_live_data_any_fixtures.py``. How their answers are ordered for a
+query is ``tests/test_live_data_any_ranking.py``; a backend that fails,
+``tests/test_live_data_any_failures.py``.
 """
 
 from __future__ import annotations
 
 import asyncio
-import logging
-from collections.abc import Iterator
 from typing import Any
 
-import httpx
 import pytest
 
+from tests._live_data_any_fixtures import no_vendor_keys_fixture, two_backends_fixture  # noqa: F401  (fixtures)
 from tests._live_data_fake import FakeLiveDataProvider
-from tests._live_data_paged import PagedProvider
-from web_router import AllProvidersFailedError, AsyncWebRouter, WebRouter
+from web_router import AsyncWebRouter, WebRouter
 from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.live_data_backends import usable_backends
-from web_router.registry import register_live_data_provider, unregister_live_data_provider
-
-
-@pytest.fixture(autouse=True)
-def no_vendor_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    for env_vars in LIVE_DATA_ENV_BY_PROVIDER.values():
-        for env_var in env_vars:
-            monkeypatch.delenv(env_var, raising=False)
-
-
-@pytest.fixture
-def two_backends(fake_live_data_provider: Any) -> Iterator[None]:
-    register_live_data_provider("paged", PagedProvider)
-    yield
-    unregister_live_data_provider("paged")
-    FakeLiveDataProvider.list_raises = None
-
 
 # -- finding a source ---------------------------------------------------------
 
@@ -73,61 +53,6 @@ def test_limit_and_offset_page_the_merged_list(two_backends: None) -> None:
     assert first.names == ["books_pdp", "shop_reviews"]
     assert second.names == ["jobs_listing", "filler_0"]
     assert second.offset == 2 and second.limit == 2
-
-
-def test_a_backend_that_fails_is_left_out_and_named(two_backends: None) -> None:
-    FakeLiveDataProvider.list_raises = ProviderError("fake", "HTTP 503")
-
-    page = WebRouter().live_data_sources(limit=3)
-
-    assert {source.provider for source in page.sources} == {"paged"}
-    assert "fake" in page.failures and "503" in page.failures["fake"]
-    # Part of the catalogue is missing, so no count is claimed for it.
-    assert page.total is None
-
-
-def test_every_backend_failing_raises_rather_than_answering_empty(fake_live_data_provider: Any) -> None:
-    FakeLiveDataProvider.list_raises = ProviderError("fake", "HTTP 503")
-    try:
-        with pytest.raises(ProviderError, match="every live data backend failed"):
-            WebRouter().live_data_sources()
-    finally:
-        FakeLiveDataProvider.list_raises = None
-
-
-def _refused_key(provider: str) -> ProviderError:
-    request = httpx.Request("GET", "https://api.example.com")
-    response = httpx.Response(401, request=request)
-    refused = httpx.HTTPStatusError("401", request=request, response=response)
-    return ProviderError(provider, "HTTP 401", original=refused)
-
-
-@pytest.mark.parametrize("use_async", [False, True])
-def test_every_backend_failing_keeps_each_ones_error_and_kind(
-    two_backends: None, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, use_async: bool
-) -> None:
-    FakeLiveDataProvider.list_raises = _refused_key("fake")
-    paged_error = _refused_key("paged")
-
-    def refuse(*_args: Any, **_kwargs: Any) -> Any:
-        raise paged_error
-
-    async def arefuse(*_args: Any, **_kwargs: Any) -> Any:
-        raise paged_error
-
-    monkeypatch.setattr(PagedProvider, "_list", refuse)
-    monkeypatch.setattr(PagedProvider, "_alist", arefuse)
-    with caplog.at_level(logging.WARNING, logger="web_router"), pytest.raises(AllProvidersFailedError) as caught:
-        if use_async:
-            asyncio.run(AsyncWebRouter().live_data_sources())
-        else:
-            WebRouter().live_data_sources()
-
-    assert set(caught.value.failures) == {"fake", "paged"}
-    assert caught.value.failures["paged"] is paged_error
-    assert (caught.value.kind, caught.value.retryable) == ("auth", False)
-    warned = {record.getMessage().split()[0] for record in caplog.records if record.levelno == logging.WARNING}
-    assert warned == {"fake", "paged"}
 
 
 def test_no_backend_at_all_names_the_variables_to_set() -> None:

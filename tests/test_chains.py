@@ -28,6 +28,7 @@ README_NAMES = {
     "Valyu": "valyu",
     "Seltz": "seltz",
     "Octen": "octen",
+    "Keirolabs": "keirolabs",
     "AgentCore": "agentcore",
     "Exa LiteLLM": "exa-litellm",
     "Tavily LiteLLM": "tavily-litellm",
