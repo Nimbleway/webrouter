@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,9 @@ import pytest
 from tests.conftest import FakeBrowseProvider, FakeResearchProvider
 from tests.test_cli import _run, _spy
 from web_router.cli.args import pairs
+from web_router.cli.output import to_json
 from web_router.constants_cli import EXIT_OK, EXIT_USAGE
+from web_router.types import ResearchResponse
 
 
 @pytest.mark.parametrize(
@@ -54,3 +57,15 @@ def test_a_file_that_is_not_text_is_refused(tmp_path: Path, capsys: pytest.Captu
     schema.write_bytes(b"\xff\xfe{}")
     status, out, err = _run(capsys, "research", "q", "--schema", f"@{schema}")
     assert (status, out, err["error"]["type"]) == (EXIT_USAGE, None, "CliInputError")
+
+
+def test_a_users_own_raw_key_is_kept_in_output() -> None:
+    response = ResearchResponse(
+        provider="fake",
+        query="q",
+        structured={"raw": 1, "rows": [{"raw": 2}]},
+        raw=[{"backend": "payload"}],
+    )
+    printed = json.loads(to_json(response, raw=False, pretty=False))
+    assert "raw" not in printed  # the model's own payload goes
+    assert printed["structured"] == {"raw": 1, "rows": [{"raw": 2}]}  # the caller's data stays
