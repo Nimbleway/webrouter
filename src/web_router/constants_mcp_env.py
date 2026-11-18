@@ -1,4 +1,5 @@
-"""The MCP server's warning about a remembered ``.env`` from another directory, apart so large files stop growing."""
+"""The MCP server's ``.env`` constants: ``load_env``'s schema and messages, the operator's key-source switches,
+and the startup warnings. Apart from ``constants.py`` so that file stops growing."""
 
 from __future__ import annotations
 
