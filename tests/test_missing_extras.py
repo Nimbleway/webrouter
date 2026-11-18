@@ -34,7 +34,7 @@ def test_the_mcp_command_without_its_extra_prints_the_install_line(
     monkeypatch.setattr(builtins, "__import__", _failing_import("web_router.mcp.server", "mcp"))
 
     with pytest.raises(SystemExit) as exited:
-        mcp_cli.main()
+        mcp_cli.main([])
 
     assert exited.value.code == 1
     assert 'pip install "webrouter[mcp]"' in capsys.readouterr().err
@@ -45,7 +45,7 @@ def test_an_unrelated_missing_module_is_not_reported_as_the_extra(monkeypatch: p
     monkeypatch.setattr(builtins, "__import__", _failing_import("web_router.mcp.server", "no_such_module"))
 
     with pytest.raises(ModuleNotFoundError, match="no_such_module"):
-        mcp_cli.main()
+        mcp_cli.main([])
 
 
 def test_the_http_base_classes_without_httpx_name_the_search_extra(monkeypatch: pytest.MonkeyPatch) -> None:
