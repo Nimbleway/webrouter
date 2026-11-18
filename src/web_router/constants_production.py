@@ -23,6 +23,8 @@ COOLDOWN_FALLBACK_S: Final = 10.0
 COOLDOWN_MAX_S: Final = 600.0
 """The longest a backend cools down, whatever its ``Retry-After`` says: a router outlives one burst."""
 
+HOP_CODE_COOLING_DOWN: Final = "cooling_down"
+"""What a decision record's hop says for a backend ``auto`` passed over while it cooled down."""
 MSG_COOLING_DOWN: Final = (
     "cooling down after a {status} for {seconds:.1f}s more; auto passed it over without calling it"
 )

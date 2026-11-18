@@ -24,6 +24,7 @@ from web_router.constants_production import (
     COOLDOWN_FALLBACK_S,
     COOLDOWN_MAX_S,
     COOLDOWN_STATUSES,
+    HOP_CODE_COOLING_DOWN,
     LOG_COOLDOWN_SET,
     MSG_COOLING_DOWN,
 )
@@ -41,7 +42,7 @@ logger = logging.getLogger(__name__)
 class CoolingDownError(ProviderError):
     """``auto`` passed a backend over while it cools down: no request was sent, so nothing was billed."""
 
-    hop_code = "cooling_down"
+    hop_code = HOP_CODE_COOLING_DOWN
     """What a decision record's hop says for it, in place of the status that started the cooldown."""
 
 

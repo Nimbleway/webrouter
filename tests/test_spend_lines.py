@@ -8,13 +8,28 @@ import pytest
 
 from tests.spend_helpers import Kept
 from web_router import ProviderError, SpendEntry, spend_report
-from web_router.exceptions import ConfigurationError
+from web_router.exceptions import ConfigurationError, ProviderNotInstalledError
 from web_router.exceptions_typed import AllProvidersFailedError
-from web_router.providers._cooldown import CoolingDownError
+from web_router.providers._cooldown import Cooldowns, CoolingDownError
+from web_router.routing.record import error_code
 from web_router.spend_record import passed_entries, raised_entries, record_lines
 from web_router.types_decision import DecisionAttempt, DecisionHop, DecisionRecord
 
-NEVER_SENT = [("tavily", "ConfigurationError"), ("nimble", "ProviderNotInstalledError"), ("exa", "cooling_down")]
+
+def _cooling(provider: str) -> CoolingDownError:
+    """The refusal a real cooldown gives, after a 429 the backend answered."""
+    cooldowns = Cooldowns()
+    cooldowns.note(provider, ProviderError(provider, "HTTP 429", kind="rate_limit"))
+    refusal = cooldowns.refusal(provider)
+    assert refusal is not None
+    return refusal
+
+
+NEVER_SENT = [
+    ("tavily", ConfigurationError("no key")),
+    ("nimble", ProviderNotInstalledError("nimble", "pip install")),
+    ("exa", _cooling("exa")),
+]
 
 
 def _record(hops: list[DecisionHop], tried: list[str]) -> DecisionRecord:
@@ -76,8 +91,10 @@ def test_a_member_the_chain_never_called_has_no_line() -> None:
 
 def test_a_hop_never_sent_has_no_line() -> None:
     """A decision record names a member never built by its error class, and a cooling one by its hop code."""
-    never = [DecisionHop(id=f"search:{name}", error=error) for name, error in NEVER_SENT]
-    hops = [*never, DecisionHop(id="search:you", error="429")]
+    never = [DecisionHop(id=f"search:{name}", error=error_code(exc)) for name, exc in NEVER_SENT]
+    throttled = ProviderError("you", "HTTP 429", original=RuntimeError("429"), kind="rate_limit")
+    throttled.status_code = 429
+    hops = [*never, DecisionHop(id="search:you", error=error_code(throttled))]
     record = _record(hops, [hop.id for hop in hops])
     assert [e.provider for e in passed_entries(record, "search")] == ["you"]
 
