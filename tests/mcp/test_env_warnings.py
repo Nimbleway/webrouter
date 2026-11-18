@@ -104,6 +104,12 @@ def test_an_error_that_echoes_a_configured_key_in_plain_text_masks_it(
     assert VENDOR_MASK in text
 
 
+def test_an_error_masks_a_short_key_even_inside_a_longer_word(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(ENV_BRAVE_API_KEY, "abc12")
+
+    assert "abc12" not in error_text(ProviderError("brave", "token abc12suffix rejected"))
+
+
 async def test_fetch_raw_masks_a_configured_key_but_leaves_a_free_setting(
     no_keys: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:

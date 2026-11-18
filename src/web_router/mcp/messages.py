@@ -6,7 +6,7 @@ import re
 
 from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_PROVIDER_CONFIG_ASIDE, MCP_PROVIDER_CONFIG_CLAUSE
 from web_router.constants_mcp_context import MCP_MSG_ERROR_FACTS
-from web_router.mcp.masking import mask_configured
+from web_router.mcp.masking import mask_configured_text
 from web_router.mcp.shaping import redact, redaction_note
 from web_router.types_errors import is_retryable
 
@@ -22,7 +22,7 @@ def error_text(exc: Exception) -> str:
     An ordinary message passes through untouched. A backend's failure ends in
     its ``kind`` and ``retryable``, which the text alone would leave a model to guess.
     """
-    message, count = redact(_for_mcp(mask_configured(str(exc))))
+    message, count = redact(_for_mcp(mask_configured_text(str(exc))))
     return str(message) + redaction_note(count) + _facts(exc)
 
 
