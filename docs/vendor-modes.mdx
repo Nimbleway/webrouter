@@ -220,10 +220,16 @@ When an attempt fails:
   credit) is not charged for it, and its next attempt runs.
 - A failure that no other backend could do better on (a `local` or `target`
   error) raises, as it does without modes.
-- Any other failure, an auth error, a 429, a 5xx or a timeout among them,
-  stops that backend for the call: its later attempts are passed over, each
-  recorded as `backend_failed`. A 429 or 402 cools down the backend, every
-  mode with it, as it always has.
+- A timeout (a 408 included) in search, extract or answer moves to the
+  backend's next attempt when that mode's measured p90 fits the time the call
+  has left (`timeout=` or `Budget(time_limit_s=...)`). With no time limit, no
+  measured p90, or too little time left, it stops the backend as below. The
+  timed-out attempt stays charged. Research and browse always stop, since a
+  job that timed out may already be running.
+- Any other failure, an auth error, a 429 or a 5xx among them, stops that
+  backend for the call: its later attempts are passed over, each recorded as
+  `backend_failed`. A 429 or 402 cools down the backend, every mode with it,
+  as it always has.
 
 The decision record lists each attempt by its full id, with `mode` set, and
 the answer's `cost_usd` is the price of the mode that answered.
