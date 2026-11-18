@@ -1,0 +1,409 @@
+{
+  "vendor": "serpstat",
+  "name": "Serpstat",
+  "category": "seo",
+  "summary": "SEO data: domain visibility and organic keywords, competitors, keyword volumes and ideas, stored Google top-100 results and backlink summaries, over a JSON-RPC API.",
+  "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/jenasqbwtxdlr-introduction-to-serpstat-api",
+  "base_url": "https://api.serpstat.com",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "SERPSTAT_API_KEY"
+        ],
+        "description": "The personal API token from the Serpstat profile page (one per user). Sent as the token query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "token",
+        "value": "{api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "JSON-RPC 2.0: every call is a POST to /v4 with a JSON body {id, method, params}; the method name is case-sensitive and picks the report.",
+    "Every response is HTTP 200, errors included: check for an error object instead of result.",
+    "The se parameter is the search database: g_ plus a country code (g_us, g_uk, g_de and so on) or bing_us.",
+    "Credits are charged per row returned on most reports (see each endpoint) and 1 credit even for an empty result; identical repeated requests are charged again.",
+    "Rate limit: 1 request per second on most plans, up to 10 on top tiers. A report returns at most 60,000 rows; page and size page through it (size usually up to 1000).",
+    "The API needs a paid or trial plan with API access."
+  ],
+  "sources": [
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/jenasqbwtxdlr-introduction-to-serpstat-api",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/okpb7grp4v67f-domain-analysis-api",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/0c6vx6hzygijk-get-domains-info",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/j5jbjt0rk7oei-get-domain-keywords",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/qzd94b49vdkyb-get-organic-competitors-page",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/2brcbdgmr6rcx-get-keywords-info",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/w7jh5sk9kc0cm-get-keywords",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/env4osjb1ev9c-get-keyword-top",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/59d6e25056c22-get-summary-v2",
+    "https://api-docs.serpstat.com/docs/serpstat-public-api/p2grcut8yurv0-get-stats"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "serpstat.domain.info",
+      "name": "Get domain SEO summary",
+      "summary": "Organic keywords, traffic, keyword movements, ad keywords and AI-overview counts for up to many domains in one search database.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "JSON-RPC request id of your choice; echoed back in the response.",
+          "example": "1"
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SerpstatDomainProcedure.getDomainsInfo"
+          ],
+          "description": "Must be exactly SerpstatDomainProcedure.getDomainsInfo.",
+          "example": "SerpstatDomainProcedure.getDomainsInfo"
+        },
+        "params": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "domains (array of domains, required), se (search database, required, e.g. g_us), filters (optional).",
+          "example": {
+            "domains": [
+              "nike.com",
+              "adidas.com"
+            ],
+            "se": "g_us"
+          }
+        }
+      },
+      "notes": [
+        "5 credits per domain returned; 1 credit even when nothing is found."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/0c6vx6hzygijk-get-domains-info",
+      "verified": {
+        "docs": "https://api-docs.serpstat.com/docs/serpstat-public-api/0c6vx6hzygijk-get-domains-info"
+      }
+    },
+    {
+      "id": "serpstat.domain.keywords",
+      "name": "List a domain's organic keywords",
+      "summary": "Keywords a domain ranks for in Google's top 100, with position, volume, CPC and URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "JSON-RPC request id of your choice; echoed back in the response.",
+          "example": "1"
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SerpstatDomainProcedure.getDomainKeywords"
+          ],
+          "description": "Must be exactly SerpstatDomainProcedure.getDomainKeywords.",
+          "example": "SerpstatDomainProcedure.getDomainKeywords"
+        },
+        "params": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "domain (required), se (required), withSubdomains (default true), withIntents (g_us and g_ua only), url, keywords, minusKeywords, filters (including types_contain/types_not_contain for SERP features), sort as {field: order}, page (from 1), size (1-1000, default 100).",
+          "example": {
+            "domain": "serpstat.com",
+            "se": "g_us",
+            "page": 1,
+            "size": 100
+          }
+        }
+      },
+      "notes": [
+        "1 credit per keyword returned; 1 credit even when nothing is found.",
+        "At most the first 60,000 rows of a report are reachable through the API."
+      ],
+      "job": "domain.keywords.organic",
+      "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/j5jbjt0rk7oei-get-domain-keywords",
+      "verified": {
+        "docs": "https://api-docs.serpstat.com/docs/serpstat-public-api/j5jbjt0rk7oei-get-domain-keywords"
+      }
+    },
+    {
+      "id": "serpstat.domain.competitors",
+      "name": "List a domain's organic competitors",
+      "summary": "Domains competing with a domain in Google's top 20, with shared-keyword and visibility figures.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "JSON-RPC request id of your choice; echoed back in the response.",
+          "example": "1"
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SerpstatDomainProcedure.getOrganicCompetitorsPage"
+          ],
+          "description": "Must be exactly SerpstatDomainProcedure.getOrganicCompetitorsPage.",
+          "example": "SerpstatDomainProcedure.getOrganicCompetitorsPage"
+        },
+        "params": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "domain (required), se (required), sort as {field: order}, page (from 1), size (10-500, default 100).",
+          "example": {
+            "domain": "amazon.com",
+            "se": "g_us",
+            "size": 10
+          }
+        }
+      },
+      "notes": [
+        "1 credit per competitor returned. Replaces the deprecated getCompetitors."
+      ],
+      "job": "domain.competitors",
+      "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/qzd94b49vdkyb-get-organic-competitors-page",
+      "verified": {
+        "docs": "https://api-docs.serpstat.com/docs/serpstat-public-api/qzd94b49vdkyb-get-organic-competitors-page"
+      }
+    },
+    {
+      "id": "serpstat.keywords.info",
+      "name": "Get keyword metrics",
+      "summary": "Search volume, CPC, competition and related figures for a list of keywords.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "JSON-RPC request id of your choice; echoed back in the response.",
+          "example": "1"
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SerpstatKeywordProcedure.getKeywordsInfo"
+          ],
+          "description": "Must be exactly SerpstatKeywordProcedure.getKeywordsInfo.",
+          "example": "SerpstatKeywordProcedure.getKeywordsInfo"
+        },
+        "params": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "keywords (array, required), se (required), withIntents (g_us and g_ua only), sort, includeMissingKeys (list keywords with no data under not_found), filters.",
+          "example": {
+            "keywords": [
+              "seo tools",
+              "keyword research"
+            ],
+            "se": "g_us"
+          }
+        }
+      },
+      "notes": [
+        "1 credit per keyword returned; at most 1000 results per query."
+      ],
+      "job": "keywords.volume",
+      "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/2brcbdgmr6rcx-get-keywords-info",
+      "verified": {
+        "docs": "https://api-docs.serpstat.com/docs/serpstat-public-api/2brcbdgmr6rcx-get-keywords-info"
+      }
+    },
+    {
+      "id": "serpstat.keywords.ideas",
+      "name": "Find keywords containing a keyword",
+      "summary": "Organic keywords that include a seed keyword, with volume, CPC and competition.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "JSON-RPC request id of your choice; echoed back in the response.",
+          "example": "1"
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SerpstatKeywordProcedure.getKeywords"
+          ],
+          "description": "Must be exactly SerpstatKeywordProcedure.getKeywords.",
+          "example": "SerpstatKeywordProcedure.getKeywords"
+        },
+        "params": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "keyword (required), se (required), minusKeywords, withIntents (g_us and g_au only), sort, filters, page (from 1), size (default 100).",
+          "example": {
+            "keyword": "iphone",
+            "se": "g_us",
+            "size": 100
+          }
+        }
+      },
+      "notes": [
+        "1 credit per row returned; only the first 60,000 rows are reachable."
+      ],
+      "job": "keywords.ideas",
+      "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/w7jh5sk9kc0cm-get-keywords",
+      "verified": {
+        "docs": "https://api-docs.serpstat.com/docs/serpstat-public-api/w7jh5sk9kc0cm-get-keywords"
+      }
+    },
+    {
+      "id": "serpstat.keywords.top",
+      "name": "Get the top 100 results for a keyword",
+      "summary": "Google's top-100 organic results for a keyword: position, URL, domain and SERP feature types.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "JSON-RPC request id of your choice; echoed back in the response.",
+          "example": "1"
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SerpstatKeywordProcedure.getKeywordTop"
+          ],
+          "description": "Must be exactly SerpstatKeywordProcedure.getKeywordTop.",
+          "example": "SerpstatKeywordProcedure.getKeywordTop"
+        },
+        "params": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "keyword (required), se (required), filters, size.",
+          "example": {
+            "keyword": "laptops",
+            "se": "g_us"
+          }
+        }
+      },
+      "notes": [
+        "1 credit per result row. This is Serpstat's stored SERP snapshot, not a live search."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/env4osjb1ev9c-get-keyword-top",
+      "verified": {
+        "docs": "https://api-docs.serpstat.com/docs/serpstat-public-api/env4osjb1ev9c-get-keyword-top"
+      }
+    },
+    {
+      "id": "serpstat.backlinks.summary",
+      "name": "Get a backlink profile summary",
+      "summary": "External links, referring domains, subdomains, IPs and subnets, domain authority and link types for a domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "JSON-RPC request id of your choice; echoed back in the response.",
+          "example": "1"
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SerpstatBacklinksProcedure.getSummaryV2"
+          ],
+          "description": "Must be exactly SerpstatBacklinksProcedure.getSummaryV2.",
+          "example": "SerpstatBacklinksProcedure.getSummaryV2"
+        },
+        "params": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "query (the domain, required), searchType (domain or domain_with_subdomains, the default).",
+          "example": {
+            "query": "facebook.com",
+            "searchType": "domain_with_subdomains"
+          }
+        }
+      },
+      "notes": [
+        "5 credits per request. Summary figures can differ slightly from the detailed backlink reports."
+      ],
+      "job": "backlinks.summary",
+      "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/59d6e25056c22-get-summary-v2",
+      "verified": {
+        "docs": "https://api-docs.serpstat.com/docs/serpstat-public-api/59d6e25056c22-get-summary-v2"
+      }
+    },
+    {
+      "id": "serpstat.account.stats",
+      "name": "Get API credit usage",
+      "summary": "Available and used API credits and extension credits of the account.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "JSON-RPC request id of your choice; echoed back in the response.",
+          "example": "1"
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "SerpstatLimitsProcedure.getStats"
+          ],
+          "description": "Must be exactly SerpstatLimitsProcedure.getStats.",
+          "example": "SerpstatLimitsProcedure.getStats"
+        }
+      },
+      "notes": [
+        "Free: spends no credits."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api-docs.serpstat.com/docs/serpstat-public-api/p2grcut8yurv0-get-stats",
+      "verified": {
+        "docs": "https://api-docs.serpstat.com/docs/serpstat-public-api/p2grcut8yurv0-get-stats"
+      }
+    }
+  ]
+}

@@ -22,7 +22,16 @@ from web_router.registry import available_providers, configured_providers, get_p
 from web_router.types import ALWAYS_SENT, NORMALIZED_PARAMETERS, SearchDepth, SearchRequest, SearchResponse
 from web_router.types_options import SearchOptions
 
-ROUTER_ONLY_ARGUMENTS = {"self", "query", "provider", "budget"}
+ROUTER_ONLY_ARGUMENTS = {
+    "self",
+    "query",
+    "provider",
+    "timeout",
+    "budget",
+    "data_apis",
+    "data_apis_only",
+    "configured_only",
+}
 
 DEPTHS: tuple[SearchDepth, ...] = get_args(SearchDepth)
 
@@ -77,7 +86,7 @@ ENV_VARS = (
 def test_router_search_exposes_every_shared_option(method: object) -> None:
     """The two search signatures and SearchOptions restate SearchRequest's fields, so guard the copies."""
     exposed = set(inspect.signature(method).parameters) - ROUTER_ONLY_ARGUMENTS
-    assert exposed == NORMALIZED_PARAMETERS | ALWAYS_SENT - {"query"}
+    assert exposed == NORMALIZED_PARAMETERS | ALWAYS_SENT - {"query", "mode"}  # a mode is pinned through provider=
     assert set(SearchOptions.__annotations__) == NORMALIZED_PARAMETERS
 
 
@@ -288,7 +297,7 @@ def test_provider_repr_never_leaks_a_credential(name: str, monkeypatch: pytest.M
 
 
 def test_every_public_model_is_importable_from_the_package_root() -> None:
-    """A model that types a public field, such as ``Template.samples``, is one a caller has to name."""
+    """A model that types a public field, such as ``LiveDataSource.samples``, is one a caller has to name."""
     models = {
         name
         for name, value in vars(web_router.types).items()

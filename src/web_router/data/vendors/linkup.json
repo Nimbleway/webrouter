@@ -1,0 +1,50 @@
+{
+  "vendor": "linkup",
+  "name": "Linkup",
+  "category": "search",
+  "summary": "The Linkup account's credit balance.",
+  "docs_url": "https://docs.linkup.so/pages/documentation/get-started/introduction",
+  "pricing_url": "https://www.linkup.so/pricing",
+  "base_url": "https://api.linkup.so",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LINKUP_API_KEY"
+        ],
+        "description": "a Linkup API key (app.linkup.so)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <key>'.",
+    "Linkup search, fetch and research go through web-router's search, extract and research, not this entry."
+  ],
+  "sources": [
+    "https://docs.linkup.so/llms.txt",
+    "https://api.linkup.so/v1/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "linkup.credits.balance",
+      "name": "Get the credit balance",
+      "summary": "Credits left in your account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/credits/balance",
+      "job": "account.usage",
+      "docs_url": "https://docs.linkup.so/pages/documentation/endpoints/account/balance.md",
+      "verified": {
+        "docs": "https://docs.linkup.so/pages/documentation/endpoints/account/balance.md"
+      }
+    }
+  ]
+}

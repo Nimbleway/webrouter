@@ -94,7 +94,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_keys: None
 def tools(
     fake_provider: Any,
     fake_extract_provider: Any,
-    fake_template_provider: Any,
+    fake_live_data_provider: Any,
     fake_research_provider: Any,
     fake_answer_provider: Any,
     fake_browse_provider: Any,
@@ -136,7 +136,11 @@ def priced(monkeypatch: pytest.MonkeyPatch) -> Table:
 
     def price(provider: str, method: str, mode: str | None = None) -> SimpleNamespace | None:
         cost = table.get(provider)
-        return None if cost is None else SimpleNamespace(estimate_usd=cost, estimate_is_floor=False, mode=mode)
+        return (
+            None
+            if cost is None
+            else SimpleNamespace(unit="per_1k", default=False, estimate_usd=cost, estimate_is_floor=False, mode=mode)
+        )
 
     monkeypatch.setattr(prices, "price", price)
     monkeypatch.setattr(prices, "estimate_latency", lambda *args, **kwargs: None)

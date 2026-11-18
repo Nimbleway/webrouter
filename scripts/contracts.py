@@ -1,6 +1,6 @@
 """Generate ``contracts/``: what each provider sends its vendor, read from the code.
 
-Each provider is built with a throwaway key and its request is built once per option value;
+Each provider is built with a throwaway key and its request is built once per option value and vendor mode;
 the contract records which wire fields each value sets, or that it is refused. ``source``,
 ``verified`` and ``vendor_options`` are written by hand and kept across regenerations.
 
@@ -23,6 +23,7 @@ from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
+from scripts.contracts_modes import MODE, add_modes, kept_verified
 from web_router import registry, registry_answer
 from web_router.constants import (
     ANSWER_ENV_BY_PROVIDER,
@@ -33,8 +34,8 @@ from web_router.constants import (
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
     RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import WebRouterError
 from web_router.providers._clock import pinned_today
 from web_router.types import (
@@ -43,10 +44,10 @@ from web_router.types import (
     ExtractRequest,
     ResearchRequest,
     SearchRequest,
-    TemplateRequest,
     Viewport,
 )
 from web_router.types_answer import AnswerRequest
+from web_router.types_live_data import LiveDataRequest
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACTS_DIR = ROOT / "contracts"
@@ -142,12 +143,12 @@ METHODS: dict[str, _Method] = {
         BROWSER_ENV_BY_PROVIDER,
         (),
     ),
-    "template": _Method(
-        TemplateRequest,
-        registry.available_template_providers,
-        registry.get_template_provider_class,
-        lambda **kw: TemplateRequest(template="probe-template", inputs={"url": "https://example.com"}, **kw),
-        TEMPLATE_ENV_BY_PROVIDER,
+    "live_data": _Method(
+        LiveDataRequest,
+        registry.available_live_data_providers,
+        registry.get_live_data_provider_class,
+        lambda **kw: LiveDataRequest(source="probe-source", inputs={"url": "https://example.com"}, **kw),
+        LIVE_DATA_ENV_BY_PROVIDER,
         (),
     ),
     "browse": _Method(
@@ -282,7 +283,7 @@ def generate(method: str, name: str) -> dict[str, Any]:
     """The generated part of one contract."""
     spec = METHODS[method]
     cls = spec.get_class(name)
-    provider = cls(api_key=PROBE_KEY)
+    provider = cls(**{getattr(cls, "key_argument", "api_key"): PROBE_KEY})
     try:
         with pinned_today(PROBE_TODAY):
             options = _options(spec.model)
@@ -304,6 +305,7 @@ def generate(method: str, name: str) -> dict[str, Any]:
                 },
                 "not_mapped": sorted(option for option in options if option not in cls.supported_parameters),
             }
+            add_modes(contract, cls, lambda part: _probe(provider, method, MODE, part))
     finally:
         provider.close()
     if method == "extract":
@@ -325,10 +327,7 @@ def render(method: str, name: str) -> str:
         if field in existing:
             contract[field] = existing[field]
     if "verified" in contract:
-        dropped = sorted(set(contract["verified"]) - set(contract["options"]))
-        if dropped:
-            print(f"{method}/{name}: no longer maps {', '.join(dropped)}; dropping its verified entry", file=sys.stderr)
-        contract["verified"] = {k: v for k, v in contract["verified"].items() if k in contract["options"]}
+        contract["verified"] = kept_verified(contract, f"{method}/{name}")
     text = json.dumps(contract, indent=2, ensure_ascii=False) + "\n"
     if PROBE_KEY in text:
         raise SystemExit(f"{method}/{name}: the probe credential reached the payload")

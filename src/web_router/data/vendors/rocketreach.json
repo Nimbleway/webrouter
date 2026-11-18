@@ -1,0 +1,390 @@
+{
+  "vendor": "rocketreach",
+  "name": "RocketReach",
+  "category": "enrichment",
+  "summary": "Search and look up professionals and companies: work and personal emails, phones, job history and firmographics.",
+  "docs_url": "https://docs.rocketreach.co/reference/rocketreach-api",
+  "pricing_url": "https://rocketreach.co/pricing",
+  "base_url": "https://api.rocketreach.co/api/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ROCKETREACH_API_KEY"
+        ],
+        "description": "A RocketReach API key (rocketreach.co/account, API section). Sent in the Api-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limits are per plan and per API (search, lookup, company search, bulk), on top of a global 10 requests per second; a 429 carries Retry-After in seconds.",
+    "Person lookups are asynchronous: the first answer may have status waiting, searching or progress; poll /person/checkStatus with the profile id (or the RR-Request-ID header value) until complete or failed.",
+    "Search returns profiles without contact details; a lookup on a profile id spends export credits and returns the emails and phones.",
+    "The 'Universal' API variants (universal credits) are not in this entry."
+  ],
+  "sources": [
+    "https://docs.rocketreach.co/llms.txt",
+    "https://docs.rocketreach.co/reference/rocketreach-api",
+    "https://docs.rocketreach.co/reference/rate-limits"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "rocketreach.account.get",
+      "name": "Get account details and usage",
+      "summary": "The account object: plan, usage and limits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/",
+      "job": "account.usage",
+      "docs_url": "https://docs.rocketreach.co/reference/rocketreach-api-account",
+      "verified": {
+        "docs": "https://docs.rocketreach.co/reference/rocketreach-api-account.md"
+      }
+    },
+    {
+      "id": "rocketreach.people.search",
+      "name": "Search people by criteria",
+      "summary": "Profiles matching title, employer, location, skills and other filters, without contact details.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filters, each a list of strings: current_title, employer, company_domain, company_name, geo, department, management_levels, skills, keyword, name, email, link, company_size, company_industry and many more (see docs).",
+          "example": {
+            "current_title": [
+              "VP of Sales"
+            ],
+            "company_domain": [
+              "rocketreach.co"
+            ]
+          }
+        },
+        "start": {
+          "in": "body",
+          "type": "integer",
+          "description": "Start index of the results, counting from 1."
+        },
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1 to 100."
+        },
+        "order_by": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "relevance",
+            "popularity",
+            "score"
+          ],
+          "description": "Ordering; default relevance. popularity matches the web app."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Some filters (intent, health_*) are only available on certain plans."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.rocketreach.co/reference/people-search-api",
+      "verified": {
+        "docs": "https://docs.rocketreach.co/reference/people-search-api.md"
+      }
+    },
+    {
+      "id": "rocketreach.people.lookup",
+      "name": "Look up a person's contact details",
+      "summary": "A profile with emails and phones, by profile id, LinkedIn URL, email, phone, NPI number, or name plus current employer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/lookup",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "description": "RocketReach profile id (from a search)."
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL.",
+          "example": "www.linkedin.com/in/jane-doe-example"
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "An email address of the person."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "A phone number, E.164 or international format."
+        },
+        "npi_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "NPI number (US healthcare professional)."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name; must go with current_employer."
+        },
+        "current_employer": {
+          "in": "query",
+          "type": "string",
+          "description": "Current employer; must go with name."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Job title, to narrow the match."
+        },
+        "lookup_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "standard",
+            "premium",
+            "premium (feeds disabled)",
+            "bulk",
+            "phone",
+            "enrich"
+          ],
+          "description": "Lookup type."
+        },
+        "return_cached_emails": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Whether cached emails come back while status is progress; false keeps email fields null until the lookup completes."
+        }
+      },
+      "notes": [
+        "Spends export credits.",
+        "May answer before the lookup finishes (status waiting, searching or progress): poll rocketreach.people.lookup_status."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.rocketreach.co/reference/people-lookup-api",
+      "verified": {
+        "docs": "https://docs.rocketreach.co/reference/people-lookup-api.md"
+      }
+    },
+    {
+      "id": "rocketreach.people.lookup_status",
+      "name": "Check person lookup status",
+      "summary": "Status (complete, failed, waiting, searching, progress) and data of earlier lookups.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/checkStatus",
+      "params": {
+        "ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Profile ids of the lookups."
+        },
+        "rr_request_id": {
+          "in": "query",
+          "type": "string",
+          "description": "The RR-Request-ID header of a lookup or bulk lookup answer; wins over ids."
+        }
+      },
+      "notes": [
+        "RocketReach recommends a webhook over polling."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.rocketreach.co/reference/rocketreach-check-person-lookup-status-people-lookup-api",
+      "verified": {
+        "docs": "https://docs.rocketreach.co/reference/rocketreach-check-person-lookup-status-people-lookup-api.md"
+      }
+    },
+    {
+      "id": "rocketreach.people_company.lookup",
+      "name": "Look up a person and their company",
+      "summary": "A person's profile with contact details plus their current company's data, in one call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profile-company/lookup",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "description": "RocketReach profile id."
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "An email address of the person."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "A phone number, E.164 or international format."
+        },
+        "npi_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "NPI number (US healthcare professional)."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name; must go with current_employer."
+        },
+        "current_employer": {
+          "in": "query",
+          "type": "string",
+          "description": "Current employer; must go with name."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Job title, to narrow the match."
+        }
+      },
+      "notes": [
+        "Spends export credits."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.rocketreach.co/reference/create_person_and_company_lookup",
+      "verified": {
+        "docs": "https://docs.rocketreach.co/reference/create_person_and_company_lookup.md"
+      }
+    },
+    {
+      "id": "rocketreach.company.search",
+      "name": "Search companies by criteria",
+      "summary": "Companies matching name, domain, industry, location, size, funding, tech stack or signal filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/searchCompany",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filters, each a list of strings: name, domain, industry, geo, location, employees, revenue, techstack, total_funding, naics_code, sic_code, keyword, news_signal and more (see docs).",
+          "example": {
+            "industry": [
+              "Computer Software"
+            ],
+            "geo": [
+              "United States"
+            ]
+          }
+        },
+        "start": {
+          "in": "body",
+          "type": "integer",
+          "description": "Start index of the results, counting from 1."
+        },
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1 to 100."
+        },
+        "order_by": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "relevance",
+            "popularity",
+            "score"
+          ],
+          "description": "Ordering; default relevance."
+        }
+      },
+      "notes": [
+        "A read over POST. Use rocketreach.company.lookup for a match's full record."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.rocketreach.co/reference/company-search-api",
+      "verified": {
+        "docs": "https://docs.rocketreach.co/reference/company-search-api.md"
+      }
+    },
+    {
+      "id": "rocketreach.company.lookup",
+      "name": "Look up a company",
+      "summary": "A company's record by domain, id, LinkedIn URL, name or ticker.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/lookup/",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain (preferred).",
+          "example": "rocketreach.co"
+        },
+        "id": {
+          "in": "query",
+          "type": "integer",
+          "description": "RocketReach company id."
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name."
+        },
+        "ticker": {
+          "in": "query",
+          "type": "string",
+          "description": "Stock ticker."
+        }
+      },
+      "notes": [
+        "Needs company exports on the plan (sales@rocketreach.co)."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.rocketreach.co/reference/company-lookup-api",
+      "verified": {
+        "docs": "https://docs.rocketreach.co/reference/company-lookup-api.md"
+      }
+    },
+    {
+      "id": "rocketreach.email.verify",
+      "name": "Verify an email address",
+      "summary": "Whether one email address can receive mail.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/email/verify/",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The address, at most 254 characters."
+        }
+      },
+      "notes": [
+        "A read over POST. Charges one email verification credit, refunded when the result is unknown or the address is malformed."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://docs.rocketreach.co/reference/create_email_verify",
+      "verified": {
+        "docs": "https://docs.rocketreach.co/reference/create_email_verify.md"
+      }
+    }
+  ]
+}

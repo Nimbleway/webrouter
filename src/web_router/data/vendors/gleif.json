@@ -1,0 +1,340 @@
+{
+  "vendor": "gleif",
+  "name": "GLEIF",
+  "category": "company-data",
+  "summary": "The Global LEI Index: legal entity records by LEI, name, BIC or ISIN, with direct and ultimate parents and children, keyless.",
+  "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+  "base_url": "https://api.gleif.org/api/v1",
+  "notes": [
+    "Free and keyless. Rate limit: 60 requests per minute per user.",
+    "JSON:API responses: records are under data[].attributes (entity, registration); pagination totals and first/next/last links are in meta and links.",
+    "Filters use bracketed names: filter[entity.legalName], filter[entity.legalAddress.country], filter[registration.status], filter[lei] (comma-separated list), filter[bic], filter[isin], filter[owns], filter[ownedBy], filter[fulltext]. GET /fields lists every filterable field.",
+    "Relationship (Level 2) data exists only where entities reported it; a missing parent can be a reporting exception instead (see the *-reporting-exception routes in the docs)."
+  ],
+  "sources": [
+    "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "gleif.records.search",
+      "name": "Search LEI records",
+      "summary": "LEI records matching filters: by name, country, status, BIC, ISIN, a list of LEIs, or full text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lei-records",
+      "params": {
+        "fulltext": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search across the record.",
+          "example": "bank",
+          "wire_name": "filter[fulltext]"
+        },
+        "legal_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Match on the entity's legal name.",
+          "wire_name": "filter[entity.legalName]"
+        },
+        "lei": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated LEI codes to fetch at once.",
+          "wire_name": "filter[lei]"
+        },
+        "bic": {
+          "in": "query",
+          "type": "string",
+          "description": "Find the LEI for a BIC code.",
+          "example": "ALETITMMXXX",
+          "wire_name": "filter[bic]"
+        },
+        "isin": {
+          "in": "query",
+          "type": "string",
+          "description": "Find the LEI for an ISIN.",
+          "example": "DE000ST8MPP0",
+          "wire_name": "filter[isin]"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Legal address country, ISO 3166-1 alpha-2.",
+          "example": "DE",
+          "wire_name": "filter[entity.legalAddress.country]"
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Entity category, e.g. FUND.",
+          "wire_name": "filter[entity.category]"
+        },
+        "registration_status": {
+          "in": "query",
+          "type": "string",
+          "description": "LEI registration status, e.g. ISSUED or LAPSED.",
+          "wire_name": "filter[registration.status]"
+        },
+        "owns": {
+          "in": "query",
+          "type": "string",
+          "description": "An LEI: returns the parents of that entity.",
+          "wire_name": "filter[owns]"
+        },
+        "owned_by": {
+          "in": "query",
+          "type": "string",
+          "description": "An LEI: returns the children of that entity.",
+          "wire_name": "filter[ownedBy]"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page.",
+          "wire_name": "page[size]"
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1.",
+          "wire_name": "page[number]"
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    },
+    {
+      "id": "gleif.records.get",
+      "name": "Get an LEI record",
+      "summary": "One LEI record: legal name, addresses, legal form, jurisdiction, status and registration dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lei-records/{lei}",
+      "params": {
+        "lei": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A 20-character LEI code.",
+          "example": "529900W18LQJJN6SJ336"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    },
+    {
+      "id": "gleif.parent.direct",
+      "name": "Get the direct parent's record",
+      "summary": "The LEI record of the entity's direct accounting consolidating parent.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lei-records/{lei}/direct-parent",
+      "params": {
+        "lei": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A 20-character LEI code.",
+          "example": "529900W18LQJJN6SJ336"
+        }
+      },
+      "notes": [
+        "404 when no parent was reported; the direct-parent-reporting-exception route says why."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    },
+    {
+      "id": "gleif.parent.ultimate",
+      "name": "Get the ultimate parent's record",
+      "summary": "The LEI record of the entity's ultimate accounting consolidating parent.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lei-records/{lei}/ultimate-parent",
+      "params": {
+        "lei": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A 20-character LEI code.",
+          "example": "529900W18LQJJN6SJ336"
+        }
+      },
+      "job": "company.ownership",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    },
+    {
+      "id": "gleif.children.direct",
+      "name": "List direct children",
+      "summary": "LEI records of the entities this one directly consolidates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lei-records/{lei}/direct-children",
+      "params": {
+        "lei": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A 20-character LEI code.",
+          "example": "529900W18LQJJN6SJ336"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page.",
+          "wire_name": "page[size]"
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1.",
+          "wire_name": "page[number]"
+        }
+      },
+      "job": "company.ownership",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    },
+    {
+      "id": "gleif.children.ultimate",
+      "name": "List ultimate children",
+      "summary": "LEI records of every entity this one ultimately consolidates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lei-records/{lei}/ultimate-children",
+      "params": {
+        "lei": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A 20-character LEI code.",
+          "example": "529900W18LQJJN6SJ336"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page.",
+          "wire_name": "page[size]"
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1.",
+          "wire_name": "page[number]"
+        }
+      },
+      "job": "company.ownership",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    },
+    {
+      "id": "gleif.isins.list",
+      "name": "List an entity's ISINs",
+      "summary": "ISIN-to-LEI mappings reported for the entity (from ANNA); can be long, so page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lei-records/{lei}/isins",
+      "params": {
+        "lei": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A 20-character LEI code.",
+          "example": "529900W18LQJJN6SJ336"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page.",
+          "wire_name": "page[size]"
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1.",
+          "wire_name": "page[number]"
+        }
+      },
+      "job": "company.isins",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    },
+    {
+      "id": "gleif.names.fuzzy",
+      "name": "Fuzzy-match a name",
+      "summary": "Approximate matches for a name or other field, each with its LEI: for resolving a company name to an LEI.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fuzzycompletions",
+      "params": {
+        "field": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The field to match, e.g. entity.legalName or fulltext.",
+          "example": "entity.legalName"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The text to match.",
+          "example": "factbook"
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    },
+    {
+      "id": "gleif.names.autocomplete",
+      "name": "Autocomplete a search term",
+      "summary": "Suggested search terms for a prefix.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/autocompletions",
+      "params": {
+        "field": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The field to complete, e.g. fulltext.",
+          "example": "fulltext"
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The prefix typed so far.",
+          "example": "Global"
+        }
+      },
+      "job": "company.suggest",
+      "docs_url": "https://documenter.getpostman.com/view/7679680/SVYrrxuU",
+      "verified": {
+        "docs": "https://documenter.getpostman.com/view/7679680/SVYrrxuU"
+      }
+    }
+  ]
+}

@@ -19,24 +19,25 @@ from __future__ import annotations
 from typing import Any, ClassVar, Literal
 
 from web_router.constants import (
-    BRAVE_API_KEY_HEADER,
-    BRAVE_BASE_URL,
-    BRAVE_HIGHLIGHT_TAGS,
-    BRAVE_SEARCH_PATH,
     ENV_BRAVE_API_KEY,
     PROVIDER_BRAVE,
 )
 from web_router.constants_brave import (
+    BRAVE_API_KEY_HEADER,
+    BRAVE_BASE_URL,
     BRAVE_COUNTRIES,
     BRAVE_EXCLUDE_DOMAIN,
     BRAVE_FRESHNESS,
+    BRAVE_HIGHLIGHT_TAGS,
     BRAVE_QUERY_MAX_CHARS,
     BRAVE_QUERY_MAX_WORDS,
     BRAVE_SEARCH_PARAM_NAMES,
     BRAVE_SEARCH_PARAMETERS,
+    BRAVE_SEARCH_PATH,
     MSG_BRAVE_QUERY_TOO_LONG,
     MSG_BRAVE_SEARCH_VALUES,
 )
+from web_router.constants_mode_parts import BRAVE_FLAGS
 from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
@@ -44,6 +45,7 @@ from web_router.providers._language import language_tag, off_the_lists
 from web_router.providers._search_text import lite_body, site_operators, unsited_domains
 from web_router.providers._utils import build_payload, mapped
 from web_router.providers.brave_answer import BraveAnswerProvider as BraveAnswerProvider
+from web_router.providers.brave_answer import refused_token_kind
 from web_router.types import SearchDepth, SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "extra_snippets", "page_age"})
@@ -64,6 +66,7 @@ class BraveProvider(HttpSearchProvider):
     """Routes searches to the Brave Web Search API."""
 
     name: ClassVar[str] = PROVIDER_BRAVE
+    flags = BRAVE_FLAGS
     supported_parameters: ClassVar[frozenset[str]] = BRAVE_SEARCH_PARAMETERS
     # A description and at most five extra snippets, cut to a snippet for lite: never a body or a page.
     depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset({"lite"})
@@ -77,6 +80,8 @@ class BraveProvider(HttpSearchProvider):
     env_api_key: ClassVar[str] = ENV_BRAVE_API_KEY
     api_key_header: ClassVar[str] = BRAVE_API_KEY_HEADER
     http_method: ClassVar[Literal["GET", "POST"]] = "GET"
+
+    _error_kind = refused_token_kind
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
@@ -96,6 +101,7 @@ class BraveProvider(HttpSearchProvider):
         return build_payload(
             request,
             BRAVE_SEARCH_PARAM_NAMES,
+            self,
             q=query,
             country=request.country.upper() if request.country else None,
             search_lang=language.lower() if language else None,

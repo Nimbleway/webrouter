@@ -1,0 +1,288 @@
+{
+  "vendor": "huggingface",
+  "name": "Hugging Face Hub",
+  "category": "ai",
+  "summary": "Search the Hugging Face Hub's models, datasets, Spaces and papers, and read paper pages and daily papers.",
+  "docs_url": "https://huggingface.co/docs/hub/api",
+  "pricing_url": "https://huggingface.co/pricing",
+  "base_url": "https://huggingface.co",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "HF_TOKEN"
+        ],
+        "required": false,
+        "description": "a Hugging Face user access token (huggingface.co/settings/tokens); public data works without one"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Public reads need no token; a token adds private and gated repos and raises rate limits.",
+    "Rate limits are counted over 5-minute windows per user or organization; a 429 carries RateLimit headers.",
+    "This entry covers the Hub only; Hugging Face Inference Providers route to other companies' models and are not listed here."
+  ],
+  "sites": [
+    "huggingface.co"
+  ],
+  "sources": [
+    "https://huggingface.co/docs/hub/api",
+    "https://huggingface.co/.well-known/openapi.md",
+    "https://huggingface.co/.well-known/openapi.json",
+    "https://huggingface.co/docs/hub/rate-limits"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "huggingface.repos.search",
+      "name": "Search repositories by text",
+      "summary": "Full-text search across model, dataset and Space repositories.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/search/full-text",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text, up to 250 characters.",
+          "example": "speech recognition"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict to one repo type.",
+          "enum": [
+            "dataset",
+            "model",
+            "space",
+            "bucket",
+            "kernel",
+            "container"
+          ]
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra filter, up to 600 characters."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1 to 100; default 20."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip; default 0."
+        }
+      },
+      "docs_url": "https://huggingface.co/.well-known/openapi.md",
+      "verified": {
+        "docs": "https://huggingface.co/.well-known/openapi.md"
+      }
+    },
+    {
+      "id": "huggingface.quicksearch",
+      "name": "Quick search the Hub",
+      "summary": "Name-based quick search across models, datasets, Spaces, orgs, users, papers and collections.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/quicksearch",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text.",
+          "example": "whisper"
+        },
+        "type": {
+          "in": "query",
+          "type": "array",
+          "description": "Kinds to return: model, dataset, space, org, user, paper, collection, bucket, container, kernel, blog."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per kind, 1 to 20."
+        },
+        "pipelines": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated pipeline types, e.g. text-generation, automatic-speech-recognition."
+        },
+        "library": {
+          "in": "query",
+          "type": "string",
+          "description": "Only models of this library, e.g. transformers."
+        },
+        "namespace": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this user or organization."
+        }
+      },
+      "docs_url": "https://huggingface.co/.well-known/openapi.md",
+      "verified": {
+        "docs": "https://huggingface.co/.well-known/openapi.md"
+      }
+    },
+    {
+      "id": "huggingface.papers.search",
+      "name": "Search papers",
+      "summary": "Hybrid semantic and full-text search over Hugging Face paper pages.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/papers/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text, up to 250 characters.",
+          "example": "mixture of experts"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1 to 120."
+        }
+      },
+      "job": "scholar.search",
+      "docs_url": "https://huggingface.co/.well-known/openapi.md",
+      "verified": {
+        "docs": "https://huggingface.co/.well-known/openapi.md"
+      }
+    },
+    {
+      "id": "huggingface.papers.get",
+      "name": "Get a paper",
+      "summary": "One paper page by its id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/papers/{paperId}",
+      "params": {
+        "paperId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Paper id (the arXiv id).",
+          "example": "2307.09288"
+        }
+      },
+      "docs_url": "https://huggingface.co/.well-known/openapi.md",
+      "verified": {
+        "docs": "https://huggingface.co/.well-known/openapi.md"
+      }
+    },
+    {
+      "id": "huggingface.papers.daily",
+      "name": "List daily papers",
+      "summary": "The curated daily papers feed, by day, week or month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/daily_papers",
+      "params": {
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "A day, YYYY-MM-DD."
+        },
+        "week": {
+          "in": "query",
+          "type": "string",
+          "description": "A week, YYYY-Www (e.g. 2026-W45)."
+        },
+        "month": {
+          "in": "query",
+          "type": "string",
+          "description": "A month, YYYY-MM."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order; default publishedAt.",
+          "enum": [
+            "publishedAt",
+            "trending"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Papers per page, 1 to 100; default 50."
+        },
+        "p": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 0."
+        },
+        "submitter": {
+          "in": "query",
+          "type": "string",
+          "description": "Only papers submitted by this user."
+        }
+      },
+      "docs_url": "https://huggingface.co/.well-known/openapi.md",
+      "verified": {
+        "docs": "https://huggingface.co/.well-known/openapi.md"
+      }
+    },
+    {
+      "id": "huggingface.spaces.search",
+      "name": "Semantic search for Spaces",
+      "summary": "Find Spaces (hosted demos and apps) by meaning, optionally by category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/spaces/semantic-search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "What the Space should do.",
+          "example": "remove image background"
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "A category such as image-generation, ocr, speech-synthesis, text-summarization (see the docs for the full list)."
+        },
+        "includeNonRunning": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include Spaces that are not running."
+        }
+      },
+      "docs_url": "https://huggingface.co/.well-known/openapi.md",
+      "verified": {
+        "docs": "https://huggingface.co/.well-known/openapi.md"
+      }
+    },
+    {
+      "id": "huggingface.whoami",
+      "name": "Get the token's user",
+      "summary": "The user and organizations behind the token, and the token's scopes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/whoami-v2",
+      "params": {},
+      "credentials": [
+        "token"
+      ],
+      "notes": [
+        "Needs HF_TOKEN."
+      ],
+      "job": "account.validate",
+      "docs_url": "https://huggingface.co/.well-known/openapi.md",
+      "verified": {
+        "docs": "https://huggingface.co/.well-known/openapi.md"
+      }
+    }
+  ]
+}

@@ -1,0 +1,326 @@
+{
+  "vendor": "extruct",
+  "name": "Extruct AI",
+  "category": "company-data",
+  "summary": "Company search by natural-language description, lookalikes of a reference company, company profiles, and async Deep Search and Deep Research tasks.",
+  "docs_url": "https://docs.extruct.ai/api-reference/introduction",
+  "base_url": "https://api.extruct.ai/v1",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "EXTRUCT_API_TOKEN"
+        ],
+        "description": "An Extruct API token (app.extruct.ai/api-tokens), sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Search and lookalike return at most 250 results a call; page with pagination.offset. Paid plans reach 2,000 results per query, the free tier 25.",
+    "Deep Search and Deep Research are async: create the task, poll GET by id until status is done (or is_exhausted for Deep Search), then read results.",
+    "Company lookup costs 0 credits; Deep Research bills 2 credits per research agent that runs and reserves the depth's full budget at start.",
+    "Table (enrichment) endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://docs.extruct.ai/api-reference/introduction",
+    "https://docs.extruct.ai/api-reference/authentication",
+    "https://docs.extruct.ai/api-reference/search-post",
+    "https://docs.extruct.ai/api-reference/lookalike-search-post",
+    "https://docs.extruct.ai/api-reference/company-lookup",
+    "https://docs.extruct.ai/api-reference/discover/create-company-discovery-task",
+    "https://docs.extruct.ai/api-reference/deep-research/create-deep-research-task"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "extruct.companies.search",
+      "name": "Search companies by description",
+      "summary": "Companies matching a natural-language query, ranked, with descriptions, firmographics, HQ and relevance score.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/companies/search",
+      "params": {
+        "q": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language query.",
+          "example": "b2b treasury automation"
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "SearchFilters object: include/exclude {size, country, city} (exclude also takes domains, up to 1000), range {founded: {min, max}}. Size buckets: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5001-10000, 10001+."
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "{offset, limit}; limit up to 250.",
+          "example": {
+            "offset": 0,
+            "limit": 20
+          }
+        }
+      },
+      "notes": [
+        "A read over POST (the GET variant takes filters as a URL-encoded string)."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.extruct.ai/api-reference/search-post",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/search-post"
+      }
+    },
+    {
+      "id": "extruct.companies.similar",
+      "name": "Find similar companies",
+      "summary": "Companies most like a reference company, ranked on what they do, who they sell to, firmographics and traffic.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/companies/{company_identifier}/similar",
+      "params": {
+        "company_identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Reference company domain or Extruct UUID.",
+          "example": "stripe.com"
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "SearchFilters object: include/exclude {size, country, city} (exclude also takes domains, up to 1000), range {founded: {min, max}}. Size buckets: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5001-10000, 10001+."
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "{offset, limit}; limit up to 250.",
+          "example": {
+            "offset": 0,
+            "limit": 20
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. The reference company is excluded from its own results; 404 when it is not in the index."
+      ],
+      "job": "company.competitors",
+      "docs_url": "https://docs.extruct.ai/api-reference/lookalike-search-post",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/lookalike-search-post"
+      }
+    },
+    {
+      "id": "extruct.company.get",
+      "name": "Look up a company profile",
+      "summary": "The full Extruct profile for a domain or UUID: descriptions, products, use cases, audience, firmographics, socials and sources.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_identifier}",
+      "params": {
+        "company_identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company domain or UUID.",
+          "example": "stripe.com"
+        }
+      },
+      "notes": [
+        "202 with status enriching means the profile is being built; retry the same call later. 0 credits."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.extruct.ai/api-reference/company-lookup",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/company-lookup"
+      }
+    },
+    {
+      "id": "extruct.discovery.create",
+      "name": "Start a Deep Search task",
+      "summary": "Agentic company discovery for a described profile, each result graded 1-5 against criteria.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/discovery_tasks",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language description of the companies to find."
+        },
+        "desired_num_results": {
+          "in": "body",
+          "type": "integer",
+          "description": "Target result count, 1-250, default 100."
+        },
+        "criteria": {
+          "in": "body",
+          "type": "array",
+          "description": "Criterion definitions to grade results on; inferred from the query when omitted."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains or URLs to keep out of results."
+        },
+        "exclude_task_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 100 ids of finished Deep Search tasks whose results to exclude."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Returns a task id immediately; spends credits as it runs."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.extruct.ai/api-reference/discover/create-company-discovery-task",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/discover/create-company-discovery-task"
+      }
+    },
+    {
+      "id": "extruct.discovery.get",
+      "name": "Get a Deep Search task",
+      "summary": "Task status and counts (discovered, enriched, evaluated, results).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discovery_tasks/{task_id}",
+      "params": {
+        "task_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Task id from create."
+        }
+      },
+      "notes": [
+        "Done when status is done or is_exhausted is true."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.extruct.ai/api-reference/discover/get-company-discovery-task",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/discover/get-company-discovery-task"
+      }
+    },
+    {
+      "id": "extruct.discovery.results",
+      "name": "Get Deep Search results",
+      "summary": "Companies found, ordered by relevance, with per-criterion scores and explanations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discovery_tasks/{task_id}/results",
+      "params": {
+        "task_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Task id."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pagination offset."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        }
+      },
+      "notes": [
+        "Page until a page returns fewer rows than limit."
+      ],
+      "job": "jobs.results",
+      "docs_url": "https://docs.extruct.ai/api-reference/discover/get-company-discovery-task-results",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/discover/get-company-discovery-task-results"
+      }
+    },
+    {
+      "id": "extruct.research.create",
+      "name": "Start a Deep Research task",
+      "summary": "A cited research report on a company, person or team from a written brief, as markdown or to a JSON Schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/deep_research_tasks",
+      "params": {
+        "brief": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Research brief, up to 20,000 characters: the targets, your context and the decision it supports."
+        },
+        "depth": {
+          "in": "body",
+          "type": "string",
+          "description": "Agent budget: medium (5), high (15), xhigh (25). Default medium.",
+          "enum": [
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        },
+        "output_schema": {
+          "in": "body",
+          "type": "object",
+          "description": "A JSON Schema object for a structured report; omit for markdown."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "Pro plan only. 2 credits per research agent that runs; the depth's full budget (10/30/50) must be available. Failed tasks are refunded."
+      ],
+      "job": "research.start",
+      "docs_url": "https://docs.extruct.ai/api-reference/deep-research/create-deep-research-task",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/deep-research/create-deep-research-task"
+      }
+    },
+    {
+      "id": "extruct.research.get",
+      "name": "Get a Deep Research task",
+      "summary": "Status and, when done, the report.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/deep_research_tasks/{task_id}",
+      "params": {
+        "task_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Task id from create."
+        }
+      },
+      "notes": [
+        "Poll until status is done or failed; failure_reason explains a rejected brief."
+      ],
+      "job": "research.status",
+      "docs_url": "https://docs.extruct.ai/api-reference/deep-research/get-deep-research-task",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/deep-research/get-deep-research-task"
+      }
+    },
+    {
+      "id": "extruct.user.get",
+      "name": "Get the user and credits",
+      "summary": "The authenticated user, including available_credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user",
+      "job": "account.usage",
+      "docs_url": "https://docs.extruct.ai/api-reference/user",
+      "verified": {
+        "docs": "https://docs.extruct.ai/api-reference/user"
+      }
+    }
+  ]
+}

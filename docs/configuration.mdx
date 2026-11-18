@@ -1,0 +1,171 @@
+---
+title: "Configuration"
+description: "Set provider keys from the environment or pass them through provider_config, and see which methods each provider's key serves."
+mode: "wide"
+icon: "gear"
+---
+
+WebRouter never logs or stores your keys, and sends each key only to its own provider. See
+[SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md) for how keys and
+requests are handled.
+
+Keys are read from the environment, or passed explicitly through
+`provider_config={Provider.NIMBLE: {"api_key": "..."}}`:
+
+| Provider | Variable | Serves |
+| --- | --- | --- |
+| Nimble | `NIMBLE_API_KEY` *(optional for `auto`, which uses its keyless tier for search and extract without one)* | search, extract, research, live data |
+| Tavily | `TAVILY_API_KEY` | search, extract |
+| Exa | `EXA_API_KEY` | search, extract, answer |
+| You.com | `YOU_API_KEY` | search, research, answer |
+| Brave | `BRAVE_SEARCH_API_KEY` | search |
+| Brave | `BRAVE_ANSWER_API_KEY` (the Answers plan, separate from the search key) | answer |
+| Parallel | `PARALLEL_API_KEY` | search, research, answer |
+| Perplexity | `PERPLEXITY_API_KEY` | search, research, answer |
+| Linkup | `LINKUP_API_KEY` | search, extract, research, answer |
+| WebIQ | `WEBIQ_API_KEY` | search, extract |
+| Keenable | `KEENABLE_API_KEY` *(optional for `auto`, which uses its keyless tier without one)* | search, extract |
+| DeepSeek | `DEEPSEEK_API_KEY` | search, extract |
+| Valyu | `VALYU_API_KEY` | search |
+| Seltz | `SELTZ_API_KEY` | search |
+| Octen | `OCTEN_API_KEY` | search |
+| Keirolabs | `KEIROLABS_API_KEY` | search |
+| AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](https://github.com/Nimbleway/webrouter/blob/main/docs/agentcore-setup.md))* | search |
+| Firecrawl | `FIRECRAWL_API_KEY` | extract |
+| Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
+| Oxylabs Web API | `OXYLABS_WEB_API_KEY` | live data |
+| Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
+| Bright Data | `BRIGHTDATA_API_TOKEN` *(the token alone, no zone)* | live data |
+| Apify | `APIFY_TOKEN` | live data |
+| Jina Reader | `JINA_API_KEY` *(optional: raises the rate limit)* | extract |
+| Steel | `STEEL_API_KEY` | open_browser |
+| Browserbase | `BROWSERBASE_API_KEY` | open_browser, browse |
+| Hyperbrowser | `HYPERBROWSER_API_KEY` | open_browser |
+| Anchor | `ANCHOR_API_KEY` | open_browser |
+| Kernel | `KERNEL_API_KEY` | open_browser |
+| Browser Use | `BROWSER_USE_API_KEY` | browse |
+| Skyvern | `SKYVERN_API_KEY` | browse |
+| LiteLLM proxy | `LITELLM_PROXY_API_KEY` + `LITELLM_PROXY_API_BASE` *(the URL: the MCP server reads it from its process environment only)* | search (`exa-litellm`, `tavily-litellm`, `parallel-litellm`) |
+| `local` | *none, keyless* (`CHROME_PATH` optional, the browser to launch) | open_browser |
+| `you-mcp` | *none, keyless* | search |
+| `exa-mcp` | *none, keyless* | search |
+| `parallel-mcp` | *none, keyless* | search |
+| `auto` | *none, keyless* | search, extract, open_browser |
+| OpenAI *(the default `evaluate()` judge, not a backend)* | `OPENAI_API_KEY` | evaluate |
+| Anthropic *(`AnthropicJudge` for `evaluate()`, not a backend)* | `ANTHROPIC_API_KEY` | evaluate |
+| Your router service *(`router="remote"`, not a backend)* | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` *(optional; `router_config["api_key"]` wins)* | routing |
+
+A key set once serves every method of a provider that has several. See
+[`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example). The library reads the environment only; the
+MCP server is the one place a `.env` is read for you; see
+[the MCP guide](/mcp-server#then-add-whichever-keys-you-have).
+`configured_providers()` and
+`configured_extract_providers()` (and `configured_research_providers()`,
+`configured_browser_providers()` and `configured_browse_providers()`) report
+which of these the current environment actually satisfies: a backend needing two variables only when it has both.
+
+WebRouter does not log or store keys, and a provider's `__repr__` omits them so
+a stray log of a provider does not leak one. Provider clients also never follow redirects
+(`httpx` would replay the auth header to the redirect target, including one on
+another host), so a provider sending a credential rejects
+`follow_redirects=True`. See [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md#credentials).
+
+## Passing keys and settings in code
+
+```python
+router = WebRouter(
+    Provider.NIMBLE,
+    provider_config={
+        Provider.NIMBLE: {"api_key": "..."},
+        Provider.TAVILY: {"api_key": "...", "timeout": 30},
+    },
+)
+
+response = router.search("query", provider=Provider.TAVILY)  # per-call override
+```
+
+`provider_config` is the one place credentials and client settings are passed
+explicitly; everything else comes from the environment. It reaches a backend
+`auto` calls as well as one you name, and a backend given an `api_key` there
+joins `auto`'s default chain as one whose key is in the environment does. Providers are
+constructed lazily and cached, so configuring a backend you never call costs
+nothing.
+
+Switching backend on every call? Build the provider once and pass it, so its
+settings travel with it instead of being restated:
+
+```python
+from web_router.providers.tavily import TavilyProvider
+
+tavily = TavilyProvider(api_key="...", timeout=30)
+
+for query in queries:
+    router.search(query, provider=tavily)
+```
+
+A provider you construct is yours: the router uses it, never caches it, and
+`router.close()` leaves it open for you to close.
+
+Already hold an authenticated Nimble client — one per end user, say, with
+your own headers and a connection pool shared across your app? Pass it as
+`async_client` to any of the three Nimble classes, directly or through
+`provider_config`, and the provider calls through it instead of building one
+from a key:
+
+```python
+from nimble_python import AsyncNimble
+
+client = AsyncNimble(api_key=user_key, default_headers={...})
+
+async with AsyncWebRouter(provider_config={Provider.NIMBLE: {"async_client": client}}) as router:
+    await router.search("query")  # auto counts Nimble as configured, no NIMBLE_API_KEY needed
+```
+
+The client stays yours: the provider reads no key, builds no sync client — a
+sync call raises `ConfigurationError`, and so does a synchronous `WebRouter`
+handed one in `provider_config`, rather than letting `auto` pass over Nimble
+unannounced — and never closes it. Its credential is the one used: an
+`api_key` passed beside it raises `ConfigurationError` instead of replacing it.
+Other options passed beside it, such as `timeout`, apply to a copy that shares
+its connection pool, and research keeps the client's own timeouts, clamping
+only the read limit to the run's budget.
+
+One `WebRouter` may be shared across threads, such as the workers of a
+`ThreadPoolExecutor`: each provider builds its HTTP client once and every
+thread reuses it, and `close()` shuts it.
+
+## Which providers can I actually use?
+
+```python
+from web_router import available_providers, configured_providers
+
+available_providers()  # every name the router knows
+configured_providers()  # the ones you have a credential for, plus the keyless ones
+```
+
+Both return plain strings, not `Provider` members: they report what is
+registered at runtime, which includes backends you added yourself and so cannot
+be an enum. Feed a result straight back to `search(provider=...)`.
+
+`configured_providers()` reads environment variables only — a key passed through
+`provider_config` will not show up there (a router's `auto` still counts it), and a key that is present may still be
+rejected by the service. It answers "worth trying", not "guaranteed to work".
+
+## Reaching a provider's own options
+
+Every search API has capabilities beyond the shared surface. Those pass through
+untranslated:
+
+```python
+router.search("nvidia earnings", provider_options={"topic": "news"})
+```
+
+`provider_options` is an escape hatch, not a destination. Options used through
+it are provider-specific by definition, so the portability guarantee above does
+not apply to them.
+
+**If you work on a search API, this is the part to change.** Promoting one of
+your options into the shared surface — so it works the same way across every
+backend — is a small, well-defined PR, and the fastest way to make WebRouter
+represent your API properly. See
+[CONTRIBUTING.md](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBUTING.md#promoting-a-provider-option).

@@ -1,0 +1,362 @@
+{
+  "vendor": "finnhub",
+  "name": "Finnhub",
+  "category": "finance",
+  "summary": "Stock quotes, candles, company profiles, fundamentals, earnings and market news from Finnhub.",
+  "docs_url": "https://finnhub.io/docs/api",
+  "pricing_url": "https://finnhub.io/pricing",
+  "base_url": "https://finnhub.io/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FINNHUB_API_KEY"
+        ],
+        "description": "a Finnhub API token (finnhub.io/dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The free plan allows 60 calls a minute and 30 calls a second overall; some endpoints (candles, international quotes, many fundamentals) need a paid plan and answer 403 otherwise.",
+    "Dates are YYYY-MM-DD and timestamps are UNIX seconds.",
+    "Real-time prices for US stocks only on the free plan."
+  ],
+  "sources": [
+    "https://finnhub.io/docs/api",
+    "https://finnhub.io/static/swagger.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "finnhub.quote.get",
+      "name": "Get a stock quote",
+      "summary": "Current price, change, day high/low, open and previous close for a US stock.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/quote",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        }
+      },
+      "notes": [
+        "Response keys are single letters: c current, d change, dp percent change, h high, l low, o open, pc previous close, t timestamp (epoch seconds)."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.symbol.search",
+      "name": "Search symbols",
+      "summary": "Find tickers by symbol, company name, ISIN or CUSIP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Symbol, name, ISIN or CUSIP.",
+          "example": "apple"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to an exchange."
+        }
+      },
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.symbol.list",
+      "name": "List symbols on an exchange",
+      "summary": "All tickers listed on one exchange.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stock/symbol",
+      "params": {
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Exchange code, e.g. US.",
+          "example": "US"
+        },
+        "mic": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by MIC code."
+        },
+        "securityType": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by security type (OpenFIGI standard)."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by currency."
+        }
+      },
+      "notes": [
+        "Large response for big exchanges."
+      ],
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.company.profile",
+      "name": "Get a company profile",
+      "summary": "Name, exchange, industry, market cap, IPO date, logo and website, by symbol, ISIN or CUSIP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stock/profile2",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker symbol.",
+          "example": "AAPL"
+        },
+        "isin": {
+          "in": "query",
+          "type": "string",
+          "description": "ISIN."
+        },
+        "cusip": {
+          "in": "query",
+          "type": "string",
+          "description": "CUSIP."
+        }
+      },
+      "notes": [
+        "Give exactly one of symbol, isin or cusip. Market cap is in millions of the reporting currency."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.stock.candles",
+      "name": "Get stock candles",
+      "summary": "OHLCV candles for a stock between two timestamps.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stock/candle",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "resolution": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Candle size: 1, 5, 15, 30, 60, D, W or M.",
+          "example": "D"
+        },
+        "from": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Start, UNIX seconds.",
+          "example": 1731000000
+        },
+        "to": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "End, UNIX seconds.",
+          "example": 1731600000
+        }
+      },
+      "notes": [
+        "Only one month of intraday data is returned per call.",
+        "Candles come back as parallel arrays: o, h, l, c, v, t.",
+        "May require a paid plan; a free key can be refused with 403."
+      ],
+      "job": "market.history",
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.stock.metrics",
+      "name": "Get basic financials",
+      "summary": "Margins, P/E, 52-week high and low and other ratios.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stock/metric",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "metric": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Metric group; use all.",
+          "example": "all"
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.stock.earnings",
+      "name": "Get earnings surprises",
+      "summary": "Quarterly actual versus estimated EPS going back to 2000.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stock/earnings",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker symbol, e.g. AAPL.",
+          "example": "AAPL"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of quarters; blank for the full history."
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.news.company",
+      "name": "Get company news",
+      "summary": "News articles about a North American company in a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company-news",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company symbol.",
+          "example": "AAPL"
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start date, YYYY-MM-DD.",
+          "example": "2026-11-01"
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date, YYYY-MM-DD.",
+          "example": "2026-11-08"
+        }
+      },
+      "notes": [
+        "North American companies only."
+      ],
+      "job": "news.search",
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.news.market",
+      "name": "Get market news",
+      "summary": "Latest market news by category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/news",
+      "params": {
+        "category": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "general, forex, crypto or merger.",
+          "example": "general",
+          "enum": [
+            "general",
+            "forex",
+            "crypto",
+            "merger"
+          ]
+        },
+        "minId": {
+          "in": "query",
+          "type": "integer",
+          "description": "Return only news with an id above this; default 0."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    },
+    {
+      "id": "finnhub.forex.rates",
+      "name": "Get forex rates",
+      "summary": "Exchange rates from a base currency to all others.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/forex/rates",
+      "params": {
+        "base": {
+          "in": "query",
+          "type": "string",
+          "description": "Base currency; default EUR."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Date; blank for latest."
+        }
+      },
+      "docs_url": "https://finnhub.io/docs/api",
+      "verified": {
+        "docs": "https://finnhub.io/docs/api"
+      }
+    }
+  ]
+}

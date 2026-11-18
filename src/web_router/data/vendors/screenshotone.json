@@ -1,0 +1,403 @@
+{
+  "vendor": "screenshotone",
+  "name": "ScreenshotOne",
+  "category": "scraping",
+  "summary": "Render a web page, HTML or Markdown to an image or PDF in a real browser, with ad and cookie-banner blocking, element capture and page metadata.",
+  "docs_url": "https://screenshotone.com/docs/getting-started/",
+  "pricing_url": "https://screenshotone.com/pricing/",
+  "base_url": "https://api.screenshotone.com",
+  "auth": {
+    "credentials": {
+      "access_key": {
+        "env": [
+          "SCREENSHOTONE_API_KEY"
+        ],
+        "description": "A ScreenshotOne access key (dashboard > Access). Sent as the access_key query parameter, the form every endpoint documents (take also accepts an X-Access-Key header)."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_key",
+        "value": "{access_key}"
+      }
+    ]
+  },
+  "notes": [
+    "A rendered screenshot counts against the plan's quota; results served from cache (cache=true) do not. GET /usage is free.",
+    "The answer is the image or PDF bytes by default (Content-Type by format); set response_type=json for a JSON answer. Errors are JSON with an error code and message.",
+    "Signed requests (a signature parameter) are optional unless signing enforcement is turned on for the key; this entry sends the key unsigned.",
+    "omit_background works only with png; webp and jpeg refuse it even as false."
+  ],
+  "sources": [
+    "https://screenshotone.com/docs/getting-started/",
+    "https://screenshotone.com/docs/options/",
+    "https://screenshotone.com/docs/get-usage/",
+    "https://screenshotone.com/docs/signed-requests/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "screenshotone.take",
+      "name": "Take a screenshot of a URL",
+      "summary": "Render a page and return the image, PDF, HTML or Markdown.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/take",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Page to capture; one of url, html or markdown is required.",
+          "example": "https://example.com"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format, default jpg.",
+          "enum": [
+            "png",
+            "jpeg",
+            "jpg",
+            "webp",
+            "gif",
+            "jp2",
+            "tiff",
+            "avif",
+            "heif",
+            "pdf",
+            "html",
+            "markdown"
+          ]
+        },
+        "full_page": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Capture the whole scrollable page, default false."
+        },
+        "selector": {
+          "in": "query",
+          "type": "string",
+          "description": "CSS selector of the one element to capture."
+        },
+        "viewport_width": {
+          "in": "query",
+          "type": "integer",
+          "description": "Viewport width in pixels, default 1280."
+        },
+        "viewport_height": {
+          "in": "query",
+          "type": "integer",
+          "description": "Viewport height in pixels, default 1024."
+        },
+        "device_scale_factor": {
+          "in": "query",
+          "type": "number",
+          "description": "Pixel ratio, 1 to 5."
+        },
+        "image_quality": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 100, default 80."
+        },
+        "block_ads": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Block ads."
+        },
+        "block_cookie_banners": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Hide cookie consent banners."
+        },
+        "block_trackers": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Block trackers."
+        },
+        "block_chats": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Block chat widgets."
+        },
+        "dark_mode": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true asks the page for dark mode, false for light."
+        },
+        "delay": {
+          "in": "query",
+          "type": "number",
+          "description": "Seconds to wait before capturing, default 0."
+        },
+        "wait_until": {
+          "in": "query",
+          "type": "array",
+          "description": "Navigation events to wait for, default [load]; values load, domcontentloaded, networkidle0, networkidle2."
+        },
+        "wait_for_selector": {
+          "in": "query",
+          "type": "string",
+          "description": "Wait until this CSS selector is in the DOM."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds, default 60, max 90."
+        },
+        "ip_country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Country of the exit IP, default us (us, gb, de, it, fr, cn, ca, es, jp, kr, in, au, br, mx, nz, pe, is, ie)."
+        },
+        "response_type": {
+          "in": "query",
+          "type": "string",
+          "description": "by_format returns the file; json returns a JSON answer (with the metadata_* results); empty returns nothing.",
+          "enum": [
+            "by_format",
+            "empty",
+            "json"
+          ]
+        },
+        "cache": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Cache the result; cached hits do not use quota."
+        },
+        "cache_ttl": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cache lifetime in seconds, 14400 to 2592000; needs cache=true."
+        },
+        "metadata_page_title": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the page title (with response_type=json)."
+        },
+        "metadata_open_graph": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return parsed Open Graph data."
+        },
+        "metadata_content": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Upload the page content and return its URL."
+        },
+        "metadata_content_format": {
+          "in": "query",
+          "type": "string",
+          "description": "Format of metadata_content, default html.",
+          "enum": [
+            "html",
+            "markdown"
+          ]
+        }
+      },
+      "notes": [
+        "Uses one render from the quota unless served from cache.",
+        "Over 30 seconds of delay is only allowed for async requests with a longer timeout."
+      ],
+      "job": "web.screenshot",
+      "docs_url": "https://screenshotone.com/docs/options/",
+      "verified": {
+        "docs": "https://screenshotone.com/docs/options/"
+      }
+    },
+    {
+      "id": "screenshotone.take.post",
+      "name": "Take a screenshot from a JSON body",
+      "summary": "Same as take, with options as JSON; the way to send large html or markdown.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/take",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Page to capture; one of url, html or markdown is required.",
+          "example": "https://example.com"
+        },
+        "html": {
+          "in": "body",
+          "type": "string",
+          "description": "HTML to render instead of a URL."
+        },
+        "markdown": {
+          "in": "body",
+          "type": "string",
+          "description": "Markdown to render instead of a URL."
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Output format, default jpg.",
+          "enum": [
+            "png",
+            "jpeg",
+            "jpg",
+            "webp",
+            "gif",
+            "jp2",
+            "tiff",
+            "avif",
+            "heif",
+            "pdf",
+            "html",
+            "markdown"
+          ]
+        },
+        "full_page": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Capture the whole scrollable page, default false."
+        },
+        "selector": {
+          "in": "body",
+          "type": "string",
+          "description": "CSS selector of the one element to capture."
+        },
+        "viewport_width": {
+          "in": "body",
+          "type": "integer",
+          "description": "Viewport width in pixels, default 1280."
+        },
+        "viewport_height": {
+          "in": "body",
+          "type": "integer",
+          "description": "Viewport height in pixels, default 1024."
+        },
+        "device_scale_factor": {
+          "in": "body",
+          "type": "number",
+          "description": "Pixel ratio, 1 to 5."
+        },
+        "image_quality": {
+          "in": "body",
+          "type": "integer",
+          "description": "0 to 100, default 80."
+        },
+        "block_ads": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Block ads."
+        },
+        "block_cookie_banners": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Hide cookie consent banners."
+        },
+        "block_trackers": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Block trackers."
+        },
+        "block_chats": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Block chat widgets."
+        },
+        "dark_mode": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true asks the page for dark mode, false for light."
+        },
+        "delay": {
+          "in": "body",
+          "type": "number",
+          "description": "Seconds to wait before capturing, default 0."
+        },
+        "wait_until": {
+          "in": "body",
+          "type": "array",
+          "description": "Navigation events to wait for, default [load]; values load, domcontentloaded, networkidle0, networkidle2."
+        },
+        "wait_for_selector": {
+          "in": "body",
+          "type": "string",
+          "description": "Wait until this CSS selector is in the DOM."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "Seconds, default 60, max 90."
+        },
+        "ip_country_code": {
+          "in": "body",
+          "type": "string",
+          "description": "Country of the exit IP, default us (us, gb, de, it, fr, cn, ca, es, jp, kr, in, au, br, mx, nz, pe, is, ie)."
+        },
+        "response_type": {
+          "in": "body",
+          "type": "string",
+          "description": "by_format returns the file; json returns a JSON answer (with the metadata_* results); empty returns nothing.",
+          "enum": [
+            "by_format",
+            "empty",
+            "json"
+          ]
+        },
+        "cache": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Cache the result; cached hits do not use quota."
+        },
+        "cache_ttl": {
+          "in": "body",
+          "type": "integer",
+          "description": "Cache lifetime in seconds, 14400 to 2592000; needs cache=true."
+        },
+        "metadata_page_title": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return the page title (with response_type=json)."
+        },
+        "metadata_open_graph": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return parsed Open Graph data."
+        },
+        "metadata_content": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Upload the page content and return its URL."
+        },
+        "metadata_content_format": {
+          "in": "body",
+          "type": "string",
+          "description": "Format of metadata_content, default html.",
+          "enum": [
+            "html",
+            "markdown"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Body limit 100 MiB; for very large HTML host it and pass url instead.",
+        "Uses one render from the quota unless served from cache."
+      ],
+      "job": "web.screenshot",
+      "docs_url": "https://screenshotone.com/docs/getting-started/",
+      "verified": {
+        "docs": "https://screenshotone.com/docs/getting-started/"
+      }
+    },
+    {
+      "id": "screenshotone.usage",
+      "name": "Get quota usage",
+      "summary": "Requests allowed, used and available in the period, and the per-minute concurrency bucket.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "notes": [
+        "Free; a 400 with error_code access_key_invalid means the key is wrong. concurrency.reset is a UNIX time in nanoseconds."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://screenshotone.com/docs/get-usage/",
+      "verified": {
+        "docs": "https://screenshotone.com/docs/get-usage/"
+      }
+    }
+  ]
+}

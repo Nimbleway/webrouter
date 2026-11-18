@@ -1,0 +1,145 @@
+{
+  "vendor": "zerobounce",
+  "name": "ZeroBounce",
+  "category": "verification",
+  "summary": "Real-time email validation with status, sub-status, domain and activity signals, plus credit and usage checks.",
+  "docs_url": "https://www.zerobounce.net/docs/email-validation-api-quickstart",
+  "pricing_url": "https://www.zerobounce.net/pricing",
+  "base_url": "https://{host}/v2",
+  "settings": {
+    "host": {
+      "env": [
+        "ZEROBOUNCE_API_HOST"
+      ],
+      "default": "api.zerobounce.net",
+      "choices": [
+        "api.zerobounce.net",
+        "api-us.zerobounce.net",
+        "api-eu.zerobounce.net"
+      ],
+      "description": "API host: the default, the U.S.-only host (api-us) or the EU host (api-eu)."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ZEROBOUNCE_API_KEY"
+        ],
+        "description": "a ZeroBounce API key (API page of your ZeroBounce account)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The API key travels as the api_key query parameter on every call.",
+    "A credit is used per validated email, never for an 'unknown' result. Test without credits using the sandbox addresses in the Sandbox Mode docs.",
+    "Rate limit on validate: 80,000 requests per 10 seconds (100,000 for ZeroBounce ONE).",
+    "Bulk file validation (sendfile, filestatus, getfile, deletefile) lives on a different host, bulkapi.zerobounce.net, and the batch endpoint takes api_key in its JSON body; neither is in this entry."
+  ],
+  "sources": [
+    "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-validate-emails",
+    "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-credit-balance",
+    "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-get-api-usage"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "zerobounce.email.validate",
+      "name": "Validate one email",
+      "summary": "Status (valid, invalid, catch-all, unknown, spamtrap, abuse, do_not_mail), sub-status, free/MX/domain flags and more for one address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/validate",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to validate.",
+          "example": "valid@example.com"
+        },
+        "ip_address": {
+          "in": "query",
+          "type": "string",
+          "description": "IP the email signed up from; can be left out.",
+          "example": "156.124.12.145"
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds allowed for validation, 3 to 60 (default 30); past it the result is unknown/greylisted."
+        },
+        "activity_data": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Append activity data to the result."
+        },
+        "verify_plus": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Use the Verify+ method, overriding the account setting."
+        }
+      },
+      "notes": [
+        "Takes 1 to 30 seconds. Slow or greylisting mail servers come back as unknown, which costs nothing; retry later or use the bulk file API."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-validate-emails",
+      "verified": {
+        "docs": "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-validate-emails"
+      }
+    },
+    {
+      "id": "zerobounce.account.credits",
+      "name": "Get credit balance",
+      "summary": "The validation credits left on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getcredits",
+      "notes": [
+        "A Credits value of -1 means the API key is invalid."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-credit-balance",
+      "verified": {
+        "docs": "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-credit-balance"
+      }
+    },
+    {
+      "id": "zerobounce.account.usage",
+      "name": "Get API usage for a date range",
+      "summary": "Counts of API calls and of each status returned between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getapiusage",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start of the range, yyyy-mm-dd.",
+          "example": "2026-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End of the range, yyyy-mm-dd.",
+          "example": "2026-01-31"
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-get-api-usage",
+      "verified": {
+        "docs": "https://www.zerobounce.net/docs/email-validation-api-quickstart/v2-get-api-usage"
+      }
+    }
+  ]
+}

@@ -28,6 +28,7 @@ from web_router.constants import (
     YOU_RESULT_SECTIONS,
     YOU_SEARCH_PATH,
 )
+from web_router.constants_mode_parts import YOU_CONTENTS
 from web_router.constants_you import (
     MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE,
     MSG_YOU_SEARCH_VALUES,
@@ -57,6 +58,7 @@ class YouProvider(HttpSearchProvider):
     """Routes searches to the You.com Search API."""
 
     name: ClassVar[str] = PROVIDER_YOU
+    contents = YOU_CONTENTS
     supported_parameters: ClassVar[frozenset[str]] = YOU_SEARCH_PARAMETERS
     refusal_reasons: ClassVar[dict[str, str]] = {
         **dict.fromkeys(("country", "locale"), MSG_YOU_SEARCH_VALUES),
@@ -82,6 +84,7 @@ class YouProvider(HttpSearchProvider):
         return build_payload(
             request,
             YOU_SEARCH_PARAM_NAMES,
+            self,
             query=request.query,
             extraction=extraction,
             country=request.country.upper() if request.country else None,

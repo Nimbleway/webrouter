@@ -1,0 +1,135 @@
+---
+title: "Vendor modes"
+description: "Pin a backend to one of its own tiers, contents or flags, priced as that mode, in one id grammar."
+icon: "sliders"
+---
+
+A backend often sells several ways to run the same search: Exa's `instant`
+and `deep` search types, Tavily's `ultra-fast` tier, Linkup's `deep` depth,
+Brave's extra snippets. web-router's normalized options (`search_depth`,
+`effort`) reach some of them; a **vendor mode** names the rest, so you can pin
+one, see what it costs, and keep a budget honest.
+
+```python
+from web_router import WebRouter
+
+router = WebRouter()
+router.search("...", provider="exa:exa-instant")        # Exa's instant search type
+router.search("...", provider="exa:exa-instant+lite")   # the same, at the lite depth
+router.search("...", provider="tavily:tavily-ultra-fast")
+router.search("...", provider="brave:brave-extra-snippets")
+```
+
+The same id works as an `auto` chain entry, and a pinned backend is built with
+its backend's `provider_config` entry:
+
+```python
+router = WebRouter(
+    provider="auto",
+    provider_config={
+        "auto": {"chain": {"search": ["exa:exa-instant", "tavily"]}},  # a pin is a search id
+        "exa": {"api_key": "..."},  # also used for exa:exa-instant
+    },
+)
+```
+
+## The id
+
+An id is `provider[:mode]`, or `search:provider[:mode]` with the method named.
+A mode has up to three slots, joined with `+`, always in this order:
+
+1. a **tier**: a vendor setting (Exa's `type`). It combines with a depth unless
+   both write one field, as Tavily's tiers and depths both set `search_depth`;
+2. a **depth**: a normalized level (`lite`, `fast`, `deep`; `low` to `max` for
+   an effort), or a **content**: a vendor setting that replaces what a depth
+   sends (Exa's highlights instead of page text), standing for one level;
+3. **flags**, sorted: add-ons that write a field no tier writes (Brave's
+   extra snippets), so they combine with any tier. A flag combines with a depth
+   unless the depth sends its field another way: `deepseek-content` takes
+   `deep`, which sends the page body too, but not `lite`. Two flags on one field
+   never combine.
+
+Each vendor part is spelled with its backend's name first (`exa-instant`), so
+it can never be read as a normalized level. Input in any order comes out
+canonical: `exa-highlights+exa-instant` is `exa-instant+exa-highlights`.
+`web_router.modes.parse_id` reads an id; an unknown part, or a slot filled
+twice, raises `InvalidParameterError`.
+
+## What each backend declares
+
+| Backend | Tiers | Contents | Flags |
+|---|---|---|---|
+| Exa | `exa-instant`, `exa-fast`, `exa-deep-lite`, `exa-deep`, `exa-deep-reasoning` | `exa-highlights` (as `lite`) | |
+| Tavily | `tavily-fast`, `tavily-ultra-fast` | | |
+| Parallel | `parallel-turbo`, `parallel-basic`, `parallel-advanced` | | |
+| Linkup | `linkup-flash`, `linkup-standard`, `linkup-deep` | | |
+| Perplexity | `perplexity-fast` | | |
+| Keenable | `keenable-realtime` | | |
+| You.com | | `you-full-page-cache` (as `deep`) | |
+| Brave | | | `brave-extra-snippets` |
+| DeepSeek | | | `deepseek-content` |
+
+Each provider class carries its parts (`ExaProvider.tiers`, `.contents`,
+`.flags`), with the request-body change each one makes. Tavily's
+`tavily-fast` is Tavily's own tier, not web-router's `fast` depth, which sends
+`advanced`.
+
+A backend's contract (`contracts/search/<provider>.json`) lists the body change
+of every part under `options.mode`, and the modes a router may pick under
+`offers`: each tier at the default depth, each depth level and content at the
+default tier, and each flag. `verified["mode.<part>"]` says whether a live call
+has shown the part changing what comes back, or which documentation page it
+was written from.
+
+## What is sent
+
+The mode is merged into the request body web-router builds, before your
+`provider_options`:
+
+- a content replaces the fields it writes;
+- a tier or a flag is merged into nested objects;
+- `provider_options` still go last, as they always have.
+
+## What is refused
+
+A mode is refused with `InvalidParameterError`, before anything is sent, when
+you set something it would overwrite:
+
+- a `provider_options` key the mode writes (`{"type": ...}` beside
+  `exa-instant`);
+- a `search_depth` other than the one the mode names (`exa:exa-instant+lite`
+  with `search_depth="deep"`), or other than the level a content stands for;
+- an option that writes the same field to another value: Exa's `effort` with an
+  Exa tier, Tavily's `search_depth` with a Tavily tier, Parallel's or
+  Keenable's `effort` with one of their tiers, DeepSeek's `lite` with
+  `deepseek-content`.
+
+## What it costs
+
+A pinned search is priced as its mode, by the price list's order:
+
+1. the row for the canonical mode;
+2. else its tier's row, when that row assumes the mode's depth, plus each
+   flag's added price;
+3. else unknown.
+
+That price is the response's `cost_usd` (`cost_source="estimated"` unless the
+backend states one), and what a budget charges. An unknown price never fits
+under a cost cap. Cooldowns stay keyed by backend: a rate limit on one mode
+cools every mode of that backend.
+
+## Benchmarks
+
+A provider scan's setup is the same id (`--providers
+tavily,tavily:fast,tavily:tavily-ultra-fast`). The old spelling `tavily@deep`
+still runs. `tavily:ultra-fast@deep` parses, so an older scan's rows still
+read, but a search with it is refused: Tavily's tier and `deep` both set
+`search_depth`. `tavily:ultra-fast` without `@` is no vendor mode, and
+`tavily:fast` is the `fast` depth, where an older scan meant Tavily's tier.
+
+## Not yet
+
+Routing on modes is not on yet: a router picks backends at their default mode,
+and a vendor mode runs only when you pin it. Extract, answer, research and
+browse have no vendor modes yet. See [Smart routing](/smart-routing) for what a
+router picks today.

@@ -7,7 +7,7 @@ Runnable scripts, roughly in the order worth reading them.
 | [`basic_search.py`](basic_search.py) | The whole API: search, read normalized results | Nimble |
 | [`extract.py`](extract.py) | `extract()`: page contents, formats, partial failure | no |
 | [`extract_max.py`](extract_max.py) | `max`: every extract backend at once, the first document wins, and a `hedge` that keeps most calls to one fetch | no |
-| [`extract_template.py`](extract_template.py) | `templates()`, `template()`, `run_template()`: the catalogue, a template's inputs, and one page turned into a record | Nimble |
+| [`live_data.py`](live_data.py) | `live_data_sources()`, `live_data_source()`, `live_data()`: the catalogue, a source's inputs, and the records it fetches | Nimble |
 | [`answer.py`](answer.py) | `answer()`: a backend's written answer and its sources in one call, the markers that tie them, a refused option, and what an unnamed call does | any answer key |
 | [`research.py`](research.py) | `research()`: prose, a schema, enrichment, and a job you can put down | any research key |
 | [`browser_session.py`](browser_session.py) | `open_browser()` on `local`: goto, snapshot, click, type, screenshot, read — sync and async | no |
@@ -37,9 +37,9 @@ back to the anonymous tiers, and the examples that fan out use
 `configured_providers()` — or `configured_extract_providers()` — to route only
 to backends this environment can use.
 
-`answer.py`, `research.py`, `browse.py`, `browser_vendor.py` and `extract_template.py` are
+`answer.py`, `research.py`, `browse.py`, `browser_vendor.py` and `live_data.py` are
 the exceptions, and not by oversight: every agentic backend bills for the run,
-every cloud browser for the time it is open, and a template run fetches on the
+every cloud browser for the time it is open, and a live data run fetches on the
 backend's account, so there is no anonymous tier for them to fall back on.
 With no key each names the variables that would fix it and exits.
 `router_llm.py`, `router_jev.py` and `router_openai_decisions.py` are exceptions too: each plan sends the

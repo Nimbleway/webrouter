@@ -1,0 +1,482 @@
+{
+  "vendor": "fantasticjobs",
+  "name": "Fantastic.jobs",
+  "category": "company-data",
+  "summary": "A job-postings feed from 58 ATS platforms and LinkedIn, Wellfound and Y Combinator, with AI-derived salary, seniority and remote fields and company details.",
+  "docs_url": "https://developer.fantastic.jobs",
+  "pricing_url": "https://developer.fantastic.jobs/documentation/credit-usage",
+  "base_url": "https://data.fantastic.jobs/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FANTASTICJOBS_API_KEY"
+        ],
+        "description": "A Fantastic.jobs API key (dashboard.fantastic.jobs), sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Two meters: Jobs credits, one per job returned by active-ats and active-jb; and API Requests, one per call on every endpoint. Modified, expired and organization endpoints use no Jobs credits. x-api-jobs-* and x-api-requests-* headers show usage.",
+    "Rate limit: 600 requests per minute.",
+    "Built for polling into your own store: time_frame 1h or 24h on a schedule, expired-ats to drop stale rows. Jobs appear 1-2 hours after the source publishes them.",
+    "Use a count endpoint to size a query before pulling it, since every returned job costs a credit.",
+    "This is the data.fantastic.jobs v1 API; the older api.fantastic.jobs and marketplace listings use other parameter and field names."
+  ],
+  "sources": [
+    "https://developer.fantastic.jobs/llms.txt",
+    "https://developer.fantastic.jobs/documentation/authentication",
+    "https://developer.fantastic.jobs/documentation/credit-usage",
+    "https://developer.fantastic.jobs/api/new-jobs"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fantasticjobs.ats.search",
+      "name": "Get ATS jobs",
+      "summary": "Active jobs from company career sites (Greenhouse, Lever, Workday, Ashby and 54 more), filtered by title, location, organization and AI fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/active-ats",
+      "params": {
+        "time_frame": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "1h, 24h, 7d or 6m window.",
+          "example": "24h",
+          "enum": [
+            "1h",
+            "24h",
+            "7d",
+            "6m"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per call, 1-1000, default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last job's id, for cursor paging (orders by id ascending; use for 6m)."
+        },
+        "description_format": {
+          "in": "query",
+          "type": "string",
+          "description": "text or html; omit to leave descriptions out.",
+          "enum": [
+            "text",
+            "html"
+          ]
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Title search, Google-style: words AND, \"exact phrase\", OR, -exclude.",
+          "example": "\"data engineer\""
+        },
+        "description": {
+          "in": "query",
+          "type": "string",
+          "description": "Search title and description together; same syntax as title."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location search with full names (United States, not US; 'New York, United States').",
+          "example": "\"United States\""
+        },
+        "organization": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact, case-sensitive organization names, comma-separated."
+        },
+        "date_posted_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Posted on or after, ISO 8601 UTC, e.g. 2026-04-20T00:00:00."
+        },
+        "date_created_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Indexed on or after, ISO 8601 UTC; use for incremental syncs."
+        },
+        "ai_work_arrangement": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: On-site, Hybrid, Remote OK, Remote Solely."
+        },
+        "ai_experience_level": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated years bands: 0-2, 2-5, 5-10, 10+."
+        },
+        "has_salary": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: only jobs with salary data."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Employer domains, comma-separated, e.g. nvidia.com,microsoft.com."
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "ATS sources, comma-separated, e.g. greenhouse,lever,workday."
+        },
+        "include_basic_organization_details": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds LinkedIn company fields to each job."
+        }
+      },
+      "notes": [
+        "One Jobs credit per job returned."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://developer.fantastic.jobs/api/new-jobs",
+      "verified": {
+        "docs": "https://developer.fantastic.jobs/api/new-jobs"
+      }
+    },
+    {
+      "id": "fantasticjobs.jb.search",
+      "name": "Get job board jobs",
+      "summary": "Active jobs from LinkedIn, Wellfound and Y Combinator, with company details inline.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/active-jb",
+      "params": {
+        "time_frame": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "1h, 24h, 7d or 6m window.",
+          "example": "24h",
+          "enum": [
+            "1h",
+            "24h",
+            "7d",
+            "6m"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per call, 1-1000, default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last job's id, for cursor paging (orders by id ascending; use for 6m)."
+        },
+        "description_format": {
+          "in": "query",
+          "type": "string",
+          "description": "text or html; omit to leave descriptions out.",
+          "enum": [
+            "text",
+            "html"
+          ]
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Title search, Google-style: words AND, \"exact phrase\", OR, -exclude.",
+          "example": "\"data engineer\""
+        },
+        "description": {
+          "in": "query",
+          "type": "string",
+          "description": "Search title and description together; same syntax as title."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location search with full names (United States, not US; 'New York, United States').",
+          "example": "\"United States\""
+        },
+        "organization": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact, case-sensitive organization names, comma-separated."
+        },
+        "date_posted_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Posted on or after, ISO 8601 UTC, e.g. 2026-04-20T00:00:00."
+        },
+        "date_created_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Indexed on or after, ISO 8601 UTC; use for incremental syncs."
+        },
+        "ai_work_arrangement": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: On-site, Hybrid, Remote OK, Remote Solely."
+        },
+        "ai_experience_level": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated years bands: 0-2, 2-5, 5-10, 10+."
+        },
+        "has_salary": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: only jobs with salary data."
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: linkedin, wellfound, ycombinator."
+        },
+        "seniority": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn seniority, case-sensitive, comma-separated: Internship, Entry level, Associate, Mid-Senior level, Director, Executive, Not Applicable."
+        },
+        "exclude_ats_duplicate": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true drops job-board jobs matched to an ATS posting (use when you also pull active-ats)."
+        }
+      },
+      "notes": [
+        "One Jobs credit per job returned."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://developer.fantastic.jobs/api/job-board-jobs",
+      "verified": {
+        "docs": "https://developer.fantastic.jobs/api/job-board-jobs"
+      }
+    },
+    {
+      "id": "fantasticjobs.ats.count",
+      "name": "Count ATS jobs",
+      "summary": "How many ATS jobs match the filters, without returning them.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/active-ats-count",
+      "params": {
+        "time_frame": {
+          "in": "query",
+          "type": "string",
+          "description": "Window; 1m (default) also counts jobs that have since expired.",
+          "enum": [
+            "1h",
+            "24h",
+            "7d",
+            "1m",
+            "6m"
+          ]
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Title search, Google-style: words AND, \"exact phrase\", OR, -exclude.",
+          "example": "\"data engineer\""
+        },
+        "description": {
+          "in": "query",
+          "type": "string",
+          "description": "Search title and description together; same syntax as title."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Location search with full names (United States, not US; 'New York, United States').",
+          "example": "\"United States\""
+        },
+        "organization": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact, case-sensitive organization names, comma-separated."
+        },
+        "date_posted_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Posted on or after, ISO 8601 UTC, e.g. 2026-04-20T00:00:00."
+        },
+        "date_created_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Indexed on or after, ISO 8601 UTC; use for incremental syncs."
+        },
+        "ai_work_arrangement": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: On-site, Hybrid, Remote OK, Remote Solely."
+        },
+        "ai_experience_level": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated years bands: 0-2, 2-5, 5-10, 10+."
+        },
+        "has_salary": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: only jobs with salary data."
+        }
+      },
+      "notes": [
+        "One API Request, no Jobs credits; times out after 60 seconds."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://developer.fantastic.jobs/api/counts",
+      "verified": {
+        "docs": "https://developer.fantastic.jobs/api/counts"
+      }
+    },
+    {
+      "id": "fantasticjobs.ats.modified",
+      "name": "Get modified ATS jobs",
+      "summary": "ATS jobs whose tracked fields changed in the last 24 hours, with date_modified and modified_fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/modified-ats",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per call, 1-1000, default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last job's id, for cursor paging (orders by id ascending; use for 6m)."
+        },
+        "description_format": {
+          "in": "query",
+          "type": "string",
+          "description": "text or html; omit to leave descriptions out.",
+          "enum": [
+            "text",
+            "html"
+          ]
+        }
+      },
+      "notes": [
+        "Pro plan. No Jobs credits. Call once a day at a fixed time."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://developer.fantastic.jobs/api/modified-jobs",
+      "verified": {
+        "docs": "https://developer.fantastic.jobs/api/modified-jobs"
+      }
+    },
+    {
+      "id": "fantasticjobs.ats.expired",
+      "name": "Get expired ATS job ids",
+      "summary": "Ids of ATS jobs that expired in the window, to remove from a stored copy.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/expired-ats",
+      "params": {
+        "time_frame": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "1h rolling, 1d previous UTC day (default), 1m or 6m.",
+          "example": "1d",
+          "enum": [
+            "1h",
+            "1d",
+            "1m",
+            "6m"
+          ]
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://developer.fantastic.jobs/api/expired",
+      "verified": {
+        "docs": "https://developer.fantastic.jobs/api/expired"
+      }
+    },
+    {
+      "id": "fantasticjobs.organizations.get",
+      "name": "Get company details",
+      "summary": "Enriched company profiles (LinkedIn, Crunchbase, Glassdoor, NAICS/SIC), 100 per page; beta.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ats-organizations-advanced",
+      "params": {
+        "linkedin_slug": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company slugs, comma-separated, e.g. nvidia,openai.",
+          "example": "nvidia"
+        },
+        "linkedin_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact, case-sensitive LinkedIn names, comma-separated."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-100, default 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        },
+        "include_crunchbase_funding_and_investment": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add Crunchbase funding rounds and investors."
+        },
+        "include_linkedin_headcount_timeseries": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add weekly headcount series."
+        },
+        "include_news_articles": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add recent news articles."
+        },
+        "include_glassdoor_reviews": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add recent Glassdoor reviews."
+        }
+      },
+      "notes": [
+        "Beta; needs the Pro-100k plan or above. No Jobs credits."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://developer.fantastic.jobs/api/advanced-organizations",
+      "verified": {
+        "docs": "https://developer.fantastic.jobs/api/advanced-organizations"
+      }
+    }
+  ]
+}

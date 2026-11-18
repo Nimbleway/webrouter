@@ -28,12 +28,26 @@
     "appended": [
       "keenable",
       "deepseek",
-      "agentcore"
+      "agentcore",
+      "exa-litellm",
+      "tavily-litellm",
+      "parallel-litellm",
+      "valyu",
+      "seltz",
+      "octen",
+      "keirolabs"
     ],
     "unmeasured": [
       "keenable",
       "deepseek",
-      "agentcore"
+      "agentcore",
+      "exa-litellm",
+      "tavily-litellm",
+      "parallel-litellm",
+      "valyu",
+      "seltz",
+      "octen",
+      "keirolabs"
     ],
     "too_few_questions": [],
     "no_row_served": [],

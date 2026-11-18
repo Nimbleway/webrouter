@@ -1,0 +1,1163 @@
+{
+  "vendor": "anyapi",
+  "name": "AnyAPI",
+  "category": "social",
+  "summary": "One pay-per-call wallet in front of many data sources: social profiles, posts, comments and search across Facebook, Instagram, LinkedIn, TikTok, X and Google.",
+  "docs_url": "https://getanyapi.com/docs",
+  "base_url": "https://api.getanyapi.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ANYAPI_API_KEY"
+        ],
+        "description": "An AnyAPI key, billed from your USD wallet (getanyapi.com dashboard)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Each operation is POST /v1/run/{sku} with a normalized JSON body; the catalog has hundreds of operations, this file names the social and search ones. GET /v1/apis/{sku} returns any operation's input schema and price.",
+    "Every call is billed in USD from the wallet, a flat price per request (listed per endpoint). Reading the balance is free.",
+    "Pagination: send the nextCursor of the previous response as cursor.",
+    "Routing options (source, allowFallbacks, ignoreSources, preferLatencyUnderMs, requireFields) exist on every run call and are not listed here; the defaults pick the cheapest source."
+  ],
+  "sources": [
+    "https://getanyapi.com/docs",
+    "https://api.getanyapi.com/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "anyapi.facebook.profile",
+      "name": "Get a Facebook page profile",
+      "summary": "Public page details: likes, followers, category, about.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/facebook.profile",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "description": "Account handle, without @."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $1.20 per 1,000 requests (USD, billed from the wallet).",
+        "Send at least one of: handle, url."
+      ]
+    },
+    {
+      "id": "anyapi.facebook.posts",
+      "name": "List a Facebook page's posts",
+      "summary": "Recent posts of a page by URL or page id, paged by cursor.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/facebook.profile_posts",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "pageId": {
+          "in": "body",
+          "type": "string",
+          "description": "Facebook page id."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $1.20 per 1,000 requests (USD, billed from the wallet).",
+        "Send at least one of: pageId, url."
+      ]
+    },
+    {
+      "id": "anyapi.facebook.post",
+      "name": "Get a Facebook post",
+      "summary": "One post by URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/facebook.post",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $1.20 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.facebook.comments",
+      "name": "List comments on a Facebook post",
+      "summary": "Comments of a post by URL or feedback id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/facebook.post_comments",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "feedbackId": {
+          "in": "body",
+          "type": "string",
+          "description": "Facebook feedback id of the post (alternative to url)."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $1.20 per 1,000 requests (USD, billed from the wallet).",
+        "Send at least one of: feedbackId, url."
+      ]
+    },
+    {
+      "id": "anyapi.facebook.search",
+      "name": "Search Facebook posts",
+      "summary": "Public posts matching a keyword, with date and place filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/facebook.search_posts",
+      "params": {
+        "endDate": {
+          "in": "body",
+          "type": "string",
+          "description": "Only posts on or before this date, YYYY-MM-DD."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Place name to localize or filter by."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "startDate": {
+          "in": "body",
+          "type": "string",
+          "description": "Only posts on or after this date, YYYY-MM-DD."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $30.00 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.instagram.profile",
+      "name": "Get an Instagram profile",
+      "summary": "Public profile data by handle.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/instagram.profile",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Account handle, without @."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $1.00 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.instagram.posts",
+      "name": "List an Instagram user's posts",
+      "summary": "Recent posts by handle, paged by cursor.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/instagram.user_posts",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Account handle, without @."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.80 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.instagram.post",
+      "name": "Get an Instagram post or reel",
+      "summary": "One post by URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/instagram.post",
+      "params": {
+        "hostVideo": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return the video on a hosted MP4 link."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.50 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.instagram.comments",
+      "name": "List comments on an Instagram post",
+      "summary": "Comments of a post or reel URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/instagram.post_comments",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.80 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.instagram.hashtag",
+      "name": "List recent posts for a hashtag",
+      "summary": "Recent public posts under a hashtag.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/instagram.hashtag_recent_posts",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "hashtag": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Hashtag without the #."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $1.20 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.linkedin.profile",
+      "name": "Get a LinkedIn profile",
+      "summary": "Public profile data from a profile URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/linkedin.profile",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $2.90 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.linkedin.company",
+      "name": "Get a LinkedIn company page",
+      "summary": "Company details from a company page URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/linkedin.company",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $1.10 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.linkedin.company_posts",
+      "name": "List a LinkedIn company's posts",
+      "summary": "Posts of a company page, with repost and time filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/linkedin.company_posts",
+      "params": {
+        "includeQuotePosts": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include quote posts."
+        },
+        "includeReposts": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include reposts."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "postedLimit": {
+          "in": "body",
+          "type": "string",
+          "description": "Only items posted within this window.",
+          "enum": [
+            "any",
+            "1h",
+            "24h",
+            "week",
+            "month",
+            "3months",
+            "6months",
+            "year"
+          ]
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $2.90 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.linkedin.post",
+      "name": "Get a LinkedIn post or article",
+      "summary": "One post by URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/linkedin.post",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.80 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.linkedin.search_people",
+      "name": "Search LinkedIn profiles",
+      "summary": "Full profiles matching a role, name or filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/linkedin.search_profiles",
+      "params": {
+        "currentCompanies": {
+          "in": "body",
+          "type": "array",
+          "description": "Companies the person currently works at, by name."
+        },
+        "jobTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Current job title filter."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Place name to localize or filter by."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: billed per result - $88.00 per 1,000 requests base + $4.40 per 1,000 results, capped at $198.00 per 1,000 requests. (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.linkedin.jobs",
+      "name": "Search LinkedIn jobs",
+      "summary": "Job listings by keywords with location, level and salary filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/linkedin.jobs",
+      "params": {
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name filter."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "easyApply": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only Easy Apply jobs."
+        },
+        "employmentType": {
+          "in": "body",
+          "type": "string",
+          "description": "Employment type.",
+          "enum": [
+            "full-time",
+            "part-time",
+            "contract",
+            "internship",
+            "temporary"
+          ]
+        },
+        "experienceLevel": {
+          "in": "body",
+          "type": "string",
+          "description": "Seniority level.",
+          "enum": [
+            "internship",
+            "entry",
+            "associate",
+            "mid-senior",
+            "director",
+            "executive"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Place name to localize or filter by."
+        },
+        "postedLimit": {
+          "in": "body",
+          "type": "string",
+          "description": "Only items posted within this window.",
+          "enum": [
+            "1h",
+            "24h",
+            "week",
+            "month"
+          ]
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "salary": {
+          "in": "body",
+          "type": "string",
+          "description": "Minimum base salary band in USD.",
+          "enum": [
+            "40k+",
+            "60k+",
+            "80k+",
+            "100k+",
+            "120k+",
+            "140k+",
+            "160k+",
+            "180k+",
+            "200k+"
+          ]
+        },
+        "sortBy": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "date",
+            "relevance"
+          ]
+        },
+        "under10Applicants": {
+          "in": "body",
+          "type": "boolean"
+        },
+        "workplaceType": {
+          "in": "body",
+          "type": "string",
+          "description": "Workplace type.",
+          "enum": [
+            "remote",
+            "hybrid",
+            "onsite"
+          ]
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $19.50 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.tiktok.profile",
+      "name": "Get a TikTok profile",
+      "summary": "Public followers, likes, bio and verification by handle.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/tiktok.profile",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Account handle, without @."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.40 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.tiktok.videos",
+      "name": "List a TikTok user's videos",
+      "summary": "Videos by handle, paged by cursor.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/tiktok.profile_videos",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Account handle, without @."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.60 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.tiktok.video",
+      "name": "Get a TikTok video",
+      "summary": "One video by URL or id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/tiktok.video",
+      "params": {
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Numeric video id (alternative to url)."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.40 per 1,000 requests (USD, billed from the wallet).",
+        "Send at least one of: id, url."
+      ]
+    },
+    {
+      "id": "anyapi.tiktok.comments",
+      "name": "List comments on a TikTok video",
+      "summary": "Comments of a video or photo post URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/tiktok.video_comments",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.60 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.tiktok.search",
+      "name": "Search TikTok videos",
+      "summary": "Videos matching a keyword.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/tiktok.search_keyword",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "datePosted": {
+          "in": "body",
+          "type": "string",
+          "description": "Posting window in days back from now."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "sortBy": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "relevance",
+            "most-liked",
+            "date-posted"
+          ]
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.60 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.tiktok.search_users",
+      "name": "Search TikTok accounts",
+      "summary": "Accounts matching a keyword.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/tiktok.search_users",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.60 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.x.profile",
+      "name": "Get an X profile",
+      "summary": "Public profile by handle.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/twitter.profile",
+      "params": {
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Account handle, without @."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.22 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.x.user_posts",
+      "name": "List an X user's tweets and replies",
+      "summary": "Recent tweets and replies by handle.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/twitter.user_tweets",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "handle": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Account handle, without @."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.45 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.x.post",
+      "name": "Get a tweet",
+      "summary": "One tweet by status URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/twitter.tweet",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Full URL of the item."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.22 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.x.search",
+      "name": "Search X posts",
+      "summary": "Posts matching X advanced-search syntax.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/twitter.search",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "queryType": {
+          "in": "body",
+          "type": "string",
+          "description": "Which posts to return.",
+          "enum": [
+            "Latest",
+            "Top",
+            "Photos",
+            "Videos"
+          ]
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.54 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.x.search_users",
+      "name": "Search X accounts",
+      "summary": "Accounts matching a keyword.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/twitter.search_users",
+      "params": {
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.54 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.google.search",
+      "name": "Google search",
+      "summary": "Organic Google results for a query, localized by country and language.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/google.search",
+      "params": {
+        "autocorrect": {
+          "in": "body",
+          "type": "boolean"
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "nextCursor from the previous response."
+        },
+        "gl": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "hl": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter language code."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Place name to localize or filter by."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number from 1."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "timeframe": {
+          "in": "body",
+          "type": "string",
+          "description": "Time window.",
+          "enum": [
+            "1h",
+            "1d",
+            "7d",
+            "1y",
+            "all"
+          ]
+        }
+      },
+      "job": "serp.google",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.40 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.google.news",
+      "name": "Google News search",
+      "summary": "News articles for a query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/run/google.news",
+      "params": {
+        "gl": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "hl": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter language code."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "Place name to localize or filter by."
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Search keywords."
+        },
+        "timeframe": {
+          "in": "body",
+          "type": "string",
+          "description": "Time window."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "A read over POST: every AnyAPI operation is a POST that only fetches data.",
+        "Price: $0.99 per 1,000 requests (USD, billed from the wallet)."
+      ]
+    },
+    {
+      "id": "anyapi.account.balance",
+      "name": "Get the wallet balance",
+      "summary": "Remaining USD in the wallet behind the key. Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/balance",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      }
+    },
+    {
+      "id": "anyapi.requests.get",
+      "name": "Get a request",
+      "summary": "Status and result of a request that was queued or running.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/requests/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The request id from a run response."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://api.getanyapi.com/openapi.json",
+      "verified": {
+        "docs": "https://api.getanyapi.com/openapi.json"
+      },
+      "notes": [
+        "Poll after retryAfterSeconds while a request is queued or running; results stay collectable for 24 hours."
+      ]
+    }
+  ]
+}

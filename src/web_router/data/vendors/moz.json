@@ -1,0 +1,527 @@
+{
+  "vendor": "moz",
+  "name": "Moz",
+  "category": "seo",
+  "summary": "Moz Links API: Domain Authority, Page Authority, backlinks, anchor text, linking domains and top pages.",
+  "docs_url": "https://moz.com/help/links-api",
+  "base_url": "https://lsapi.seomoz.com/v2",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "MOZ_API_TOKEN"
+        ],
+        "description": "a Moz API token (Moz API dashboard at moz.com/api/dashboard, + Add Token)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-moz-token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is a POST with a JSON body to https://lsapi.seomoz.com/v2/<endpoint>, including reads.",
+    "Usage is counted in rows, not requests. Free access allows one request every ten seconds and 50 rows a month; paid plans bill overage. Some endpoints are weighted (see each note).",
+    "Lists paginate with limit (1-50, default 25) and next_token.",
+    "Written from Moz's Links API V2 help pages, which Moz labels legacy now that all Moz API endpoints are in one unified API; the Links V2 pages remain published, and the token is the documented credential for them. Older accounts can use HTTP Basic (Access ID and Secret Key) instead; this entry uses the token."
+  ],
+  "sources": [
+    "https://moz.com/help/links-api/making-calls/url-metrics",
+    "https://moz.com/help/links-api/making-calls/links",
+    "https://moz.com/help/links-api/making-calls/anchor-text",
+    "https://moz.com/help/links-api/making-calls/linking-root-domains",
+    "https://moz.com/help/links-api/making-calls/top-pages",
+    "https://moz.com/help/links-api/making-calls/link-intersect",
+    "https://moz.com/help/links-api/making-calls/link-status",
+    "https://moz.com/help/links-api/making-calls/index-metadata",
+    "https://moz.com/help/links-api/making-calls/usage-data",
+    "https://moz.com/help/links-api/getting-started/overview",
+    "https://moz.com/help/links-api/making-calls/weighted-endpoints"
+  ],
+  "endpoints": [
+    {
+      "id": "moz.links.url_metrics",
+      "name": "URL metrics",
+      "summary": "Domain Authority, Page Authority, Spam Score, link counts and more for up to 50 URLs.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/url_metrics",
+      "params": {
+        "targets": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 50 URLs, subdomains or root domains.",
+          "example": [
+            "moz.com"
+          ]
+        },
+        "daily_history_deltas": {
+          "in": "body",
+          "type": "array",
+          "description": "Metrics to return daily history for, as dated gains and losses."
+        },
+        "daily_history_values": {
+          "in": "body",
+          "type": "array",
+          "description": "Metrics to return daily history for, as date and value pairs."
+        },
+        "monthly_history_deltas": {
+          "in": "body",
+          "type": "array",
+          "description": "Metrics to return 32 months of history for, as gains and losses."
+        },
+        "monthly_history_values": {
+          "in": "body",
+          "type": "array",
+          "description": "Metrics to return 32 months of history for, as date and value pairs."
+        },
+        "distributions": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true adds link distribution metrics."
+        }
+      },
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed.",
+        "Weighted: one row per call with no options; each history metric requested and distributions=true each add one row to usage.",
+        "You cannot pick metrics; all are returned for each target."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://moz.com/help/links-api/making-calls/url-metrics",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/url-metrics"
+      }
+    },
+    {
+      "id": "moz.links.links",
+      "name": "Links to a target",
+      "summary": "Individual links pointing at a page, subdomain or root domain, with anchor text and first and last seen dates.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/links",
+      "params": {
+        "target": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The URL to get links for.",
+          "example": "moz.com/blog"
+        },
+        "target_scope": {
+          "in": "body",
+          "type": "string",
+          "description": "Scope of the target. Default page.",
+          "enum": [
+            "page",
+            "subdomain",
+            "root_domain"
+          ]
+        },
+        "sort": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order, descending. Default source_page_authority; see the docs page for the valid values per scope."
+        },
+        "anchor_text": {
+          "in": "body",
+          "type": "string",
+          "description": "Only links whose normalized anchor text matches."
+        },
+        "source_root_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Only links from this source root domain."
+        },
+        "source_scope": {
+          "in": "body",
+          "type": "string",
+          "description": "With subdomain or root_domain, return only the best link from each source at that scope. Default page.",
+          "enum": [
+            "page",
+            "subdomain",
+            "root_domain"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results, 1-50. Default 25.",
+          "example": 25
+        },
+        "next_token": {
+          "in": "body",
+          "type": "string",
+          "description": "next_token from a previous answer; send it to get the next page."
+        }
+      },
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed.",
+        "One row of usage per link returned. Paginate with next_token."
+      ],
+      "job": "backlinks.list",
+      "docs_url": "https://moz.com/help/links-api/making-calls/links",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/links"
+      }
+    },
+    {
+      "id": "moz.links.anchor_text",
+      "name": "Anchor text to a target",
+      "summary": "Anchor texts used in links to a target, with referring root domain and page counts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/anchor_text",
+      "params": {
+        "target": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The target to get anchor text for.",
+          "example": "moz.com/blog"
+        },
+        "scope": {
+          "in": "body",
+          "type": "string",
+          "description": "Scope of links to the target. Default page.",
+          "enum": [
+            "page",
+            "subdomain",
+            "root_domain"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results, 1-50. Default 25.",
+          "example": 25
+        },
+        "next_token": {
+          "in": "body",
+          "type": "string",
+          "description": "next_token from a previous answer; send it to get the next page."
+        }
+      },
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed."
+      ],
+      "job": "backlinks.anchors",
+      "docs_url": "https://moz.com/help/links-api/making-calls/anchor-text",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/anchor-text"
+      }
+    },
+    {
+      "id": "moz.links.linking_root_domains",
+      "name": "Linking root domains",
+      "summary": "Root domains that link to a target, with their Domain Authority, spam score and link counts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/linking_root_domains",
+      "params": {
+        "target": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A URL to get linking root domains for.",
+          "example": "moz.com/blog"
+        },
+        "target_scope": {
+          "in": "body",
+          "type": "string",
+          "description": "Scope of the target. Default page.",
+          "enum": [
+            "page",
+            "subdomain",
+            "root_domain"
+          ]
+        },
+        "sort": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order, descending. Default source_domain_authority; date_gained and date_lost sort newest first."
+        },
+        "filter": {
+          "in": "body",
+          "type": "string",
+          "description": "Filter expression such as external or external+follow. Default external."
+        },
+        "begin_date": {
+          "in": "body",
+          "type": "string",
+          "description": "With sort date_gained or date_lost: earliest date, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "body",
+          "type": "string",
+          "description": "With sort date_gained or date_lost: latest date, YYYY-MM-DD."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results, 1-50. Default 25.",
+          "example": 25
+        },
+        "next_token": {
+          "in": "body",
+          "type": "string",
+          "description": "next_token from a previous answer; send it to get the next page."
+        }
+      },
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed."
+      ],
+      "job": "backlinks.refdomains",
+      "docs_url": "https://moz.com/help/links-api/making-calls/linking-root-domains",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/linking-root-domains"
+      }
+    },
+    {
+      "id": "moz.links.top_pages",
+      "name": "Top pages on a domain",
+      "summary": "A domain's strongest pages by Page Authority, with their metrics.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/top_pages",
+      "params": {
+        "target": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The domain to return top pages for.",
+          "example": "moz.com"
+        },
+        "scope": {
+          "in": "body",
+          "type": "string",
+          "description": "Scope of the target. Default root_domain.",
+          "enum": [
+            "subdomain",
+            "root_domain"
+          ]
+        },
+        "sort": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order, descending. Default page_authority.",
+          "enum": [
+            "page_authority",
+            "root_domains_to_page",
+            "external_pages_to_page"
+          ]
+        },
+        "filter": {
+          "in": "body",
+          "type": "string",
+          "description": "Only pages whose last crawl returned this status. Default all.",
+          "enum": [
+            "all",
+            "status_200",
+            "status_301",
+            "status_302",
+            "status_4xx",
+            "status_5xx"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results, 1-50. Default 25.",
+          "example": 25
+        },
+        "next_token": {
+          "in": "body",
+          "type": "string",
+          "description": "next_token from a previous answer; send it to get the next page."
+        }
+      },
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed."
+      ],
+      "job": "domain.pages",
+      "docs_url": "https://moz.com/help/links-api/making-calls/top-pages",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/top-pages"
+      }
+    },
+    {
+      "id": "moz.links.link_intersect",
+      "name": "Link intersect",
+      "summary": "Sources that link to some targets but not others, for finding link-building opportunities.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/link_intersect",
+      "params": {
+        "positive_targets": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Targets whose linkers you want, as {target, scope} objects. Together with negative_targets, up to 6 targets.",
+          "example": [
+            {
+              "target": "latimes.com",
+              "scope": "root_domain"
+            }
+          ]
+        },
+        "negative_targets": {
+          "in": "body",
+          "type": "array",
+          "description": "Targets whose linkers to exclude, as {target, scope} objects.",
+          "example": [
+            {
+              "target": "moz.com",
+              "scope": "root_domain"
+            }
+          ]
+        },
+        "min_matching_targets": {
+          "in": "body",
+          "type": "integer",
+          "description": "Only sources that link to at least this many positive targets."
+        },
+        "source_scope": {
+          "in": "body",
+          "type": "string",
+          "description": "Scope of sources returned. Default page.",
+          "enum": [
+            "page",
+            "root_domain"
+          ]
+        },
+        "sort": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order, descending. Default matching_target_count."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum results; at most 50.",
+          "example": 25
+        },
+        "next_token": {
+          "in": "body",
+          "type": "string",
+          "description": "next_token from a previous answer; send it to get the next page."
+        }
+      },
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed.",
+        "Weighted: each returned row counts as 5 rows of usage (a limit of 50 can use 250)."
+      ],
+      "job": "backlinks.intersect",
+      "docs_url": "https://moz.com/help/links-api/making-calls/link-intersect",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/link-intersect"
+      }
+    },
+    {
+      "id": "moz.links.link_status",
+      "name": "Link status",
+      "summary": "Whether each of up to 50 sources links to a target.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/link_status",
+      "params": {
+        "sources": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 50 sources to check.",
+          "example": [
+            "twitter.com",
+            "linkedin.com"
+          ]
+        },
+        "target": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The target to check links to.",
+          "example": "moz.com/blog"
+        },
+        "target_scope": {
+          "in": "body",
+          "type": "string",
+          "description": "Scope of the target. Default page.",
+          "enum": [
+            "page",
+            "subdomain",
+            "root_domain"
+          ]
+        },
+        "source_scope": {
+          "in": "body",
+          "type": "string",
+          "description": "Scope of each source. Default page.",
+          "enum": [
+            "page",
+            "subdomain",
+            "root_domain"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed.",
+        "Weighted: each source counts as 2 rows of usage."
+      ],
+      "job": "backlinks.status",
+      "docs_url": "https://moz.com/help/links-api/making-calls/link-status",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/link-status"
+      }
+    },
+    {
+      "id": "moz.links.index_metadata",
+      "name": "Index metadata",
+      "summary": "Information about the current Links index. Send an empty body.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/index_metadata",
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed."
+      ],
+      "job": "index.metadata",
+      "docs_url": "https://moz.com/help/links-api/making-calls/index-metadata",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/index-metadata"
+      }
+    },
+    {
+      "id": "moz.account.usage_data",
+      "name": "Usage data",
+      "summary": "Rows consumed in a time period (default: the current month).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/usage_data",
+      "params": {
+        "start": {
+          "in": "body",
+          "type": "string",
+          "description": "Period start as Unix seconds, passed as a string. Default: start of this month.",
+          "example": "1762560000"
+        },
+        "end": {
+          "in": "body",
+          "type": "string",
+          "description": "Period end as Unix seconds, passed as a string. Default: now.",
+          "example": "1762646400"
+        }
+      },
+      "notes": [
+        "A read over POST: Moz Links V2 takes every call as POST with a JSON body, and nothing is changed."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://moz.com/help/links-api/making-calls/usage-data",
+      "verified": {
+        "docs": "https://moz.com/help/links-api/making-calls/usage-data"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

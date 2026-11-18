@@ -1,0 +1,343 @@
+{
+  "vendor": "bankofcanada",
+  "name": "Bank of Canada",
+  "category": "finance",
+  "summary": "Bank of Canada Valet API: exchange rates, interest rates and other Bank of Canada statistical series, keyless.",
+  "docs_url": "https://www.bankofcanada.ca/valet/docs",
+  "base_url": "https://www.bankofcanada.ca/valet",
+  "notes": [
+    "Free and keyless; no credentials.",
+    "Data is organised as series (one time series, e.g. FXUSDCAD) and groups (a named set of series, e.g. FX_RATES_DAILY). Find names with bankofcanada.search.series / bankofcanada.search.groups or bankofcanada.lists.",
+    "Most paths end in a format segment: json, csv or xml. Use json unless a file is wanted.",
+    "Exchange-rate series are named FX[currency1][currency2] (FXUSDCAD); rates are indicative, published once each business day by 16:30 ET.",
+    "Data can lag publication briefly; if today's value is missing, check again later in the day."
+  ],
+  "sources": [
+    "https://www.bankofcanada.ca/valet/docs",
+    "https://www.bankofcanada.ca/valet/static/swagger/api-en.yml"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "bankofcanada.observations.series",
+      "name": "Get series observations",
+      "summary": "Observations of one or more series (exchange rates, interest rates, statistics), filtered by date range or most recent N.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/observations/{seriesNames}/{format}",
+      "params": {
+        "seriesNames": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated series names.",
+          "example": "FXUSDCAD,FXEURCAD"
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ],
+          "example": "json",
+          "description": "Response format."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Observations on or after this date (YYYY-MM-DD).",
+          "example": "2023-01-23"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Observations on or before this date (YYYY-MM-DD).",
+          "example": "2023-07-19"
+        },
+        "recent": {
+          "in": "query",
+          "type": "integer",
+          "description": "The most recent N observations per series."
+        },
+        "recent_weeks": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last N weeks of observations per series."
+        },
+        "recent_months": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last N months of observations per series."
+        },
+        "recent_years": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last N years of observations per series."
+        },
+        "order_dir": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Order of observations per series."
+        }
+      },
+      "notes": [
+        "recent, recent_weeks, recent_months and recent_years cannot be combined with start_date/end_date.",
+        "Date filters apply only to time series."
+      ],
+      "job": "market.history",
+      "docs_url": "https://www.bankofcanada.ca/valet/docs",
+      "verified": {
+        "docs": "https://www.bankofcanada.ca/valet/static/swagger/api-en.yml"
+      }
+    },
+    {
+      "id": "bankofcanada.observations.group",
+      "name": "Get group observations",
+      "summary": "Observations of every series in a group (e.g. all daily exchange rates), filtered by date range or most recent N.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/observations/group/{groupName}/{format}",
+      "params": {
+        "groupName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Group name.",
+          "example": "FX_RATES_DAILY"
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ],
+          "example": "json",
+          "description": "Response format."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Observations on or after this date (YYYY-MM-DD)."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Observations on or before this date (YYYY-MM-DD)."
+        },
+        "recent": {
+          "in": "query",
+          "type": "integer",
+          "description": "The most recent N observations per series."
+        },
+        "recent_weeks": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last N weeks of observations per series."
+        },
+        "recent_months": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last N months of observations per series."
+        },
+        "recent_years": {
+          "in": "query",
+          "type": "integer",
+          "description": "The last N years of observations per series."
+        },
+        "order_dir": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Order of observations per series."
+        }
+      },
+      "notes": [
+        "recent_* parameters cannot be combined with start_date/end_date."
+      ],
+      "job": "market.history",
+      "docs_url": "https://www.bankofcanada.ca/valet/docs",
+      "verified": {
+        "docs": "https://www.bankofcanada.ca/valet/static/swagger/api-en.yml"
+      }
+    },
+    {
+      "id": "bankofcanada.series.get",
+      "name": "Get series details",
+      "summary": "Label and description of one series.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/series/{seriesName}/{format}",
+      "params": {
+        "seriesName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Series name.",
+          "example": "FXUSDCAD"
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ],
+          "example": "json",
+          "description": "Response format."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://www.bankofcanada.ca/valet/docs",
+      "verified": {
+        "docs": "https://www.bankofcanada.ca/valet/static/swagger/api-en.yml"
+      }
+    },
+    {
+      "id": "bankofcanada.groups.get",
+      "name": "Get group details",
+      "summary": "A group's details and the series it contains.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/groups/{groupName}/{format}",
+      "params": {
+        "groupName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Group name.",
+          "example": "FX_RATES_DAILY"
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ],
+          "example": "json",
+          "description": "Response format."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://www.bankofcanada.ca/valet/docs",
+      "verified": {
+        "docs": "https://www.bankofcanada.ca/valet/static/swagger/api-en.yml"
+      }
+    },
+    {
+      "id": "bankofcanada.lists",
+      "name": "List all series or groups",
+      "summary": "Names of every available series or every group.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lists/{type}/{format}",
+      "params": {
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "groups",
+            "series"
+          ],
+          "example": "groups",
+          "description": "Which list to return."
+        },
+        "format": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "json",
+            "csv",
+            "xml"
+          ],
+          "example": "json",
+          "description": "Response format."
+        }
+      },
+      "notes": [
+        "The series list is large; prefer bankofcanada.search.series to find a series by keyword."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://www.bankofcanada.ca/valet/docs",
+      "verified": {
+        "docs": "https://www.bankofcanada.ca/valet/static/swagger/api-en.yml"
+      }
+    },
+    {
+      "id": "bankofcanada.search.series",
+      "name": "Search series",
+      "summary": "Paginated series whose label matches a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/series",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search query; quoted phrases supported.",
+          "example": "overnight rate"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, starting at 1."
+        }
+      },
+      "notes": [
+        "No match or a page past the end returns 200 with a message field, not an error."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://www.bankofcanada.ca/valet/docs",
+      "verified": {
+        "docs": "https://www.bankofcanada.ca/valet/static/swagger/api-en.yml"
+      }
+    },
+    {
+      "id": "bankofcanada.search.groups",
+      "name": "Search groups",
+      "summary": "Paginated groups whose label matches a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/groups",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Search query; quoted phrases supported."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, starting at 1."
+        }
+      },
+      "notes": [
+        "No match or a page past the end returns 200 with a message field, not an error."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://www.bankofcanada.ca/valet/docs",
+      "verified": {
+        "docs": "https://www.bankofcanada.ca/valet/static/swagger/api-en.yml"
+      }
+    }
+  ]
+}

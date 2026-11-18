@@ -8,13 +8,16 @@ rules every change here follows.
 ## What this is
 
 `web-router` puts one typed interface in front of many web APIs: `search`,
-`extract`, `run_template` (a backend's saved Extract Template, with
-`templates` and `template` to find one), `answer` (a backend's written answer
+`extract`, `live_data` (a vendor's ready-made scraper for one site -- Nimble,
+Apify, Bright Data, Oxylabs -- fetched for this call, with `live_data_sources`
+and `live_data_source` to find one), `answer` (a backend's written answer
 with its sources, in one call), `research`, `open_browser` (a browser
 session) and `browse` (a hosted browser agent). Each call behaves the same
-whichever backend serves it.
-It ships a Python library and an MCP server. [README.md](README.md) is the full
-reference.
+whichever backend serves it. Beside them, `call_vendor` reaches a vendor's own
+API (Google Ads, Datadog, ...) with the user's credentials, from a catalog of
+vendors listed in [VENDORS.md](VENDORS.md).
+It ships a Python library and an MCP server. [README.md](README.md) is the overview;
+[docs.webrouter.net](https://docs.webrouter.net) is the full reference.
 
 ## Set it up
 
@@ -32,6 +35,13 @@ them.** No key is required: search and extract work keyless. Every key added
 unlocks more backends and fallbacks, and research, browse and cloud browsers
 each need at least one; with a key for every backend, every capability is
 available. `.env.example` names each variable and where to get it.
+
+The library reads the process environment only, never `.env` (the MCP server
+loads it for you). Run scripts with the file loaded:
+
+```bash
+uv run --env-file .env python my_script.py
+```
 
 Check it works:
 
@@ -69,12 +79,31 @@ claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --
 
 `--project` keeps the working directory, so the server reads the `.env` of the
 project the user is in. For Claude Desktop, Cursor and other clients, see
-[docs/mcp.md](docs/mcp.md). After adding keys, the server needs a restart, or
+[the MCP guide](https://docs.webrouter.net/mcp-server). After adding keys, the server needs a restart, or
 call its `load_env` tool with the path of the user's `.env`.
 
 The `web-router://capabilities` resource shows which backends are configured,
 and its `unlock` map lists each backend still missing a key and the variable
 that would add it: ask the model to read it.
+
+## Teach the agent to use it
+
+Two texts tell an agent how to use the MCP tools well -- which method is
+cheapest, what bills, how to check a result before trusting it. Both use the
+MCP server's tool names, with a table mapping each to its Python method:
+
+- [skills/web-router/SKILL.md](skills/web-router/SKILL.md): a Claude Code
+  skill. Install it for every project by linking it into the user's skills
+  folder, so a `git pull` here updates it:
+
+  ```bash
+  mkdir -p ~/.claude/skills && ln -s "$PWD/skills/web-router" ~/.claude/skills/web-router
+  ```
+
+  For one project only, link it into that project's `.claude/skills/` instead.
+- The [agent system prompt](https://docs.webrouter.net/agent-prompt) (source: `docs/agent-prompt.mdx`): the same guidance as a system
+  prompt, for an agent built on the Claude API, the Agent SDK or another
+  framework.
 
 ## Update
 
@@ -84,7 +113,9 @@ git pull && make setup
 
 ## Where to look
 
-- [README.md](README.md) — the API, every backend, and what each option does
-- [docs/mcp.md](docs/mcp.md) — the MCP server in depth
+- [README.md](README.md): the project overview, quickstart and links into the docs
+- [Documentation](https://docs.webrouter.net): getting started, core methods, providers and errors
+- [MCP server](https://docs.webrouter.net/mcp-server) — the MCP server in depth (source: `docs/mcp-server.mdx`)
+- [skills/web-router/SKILL.md](skills/web-router/SKILL.md) and the [agent system prompt](https://docs.webrouter.net/agent-prompt) (source: `docs/agent-prompt.mdx`) — how an agent should use the tools
 - [examples/](examples/) — runnable scripts (`uv run python examples/main.py`)
 - [CONTRIBUTING.md](CONTRIBUTING.md) — adding a provider and opening a pull request

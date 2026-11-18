@@ -19,10 +19,12 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from web_router.constants import (
+    MSG_SEARCH_FAILED,
     PROVIDER_TAVILY,
     TAVILY_PARAMS_BY_DEPTH,
     TAVILY_SDK_SEARCH_TIMEOUT,
 )
+from web_router.constants_mode_parts import TAVILY_TIERS
 from web_router.constants_tavily import (
     MSG_TAVILY_COUNTRY,
     TAVILY_COUNTRIES,
@@ -37,8 +39,9 @@ from web_router.providers._language import language_code
 from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.base import SearchProvider
+from web_router.providers.tavily_clients import TavilyClients, TavilyClientsMixin, sdk_errors
 from web_router.providers.tavily_extract import TavilyExtractProvider as TavilyExtractProvider
-from web_router.providers.tavily_extract import clamped_timeout, sdk_clients, tavily_key
+from web_router.providers.tavily_extract import clamped_timeout, tavily_key
 from web_router.types import (
     SearchRequest,
     SearchResponse,
@@ -48,10 +51,30 @@ from web_router.types import (
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "content", "raw_content", "score", "published_date"})
 
 
-class TavilyProvider(SearchProvider):
+def search_fields(request: SearchRequest, *, timeout: float | None = None, modes: Any = None) -> dict[str, Any]:
+    """Tavily's search fields for ``request``: its SDK's ``search()`` keywords, which are its REST body's fields."""
+    depth = mapped(TAVILY_PARAMS_BY_DEPTH, request.search_depth)
+    return build_payload(
+        request,
+        TAVILY_PARAM_NAMES,
+        modes,
+        query=request.query,
+        timeout=timeout,
+        country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
+        # The language alone, as the ISO 639-1 code Tavily documents.
+        language=language_code(request.locale) if request.locale else None,
+        time_range=mapped(TAVILY_TIME_RANGE, request.recency),
+        **(depth or {}),
+        **(TAVILY_LANGUAGE_FILTER if request.locale else {}),
+        **(TAVILY_RECENCY_FILTER if request.recency else {}),
+    )
+
+
+class TavilyProvider(TavilyClientsMixin, SearchProvider):
     """Routes searches to the Tavily Search API."""
 
     name: ClassVar[str] = PROVIDER_TAVILY
+    tiers = TAVILY_TIERS
     supported_parameters: ClassVar[frozenset[str]] = TAVILY_SEARCH_PARAMETERS
     refusal_reasons: ClassVar[dict[str, str]] = {"country": MSG_TAVILY_COUNTRY}
 
@@ -82,21 +105,17 @@ class TavilyProvider(SearchProvider):
         super().__init__(api_key=key, api_base_url=api_base_url, **kwargs)
 
         self._timeout = timeout
-        self._client, self._async_client = sdk_clients(key, api_base_url, kwargs)
+        self._clients = TavilyClients(key, api_base_url, kwargs)
 
     def _search(self, request: SearchRequest) -> SearchResponse:
-        payload = self._client.search(**self._build_payload(request))
+        with sdk_errors(self.name, MSG_SEARCH_FAILED):
+            payload = self._client.search(**self._build_payload(request))
         return self._to_response(request, payload)
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
-        payload = await self._async_client.search(**self._build_payload(request))
+        with sdk_errors(self.name, MSG_SEARCH_FAILED):
+            payload = await self._async_client.search(**self._build_payload(request))
         return self._to_response(request, payload)
-
-    def close(self) -> None:
-        self._client.close()
-
-    async def aclose(self) -> None:
-        await self._async_client.close()
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
@@ -108,21 +127,7 @@ class TavilyProvider(SearchProvider):
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         """Translate a normalized request into Tavily ``search()`` keyword arguments."""
-        depth = mapped(TAVILY_PARAMS_BY_DEPTH, request.search_depth)
-        payload = build_payload(
-            request,
-            TAVILY_PARAM_NAMES,
-            query=request.query,
-            timeout=self._timeout,
-            country=TAVILY_COUNTRIES[request.country.upper()] if request.country else None,
-            # The language alone, as the ISO 639-1 code Tavily documents.
-            language=language_code(request.locale) if request.locale else None,
-            time_range=mapped(TAVILY_TIME_RANGE, request.recency),
-            **(depth or {}),
-            **(TAVILY_LANGUAGE_FILTER if request.locale else {}),
-            **(TAVILY_RECENCY_FILTER if request.recency else {}),
-        )
-        return clamped_timeout(payload, TAVILY_SDK_SEARCH_TIMEOUT)
+        return clamped_timeout(search_fields(request, timeout=self._timeout, modes=self), TAVILY_SDK_SEARCH_TIMEOUT)
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         results = []

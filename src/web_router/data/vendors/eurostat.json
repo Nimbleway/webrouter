@@ -1,0 +1,248 @@
+{
+  "vendor": "eurostat",
+  "name": "Eurostat",
+  "category": "finance",
+  "summary": "Eurostat EU statistics (prices and inflation, energy, labour, trade, GDP, population, regions) as JSON-stat or SDMX, keyless.",
+  "docs_url": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access",
+  "base_url": "https://ec.europa.eu/eurostat/api/dissemination",
+  "notes": [
+    "Free and keyless; no credentials.",
+    "Datasets are addressed by their online data code (nama_10_gdp, DEMO_R_D3DENS); find codes with eurostat.toc or in the Eurostat data browser.",
+    "eurostat.statistics filters by dimension name (geo, unit, freq, time); for any other dimension use eurostat.sdmx.data, whose key covers every dimension in order.",
+    "Regional datasets are large: always filter by geo or geoLevel and by time.",
+    "Comext and Prodcom trade datasets live under a different base (api/comext/dissemination) not covered here."
+  ],
+  "sources": [
+    "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-getting-started/api",
+    "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/api-statistics",
+    "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/sdmx2-1/data-query",
+    "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/catalogue-api/toc"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "eurostat.statistics",
+      "name": "Get dataset values as JSON-stat",
+      "summary": "Values of a Eurostat dataset filtered by geography, unit, frequency and time, as JSON-stat 2.0.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/statistics/1.0/data/{datasetCode}",
+      "params": {
+        "datasetCode": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Online data code of the dataset.",
+          "example": "nama_10_gdp"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "EN",
+            "FR",
+            "DE"
+          ],
+          "description": "Label language; default EN."
+        },
+        "geo": {
+          "in": "query",
+          "type": "string",
+          "description": "Geography code (EU27_2020, FR, FR41); not with geoLevel.",
+          "example": "EU27_2020"
+        },
+        "geoLevel": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "aggregate",
+            "country",
+            "nuts1",
+            "nuts2",
+            "nuts3",
+            "city"
+          ],
+          "description": "All geographies at one level; not with geo."
+        },
+        "unit": {
+          "in": "query",
+          "type": "string",
+          "description": "Unit code, when the dataset has a unit dimension."
+        },
+        "freq": {
+          "in": "query",
+          "type": "string",
+          "description": "Frequency code (A annual, M monthly, ...), when the dataset has one."
+        },
+        "time": {
+          "in": "query",
+          "type": "string",
+          "description": "One time period, e.g. 2022.",
+          "example": "2022"
+        },
+        "sinceTimePeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "Periods from this one, inclusive."
+        },
+        "untilTimePeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "Periods up to this one, inclusive."
+        },
+        "lastTimePeriod": {
+          "in": "query",
+          "type": "integer",
+          "description": "The N latest periods.",
+          "example": 1
+        }
+      },
+      "notes": [
+        "Use only one time filter, except sinceTimePeriod with untilTimePeriod.",
+        "Values come back as a flat 'value' object indexed by position across the dimension sizes in 'id'/'size'; decode with the 'dimension' index."
+      ],
+      "job": "market.history",
+      "docs_url": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/api-statistics",
+      "verified": {
+        "docs": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/api-statistics"
+      }
+    },
+    {
+      "id": "eurostat.sdmx.data",
+      "name": "Get dataset values by SDMX key",
+      "summary": "Values of a dataset for a dot-separated key over every dimension, as SDMX-CSV, TSV, JSON-stat or SDMX-ML.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sdmx/2.1/data/{resourceID}/{key}",
+      "params": {
+        "resourceID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset code.",
+          "example": "NAMA_10_GDP"
+        },
+        "key": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dimension values in the dataset structure's order, dot-separated; an empty position is a wildcard."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "SDMX_2.1_STRUCTURED",
+            "SDMX-CSV",
+            "JSON",
+            "TSV"
+          ],
+          "description": "Default SDMX-ML 2.1 Generic XML; JSON means JSON-stat.",
+          "example": "SDMX-CSV"
+        },
+        "startPeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "Start period."
+        },
+        "endPeriod": {
+          "in": "query",
+          "type": "string",
+          "description": "End period."
+        },
+        "firstNObservations": {
+          "in": "query",
+          "type": "integer",
+          "description": "First N observations per series."
+        },
+        "lastNObservations": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last N observations per series."
+        },
+        "detail": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "dataonly",
+            "serieskeysonly",
+            "nodata"
+          ],
+          "description": "Amount of detail."
+        },
+        "returnData": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "ALL",
+            "DATA_ONLY"
+          ],
+          "description": "TSV and SDMX-CSV only: include series with no data (ALL) or not (DATA_ONLY, default)."
+        }
+      },
+      "notes": [
+        "Get the dimension order from eurostat.sdmx.datastructure.",
+        "A very large result is delivered asynchronously (a placeholder response to fetch later) rather than inline."
+      ],
+      "job": "market.history",
+      "docs_url": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/sdmx2-1/data-query",
+      "verified": {
+        "docs": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/sdmx2-1/data-query"
+      }
+    },
+    {
+      "id": "eurostat.sdmx.datastructure",
+      "name": "Get a dataset's structure",
+      "summary": "The data structure definition: dimensions in key order and their codelists.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sdmx/2.1/datastructure/ESTAT/{resourceID}/latest",
+      "params": {
+        "resourceID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Dataset code.",
+          "example": "NAMA_10_GDP"
+        }
+      },
+      "notes": [
+        "Returns SDMX-ML structure XML."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/sdmx2-1/data-query",
+      "verified": {
+        "docs": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/sdmx2-1/data-query"
+      }
+    },
+    {
+      "id": "eurostat.toc",
+      "name": "List datasets",
+      "summary": "Eurostat's table of contents: every dataset and table with code, title, last update, data start and end, and value count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/catalogue/toc/txt",
+      "params": {
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "en",
+            "fr",
+            "de"
+          ],
+          "description": "Title language.",
+          "example": "en"
+        }
+      },
+      "notes": [
+        "Plain text of the whole catalogue (large); hierarchy is shown by 4-space indentation of titles."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/catalogue-api/toc",
+      "verified": {
+        "docs": "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-detailed-guidelines/catalogue-api/toc"
+      }
+    }
+  ]
+}

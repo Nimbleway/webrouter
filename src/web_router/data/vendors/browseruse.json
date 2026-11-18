@@ -1,0 +1,54 @@
+{
+  "vendor": "browseruse",
+  "name": "Browser Use",
+  "category": "scraping",
+  "summary": "The Browser Use Cloud account and its credit balance.",
+  "docs_url": "https://docs.browser-use.com/cloud/api-reference.md",
+  "pricing_url": "https://browser-use.com/pricing",
+  "base_url": "https://api.browser-use.com/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BROWSER_USE_API_KEY"
+        ],
+        "description": "A Browser Use Cloud API key (cloud.browser-use.com > API keys). Sent in the X-Browser-Use-API-Key header, without a Bearer prefix."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Browser-Use-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The account and credit balance is on the Cloud API v2 (/v2/billing/account).",
+    "Browser Use agent runs go through web-router's browse, not this entry."
+  ],
+  "sources": [
+    "https://docs.browser-use.com/llms.txt",
+    "https://docs.browser-use.com/cloud/openapi/v4.json",
+    "https://docs.browser-use.com/cloud/openapi/v2.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "browseruse.account.get",
+      "name": "Get account and credit balance",
+      "summary": "Project id, credit balance, concurrent session limit and active session count for the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/billing/account",
+      "notes": [
+        "rateLimit in the answer is a legacy alias for concurrency, not requests per second."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.browser-use.com/cloud/api-v2/billing/get-account-billing.md",
+      "verified": {
+        "docs": "https://docs.browser-use.com/cloud/api-v2/billing/get-account-billing.md"
+      }
+    }
+  ]
+}

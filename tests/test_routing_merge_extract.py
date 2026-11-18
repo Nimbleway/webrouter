@@ -21,7 +21,9 @@ def _urls(n: int) -> RouteDecision:
 
 @pytest.fixture(autouse=True)
 def cent_a_page(monkeypatch: pytest.MonkeyPatch) -> None:
-    row = SimpleNamespace(estimate_usd=0.01, estimate_is_floor=False, mode=None, results_assumed=None)
+    row = SimpleNamespace(
+        unit="per_1k", default=False, estimate_usd=0.01, estimate_is_floor=False, mode=None, results_assumed=None
+    )
     monkeypatch.setattr(prices, "price", lambda *_: row)
 
 

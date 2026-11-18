@@ -1,0 +1,90 @@
+{
+  "provider": "seltz",
+  "method": "search",
+  "class": "web_router.providers.seltz.SeltzProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.seltz.ai",
+    "paths": {
+      "search_path": "/v1/search"
+    },
+    "method": "POST",
+    "auth_header": "x-api-key"
+  },
+  "credentials": [
+    "SELTZ_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.max_results": 3
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.include_domains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.exclude_domains": [
+          "example.org"
+        ]
+      }
+    },
+    "recency": {
+      "day": {
+        "body.from_date": "now-1d"
+      },
+      "week": {
+        "body.from_date": "now-7d"
+      },
+      "month": {
+        "body.from_date": "now-1M"
+      },
+      "year": {
+        "body.from_date": "now-1y"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort",
+    "locale",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.seltz.ai/api-reference/openapi.json",
+    "https://docs.seltz.ai/api-reference/search"
+  ],
+  "verified": {
+    "max_results": "docs: https://docs.seltz.ai/api-reference/openapi.json",
+    "include_domains": "docs: https://docs.seltz.ai/api-reference/openapi.json",
+    "exclude_domains": "docs: https://docs.seltz.ai/api-reference/openapi.json",
+    "recency": "docs: https://docs.seltz.ai/api-reference/openapi.json"
+  },
+  "vendor_options": {
+    "scope": {
+      "status": "passthrough",
+      "note": "web (beta, the default), news, wikipedia, people, companies or financial-reports."
+    },
+    "tier": {
+      "status": "passthrough",
+      "note": "base or pro (the default): pro adds a ranking stage, at a higher price."
+    },
+    "to_date": {
+      "status": "passthrough",
+      "note": "Results published on or before this point; recency sends from_date alone."
+    },
+    "fields": {
+      "status": "passthrough",
+      "note": "Which of content, snippets and properties each document carries; snippet limits (max_snippets_per_result, max_tokens...) go in an object under fields.snippets."
+    }
+  }
+}

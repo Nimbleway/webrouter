@@ -33,7 +33,7 @@ from web_router.providers.auto import AutoBrowseProvider, AutoExtractProvider, A
 from web_router.providers.auto_answer import AutoAnswerProvider
 
 TOOLS = ("search", "extract", "answer", "research", "browse")
-"""The tools ``route_tools`` names, in the README's order."""
+"""The tools ``route_tools`` names, in the order of the smart routing docs page."""
 
 SHARE = 0.25
 """The starting rule: a tool asks the router for its provider order only when the router's p50 is below this

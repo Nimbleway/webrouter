@@ -257,13 +257,13 @@ def test_load_of_a_file_that_is_not_a_dotenv_yields_nothing_and_quotes_none_of_i
     isolated_home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A model can name any path. Whatever it points at, only credential variables are ever taken from it."""
-    # OPENAI_API_KEY is not a provider credential, so no_keys leaves a developer's own in place. Setting
+    # APP_DATABASE_PASSWORD is no backend's or vendor's credential, so no_keys leaves it alone. Setting
     # before deleting makes monkeypatch restore the variable even if the loader wrongly took it from the file.
-    for name in ("OPENAI_API_KEY", "AWS_SECRET_ACCESS_KEY", ENV_LOCAL_BROWSER_PATH):
+    for name in ("APP_DATABASE_PASSWORD", "AWS_SECRET_ACCESS_KEY", ENV_LOCAL_BROWSER_PATH):
         monkeypatch.setenv(name, "")
         monkeypatch.delenv(name)
     secrets = (
-        "OPENAI_API_KEY=not-real-openai-value\n"
+        "APP_DATABASE_PASSWORD=not-real-openai-value\n"
         "AWS_SECRET_ACCESS_KEY=also-secret\n"
         f"{ENV_LOCAL_BROWSER_PATH}=/tmp/evil\n"
         'password = "hunter2"\n'
@@ -279,7 +279,7 @@ def test_load_of_a_file_that_is_not_a_dotenv_yields_nothing_and_quotes_none_of_i
     assert str(path) in message
     for value in ("not-real-openai-value", "also-secret", "/tmp/evil", "hunter2", "json-secret"):
         assert value not in message
-    for name in ("OPENAI_API_KEY", "AWS_SECRET_ACCESS_KEY", ENV_LOCAL_BROWSER_PATH):
+    for name in ("APP_DATABASE_PASSWORD", "AWS_SECRET_ACCESS_KEY", ENV_LOCAL_BROWSER_PATH):
         assert not is_set(name)
 
 

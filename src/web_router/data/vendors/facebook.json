@@ -1,0 +1,157 @@
+{
+  "vendor": "facebook",
+  "name": "Facebook Pages (Graph API)",
+  "category": "social",
+  "summary": "Facebook Pages you manage through Meta's Graph API: Page details and the Page feed.",
+  "docs_url": "https://developers.facebook.com/docs/pages-api",
+  "base_url": "https://graph.facebook.com/{api_version}",
+  "settings": {
+    "api_version": {
+      "env": [
+        "META_GRAPH_API_VERSION"
+      ],
+      "default": "v25.0",
+      "choices": [
+        "v25.0",
+        "v26.0",
+        "v27.0"
+      ],
+      "description": "Graph API version. Meta retires old versions about two years after release."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "FACEBOOK_ACCESS_TOKEN"
+        ],
+        "description": "A Page access token (or a system-user token) from your Meta app, with the Pages permissions the call needs (Meta for Developers > your app > Graph API Explorer)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Most Page calls need a Page access token, obtained by exchanging a user token; the Pages a user manages come from user.accounts.",
+    "Reading Page content and publishing need Meta App Review for the pages_* permissions.",
+    "Lists page with paging.cursors.after; follow paging.next when present.",
+    "Rate limits are per Page: error 80001 means too many calls, wait and retry."
+  ],
+  "sources": [
+    "https://developers.facebook.com/docs/pages-api",
+    "https://developers.facebook.com/docs/graph-api/reference/page",
+    "https://developers.facebook.com/docs/graph-api/reference/page/feed",
+    "https://developers.facebook.com/docs/graph-api/reference/page/photos",
+    "https://developers.facebook.com/docs/graph-api/reference/user/accounts"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "facebook.page.get",
+      "name": "Get a Page",
+      "summary": "Profile and audience fields of a Facebook Page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{page_id}",
+      "params": {
+        "page_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Page id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: id, name, username, about, category, link, website, fan_count, followers_count, is_published, instagram_business_account, ...",
+          "example": "name,about,fan_count,followers_count,link"
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.facebook.com/docs/graph-api/reference/page",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/graph-api/reference/page"
+      },
+      "notes": [
+        "Fields that can carry user data need a Page access token; the instagram_business_account field needs a user token."
+      ]
+    },
+    {
+      "id": "facebook.page.feed",
+      "name": "List a Page's posts",
+      "summary": "The Page's feed: its own posts, visitor posts and public posts that tag it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{page_id}/feed",
+      "params": {
+        "page_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Page id."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated post fields, e.g. id, message, created_time, permalink_url, attachments.",
+          "example": "id,message,created_time,permalink_url"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Up to 100."
+        },
+        "is_published": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only published posts."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.facebook.com/docs/graph-api/reference/page/feed",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/graph-api/reference/page/feed"
+      },
+      "notes": [
+        "Needs a Page access token and pages_read_engagement plus pages_read_user_content.",
+        "Returns roughly 600 published, ranked posts a year; expired posts are gone. Reels come from the VideoReels edge."
+      ]
+    },
+    {
+      "id": "facebook.user.accounts",
+      "name": "List the Pages a user manages",
+      "summary": "Pages the token's user owns or has a role on, with the user's tasks on each.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{user_id}/accounts",
+      "params": {
+        "user_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A user id, or me.",
+          "example": "me"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated Page fields, e.g. id, name, tasks."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer"
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.facebook.com/docs/graph-api/reference/user/accounts",
+      "verified": {
+        "docs": "https://developers.facebook.com/docs/graph-api/reference/user/accounts"
+      }
+    }
+  ]
+}

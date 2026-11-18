@@ -26,7 +26,9 @@ def _urls(*urls: str) -> RouteDecision:
 def test_router_urls_dropped_for_cost_keep_extract_when_no_search_backend_is_offered(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    row = SimpleNamespace(estimate_usd=0.01, estimate_is_floor=False, mode=None, results_assumed=None)
+    row = SimpleNamespace(
+        unit="per_1k", default=False, estimate_usd=0.01, estimate_is_floor=False, mode=None, results_assumed=None
+    )
     monkeypatch.setattr(prices, "price", lambda *_: row)
     merged = _merge(_urls(*(f"https://site.test/{i}" for i in range(50))))
     assert (merged.tool, merged.providers, merged.params) == ("extract", ("jina",), {})  # type: ignore[attr-defined]

@@ -1,0 +1,474 @@
+{
+  "vendor": "cnpja",
+  "name": "CNPJá",
+  "category": "company-data",
+  "summary": "Brazilian company registry (CNPJ) data: establishments, companies with partners, Simples Nacional and Receita Federal records, and filtered searches.",
+  "docs_url": "https://api.cnpja.com/docs",
+  "base_url": "https://api.cnpja.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CNPJA_API_KEY"
+        ],
+        "description": "A CNPJá commercial API key (cnpja.com account), sent as the raw Authorization header value with no prefix."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits (₪): an online CNPJ lookup costs 1, a cached one 0; add-ons (simples, suframa, geocoding, registrations) add 1 each. Company, person-by-id and postal-code lookups are free. Searches cost 1 per 10 records.",
+    "strategy=CACHE never charges; it returns 404 when nothing is cached. sync=true makes the response carry the charge in the cnpja-request-cost header.",
+    "CNPJ and CPF values are digits only. A company id is the first 8 digits of the CNPJ (the root); an establishment is the full 14-digit CNPJ.",
+    "Searches page with the token returned by the previous page; a token excludes every other filter. Filter names are dotted (names.in, address.state.in) and lists are comma-separated.",
+    "Docs and field descriptions are in Portuguese. The keyless public API at open.cnpja.com is a separate, rate-limited service not in this entry."
+  ],
+  "sources": [
+    "https://api.cnpja.com/docs",
+    "https://api.cnpja.com/docs/json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "cnpja.office.get",
+      "name": "Look up a CNPJ",
+      "summary": "One establishment: legal and trade name, status, address, phones, emails, activities (CNAE), partners, and optional Simples, state registrations, SUFRAMA and geocode.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/office/{taxId}",
+      "params": {
+        "taxId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CNPJ, digits only.",
+          "example": "37335118000180"
+        },
+        "simples": {
+          "in": "query",
+          "type": "boolean",
+          "description": "+1 credit: add Simples Nacional and MEI status."
+        },
+        "simplesHistory": {
+          "in": "query",
+          "type": "boolean",
+          "description": "+1 credit: add past Simples and MEI periods."
+        },
+        "registrations": {
+          "in": "query",
+          "type": "string",
+          "description": "+1 credit (CCC) or +1 per state (SINTEGRA): state registrations for these UFs, comma-separated; ORIGIN or ALL also accepted.",
+          "example": "ORIGIN"
+        },
+        "registrationsSource": {
+          "in": "query",
+          "type": "string",
+          "description": "Source for state registrations; default AUTO.",
+          "enum": [
+            "AUTO",
+            "CCC",
+            "SINTEGRA"
+          ]
+        },
+        "suframa": {
+          "in": "query",
+          "type": "boolean",
+          "description": "+1 credit: add the SUFRAMA registration."
+        },
+        "geocoding": {
+          "in": "query",
+          "type": "boolean",
+          "description": "+1 credit: add latitude and longitude."
+        },
+        "strategy": {
+          "in": "query",
+          "type": "string",
+          "description": "CACHE: cache only, never charged, 404 when absent. CACHE_IF_FRESH: cache within maxAge, else online. CACHE_IF_ERROR (default): as CACHE_IF_FRESH, falling back to cache within maxStale if online fails. ONLINE: always online (prefer maxAge=1).",
+          "enum": [
+            "ONLINE",
+            "CACHE_IF_FRESH",
+            "CACHE_IF_ERROR",
+            "CACHE"
+          ]
+        },
+        "maxAge": {
+          "in": "query",
+          "type": "number",
+          "description": "Days a cached record is accepted; default 45."
+        },
+        "maxStale": {
+          "in": "query",
+          "type": "number",
+          "description": "Days a cached record is accepted when the online lookup fails (CACHE_IF_ERROR); default 365."
+        },
+        "sync": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Settle credits synchronously and return the cnpja-request-cost header."
+        }
+      },
+      "notes": [
+        "1 credit online, 0 from cache, plus add-ons."
+      ],
+      "job": "company.verify",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    },
+    {
+      "id": "cnpja.office.search",
+      "name": "Search establishments",
+      "summary": "CNPJs matching filters on name, status, founding date, address, activity (CNAE), size, Simples/MEI, phones and emails.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/office",
+      "params": {
+        "token": {
+          "in": "query",
+          "type": "string",
+          "description": "Paging token from the previous page; excludes every other filter."
+        },
+        "limit": {
+          "in": "query",
+          "type": "number",
+          "description": "Records per page; default 10."
+        },
+        "names_in": {
+          "in": "query",
+          "type": "string",
+          "description": "Terms in the legal or trade name: space-separated must all match one company, comma-separated match different ones.",
+          "wire_name": "names.in"
+        },
+        "status_id_in": {
+          "in": "query",
+          "type": "string",
+          "description": "Registration status codes, comma-separated: 1 null, 2 active, 3 suspended, 4 unfit, 8 closed.",
+          "example": "2",
+          "wire_name": "status.id.in"
+        },
+        "main_activity_id_in": {
+          "in": "query",
+          "type": "string",
+          "description": "Main CNAE activity codes, comma-separated.",
+          "wire_name": "mainActivity.id.in"
+        },
+        "activities_id_in": {
+          "in": "query",
+          "type": "string",
+          "description": "Main or secondary CNAE codes, comma-separated.",
+          "wire_name": "activities.id.in"
+        },
+        "address_state_in": {
+          "in": "query",
+          "type": "string",
+          "description": "States (UF), comma-separated.",
+          "example": "SP",
+          "wire_name": "address.state.in"
+        },
+        "address_municipality_in": {
+          "in": "query",
+          "type": "string",
+          "description": "IBGE municipality codes, comma-separated.",
+          "wire_name": "address.municipality.in"
+        },
+        "founded_gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Opened on or after this date.",
+          "wire_name": "founded.gte"
+        },
+        "founded_lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Opened on or before this date.",
+          "wire_name": "founded.lte"
+        },
+        "head_eq": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: head offices only; false: branches only.",
+          "wire_name": "head.eq"
+        },
+        "company_size_id_in": {
+          "in": "query",
+          "type": "string",
+          "description": "Company size codes: 1 micro (ME), 3 small (EPP), 5 other.",
+          "wire_name": "company.size.id.in"
+        },
+        "company_simples_optant_eq": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: Simples Nacional optants only.",
+          "wire_name": "company.simples.optant.eq"
+        },
+        "phones_ex": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: only establishments with a phone.",
+          "wire_name": "phones.ex"
+        },
+        "emails_ex": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: only establishments with an email.",
+          "wire_name": "emails.ex"
+        }
+      },
+      "notes": [
+        "1 credit per 10 records returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    },
+    {
+      "id": "cnpja.company.get",
+      "name": "Get a company",
+      "summary": "A company (CNPJ root) with all its partners and establishments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/{companyId}",
+      "params": {
+        "companyId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The first 8 digits of the CNPJ.",
+          "example": "37335118"
+        }
+      },
+      "notes": [
+        "Free; served from cache, refreshed every 30 days."
+      ],
+      "job": "company.shareholders",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    },
+    {
+      "id": "cnpja.person.search",
+      "name": "Search people",
+      "summary": "Partners and administrators by name, type, partial CPF/CNPJ, age band or country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person",
+      "params": {
+        "token": {
+          "in": "query",
+          "type": "string",
+          "description": "Paging token from the previous page; excludes every other filter."
+        },
+        "limit": {
+          "in": "query",
+          "type": "number",
+          "description": "Records per page; default 10."
+        },
+        "name_in": {
+          "in": "query",
+          "type": "string",
+          "description": "Names: space-separated must all match one person, comma-separated match different ones.",
+          "wire_name": "name.in"
+        },
+        "type_in": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: NATURAL, LEGAL, FOREIGN, UNKNOWN.",
+          "wire_name": "type.in"
+        },
+        "taxId_in": {
+          "in": "query",
+          "type": "string",
+          "description": "CPFs or CNPJs, comma-separated; CPFs match on digits 4 to 9 only.",
+          "wire_name": "taxId.in"
+        }
+      },
+      "notes": [
+        "1 credit per 10 records returned."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    },
+    {
+      "id": "cnpja.person.get",
+      "name": "Get a person",
+      "summary": "One person and the companies they are a partner in.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/person/{personId}",
+      "params": {
+        "personId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The person's CNPJá id, from a search or a company's partners."
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    },
+    {
+      "id": "cnpja.rfb.get",
+      "name": "Get the Receita Federal record",
+      "summary": "The Receita Federal registration: details, economic activities and partners and administrators (QSA).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rfb",
+      "params": {
+        "taxId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "CNPJ, digits only.",
+          "example": "37335118000180"
+        },
+        "strategy": {
+          "in": "query",
+          "type": "string",
+          "description": "CACHE: cache only, never charged, 404 when absent. CACHE_IF_FRESH: cache within maxAge, else online. CACHE_IF_ERROR (default): as CACHE_IF_FRESH, falling back to cache within maxStale if online fails. ONLINE: always online (prefer maxAge=1).",
+          "enum": [
+            "ONLINE",
+            "CACHE_IF_FRESH",
+            "CACHE_IF_ERROR",
+            "CACHE"
+          ]
+        },
+        "maxAge": {
+          "in": "query",
+          "type": "number",
+          "description": "Days a cached record is accepted; default 45."
+        },
+        "maxStale": {
+          "in": "query",
+          "type": "number",
+          "description": "Days a cached record is accepted when the online lookup fails (CACHE_IF_ERROR); default 365."
+        },
+        "sync": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the cnpja-request-cost header."
+        }
+      },
+      "notes": [
+        "1 credit online, 0 from cache."
+      ],
+      "job": "company.verify",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    },
+    {
+      "id": "cnpja.simples.get",
+      "name": "Get Simples Nacional status",
+      "summary": "Simples Nacional option and MEI status with dates, optionally with history.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/simples",
+      "params": {
+        "taxId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "CNPJ, digits only.",
+          "example": "37335118000180"
+        },
+        "history": {
+          "in": "query",
+          "type": "boolean",
+          "description": "+1 credit: add past periods and IBS/CBS events."
+        },
+        "strategy": {
+          "in": "query",
+          "type": "string",
+          "description": "CACHE: cache only, never charged, 404 when absent. CACHE_IF_FRESH: cache within maxAge, else online. CACHE_IF_ERROR (default): as CACHE_IF_FRESH, falling back to cache within maxStale if online fails. ONLINE: always online (prefer maxAge=1).",
+          "enum": [
+            "ONLINE",
+            "CACHE_IF_FRESH",
+            "CACHE_IF_ERROR",
+            "CACHE"
+          ]
+        },
+        "maxAge": {
+          "in": "query",
+          "type": "number",
+          "description": "Days a cached record is accepted; default 45."
+        },
+        "maxStale": {
+          "in": "query",
+          "type": "number",
+          "description": "Days a cached record is accepted when the online lookup fails (CACHE_IF_ERROR); default 365."
+        },
+        "sync": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the cnpja-request-cost header."
+        }
+      },
+      "notes": [
+        "1 credit online, 0 from cache."
+      ],
+      "job": "company.verify",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    },
+    {
+      "id": "cnpja.zip.get",
+      "name": "Look up a postal code",
+      "summary": "Address and IBGE municipality for a CEP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/zip/{code}",
+      "params": {
+        "code": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CEP, digits only.",
+          "example": "01452922"
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "reference.geo",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    },
+    {
+      "id": "cnpja.credit.get",
+      "name": "Get credit balance",
+      "summary": "Credits remaining on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credit",
+      "job": "account.usage",
+      "docs_url": "https://api.cnpja.com/docs",
+      "verified": {
+        "docs": "https://api.cnpja.com/docs"
+      }
+    }
+  ]
+}

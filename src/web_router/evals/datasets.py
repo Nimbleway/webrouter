@@ -1,4 +1,4 @@
-"""Question sets: SimpleQA, SimpleQA Verified, FRAMES, SealQA, two unlabeled sets of Nimble's, or a CSV of yours.
+"""Question sets: SimpleQA, SimpleQA Verified, FRAMES, SealQA, or a CSV of yours, with gold answers or none.
 
 Sampling mirrors ``SimpleQAEval`` in openai/simple-evals -- ``random.Random(seed).sample(rows, limit)``
 on the stdlib RNG -- so ``limit=500`` with the default seed is the same 500 questions every published
@@ -39,12 +39,6 @@ from web_router.constants_evals import (
     FRAMES_NAME,
     FRAMES_QUESTION_COLUMN,
     FRAMES_URL,
-    MSG_EVALS_UNKNOWN_PUBLIC_SET,
-    PUBLIC_BENCHMARKS_ANSWER_COLUMN,
-    PUBLIC_BENCHMARKS_COMMIT,
-    PUBLIC_BENCHMARKS_QUESTION_COLUMN,
-    PUBLIC_BENCHMARKS_SETS,
-    PUBLIC_BENCHMARKS_URL,
     SEALQA_METADATA_COLUMNS,
     SEALQA_SPLITS,
     SEALQA_URL,
@@ -189,8 +183,8 @@ class Dataset(BaseModel):
         seed: int = SIMPLEQA_SEED,
     ) -> Dataset:
         """A question set by name -- ``simpleqa``, ``simpleqa-verified``, ``frames``, ``sealqa-0``, ``sealqa-hard``,
-        the unlabeled ``due-diligence`` and ``lead-enrichment``, or ``csv``, your own file at ``path`` read by the
-        two named columns.
+        or ``csv``, your own file at ``path`` read by the two named columns (``answer_column=None`` for one with no
+        answers).
 
         For a named set, ``path`` is a local copy of its file in place of the download.
 
@@ -335,37 +329,6 @@ class Dataset(BaseModel):
             f"sealqa-{split}", rows, question_column="question", answer_column="answer", source=source
         ).model_copy(update={"withheld_markers": SEALQA_WITHHELD_MARKERS})
         return dataset.sample(limit, seed)
-
-    @classmethod
-    def public_benchmarks(
-        cls,
-        name: str,
-        *,
-        path: str | Path | None = None,
-        limit: int | None = None,
-        seed: int = SIMPLEQA_SEED,
-    ) -> Dataset:
-        """A set from Nimbleway/Public-benchmarks, read at a pinned commit unless a local copy is given.
-
-        ``due-diligence`` and ``lead-enrichment``: what people search about a company to invest in or sell to. Only
-        ``question`` is read, and ``answer`` when present. With no answers, ``evaluate()`` refuses them.
-        """
-        if name not in PUBLIC_BENCHMARKS_SETS:
-            raise ValueError(MSG_EVALS_UNKNOWN_PUBLIC_SET.format(name=name, sets=sorted(PUBLIC_BENCHMARKS_SETS)))
-        if path is not None:
-            text = Path(path).read_text(encoding="utf-8")
-            source = str(path)
-        else:
-            source = PUBLIC_BENCHMARKS_URL.format(commit=PUBLIC_BENCHMARKS_COMMIT, folder=PUBLIC_BENCHMARKS_SETS[name])
-            text = _fetch(source).decode("utf-8")
-        reader = csv.DictReader(io.StringIO(text))
-        answer = (
-            PUBLIC_BENCHMARKS_ANSWER_COLUMN if PUBLIC_BENCHMARKS_ANSWER_COLUMN in (reader.fieldnames or ()) else None
-        )
-        rows = [{key: row[key] for key in (PUBLIC_BENCHMARKS_QUESTION_COLUMN, answer) if key} for row in reader]
-        return cls.from_rows(
-            name, rows, question_column=PUBLIC_BENCHMARKS_QUESTION_COLUMN, answer_column=answer, source=source
-        ).sample(limit, seed)
 
 
 def _fetch(url: str, *, follow_redirects: bool = True) -> bytes:

@@ -1,0 +1,502 @@
+{
+  "vendor": "twelvedata",
+  "name": "Twelve Data",
+  "category": "finance",
+  "summary": "Prices, quotes, time series, symbol search and fundamentals for stocks, forex, crypto and ETFs worldwide.",
+  "docs_url": "https://twelvedata.com/docs",
+  "pricing_url": "https://twelvedata.com/pricing",
+  "base_url": "https://api.twelvedata.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TWELVEDATA_API_KEY",
+          "TWELVE_DATA_API_KEY"
+        ],
+        "description": "a Twelve Data API key (twelvedata.com/account/api-keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "apikey {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limits and API credits depend on the plan; an over-limit key gets 429. Fundamentals, many exchanges and some options need paid plans.",
+    "Pass a symbol; add exchange, mic_code or country when a ticker trades in several places."
+  ],
+  "sources": [
+    "https://twelvedata.com/docs",
+    "https://api.twelvedata.com/doc/swagger/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "twelvedata.time_series",
+      "name": "Get a price time series",
+      "summary": "OHLCV candles for stocks, forex, crypto, ETFs and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/time_series",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker, e.g. AAPL, or a pair such as EUR/USD.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange, to disambiguate a symbol."
+        },
+        "mic_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Market Identifier Code (ISO 10383)."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country of listing, e.g. US."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset class, e.g. Common Stock, ETF."
+        },
+        "dp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Decimal places, 0 to 11."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Candle size: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month.",
+          "example": "1day"
+        },
+        "outputsize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points to return, 1 to 5000; default 30."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From, 2006-01-02 or 2006-01-02T15:04:05."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "To, same formats."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Output timezone: Exchange, UTC or an IANA name."
+        },
+        "adjust": {
+          "in": "query",
+          "type": "string",
+          "description": "Price adjustment: all, splits (default), dividends or none."
+        },
+        "previous_close": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add previous close."
+        }
+      },
+      "notes": [
+        "Dates in start_date and end_date take 2006-01-02 or 2006-01-02T15:04:05 formats."
+      ],
+      "job": "market.history",
+      "docs_url": "https://twelvedata.com/docs#time-series",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#time-series"
+      }
+    },
+    {
+      "id": "twelvedata.quote",
+      "name": "Get a quote",
+      "summary": "Latest quote with open, high, low, close, volume, change and 52-week range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/quote",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker, e.g. AAPL, or a pair such as EUR/USD.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange, to disambiguate a symbol."
+        },
+        "mic_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Market Identifier Code (ISO 10383)."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country of listing, e.g. US."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset class, e.g. Common Stock, ETF."
+        },
+        "dp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Decimal places, 0 to 11."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "Interval of the quote, default 1day."
+        },
+        "eod": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return closed-day data."
+        },
+        "rolling_period": {
+          "in": "query",
+          "type": "integer",
+          "description": "Hours for rolling change, 1 to 168; default 24."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Output timezone."
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://twelvedata.com/docs#quote",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#quote"
+      }
+    },
+    {
+      "id": "twelvedata.price",
+      "name": "Get the latest price",
+      "summary": "Just the latest price of an instrument.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/price",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker, e.g. AAPL, or a pair such as EUR/USD.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange, to disambiguate a symbol."
+        },
+        "mic_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Market Identifier Code (ISO 10383)."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country of listing, e.g. US."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset class, e.g. Common Stock, ETF."
+        },
+        "dp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Decimal places, 0 to 11."
+        }
+      },
+      "job": "market.quote",
+      "docs_url": "https://twelvedata.com/docs#price",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#price"
+      }
+    },
+    {
+      "id": "twelvedata.eod",
+      "name": "Get end-of-day price",
+      "summary": "Closing price of the last trading day, or a given date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/eod",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker, e.g. AAPL, or a pair such as EUR/USD.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange, to disambiguate a symbol."
+        },
+        "mic_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Market Identifier Code (ISO 10383)."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country of listing, e.g. US."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset class, e.g. Common Stock, ETF."
+        },
+        "dp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Decimal places, 0 to 11."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "A specific date, YYYY-MM-DD."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://twelvedata.com/docs#eod",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#eod"
+      }
+    },
+    {
+      "id": "twelvedata.symbol_search",
+      "name": "Search symbols",
+      "summary": "Find instruments by ticker or name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/symbol_search",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Ticker, name or ISIN to search.",
+          "example": "apple"
+        },
+        "outputsize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Matches to return, max 120."
+        },
+        "show_plan": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the plan each symbol is available on."
+        }
+      },
+      "docs_url": "https://twelvedata.com/docs#symbol-search",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#symbol-search"
+      }
+    },
+    {
+      "id": "twelvedata.exchange_rate",
+      "name": "Get a currency exchange rate",
+      "summary": "Rate for a forex or crypto pair, now or on a date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/exchange_rate",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Pair with a slash, e.g. EUR/USD or BTC/USD.",
+          "example": "EUR/USD"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Rate at this date or time."
+        },
+        "dp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Decimal places."
+        }
+      },
+      "docs_url": "https://twelvedata.com/docs#exchange-rate",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#exchange-rate"
+      }
+    },
+    {
+      "id": "twelvedata.income_statement",
+      "name": "Get income statements",
+      "summary": "Annual or quarterly income statements.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/income_statement",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker, e.g. AAPL, or a pair such as EUR/USD.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange, to disambiguate a symbol."
+        },
+        "mic_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Market Identifier Code (ISO 10383)."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country of listing, e.g. US."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset class, e.g. Common Stock, ETF."
+        },
+        "dp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Decimal places, 0 to 11."
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "annual or quarterly."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal date from, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Fiscal date to, YYYY-MM-DD."
+        },
+        "outputsize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return."
+        }
+      },
+      "notes": [
+        "Fundamentals need a paid plan."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://twelvedata.com/docs#income-statement",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#income-statement"
+      }
+    },
+    {
+      "id": "twelvedata.earnings",
+      "name": "Get earnings history",
+      "summary": "Reported versus estimated EPS per period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/earnings",
+      "params": {
+        "symbol": {
+          "in": "query",
+          "type": "string",
+          "description": "Ticker, e.g. AAPL, or a pair such as EUR/USD.",
+          "example": "AAPL"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange, to disambiguate a symbol."
+        },
+        "mic_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Market Identifier Code (ISO 10383)."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country of listing, e.g. US."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Asset class, e.g. Common Stock, ETF."
+        },
+        "dp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Decimal places, 0 to 11."
+        },
+        "period": {
+          "in": "query",
+          "type": "string",
+          "description": "Type of earning; returns one record and ignores dates and outputsize."
+        },
+        "outputsize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points, 1 to 1000; default 10."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "From, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "To, YYYY-MM-DD."
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://twelvedata.com/docs#earnings",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#earnings"
+      }
+    },
+    {
+      "id": "twelvedata.api_usage",
+      "name": "Get API usage",
+      "summary": "Credits used and plan limits for the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api_usage",
+      "job": "account.usage",
+      "docs_url": "https://twelvedata.com/docs#api-usage",
+      "verified": {
+        "docs": "https://twelvedata.com/docs#api-usage"
+      }
+    }
+  ]
+}

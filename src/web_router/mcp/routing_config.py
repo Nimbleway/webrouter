@@ -75,7 +75,10 @@ from web_router.routing.rules import rules
 
 @dataclass(frozen=True)
 class McpRouting:
-    """The server's routing as the operator set it: the router ``web_run`` plans with, and the ceiling."""
+    """The server's routing as the operator set it: the router ``web_run`` plans with, and the ceiling.
+
+    The default is the :func:`~web_router.routing.rules.rules` function itself, not ``RulesRouter`` as the clients'
+    ``router="rules"`` builds it: the server has no ``route_tools`` to narrow, so it needs no wrapper."""
 
     router: RouterLike | str | None = rules
     router_name: str = RULES_ROUTER_NAME

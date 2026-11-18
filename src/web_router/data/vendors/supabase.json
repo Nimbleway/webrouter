@@ -1,0 +1,280 @@
+{
+  "vendor": "supabase",
+  "name": "Supabase",
+  "category": "developer",
+  "summary": "Supabase Management API: the user's projects and organisations, read-only SQL against a project's Postgres, logs, health, advisors and edge functions.",
+  "docs_url": "https://supabase.com/docs/reference/api/introduction",
+  "pricing_url": "https://supabase.com/pricing",
+  "base_url": "https://api.supabase.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "SUPABASE_ACCESS_TOKEN"
+        ],
+        "description": "A Supabase personal access token (or an OAuth token), sent as a Bearer token. Prefer a scoped token; a classic one has full account rights."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit: 120 requests a minute per user, per project or organisation, per endpoint; some are stricter. X-RateLimit-Limit, X-RateLimit-Remaining and X-RateLimit-Reset (seconds) come back; over it answers 429.",
+    "This is the management API on api.supabase.com, not a project's own REST/Auth/Storage API at <ref>.supabase.co, which needs the project's keys and a per-project host.",
+    "Several endpoints (SQL query, advisors, database context) are marked experimental or beta and may change."
+  ],
+  "sources": [
+    "https://supabase.com/docs/reference/api/introduction",
+    "https://api.supabase.com/api/v1-json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "supabase.projects.list",
+      "name": "List projects",
+      "summary": "Every project the token can see, with ref, name, region, status and organisation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/projects",
+      "params": {},
+      "job": "developer.projects.list",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-list-all-projects",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-list-all-projects"
+      }
+    },
+    {
+      "id": "supabase.projects.get",
+      "name": "Get a project",
+      "summary": "One project's details and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/projects/{ref}",
+      "params": {
+        "ref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project ref, 20 lowercase letters (from list projects or the project URL).",
+          "example": "abcdefghijklmnopqrst"
+        }
+      },
+      "job": "developer.projects.get",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-get-project",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-get-project"
+      }
+    },
+    {
+      "id": "supabase.organizations.list",
+      "name": "List organisations",
+      "summary": "Organisations the user belongs to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/organizations",
+      "params": {},
+      "job": "developer.organizations.list",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-list-all-organizations",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-list-all-organizations"
+      }
+    },
+    {
+      "id": "supabase.projects.health",
+      "name": "Check a project's service health",
+      "summary": "Health of the chosen services (auth, db, rest, storage, realtime, pooler...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/projects/{ref}/health",
+      "params": {
+        "ref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project ref, 20 lowercase letters (from list projects or the project URL).",
+          "example": "abcdefghijklmnopqrst"
+        },
+        "services": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated: auth, db, db_postgres_user, pooler, realtime, rest, storage, pg_bouncer.",
+          "example": "auth,db"
+        },
+        "timeout_ms": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 10000."
+        }
+      },
+      "job": "developer.health",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-get-services-health",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-get-services-health"
+      }
+    },
+    {
+      "id": "supabase.database.query.read_only",
+      "name": "Run a read-only SQL query",
+      "summary": "Run SQL as supabase_read_only_user and get the rows.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/projects/{ref}/database/query/read-only",
+      "params": {
+        "ref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project ref, 20 lowercase letters (from list projects or the project URL).",
+          "example": "abcdefghijklmnopqrst"
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "SQL; every table must be schema-qualified (public.users).",
+          "example": "select * from public.orders limit 10"
+        },
+        "parameters": {
+          "in": "body",
+          "type": "array",
+          "description": "Values for the query's parameters."
+        }
+      },
+      "notes": [
+        "A read over POST, run as a read-only role. Beta."
+      ],
+      "job": "database.query",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-read-only-query",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-read-only-query"
+      }
+    },
+    {
+      "id": "supabase.logs.query",
+      "name": "Query project logs",
+      "summary": "Run a ClickHouse-SQL query over the project's unified log stream.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/projects/{ref}/analytics/endpoints/logs",
+      "params": {
+        "ref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project ref, 20 lowercase letters (from list projects or the project URL).",
+          "example": "abcdefghijklmnopqrst"
+        },
+        "sql": {
+          "in": "query",
+          "type": "string",
+          "description": "ClickHouse SQL over the logs; filter on source (edge_logs, postgres_logs...).",
+          "example": "select event_message from edge_logs limit 10"
+        },
+        "iso_timestamp_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, ISO 8601."
+        },
+        "iso_timestamp_end": {
+          "in": "query",
+          "type": "string",
+          "description": "End, ISO 8601."
+        }
+      },
+      "notes": [
+        "Without both timestamps only the last minute is searched; the range may not exceed 24 hours and is rounded to the minute. The older logs.all endpoint now answers 410."
+      ],
+      "job": "logs.search",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-get-project-logs",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-get-project-logs"
+      }
+    },
+    {
+      "id": "supabase.advisors.security",
+      "name": "Get security advisor findings",
+      "summary": "Security lints for the project's database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/projects/{ref}/advisors/security",
+      "params": {
+        "ref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project ref, 20 lowercase letters (from list projects or the project URL).",
+          "example": "abcdefghijklmnopqrst"
+        },
+        "lint_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "sql"
+          ],
+          "description": "Lint type."
+        }
+      },
+      "notes": [
+        "Experimental."
+      ],
+      "job": "developer.advisors",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-get-security-advisors",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-get-security-advisors"
+      }
+    },
+    {
+      "id": "supabase.advisors.performance",
+      "name": "Get performance advisor findings",
+      "summary": "Performance lints for the project's database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/projects/{ref}/advisors/performance",
+      "params": {
+        "ref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project ref, 20 lowercase letters (from list projects or the project URL).",
+          "example": "abcdefghijklmnopqrst"
+        }
+      },
+      "notes": [
+        "Experimental."
+      ],
+      "job": "developer.advisors",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-get-performance-advisors",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-get-performance-advisors"
+      }
+    },
+    {
+      "id": "supabase.functions.list",
+      "name": "List edge functions",
+      "summary": "Edge functions deployed in the project.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/projects/{ref}/functions",
+      "params": {
+        "ref": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Project ref, 20 lowercase letters (from list projects or the project URL).",
+          "example": "abcdefghijklmnopqrst"
+        }
+      },
+      "job": "developer.functions.list",
+      "docs_url": "https://supabase.com/docs/reference/api/v1-list-all-functions",
+      "verified": {
+        "docs": "https://supabase.com/docs/reference/api/v1-list-all-functions"
+      }
+    }
+  ]
+}

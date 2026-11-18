@@ -1,0 +1,531 @@
+{
+  "vendor": "olostep",
+  "name": "Olostep",
+  "category": "scraping",
+  "summary": "Scrape, crawl, map, search and answer over the web with Olostep's API.",
+  "docs_url": "https://docs.olostep.com/",
+  "pricing_url": "https://www.olostep.com/pricing",
+  "base_url": "https://api.olostep.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OLOSTEP_API_KEY"
+        ],
+        "description": "an Olostep API key (olostep.com dashboard > API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <key>'.",
+    "Scrapes, crawls, maps, searches and answers are stored for about 7 days by default.",
+    "Crawls and batches are asynchronous: start, poll the info endpoint, then fetch content with retrieve_id.",
+    "Olostep also has monitors, schedules, files and a credit top-up endpoint that charges a saved card; those are not in this entry."
+  ],
+  "sources": [
+    "https://docs.olostep.com/llms.txt",
+    "https://docs.olostep.com/api-reference/scrapes/create.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "olostep.scrapes.create",
+      "name": "Scrape a URL",
+      "summary": "Scrape one page into markdown, HTML, text, JSON or a screenshot, with optional actions, parsers and LLM extraction.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/scrapes",
+      "params": {
+        "url_to_scrape": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The URL to scrape.",
+          "example": "https://example.com"
+        },
+        "formats": {
+          "in": "body",
+          "type": "array",
+          "description": "Content formats.",
+          "example": [
+            "markdown"
+          ]
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Residential country to load the page from, e.g. US."
+        },
+        "wait_before_scraping": {
+          "in": "body",
+          "type": "integer",
+          "description": "Milliseconds to wait before scraping."
+        },
+        "actions": {
+          "in": "body",
+          "type": "array",
+          "description": "Page actions to run before reading content."
+        },
+        "remove_images": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Strip images from the content."
+        },
+        "transformer": {
+          "in": "body",
+          "type": "string",
+          "description": "HTML transformer.",
+          "enum": [
+            "postlight",
+            "none"
+          ]
+        },
+        "parser": {
+          "in": "body",
+          "type": "object",
+          "description": "Parser to use when json is a requested format."
+        },
+        "llm_extract": {
+          "in": "body",
+          "type": "object",
+          "description": "LLM extraction options."
+        },
+        "links_on_page": {
+          "in": "body",
+          "type": "object",
+          "description": "Return all links on the page as absolute URLs."
+        },
+        "max_age": {
+          "in": "body",
+          "type": "integer",
+          "description": "Accept a stored scrape up to this many seconds old."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches a page and changes nothing in your account.",
+        "Results are kept for about 7 days unless storage says otherwise; read them again with scrapes.get."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.olostep.com/api-reference/scrapes/create.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/scrapes/create.md"
+      }
+    },
+    {
+      "id": "olostep.scrapes.get",
+      "name": "Get a scrape result",
+      "summary": "Retrieve a previous scrape by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/scrapes/{scrape_id}",
+      "params": {
+        "scrape_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Scrape id."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.olostep.com/api-reference/scrapes/get.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/scrapes/get.md"
+      }
+    },
+    {
+      "id": "olostep.crawls.create",
+      "name": "Start a crawl",
+      "summary": "Crawl a site from a start URL; returns an id to track.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/crawls",
+      "params": {
+        "start_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Where the crawl starts.",
+          "example": "https://docs.olostep.com"
+        },
+        "max_pages": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Most pages to crawl.",
+          "example": 10
+        },
+        "include_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Glob path patterns to include; default /**."
+        },
+        "exclude_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Glob path patterns to exclude; these win over include."
+        },
+        "max_depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum link depth."
+        },
+        "include_external": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Crawl first-degree external links."
+        },
+        "include_subdomain": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include subdomains; default false."
+        },
+        "search_query": {
+          "in": "body",
+          "type": "string",
+          "description": "Find and rank links by relevance."
+        },
+        "top_n": {
+          "in": "body",
+          "type": "integer",
+          "description": "Only crawl the top N links per page for the search query."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "integer",
+          "description": "End the crawl after this many seconds."
+        },
+        "follow_robots_txt": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Respect robots.txt; default true."
+        },
+        "scrape_options": {
+          "in": "body",
+          "type": "object",
+          "description": "What each page scrape requests."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        ".",
+        "Async: may take 1-10 minutes; poll crawls.get, then list pages with crawls.pages."
+      ],
+      "job": "web.crawl",
+      "docs_url": "https://docs.olostep.com/api-reference/crawls/create.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/crawls/create.md"
+      }
+    },
+    {
+      "id": "olostep.crawls.get",
+      "name": "Get a crawl's status",
+      "summary": "Information about one crawl.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/crawls/{crawl_id}",
+      "params": {
+        "crawl_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crawl id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.olostep.com/api-reference/crawls/info.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/crawls/info.md"
+      }
+    },
+    {
+      "id": "olostep.crawls.pages",
+      "name": "List a crawl's pages",
+      "summary": "The pages a crawl has processed, each with a retrieve_id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/crawls/{crawl_id}/pages",
+      "params": {
+        "crawl_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crawl id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index to start from; start at 0, then pass the cursor the response returns."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages per call; 10-50 recommended."
+        },
+        "search_query": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort pages by relevance to this query."
+        }
+      },
+      "notes": [
+        "Page content is fetched with the retrieve endpoint and a page's retrieve_id."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://docs.olostep.com/api-reference/crawls/pages.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/crawls/pages.md"
+      }
+    },
+    {
+      "id": "olostep.maps.create",
+      "name": "Map a site's URLs",
+      "summary": "All URLs on a website, optionally ranked by a query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/maps",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Website to map.",
+          "example": "https://example.com"
+        },
+        "search_query": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort links by relevance to this query."
+        },
+        "top_n": {
+          "in": "body",
+          "type": "integer",
+          "description": "Limit to the top N links for the query."
+        },
+        "include_subdomain": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include subdomains; default true."
+        },
+        "include_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Glob path patterns to include."
+        },
+        "exclude_urls": {
+          "in": "body",
+          "type": "array",
+          "description": "Glob path patterns to exclude."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "Cursor from a previous response for the next page."
+        }
+      },
+      "notes": [
+        "A read over POST: it lists URLs and changes nothing in your account.",
+        "Can take up to 120 seconds on complex sites; large sites are paginated with a cursor."
+      ],
+      "job": "web.map",
+      "docs_url": "https://docs.olostep.com/api-reference/maps/create.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/maps/create.md"
+      }
+    },
+    {
+      "id": "olostep.searches.create",
+      "name": "Search the web",
+      "summary": "A deduplicated list of relevant links for a natural-language query, optionally scraped.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/searches",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language query.",
+          "example": "latest news on open-source LLMs"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most links to return."
+        },
+        "include_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Bare hosts to restrict to."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Bare hosts to leave out."
+        },
+        "fast_mode": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Direct low-latency search using the query verbatim."
+        },
+        "scrape_options": {
+          "in": "body",
+          "type": "object",
+          "description": "When set, every returned link is also scraped (billed per page)."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.olostep.com/api-reference/searches/create.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/searches/create.md"
+      }
+    },
+    {
+      "id": "olostep.answers.create",
+      "name": "Get an AI answer from the web",
+      "summary": "An AI that searches and browses to answer a task, optionally as JSON.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/answers",
+      "params": {
+        "task": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The question or task.",
+          "example": "What is the population of Tel Aviv?"
+        },
+        "json_format": {
+          "in": "body",
+          "type": "object",
+          "description": "Desired output shape as an object with empty values, or a description string."
+        }
+      },
+      "notes": [
+        "A read over POST: it answers a question and changes nothing in your account.",
+        "Takes 3-30 seconds; use Olostep's agent feature for longer tasks."
+      ],
+      "job": "ai.chat",
+      "docs_url": "https://docs.olostep.com/api-reference/answers/create.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/answers/create.md"
+      }
+    },
+    {
+      "id": "olostep.batches.create",
+      "name": "Start a batch scrape",
+      "summary": "Scrape many URLs as one job; returns an id to track.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/batches",
+      "params": {
+        "items": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Items to process, each {\"custom_id\": \"...\", \"url\": \"...\"}.",
+          "example": [
+            {
+              "custom_id": "1",
+              "url": "https://example.com"
+            }
+          ]
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Country for the batch, ISO 3166-1 alpha-2."
+        },
+        "parser": {
+          "in": "body",
+          "type": "object",
+          "description": "Parser to extract structured content."
+        },
+        "links_on_page": {
+          "in": "body",
+          "type": "object",
+          "description": "Return links present on each page."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        ".",
+        "Async: poll batches.get; per-item content is fetched with the retrieve endpoint."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.olostep.com/api-reference/batches/create.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/batches/create.md"
+      }
+    },
+    {
+      "id": "olostep.batches.get",
+      "name": "Get a batch's status",
+      "summary": "Status and progress of a batch.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/batches/{batch_id}",
+      "params": {
+        "batch_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Batch id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.olostep.com/api-reference/batches/info.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/batches/info.md"
+      }
+    },
+    {
+      "id": "olostep.retrieve.content",
+      "name": "Retrieve a page's content",
+      "summary": "Content of a processed page from a crawl, scrape or batch, by retrieve_id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/retrieve",
+      "params": {
+        "retrieve_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "retrieve_id from a crawl's pages, a scrape or a batch's items."
+        },
+        "formats": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these formats; default all."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.olostep.com/api-reference/retrieve.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/retrieve.md"
+      }
+    },
+    {
+      "id": "olostep.credits.info",
+      "name": "Get the credit balance",
+      "summary": "Credit balance, lots and subscription of your team.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user/credits/info",
+      "job": "account.usage",
+      "docs_url": "https://docs.olostep.com/api-reference/billing/credits-info.md",
+      "verified": {
+        "docs": "https://docs.olostep.com/api-reference/billing/credits-info.md"
+      }
+    }
+  ]
+}

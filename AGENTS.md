@@ -9,7 +9,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek and AWS AgentCore Web Search, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search and Keirolabs, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
@@ -20,16 +20,29 @@ fastest answer any backend can give, at one fetch per member, so never the
 default. `profile` names a saved identity on the backend, the one a browser
 session logged into, whose cookies ride along; only Browserbase maps it.
 
-**`run_template`** — a vendor's template: a saved, site-specific extraction
-(Nimble's Extract Templates, Oxylabs' sources, Bright Data's scrapers, Apify's
-actors), run on one page and answering with a record shaped by the template's
-own output schema rather than page text. Its inputs are the template's own --
-a URL for some, an id, a slug or a search term for others -- which is why it
-is a method and not an option on `extract`. `templates` lists one page of the
-vendor's catalogue and `template` describes one, schemas and all; the three
-share one registry. Nimble only so far. No keyless tier and no `auto`: a run
-fetches and parses on the backend's account, and a template's name belongs to
-one vendor, so `provider` is required.
+**`live_data`** — a vendor's ready-made scraper for one site (Nimble's
+Extract Templates, Apify's Store Actors, Bright Data's scrapers, Oxylabs'
+Web API scrapers), run for this call and answering with structured
+`records` shaped by the source's own output schema rather than page text. Its
+inputs are the source's own -- a URL for some, an id, a slug or a search term
+for others -- which is why it is a method and not an option on `extract`.
+`live_data_sources` lists one page of the vendor's catalogue (or searches it
+by `query`: natively where the vendor's API has a search, as Apify's Store
+does, otherwise by reading the whole catalogue and matching here) and
+`live_data_source` describes one, schemas and all; the three share one
+registry. Nimble, Apify, Bright Data and Oxylabs. No keyless tier, and a
+run has no `auto`: it fetches and parses on the backend's account, and a
+source's name belongs to one vendor. The caller still never has to name
+one: `live_data_sources` with no `provider` asks every backend with a key
+at once and merges the pages (`live_data_any.py`), each source naming its
+own backend, and `live_data`/`live_data_source` take that `LiveDataSource`
+whole; a bare name needs `provider` unless one backend is configured.
+**A backend joins only
+if it fetches on request**: data a vendor collected earlier and serves from
+storage is that vendor's own API, reached through `call_vendor`, never here.
+These were `run_template`, `templates` and `template`; the old names, and the
+`Template*` types, are deprecated aliases in `client_live_data.py` and
+`live_data_compat.py` until a release removes them.
 
 **`research`** — an agentic run: the backend reasons over several turns and
 answers in minutes rather than milliseconds. Nimble, Parallel, Perplexity,
@@ -39,11 +52,13 @@ Linkup, You.com, and `auto`. It has no keyless tier, because every backend bills
 writes the answer itself, and the response carries it with the sources it rests
 on. Between `search`, which returns pages, and `research`, a job of minutes.
 Nothing here composes or edits the answer. No keyless tier, since every backend
-bills the call, and no `auto` until its order is chosen: with no `provider`,
-the router's default serves it when that is an answer backend, else the one
-configured answer backend -- a key in `provider_config` counts -- and
-otherwise the call raises `ProviderNotFoundError`, naming the configured
-backends when there are several and the variables to set when there are none.
+bills the call. `auto`, the usual default, tries the answer backends you hold
+keys for in the ranked order in `data/chains.json`, passing over one that fails
+or answers with nothing, and each one it tries bills. With a default that does
+not serve answers, the one configured answer backend serves the call -- a key in
+`provider_config` counts -- and otherwise it raises `ProviderNotFoundError`,
+naming the configured backends when there are several and the variables to set
+when there are none.
 
 **`open_browser`** — a browser session: not an answer but a handle, carrying a
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and
@@ -59,9 +74,19 @@ later. It is research's shape on the same job core, with `submit_browse` for
 the job handle. Browser Use, Skyvern, Browserbase, and `auto`. Like research, it
 has no keyless tier, because every task bills.
 
+**Vendor data** (`call_vendor`, `vendor_request`, and `vendors`,
+`vendor`, `vendor_endpoint`, `find_vendor_endpoints` to find what to call) is
+not an eighth method of interchangeable backends. It reaches one vendor's own
+API with the user's credentials -- their Google Ads, their Datadog -- and
+returns the vendor's answer untouched. `search` lists the read endpoints that
+match its query in `data_apis` -- locally, never calling one -- and only
+`call_vendor` runs one. The vendors are data, not classes: one
+JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
+`web_router/vendors/`. See "Adding a vendor" below.
+
 A name does not imply every method. `brave` searches and cannot extract,
 `oxylabs` extracts and cannot search, `nimble` searches, extracts, runs
-templates and researches through four classes, and `browserbase` opens
+live data and researches through four classes, and `browserbase` opens
 sessions, runs browse tasks and extracts through three. Each method has its own registry,
 and asking one for another's backend reports it as unknown.
 
@@ -76,7 +101,6 @@ defeat the point, even when they pass tests.
 ```
 src/web_router/
 ├── types.py            SearchRequest/Response/Result, ExtractRequest/Response/Document,
-│                       TemplateRequest/Response + Template/TemplatePage,
 │                       ResearchRequest/Response/Progress + Citation,
 │                       BrowserRequest/Session/State + Viewport,
 │                       BrowseRequest/Response/Progress + BrowseStep
@@ -85,22 +109,48 @@ src/web_router/
 │                       call can route and on Plan; types re-exports it, it imports nothing
 ├── types_answer.py     AnswerRequest/Response + Recency: answer()'s contract, apart so
 │                       types.py stops growing; it imports types, never the reverse
+├── types_live_data.py  LiveDataRequest/Response + LiveDataSource/SourcePage/Sample:
+│                       live data's contract, apart on the same terms
+├── types_cost.py       elapsed_s, cost_usd and cost_source: the fields every routable
+│                       response carries, as Annotated aliases; imports nothing of ours
+├── types_citation.py   Citation, apart so types.py stops growing; types re-exports it
 ├── types_page.py       PageState/PageSnapshot/Screenshot + PageLoadState/PageFormat:
 │                       what a browser handle's page actions return; imports nothing of ours
 ├── types_benchmark.py BenchmarkRun/Report + ExtractBenchmarkRun/Report: what benchmark()
 │                       and benchmark_extract() return; it imports types, never the reverse
 ├── client.py           WebRouter, AsyncWebRouter — the public facade
-│                       (search, extract, templates + template + run_template,
+│                       (search, extract,
 │                        answer, research + submit_research,
 │                        browse + submit_browse, open_browser, benchmark and
 │                        benchmark_extract, fan-outs over search and extract,
 │                        and evaluate, accuracy on top of benchmark)
 ├── client_answer.py    answer() and get_answer_provider(), mixed into both routers
-├── client_template.py  templates(), template() and run_template(), mixed into both routers
+├── client_search.py    search(), with timeout=, mixed into both routers: the web results, plus the
+│                       data APIs that match, from data_api_discovery.py (types_data_api.py's DataApiMatch)
+├── client_core.py      extract(), with timeout=, mixed into both routers: the pages, plus the data APIs
+│                       that serve each page's site (the catalog's `sites`)
+├── client_warmup.py    warmup(): the search and extract backends and clients a first call builds
+├── client_live_data.py live_data(), live_data_sources(), live_data_source() and the
+│                       deprecated template names, mixed into both routers
+├── live_data_search.py live_data_sources(query=...): NativeSourceSearch for vendors that
+│                       search their own catalogue, a local match for the rest
+├── live_data_rank.py   a local match: the query read as site, kind and country, the gate and the score;
+│                       its words and weights are live_data_rank_vocab.py, a domain's site and
+│                       country live_data_rank_site.py
+├── live_data_merge.py  several backends' answers as one order: in turn, or merged by score
+├── live_data_compat.py the old Template* names, importable from web_router with a warning
+├── client_vendors.py   call_vendor(), vendor_request() and the catalog lookups, mixed into
+│                       both routers
+├── client_handles.py   the browser sessions a router hands out, tracked for close()
+
 ├── client_plan.py      plan() and run(), prompt-level routing, mixed into both routers
 ├── client_benchmark.py benchmark(), benchmark_extract() and evaluate(), mixed into
 │                       both routers
 ├── client_budget.py    budget(), mixed into both routers
+├── client_spend.py     log_spend(): where a router writes each answered call, mixed in with budget()
+├── spend.py            SpendEntry, SpendLog (a JSON-lines file), SpendRow and spend_report():
+│                       the spend log and its report by day, backend and method
+├── spend_record.py     the entry a router writes after each call, and a failing sink only warned about
 ├── client_config.py    config_for(): the constructor kwargs provider_config gives each
 │                       backend, a delegating one's members included
 ├── client_scope.py     the BudgetScope / AsyncBudgetScope budget() returns
@@ -110,8 +160,7 @@ src/web_router/
 ├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
-│   │                   SealQA, Nimble's unlabeled due-diligence and lead-enrichment,
-│   │                   or a CSV; seeded sampling; answer-key pages withheld
+│   │                   SealQA, or a CSV; seeded sampling; answer-key pages withheld
 │   ├── judge.py        Judge ABC, OpenAIJudge and AnthropicJudge: synthesize,
 │   │                   then grade
 │   ├── run.py          the loop: benchmark per question, judge per row, score
@@ -122,6 +171,8 @@ src/web_router/
 ├── constants_answer.py answer()'s messages and MCP tool text, imported from here by name
 ├── constants_evals.py the question sets' sources, names and columns, and the
 │                       messages their loaders raise
+├── constants_live_data.py live data's messages, MCP tools, builtin providers and env table
+├── constants_apify.py  Apify's paths; constants_live_data_vendors.py Bright Data's and Oxylabs'
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
@@ -134,6 +185,12 @@ src/web_router/
 │                       from data/prices.json; PRICING.md's tables are made from it
 ├── prices_latency.py   the check a row's measured latency passes, apart from
 │                       prices.py so it stays small; it never imports Price
+├── prices_modes.py     what a mode costs: its own row, else its tier's plus its
+│                       flags', else unknown; the parts the price list names
+├── modes.py            vendor modes: Tier, Content, Flag, the empty defaults every
+│                       provider inherits, and the one mode id parser
+├── _modes_checks.py    the checks a mode declaration and a price row's mode
+│                       fields pass, apart from modes.py so it stays small
 ├── data/prices.json    the price list itself (experimental), shipped in the wheel
 ├── data/chains.json    search's and answer's default `auto` orders (`make chains`)
 ├── data/efforts.json   each research effort's accuracy and p90 (`make efforts`)
@@ -151,6 +208,7 @@ src/web_router/
 ├── constants_decider.py the built-in deciders' presets, key homes, limits and messages
 ├── data/schemas/router/v1/ request.json and response.json: the router wire format's
 │                       JSON Schema, generated by routing/wire_schema.py, never by hand
+├── constants_production.py the package logger's name, the cooldown table and the production messages
 ├── routing/            the router contract (experimental): what a router is shown
 │   │                   and what it may answer, one module per part
 │   ├── contract.py     ToolName, Budget, Candidate, RouteRequest, RouteDecision, Plan
@@ -166,6 +224,8 @@ src/web_router/
 │   ├── pool_bind.py    which shared budgets are in force here: bind, unbind, current_pool
 │   ├── pool_status.py  BudgetStatus, where a shared budget stands
 │   ├── record.py       the record's own fields: decision_id, the prompt's hash, a failure's code
+│   ├── metered.py      elapsed_s and cost_usd on every routed response: the backend's stated
+│   │                   cost, else the pricing rule's estimate
 │   ├── pricing.py      the one cost and p90 rule: price list, floor, provider_options and
 │   │                   results past a row's price unknown, research's p90 from the effort table
 │   ├── invoke.py       router=: the two forms a router takes, called sync or async on
@@ -177,7 +237,7 @@ src/web_router/
 │   │                   from router_config, and closed by the router that built them
 │   ├── wire.py         the JSON wire format, schema 1: a RouteRequest out, a
 │   │                   RouteDecision back
-│   ├── wire_schema.py  the JSON Schema files and README examples made from those types
+│   ├── wire_schema.py  the JSON Schema files and docs examples made from those types
 │   ├── remote.py       RemoteRouter, router="remote": a router service over httpx,
 │   │                   async only, one try, 64 KiB answers, scheme and host shown
 │   ├── remote_url.py   its URL check: https, or http to localhost or a loopback
@@ -201,6 +261,7 @@ src/web_router/
 │   ├── fallback_members.py its members: built by name or taken as given, named, closed
 │   ├── composite.py    CompositeDecision: a decision with the members a router asked, for
 │   │                   the record's `members`
+│   ├── in_loop.py      the sync router's warning when called on a thread running an event loop
 │   ├── routed.py       the routers' mixin every routable call runs through: whether
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
@@ -236,7 +297,10 @@ src/web_router/
 │   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
 │   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
 │   │                   check before dispatch (no DNS, no redirects)
-│   └── rules.py        rules(): the built-in keyless router, URL to extract, else search
+│   ├── rules.py        rules(): the built-in keyless router, URL to extract, else search
+│   ├── cheapest.py     cheapest_first(): the built-in router ordering every call by estimated cost, $0 first
+│   └── cost_order.py   auto's order under a cost cap with no router: cheapest first within each
+│                       accuracy tier of the default order (search and answer)
 ├── constants_params.py the effort mapping's data path, rule and reasons
 ├── constants_merge.py  the options a router may set, and the merge's reasons and notes
 ├── constants_mcp.py    the MCP server's instructions, and its routing tools' names, schemas,
@@ -251,11 +315,24 @@ src/web_router/
 │                       metadata, loopback and legacy-IPv4 host lists
 ├── constants_prices.py the price list's data path, unit divisors, messages and
 │                       PRICING.md wording, kept apart for the same reason
+├── constants_modes.py  the mode id grammar's separators, levels and messages,
+│                       kept apart for the same reason
+├── constants_mode_parts.py each search backend's declared tiers, contents and
+│                       flags, and the wire each sends
 ├── registry.py         name → provider class, one table per method, lazily
 │                       imported; available vs configured
 ├── registry_answer.py  the answer backends' table, and the backend an
 │                       unnamed answer() uses
 ├── exceptions.py       WebRouterError and subclasses
+├── exceptions_vendors.py VendorNotFoundError and VendorWriteRefusedError, apart on the
+│                       terms exceptions_budget.py is
+├── vendors/            call_vendor's vendor-blind code: schema.py (the catalog file's
+│                       models, with schema_base.py, schema_auth.py and
+│                       schema_endpoint.py), catalog.py, credentials.py, tokens.py
+│                       (OAuth tokens), masking.py, plan.py (inputs placed),
+│                       values.py (credentials resolved), caller.py (sent),
+│                       response.py (the answer, masked), sites.py (the vendors
+│                       that serve a page's site, and their endpoints for it), types.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
 │                       for an agent to call, installed by [mcp]
 │   ├── methods.py      the library method behind each provider-picking tool: its
@@ -266,7 +343,7 @@ src/web_router/
 │   │                   file's values join the environment
 │   ├── messages.py     a failed tool call's message: provider_config swapped for
 │   │                   load_env, then redacted
-│   ├── urls.py         public_only on the URLs extract, browse and run_template
+│   ├── urls.py         public_only on the URLs extract, browse and live_data
 │   │                   are given, refused before anything is sent
 │   ├── routing_config.py the operator's router and ceiling, read once at startup
 │   ├── routing_named.py a built-in router by name: its JSON config, keys captured at
@@ -274,8 +351,11 @@ src/web_router/
 │   ├── routing_keys.py where such a router posts, a preset's host included, and its key,
 │   │                   read from the process environment before any .env file
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
+│   ├── vendor_tools.py vendors, vendor_endpoint and call_vendor
+│   ├── session_tools.py the routing and vendor tools, registered after the methods' own
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
-│   │                   the charge for run_template and browser_open
+│   │                   the charge for live_data and browser_open
+│   ├── live_data_tools.py  the three live data tools; shaping_live_data.py shapes them
 │   └── chains.py       the members a delegating provider would try, per tool
 ├── integrations/       agent-framework adapters, one module each
 │   ├── _render.py      what a model reads back, one layout for every framework
@@ -289,7 +369,7 @@ src/web_router/
 │   └── openai.py       WebRouterTools (OpenAI function tools, Responses and
 │                       Chat Completions, + local executor) — no SDK, no extra
 └── providers/
-    ├── base.py         SearchProvider / ExtractProvider / TemplateProvider /
+    ├── base.py         SearchProvider / ExtractProvider / LiveDataProvider /
     │                   ResearchProvider / BrowseProvider /
     │                   BrowserProvider ABCs over a shared
     │                   base; the generic JobProvider / Job core that
@@ -301,20 +381,40 @@ src/web_router/
     │                   HttpBrowserProvider — for APIs with no SDK
     ├── _utils.py       payload assembly, key and setting resolution, dict
     │                   coercion, body selection
+    ├── _modes.py       vendor modes on the wire: pinning (`exa:exa-instant`), the
+    │                   merge into a payload, refusals, and what a backend offers
     ├── _search_text.py a body cut to a snippet; domain filters as site:
     │                   operators, and the domain lists a backend refuses
     ├── _deadline.py    the per-call deadline, its budgets, and the mixin
     │                   that holds a provider's call to it
+    ├── _job_wait.py    waiting on a vendor's job (Oxylabs' jobs, Bright Data's snapshots); every error names it
     ├── _clamp.py       a transport's own timeout, clamped to the deadline's time left
+    ├── _runtime.py     what a router lends its calls: its cooldowns and max_concurrency's slots
+    ├── _cooldown.py    a router's cooldowns: the backends a 429 or 402 told auto to leave alone
+    ├── _hop.py         one auto hop: skipped while cooling, timed, logged without keys or URLs
+    ├── _credential.py  holds_credential: whether a provider's calls carry one, read before auto warns
+    ├── _in_flight.py   what an async auto call had tried when its deadline cut it off
     ├── _page.py        the page actions both browser handles delegate to,
     │                   once over CDP through Playwright; snapshot refs
     ├── _png.py         a screenshot as PNG: converts what a backend returns as
     │                   another format (Anchor: JPEG), and reads the size
     ├── nimble.py       search + extract + research, via the nimble-python SDK;
     │                   the shared clients and constructor of the four Nimble classes
-    ├── nimble_template.py  Nimble's templates, on nimble.py's clients
+    ├── nimble_citations.py  a research run's citations: trust claims, else its source index's markers
+    ├── _cost.py        a backend's stated cost read from its payload, as `reported`
+    ├── nimble_live_data.py  Nimble's templates as live data, on nimble.py's clients
+    ├── _http_live_data.py   HttpLiveDataProvider: the base of the three below
+    ├── apify.py        live data: Apify Store Actors, run synchronously
+    ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
+    ├── brightdata_snapshots.py  waiting on the snapshot of a scrape that outlasted the synchronous window
+    ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
+    ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
+    ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
+    ├── oxylabs_jobs.py          an Oxylabs job: its id, where it is read, and when it is done
+    ├── oxylabs_response.py      a scrape's answer as a live data response
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
-    ├── tavily_extract.py  extract, and the SDK clients, key and timeout both classes share
+    ├── tavily_extract.py  extract, and the key and timeout both classes share
+    ├── tavily_clients.py  the SDK clients both classes hold, each built on first use
     ├── exa.py          search + extract, via httpx (its research API is retired);
     │                   re-exports exa_answer.py
     ├── exa_answer.py   answer, via httpx
@@ -334,6 +434,8 @@ src/web_router/
     │                   the caller's `chain`, what a member's failure means
     ├── _chain_deadline.py a one-call chain out of time: the first empty
     │                   answer it holds, else the deadline naming each reason
+    ├── _attempt_loop.py the one loop every auto chain walks, sync and async: the hook
+    │                   before each member, hop or job submit, failures, empty answers held
     ├── _auto_extract.py which members of extract `auto` can serve a request: the
     │                   format and every option it sets; apart so auto.py stops growing
     ├── auto.py         the default for search, extract, research, browser and
@@ -381,12 +483,16 @@ tests/                  mirrors src/; tests/providers/ holds per-provider tests,
                         their sample request and loop and close builders;
                         routing_registry_helpers.py the routers the registry tests build;
                         decider_helpers.py the decider tests' fixed deciders and
-                        httpx on a mock transport.
-                        test_contract.py, test_extract_contract.py, test_template_contract.py,
+                        httpx on a mock transport; _live_data_paged.py the paged
+                        catalogue the live data search tests read, and
+                        providers/_brightdata_live_data.py the scraper the
+                        Bright Data live data tests run.
+                        test_contract.py, test_extract_contract.py, test_live_data_contract.py,
                         test_research_contract.py, test_answer_contract.py,
                         test_browse_contract.py and
                         test_browser_contract.py guard the seven shared
-                        contracts; test_job_core.py the job core under
+                        contracts; test_live_data_base.py what LiveDataProvider
+                        guarantees every live data backend; test_job_core.py the job core under
                         research and browse; test_deadline_*.py the
                         per-call deadline on every method, over the fakes
                         in deadline_helpers.py;
@@ -607,11 +713,11 @@ any, and a bot wall with text counts, which its report says — so it ranks who
 brings a page back, not whose page is best; scoring text against ground truth
 is work for a scorer that carries it, which this repository does not. Its URL
 sets under `urls/` are `url,category` lists only, no ground truth, and
-`--combine` merges scans only of the same file, format and timeout. A setup may name a normalized
-depth (`tavily@deep`, one `evaluate()` per depth) or a vendor mode from
-`modes.json` (`tavily:ultra-fast`), sent through `provider_options` by a
-wrapper that calls the backend's public `asearch`; mark a mode `verified` only
-after a live call shows it changing the response. `answer.py` is the answer scan: every configured answer backend through the
+`--combine` merges scans only of the same file, format and timeout. A setup is
+the id `provider=` pins: a normalized depth (`tavily:deep`, one `evaluate()` per
+depth) or a vendor mode the provider class declares (`tavily:tavily-ultra-fast`),
+run by a wrapper that calls the backend's public `asearch`; mark a mode
+`verified` in its contract only after a live call shows it changing the response. `answer.py` is the answer scan: every configured answer backend through the
 public `answer()` on the same questions, each backend's own answer graded by the
 same judge as the search scan -- nothing synthesized, since the backend wrote the answer
 -- so its `report.md` is a third place a judged accuracy appears, and it names
@@ -626,11 +732,20 @@ reads to estimate a call's cost before it runs: edit the JSON, never a table,
 and run `make prices`; its prose is hand-written. A price comes only from the
 vendor's own page, cited in `source_url` and dated in `checked`; one the vendor
 does not publish is `unknown` and one billed by tokens is `token_billed`, never
-estimated. The library still never puts a price in a response outside
-`DecisionRecord`, where an estimate says so in `cost_is_estimate`.
+a guessed figure: a `token_billed` row is estimated only at the mean cost per
+call its backend's own responses stated over the benchmark behind the method's
+`auto` order (`data/chains.json`), at its default mode, and is unknown
+otherwise. A price reaches a response in two places, each labelled: the
+`DecisionRecord`, where `cost_is_estimate` says so, and `cost_usd` on every
+search, extract, answer, research and browse response, where `cost_source` is
+`reported` only for a figure the backend's response stated (read by its
+provider through `providers/_cost.py`) and `estimated` for anything made here
+(`routing/metered.py`, by the same rule a budget charges by).
 
 **`constants.py` imports `types.py`, so `types.py` imports nothing of ours**
-but `types_decision`, a leaf that imports nothing of ours either.
+but `types_decision`, a leaf that imports nothing of ours either (as are
+`types_page`, `types_options`, `types_errors`, `types_citation` and
+`types_cost`).
 The import graph is `types` ← `constants` ← `exceptions` ← everything else. A
 model that needs an exception type or a message template cannot live in
 `types.py` — put it in a subpackage's own `types.py` (as `evals/types.py`
@@ -642,7 +757,7 @@ it may import `types` (and `types_answer`, which imports only `types` and
 of ours) and nothing else of ours.
 
 **Never override the public method in a provider.** `search`/`asearch`,
-`extract`/`aextract`, `run`/`templates`/`template`, `answer`/`aanswer`,
+`extract`/`aextract`, `run`/`live_data_sources`/`live_data_source`, `answer`/`aanswer`,
 `submit`/`research`/`browse`/`poll`/`cancel` and
 `open`/`release`/`status` (each with its `a` twin) live on the base
 classes and enforce validation, error wrapping, and — for extract — the URL
@@ -678,7 +793,7 @@ threaded through every provider signature between the router and httpx. It is
 the one implicit thing in this package; read it through `job_budget(default)`
 (`research_budget` is the same function under the name the research providers
 already read) or `current_deadline()`, never directly, and a block inside
-another only ever tightens it. A one-call method — search, extract, a template
+another only ever tightens it. A one-call method — search, extract, a live data
 run, answer — refuses to start past it. The base class mixes in `_bounded` and
 `_abounded` from `_deadline.py`; they raise `DeadlineExceededError` when the
 clamp cut a call off, and cancel an async call at the deadline. An extract keeps
@@ -774,7 +889,7 @@ a member of `max`.
 Search's keyed members (`AUTO_PREFERRED`) and answer's (`AUTO_ANSWER_PREFERRED`)
 are generated: `make chains` ranks them with route-eval on the frozen results
 and writes `data/chains.json`, and a test fails when that file is stale or the
-README's order disagrees with it. All of search's keyed members come before the
+providers page's order disagrees with it. All of search's keyed members come before the
 keyless tier -- so a key held only for research serves plain searches too, on
 purpose. A backend that joins later goes at the end of the file's `appended`
 (search; after the keyless tier) or `preferred` (answer), or of
@@ -982,35 +1097,45 @@ whose class declares it, and a clamped value is named in the result's `note`.
 The `browser_*` tools are listed only where Playwright imports; the `mcp` extra
 does not install it.
 
-**A template's inputs are the template's, never ours.** `TemplateRequest.params`
-is sent as the caller gave it, keyed by whatever the template's `input_schema`
-names; the library reads no URL out of it, derives none, and checks nothing
-against the schema -- the backend refuses inputs that do not match, in its own
-words. The MCP layer alone screens an input that is a URL (`mcp/urls.py`).
-A run is one page and one record: a page the backend could not fetch, or a
-template that failed to parse it, raises `ProviderError` with the backend's
-reason, because an empty `data` cannot be told from a record with nothing in
-it. `format` is the one option, and it is the extract rule in reverse: unset
-sends nothing and returns no page, since the record is the answer and there is
-no vendor default to pin. The record is read from `data.parsing` in each of
+**A source's inputs are the source's, never ours.** `LiveDataRequest.inputs`
+is sent as the caller gave it, keyed by whatever the source's `input_schema`
+names; nothing here reads a URL out of it, derives one, or checks it against
+the schema -- the backend refuses inputs that do not match, in its own words.
+The MCP layer alone screens an input that is a URL (`mcp/urls.py`).
+A run is one set of inputs: a page the backend could not fetch, or a source
+that failed to parse it, raises `ProviderError` with the backend's reason.
+`records` holds what came back -- one for a product page, many for a search --
+and `data` the first of them. `fetched_at` is the vendor's own timestamp or
+`None`: never the time the answer arrived, and never a timestamp whose meaning
+the vendor does not document (Oxylabs' `created_at` stays in `extra`). A
+schema the backend does not publish stays `None`, and one that lists field
+names without types (Bright Data) names those fields and nothing more.
+`format` is the one option, and it is the extract rule in reverse: unset
+sends nothing and returns no page, since the records are the answer and there
+is no vendor default to pin; a backend that returns no page declares the
+option and supports no format, so asking raises `UnsupportedFormatError`. The record is read from `data.parsing` in each of
 the three shapes the SDK's union allows (bare, wrapped beside `success`, or an
-`error` report -- `NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS` records which was
+`error` report -- `NIMBLE_LIVE_DATA_PARSING_SUCCESS_STATUS` records which was
 seen live), and only the last is a failure; a record whose own field is
-called `status` is still a record. `templates()` returns one page as the
+called `status` is still a record. `live_data_sources()` returns one page as the
 backend pages it -- `limit` and `offset` unset are not sent -- never the whole
-catalogue, which runs to thousands. The MCP `templates` tool shapes a row to
-the words a model picks a template by and leaves the schemas to `template`,
+catalogue, which runs to thousands (Bright Data answers with all of it, so its
+provider pages the list itself). The MCP `live_data_sources` tool shapes a row
+to the words a model picks a source by and leaves the schemas to `live_data_source`,
 whose schemas are never cut: a cut `input_schema` sends the model guessing at
 the inputs it dropped. A schema or a record that does not fit the budget even
 on its own is left out whole, with a note naming the `fetch_raw` handle that
 holds it (`MCP_MSG_OVERSIZED`), never inlined over the budget. There is no
-template `auto`: a template's name belongs to one vendor, so `provider` is
-required on the three router methods and on the three MCP tools alone, and an
-unknown name raises `TemplateNotFoundError`, a `ProviderError`. One call is
-one page and one set of inputs, answered in real time with one record -- the
-shape every real-time parsed-extraction product shares; a vendor whose
-templates are dataset jobs would join through its synchronous endpoint and
-inherit its time cap, and batch inputs stay out of scope.
+live data `auto` chain: a source's name belongs to one vendor, so no other
+vendor can stand in for it. `live_data_sources()` with no `provider` searches
+every configured vendor at once and each source names its own; `live_data()`
+and `live_data_source()` take that source whole, while a bare name needs
+`provider` unless one live data backend is configured. An unknown name raises
+`LiveDataSourceNotFoundError`, a `ProviderError`. One call
+is one set of inputs, answered through the vendor's synchronous endpoint under
+that endpoint's own time cap (Apify 300 s, Oxylabs 150 s, Bright Data about a
+minute, past which it raises naming the snapshot to fetch); batch inputs stay
+out of scope.
 
 **An extract call that partly fails stays partly successful.** `ExtractProvider`
 fans URLs out across calls for backends that take one at a time, records each
@@ -1132,33 +1257,96 @@ them from the frozen results in `benchmarks/providers/frozen/` (search and
 answer only, null elsewhere), and `tests/test_prices.py` fails while they are
 stale. New frozen results mean running it again.
 
-## Adding a template provider
+## Adding a live data provider
 
-Against `TemplateProvider`. A vendor that already extracts gets a third class
-in its existing module, as `nimble.py` does.
+Against `LiveDataProvider`, or `HttpLiveDataProvider`
+(`providers/_http_live_data.py`) for a REST API. First check the rule: the
+vendor's sources fetch the site on request. A catalogue of data collected
+earlier belongs in the vendor catalogue for `call_vendor`, not here.
 
-1. Implement `_run`/`_arun` -- one request in, one `TemplateResponse` out,
-   its record in `data` -- `_list`/`_alist`, returning one `TemplatePage`
-   with `limit` and `offset` sent only when set, and `_get`/`_aget`, one
-   `Template` by name with `input_schema` and `output_schema` from
-   the backend and `published` false when it has no runnable version. Set
-   `name`, `supported_parameters` and `supported_formats` -- the page formats
-   it returns beside the record, derived from its format table -- and build
-   the run's payload through `build_payload` so `provider_options` reaches
-   the API last. A fetch the backend refused, a page the site answered with
-   4xx or 5xx, or a parse that failed, raises `ProviderError` naming the
-   template and the backend's reason; an unknown name raises
-   `TemplateNotFoundError`; never return an empty record.
-2. Put the endpoints, the record's field names and the status values in
-   `constants_<provider>.py`.
-3. Register the class in `_BUILTIN_TEMPLATE_PROVIDERS` in `registry.py` and
-   add the provider to `TEMPLATE_ENV_BY_PROVIDER` in `constants.py`. There is
-   no `auto` to join.
-4. Add `tests/providers/test_<name>_template.py` covering the payload, the
-   three response shapes (a record, a refused fetch, a failed parse), the
-   catalogue mapping, and a skipping `@pytest.mark.integration` live test
-   that lists, describes and runs one template.
-5. Update the README support table and `CHANGELOG.md`.
+1. Implement `_run`/`_arun` -- one request in, one `LiveDataResponse` out,
+   every record in `records` -- `_list`/`_alist`, returning one
+   `LiveDataSourcePage` with `limit` and `offset` sent only when set (or
+   applied locally, if the vendor answers with the whole catalogue), and
+   `_get`/`_aget`, one `LiveDataSource` by name with `input_schema` and
+   `output_schema` from the backend -- `None` when it publishes none. Set
+   `name`, `supported_parameters` (`LIVE_DATA_PARAMETERS`, so an unservable
+   `format` is refused as a format) and `supported_formats`, declare the run
+   endpoint as `run_path`, and give the body a `_build_payload` so the
+   contract can record it. A fetch the backend refused, a page the site
+   answered with 4xx or 5xx, or a parse that failed, raises `ProviderError`
+   naming the source and the backend's reason; an unknown name raises
+   `LiveDataSourceNotFoundError` (`HttpLiveDataProvider._named` maps a 404).
+   Set `fetched_at` only from a timestamp the vendor documents as the fetch time.
+2. Put the paths, field names and status values in a constants module of
+   their own (`constants_apify.py`, `constants_live_data_vendors.py`).
+3. Add the class to `BUILTIN_LIVE_DATA_PROVIDERS` and its variables to
+   `LIVE_DATA_ENV_BY_PROVIDER`, both in `constants_live_data.py`. There is no
+   `auto` to join.
+4. Add `tests/providers/test_<name>_live_data.py` covering the payload, each
+   response shape the docs describe (records, a refused fetch, a failed
+   parse), the catalogue mapping, and a skipping `@pytest.mark.integration`
+   live test that lists, describes and runs one source.
+5. A price row in `prices.json` (`make prices`), a contract (`make contracts
+   PROVIDER=live_data/<name>`), the `docs/providers.mdx` support table and `CHANGELOG.md`.
+
+## Adding a vendor
+
+A vendor is a file, never code: `src/web_router/data/vendors/<vendor>.json`,
+validated by the strict models in `web_router/vendors/schema.py` (an unknown
+key is refused). If a vendor seems to need code -- a signed request, say --
+it is a format change to discuss first, not a branch in `caller.py`.
+
+An endpoint goes in the catalog only when no WebRouter method covers it. A
+vendor that is also a backend (Tavily, Firecrawl, Exa...) keeps only what
+`search`, `extract`, `answer`, `research`, `live_data` and `browse` cannot do,
+and an endpoint leaves the catalog in the same pull request that adds the
+method covering it.
+
+1. Write it **from the vendor's own documentation**, never from another
+   project's catalog: notes and summaries are ours. List the pages in
+   `sources`, set `curated` to the date, and give each endpoint the
+   reference page it was written from as `docs_url` and `verified.docs`.
+   `verified.live` is a date, and only after a real call matched the entry.
+2. Accuracy beats coverage. An endpoint goes in only when its method, path
+   and inputs are known; an undocumented parameter is left out. The rules
+   that hold for providers hold here: never invent a value, never drop one.
+3. Read or write. Sort every call into one of four kinds:
+   1. a pure read;
+   2. a metered read, or one that starts a temporary job: still `read`,
+      and its first note says it starts a billed job;
+   3. a read with an input that writes (saves to a list or table, writes
+      a shared cache): leave that input out, or make the call a write;
+   4. a write: anything that changes the user's data or account, sends
+      something to other people, or deletes; every DELETE, PUT and PATCH.
+
+   The shipped catalog holds kinds 1 and 2 only; `vendor_request` and a
+   user's own catalog directory carry writes. A read over POST says so in
+   its notes. A write is what `allow_writes` gates, so a write marked
+   `read` is a safety bug. A callback or webhook URL input is left out
+   too: it sends the answer to an address the caller picks, and the planner
+   refuses a webhook or callback key inside an object input. A call that
+   returns what an AI engine answered is a read when what comes back is data
+   with its sources; the test is what the call returns, not whether it takes a
+   prompt. A raw model call is not shipped. A parameter
+   whose `enum` has one value is a constant (Majestic's `cmd`): any other
+   value is refused, so a read cannot be pointed at a write command.
+4. `base_url` is https. A part of the host that varies (region, data
+   centre) is a setting with an exhaustive `choices` list -- the format
+   refuses one without, because a free-form host could carry the credential
+   anywhere.
+5. Category: the shelf in `VENDOR_CATEGORY_DESCRIPTIONS` (`constants_vendors.py`) whose
+   line describes what the vendor holds. There is no catch-all: a vendor that fits no shelf
+   needs a new one, with its description, which `VENDORS.md` prints under its heading. The
+   `custom` shelf is for a user's own catalog directory and is never used by a shipped file.
+6. Credentials: the variable names the vendor's own docs use, or the one
+   `.env.example` already uses for that vendor, else `<VENDOR>_API_KEY`. Two
+   vendors never share a variable (a test checks).
+7. Notes are what a caller gets wrong without being told: units, paging,
+   credits per call, async job flows.
+8. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
+   section) and `uv run pytest tests/vendors`, which loads every shipped
+   file. Add a line to `CHANGELOG.md`.
 
 ## Adding a research provider
 
@@ -1181,7 +1369,7 @@ The same shape as the two below, against `ResearchProvider` or
 4. Add `tests/providers/test_<name>_research.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
 
 ## Adding an answer provider
 
@@ -1207,7 +1395,7 @@ Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
    `@pytest.mark.integration` live test. `tests/test_answer_contract.py`
    already holds every unmapped option to a refusal before anything is sent.
 5. Start its contract with `make contracts PROVIDER=answer/<name>`, and update
-   the README support table and `CHANGELOG.md`.
+   the `docs/providers.mdx` support table and `CHANGELOG.md`.
 
 ## Adding a browser provider
 
@@ -1242,7 +1430,7 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    open-release sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test that opens, asks and releases, and
    asks the backend afterwards through `tests/providers/_browser_live.py`.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the browser support tables in `docs/browser.mdx` and `CHANGELOG.md`.
 
 ## Adding a browse provider
 
@@ -1282,7 +1470,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>_browse.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the browse support table in `docs/browser.mdx` and `CHANGELOG.md`.
 
 ## Adding a search provider
 
@@ -1305,7 +1493,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>.py` covering parameter mapping and response
    normalization against a recorded payload, plus one `@pytest.mark.integration`
    live test that skips without credentials.
-5. Update the README support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
 
 ## Adding an extract provider
 
@@ -1330,7 +1518,7 @@ searches gets a second class in its existing module rather than a new one.
 4. Add `tests/providers/test_<name>.py` and the live checks in
    `tests/test_integration_surface.py`, which run only against providers that
    declare the format under test.
-5. Update the README support tables and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support tables and `CHANGELOG.md`.
 
 ## Testing
 
@@ -1401,7 +1589,7 @@ set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
 `auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
-Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
+Nimble, Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —
 `OpenAIJudge` and `AnthropicJudge` — so each appears in `.env.example` and in
@@ -1413,8 +1601,9 @@ definitions the caller's own client sends. The built-in `llm` and `systemone` ro
 when a caller names them: a preset's variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`,
 `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`), or the one `api_key_env`
 names, once, when the router is built; `KEY_HOMES` in `constants_decider.py` sends each preset variable
-only to its vendor's host. `.env` is gitignored — keep it that way. `TEMPLATE_ENV_BY_PROVIDER` is the
-template method's table, and names Nimble's key again: one key, four classes.
+only to its vendor's host. `.env` is gitignored — keep it that way. `LIVE_DATA_ENV_BY_PROVIDER`, in
+`constants_live_data.py`, is live data's table: Apify's token, Oxylabs' Web API key
+(not its extract credentials), and Nimble's and Bright Data's keys again: one key, several classes.
 
 **The library never loads `.env` itself.** Only these entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,

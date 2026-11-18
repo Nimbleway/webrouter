@@ -1,0 +1,501 @@
+{
+  "vendor": "apollo",
+  "name": "Apollo.io",
+  "category": "enrichment",
+  "summary": "Search and enrich B2B people and companies, with email and phone reveal, from Apollo's contact database.",
+  "docs_url": "https://docs.apollo.io/reference/",
+  "pricing_url": "https://www.apollo.io/pricing",
+  "base_url": "https://api.apollo.io/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "APOLLO_API_KEY"
+        ],
+        "description": "An Apollo API key (Settings > Integrations > API). Some endpoints need a master key."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Filters on the search and enrich calls go in the QUERY STRING even though most are POST; array filters carry a [] suffix.",
+    "Search endpoints return no emails or phones; enrich to get them, which spends credits.",
+    "Account CRM endpoints (create or update accounts) are left out of this entry.",
+    "OAuth bearer tokens are also accepted for partner apps; this entry uses the API key."
+  ],
+  "sources": [
+    "https://docs.apollo.io/reference/",
+    "https://docs.apollo.io/reference/authentication.md",
+    "https://docs.apollo.io/reference/people-api-search.md",
+    "https://docs.apollo.io/reference/people-enrichment.md",
+    "https://docs.apollo.io/reference/bulk-people-enrichment.md",
+    "https://docs.apollo.io/reference/organization-search.md",
+    "https://docs.apollo.io/reference/organization-enrichment.md",
+    "https://docs.apollo.io/reference/organization-jobs-postings.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "apollo.people.search",
+      "name": "Search people",
+      "summary": "Find people by title, seniority, location and employer filters. No emails or phones returned.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/mixed_people/api_search",
+      "params": {
+        "person_titles": {
+          "in": "query",
+          "type": "array",
+          "description": "Job titles to match; any one is enough.",
+          "example": [
+            "marketing manager"
+          ],
+          "wire_name": "person_titles[]"
+        },
+        "include_similar_titles": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include similar titles; false for strict matches."
+        },
+        "person_not_titles": {
+          "in": "query",
+          "type": "array",
+          "description": "Exclude people with these current titles.",
+          "wire_name": "person_not_titles[]"
+        },
+        "q_keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword filter."
+        },
+        "q_person_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Search by person name."
+        },
+        "person_locations": {
+          "in": "query",
+          "type": "array",
+          "description": "Where people live: cities, states, countries or postal codes.",
+          "wire_name": "person_locations[]"
+        },
+        "person_seniorities": {
+          "in": "query",
+          "type": "array",
+          "description": "Current seniority.",
+          "example": [
+            "vp",
+            "director"
+          ],
+          "wire_name": "person_seniorities[]"
+        },
+        "organization_locations": {
+          "in": "query",
+          "type": "array",
+          "description": "Employer headquarters locations.",
+          "wire_name": "organization_locations[]"
+        },
+        "organization_industries": {
+          "in": "query",
+          "type": "array",
+          "description": "Employer industry names; exact lowercase Apollo names.",
+          "wire_name": "organization_industries[]"
+        },
+        "q_organization_domains_list": {
+          "in": "query",
+          "type": "array",
+          "description": "Employer domains, current or previous; up to 1,000.",
+          "example": [
+            "apollo.io"
+          ],
+          "wire_name": "q_organization_domains_list[]"
+        },
+        "contact_email_status": {
+          "in": "query",
+          "type": "array",
+          "description": "Email status filter: verified, unverified, likely to engage, unavailable.",
+          "wire_name": "contact_email_status[]"
+        },
+        "organization_ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Apollo company ids to include.",
+          "wire_name": "organization_ids[]"
+        },
+        "organization_num_employees_ranges": {
+          "in": "query",
+          "type": "array",
+          "description": "Headcount ranges as \"min,max\".",
+          "example": [
+            "250,500"
+          ],
+          "wire_name": "organization_num_employees_ranges[]"
+        },
+        "currently_using_any_of_technology_uids": {
+          "in": "query",
+          "type": "array",
+          "description": "Employer uses any listed technology; underscores for spaces and periods.",
+          "wire_name": "currently_using_any_of_technology_uids[]"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "notes": [
+        "A read over POST: every filter goes in the query string, with array filters named like person_titles[].",
+        "0 credits. Emails and phone numbers are not returned; use people.enrich for them.",
+        "Display cap 50,000 records (100 per page, 500 pages). Rate limit about 600 calls per hour, plan dependent."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.apollo.io/reference/people-api-search",
+      "verified": {
+        "docs": "https://docs.apollo.io/reference/people-api-search"
+      }
+    },
+    {
+      "id": "apollo.people.enrich",
+      "name": "Enrich a person",
+      "summary": "Match one person by name, email, LinkedIn URL, domain or Apollo id and return their profile and contact data.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people/match",
+      "params": {
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email address."
+        },
+        "hashed_email": {
+          "in": "query",
+          "type": "string",
+          "description": "MD5 or SHA-256 of the email."
+        },
+        "organization_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Current or previous employer name."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Employer domain without www or @.",
+          "example": "apollo.io"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Apollo person id."
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL."
+        },
+        "run_waterfall_email": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Run email waterfall enrichment; needs poll_only=true."
+        },
+        "run_waterfall_phone": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Run phone waterfall enrichment; needs poll_only=true."
+        },
+        "reveal_personal_emails": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return personal emails (not for GDPR regions). Costs credits."
+        },
+        "reveal_phone_number": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return all phone numbers incl. mobile (adds 8 credits when found); needs poll_only=true."
+        },
+        "poll_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Poll for phone/waterfall results by request_id."
+        }
+      },
+      "notes": [
+        "A read over POST, parameters in the query string.",
+        "1 credit for demographic or email data found, plus 8 for a returned mobile number; 0 credits when nothing is found. Low-confidence matches are charged only if data you did not send comes back. Waterfall costs depend on your waterfall vendors.",
+        "Phone and waterfall results arrive asynchronously: set poll_only=true and poll with the returned request_id."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.apollo.io/reference/people-enrichment",
+      "verified": {
+        "docs": "https://docs.apollo.io/reference/people-enrichment"
+      }
+    },
+    {
+      "id": "apollo.people.bulk_enrich",
+      "name": "Enrich up to 10 people",
+      "summary": "Bulk version of person enrichment.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/people/bulk_match",
+      "params": {
+        "run_waterfall_email": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Run email waterfall enrichment; needs poll_only=true."
+        },
+        "run_waterfall_phone": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Run phone waterfall enrichment; needs poll_only=true."
+        },
+        "reveal_personal_emails": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return personal emails (not for GDPR regions). Costs credits."
+        },
+        "reveal_phone_number": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return all phone numbers incl. mobile (adds 8 credits when found); needs poll_only=true."
+        },
+        "poll_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Poll for phone/waterfall results by request_id."
+        },
+        "details": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 10 objects, each with first_name/last_name or name, email, hashed_email, organization_name, domain, id, linkedin_url.",
+          "example": [
+            {
+              "first_name": "marcus",
+              "last_name": "ellery",
+              "domain": "apollo.io"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Per person the same credit rule as people.enrich: 1 to 9 credits, 0 when nothing is found. Max 10 people per call.",
+        "Check match_confidence (high, medium, low, none) on each result."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.apollo.io/reference/bulk-people-enrichment",
+      "verified": {
+        "docs": "https://docs.apollo.io/reference/bulk-people-enrichment"
+      }
+    },
+    {
+      "id": "apollo.organizations.search",
+      "name": "Search companies",
+      "summary": "Find companies by size, location, industry, technology, funding and hiring filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/mixed_companies/search",
+      "params": {
+        "q_organization_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name filter; partial matches allowed."
+        },
+        "q_organization_domains_list": {
+          "in": "query",
+          "type": "array",
+          "description": "Domains, current or past; up to 1,000.",
+          "wire_name": "q_organization_domains_list[]"
+        },
+        "organization_num_employees_ranges": {
+          "in": "query",
+          "type": "array",
+          "description": "Headcount ranges as \"min,max\".",
+          "example": [
+            "250,500"
+          ],
+          "wire_name": "organization_num_employees_ranges[]"
+        },
+        "organization_locations": {
+          "in": "query",
+          "type": "array",
+          "description": "HQ locations.",
+          "wire_name": "organization_locations[]"
+        },
+        "organization_not_locations": {
+          "in": "query",
+          "type": "array",
+          "description": "Exclude HQ locations.",
+          "wire_name": "organization_not_locations[]"
+        },
+        "organization_industries": {
+          "in": "query",
+          "type": "array",
+          "description": "Industry names; exact lowercase.",
+          "wire_name": "organization_industries[]"
+        },
+        "q_organization_keyword_tags": {
+          "in": "query",
+          "type": "array",
+          "description": "Keywords associated with companies.",
+          "wire_name": "q_organization_keyword_tags[]"
+        },
+        "currently_using_any_of_technology_uids": {
+          "in": "query",
+          "type": "array",
+          "description": "Technologies in use; underscores for spaces and periods.",
+          "wire_name": "currently_using_any_of_technology_uids[]"
+        },
+        "revenue_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum revenue, digits only.",
+          "wire_name": "revenue_range[min]"
+        },
+        "revenue_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum revenue, digits only.",
+          "wire_name": "revenue_range[max]"
+        },
+        "total_funding_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum total funding.",
+          "wire_name": "total_funding_range[min]"
+        },
+        "total_funding_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum total funding.",
+          "wire_name": "total_funding_range[max]"
+        },
+        "organization_ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Apollo company ids to include.",
+          "wire_name": "organization_ids[]"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, max 100."
+        }
+      },
+      "notes": [
+        "A read over POST: all filters in the query string.",
+        "1 credit per page of up to 100 results. Display cap 50,000 records. May require a paid plan."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.apollo.io/reference/organization-search",
+      "verified": {
+        "docs": "https://docs.apollo.io/reference/organization-search"
+      }
+    },
+    {
+      "id": "apollo.organizations.enrich",
+      "name": "Enrich a company",
+      "summary": "Company profile by domain, LinkedIn URL, website or name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/enrich",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain without www or @.",
+          "example": "apollo.io"
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Company LinkedIn URL."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name; use with another identifier."
+        },
+        "website": {
+          "in": "query",
+          "type": "string",
+          "description": "Full company website URL."
+        }
+      },
+      "notes": [
+        "1 credit per organization. Answers 422 if no identifier is sent."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.apollo.io/reference/organization-enrichment",
+      "verified": {
+        "docs": "https://docs.apollo.io/reference/organization-enrichment"
+      }
+    },
+    {
+      "id": "apollo.organizations.job_postings",
+      "name": "List a company's job postings",
+      "summary": "Active job postings for one company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/{organization_id}/job_postings",
+      "params": {
+        "organization_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Apollo company id (find it with organizations.search).",
+          "example": "5e66b6381e05b4008c8331b8"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "notes": [
+        "1 credit per page request."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.apollo.io/reference/organization-jobs-postings",
+      "verified": {
+        "docs": "https://docs.apollo.io/reference/organization-jobs-postings"
+      }
+    }
+  ]
+}

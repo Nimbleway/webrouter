@@ -8,10 +8,10 @@ A name does not imply every method: most search backends do not extract, and som
 Each method resolves the name against its own registry, so asking one for a backend that only serves another
 reports it as unknown and lists the ones that method does serve.
 
-:meth:`WebRouter.run_template` runs one of a vendor's templates -- a saved, site-specific extraction that turns one
-page into a record -- and :meth:`WebRouter.templates` and :meth:`WebRouter.template` list and describe the
-catalogue it is picked from; the three share one registry, and all three need ``provider`` named, since a
-template's name belongs to one vendor.
+:meth:`WebRouter.live_data` runs one of a vendor's ready-made scrapers for one
+site and returns structured records fetched for this call;
+:meth:`WebRouter.live_data_sources` and :meth:`WebRouter.live_data_source`
+list and describe the catalogue (``client_live_data.py``).
 
 :meth:`WebRouter.research` behaves differently (:meth:`WebRouter.answer`, one cited answer, does not): an agentic
 run takes minutes rather than milliseconds, so it waits for the answer -- or hands back a
@@ -31,33 +31,39 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Collection, Mapping
-from contextlib import AsyncExitStack, ExitStack, suppress
+from contextlib import AsyncExitStack, ExitStack
 from types import TracebackType
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
 from web_router.client_config import config_for
+from web_router.client_core import AsyncCore, SyncCore
+from web_router.client_handles import _HandleT, _HandleTracking
+from web_router.client_live_data import AsyncLiveData, SyncLiveData
 from web_router.client_plan import AsyncPlan, SyncPlan
 from web_router.client_requests import JsonSchema as JsonSchema
 from web_router.client_requests import (
     async_client_holders,
     build_browse_request,
     build_browser_request,
-    build_extract_request,
     build_research_request,
-    build_search_request,
 )
-from web_router.client_template import AsyncTemplate, SyncTemplate
+from web_router.client_search import AsyncSearch, SyncSearch
+from web_router.client_vendors import AsyncVendors, SyncVendors, VendorCredentials, _VendorLookup
+from web_router.client_warmup import AsyncWarmup, SyncWarmup
 from web_router.constants import (
     BROWSE_TIMEOUT,
     DEFAULT_PROVIDER,
     MSG_SYNC_ROUTER_ASYNC_CLIENT,
     RESEARCH_TIMEOUT,
 )
+from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
+from web_router.providers._pinning import backend_of
+from web_router.providers._runtime import Runtime
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     AsyncBrowserHandle,
@@ -66,10 +72,10 @@ from web_router.providers.base import (
     BrowserHandle,
     BrowserProvider,
     ExtractProvider,
+    LiveDataProvider,
     ResearchJob,
     ResearchProvider,
     SearchProvider,
-    TemplateProvider,
     _BaseProvider,
 )
 from web_router.registry import (
@@ -78,7 +84,6 @@ from web_router.registry import (
     create_extract_provider,
     create_provider,
     create_research_provider,
-    create_template_provider,
 )
 from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
@@ -87,23 +92,16 @@ from web_router.routing.submitted import asubmitted, submitted
 from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
     BrowseResponse,
-    ExtractFormat,
-    ExtractResponse,
     Provider,
-    Recency,
     ResearchEffort,
     ResearchResponse,
-    SearchDepth,
-    SearchResponse,
     StealthLevel,
     Viewport,
     provider_name,
 )
 
-_HandleT = TypeVar("_HandleT", BrowserHandle, AsyncBrowserHandle)
 
-
-class _BaseRouter(RouterSetup, Generic[_HandleT]):
+class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     """Provider resolution and caching shared by the sync and async routers.
 
     Generic only in the browser handle each one hands out, which is the one
@@ -115,11 +113,13 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | str | None = None,
+        router: RouterLike | str | None = RULES_ROUTER_NAME,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        vendor_credentials: VendorCredentials = None,
+        max_concurrency: int | None = None,
     ) -> None:
         """
         Args:
@@ -129,17 +129,22 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
                 ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is the only place
                 credentials are passed explicitly; everything else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
-                ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental) -- see
-                :mod:`web_router.routing.invoke`. A name such as ``"remote"`` builds a registered router from
-                ``router_config``, and closing this router closes it -- see :mod:`web_router.routing.registry`.
+                ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental):
+                ``"rules"`` unless set (:mod:`web_router.routing.rules`), ``None`` for none. A name builds a registered
+                router from ``router_config``, closed with this one -- see :mod:`web_router.routing.registry`.
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
+            vendor_credentials: for :meth:`call_vendor`, read before the environment -- see
+                :mod:`web_router.client_vendors`.
+            max_concurrency: the most vendor calls this router has in flight at once, across every search,
+                extract and answer it serves (per event loop on the async router); ``None`` caps nothing. A call
+                waits for a slot within its own ``timeout`` -- see :mod:`web_router.providers._runtime`.
         """
+        self._runtime = Runtime.capped(max_concurrency)
+        self._init_vendors(vendor_credentials)
         name = provider_name(provider)
-        # Either registry is enough to name a default: a router defaulted to a
-        # search-only backend still extracts through `provider=`, and the
-        # method that cannot serve the default says so when it is called.
+        # Either registry names a default (a pinned search id by its backend); a method that can't serve it says so.
         known = every_provider_name()
-        if name not in known:
+        if backend_of(name) not in known:
             raise ProviderNotFoundError(name, known)
 
         self.default_provider = name
@@ -151,7 +156,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         # Keyed separately from the search instances: one name resolves to a different class per method, and a
         # vendor serving all three is three objects here.
         self._extract_instances: dict[str, ExtractProvider] = {}
-        self._template_instances: dict[str, TemplateProvider] = {}
+        self._live_data_instances: dict[str, LiveDataProvider] = {}
         self._research_instances: dict[str, ResearchProvider] = {}
         self._answer_instances: dict[str, AnswerProvider] = {}
         self._browser_instances: dict[str, BrowserProvider] = {}
@@ -199,27 +204,11 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         if isinstance(name, ExtractProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)  # a pin: its backend
         with self._providers_lock:
             if key not in self._extract_instances:
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
             return self._extract_instances[key]
-
-    def get_template_provider(self, name: str | Provider | TemplateProvider) -> TemplateProvider:
-        """Return the named template provider, constructing and caching it on first use.
-
-        The template counterpart of :meth:`get_provider`, with the same
-        ownership rule -- but no default: a template's name belongs to one
-        vendor, so the caller always says which.
-        """
-        if isinstance(name, TemplateProvider):
-            return name
-
-        key = provider_name(name)
-        with self._providers_lock:
-            if key not in self._template_instances:
-                self._template_instances[key] = create_template_provider(key, **self._config_for(key))
-            return self._template_instances[key]
 
     def get_research_provider(self, name: str | Provider | ResearchProvider | None = None) -> ResearchProvider:
         """Return the named research provider, constructing and caching it on first use.
@@ -230,7 +219,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         if isinstance(name, ResearchProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._research_instances:
                 self._research_instances[key] = create_research_provider(key, **self._config_for(key))
@@ -245,7 +234,7 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         if isinstance(name, BrowserProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._browser_instances:
                 self._browser_instances[key] = create_browser_provider(key, **self._config_for(key))
@@ -260,38 +249,17 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         if isinstance(name, BrowseProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._browse_instances:
                 self._browse_instances[key] = create_browse_provider(key, **self._config_for(key))
             return self._browse_instances[key]
 
-    def _track(self, handle: _HandleT) -> _HandleT:
-        # Pruned on every open, so a long-lived router that opens thousands of
-        # sessions holds only the ones still open. In place and under the lock:
-        # rebuilding the list and reassigning it lost a handle to a concurrent
-        # open that appended between the two.
-        with self._handles_lock:
-            self._browser_handles[:] = [held for held in self._browser_handles if not held.released]
-            self._browser_handles.append(handle)
-        return handle
-
-    def _open_handles(self) -> list[_HandleT]:
-        # Left tracked: a handle leaves only once its release succeeds, so one
-        # that fails is still here for the next close() to retry.
-        with self._handles_lock:
-            self._browser_handles[:] = [held for held in self._browser_handles if not held.released]
-            return list(self._browser_handles)
-
-    def _untrack(self, handle: _HandleT) -> None:
-        with self._handles_lock, suppress(ValueError):
-            self._browser_handles.remove(handle)
-
     def _all_instances(self) -> list[_BaseProvider]:
         return [
             *self._instances.values(),
             *self._extract_instances.values(),
-            *self._template_instances.values(),
+            *self._live_data_instances.values(),
             *self._research_instances.values(),
             *self._answer_instances.values(),
             *self._browser_instances.values(),
@@ -302,16 +270,28 @@ class _BaseRouter(RouterSetup, Generic[_HandleT]):
         return f"<{type(self).__name__} default_provider={self.default_provider!r}>"
 
 
-class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan, SyncBudget, SyncTemplate):
+class WebRouter(
+    _BaseRouter[BrowserHandle],
+    SyncSearch,
+    SyncCore,
+    SyncWarmup,
+    SyncAnswer,
+    SyncLiveData,
+    SyncBenchmark,
+    SyncPlan,
+    SyncBudget,
+    SyncVendors,
+):
     """Synchronous router.
 
     Example:
-        >>> router = WebRouter("nimble")
-        >>> response = router.search("who won the 2022 world cup", max_results=5)
-        >>> response.urls
-        >>> router.extract(response.urls[:3], format="markdown")
+        >>> with WebRouter("nimble") as router:
+        ...     response = router.search("who won the 2022 world cup", max_results=5, timeout=10)
+        ...     router.extract(response.urls[:3], format="markdown", timeout=30)
 
-    ``budget=`` caps one call and :meth:`budget` several (experimental): see :mod:`web_router.routing.budget`.
+    Build one per process and share it across threads; close it (or use it as a context manager) when done.
+
+    ``budget=`` caps one call and :meth:`budget` several: see :mod:`web_router.routing.budget`.
     """
 
     def __init__(
@@ -319,11 +299,13 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | str | None = None,
+        router: RouterLike | str | None = RULES_ROUTER_NAME,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        vendor_credentials: VendorCredentials = None,
+        max_concurrency: int | None = None,
     ) -> None:
         """
         Raises:
@@ -339,66 +321,13 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             route_tools=route_tools,
             fail_on_router_error=fail_on_router_error,
             url_policy=url_policy,
+            vendor_credentials=vendor_credentials,
+            max_concurrency=max_concurrency,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:
             self._close_refused_router()  # built by name above, and this router is never returned to close it
             raise ConfigurationError(MSG_SYNC_ROUTER_ASYNC_CLIENT.format(names=", ".join(map(repr, async_only))))
-
-    def search(
-        self,
-        query: str,
-        *,
-        provider: str | Provider | SearchProvider | None = None,
-        max_results: int | None = None,
-        search_depth: SearchDepth | None = None,
-        include_domains: list[str] | None = None,
-        exclude_domains: list[str] | None = None,
-        country: str | None = None,
-        locale: str | None = None,
-        recency: Recency | None = None,
-        effort: ResearchEffort | None = None,
-        provider_options: dict[str, Any] | None = None,
-        budget: Budget | None = None,
-    ) -> SearchResponse:
-        """Search the web through ``provider`` (or the router's default)."""
-        request = build_search_request(
-            query,
-            max_results=max_results,
-            search_depth=search_depth,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            country=country,
-            locale=locale,
-            recency=recency,
-            effort=effort,
-            provider_options=provider_options,
-        )
-        chain = self.get_provider(provider)
-        return self._routed(chain, request, budget, chain.search)
-
-    def extract(
-        self,
-        urls: str | list[str],
-        *,
-        provider: str | Provider | ExtractProvider | None = None,
-        format: ExtractFormat | None = None,
-        profile: str | None = None,
-        provider_options: dict[str, Any] | None = None,
-        budget: Budget | None = None,
-    ) -> ExtractResponse:
-        """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
-
-        Several URLs can partly succeed: what came back is in
-        :attr:`~web_router.ExtractResponse.documents` and everything that did
-        not is in :attr:`~web_router.ExtractResponse.failures`. A call where
-        nothing came back raises instead. ``profile`` names a saved identity on
-        the backend -- the one a browser session logged into -- whose cookies
-        are sent with each fetch; a backend without saved profiles refuses it.
-        """
-        request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
-        chain = self.get_extract_provider(provider)
-        return self._routed(chain, request, budget, chain.extract)
 
     def research(
         self,
@@ -610,6 +539,7 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
             # so they close after the releases, which need their clients. A
             # release that fails does not stop the rest.
             stack.callback(self._close_router)
+            stack.callback(self._close_vendors)
             for instance in self._all_instances():
                 stack.callback(instance.close)
             for handle in self._open_handles():
@@ -632,7 +562,16 @@ class WebRouter(_BaseRouter[BrowserHandle], SyncAnswer, SyncBenchmark, SyncPlan,
 
 
 class AsyncWebRouter(
-    _BaseRouter[AsyncBrowserHandle], AsyncAnswer, AsyncBenchmark, AsyncPlan, AsyncBudget, AsyncTemplate
+    _BaseRouter[AsyncBrowserHandle],
+    AsyncSearch,
+    AsyncCore,
+    AsyncWarmup,
+    AsyncAnswer,
+    AsyncLiveData,
+    AsyncBenchmark,
+    AsyncPlan,
+    AsyncBudget,
+    AsyncVendors,
 ):
     """Asynchronous router.
 
@@ -640,59 +579,6 @@ class AsyncWebRouter(
         >>> async with AsyncWebRouter("nimble") as router:
         ...     response = await router.search("latest nvidia earnings")
     """
-
-    async def search(
-        self,
-        query: str,
-        *,
-        provider: str | Provider | SearchProvider | None = None,
-        max_results: int | None = None,
-        search_depth: SearchDepth | None = None,
-        include_domains: list[str] | None = None,
-        exclude_domains: list[str] | None = None,
-        country: str | None = None,
-        locale: str | None = None,
-        recency: Recency | None = None,
-        effort: ResearchEffort | None = None,
-        provider_options: dict[str, Any] | None = None,
-        budget: Budget | None = None,
-    ) -> SearchResponse:
-        """Search the web through ``provider`` (or the router's default)."""
-        request = build_search_request(
-            query,
-            max_results=max_results,
-            search_depth=search_depth,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            country=country,
-            locale=locale,
-            recency=recency,
-            effort=effort,
-            provider_options=provider_options,
-        )
-        chain = self.get_provider(provider)
-        return await self._arouted(chain, request, budget, chain.asearch)
-
-    async def extract(
-        self,
-        urls: str | list[str],
-        *,
-        provider: str | Provider | ExtractProvider | None = None,
-        format: ExtractFormat | None = None,
-        profile: str | None = None,
-        provider_options: dict[str, Any] | None = None,
-        budget: Budget | None = None,
-    ) -> ExtractResponse:
-        """Fetch the contents of one or more URLs through ``provider`` (or the router's default).
-
-        Backends that take one URL per call are fanned out concurrently. As on
-        the sync router, a partly successful call returns its failures and one
-        where nothing came back raises, and ``profile`` is the saved identity
-        whose cookies each fetch carries.
-        """
-        request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
-        chain = self.get_extract_provider(provider)
-        return await self._arouted(chain, request, budget, chain.aextract)
 
     async def research(
         self,
@@ -854,6 +740,8 @@ class AsyncWebRouter(
         """
         async with AsyncExitStack() as stack:
             stack.push_async_callback(self._aclose_router)
+            stack.push_async_callback(self._aclose_vendors)
+
             for instance in self._all_instances():
                 stack.push_async_callback(instance.aclose)
             for handle in self._open_handles():

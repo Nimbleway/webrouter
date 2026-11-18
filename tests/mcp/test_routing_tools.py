@@ -144,12 +144,12 @@ async def test_under_a_ceiling_an_unknown_price_research_backend_is_refused_nami
     assert members == []
 
 
-async def test_a_template_run_spends_from_the_ceiling(fake_template_provider: Any, priced: Table) -> None:
+async def test_a_template_run_spends_from_the_ceiling(fake_live_data_provider: Any, priced: Table) -> None:
     priced.update(fake=0.04)
     tools = routed(Budget(max_cost_usd=0.05))
-    await ok_on(tools, "run_template", template="books_pdp", provider="fake", inputs={"url": URL})
-    failed, message = await outcome(tools, "run_template", template="books_pdp", provider="fake", inputs={"url": URL})
-    assert failed and "run_template:fake" in message
+    await ok_on(tools, "live_data", source="books_pdp", provider="fake", inputs={"url": URL})
+    failed, message = await outcome(tools, "live_data", source="books_pdp", provider="fake", inputs={"url": URL})
+    assert failed and "live_data:fake" in message
 
 
 # -- budget_start and budget_status --------------------------------------------

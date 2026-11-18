@@ -13,17 +13,18 @@ rest on.
     uv run --all-extras python benchmarks/providers/run.py --questions sealqa-hard
     uv run --all-extras python benchmarks/providers/run.py --questions csv --dataset mine.csv \
         --question-column question --answer-column answer
-    uv run --all-extras python benchmarks/providers/run.py --providers tavily,tavily@fast,tavily:ultra-fast
+    uv run --all-extras python benchmarks/providers/run.py --providers tavily,tavily:fast,tavily:tavily-ultra-fast
 
 SealQA withholds results from its own pages (the dataset, the paper, copies)
 before judging, so a backend is not scored on finding the answer key; each row
 records how many results it withheld.
 
-A setup is a backend (``tavily``), a backend at one of web-router's normalized
-depths (``tavily@deep``), or a backend in a vendor mode the normalized surface
-does not map (``tavily:ultra-fast``), sent through ``provider_options`` from
-``modes.json`` beside this script. Each depth is its own ``evaluate()``, as
-the library asks of a comparison of tiers, on the same questions.
+A setup is a backend (``tavily``) or a backend pinned to a mode (``tavily:deep``,
+``tavily:tavily-ultra-fast``, ``exa:exa-instant+lite``): the id ``provider=`` takes,
+read with the parts each provider class declares. The old ``tavily@deep`` still runs;
+``tavily:ultra-fast@deep`` parses but is refused (Tavily's tier and ``deep`` both set
+``search_depth``). Setups run in one ``evaluate()`` per
+``search_depth``, each search in its own pinned mode, on the same questions.
 
 Keys come from the repo's ``.env`` (or the environment): each backend's own,
 and ``OPENAI_API_KEY`` for the default judge. ``auto`` is left out, as
@@ -43,7 +44,6 @@ inside route-eval's noise floor.
 from __future__ import annotations
 
 import argparse
-import json
 from collections import defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -58,7 +58,6 @@ from _common import (
     _s,
     combine_scans,
     scan_main,
-    split_label,
 )
 from _questions import (
     MSG_CANNOT_COMBINE,
@@ -76,62 +75,48 @@ from _report_tables import breakdown, breakdown_tables, search_score
 
 from web_router import AsyncWebRouter
 from web_router.constants import BENCHMARK_EXCLUDED
+from web_router.constants_modes import DEPTH_LEVELS, PART_SEP
 from web_router.evals import OpenAIJudge
+from web_router.exceptions import ProviderNotFoundError
+from web_router.exceptions_typed import InvalidParameterError
+from web_router.modes import ModeId, parse_id
 from web_router.providers.base import SearchProvider
-from web_router.registry import configured_providers
+from web_router.registry import configured_providers, get_provider_class
 from web_router.types import SearchDepth, SearchRequest, SearchResponse
 
-MODES_FILE = Path(__file__).resolve().parent / "modes.json"
-DEPTHS = ("lite", "fast", "deep")
-MSG_UNKNOWN_DEPTH = "{setup!r}: depth must be one of {depths}"
-MSG_UNKNOWN_MODE = "{setup!r}: no mode {mode!r} for {provider} in modes.json (it has: {known})"
 DEFAULT_MAX_RESULTS = 5
 DEFAULT_CONCURRENCY = 8
 
 
 class VendorMode(SearchProvider):
-    """A backend in one of its own modes: the mode's ``provider_options`` added to every search, under its own name.
+    """A backend, pinned or not, answering under its setup's label, so each row says which mode answered.
 
     The search still goes through the backend's public ``asearch`` -- this
-    translates nothing -- so validation, wrapping and normalization are the
-    backend's own, and the row's name says which mode answered.
+    translates nothing -- so validation, the mode's merge and normalization are the backend's own.
     """
 
-    def __init__(self, inner: SearchProvider, options: dict[str, Any]) -> None:
+    def __init__(self, inner: SearchProvider) -> None:
         super().__init__()
         self._inner = inner
-        self._options = options
-
-    def _with_options(self, request: SearchRequest) -> SearchRequest:
-        return request.model_copy(update={"provider_options": {**request.provider_options, **self._options}})
 
     def _search(self, request: SearchRequest) -> SearchResponse:
-        return self._inner.search(self._with_options(request))
+        return self._inner.search(request)
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
-        return await self._inner.asearch(self._with_options(request))
+        return await self._inner.asearch(request)
 
 
-def parse_setup(setup: str, modes: dict[str, dict[str, Any]]) -> tuple[str, str | None, dict[str, Any]]:
-    """``provider[:mode][@depth]`` as the backend, the normalized depth and the vendor options."""
-    provider, mode, depth = split_label(setup)
-    if depth and depth not in DEPTHS:
-        raise SystemExit(MSG_UNKNOWN_DEPTH.format(setup=setup, depths=", ".join(DEPTHS)))
-    options: dict[str, Any] = {}
-    if mode:
-        known = modes.get(provider, {})
-        if mode not in known:
-            raise SystemExit(
-                MSG_UNKNOWN_MODE.format(setup=setup, mode=mode, provider=provider, known=", ".join(known) or "none")
-            )
-        options = known[mode]["provider_options"]
-    return provider, depth or None, options
+def parse_setup(setup: str) -> ModeId:
+    """``provider[:mode]`` as the id it pins, its mode canonical; exits naming the setup when it does not parse."""
+    try:
+        return parse_id(setup, get_provider_class)
+    except (InvalidParameterError, ProviderNotFoundError) as exc:
+        raise SystemExit(f"{setup!r}: {exc}") from exc
 
 
-def _modes() -> dict[str, dict[str, Any]]:
-    if not MODES_FILE.is_file():
-        return {}
-    return {k: v for k, v in json.loads(MODES_FILE.read_text(encoding="utf-8")).items() if not k.startswith("_")}
+def _depth(pinned: ModeId) -> str | None:
+    """The normalized depth a pinned mode names, if any: its setups share one ``evaluate()``."""
+    return next((part for part in (pinned.mode or "").split(PART_SEP) if part in DEPTH_LEVELS), None)
 
 
 def summarize(rows: list[dict[str, Any]], setup: dict[str, Any]) -> dict[str, Any]:
@@ -213,23 +198,22 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
     providers = setup["providers"]
     print(f"{len(providers)} backends x {len(dataset)} questions -> {args.out}: {', '.join(providers)}")
     meta = {q.question: question_tags(q.metadata) for q in dataset.questions}
-    modes = _modes()
-    by_depth: dict[str | None, list[tuple[str, str, dict[str, Any]]]] = defaultdict(list)
-    for label in setup["providers"]:
-        provider, depth, options = parse_setup(label, modes)
-        by_depth[depth].append((label, provider, options))
+    by_depth: dict[str | None, dict[str, str]] = defaultdict(dict)
+    for label in providers:  # every setup is read before anything is searched
+        pinned = parse_setup(label)
+        by_depth[_depth(pinned)][label] = str(pinned)
     judge = OpenAIJudge()
     labels = [label for label, _ in setup["breakdowns"]]
     rows: list[dict[str, Any]] = []
     try:
         async with AsyncWebRouter() as router:
-            # One evaluate() per depth: the library sends one depth to every backend in a comparison.
+            # One evaluate() per depth: a depth's rows reach the file once it returns, so a crash keeps them.
             for depth, members in by_depth.items():
                 wrapped = [
-                    type(label, (VendorMode,), {"name": label, "supported_parameters": _supported(router, provider)})(
-                        router.get_provider(provider), options
+                    type(label, (VendorMode,), {"name": label, "supported_parameters": _supported(router, name)})(
+                        router.get_provider(name)
                     )
-                    for label, provider, options in members
+                    for label, name in members.items()
                 ]
                 report = await router.evaluate(
                     dataset,
@@ -240,7 +224,6 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
                     search_depth=cast(SearchDepth | None, depth),
                 )
                 setup["judge"] = report.judge
-                # A depth's rows reach the file once its evaluate() returns: a crash in the next depth keeps them.
                 batch = [
                     {**row.model_dump(mode="json"), **{tag: meta.get(row.question, {}).get(tag) for tag in labels}}
                     for row in report.rows

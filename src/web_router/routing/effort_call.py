@@ -1,6 +1,6 @@
 """The one research effort a call sends, chosen once: before its candidates are priced or a router is asked.
 
-Experimental. The request is shared by every backend the call may try, so the
+The request is shared by every backend the call may try, so the
 effort is :func:`~web_router.routing.params.shared_effort`'s pick over them;
 an effort the caller set stands. The candidate builder prices research at it,
 and a call no router orders -- on ``auto`` or on a backend the caller named --
@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS
+from web_router.providers._pinning import pinned_for
 from web_router.routing.contract import Budget, ToolName
 from web_router.routing.eligible import eligible_members
 from web_router.routing.params import EffortChoice, shared_effort
@@ -66,10 +67,10 @@ def unrouted(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_Re
 
 
 def named(chain: Any, request: _RequestT, budget: Budget | None) -> tuple[_RequestT, DecisionRecord | None]:
-    """A call to a backend the caller named: its research effort, as :func:`unrouted` maps it; else unchanged."""
+    """A call to a backend the caller named: its pinned mode, and its research effort as :func:`unrouted` maps it."""
     if getattr(chain, "name", PROVIDER_AUTO) == PROVIDER_AUTO:
         return request, None
-    return unrouted(chain, request, budget)
+    return unrouted(chain, pinned_for(chain, request), budget)
 
 
 def with_record(response: _ResponseT, record: DecisionRecord | None) -> _ResponseT:

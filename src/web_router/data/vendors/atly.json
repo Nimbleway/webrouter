@@ -1,0 +1,212 @@
+{
+  "vendor": "atly",
+  "name": "Atly",
+  "category": "search",
+  "summary": "Review-based place discovery: where to go for an intent (work-friendly, gluten-free, first date) near a location, with reasons.",
+  "docs_url": "https://agentic-api.atly.com/v2/docs",
+  "base_url": "https://agentic-api.atly.com/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ATLY_API_KEY"
+        ],
+        "required": false,
+        "description": "an Atly API key (create one by POSTing an email to /keys; it raises the quota from the small shared hourly IP allowance to a daily one)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "No key is required: anonymous callers share a small hourly quota per IP. A key gives a daily quota.",
+    "Every metered response carries X-RateLimit-Limit, X-RateLimit-Remaining and X-RateLimit-Reset; each metered request counts one unit, errors included. Reference calls (categories, areas, key info, docs) are free.",
+    "Never reuse a place id or category from examples; ids come only from live responses. Every response includes a call_id.",
+    "API v1 was retired on 2026-10-26; this entry targets v2."
+  ],
+  "sources": [
+    "https://agentic-api.atly.com/v2/docs",
+    "https://agentic-api.atly.com/v2/openapi.yaml"
+  ],
+  "endpoints": [
+    {
+      "id": "atly.places.search",
+      "name": "Find places for an intent near a location",
+      "summary": "Places ranked for one or more intents (categories such as Coffee or Work Friendly) in a city, area or radius, with quotable review reasons.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/places/search",
+      "params": {
+        "categories": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "1 to 5 category names or ids, most important first; every result matches all (trailing ones are dropped if nothing matches). Names must be exact; look them up with atly.places.list_categories.",
+          "example": [
+            "Cappuccino",
+            "Work Friendly"
+          ]
+        },
+        "area_id": {
+          "in": "body",
+          "type": "string",
+          "description": "An area id from atly.places.list_areas, or a city name such as Austin. Give this or lat and lon, not both.",
+          "example": "Austin"
+        },
+        "lat": {
+          "in": "body",
+          "type": "number",
+          "description": "Latitude of the search centre, -90 to 90."
+        },
+        "lon": {
+          "in": "body",
+          "type": "number",
+          "description": "Longitude of the search centre, -180 to 180."
+        },
+        "radius_km": {
+          "in": "body",
+          "type": "number",
+          "description": "Radius with lat and lon, in km, held to 0.2-50. Default 5."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Places to return, at most 25. Default 10.",
+          "example": 10
+        },
+        "place_type": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 5 Google place-type words to keep, matched as whole words, such as restaurant or coffee. Applied to the strongest 400 places and never relaxed."
+        }
+      },
+      "notes": [
+        "A read over POST: it searches and changes nothing. Scores are 0-10 and relative to other places in the same country; a place with no score is unmeasured, not bad.",
+        "Counts one unit against your quota (every metered call, errors included). If no place matches every category, trailing categories are dropped and dropped_categories says which.",
+        "Coverage is mostly the United States, with pockets in Mexico, Israel and Thailand."
+      ],
+      "job": "places.search",
+      "docs_url": "https://agentic-api.atly.com/v2/docs",
+      "verified": {
+        "docs": "https://agentic-api.atly.com/v2/openapi.yaml"
+      }
+    },
+    {
+      "id": "atly.places.get",
+      "name": "Get one place",
+      "summary": "Profile, hours, category scores, quotable statements, good-to-know facts and the Atly link for a place.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/places/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A place id from atly.places.search, or an atly.com place link or slug (URL-encode a link)."
+        }
+      },
+      "notes": [
+        "Counts one unit against your quota."
+      ],
+      "job": "places.details",
+      "docs_url": "https://agentic-api.atly.com/v2/docs",
+      "verified": {
+        "docs": "https://agentic-api.atly.com/v2/openapi.yaml"
+      }
+    },
+    {
+      "id": "atly.places.list_categories",
+      "name": "List intent categories",
+      "summary": "Atly's categories, optionally matched against words such as coffee or dog friendly.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/categories",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words to match against category names and keywords.",
+          "example": "dog friendly"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum categories, at most 2000. Default 2000.",
+          "example": 50
+        }
+      },
+      "notes": [
+        "Free: reference calls do not count against your quota."
+      ],
+      "job": "places.categories",
+      "docs_url": "https://agentic-api.atly.com/v2/docs",
+      "verified": {
+        "docs": "https://agentic-api.atly.com/v2/openapi.yaml"
+      }
+    },
+    {
+      "id": "atly.places.list_areas",
+      "name": "List supported areas",
+      "summary": "Cities, neighborhoods and states Atly covers, with ids for place searches.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/areas",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Area name or abbreviation, such as san diego or nyc.",
+          "example": "san diego"
+        },
+        "level": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict to one level.",
+          "enum": [
+            "city",
+            "neighborhood",
+            "state"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum areas, at most 200. Default 50.",
+          "example": 20
+        }
+      },
+      "notes": [
+        "Free: reference calls do not count against your quota."
+      ],
+      "job": "places.areas",
+      "docs_url": "https://agentic-api.atly.com/v2/docs",
+      "verified": {
+        "docs": "https://agentic-api.atly.com/v2/openapi.yaml"
+      }
+    },
+    {
+      "id": "atly.account.get_key",
+      "name": "Show my key and quota",
+      "summary": "Your key's tier and remaining quota; without a key, the anonymous allowance for your IP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/keys/me",
+      "notes": [
+        "Free: does not count against your quota."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://agentic-api.atly.com/v2/docs",
+      "verified": {
+        "docs": "https://agentic-api.atly.com/v2/openapi.yaml"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

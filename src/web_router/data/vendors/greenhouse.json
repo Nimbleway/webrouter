@@ -1,0 +1,171 @@
+{
+  "vendor": "greenhouse",
+  "name": "Greenhouse Job Board",
+  "category": "company-data",
+  "summary": "A company's public Greenhouse job board: open roles with descriptions, departments, offices and pay ranges, keyless.",
+  "docs_url": "https://docs.greenhouse.io/job-board.html",
+  "base_url": "https://boards-api.greenhouse.io/v1",
+  "notes": [
+    "Keyless: the docs state Job Board GET data is public and needs no authentication. Only the application POST (not in this entry) needs a Basic-auth Job Board API key.",
+    "Every call is scoped to one company's board_token; there is no cross-company search. A wrong token returns 404.",
+    "Job ids in /jobs are the job post ids that /jobs/{job_id} takes."
+  ],
+  "sources": [
+    "https://docs.greenhouse.io/job-board.html"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "greenhouse.board.get",
+      "name": "Get a job board",
+      "summary": "The organization's name and job board intro content.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/boards/{board_token}",
+      "params": {
+        "board_token": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company's job board token: the slug in boards.greenhouse.io/<token> or job-boards.greenhouse.io/<token>.",
+          "example": "airbnb"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.greenhouse.io/job-board.html",
+      "verified": {
+        "docs": "https://docs.greenhouse.io/job-board.html"
+      }
+    },
+    {
+      "id": "greenhouse.jobs.list",
+      "name": "List open jobs",
+      "summary": "Every published job on the board, with title, location, updated_at and absolute_url.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/boards/{board_token}/jobs",
+      "params": {
+        "board_token": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company's job board token: the slug in boards.greenhouse.io/<token> or job-boards.greenhouse.io/<token>.",
+          "example": "airbnb"
+        },
+        "content": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds each job's full description, departments and offices."
+        }
+      },
+      "notes": [
+        "No paging is documented: the whole board comes back in one response, and content=true makes it much larger."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.greenhouse.io/job-board.html",
+      "verified": {
+        "docs": "https://docs.greenhouse.io/job-board.html"
+      }
+    },
+    {
+      "id": "greenhouse.jobs.get",
+      "name": "Get a job",
+      "summary": "One job post: description, location, and optionally its application questions and pay ranges.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/boards/{board_token}/jobs/{job_id}",
+      "params": {
+        "board_token": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company's job board token: the slug in boards.greenhouse.io/<token> or job-boards.greenhouse.io/<token>.",
+          "example": "airbnb"
+        },
+        "job_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The job post id from the jobs list."
+        },
+        "questions": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds questions, location_questions, compliance (EEOC, if enabled) and demographic_questions."
+        },
+        "pay_transparency": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds pay_input_ranges (the pay ranges the company published)."
+        }
+      },
+      "job": "jobs.posting.get",
+      "docs_url": "https://docs.greenhouse.io/job-board.html",
+      "verified": {
+        "docs": "https://docs.greenhouse.io/job-board.html"
+      }
+    },
+    {
+      "id": "greenhouse.departments.list",
+      "name": "List departments",
+      "summary": "Departments with the jobs in each.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/boards/{board_token}/departments",
+      "params": {
+        "board_token": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company's job board token: the slug in boards.greenhouse.io/<token> or job-boards.greenhouse.io/<token>.",
+          "example": "airbnb"
+        },
+        "render_as": {
+          "in": "query",
+          "type": "string",
+          "description": "list (default) or tree, for nested offices or departments.",
+          "enum": [
+            "list",
+            "tree"
+          ]
+        }
+      },
+      "job": "company.departments",
+      "docs_url": "https://docs.greenhouse.io/job-board.html",
+      "verified": {
+        "docs": "https://docs.greenhouse.io/job-board.html"
+      }
+    },
+    {
+      "id": "greenhouse.offices.list",
+      "name": "List offices",
+      "summary": "Offices with their departments and jobs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/boards/{board_token}/offices",
+      "params": {
+        "board_token": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company's job board token: the slug in boards.greenhouse.io/<token> or job-boards.greenhouse.io/<token>.",
+          "example": "airbnb"
+        },
+        "render_as": {
+          "in": "query",
+          "type": "string",
+          "description": "list (default) or tree, for nested offices or departments.",
+          "enum": [
+            "list",
+            "tree"
+          ]
+        }
+      },
+      "job": "company.offices",
+      "docs_url": "https://docs.greenhouse.io/job-board.html",
+      "verified": {
+        "docs": "https://docs.greenhouse.io/job-board.html"
+      }
+    }
+  ]
+}

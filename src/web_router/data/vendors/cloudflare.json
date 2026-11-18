@@ -1,0 +1,272 @@
+{
+  "vendor": "cloudflare",
+  "name": "Cloudflare",
+  "category": "analytics",
+  "summary": "Zone traffic, firewall and security analytics through Cloudflare's GraphQL Analytics API, plus zones and DNS records from the v4 REST API.",
+  "docs_url": "https://developers.cloudflare.com/api/",
+  "pricing_url": "https://www.cloudflare.com/plans/",
+  "base_url": "https://api.cloudflare.com/client/v4",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "CLOUDFLARE_API_TOKEN"
+        ],
+        "description": "a Cloudflare API token (My Profile > API Tokens) with Zone Read, Analytics Read and DNS Read as needed"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "REST answers are wrapped as {success, errors, messages, result, result_info}; page with page and per_page and read result_info.total_pages.",
+    "Analytics are GraphQL only: POST a query against viewer.zones(filter: {zoneTag}) or viewer.accounts(filter: {accountTag}) and a dataset node such as httpRequestsAdaptiveGroups or firewallEventsAdaptive. Zone ids come from cloudflare.zones.list.",
+    "GraphQL quota: 300 queries per 5 minutes per user by default; up to 10 zones or 1 account per query. Adaptive datasets keep at least 31 days on every plan; aggregated ones (httpRequests1hGroups, 1dGroups) have per-plan lookback limits.",
+    "Cloudflare also accepts the legacy global API key (X-Auth-Email + X-Auth-Key); this entry uses an API token."
+  ],
+  "sources": [
+    "https://developers.cloudflare.com/api/resources/zones/methods/list/",
+    "https://developers.cloudflare.com/api/resources/zones/methods/get/",
+    "https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/list/",
+    "https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/verify/",
+    "https://developers.cloudflare.com/analytics/graphql-api/getting-started/execute-graphql-query/",
+    "https://developers.cloudflare.com/analytics/graphql-api/limits/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "cloudflare.token.verify",
+      "name": "Verify the API token",
+      "summary": "Whether the token is active, disabled or expired, and its validity window.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user/tokens/verify",
+      "job": "account.validate",
+      "docs_url": "https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/verify/",
+      "verified": {
+        "docs": "https://developers.cloudflare.com/api/resources/user/subresources/tokens/methods/verify/"
+      }
+    },
+    {
+      "id": "cloudflare.zones.list",
+      "name": "List zones",
+      "summary": "Domains (zones) the token can see, with id, status, plan and name servers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/zones",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain name filter.",
+          "example": "example.com"
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "initializing",
+            "pending",
+            "active",
+            "moved"
+          ]
+        },
+        "account_id": {
+          "in": "query",
+          "wire_name": "account.id",
+          "type": "string",
+          "description": "Only zones in this account."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "name",
+            "status",
+            "account.id",
+            "account.name",
+            "plan.id"
+          ]
+        },
+        "direction": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "From 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "5-50."
+        }
+      },
+      "notes": [
+        "Needs Zone Read. internal zones are left out unless type includes them."
+      ],
+      "job": "analytics.accounts.list",
+      "docs_url": "https://developers.cloudflare.com/api/resources/zones/methods/list/",
+      "verified": {
+        "docs": "https://developers.cloudflare.com/api/resources/zones/methods/list/"
+      }
+    },
+    {
+      "id": "cloudflare.zones.get",
+      "name": "Get a zone",
+      "summary": "One zone's details: name, status, plan, account, name servers, settings summary.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/zones/{zone_id}",
+      "params": {
+        "zone_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The 32-character zone id."
+        }
+      },
+      "docs_url": "https://developers.cloudflare.com/api/resources/zones/methods/get/",
+      "verified": {
+        "docs": "https://developers.cloudflare.com/api/resources/zones/methods/get/"
+      }
+    },
+    {
+      "id": "cloudflare.dns.list",
+      "name": "List DNS records",
+      "summary": "DNS records in a zone, filterable by type and proxy status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/zones/{zone_id}/dns_records",
+      "params": {
+        "zone_id": {
+          "in": "path",
+          "type": "string",
+          "required": true
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Record type.",
+          "enum": [
+            "A",
+            "AAAA",
+            "CAA",
+            "CERT",
+            "CNAME",
+            "DNSKEY",
+            "DS",
+            "HTTPS",
+            "LOC",
+            "MX",
+            "NAPTR",
+            "NS",
+            "OPENPGPKEY",
+            "PTR",
+            "SMIMEA",
+            "SRV",
+            "SSHFP",
+            "SVCB",
+            "TLSA",
+            "TXT",
+            "URI"
+          ]
+        },
+        "proxied": {
+          "in": "query",
+          "type": "boolean"
+        },
+        "match": {
+          "in": "query",
+          "type": "string",
+          "description": "any (OR) or all (AND) across filters.",
+          "enum": [
+            "any",
+            "all"
+          ]
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "type",
+            "name",
+            "content",
+            "ttl",
+            "proxied"
+          ]
+        },
+        "direction": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer"
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer"
+        }
+      },
+      "notes": [
+        "Needs DNS Read."
+      ],
+      "docs_url": "https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/list/",
+      "verified": {
+        "docs": "https://developers.cloudflare.com/api/resources/dns/subresources/records/methods/list/"
+      }
+    },
+    {
+      "id": "cloudflare.analytics.graphql",
+      "name": "Query analytics (GraphQL)",
+      "summary": "Traffic, cache, firewall and security analytics for zones or an account through the GraphQL Analytics API.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/graphql",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A GraphQL query, newlines removed.",
+          "example": "{viewer { zones(filter: { zoneTag: $zoneTag }) { firewallEventsAdaptive(filter: $filter limit: 10 orderBy: [datetime_DESC]) { action clientCountryName clientIP clientRequestPath datetime source userAgent } } }}"
+        },
+        "variables": {
+          "in": "body",
+          "type": "object",
+          "description": "A value for every variable the query declares.",
+          "example": {
+            "zoneTag": "<zone id>",
+            "filter": {
+              "datetime_geq": "2026-11-01T00:00:00Z",
+              "datetime_leq": "2026-11-02T00:00:00Z"
+            }
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Needs Analytics Read on the zone or account."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://developers.cloudflare.com/analytics/graphql-api/getting-started/execute-graphql-query/",
+      "verified": {
+        "docs": "https://developers.cloudflare.com/analytics/graphql-api/getting-started/execute-graphql-query/"
+      }
+    }
+  ]
+}

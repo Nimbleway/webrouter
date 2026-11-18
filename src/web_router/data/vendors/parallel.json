@@ -1,0 +1,164 @@
+{
+  "vendor": "parallel",
+  "name": "Parallel",
+  "category": "search",
+  "summary": "People and company discovery from Parallel Web Systems: entity search and FindAll runs.",
+  "docs_url": "https://docs.parallel.ai/getting-started/overview",
+  "pricing_url": "https://parallel.ai/pricing",
+  "base_url": "https://api.parallel.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "PARALLEL_API_KEY"
+        ],
+        "description": "a Parallel API key (platform.parallel.ai > API keys)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is the x-api-key header.",
+    "FindAll runs are asynchronous: start, then poll the run.",
+    "FindAll and entity search live under /v1beta and may change.",
+    "Parallel search, extract and Task runs go through web-router's search, extract and research, not this entry."
+  ],
+  "sources": [
+    "https://docs.parallel.ai/llms.txt",
+    "https://docs.parallel.ai/api-reference/search/search.md",
+    "https://docs.parallel.ai/api-reference/tasks/create-task-run.md",
+    "https://docs.parallel.ai/api-reference/findall/fast-entity-search.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "parallel.entities.search",
+      "name": "Search people or companies fast",
+      "summary": "Fast synchronous ranked list of people or companies matching a description.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1beta/findall/entity-search",
+      "params": {
+        "entity_type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "What to search for.",
+          "example": "companies",
+          "enum": [
+            "people",
+            "companies"
+          ]
+        },
+        "objective": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language description of the target entities.",
+          "example": "Series A fintech startups in London"
+        },
+        "match_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most entities to return, 5-1000; default 100."
+        }
+      },
+      "notes": [
+        "A read over POST: it runs a search and changes nothing in your account.",
+        "Beta path (/v1beta). Returns a fixed set of attributes; use FindAll runs for full match evaluation."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.parallel.ai/api-reference/findall/fast-entity-search.md",
+      "verified": {
+        "docs": "https://docs.parallel.ai/api-reference/findall/fast-entity-search.md"
+      }
+    },
+    {
+      "id": "parallel.findall.run.create",
+      "name": "Start a FindAll run",
+      "summary": "Discover and evaluate entities against match conditions; asynchronous.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1beta/findall/runs",
+      "params": {
+        "objective": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language objective."
+        },
+        "entity_type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Type of entity to find, e.g. companies."
+        },
+        "match_conditions": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Conditions each entity must meet."
+        },
+        "generator": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Generator tier.",
+          "enum": [
+            "preview",
+            "base",
+            "core",
+            "pro"
+          ]
+        },
+        "match_limit": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Most matches to find, 5-1000."
+        },
+        "exclude_list": {
+          "in": "body",
+          "type": "array",
+          "description": "Entity names or ids to exclude, up to 10000."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account; billed per run.",
+        "Beta path (/v1beta). Returns a run in status queued; poll findall.run.get."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.parallel.ai/api-reference/findall/create-findall-run.md",
+      "verified": {
+        "docs": "https://docs.parallel.ai/api-reference/findall/create-findall-run.md"
+      }
+    },
+    {
+      "id": "parallel.findall.run.get",
+      "name": "Get a FindAll run's status",
+      "summary": "Status of a FindAll run.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1beta/findall/runs/{findall_id}",
+      "params": {
+        "findall_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "FindAll run id."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://docs.parallel.ai/api-reference/findall/retrieve-findall-run-status.md",
+      "verified": {
+        "docs": "https://docs.parallel.ai/api-reference/findall/retrieve-findall-run-status.md"
+      }
+    }
+  ]
+}

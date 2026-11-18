@@ -1,0 +1,221 @@
+{
+  "vendor": "coinbase-exchange",
+  "name": "Coinbase Exchange",
+  "category": "finance",
+  "summary": "Public Coinbase Exchange market data: trading pairs, tickers, order books, trades, candles and 24h stats.",
+  "docs_url": "https://docs.cdp.coinbase.com/exchange/rest-api/rate-limits",
+  "base_url": "https://api.exchange.coinbase.com",
+  "notes": [
+    "Only the keyless public market-data endpoints are named here; trading and account endpoints need signed requests.",
+    "Public endpoints allow 10 requests per second per IP, bursts to 15; over that returns 429.",
+    "Prices and sizes are strings; keep them as decimals rather than floats.",
+    "For real-time data Coinbase recommends the WebSocket feed over polling."
+  ],
+  "sources": [
+    "https://docs.cdp.coinbase.com/exchange/rest-api/rate-limits",
+    "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproducts"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "coinbase-exchange.products.list",
+      "name": "List trading pairs",
+      "summary": "Every currency pair available for trading.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Product type filter."
+        }
+      },
+      "job": "market.symbols",
+      "docs_url": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproducts",
+      "verified": {
+        "docs": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproducts"
+      }
+    },
+    {
+      "id": "coinbase-exchange.ticker.get",
+      "name": "Get ticker",
+      "summary": "Last trade price and size, best bid and ask, and 24h volume of a pair.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{product_id}/ticker",
+      "params": {
+        "product_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Product id, BASE-QUOTE.",
+          "example": "BTC-USD"
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductticker",
+      "verified": {
+        "docs": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductticker"
+      }
+    },
+    {
+      "id": "coinbase-exchange.stats.get",
+      "name": "Get 24h stats",
+      "summary": "Open, high, low, last and volume over 24 hours, plus 30-day volume.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{product_id}/stats",
+      "params": {
+        "product_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Product id, BASE-QUOTE.",
+          "example": "BTC-USD"
+        }
+      },
+      "notes": [
+        "volume is in base currency; open, high and low in quote currency."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductstats",
+      "verified": {
+        "docs": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductstats"
+      }
+    },
+    {
+      "id": "coinbase-exchange.book.get",
+      "name": "Get order book",
+      "summary": "Best bid and ask (level 1) or the full book aggregated (2) or per order (3).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{product_id}/book",
+      "params": {
+        "product_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Product id, BASE-QUOTE.",
+          "example": "BTC-USD"
+        },
+        "level": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 best bid/ask (default), 2 full aggregated, 3 full per order.",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "notes": [
+        "Polling level 3 heavily can get access limited or blocked."
+      ],
+      "job": "market.orderbook",
+      "docs_url": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductbook",
+      "verified": {
+        "docs": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductbook"
+      }
+    },
+    {
+      "id": "coinbase-exchange.trades.list",
+      "name": "List recent trades",
+      "summary": "Latest trades of a pair, cursor-paged.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{product_id}/trades",
+      "params": {
+        "product_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Product id, BASE-QUOTE.",
+          "example": "BTC-USD"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, default 1000."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor: sets the start cursor to this trade id."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor: sets the end cursor to this trade id."
+        }
+      },
+      "job": "market.trades",
+      "docs_url": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproducttrades",
+      "verified": {
+        "docs": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproducttrades"
+      }
+    },
+    {
+      "id": "coinbase-exchange.candles.get",
+      "name": "Get candles",
+      "summary": "OHLCV candles of a pair at a fixed granularity.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/products/{product_id}/candles",
+      "params": {
+        "product_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Product id, BASE-QUOTE.",
+          "example": "BTC-USD"
+        },
+        "granularity": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds per candle: 60, 300, 900, 3600, 21600 or 86400.",
+          "enum": [
+            60,
+            300,
+            900,
+            3600,
+            21600,
+            86400
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "Range start timestamp; ignored unless end is also set."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "Range end timestamp; ignored unless start is also set."
+        }
+      },
+      "notes": [
+        "At most 300 candles per request; split longer ranges. Intervals with no trades have no candle."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductcandles",
+      "verified": {
+        "docs": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductcandles"
+      }
+    },
+    {
+      "id": "coinbase-exchange.currencies.list",
+      "name": "List currencies",
+      "summary": "Every currency known to the exchange.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/currencies",
+      "job": "crypto.assets",
+      "docs_url": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getcurrencies",
+      "verified": {
+        "docs": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getcurrencies"
+      }
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 Every provider maps its own payload onto these types, so swapping Nimble for Tavily or You.com does not change the
 shape of what callers get back. Anything a provider returns that has no home here is preserved verbatim under
 ``SearchResult.extra`` / ``SearchResponse.raw`` for a search, ``ExtractedDocument.extra`` / ``ExtractResponse.raw``
-for an extract, and ``TemplateResponse.extra`` / ``TemplateResponse.raw`` for an Extract Template run. A browser
+for an extract, and ``LiveDataResponse.extra`` / ``LiveDataResponse.raw`` for an Extract Template run. A browser
 session is the exception to "a call returns an answer": it returns a :class:`BrowserSession` describing a browser the
 caller then drives itself.
 """
@@ -14,15 +14,27 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from importlib import import_module
 from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from web_router.types_citation import Citation as Citation
+from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
+from web_router.types_data_api import DATA_API_SITE_DESCRIPTION, DATA_APIS_DESCRIPTION, DataApiMatch
 from web_router.types_decision import DECISION_DESCRIPTION
 from web_router.types_decision import DecisionAttempt as DecisionAttempt
 from web_router.types_decision import DecisionHop as DecisionHop
 from web_router.types_decision import DecisionRecord as DecisionRecord
-from web_router.types_options import RECENCY_DESCRIPTION, SEARCH_DEPTH_DESCRIPTION, SEARCH_EFFORT_DESCRIPTION
+from web_router.types_errors import ExtractFailure as ExtractFailure
+from web_router.types_options import (
+    EXTRACT_PROFILE_DESCRIPTION,
+    MAX_RESULTS_DESCRIPTION,
+    RECENCY_DESCRIPTION,
+    SEARCH_DEPTH_DESCRIPTION,
+    SEARCH_EFFORT_DESCRIPTION,
+    NonBlankText,
+)
 from web_router.types_options import Recency as Recency
 from web_router.types_options import ResearchEffort as ResearchEffort
 from web_router.types_options import SearchDepth as SearchDepth
@@ -39,30 +51,24 @@ ExtractFormat = Literal["markdown", "html", "text"]
 - ``html``: the page's HTML, as the backend fetched it.
 - ``text``: the visible text, with no markup at all.
 
-Backends do not all offer all three: one that cannot produce the format you
-asked for raises :class:`~web_router.exceptions.UnsupportedFormatError` rather
-than returning a different one under the same name. See the format table in
-README.md.
+Backends do not all offer all three: one that cannot produce the format you asked for raises
+:class:`~web_router.exceptions.UnsupportedFormatError` rather than returning a different one under the same name.
+See the format table at https://docs.webrouter.net/extract#formats
 """
 
 
 class Provider(str, Enum):
     """The providers built into web-router.
 
-    Every argument that names a provider also accepts a plain string; this
-    exists so the built-in names are discoverable from an editor rather than
-    remembered. Backends added with :func:`web_router.register_provider` are
-    named by string, which is why the string form is never going away.
+    Every argument that names a provider also accepts a plain string; this exists so the built-in names are
+    discoverable from an editor rather than remembered. Backends added with :func:`web_router.register_provider`
+    are named by string, which is why the string form is never going away.
 
-    Not every name serves every method: ``oxylabs``, ``brightdata``,
-    ``firecrawl`` and ``jina`` extract but do not search, and most of the search
-    backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``,
-    ``anchor``, ``kernel`` and ``local`` open browser sessions and do nothing else, and
-    ``browser-use`` and ``skyvern`` run browse tasks and nothing else.
-    :func:`web_router.available_providers`,
-    :func:`web_router.available_extract_providers` and their research and
-    browser counterparts list each method's own set. ``auto`` serves every
-    method by trying its backends in turn; ``max`` serves extract alone, by
+    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl`` and ``jina`` extract but do not
+    search, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
+    ``kernel`` and ``local`` only open browser sessions, ``browser-use`` and ``skyvern`` only run browse tasks, and
+    ``apify`` only runs live data. :func:`web_router.available_providers` and its per-method counterparts list each
+    method's own set. ``auto`` serves every method by trying its backends in turn; ``max`` serves extract alone, by
     trying every backend at once and returning the first document back.
     """
 
@@ -74,13 +80,20 @@ class Provider(str, Enum):
     PARALLEL = "parallel"
     PERPLEXITY = "perplexity"
     LINKUP = "linkup"
+    SELTZ = "seltz"
     WEBIQ = "webiq"
+    OCTEN = "octen"
+    KEIROLABS = "keirolabs"
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
+    VALYU = "valyu"
     AGENTCORE = "agentcore"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
     PARALLEL_MCP = "parallel-mcp"
+    EXA_LITELLM = "exa-litellm"
+    TAVILY_LITELLM = "tavily-litellm"
+    PARALLEL_LITELLM = "parallel-litellm"
     OXYLABS = "oxylabs"
     BRIGHTDATA = "brightdata"
     FIRECRAWL = "firecrawl"
@@ -92,6 +105,7 @@ class Provider(str, Enum):
     KERNEL = "kernel"
     SKYVERN = "skyvern"
     LOCAL = "local"
+    APIFY = "apify"
     BROWSER_USE = "browser-use"
     AUTO = "auto"
     MAX = "max"
@@ -113,8 +127,7 @@ class NormalizedRequest(BaseModel):
     :class:`ExtractRequest` -- and they share only this: a set of optional
     parameters a provider may or may not map, and an untranslated passthrough.
     :meth:`SearchProvider.validate <web_router.SearchProvider.validate>` reads
-    :meth:`specified_parameters` to reject a request carrying options the chosen
-    backend does not map.
+    :meth:`specified_parameters` to reject a request carrying options the chosen backend does not map.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -141,23 +154,15 @@ class NormalizedRequest(BaseModel):
         return {name for name in self.normalized_parameters() if getattr(self, name) is not None}
 
 
-MAX_RESULTS_DESCRIPTION = (
-    "How many results to return; unset, the backend's own default. For an agent: 5 to 10 for most questions,"
-    " more for news or a question with several parts, and 1 only when the user asked for a single link."
-)
-"""What a model reads about ``max_results``, in this schema and the MCP server's."""
-
-
 class SearchRequest(NormalizedRequest):
     """A normalized search request.
 
-    Only :attr:`query` is required. Fields left as ``None`` are omitted from the
-    provider call so each backend applies its own default rather than ours.
+    Only :attr:`query` is required. A field left as ``None`` is not sent: each backend applies its own default.
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options", "mode"})
 
-    query: Annotated[str, Field(min_length=1, description="The search query.")]
+    query: Annotated[NonBlankText, Field(description="The search query.")]
     max_results: Annotated[int | None, Field(default=None, ge=1, description=MAX_RESULTS_DESCRIPTION)] = None
     search_depth: SearchDepth | None = Field(default=None, description=SEARCH_DEPTH_DESCRIPTION)
     include_domains: list[str] | None = Field(default=None, description="Restrict results to these domains.")
@@ -166,10 +171,11 @@ class SearchRequest(NormalizedRequest):
     locale: str | None = Field(default=None, description="Language code, e.g. 'en'.")
     recency: Recency | None = Field(default=None, description=RECENCY_DESCRIPTION)
     effort: ResearchEffort | None = Field(default=None, description=SEARCH_EFFORT_DESCRIPTION)
+    mode: str | None = Field(default=None, description="The vendor mode a pinned id set, e.g. 'exa-instant+lite'.")
 
 
 ALWAYS_SENT = SearchRequest.always_sent
-"""Fields every search provider handles itself: the query, and the untranslated passthrough."""
+"""Fields every search provider handles itself: the query, the vendor mode a pin set, and the passthrough."""
 
 NORMALIZED_PARAMETERS: frozenset[str] = SearchRequest.normalized_parameters()
 """Every optional parameter a search provider may declare support for."""
@@ -193,10 +199,7 @@ class ExtractRequest(NormalizedRequest):
         Field(min_length=1, description="The URLs to fetch, in the order the documents come back."),
     ]
     format: ExtractFormat | None = Field(default=None, description="Which representation of each page to return.")
-    profile: str | None = Field(
-        default=None,
-        description="The backend's id for a saved profile whose cookies are sent with each fetch.",
-    )
+    profile: str | None = Field(default=None, description=EXTRACT_PROFILE_DESCRIPTION)
 
 
 EXTRACT_ALWAYS_SENT = ExtractRequest.always_sent
@@ -234,8 +237,7 @@ class SearchResult(BaseModel):
     score: float | None = Field(default=None, description="Provider relevance score, when one is given.")
     published_date: str | None = None
     extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
+        default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
 
 
@@ -252,6 +254,10 @@ class SearchResponse(BaseModel):
     request_id: str | None = None
     raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
+    data_apis: list[DataApiMatch] = Field(default_factory=list, description=DATA_APIS_DESCRIPTION)
 
     def __len__(self) -> int:
         return len(self.results)
@@ -281,28 +287,21 @@ class ExtractedDocument(BaseModel):
     )
     status_code: int | None = Field(default=None, description="The fetched page's HTTP status, when reported.")
     published_date: str | None = None
-    extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
+    warnings: list[str] = Field(
+        default_factory=list, description="What looked off about a page that came back, such as a near-empty body."
     )
-
-
-class ExtractFailure(BaseModel):
-    """A URL the provider could not fetch, and why."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    error: str
+    extra: dict[str, Any] = Field(
+        default_factory=dict, description="Provider-specific fields with no normalized equivalent."
+    )
+    data_apis: list[DataApiMatch] = Field(default_factory=list, description=DATA_API_SITE_DESCRIPTION)
 
 
 class ExtractResponse(BaseModel):
     """The result of one extract call, tagged with the provider that served it.
 
-    Extracting several URLs can partly succeed: what came back is in
-    :attr:`documents`, and every URL that did not is in :attr:`failures` with
-    the reason. A call where *nothing* came back raises instead, so a failure
-    is never something you have to go looking for.
+    Extracting several URLs can partly succeed: what came back is in :attr:`documents`, and every URL that
+    did not is in :attr:`failures` with the reason. A call where *nothing* came back raises instead, so a
+    failure is never something you have to go looking for.
     """
 
     # Unknown keys are a provider bug: the untouched payload belongs in `raw`.
@@ -326,6 +325,9 @@ class ExtractResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
 
     def __len__(self) -> int:
         return len(self.documents)
@@ -336,170 +338,15 @@ class ExtractResponse(BaseModel):
         return [document.url for document in self.documents]
 
 
-_BENCHMARK_MODELS = frozenset({"BenchmarkRun", "BenchmarkReport", "ExtractBenchmarkRun", "ExtractBenchmarkReport"})
+_MOVED = {"BrowseProgress": "browse"} | dict.fromkeys(("BenchmarkRun", "BenchmarkReport"), "benchmark")
+_MOVED |= dict.fromkeys(("ExtractBenchmarkRun", "ExtractBenchmarkReport"), "benchmark")
 
 
 def __getattr__(name: str) -> Any:
-    """The benchmark models' old path: ``types_benchmark`` imports this module, so it cannot be imported at the top."""
-    if name in _BENCHMARK_MODELS:
-        from web_router import types_benchmark
-
-        return getattr(types_benchmark, name)
+    """A moved model's old path: its ``types_*`` module imports this one, so it cannot be imported at the top."""
+    if name in _MOVED:
+        return getattr(import_module(f"web_router.types_{_MOVED[name]}"), name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-class TemplateRequest(NormalizedRequest):
-    """A normalized Extract Template run.
-
-    A template is a reusable extraction a backend holds for one kind of page --
-    a retailer's product page, a job board's listing -- that turns the page
-    into a record shaped by the template's own output schema. Its inputs are
-    the template's, not ours: :attr:`inputs` is whatever its ``input_schema``
-    names, a URL for some templates and an id, a slug or a search term for
-    others, so nothing here presumes a URL.
-
-    :attr:`format` left as ``None`` means no page content beside the record,
-    which is what every backend returns when asked for nothing: unlike an
-    extract there is no default format to pin, because the record is the
-    answer and the page is an extra.
-    """
-
-    always_sent: ClassVar[frozenset[str]] = frozenset({"template", "inputs", "provider_options"})
-
-    template: Annotated[str, Field(min_length=1, description="The template's name, as the backend knows it.")]
-    inputs: dict[str, Any] = Field(
-        default_factory=dict,
-        description="The template's inputs, named by its input_schema -- a URL, an id, a search term.",
-    )
-    format: ExtractFormat | None = Field(
-        default=None,
-        description="A representation of the page to return beside the record. Unset returns the record alone.",
-    )
-
-
-TEMPLATE_ALWAYS_SENT = TemplateRequest.always_sent
-"""Fields every template provider handles itself: the template, its inputs, and the untranslated passthrough."""
-
-TEMPLATE_PARAMETERS: frozenset[str] = TemplateRequest.normalized_parameters()
-"""Every optional parameter a template provider may declare support for."""
-
-
-class TemplateSample(BaseModel):
-    """One run the backend recorded for a template: inputs it accepted, and the record they produced.
-
-    The shortest route to running a template you have not run before: copy
-    :attr:`input` and change the values. Published by the backend, never made
-    up here; a template with none has an empty :attr:`Template.samples`.
-    """
-
-    # Unknown keys are a provider bug: a sample is exactly an input and an output.
-    model_config = ConfigDict(extra="forbid")
-
-    input: dict[str, Any] = Field(default_factory=dict, description="Inputs a run accepted, shaped by input_schema.")
-    output: Any = Field(default=None, description="The record that run returned, shaped by output_schema.")
-
-
-class Template(BaseModel):
-    """One Extract Template a backend holds, as the backend describes it.
-
-    What a caller needs to run it is :attr:`input_schema`, and what comes back
-    is shaped by :attr:`output_schema`. Both are ``None`` for a template that
-    has no published version yet, which cannot be run. :attr:`samples` are
-    runs the backend recorded, an input and the record it produced, when it
-    publishes any.
-    """
-
-    # Unknown keys are a provider bug: anything unmapped belongs in `extra`.
-    model_config = ConfigDict(extra="forbid")
-
-    provider: str
-    name: str = Field(description="The stable name a run names the template by.")
-    description: str = Field(default="", description="What the template extracts, when the backend says.")
-    domain: str | None = Field(default=None, description="The site the template reads, when the backend says.")
-    entity_type: str | None = Field(default=None, description="The kind of page it reads, in the backend's words.")
-    input_schema: dict[str, Any] | None = Field(
-        default=None,
-        description=(
-            "JSON Schema of the inputs a run passes as `inputs`. None for a template with no published version."
-        ),
-    )
-    output_schema: dict[str, Any] | None = Field(
-        default=None,
-        description="JSON Schema of the record a run returns. None for a template with no published version.",
-    )
-    samples: list[TemplateSample] = Field(
-        default_factory=list,
-        description="Runs the backend recorded, each an input and the record it returned; empty when it has none.",
-    )
-    version: int | None = Field(default=None, description="The published version's number, when there is one.")
-    published: bool = Field(default=False, description="Whether a version is published, so the template can be run.")
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
-    )
-    raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched description of it.")
-
-
-class TemplatePage(BaseModel):
-    """One page of a vendor's templates, tagged with the provider that served it.
-
-    Backends page their catalogues, so this carries where in the catalogue the
-    page sits beside the templates on it; :attr:`total` is the backend's count
-    of the whole catalogue, when it reports one.
-    """
-
-    # Unknown keys are a provider bug: the untouched payload belongs in `raw`.
-    model_config = ConfigDict(extra="forbid")
-
-    provider: str
-    templates: list[Template] = Field(default_factory=list)
-    total: int | None = Field(default=None, description="How many templates the backend holds, when it says.")
-    offset: int | None = Field(default=None, description="How many templates precede this page, when it says.")
-    limit: int | None = Field(default=None, description="The page size the backend applied, when it says.")
-    raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
-
-    def __len__(self) -> int:
-        return len(self.templates)
-
-    @property
-    def names(self) -> list[str]:
-        """Every template name on the page, in the backend's order."""
-        return [template.name for template in self.templates]
-
-
-class TemplateResponse(BaseModel):
-    """The result of one Extract Template run, tagged with the provider that served it.
-
-    :attr:`data` is the record the template parsed, shaped by its
-    ``output_schema``; :attr:`document` is the page it was parsed from, only
-    when a :attr:`~TemplateRequest.format` asked for it. A run the backend
-    could not complete -- a page it could not fetch, a template that failed on
-    it -- raises rather than coming back with an empty record.
-    """
-
-    # Unknown keys are a provider bug: the untouched payload belongs in `raw`.
-    model_config = ConfigDict(extra="forbid")
-
-    provider: str
-    template: str
-    inputs: dict[str, Any] = Field(default_factory=dict, description="The inputs the run was given, as sent.")
-    data: dict[str, Any] = Field(
-        default_factory=dict, description="The record, shaped by the template's output_schema."
-    )
-    url: str | None = Field(default=None, description="The page the backend resolved the inputs to, when it says.")
-    document: ExtractedDocument | None = Field(
-        default=None,
-        description="The page the record came from, in the format asked for; None when none was.",
-    )
-    status_code: int | None = Field(default=None, description="The fetched page's HTTP status, when reported.")
-    request_id: str | None = Field(default=None, description="The provider's id for the request.")
-    extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent -- pagination hints, say.",
-    )
-    raw: dict[str, Any] | None = Field(default=None, description="The provider's untouched response payload.")
 
 
 JobState = Literal["queued", "running", "completed", "failed", "cancelled"]
@@ -525,15 +372,14 @@ finished the work it was asked to do.
 class ResearchRequest(NormalizedRequest):
     """A normalized research request.
 
-    Only :attr:`query` is required. Setting :attr:`output_schema` asks for a
-    structured answer instead of prose, and adding :attr:`records` on top of it
-    turns the run into an enrichment: the same schema, filled in once per record
-    you already hold.
+    Only :attr:`query` is required. Setting :attr:`output_schema` asks for a structured answer instead of prose, and
+    adding :attr:`records` on top of it turns the run into an enrichment: the same schema, filled in once per record you
+    already hold.
     """
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
 
-    query: Annotated[str, Field(min_length=1, description="The question, or the instructions for the run.")]
+    query: Annotated[NonBlankText, Field(description="The question, or the instructions for the run.")]
     output_schema: dict[str, Any] | None = Field(
         default=None,
         description="JSON Schema the answer must conform to. Unset asks for prose instead.",
@@ -552,29 +398,6 @@ RESEARCH_ALWAYS_SENT = ResearchRequest.always_sent
 
 RESEARCH_PARAMETERS: frozenset[str] = ResearchRequest.normalized_parameters()
 """Every optional parameter a research provider may declare support for."""
-
-
-class Citation(BaseModel):
-    """A source the answer rests on."""
-
-    # Unknown keys are a provider bug: anything unmapped belongs in `extra`.
-    model_config = ConfigDict(extra="forbid")
-
-    url: str
-    title: str = Field(default="", description="The cited page's title, when the provider returned one.")
-    snippet: str = Field(default="", description="The passage the backend quoted from the page, when it quoted one.")
-    field: str | None = Field(
-        default=None,
-        description=(
-            "Which part of the answer this source backs -- a JSON path into `structured`, or a marker "
-            "in `answer` (`[2]`, or on You.com the whole group that names it, `[[1, 2]]`) -- when the "
-            "backend attributes per field. `None` when it ties the source to no part of it."
-        ),
-    )
-    extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
-    )
 
 
 class ResearchResponse(BaseModel):
@@ -607,6 +430,9 @@ class ResearchResponse(BaseModel):
         description="The provider's untouched payloads, one per call the run took.",
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None
 
     @property
     def urls(self) -> list[str]:
@@ -821,7 +647,7 @@ class BrowseRequest(NormalizedRequest):
 
     always_sent: ClassVar[frozenset[str]] = frozenset({"task", "provider_options"})
 
-    task: Annotated[str, Field(min_length=1, description="What the agent should do, in plain words.")]
+    task: Annotated[NonBlankText, Field(description="What the agent should do, in plain words.")]
     start_url: str | None = Field(default=None, description="The page the agent starts on.")
     output_schema: dict[str, Any] | None = Field(
         default=None,
@@ -864,8 +690,7 @@ class BrowseStep(BaseModel):
     detail: str | None = Field(default=None, description="The agent's own note on the step -- its reasoning, a result.")
     screenshot_url: str | None = Field(default=None, description="A screenshot taken at this step, when reported.")
     extra: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Provider-specific fields with no normalized equivalent.",
+        default_factory=dict, description="Provider-specific fields with no normalized equivalent."
     )
 
 
@@ -911,25 +736,6 @@ class BrowseResponse(BaseModel):
         ),
     )
     decision: DecisionRecord | None = Field(default=None, description=DECISION_DESCRIPTION)
-
-
-class BrowseProgress(BaseModel):
-    """Where one browse task stands, and its answer once it has one."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    job_id: str = Field(description="The backend's id for this task, which is what a later poll is keyed on.")
-    state: JobState
-    response: BrowseResponse | None = Field(
-        default=None,
-        description="The answer. Set exactly when `state` is 'completed'.",
-    )
-    detail: str | None = Field(
-        default=None,
-        description="Whatever the backend said about this state -- an error message, a progress note.",
-    )
-
-    @property
-    def is_terminal(self) -> bool:
-        """Whether this task has stopped, one way or another."""
-        return self.state not in ("queued", "running")
+    elapsed_s: ElapsedSeconds = None
+    cost_usd: CostUsd = None
+    cost_source: CostSourceField = None

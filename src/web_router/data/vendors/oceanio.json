@@ -1,0 +1,572 @@
+{
+  "vendor": "oceanio",
+  "name": "Ocean.io",
+  "category": "company-data",
+  "summary": "Lookalike company and people search, company and person enrichment and bulk lookups.",
+  "docs_url": "https://app.ocean.io/docs",
+  "pricing_url": "https://www.ocean.io/pricing",
+  "base_url": "https://api.ocean.io",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "OCEAN_API_TOKEN"
+        ],
+        "description": "an Ocean.io API token (app.ocean.io, API settings)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Token",
+        "value": "{api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced per result: searches 0.2, enrich 0.1, bulk lookup 0.05, autocomplete 0.1 per call. Email reveal (1 credit) and phone reveal (10) are asynchronous and deliver to a webhook, so they are not listed.",
+    "Paging uses searchAfter: send the value from the previous response.",
+    "Search 'preview' endpoints exist only on enterprise or older plans (402 otherwise).",
+    "The docs also accept the token as an apiToken query parameter; sending both a header and a query token is an error."
+  ],
+  "sources": [
+    "https://app.ocean.io/docs"
+  ],
+  "endpoints": [
+    {
+      "id": "oceanio.credits.balance",
+      "name": "Get credit balance",
+      "summary": "Remaining credits on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/credits/balance",
+      "job": "account.usage",
+      "docs_url": "https://app.ocean.io/docs",
+      "verified": {
+        "docs": "https://app.ocean.io/docs"
+      }
+    },
+    {
+      "id": "oceanio.credits.usage",
+      "name": "Get credit usage over time",
+      "summary": "Credits consumed through the public API per endpoint, by hour, day, week or month.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/credits/usage",
+      "params": {
+        "startDate": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Start of the period (ISO date).",
+          "example": "2026-11-01"
+        },
+        "endDate": {
+          "in": "body",
+          "type": "string",
+          "description": "End of the period (ISO date)."
+        },
+        "granularity": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Bucket size.",
+          "enum": [
+            "hour",
+            "day",
+            "week",
+            "month"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://app.ocean.io/docs",
+      "verified": {
+        "docs": "https://app.ocean.io/docs"
+      }
+    },
+    {
+      "id": "oceanio.data_fields.list",
+      "name": "List searchable industries, regions, technologies and seniorities",
+      "summary": "The valid values for search filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/data-fields",
+      "notes": [
+        "Free."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.ocean.io/docs",
+      "verified": {
+        "docs": "https://app.ocean.io/docs"
+      }
+    },
+    {
+      "id": "oceanio.autocomplete.companies",
+      "name": "Autocomplete company names or domains",
+      "summary": "Up to 15 companies for the start of a name or domain; for picking lookalike seeds.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/autocomplete/companies",
+      "params": {
+        "name": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Beginning of a company name or domain.",
+          "example": "stripe"
+        },
+        "countryFilters": {
+          "in": "body",
+          "type": "array",
+          "description": "Country codes to limit to.",
+          "example": [
+            "dk",
+            "se"
+          ]
+        },
+        "excludeDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Domains to leave out."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credits per call."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.ocean.io/docs",
+      "verified": {
+        "docs": "https://app.ocean.io/docs"
+      }
+    },
+    {
+      "id": "oceanio.autocomplete.keywords",
+      "name": "Autocomplete company keywords",
+      "summary": "Valid keyword values for company search.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/autocomplete/keywords",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Beginning of the keyword.",
+          "example": "softw"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "How many to return, default 5, max 15."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credits per call."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.ocean.io/docs",
+      "verified": {
+        "docs": "https://app.ocean.io/docs"
+      }
+    },
+    {
+      "id": "oceanio.autocomplete.job_titles",
+      "name": "Autocomplete job titles",
+      "summary": "Matching job titles for people search.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/autocomplete/job-titles",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Beginning of the job title.",
+          "example": "developer"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "How many to return, default 5, max 15."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credits per call."
+      ],
+      "job": "people.search",
+      "docs_url": "https://app.ocean.io/docs",
+      "verified": {
+        "docs": "https://app.ocean.io/docs"
+      }
+    },
+    {
+      "id": "oceanio.autocomplete.locations",
+      "name": "Autocomplete locations",
+      "summary": "Location filter codes (filterCode values) for a typed place.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/autocomplete/locations",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Beginning of the location.",
+          "example": "londo"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "How many to return, default 5, max 15."
+        },
+        "locationType": {
+          "in": "body",
+          "type": "string",
+          "description": "Whether the codes are for company or people filters.",
+          "enum": [
+            "companies",
+            "people"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credits per call."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.ocean.io/docs",
+      "verified": {
+        "docs": "https://app.ocean.io/docs"
+      }
+    },
+    {
+      "id": "oceanio.autocomplete.skills",
+      "name": "Autocomplete skills",
+      "summary": "Valid skill values for people search.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/autocomplete/skills",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Beginning of the skill name.",
+          "example": "python"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "How many to return, default 5, max 15."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credits per call."
+      ],
+      "job": "people.search",
+      "docs_url": "https://app.ocean.io/docs",
+      "verified": {
+        "docs": "https://app.ocean.io/docs"
+      }
+    },
+    {
+      "id": "oceanio.companies.search",
+      "name": "Search companies (lookalike and filters)",
+      "summary": "Company search by lookalike domains and filters: size, revenue, industry, location, technology, funding, hiring and more.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/search/companies",
+      "params": {
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Companies to return, up to 10,000.",
+          "example": 10
+        },
+        "searchAfter": {
+          "in": "body",
+          "type": "string",
+          "description": "The searchAfter value from the previous response, for the next page."
+        },
+        "companiesFilters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters, all optional: lookalikeDomains, includeDomains, excludeDomains, companySizes (e.g. '51-200'), revenues (e.g. '1-10M'), industries {industries, mode}, linkedinIndustries, primaryLocations {includeCountries (alpha-2), includeRegions, includeCities}, technologies, keywords {anyOf, allOf, noneOf}, fundingRound, headcountGrowth, jobPostings, buyingSignals, yearFounded {from, to}, minRelevance/maxRelevance (A to C).",
+          "example": {
+            "lookalikeDomains": [
+              "stripe.com"
+            ],
+            "companySizes": [
+              "51-200"
+            ]
+          }
+        },
+        "peopleFilters": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional: require companies that have people matching, using the people filters of people.search."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields to return; asking for fewer is faster and lighter.",
+          "example": [
+            "domain",
+            "companySize"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "0.2 credits per result. Page with searchAfter.",
+        "Valid industries, regions and technologies come from data_fields.list."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.ocean.io/docs#searchCompaniesV3",
+      "verified": {
+        "docs": "https://app.ocean.io/docs#searchCompaniesV3"
+      }
+    },
+    {
+      "id": "oceanio.people.search",
+      "name": "Search people (lookalike and filters)",
+      "summary": "People search by title, seniority, department, skills, location and job changes, plus company filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v3/search/people",
+      "params": {
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "People to return, up to 10,000.",
+          "example": 10
+        },
+        "searchAfter": {
+          "in": "body",
+          "type": "string",
+          "description": "The searchAfter value from the previous response, for the next page."
+        },
+        "peopleFilters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters, all optional: lookalikeLinkedinHandles, countries (alpha-2), seniorities, departments {departments, mode}, jobTitleKeywords {allOf, anyOf, noneOf}, skills {allOf, anyOf, noneOf}, states, cities, names, changedPositionAfter/Before ('2023-01'), laborStatusOpenToWork, laborStatusHiring, excludePeopleIds.",
+          "example": {
+            "seniorities": [
+              "Founder",
+              "Owner"
+            ],
+            "countries": [
+              "us"
+            ]
+          }
+        },
+        "companiesFilters": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional company filters, same shape as companies.search."
+        },
+        "peoplePerCompany": {
+          "in": "body",
+          "type": "integer",
+          "description": "Max people per company; leave out for all."
+        },
+        "jobTitleThreshold": {
+          "in": "body",
+          "type": "number",
+          "description": "Job title similarity threshold, 0 to 1, default 0.8."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Person fields to return."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "0.2 credits per result. Page with searchAfter. Keep each result's id: it is the input to email and phone reveal.",
+        "Emails and phones are not in search results; reveal is a separate, webhook-delivered call that this entry does not list."
+      ],
+      "job": "people.search",
+      "docs_url": "https://app.ocean.io/docs#searchPeopleV3",
+      "verified": {
+        "docs": "https://app.ocean.io/docs#searchPeopleV3"
+      }
+    },
+    {
+      "id": "oceanio.company.enrich",
+      "name": "Enrich a company",
+      "summary": "Match one company from name, domain, social links or address and return firmographics.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrich/company",
+      "params": {
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Identifiers: domain (strongest), linkedin, name, registrationNumber, email, phone, countryCode, state, city, address and social page URLs.",
+          "example": {
+            "domain": "ocean.io"
+          }
+        },
+        "people": {
+          "in": "body",
+          "type": "array",
+          "description": "People to help match the company."
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields to return; asking for fewer is faster and lighter.",
+          "example": [
+            "domain",
+            "companySize"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.1 credits per result. HTTP 201 means the domain is not indexed yet and crawling started; nothing is charged, retry in 2 to 5 minutes."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://app.ocean.io/docs#enrichCompany",
+      "verified": {
+        "docs": "https://app.ocean.io/docs#enrichCompany"
+      }
+    },
+    {
+      "id": "oceanio.person.enrich",
+      "name": "Enrich a person",
+      "summary": "Match one person from name, title, LinkedIn URL, email or company and return their profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrich/person",
+      "params": {
+        "person": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Identifiers: linkedin (strongest), id, name, firstName, lastName, jobTitle, email, phone, country.",
+          "example": {
+            "linkedin": "https://www.linkedin.com/in/johndoe"
+          }
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional current company, same identifiers as company.enrich."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.1 credits per result. The revealEmails and revealPhones options deliver by webhook and charge extra, so they are not listed here."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://app.ocean.io/docs#enrichPerson",
+      "verified": {
+        "docs": "https://app.ocean.io/docs#enrichPerson"
+      }
+    },
+    {
+      "id": "oceanio.companies.lookup",
+      "name": "Look up companies by domain in bulk",
+      "summary": "Up to 1,000 domains in one call; unknown domains return company: null.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/lookup/companies",
+      "params": {
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Domains to look up, max 1,000.",
+          "example": [
+            "ocean.io",
+            "stripe.com"
+          ]
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields to return; asking for fewer is faster and lighter.",
+          "example": [
+            "domain",
+            "companySize"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.05 credits per result."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://app.ocean.io/docs#lookupCompanies",
+      "verified": {
+        "docs": "https://app.ocean.io/docs#lookupCompanies"
+      }
+    },
+    {
+      "id": "oceanio.people.lookup",
+      "name": "Look up people by LinkedIn handle or Ocean id in bulk",
+      "summary": "Profiles for up to 1,000 identifiers; unmatched ones are omitted (compare totalRequested and totalFound).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/lookup/people",
+      "params": {
+        "linkedinHandles": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn URL slugs, the part after linkedin.com/in/.",
+          "example": [
+            "john-doe"
+          ]
+        },
+        "oceanIds": {
+          "in": "body",
+          "type": "array",
+          "description": "Ocean person ids."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "0.05 credits per result; max 1,000 identifiers combined."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://app.ocean.io/docs#lookupPeople",
+      "verified": {
+        "docs": "https://app.ocean.io/docs#lookupPeople"
+      }
+    },
+    {
+      "id": "oceanio.companies.warmup",
+      "name": "Pre-load domains into the database",
+      "summary": "Checks domains and starts crawling missing ones so later lookups and enrichment hit.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/warmup/companies",
+      "params": {
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Domains to check, max 500.",
+          "example": [
+            "ocean.io"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: it only asks Ocean to fetch public data. Free.",
+        "Domains already indexed come back in successfulDomains; others in triggeredDomains. Retry after 2 to 5 minutes."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://app.ocean.io/docs#warmupCompanies",
+      "verified": {
+        "docs": "https://app.ocean.io/docs#warmupCompanies"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

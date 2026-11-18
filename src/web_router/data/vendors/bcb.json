@@ -1,0 +1,101 @@
+{
+  "vendor": "bcb",
+  "name": "Banco Central do Brasil (SGS)",
+  "category": "finance",
+  "summary": "Keyless time series from the Central Bank of Brazil's SGS system (Selic, IPCA, exchange rates, credit and thousands more) by series code.",
+  "docs_url": "https://dadosabertos.bcb.gov.br/",
+  "base_url": "https://api.bcb.gov.br/dados/serie",
+  "notes": [
+    "Keyless. Each series has a numeric code listed on its dadosabertos.bcb.gov.br dataset page.",
+    "Dates are dd/MM/yyyy.",
+    "Pass formato=json; the series path is bcdata.sgs.{code}."
+  ],
+  "sources": [
+    "https://dadosabertos.bcb.gov.br/",
+    "https://dadosabertos.bcb.gov.br/dataset/20542-saldo-da-carteira-de-credito-com-recursos-livres---total/resource/6e2b0c97-afab-4790-b8aa-b9542923cf88"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "bcb.series.get",
+      "name": "Get a series over a date range",
+      "summary": "Date and value pairs of one SGS series between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/bcdata.sgs.{code}/dados",
+      "params": {
+        "code": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "SGS series code.",
+          "example": 20542
+        },
+        "formato": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json"
+          ]
+        },
+        "dataInicial": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, dd/MM/yyyy.",
+          "example": "01/01/2020"
+        },
+        "dataFinal": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, dd/MM/yyyy.",
+          "example": "31/12/2020"
+        }
+      },
+      "job": "economics.series",
+      "docs_url": "https://dadosabertos.bcb.gov.br/dataset/20542-saldo-da-carteira-de-credito-com-recursos-livres---total/resource/6e2b0c97-afab-4790-b8aa-b9542923cf88",
+      "verified": {
+        "docs": "https://dadosabertos.bcb.gov.br/dataset/20542-saldo-da-carteira-de-credito-com-recursos-livres---total/resource/6e2b0c97-afab-4790-b8aa-b9542923cf88"
+      }
+    },
+    {
+      "id": "bcb.series.latest",
+      "name": "Get the latest values of a series",
+      "summary": "The last N date and value pairs of one SGS series.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/bcdata.sgs.{code}/dados/ultimos/{count}",
+      "params": {
+        "code": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "SGS series code.",
+          "example": 20542
+        },
+        "count": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "How many of the most recent values.",
+          "example": 10
+        },
+        "formato": {
+          "in": "query",
+          "type": "string",
+          "description": "Response format.",
+          "example": "json",
+          "enum": [
+            "json"
+          ]
+        }
+      },
+      "job": "economics.series",
+      "docs_url": "https://dadosabertos.bcb.gov.br/dataset/20542-saldo-da-carteira-de-credito-com-recursos-livres---total/resource/6e2b0c97-afab-4790-b8aa-b9542923cf88",
+      "verified": {
+        "docs": "https://dadosabertos.bcb.gov.br/dataset/20542-saldo-da-carteira-de-credito-com-recursos-livres---total/resource/6e2b0c97-afab-4790-b8aa-b9542923cf88"
+      }
+    }
+  ]
+}

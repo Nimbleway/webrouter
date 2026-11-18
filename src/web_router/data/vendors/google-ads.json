@@ -2,7 +2,7 @@
   "vendor": "google-ads",
   "name": "Google Ads",
   "category": "advertising",
-  "summary": "Your Google Ads accounts: GAQL reports on campaigns, spend, clicks and conversions, Keyword Planner ideas and volumes, and budget changes.",
+  "summary": "Your Google Ads accounts: GAQL reports on campaigns, spend, clicks and conversions, and Keyword Planner ideas and volumes.",
   "docs_url": "https://developers.google.com/google-ads/api/rest/overview",
   "pricing_url": "https://developers.google.com/google-ads/api/docs/access-levels",
   "base_url": "https://googleads.googleapis.com/{api_version}",
@@ -52,7 +52,7 @@
   },
   "notes": [
     "Two credentials on every call: an OAuth access token for a user with access to the account, and the developer token of an approved manager account. A missing or unapproved developer token answers DEVELOPER_TOKEN_* errors, not 401.",
-    "Google has no read-only Ads scope: the adwords scope can read and change everything the user can. Writes here are refused unless allow_writes is passed, and every mutate accepts validateOnly: true to dry-run first.",
+    "Google has no read-only Ads scope: the adwords scope can read and change everything the user can. The catalog lists only read endpoints; a mutate through vendor_request is still refused unless allow_writes is passed.",
     "Customer ids are digits only: strip the dashes the Ads UI shows (123-456-7890 -> 1234567890).",
     "Money is in MICROS of the account currency: divide cost_micros by 1,000,000.",
     "A test developer token only reaches test accounts; Basic access caps daily operations (see pricing_url)."
@@ -191,55 +191,6 @@
       "job": "keywords.volume",
       "docs_url": "https://developers.google.com/google-ads/api/docs/keyword-planning/generate-historical-metrics",
       "verified": {"docs": "https://developers.google.com/google-ads/api/reference/rpc/v26/GenerateKeywordHistoricalMetricsRequest"}
-    },
-    {
-      "id": "google-ads.campaign_budgets.mutate",
-      "name": "Create, change or remove campaign budgets",
-      "summary": "Change a campaign's daily budget, among other budget operations. Spends real money from the next impression.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/customers/{customer_id}/campaignBudgets:mutate",
-      "params": {
-        "customer_id": {"in": "path", "type": "string", "required": true, "description": "Digits only.", "example": "1234567890"},
-        "operations": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "Each {create | update + updateMask | remove}. amountMicros is the DAILY budget in micros.",
-          "example": [{"update": {"resourceName": "customers/1234567890/campaignBudgets/111", "amountMicros": "50000000"}, "updateMask": "amountMicros"}]
-        },
-        "validateOnly": {"in": "body", "type": "boolean", "description": "true checks the operations and changes nothing. Send it first."},
-        "partialFailure": {"in": "body", "type": "boolean", "description": "Apply the valid operations even when others fail."},
-        "responseContentType": {"in": "body", "type": "string", "enum": ["RESOURCE_NAME_ONLY", "MUTABLE_RESOURCE"]}
-      },
-      "notes": ["Find a budget's resourceName first: SELECT campaign.name, campaign_budget.resource_name, campaign_budget.amount_micros FROM campaign."],
-      "job": "ads.budgets.update",
-      "docs_url": "https://developers.google.com/google-ads/api/rest/examples",
-      "verified": {"docs": "https://developers.google.com/google-ads/api/reference/rpc/v26/MutateCampaignBudgetsRequest"}
-    },
-    {
-      "id": "google-ads.campaigns.mutate",
-      "name": "Create, change, pause or remove campaigns",
-      "summary": "Campaign operations -- pause or enable one by setting status, rename, change bidding -- in one atomic request.",
-      "kind": "write",
-      "method": "POST",
-      "path": "/customers/{customer_id}/campaigns:mutate",
-      "params": {
-        "customer_id": {"in": "path", "type": "string", "required": true, "description": "Digits only.", "example": "1234567890"},
-        "operations": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "Each {create | update + updateMask | remove}.",
-          "example": [{"update": {"resourceName": "customers/1234567890/campaigns/222", "status": "PAUSED"}, "updateMask": "status"}]
-        },
-        "validateOnly": {"in": "body", "type": "boolean", "description": "true checks the operations and changes nothing. Send it first."},
-        "partialFailure": {"in": "body", "type": "boolean"},
-        "responseContentType": {"in": "body", "type": "string", "enum": ["RESOURCE_NAME_ONLY", "MUTABLE_RESOURCE"]}
-      },
-      "job": "ads.campaigns.update",
-      "docs_url": "https://developers.google.com/google-ads/api/rest/examples",
-      "verified": {"docs": "https://developers.google.com/google-ads/api/rest/examples"}
     }
   ]
 }

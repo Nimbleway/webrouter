@@ -1,0 +1,237 @@
+{
+  "vendor": "tavily",
+  "name": "Tavily",
+  "category": "search",
+  "summary": "Tavily's site crawl and map APIs, and the account's credit usage.",
+  "docs_url": "https://docs.tavily.com/documentation/api-reference",
+  "pricing_url": "https://www.tavily.com/pricing",
+  "base_url": "https://api.tavily.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TAVILY_API_KEY"
+        ],
+        "description": "a Tavily API key, starting tvly- (app.tavily.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Auth is 'Authorization: Bearer <key>'.",
+    "Credits: crawl and map cost per 10 pages and double with instructions.",
+    "Tavily search, extract and research go through web-router's search, extract and research, not this entry."
+  ],
+  "sources": [
+    "https://docs.tavily.com/llms.txt",
+    "https://docs.tavily.com/documentation/api-reference/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "tavily.crawl.site",
+      "name": "Crawl a site",
+      "summary": "Graph-based site traversal with built-in extraction; returns pages in the same call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/crawl",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Root URL to begin from.",
+          "example": "docs.tavily.com"
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language guidance for the crawler; raises the cost to 2 credits per 10 pages."
+        },
+        "max_depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "How far from the base URL to explore."
+        },
+        "max_breadth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Links to follow per page."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Total links to process before stopping."
+        },
+        "select_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes selecting URL paths."
+        },
+        "select_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes selecting domains."
+        },
+        "exclude_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes excluding URL paths."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes excluding domains."
+        },
+        "allow_external": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include external-domain links in results."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "number",
+          "description": "Seconds before timing out, 10-150."
+        },
+        "chunks_per_source": {
+          "in": "body",
+          "type": "integer",
+          "description": "Max chunks per page."
+        },
+        "extract_depth": {
+          "in": "body",
+          "type": "string",
+          "description": "advanced gets more data at higher cost.",
+          "enum": [
+            "basic",
+            "advanced"
+          ]
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "Content format.",
+          "enum": [
+            "markdown",
+            "text"
+          ]
+        },
+        "include_images": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include images."
+        }
+      },
+      "notes": [
+        "A read over POST: it fetches pages and changes nothing in your account.",
+        "Synchronous: returns the crawled pages in the response; bound it with limit, max_depth and timeout."
+      ],
+      "job": "web.crawl",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/crawl.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/crawl.md"
+      }
+    },
+    {
+      "id": "tavily.map.site",
+      "name": "Map a site",
+      "summary": "Traverse a site like a graph and return its URLs without page content.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/map",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Root URL to begin from.",
+          "example": "docs.tavily.com"
+        },
+        "instructions": {
+          "in": "body",
+          "type": "string",
+          "description": "Natural-language guidance for the crawler; raises the cost to 2 credits per 10 pages."
+        },
+        "max_depth": {
+          "in": "body",
+          "type": "integer",
+          "description": "How far from the base URL to explore."
+        },
+        "max_breadth": {
+          "in": "body",
+          "type": "integer",
+          "description": "Links to follow per page."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Total links to process before stopping."
+        },
+        "select_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes selecting URL paths."
+        },
+        "select_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes selecting domains."
+        },
+        "exclude_paths": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes excluding URL paths."
+        },
+        "exclude_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Regexes excluding domains."
+        },
+        "allow_external": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Include external-domain links in results."
+        },
+        "timeout": {
+          "in": "body",
+          "type": "number",
+          "description": "Seconds before timing out, 10-150."
+        }
+      },
+      "notes": [
+        "A read over POST: it lists URLs and changes nothing in your account."
+      ],
+      "job": "web.map",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/map.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/map.md"
+      }
+    },
+    {
+      "id": "tavily.account.usage",
+      "name": "Get API key and account usage",
+      "summary": "Credit usage for your key and plan.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage",
+      "params": {
+        "X-Project-ID": {
+          "in": "header",
+          "type": "string",
+          "description": "Scope the query to one project."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.tavily.com/documentation/api-reference/endpoint/usage.md",
+      "verified": {
+        "docs": "https://docs.tavily.com/documentation/api-reference/endpoint/usage.md"
+      }
+    }
+  ]
+}

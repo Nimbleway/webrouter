@@ -1,0 +1,271 @@
+{
+  "vendor": "agentphone",
+  "name": "AgentPhone",
+  "category": "messaging",
+  "summary": "Phone numbers for AI agents: SMS/iMessage/WhatsApp messages, conversations, voice calls with transcripts, and usage.",
+  "docs_url": "https://docs.agentphone.to/api-reference.md",
+  "base_url": "https://api.agentphone.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AGENTPHONE_API_KEY"
+        ],
+        "description": "An AgentPhone API key (see the Authentication page). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every path is under /v1. Lists of numbers, agents, conversations and calls page by limit (max 100, default 20) and offset (max 10000).",
+    "Message lists page by cursor: pass the previous response's nextCursor as cursor; it wins over before/after.",
+    "Field names are camelCase on most endpoints, but Send Message takes snake_case (agent_id, to_number).",
+    "Every endpoint accepts an optional X-Sub-Account-Id header to act on a sub-account."
+  ],
+  "sources": [
+    "https://docs.agentphone.to/openapi.json",
+    "https://docs.agentphone.to/llms.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "agentphone.numbers.list",
+      "name": "List phone numbers",
+      "summary": "Active numbers held by the account; released numbers are left out.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/numbers",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max 100, default 20."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 10000."
+        },
+        "externalId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only the number tagged with this externalId."
+        }
+      },
+      "docs_url": "https://docs.agentphone.to/api-reference/numbers/list-numbers-v-1-numbers-get.md",
+      "verified": {
+        "docs": "https://docs.agentphone.to/api-reference/numbers/list-numbers-v-1-numbers-get.md"
+      }
+    },
+    {
+      "id": "agentphone.numbers.messages",
+      "name": "Get messages for a number",
+      "summary": "Messages sent and received on one number, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/numbers/{number_id}/messages",
+      "params": {
+        "number_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The number id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 200, default 50."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages before this date-time."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages after this date-time."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "nextCursor from the previous page."
+        }
+      },
+      "job": "messaging.messages.list",
+      "docs_url": "https://docs.agentphone.to/api-reference/numbers/get-messages-v-1-numbers-number-id-messages-get.md",
+      "verified": {
+        "docs": "https://docs.agentphone.to/api-reference/numbers/get-messages-v-1-numbers-number-id-messages-get.md"
+      }
+    },
+    {
+      "id": "agentphone.conversations.list",
+      "name": "List conversations",
+      "summary": "Conversations of the account, most recent activity first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/conversations",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max 100, default 20."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 10000."
+        }
+      },
+      "job": "messaging.channels.list",
+      "docs_url": "https://docs.agentphone.to/api-reference/conversations/list-conversations-v-1-conversations-get.md",
+      "verified": {
+        "docs": "https://docs.agentphone.to/api-reference/conversations/list-conversations-v-1-conversations-get.md"
+      }
+    },
+    {
+      "id": "agentphone.conversations.messages",
+      "name": "Get a conversation's messages",
+      "summary": "Messages in one conversation; each page is oldest-first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/conversations/{conversation_id}/messages",
+      "params": {
+        "conversation_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The conversation id."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 200, default 50."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages before this date-time."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Only messages after this date-time."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "nextCursor from the previous page; walks to older history."
+        }
+      },
+      "job": "messaging.thread.read",
+      "docs_url": "https://docs.agentphone.to/api-reference/conversations/get-conversation-messages-v-1-conversations-conversation-id-messages-get.md",
+      "verified": {
+        "docs": "https://docs.agentphone.to/api-reference/conversations/get-conversation-messages-v-1-conversations-conversation-id-messages-get.md"
+      }
+    },
+    {
+      "id": "agentphone.calls.list",
+      "name": "List calls",
+      "summary": "Calls of the account, filterable by status, direction, type and number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/calls",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max 100, default 20."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 10000."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "completed, in-progress or failed."
+        },
+        "direction": {
+          "in": "query",
+          "type": "string",
+          "description": "inbound or outbound."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "pstn or web."
+        },
+        "search": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of fromNumber or toNumber."
+        }
+      },
+      "docs_url": "https://docs.agentphone.to/api-reference/calls/list-calls-v-1-calls-get.md",
+      "verified": {
+        "docs": "https://docs.agentphone.to/api-reference/calls/list-calls-v-1-calls-get.md"
+      }
+    },
+    {
+      "id": "agentphone.calls.get",
+      "name": "Get a call",
+      "summary": "One call with its transcripts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/calls/{call_id}",
+      "params": {
+        "call_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The call id."
+        }
+      },
+      "docs_url": "https://docs.agentphone.to/api-reference/calls/get-call-v-1-calls-call-id-get.md",
+      "verified": {
+        "docs": "https://docs.agentphone.to/api-reference/calls/get-call-v-1-calls-call-id-get.md"
+      }
+    },
+    {
+      "id": "agentphone.calls.transcript",
+      "name": "Get a call transcript",
+      "summary": "The complete ordered transcript: each caller utterance with the agent's response.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/calls/{call_id}/transcript",
+      "params": {
+        "call_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The call id."
+        }
+      },
+      "docs_url": "https://docs.agentphone.to/api-reference/calls/get-call-transcript-v-1-calls-call-id-transcript-get.md",
+      "verified": {
+        "docs": "https://docs.agentphone.to/api-reference/calls/get-call-transcript-v-1-calls-call-id-transcript-get.md"
+      }
+    },
+    {
+      "id": "agentphone.usage.get",
+      "name": "Get account usage",
+      "summary": "Number limits used and remaining, message, call and webhook delivery counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/usage",
+      "job": "account.usage",
+      "docs_url": "https://docs.agentphone.to/api-reference/usage/get-usage-v-1-usage-get.md",
+      "verified": {
+        "docs": "https://docs.agentphone.to/api-reference/usage/get-usage-v-1-usage-get.md"
+      }
+    }
+  ]
+}

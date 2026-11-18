@@ -1,0 +1,64 @@
+{
+  "provider": "apify",
+  "method": "live_data",
+  "class": "web_router.providers.apify.ApifyLiveDataProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.apify.com",
+    "paths": {
+      "run_path": "/v2/actors/{actor}/run-sync-get-dataset-items"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "APIFY_TOKEN"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "refused": "UnsupportedFormatError"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": [
+    "https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post",
+    "https://docs.apify.com/api/v2/store-get",
+    "https://docs.apify.com/api/v2/act-build-default-get"
+  ],
+  "verified": {
+    "format": "docs: https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post"
+  },
+  "vendor_options": {
+    "memory": {
+      "status": "passthrough",
+      "note": "Query parameter: run memory in MB, a power of 2, at least 128."
+    },
+    "timeout": {
+      "status": "passthrough",
+      "note": "Query parameter: the run's own timeout in seconds; the HTTP wait stays capped at 300 s."
+    },
+    "maxItems": {
+      "status": "passthrough",
+      "note": "Query parameter: the most dataset items a pay-per-result Actor may charge for."
+    },
+    "maxTotalChargeUsd": {
+      "status": "passthrough",
+      "note": "Query parameter: a spending cap for pay-per-event Actors."
+    },
+    "build": {
+      "status": "passthrough",
+      "note": "Query parameter: the build tag or number to run instead of the default."
+    }
+  }
+}

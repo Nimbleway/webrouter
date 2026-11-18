@@ -1,6 +1,6 @@
 """The research effort table: each backend's measured efforts, the noise floor, and an effort's p90.
 
-Experimental. Reads ``data/efforts.json``, written by ``make efforts`` from the
+Reads ``data/efforts.json``, written by ``make efforts`` from the
 frozen ``tools-effort-60`` results. A p90 comes from the table's measured
 figure, and from the price list's latency prior
 (:func:`web_router.prices.estimate_latency`) only for an effort the table has no

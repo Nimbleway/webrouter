@@ -1,0 +1,69 @@
+{
+  "provider": "oxylabs",
+  "method": "live_data",
+  "class": "web_router.providers.oxylabs_live_data.OxylabsLiveDataProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://webapi.oxylabs.io",
+    "paths": {
+      "run_path": "/v1/scrape/{source}",
+      "scrapers_path": "/v1/scrapers"
+    },
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "OXYLABS_WEB_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.output": [
+      "json"
+    ],
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "refused": "UnsupportedFormatError"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "refused": "UnsupportedFormatError"
+      }
+    }
+  },
+  "not_mapped": [],
+  "source": [
+    "https://developers.oxylabs.io/products/web-api/scrape/endpoint-discovery",
+    "https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers",
+    "https://developers.oxylabs.io/products/web-api/scrape/delivery-modes",
+    "https://developers.oxylabs.io/products/web-api/troubleshooting"
+  ],
+  "verified": {
+    "format": "docs: https://developers.oxylabs.io/products/web-api/scrape"
+  },
+  "vendor_options": {
+    "run_js": {
+      "status": "passthrough",
+      "note": "Body field: renders the page's JavaScript before parsing; slower."
+    },
+    "device": {
+      "status": "passthrough",
+      "note": "Body field: `desktop` (default) or `mobile`."
+    },
+    "json": {
+      "status": "passthrough",
+      "note": "Body field: `{\"prompt\": ...}` or `{\"schema\": ...}`, AI parsing in place of the scraper's own parser."
+    },
+    "location": {
+      "status": "passthrough",
+      "note": "Body field: where the scrape is made from; each scraper documents its own form (a country, or a postal code)."
+    },
+    "callback_url": {
+      "status": "not_supported",
+      "note": "A webhook this call would never read; dropped, as `storage` is, and `output` is always `[\"json\"]`."
+    }
+  }
+}

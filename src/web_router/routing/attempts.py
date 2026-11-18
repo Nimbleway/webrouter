@@ -15,14 +15,19 @@ threaded through every provider between the router and the chain.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from web_router.constants_errors import MSG_KEY_REFUSED
 from web_router.routing.contract import ToolName
 from web_router.types import NormalizedRequest
+from web_router.types_errors import CHAIN_STOPPING_KINDS, ERROR_KIND_AUTH
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -45,6 +50,9 @@ AttemptHook = Callable[[Attempt], bool]
 FailureHook = Callable[[ToolName, str, BaseException], None]
 """Called when a member fails and ``auto`` moves on: the method, the member's name, and the failure."""
 
+AnswerHook = Callable[[ToolName, str], None]
+"""Called when a member read part of a call's answer though another's response carries it: the method, the name."""
+
 
 @dataclass(frozen=True, kw_only=True)
 class CallRoute:
@@ -59,6 +67,9 @@ class CallRoute:
 
     on_failure: FailureHook | None = None
     """Called when a member fails and the chain moves on. ``None`` notes nothing."""
+
+    on_answer: AnswerHook | None = None
+    """Called when a member ``auto`` retried a batch's failed URLs on read some of them. ``None`` notes nothing."""
 
 
 _ROUTE: ContextVar[CallRoute | None] = ContextVar("web_router_call_route", default=None)
@@ -112,10 +123,31 @@ def admitted(tool: ToolName, provider: str, request: NormalizedRequest) -> bool:
     return route.before_attempt(Attempt(tool=tool, provider=provider, request=request))
 
 
-def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseException) -> None:
-    """Note in ``failures`` that ``provider`` failed with ``exc``, and tell the call's failure hook, if any."""
+def failed(failures: dict[str, Any], tool: ToolName, provider: str, exc: BaseException, member: object = None) -> None:
+    """Note in ``failures`` that ``provider`` failed with ``exc``, and tell the call's failure hook, if any.
+
+    ``member`` is the provider object that raised, when built: it says whether it held a credential to refuse.
+    Raises ``exc`` itself when no other backend could do better: a ``local``
+    failure (a closed event loop, a provider's own bug) would fail every
+    member the same way, and a ``target`` one (a host that does not resolve,
+    an invalid URL) is the page's, not the backend's. Moving on would only
+    bill more calls and hide the cause.
+    """
     failures[provider] = exc
     noted(tool, provider, exc)
+    warn_if_refused(provider, exc, member)
+    if getattr(exc, "kind", None) in CHAIN_STOPPING_KINDS:
+        raise exc
+
+
+def warn_if_refused(provider: str, exc: BaseException, member: object = None) -> None:
+    """Log a WARNING when ``exc`` is ``provider`` refusing its key: a setup problem moving on would otherwise hide.
+
+    A ``member`` that sent no credential (a keyless tier, a keyless custom provider) refused no key of the
+    caller's: its 401 or 403 is left to the hop's INFO record.
+    """
+    if getattr(exc, "kind", None) == ERROR_KIND_AUTH and getattr(member, "holds_credential", True):
+        logger.warning(MSG_KEY_REFUSED, provider, getattr(exc, "status_code", None))
 
 
 def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
@@ -123,3 +155,10 @@ def noted(tool: ToolName, provider: str, exc: BaseException) -> None:
     route = _ROUTE.get()
     if route is not None and route.on_failure is not None:
         route.on_failure(tool, provider, exc)
+
+
+def contributed(tool: ToolName, provider: str) -> None:
+    """Tell the call's answer hook, if any, that ``provider`` read part of an answer another member's carries."""
+    route = _ROUTE.get()
+    if route is not None and route.on_answer is not None:
+        route.on_answer(tool, provider)

@@ -1,0 +1,141 @@
+{
+  "vendor": "gov-uk",
+  "name": "GOV.UK",
+  "category": "government",
+  "summary": "The UK government's GOV.UK site as data: the Content API returns any www.gov.uk page as JSON, and the Search API searches, filters and aggregates all GOV.UK content.",
+  "docs_url": "https://content-api.publishing.service.gov.uk/",
+  "base_url": "https://www.gov.uk",
+  "notes": [
+    "Free and keyless; no onboarding or agreement.",
+    "Content API: at most 10 requests per second per client; above that requests queue and may time out.",
+    "The Content API covers HTML pages on www.gov.uk only (not other gov.uk subdomains, not attachments or images, not dynamic pages such as search results) and is marked beta.",
+    "Responses are JSON."
+  ],
+  "sources": [
+    "https://content-api.publishing.service.gov.uk/",
+    "https://github.com/alphagov/search-api/blob/main/docs/using-the-search-api.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "gov-uk.search",
+      "name": "Search GOV.UK content",
+      "summary": "Documents on GOV.UK matching a query and filters, with title, description, link and other chosen fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/search.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search query; any UTF-8 text.",
+          "example": "taxes"
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return: default 10, maximum 1500; 0 returns only aggregates.",
+          "example": 10
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "0-based offset into the results, for paging.",
+          "example": 0
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Field to sort on, '-' prefix for descending (e.g. -public_timestamp). Default: relevance with q, most viewed in 14 days without.",
+          "example": "-public_timestamp"
+        },
+        "fields": {
+          "in": "query",
+          "type": "array",
+          "description": "Fields to return instead of the default set, e.g. title, description, link.",
+          "example": [
+            "title",
+            "description",
+            "link"
+          ]
+        },
+        "filter_organisations": {
+          "in": "query",
+          "type": "array",
+          "description": "Only documents tagged to any of these organisation slugs.",
+          "example": [
+            "cabinet-office"
+          ]
+        },
+        "reject_organisations": {
+          "in": "query",
+          "type": "array",
+          "description": "Exclude documents tagged to these organisation slugs.",
+          "example": [
+            "government-digital-service"
+          ]
+        },
+        "filter_format": {
+          "in": "query",
+          "type": "string",
+          "description": "Only documents of this format, e.g. transaction, person.",
+          "example": "transaction"
+        },
+        "filter_content_store_document_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only documents of this content store document type.",
+          "example": "transaction"
+        },
+        "filter_public_timestamp": {
+          "in": "query",
+          "type": "string",
+          "description": "Date range on publication time: 'from:<date>', 'to:<date>' or both comma-separated; ISO dates, UTC, inclusive.",
+          "example": "from:2020-01-01,to:2020-12-31"
+        },
+        "aggregate_organisations": {
+          "in": "query",
+          "type": "string",
+          "description": "Group matches by organisation: a limit, then optional comma-separated options (scope:, order:, examples:, example_scope:, example_fields:).",
+          "example": "10"
+        }
+      },
+      "notes": [
+        "Unknown parameters or invalid values return HTTP 422.",
+        "Any field can be filtered with filter_<field> or excluded with reject_<field>; filter_any_/filter_all_ variants exist for multivalued fields. Only the common ones are named here; others need a raw call.",
+        "A start past the end returns no results and no error."
+      ],
+      "job": "web.search",
+      "docs_url": "https://github.com/alphagov/search-api/blob/main/docs/using-the-search-api.md",
+      "verified": {
+        "docs": "https://github.com/alphagov/search-api/blob/main/docs/using-the-search-api.md"
+      }
+    },
+    {
+      "id": "gov-uk.content.get",
+      "name": "Get a GOV.UK page as JSON",
+      "summary": "The structured content and metadata of one www.gov.uk page, by its path.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/content/{page_path}",
+      "params": {
+        "page_path": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The page's path on www.gov.uk without the leading slash, as one segment (e.g. take-pet-abroad for https://www.gov.uk/take-pet-abroad).",
+          "example": "take-pet-abroad"
+        }
+      },
+      "notes": [
+        "The path value is URL-encoded as a single segment, so a nested page path (with slashes) needs a raw call to /api/content/<path>.",
+        "Some items are placeholders or redirects to a catch-all item."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://content-api.publishing.service.gov.uk/",
+      "verified": {
+        "docs": "https://content-api.publishing.service.gov.uk/"
+      }
+    }
+  ]
+}

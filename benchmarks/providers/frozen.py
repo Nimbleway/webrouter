@@ -58,8 +58,8 @@ from _frozen_checks import (
     require_same_answers,
 )
 from _frozen_mixed import MIXED, freeze_mixed, sample_index
+from _frozen_price import price_mode as price_mode
 from _tools_effort_plan import QUESTIONS as MIXED_QUESTIONS
-from _tools_effort_plan import RESEARCH
 
 HERE = Path(__file__).resolve().parent
 FROZEN_DIR = HERE / "frozen"
@@ -101,22 +101,6 @@ def split_setup(setup: str) -> tuple[str, str]:
     provider, vendor_mode, depth = split_label(setup)
     mode = vendor_mode + (DEPTH_MARK + depth if depth else "")
     return provider, mode or DEFAULT_MODE
-
-
-def price_mode(method: str, mode: str) -> str | None:
-    """A frozen row's ``mode`` as ``web_router.prices`` keys it, for its cost and its latency alike.
-
-    ``default`` (the scan asked for none) is ``None``; a research row's mode is
-    its effort, keyed as it is; ``@deep`` is the ``search_depth`` ``deep``;
-    ``ultra-fast`` is the vendor mode ``:ultra-fast``. A vendor mode at a depth
-    (``ultra-fast@deep``) has no row and is kept whole, so it matches nothing.
-    """
-    if mode == DEFAULT_MODE:
-        return None
-    if method == RESEARCH:
-        return mode
-    vendor, _, depth = mode.partition(DEPTH_MARK)
-    return depth if not vendor else ":" + mode
 
 
 def frozen_row(set_name: str, method: str, row: Mapping[str, Any]) -> dict[str, Any]:

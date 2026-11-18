@@ -1,18 +1,14 @@
 """Perplexity providers, over the Search API and the Agent (Responses) API.
 
-:class:`PerplexityProvider` is the ``/search`` endpoint, which returns ranked
-web results. :class:`PerplexityResearchProvider` runs research as a background
-job on ``/v1/responses``, the Agent API that replaced deep research on the chat
-endpoint; :class:`PerplexityAnswerProvider`, which asks the same endpoint for
-one answer in one call, lives in :mod:`web_router.providers.perplexity_answer`.
-Install with the ``search``, ``research`` or ``answer`` extra. Reads
-``PERPLEXITY_API_KEY`` unless a key is passed explicitly.
+:class:`PerplexityProvider` is the ``/search`` endpoint, which returns ranked web results.
+:class:`PerplexityResearchProvider` runs research as a background job on ``/v1/responses``, the Agent API that
+replaced deep research on the chat endpoint; :class:`PerplexityAnswerProvider`, which asks the same endpoint for one
+answer in one call, lives in :mod:`web_router.providers.perplexity_answer`. Install with the ``search``, ``research``
+or ``answer`` extra. Reads ``PERPLEXITY_API_KEY`` unless a key is passed explicitly.
 
-Search maps every shared option: the domain filters onto one
-``search_domain_filter``, ``country``, ``locale`` as ``search_language_filter``,
-``recency``, ``search_depth`` as a per-page token budget (``lite`` and ``fast``;
-``deep`` is refused) and ``effort`` as ``search_type``. Everything else is
-reachable through ``provider_options``.
+Search maps every shared option: the domain filters onto one ``search_domain_filter``, ``country``, ``locale`` as
+``search_language_filter``, ``recency``, ``search_depth`` as a per-page token budget (``lite`` and ``fast``; ``deep``
+is refused) and ``effort`` as ``search_type``. Everything else is reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -37,12 +33,14 @@ from web_router.constants import (
     PERPLEXITY_SEARCH_PATH,
     PROVIDER_PERPLEXITY,
 )
+from web_router.constants_mode_parts import PERPLEXITY_TIERS
 from web_router.constants_perplexity import (
     MSG_PERPLEXITY_LOCALE,
     MSG_PERPLEXITY_SEARCH_DOMAINS,
     PERPLEXITY_ANSWER_DOMAIN_FIELD,
     PERPLEXITY_ANSWER_RECENCY,
     PERPLEXITY_ANSWER_RECENCY_FIELD,
+    PERPLEXITY_COST_PATH,
     PERPLEXITY_LANGUAGE_FIELD,
     PERPLEXITY_LANGUAGE_PATTERN,
     PERPLEXITY_MAX_DOMAINS,
@@ -52,6 +50,7 @@ from web_router.constants_perplexity import (
     PERPLEXITY_SEARCH_TYPE_BY_EFFORT,
     PERPLEXITY_SEARCH_TYPE_FIELD,
 )
+from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpResearchProvider, HttpSearchProvider
 from web_router.providers._search_text import lite_body, refused_domains
 from web_router.providers._utils import build_payload, error_detail, mapped
@@ -81,6 +80,7 @@ class PerplexityProvider(HttpSearchProvider):
     """Routes searches to the Perplexity Search API."""
 
     name: ClassVar[str] = PROVIDER_PERPLEXITY
+    tiers = PERPLEXITY_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
         {*PERPLEXITY_SEARCH_NAMES, "include_domains", "exclude_domains", "locale", "recency", "search_depth", "effort"}
     )
@@ -108,6 +108,7 @@ class PerplexityProvider(HttpSearchProvider):
         return build_payload(
             request,
             PERPLEXITY_SEARCH_NAMES,
+            self,
             query=request.query,
             **{
                 PERPLEXITY_ANSWER_DOMAIN_FIELD: domain_filter(request),
@@ -216,4 +217,5 @@ class PerplexityResearchProvider(HttpResearchProvider):
             outcome="partial" if payload.get("status") == PERPLEXITY_INCOMPLETE_STATUS else "complete",
             request_id=payload.get("id"),
             raw=[payload],
+            **stated_cost(payload, *PERPLEXITY_COST_PATH),
         )

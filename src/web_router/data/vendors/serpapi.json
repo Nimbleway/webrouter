@@ -1,0 +1,627 @@
+{
+  "vendor": "serpapi",
+  "name": "SerpApi",
+  "category": "search",
+  "summary": "Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches.",
+  "docs_url": "https://serpapi.com/search-api",
+  "pricing_url": "https://serpapi.com/pricing",
+  "base_url": "https://serpapi.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SERPAPI_API_KEY"
+        ],
+        "description": "a SerpApi private API key (Your Account page at serpapi.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every engine is the same GET /search with a different engine value; the engine's own parameters follow.",
+    "Billing counts each successful uncached search against your monthly quota; cached results (identical search within 1 hour) and the Account and Locations APIs are free.",
+    "Results come as JSON; search_metadata.status goes Processing then Success or Error, and search_metadata.id is the archive id."
+  ],
+  "sources": [
+    "https://serpapi.com/search-api",
+    "https://serpapi.com/google-news-api",
+    "https://serpapi.com/google-maps-api",
+    "https://serpapi.com/google-play-api",
+    "https://serpapi.com/youtube-search-api",
+    "https://serpapi.com/search-archive-api",
+    "https://serpapi.com/account-api",
+    "https://serpapi.com/locations-api"
+  ],
+  "endpoints": [
+    {
+      "id": "serpapi.google.search",
+      "name": "Google search",
+      "summary": "Structured Google results (organic, ads, answer boxes, related questions and more) for a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "description": "The engine. google is the default.",
+          "example": "google",
+          "enum": [
+            "google"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search query; operators such as site: and intitle: work.",
+          "example": "coffee"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Origin of the search; city level works best. Look names up with serpapi.locations.search. Cannot be combined with uule, lat or lon.",
+          "example": "Austin, Texas, United States"
+        },
+        "google_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Google domain to use; defaults to google.com.",
+          "example": "google.co.uk"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code, such as us. Pair it with location.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language code, such as en or es-419.",
+          "example": "en"
+        },
+        "cr": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to pages from countries, as countryFR|countryDE."
+        },
+        "lr": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to languages, as lang_fr|lang_de."
+        },
+        "tbs": {
+          "in": "query",
+          "type": "string",
+          "description": "Advanced search filter string, for date ranges and other filters Google exposes in its URL."
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "Adult-content filtering.",
+          "enum": [
+            "active",
+            "off"
+          ]
+        },
+        "nfpr": {
+          "in": "query",
+          "type": "string",
+          "description": "1 excludes results from an auto-corrected query; 0 (default) includes them."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "1 (default) enables the Similar Results and Omitted Results filters; 0 disables them."
+        },
+        "tbm": {
+          "in": "query",
+          "type": "string",
+          "description": "Search type selector (images, news, videos, shopping and so on); leave unset for regular web search."
+        },
+        "udm": {
+          "in": "query",
+          "type": "string",
+          "description": "Display mode selector; leave unset for regular Google Search."
+        },
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result offset for pagination: 0 is page 1, 10 is page 2, 20 is page 3.",
+          "example": 0
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Device to emulate.",
+          "enum": [
+            "desktop",
+            "tablet",
+            "mobile"
+          ]
+        },
+        "no_cache": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true forces a fresh fetch; false (default) may serve a cached result under 1 hour old, which does not count toward your monthly searches. Do not combine with async."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true submits the search and returns at once; fetch the result later with serpapi.archive.get using search_metadata.id. false (default) waits for the result. Do not combine with no_cache."
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) for structured results, html for the raw page, md for an LLM-friendly Markdown view.",
+          "enum": [
+            "json",
+            "html",
+            "md"
+          ]
+        }
+      },
+      "notes": [
+        "Each successful uncached search counts as one search against your monthly quota; repeated identical searches within an hour are served from cache and are free.",
+        "Paging is by start offset, not page number. num is not documented on this page, so it is left out.",
+        "With async=true the call returns search_metadata.id; poll serpapi.archive.get until its status is Success."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://serpapi.com/search-api",
+      "verified": {
+        "docs": "https://serpapi.com/search-api"
+      }
+    },
+    {
+      "id": "serpapi.google_news.search",
+      "name": "Google News search",
+      "summary": "Structured Google News results for a query, topic, publication or story.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_news.",
+          "example": "google_news",
+          "enum": [
+            "google_news"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "The news query; supports site: and when:. Cannot be combined with the token parameters below.",
+          "example": "technology"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code; defaults to us.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language code.",
+          "example": "en"
+        },
+        "topic_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for a news topic such as World or Business; found in earlier JSON results or a Google News URL."
+        },
+        "publication_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for one publisher; found in earlier JSON results or a Google News URL."
+        },
+        "section_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for a sub-section of a topic or publication."
+        },
+        "story_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for the full coverage of one story."
+        },
+        "kgmid": {
+          "in": "query",
+          "type": "string",
+          "description": "Knowledge Graph ID (starts with /m/ or /g/); can only be used alone."
+        },
+        "so": {
+          "in": "query",
+          "type": "integer",
+          "description": "Sort order for story and section results: 0 relevance, 1 date.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "no_cache": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true forces a fresh fetch; false (default) may serve a cached result under 1 hour old, which does not count toward your monthly searches. Do not combine with async."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true submits the search and returns at once; fetch the result later with serpapi.archive.get using search_metadata.id. false (default) waits for the result. Do not combine with no_cache."
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) for structured results, html for the raw page, md for an LLM-friendly Markdown view.",
+          "enum": [
+            "json",
+            "html",
+            "md"
+          ]
+        }
+      },
+      "notes": [
+        "Each successful uncached search counts as one search against your monthly quota.",
+        "q cannot be combined with topic_token, publication_token, section_token, story_token or kgmid."
+      ],
+      "job": "news.search",
+      "docs_url": "https://serpapi.com/google-news-api",
+      "verified": {
+        "docs": "https://serpapi.com/google-news-api"
+      }
+    },
+    {
+      "id": "serpapi.google_maps.search",
+      "name": "Google Maps search",
+      "summary": "Local places from Google Maps for a query, or the details of one place.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_maps.",
+          "example": "google_maps",
+          "enum": [
+            "google_maps"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "search lists places for q; place returns one place (needed with data, optional with place_id or data_cid).",
+          "enum": [
+            "search",
+            "place"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "The Maps query. Only needed when type is search.",
+          "example": "coffee"
+        },
+        "ll": {
+          "in": "query",
+          "type": "string",
+          "description": "Search origin as @latitude,longitude,zoom (for example @40.7455096,-74.0083012,14z) or with a map height in meters.",
+          "example": "@40.7455096,-74.0083012,14z"
+        },
+        "place_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Google Place ID of one place; cannot be used with data_cid."
+        },
+        "data_cid": {
+          "in": "query",
+          "type": "string",
+          "description": "Google CID of one place; cannot be used with place_id."
+        },
+        "google_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Google domain to use; defaults to google.com."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language code."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code; only affects place results."
+        },
+        "no_cache": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true forces a fresh fetch; false (default) may serve a cached result under 1 hour old, which does not count toward your monthly searches. Do not combine with async."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true submits the search and returns at once; fetch the result later with serpapi.archive.get using search_metadata.id. false (default) waits for the result. Do not combine with no_cache."
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) for structured results, html for the raw page, md for an LLM-friendly Markdown view.",
+          "enum": [
+            "json",
+            "html",
+            "md"
+          ]
+        }
+      },
+      "notes": [
+        "Each successful uncached search counts as one search against your monthly quota.",
+        "ll, location, lat/lon with z or m, and nearby give other ways to set the origin; see the docs page for their combination rules."
+      ],
+      "job": "places.search",
+      "docs_url": "https://serpapi.com/google-maps-api",
+      "verified": {
+        "docs": "https://serpapi.com/google-maps-api"
+      }
+    },
+    {
+      "id": "serpapi.google_play.search",
+      "name": "Google Play search",
+      "summary": "Apps from the Google Play store by query, category, chart or device.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_play.",
+          "example": "google_play",
+          "enum": [
+            "google_play"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "The app search query.",
+          "example": "maps"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code; defaults to us.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language code."
+        },
+        "apps_category": {
+          "in": "query",
+          "type": "string",
+          "description": "Play Store apps category code."
+        },
+        "store_device": {
+          "in": "query",
+          "type": "string",
+          "description": "Device to sort for; cannot be used with apps_category or q.",
+          "enum": [
+            "phone",
+            "tablet",
+            "tv",
+            "chromebook",
+            "watch",
+            "car"
+          ]
+        },
+        "chart": {
+          "in": "query",
+          "type": "string",
+          "description": "Top chart to show, up to 50 results; the valid values depend on the store."
+        },
+        "next_page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token for the next page of results."
+        },
+        "no_cache": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true forces a fresh fetch; false (default) may serve a cached result under 1 hour old, which does not count toward your monthly searches. Do not combine with async."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true submits the search and returns at once; fetch the result later with serpapi.archive.get using search_metadata.id. false (default) waits for the result. Do not combine with no_cache."
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) for structured results, html for the raw page, md for an LLM-friendly Markdown view.",
+          "enum": [
+            "json",
+            "html",
+            "md"
+          ]
+        }
+      },
+      "notes": [
+        "Each successful uncached search counts as one search against your monthly quota."
+      ],
+      "job": "web.search",
+      "docs_url": "https://serpapi.com/google-play-api",
+      "verified": {
+        "docs": "https://serpapi.com/google-play-api"
+      }
+    },
+    {
+      "id": "serpapi.youtube.search",
+      "name": "YouTube search",
+      "summary": "Structured YouTube video, channel and playlist results for a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be youtube.",
+          "example": "youtube",
+          "enum": [
+            "youtube"
+          ]
+        },
+        "search_query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search query; this engine takes search_query, not q.",
+          "example": "coffee"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language code.",
+          "example": "en"
+        },
+        "sp": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination token (from serpapi_pagination.next_page_token) or a filter value copied from a YouTube URL."
+        },
+        "no_cache": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true forces a fresh fetch; false (default) may serve a cached result under 1 hour old, which does not count toward your monthly searches. Do not combine with async."
+        },
+        "async": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true submits the search and returns at once; fetch the result later with serpapi.archive.get using search_metadata.id. false (default) waits for the result. Do not combine with no_cache."
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) for structured results, html for the raw page, md for an LLM-friendly Markdown view.",
+          "enum": [
+            "json",
+            "html",
+            "md"
+          ]
+        }
+      },
+      "notes": [
+        "Each successful uncached search counts as one search against your monthly quota.",
+        "Pages continue by sp token rather than page number."
+      ],
+      "job": "social.search",
+      "docs_url": "https://serpapi.com/youtube-search-api",
+      "verified": {
+        "docs": "https://serpapi.com/youtube-search-api"
+      }
+    },
+    {
+      "id": "serpapi.archive.get",
+      "name": "Get a search from the archive",
+      "summary": "Fetch a past or asynchronous search by its id, as JSON or raw HTML.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/searches/{search_id}",
+      "params": {
+        "search_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id from a search's search_metadata.id.",
+          "example": "5b50d58a304bda2fca30bac9"
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or html for the raw page.",
+          "enum": [
+            "json",
+            "html"
+          ]
+        }
+      },
+      "notes": [
+        "Status is Queued, Processing, Success or an error. Searches stay retrievable for 31 days after completion.",
+        "Poll this after a search made with async=true."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://serpapi.com/search-archive-api",
+      "verified": {
+        "docs": "https://serpapi.com/search-archive-api"
+      }
+    },
+    {
+      "id": "serpapi.account.get",
+      "name": "Get account usage",
+      "summary": "Plan, searches used this month, searches left and hourly rate limit for the API key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account",
+      "notes": [
+        "Free and not counted toward your monthly quota."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://serpapi.com/account-api",
+      "verified": {
+        "docs": "https://serpapi.com/account-api"
+      }
+    },
+    {
+      "id": "serpapi.locations.search",
+      "name": "Search supported locations",
+      "summary": "SerpApi's supported location names and ids, ranked by reach.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/locations.json",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict to locations containing this text.",
+          "example": "Austin"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum locations returned; at most 10.",
+          "example": 5
+        }
+      },
+      "notes": [
+        "Free. Use a result's canonical_name as location in a search."
+      ],
+      "job": "search.locations",
+      "docs_url": "https://serpapi.com/locations-api",
+      "verified": {
+        "docs": "https://serpapi.com/locations-api"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

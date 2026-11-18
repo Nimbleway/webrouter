@@ -1,0 +1,326 @@
+{
+  "vendor": "crawl4ai",
+  "name": "Crawl4AI Cloud",
+  "category": "scraping",
+  "summary": "Crawl4AI's hosted API: scrape pages to markdown, extract JSON, search the web, Google results as data, direct answers and ready-made site recipes.",
+  "docs_url": "https://api.crawl4ai.com/docs",
+  "pricing_url": "https://api.crawl4ai.com/v1/prices",
+  "base_url": "https://api.crawl4ai.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CRAWL4AI_KEY"
+        ],
+        "description": "A Crawl4AI Cloud key, sk_live_... (api.crawl4ai.com > Get a key; manage at api.crawl4ai.com/dashboard). Sent as Authorization: Bearer."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "This is the hosted service built on the open-source crawl4ai library. The legacy v1 API (sessions, scan, site, enrich, context) was shut down on 2026-11-06.",
+    "Every call costs credits (1 credit = $0.001; a cached result costs half). Response headers x-c4-cost and x-c4-balance give the charge and the exact balance; GET /v1/prices is the live price table.",
+    "Free plan: 10 requests a minute, 2 at a time, 1,000 credits a month; over the pace limit is 429, out of credit is 402 no_credit, over the month's plan allowance 402 plan_cap.",
+    "Failed fetches (403 blocked or login-wall, 502 no-answer or origin-error, 503 busy, 500) are not charged.",
+    "Batches (/scrape/batch, /scrape/jobs), recipe jobs, /price and the billing top-up (charges a saved card) are not in this entry."
+  ],
+  "sources": [
+    "https://api.crawl4ai.com/llms.txt",
+    "https://gate.crawl4ai.com/llms.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "crawl4ai.scrape",
+      "name": "Scrape a page",
+      "summary": "One URL as clean markdown and/or HTML, optionally with links, media, metadata and tables.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/scrape",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "A public http or https URL.",
+          "example": "https://example.com"
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "What to return. Default both.",
+          "enum": [
+            "both",
+            "md",
+            "html"
+          ]
+        },
+        "proxy": {
+          "in": "body",
+          "type": "string",
+          "description": "Exit network, for a site that blocked a plain request. isp costs 2x, residential 4x. Default none.",
+          "enum": [
+            "none",
+            "isp",
+            "residential"
+          ]
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Two-letter country to fetch from, e.g. us, gb."
+        },
+        "parse": {
+          "in": "body",
+          "type": "object",
+          "description": "Also return page structure: true for all, or pick {\"links\":true,\"media\":true,\"metadata\":true,\"tables\":true}."
+        },
+        "engine": {
+          "in": "body",
+          "type": "string",
+          "description": "auto (default) picks the cheapest that works; browser-light or browser force a fresh browser fetch, slower and priced higher.",
+          "enum": [
+            "auto",
+            "browser-light",
+            "browser"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "Most pages answer in 1-2 s; a page that needs a real browser takes 10-60 s, up to 90 s. Use a 120 s client timeout.",
+        "The answer says which engine served it and the steps tried (ladder)."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://api.crawl4ai.com/llms.txt",
+      "verified": {
+        "docs": "https://api.crawl4ai.com/llms.txt"
+      }
+    },
+    {
+      "id": "crawl4ai.extract",
+      "name": "Extract structured data",
+      "summary": "Typed JSON from a page (crawled for you) or your own content, guided by an instruction and/or a JSON schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/extract",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "The page to read. Give url or content."
+        },
+        "content": {
+          "in": "body",
+          "type": "string",
+          "description": "Your own text, markdown or HTML, instead of url."
+        },
+        "instruction": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-English description of what to pull out."
+        },
+        "schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema each returned record must match."
+        },
+        "example": {
+          "in": "body",
+          "type": "object",
+          "description": "A sample of the wanted shape (structure, not values)."
+        }
+      },
+      "notes": [
+        "A read over POST. Give an instruction, a schema, or both.",
+        "Returns {ok, url, data, usage.total_tokens, ms}."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://api.crawl4ai.com/llms.txt",
+      "verified": {
+        "docs": "https://api.crawl4ai.com/llms.txt"
+      }
+    },
+    {
+      "id": "crawl4ai.search",
+      "name": "Search the web",
+      "summary": "Ranked, cleaned web results (title, url, snippet, source), optionally with follow-up questions, an entity card, news and videos.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The query, up to 512 characters.",
+          "example": "rust web crawler"
+        },
+        "rich": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 also returns a rich block (follow-up questions, related queries, entity, videos, news). Default 0.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "source gg or gs is a live web result; index is from Crawl4AI's own index, added when the web returns fewer than 10."
+      ],
+      "job": "web.search",
+      "docs_url": "https://api.crawl4ai.com/llms.txt",
+      "verified": {
+        "docs": "https://api.crawl4ai.com/llms.txt"
+      }
+    },
+    {
+      "id": "crawl4ai.serp",
+      "name": "Get Google results as data",
+      "summary": "Google's results page as structured data: organic ranks plus every block shown (AI overview, people also ask, local pack, ads...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/serp",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The query, up to 512 characters.",
+          "example": "best crm software"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country. Default us."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Google language code. Default en."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "City or region to localise to, e.g. 'Austin, TX'. An unknown one is a 400 listing the 3 closest names."
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results wanted, a multiple of 10 up to 100. Default 10."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page over num, 1-30: num=20&page=2 is results 21-40. Default 1."
+        },
+        "time": {
+          "in": "query",
+          "type": "string",
+          "description": "Google's time filter.",
+          "enum": [
+            "hour",
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "fresh": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 skips the cache. Default 0.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "Beta. 1 credit per Google page fetched live (num=100 is up to 10 credits); a cached page costs half.",
+        "position is the organic rank; position_absolute counts every numbered item on the page, as rank trackers do."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://api.crawl4ai.com/llms.txt",
+      "verified": {
+        "docs": "https://api.crawl4ai.com/llms.txt"
+      }
+    },
+    {
+      "id": "crawl4ai.answer",
+      "name": "Answer a question",
+      "summary": "A direct answer to a question with its sources, or answered:false when there is none.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/answer",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The question or a whole prompt, up to 4,000 characters. Ask for the shape you want in the question itself.",
+          "example": "why is the sky blue"
+        },
+        "deep": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 (default) may read a couple of pages to answer; 0 returns only a readily available answer.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "Experimental: the shape may change.",
+        "1 credit for an answer found directly (a Google AI overview or AI mode), 3 when Crawl4AI's model wrote it, nothing when answered is false.",
+        "When the question asks for JSON, answer.text is a JSON string: parse it."
+      ],
+      "job": "web.answer",
+      "docs_url": "https://api.crawl4ai.com/llms.txt",
+      "verified": {
+        "docs": "https://api.crawl4ai.com/llms.txt"
+      }
+    },
+    {
+      "id": "crawl4ai.recipes.list",
+      "name": "List recipes",
+      "summary": "The catalog of ready-made site scrapers (Amazon, LinkedIn, Google Maps, app stores...), with each one's inputs and output columns.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/recipes",
+      "notes": [
+        "Free. Read a recipe's inputs and output_about here before running it; never guess a recipe name.",
+        "Run one with a raw POST /recipes/{name} whose JSON body is the recipe's inputs as top-level fields (e.g. {\"product\":\"B0BSHF7WHW\",\"limit\":20}); it costs usage.units credits (1 per call plus 1 per page) and can take up to 300 s. Inputs marked secret take the user's own login cookies: never fill them unasked."
+      ],
+      "job": "scraper.list",
+      "docs_url": "https://api.crawl4ai.com/llms.txt",
+      "verified": {
+        "docs": "https://api.crawl4ai.com/llms.txt"
+      }
+    },
+    {
+      "id": "crawl4ai.balance",
+      "name": "Get credit balance",
+      "summary": "The account's credit balance and plan allowance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/billing/balance",
+      "notes": [
+        "Trails the per-call x-c4-balance header by about a minute."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api.crawl4ai.com/llms.txt",
+      "verified": {
+        "docs": "https://api.crawl4ai.com/llms.txt"
+      }
+    }
+  ]
+}

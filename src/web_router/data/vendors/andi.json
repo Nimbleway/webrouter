@@ -1,0 +1,380 @@
+{
+  "vendor": "andi",
+  "name": "Andi AI Search",
+  "category": "search",
+  "summary": "Web search API for agents with adjustable effort, optional full page content, a page fetch/extract endpoint and curated topic news feeds.",
+  "docs_url": "https://docs.andiai.com/api-reference/introduction",
+  "pricing_url": "https://docs.andiai.com/pricing",
+  "base_url": "https://api.andiai.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ANDI_API_KEY"
+        ],
+        "description": "an Andi API key (console.andiai.com). Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Outcome-based pricing: each call is charged for the work it did plus a per-token rate on returned content. Every JSON response reports its cost in metrics.cost_dollars (frontmatter cost_dollars with format=context). An empty balance answers 402.",
+    "Rate limits are per key, per endpoint, per second, set in the console; responses carry X-RateLimit-* headers and 429 carries Retry-After."
+  ],
+  "sources": [
+    "https://docs.andiai.com/llms.txt",
+    "https://docs.andiai.com/api-reference/openapi.json",
+    "https://docs.andiai.com/pricing",
+    "https://docs.andiai.com/resources/rate-limits",
+    "https://docs.andiai.com/getting-started/authentication"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "andi.search",
+      "name": "Search the web",
+      "summary": "Ranked web results for a query, with optional extracts or full page text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Query; operators such as site:, filetype:, intitle: are parsed unless parseOperators=false. A JSON array of up to 5 queries runs a multi-query search."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 100. Omitted: 10 to 40 picked to fit the query (20 with offset or multi-query)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, default 0."
+        },
+        "searchMode": {
+          "in": "query",
+          "type": "string",
+          "description": "Effort: auto (default) picks per query; low-cost caps the cost.",
+          "enum": [
+            "auto",
+            "low-cost",
+            "fast",
+            "balanced",
+            "deep",
+            "exhaustive"
+          ]
+        },
+        "effort": {
+          "in": "query",
+          "type": "string",
+          "description": "Thoroughness dial, independent of searchMode.",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ]
+        },
+        "intent": {
+          "in": "query",
+          "type": "string",
+          "description": "Force an intent (search, news, video, images, weather, wiki, code, recipe, place, time...); none disables detection."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or context (markdown for an LLM).",
+          "enum": [
+            "json",
+            "context"
+          ]
+        },
+        "extracts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include passages from result pages (no extra cost)."
+        },
+        "content": {
+          "in": "query",
+          "type": "string",
+          "description": "Full page text per result: true (head of page), focused (query-relevant parts) or false (default).",
+          "enum": [
+            "true",
+            "focused",
+            "false"
+          ]
+        },
+        "maxContentLength": {
+          "in": "query",
+          "type": "integer",
+          "description": "Character cap of page content per result, when content is on."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 locale bias, default US."
+        },
+        "sourceCountry": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2: only sources from this country."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language tag such as en or zh-Hans; detected when omitted."
+        },
+        "dateRange": {
+          "in": "query",
+          "type": "string",
+          "description": "Relative date filter.",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year",
+            "24h",
+            "7d",
+            "30d",
+            "90d",
+            "1y"
+          ]
+        },
+        "dateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "Published on or after, YYYY-MM-DD."
+        },
+        "dateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "Published on or before, YYYY-MM-DD."
+        },
+        "includeDomains": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to restrict to; wildcards like *.example.com allowed."
+        },
+        "excludeDomains": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains to exclude; wildcards allowed."
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "Safe search, default off.",
+          "enum": [
+            "off",
+            "moderate",
+            "strict"
+          ]
+        }
+      },
+      "notes": [
+        "Full content is charged per token: cap it with maxContentLength and limit. extracts are free.",
+        "POST /api/v1/search takes the same parameters as a JSON body (and location fields); not in this entry."
+      ],
+      "job": "web.search",
+      "docs_url": "https://docs.andiai.com/api-reference/search-the-web",
+      "verified": {
+        "docs": "https://docs.andiai.com/api-reference/search-the-web"
+      }
+    },
+    {
+      "id": "andi.fetch",
+      "name": "Fetch and extract a web page",
+      "summary": "Clean title, article text and metadata of one page, as JSON or LLM-ready markdown.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/fetch",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full http(s) URL."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or context (markdown).",
+          "enum": [
+            "json",
+            "context"
+          ]
+        },
+        "effort": {
+          "in": "query",
+          "type": "string",
+          "description": "How hard to try; max helps slow or client-rendered pages.",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ]
+        },
+        "maxContentLength": {
+          "in": "query",
+          "type": "integer",
+          "description": "Content characters, 1 to 200000, default 100000."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Scope extraction to this query; adds query_extracts and query_snippet."
+        }
+      },
+      "notes": [
+        "$0.001 per request plus $0.05 per 1M tokens of content. 422 and 503 answers are free."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.andiai.com/api-reference/fetch-a-web-page",
+      "verified": {
+        "docs": "https://docs.andiai.com/api-reference/fetch-a-web-page"
+      }
+    },
+    {
+      "id": "andi.news.topics",
+      "name": "List news feed topics",
+      "summary": "Every topic available to andi.news.feed, with formats and recent story counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/news",
+      "params": {
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or html.",
+          "enum": [
+            "json",
+            "html"
+          ]
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.andiai.com/api-reference/list-news-topics",
+      "verified": {
+        "docs": "https://docs.andiai.com/api-reference/list-news-topics"
+      }
+    },
+    {
+      "id": "andi.news.feed",
+      "name": "Get a curated topic news feed",
+      "summary": "Ranked recent articles for a fixed topic, optionally filtered by keyword, with an AI brief.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/news/{topic}",
+      "params": {
+        "topic": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Topic slug.",
+          "enum": [
+            "technology",
+            "business",
+            "finance",
+            "politics",
+            "sports",
+            "health",
+            "science",
+            "world",
+            "entertainment",
+            "us",
+            "europe",
+            "uk",
+            "asia",
+            "middle-east",
+            "africa",
+            "latin-america",
+            "australia",
+            "programming",
+            "startups",
+            "media",
+            "crypto",
+            "legal",
+            "space",
+            "top",
+            "hn-frontpage",
+            "ai-news",
+            "tech-news"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword filter within the topic, up to 200 characters (no brief is returned with q)."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 50, default 20."
+        },
+        "hours": {
+          "in": "query",
+          "type": "integer",
+          "description": "Recency window in hours, 1 to 336, default 48."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, or all. Default en."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default), context (markdown) or rss. embed and ticker are HTML widgets.",
+          "enum": [
+            "json",
+            "context",
+            "rss",
+            "embed",
+            "ticker"
+          ]
+        },
+        "summary": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false drops the topic brief."
+        },
+        "extracts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include stored passages per article."
+        },
+        "content": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include stored full article text (billed per token)."
+        },
+        "maxContentLength": {
+          "in": "query",
+          "type": "integer",
+          "description": "Character cap of content per article."
+        }
+      },
+      "notes": [
+        "results are ranked by relevance; news holds the same articles newest first. Charged for ranking plus per token of content."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.andiai.com/api-reference/get-a-curated-news-feed",
+      "verified": {
+        "docs": "https://docs.andiai.com/api-reference/get-a-curated-news-feed"
+      }
+    }
+  ]
+}

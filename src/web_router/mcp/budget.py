@@ -17,9 +17,9 @@ from it as a call inside ``wr.budget(...)`` does:
   no budget.
 
 search, extract, answer, ``web_run``, and research and browse as they start
-their jobs, spend through the library's own per-attempt check. ``run_template``
+their jobs, spend through the library's own per-attempt check. ``live_data``
 and ``browser_open`` have no ``auto`` to hook, so :func:`charged` reserves
-theirs before the call: a template run at its list price, a cloud browser per
+theirs before the call: a live data run at its list price, a cloud browser per
 minute of its lifetime. Under a cost cap a backend whose price is unknown never
 runs, and the refusal names the unknown price.
 """
@@ -37,10 +37,11 @@ from web_router.constants import MCP_ARG_PROVIDER
 from web_router.constants_budget import STATUS_DIGITS
 from web_router.constants_mcp import (
     MCP_MSG_BUDGET_LIMIT,
+    MCP_PRICE_LIVE_DATA,
     MCP_PRICE_OPEN_BROWSER,
-    MCP_PRICE_RUN_TEMPLATE,
     MCP_TOOL_BUDGET_START,
 )
+from web_router.live_data_backends import backend_for
 from web_router.providers._deadline import current_deadline
 from web_router.providers.auto_browser import AutoBrowserProvider
 from web_router.routing.attempts import Attempt
@@ -49,7 +50,8 @@ from web_router.routing.contract import Budget, ToolName
 from web_router.routing.pool import BudgetPool, PoolChain, chain_in_force
 from web_router.routing.pool_bind import bind, current_pool, unbind
 from web_router.routing.pricing import attempt_cost
-from web_router.types import BrowserRequest, NormalizedRequest, TemplateRequest
+from web_router.types import BrowserRequest, NormalizedRequest
+from web_router.types_live_data import LiveDataRequest
 
 if TYPE_CHECKING:
     from web_router.mcp.tools import WebRouterTools
@@ -167,12 +169,12 @@ async def budget_status(tools: WebRouterTools, arguments: Mapping[str, Any]) -> 
     return {"budget": routing["budget"], "ceiling": routing["ceiling"]}
 
 
-def template_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> AbstractContextManager[None]:
-    """:func:`charged` for a ``run_template`` call with ``kwargs``: one run on the named backend."""
+def live_data_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> AbstractContextManager[None]:
+    """:func:`charged` for a ``live_data`` call with ``kwargs``: one run on the named backend."""
     if current_pool() is None:
         return nullcontext()
-    backend = router.get_template_provider(kwargs[MCP_ARG_PROVIDER])
-    return charged(MCP_PRICE_RUN_TEMPLATE, [backend.name], TemplateRequest(template=str(kwargs["template"])), router)
+    backend, name = backend_for(router, str(kwargs["source"]), kwargs.get(MCP_ARG_PROVIDER))
+    return charged(MCP_PRICE_LIVE_DATA, [backend.name], LiveDataRequest(source=name), router)
 
 
 def browser_charged(router: AsyncWebRouter, kwargs: Mapping[str, Any]) -> AbstractContextManager[None]:

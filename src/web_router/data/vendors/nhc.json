@@ -1,0 +1,127 @@
+{
+  "vendor": "nhc",
+  "name": "NOAA National Hurricane Center",
+  "category": "environment",
+  "summary": "Keyless feeds of active Atlantic and Pacific tropical cyclones: a JSON summary of every active storm with links to its advisories, plus basin and per-storm RSS and GIS feeds.",
+  "docs_url": "https://www.nhc.noaa.gov/productexamples/",
+  "base_url": "https://www.nhc.noaa.gov",
+  "notes": [
+    "These are static files NHC updates with each advisory (typically every 6 hours, more often during landfall), not a query API: there are no parameters beyond the basin.",
+    "CurrentStorms.json has an empty activeStorms list outside active storms; field meanings are in NHC's Tropical Cyclone Status JSON File Reference (PDF on the product examples page).",
+    "Each storm entry in CurrentStorms.json links to its own products (public advisory, forecast discussion, cone and track GIS files); fetch those URLs directly.",
+    "RSS feeds are XML; storm wallets at1-at5, ep1-ep5, cp1-cp5 are slots NHC assigns to active storms in order."
+  ],
+  "sources": [
+    "https://www.nhc.noaa.gov/productexamples/",
+    "https://www.nhc.noaa.gov/aboutrss.shtml"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "nhc.storms.current",
+      "name": "List active tropical cyclones",
+      "summary": "Every active storm with id, name, classification, intensity, pressure, position, movement and links to its latest products.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/CurrentStorms.json",
+      "job": "weather.storms",
+      "docs_url": "https://www.nhc.noaa.gov/productexamples/",
+      "verified": {
+        "docs": "https://www.nhc.noaa.gov/productexamples/"
+      }
+    },
+    {
+      "id": "nhc.basin.feed",
+      "name": "Get a basin's advisories feed",
+      "summary": "RSS of the latest tropical weather outlooks and storm advisories for one ocean basin.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/index-{basin}.xml",
+      "params": {
+        "basin": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "at (Atlantic), ep (Eastern Pacific) or cp (Central Pacific).",
+          "enum": [
+            "at",
+            "ep",
+            "cp"
+          ],
+          "example": "at"
+        }
+      },
+      "job": "weather.storms",
+      "docs_url": "https://www.nhc.noaa.gov/aboutrss.shtml",
+      "verified": {
+        "docs": "https://www.nhc.noaa.gov/aboutrss.shtml"
+      }
+    },
+    {
+      "id": "nhc.basin.gis_feed",
+      "name": "Get a basin's GIS feed",
+      "summary": "RSS linking the latest GIS files (forecast cone, track, wind field, watches/warnings) for a basin's storms.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/gis-{basin}.xml",
+      "params": {
+        "basin": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "at (Atlantic), ep (Eastern Pacific) or cp (Central Pacific).",
+          "enum": [
+            "at",
+            "ep",
+            "cp"
+          ],
+          "example": "at"
+        }
+      },
+      "job": "weather.storms",
+      "docs_url": "https://www.nhc.noaa.gov/aboutrss.shtml",
+      "verified": {
+        "docs": "https://www.nhc.noaa.gov/aboutrss.shtml"
+      }
+    },
+    {
+      "id": "nhc.storm.feed",
+      "name": "Get a storm wallet feed",
+      "summary": "RSS of all products for the storm assigned to one wallet slot.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nhc_{wallet}.xml",
+      "params": {
+        "wallet": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Basin and slot, e.g. at1 for the first active Atlantic storm.",
+          "enum": [
+            "at1",
+            "at2",
+            "at3",
+            "at4",
+            "at5",
+            "ep1",
+            "ep2",
+            "ep3",
+            "ep4",
+            "ep5",
+            "cp1",
+            "cp2",
+            "cp3",
+            "cp4",
+            "cp5"
+          ],
+          "example": "at1"
+        }
+      },
+      "job": "weather.storms",
+      "docs_url": "https://www.nhc.noaa.gov/aboutrss.shtml",
+      "verified": {
+        "docs": "https://www.nhc.noaa.gov/aboutrss.shtml"
+      }
+    }
+  ]
+}

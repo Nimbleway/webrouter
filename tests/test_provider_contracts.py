@@ -61,6 +61,11 @@ def test_a_filled_contract_is_complete(key: str) -> None:
     assert all(field in contract for field in HAND_FIELDS), f"{key}: fill in all of {', '.join(HAND_FIELDS)}"
     sources = contract["source"] if isinstance(contract["source"], list) else [contract["source"]]
     assert sources and all(map(_filled, sources)), f"{key}: name the vendor's documentation in `source`"
+    notes_as_urls = [s for s in sources if s.startswith(("http://", "https://")) and len(s.split()) > 1]
+    assert not notes_as_urls, (
+        f"{key}: a `source` that starts with a URL must be only the URL, or the docs watch fetches the note "
+        f"too; write a note as prose that names the URL inside it: {notes_as_urls}"
+    )
     assert isinstance(contract["vendor_options"], dict), (
         f"{key}: list the vendor's unmapped options in `vendor_options`"
     )
@@ -99,3 +104,13 @@ def _top_field(field: str) -> str:
     rest = field.split(".", 1)[-1]
     rest = rest.removeprefix(MCP_ARGUMENTS)
     return rest.split(".", 1)[0]
+
+
+@pytest.mark.parametrize("key", FILLED)
+def test_every_declared_mode_says_how_it_was_checked(key: str) -> None:
+    """Each tier, content and flag a backend declares needs its own ``verified["mode.<part>"]``."""
+    contract = CONTRACTS[key]
+    missing = [part for part in contract["options"].get("mode", {}) if f"mode.{part}" not in contract["verified"]]
+    assert not missing, (
+        f"{key}: add verified['mode.<part>'] for {', '.join(missing)}: 'docs: <page>' until checked live"
+    )

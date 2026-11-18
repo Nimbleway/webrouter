@@ -1,0 +1,340 @@
+{
+  "vendor": "clado",
+  "name": "Clado",
+  "category": "enrichment",
+  "summary": "Natural-language people search over LinkedIn profiles, deep research jobs, profile scraping and email/phone enrichment.",
+  "docs_url": "https://docs.clado.ai/api-reference/introduction",
+  "pricing_url": "https://docs.clado.ai/api-reference/pricing",
+  "base_url": "https://search.clado.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CLADO_API_KEY"
+        ],
+        "description": "A Clado API key (starts with lk_). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits cost $0.01 each; you pay only for successful calls (5xx are not charged). See each endpoint's notes for its price.",
+    "Rate limits are per endpoint and tier, e.g. Search People 20/min free up to 400/min; contact enrichment is unavailable (0/min) on the free tier. A 429 carries retry_after in seconds.",
+    "Bulk contact enrichment and job cancel are documented but not in this entry."
+  ],
+  "sources": [
+    "https://docs.clado.ai/llms.txt",
+    "https://docs.clado.ai/api-reference/openapi.json",
+    "https://docs.clado.ai/api-reference/introduction.md",
+    "https://docs.clado.ai/api-reference/pricing.md",
+    "https://docs.clado.ai/api-reference/rate-limits.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "clado.credits.get",
+      "name": "Get remaining credits",
+      "summary": "Credit balance of the API key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/credits",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/get-credits",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/get-credits.md"
+      }
+    },
+    {
+      "id": "clado.people.search",
+      "name": "Search people in natural language",
+      "summary": "LinkedIn profiles matching a plain-English query, with optional company and school filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Natural-language query; required for a new search.",
+          "example": "software engineers at Y Combinator companies"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Profiles to return, 1 to 100."
+        },
+        "companies": {
+          "in": "query",
+          "type": "array",
+          "description": "Company names to filter by."
+        },
+        "schools": {
+          "in": "query",
+          "type": "array",
+          "description": "School names to filter by."
+        },
+        "advanced_filtering": {
+          "in": "query",
+          "type": "boolean",
+          "description": "AI review of results (default on): fewer but better results."
+        },
+        "search_id": {
+          "in": "query",
+          "type": "string",
+          "description": "search_id of an earlier search, to page through it."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip; use with search_id."
+        }
+      },
+      "notes": [
+        "Default (advanced_filtering on): 1 credit per result returned. advanced_filtering=false: 5 credits flat.",
+        "Page with the returned search_id plus offset."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/search-people",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/search-people.md"
+      }
+    },
+    {
+      "id": "clado.deep_research.start",
+      "name": "Start a deep research job",
+      "summary": "Asynchronous, AI-validated people search for larger result sets; answers with a job_id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search/deep_research",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Natural-language description of the people to find."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most profiles to research."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per profile found.",
+        "Poll clado.deep_research.status with the job_id."
+      ],
+      "job": "research.start",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/initiate-deep-research",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/initiate-deep-research.md"
+      }
+    },
+    {
+      "id": "clado.deep_research.status",
+      "name": "Get deep research status and results",
+      "summary": "Status of a deep research job and the profiles found so far.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/search/deep_research/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id from clado.deep_research.start."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number from 1; omit for all results."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; only with page."
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "research.status",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/get-deep-research-status",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/get-deep-research-status.md"
+      }
+    },
+    {
+      "id": "clado.deep_research.more",
+      "name": "Continue a deep research job",
+      "summary": "Find more profiles for an existing deep research job.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/search/deep_research/{job_id}/more",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The job to continue."
+        },
+        "additional_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "How many more profiles to find."
+        }
+      },
+      "notes": [
+        "1 credit per additional profile."
+      ],
+      "job": "research.start",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/continue-deep-research",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/continue-deep-research.md"
+      }
+    },
+    {
+      "id": "clado.contacts.get",
+      "name": "Get a person's emails and phones",
+      "summary": "Contact information for a profile found by LinkedIn URL, email or phone.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/enrich/contacts",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL; exactly one of linkedin_url, email, phone."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email address of the person."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "Phone number of the person, e.g. +1234567890."
+        },
+        "email_enrichment": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return emails (4 credits if found)."
+        },
+        "phone_enrichment": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return phones (10 credits if found)."
+        }
+      },
+      "notes": [
+        "Default (neither flag): all available contact info for 4 credits. Needs purchased credits (not on the free trial)."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/get-contact-information",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/get-contact-information.md"
+      }
+    },
+    {
+      "id": "clado.profile.get",
+      "name": "Get a LinkedIn profile from Clado's database",
+      "summary": "Stored profile data for a LinkedIn URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/enrich/linkedin",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/username"
+        }
+      },
+      "notes": [
+        "1 credit."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/get-linkedin-profile",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/get-linkedin-profile.md"
+      }
+    },
+    {
+      "id": "clado.profile.scrape",
+      "name": "Scrape a LinkedIn profile live",
+      "summary": "Fresh detailed profile data scraped from a LinkedIn URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/enrich/scrape",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn profile URL.",
+          "example": "https://www.linkedin.com/in/username"
+        }
+      },
+      "notes": [
+        "2 credits."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/scrape-linkedin-profile",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/scrape-linkedin-profile.md"
+      }
+    },
+    {
+      "id": "clado.posts.reactions",
+      "name": "Get reactions on a LinkedIn post",
+      "summary": "People who reacted to a post, filterable by reaction type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/enrich/post-reactions",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn post URL."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "reaction_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "like",
+            "love",
+            "celebrate",
+            "support",
+            "insightful",
+            "funny"
+          ],
+          "description": "Only this reaction type."
+        }
+      },
+      "notes": [
+        "1 credit."
+      ],
+      "job": "social.reactions",
+      "docs_url": "https://docs.clado.ai/api-reference/endpoint/get-post-reactions",
+      "verified": {
+        "docs": "https://docs.clado.ai/api-reference/endpoint/get-post-reactions.md"
+      }
+    }
+  ]
+}

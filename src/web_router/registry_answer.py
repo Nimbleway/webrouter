@@ -62,7 +62,7 @@ def every_provider_name() -> list[str]:
     return (
         registry.available_providers()
         + registry.available_extract_providers()
-        + registry.available_template_providers()
+        + registry.available_live_data_providers()
         + registry.available_research_providers()
         + available_answer_providers()
         + registry.available_browser_providers()

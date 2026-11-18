@@ -1,0 +1,143 @@
+{
+  "vendor": "npi-registry",
+  "name": "NPPES NPI Registry",
+  "category": "health",
+  "summary": "US healthcare providers and organizations by National Provider Identifier: names, taxonomies (specialties), practice and mailing addresses, other identifiers, refreshed daily by CMS.",
+  "docs_url": "https://npiregistry.cms.hhs.gov/api-page",
+  "base_url": "https://npiregistry.cms.hhs.gov",
+  "notes": [
+    "Keyless and read-only. version=2.1 is required on every call; older versions are retired.",
+    "At most 200 results per call (limit) and skip up to 1000, so a search yields at most 1,200 records; narrow the criteria for more.",
+    "enumeration_type and state cannot be the only criteria; country_code alone works only for a non-US country.",
+    "Name and postal-code fields take a trailing * wildcard after at least two characters.",
+    "An NPI does not mean the provider is licensed or credentialed."
+  ],
+  "sources": [
+    "https://npiregistry.cms.hhs.gov/api-page"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "npi-registry.providers.search",
+      "name": "Search or look up providers",
+      "summary": "Providers matching an NPI, a name, a taxonomy description or an address, with full NPI records.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/",
+      "params": {
+        "version": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "2.1"
+          ],
+          "example": "2.1"
+        },
+        "number": {
+          "in": "query",
+          "type": "string",
+          "description": "The 10-digit NPI."
+        },
+        "enumeration_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "NPI-1",
+            "NPI-2"
+          ],
+          "description": "NPI-1 individuals, NPI-2 organizations; needs another criterion."
+        },
+        "taxonomy_description": {
+          "in": "query",
+          "type": "string",
+          "description": "Taxonomy (specialty) description.",
+          "example": "Cardiology"
+        },
+        "name_purpose": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "AO",
+            "Provider"
+          ],
+          "description": "Match names against the Authorized Official (AO) or the provider; both when unset."
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Individuals only; trailing * after two characters."
+        },
+        "use_first_name_alias": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "True",
+            "False"
+          ],
+          "description": "Include similar first names (Robert also finds Bob); default True."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Individuals only; trailing * after two characters."
+        },
+        "organization_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Organizations only; matches every name type (legal, DBA, former, other); trailing * after two characters."
+        },
+        "address_purpose": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "LOCATION",
+            "MAILING",
+            "PRIMARY",
+            "SECONDARY"
+          ],
+          "description": "Which address the address criteria match; any when unset."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City; APO or FPO for military addresses."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter state; needs another criterion besides enumeration_type and country_code.",
+          "example": "NY"
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "5-digit codes also match ZIP+4; trailing * after two characters."
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1-200; default 10."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, up to 1000."
+        }
+      },
+      "notes": [
+        "addresses holds the primary practice location first and the mailing address second; other practice locations come in a separate practice locations array."
+      ],
+      "job": "health.providers.search",
+      "docs_url": "https://npiregistry.cms.hhs.gov/api-page",
+      "verified": {
+        "docs": "https://npiregistry.cms.hhs.gov/api-page"
+      }
+    }
+  ]
+}

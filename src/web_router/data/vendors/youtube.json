@@ -1,0 +1,454 @@
+{
+  "vendor": "youtube",
+  "name": "YouTube Data API",
+  "category": "social",
+  "summary": "Public YouTube data: videos, channels, playlists, comments and search, read with a Google API key.",
+  "docs_url": "https://developers.google.com/youtube/v3/docs",
+  "pricing_url": "https://developers.google.com/youtube/v3/determine_quota_cost",
+  "base_url": "https://www.googleapis.com/youtube/v3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "YOUTUBE_API_KEY"
+        ],
+        "description": "A Google Cloud API key with the YouTube Data API v3 enabled (Google Cloud console > APIs & Services > Credentials)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Only public data, read with an API key. Data private to a user, and every upload, comment, rating or other change, needs OAuth 2.0 and is not covered here.",
+    "Quota is in units, default 10,000 a day per project: most reads cost 1, and search is also capped at 100 calls a day by default.",
+    "Lists page with nextPageToken and pageToken; maxResults tops out at 50 (100 for comment threads).",
+    "part is required on every list call and decides which fields come back."
+  ],
+  "sites": [
+    "youtube.com",
+    "youtu.be"
+  ],
+  "sources": [
+    "https://developers.google.com/youtube/v3/getting-started",
+    "https://developers.google.com/youtube/v3/docs/videos/list",
+    "https://developers.google.com/youtube/v3/docs/search/list",
+    "https://developers.google.com/youtube/v3/docs/channels/list",
+    "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+    "https://developers.google.com/youtube/v3/docs/playlists/list",
+    "https://developers.google.com/youtube/v3/docs/commentThreads/list"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "youtube.videos.get",
+      "name": "Get videos by id or most-popular chart",
+      "summary": "Details and statistics of videos by id, or the most popular videos of a region.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/videos",
+      "params": {
+        "part": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated: snippet, contentDetails, statistics, status, player, topicDetails, liveStreamingDetails, localizations, recordingDetails, paidProductPlacementDetails.",
+          "example": "snippet,statistics"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated video ids. Give exactly one of id or chart.",
+          "example": "dQw4w9WgXcQ"
+        },
+        "chart": {
+          "in": "query",
+          "type": "string",
+          "description": "mostPopular. Give exactly one of id or chart.",
+          "enum": [
+            "mostPopular"
+          ]
+        },
+        "regionCode": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country code; only with chart."
+        },
+        "videoCategoryId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only with chart; default 0."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code for snippet.localized."
+        },
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 50, default 5."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.google.com/youtube/v3/docs/videos/list",
+      "verified": {
+        "docs": "https://developers.google.com/youtube/v3/docs/videos/list"
+      },
+      "notes": [
+        "maxResults and pageToken work with chart, not with id (up to 50 ids per call).",
+        "Each call costs 1 quota unit; the default quota is 10,000 units a day."
+      ]
+    },
+    {
+      "id": "youtube.search",
+      "name": "Search videos, channels and playlists",
+      "summary": "Keyword search across YouTube, with filters for channel, date, duration, region and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "part": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always snippet.",
+          "example": "snippet",
+          "enum": [
+            "snippet"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search query. Supports - (NOT) and | (OR, URL-encode as %7C).",
+          "example": "web scraping"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: video, channel, playlist. Default all three.",
+          "example": "video"
+        },
+        "channelId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results from this channel."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order. Default relevance.",
+          "enum": [
+            "date",
+            "rating",
+            "relevance",
+            "title",
+            "videoCount",
+            "viewCount"
+          ]
+        },
+        "publishedAfter": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339 time.",
+          "example": "2026-01-01T00:00:00Z"
+        },
+        "publishedBefore": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339 time."
+        },
+        "regionCode": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country code."
+        },
+        "relevanceLanguage": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 639-1 language code."
+        },
+        "videoDuration": {
+          "in": "query",
+          "type": "string",
+          "description": "Needs type=video.",
+          "enum": [
+            "any",
+            "short",
+            "medium",
+            "long"
+          ]
+        },
+        "eventType": {
+          "in": "query",
+          "type": "string",
+          "description": "Needs type=video.",
+          "enum": [
+            "completed",
+            "live",
+            "upcoming"
+          ]
+        },
+        "safeSearch": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "moderate",
+            "none",
+            "strict"
+          ]
+        },
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 to 50, default 5."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://developers.google.com/youtube/v3/docs/search/list",
+      "verified": {
+        "docs": "https://developers.google.com/youtube/v3/docs/search/list"
+      },
+      "notes": [
+        "Quota: the default 10,000 units a day applies, but search calls are also capped at 100 per day under default quota. Use videos.get or channels.get when you already have ids.",
+        "Returns ids and snippets only, no statistics: follow up with videos.get."
+      ]
+    },
+    {
+      "id": "youtube.channels.get",
+      "name": "Get channels by id, handle or username",
+      "summary": "Channel details, statistics and the uploads playlist id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/channels",
+      "params": {
+        "part": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated: snippet, contentDetails, statistics, brandingSettings, status, topicDetails, localizations.",
+          "example": "snippet,statistics,contentDetails"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated channel ids. Give exactly one of id, forHandle, forUsername."
+        },
+        "forHandle": {
+          "in": "query",
+          "type": "string",
+          "description": "A handle, with or without the leading @.",
+          "example": "@YouTube"
+        },
+        "forUsername": {
+          "in": "query",
+          "type": "string",
+          "description": "A legacy YouTube username."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string"
+        },
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 50, default 5."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://developers.google.com/youtube/v3/docs/channels/list",
+      "verified": {
+        "docs": "https://developers.google.com/youtube/v3/docs/channels/list"
+      },
+      "notes": [
+        "contentDetails.relatedPlaylists.uploads is the playlist of a channel's uploads: list it with playlist_items.list."
+      ]
+    },
+    {
+      "id": "youtube.playlist_items.list",
+      "name": "List the videos of a playlist",
+      "summary": "The items of a playlist, including a channel's uploads playlist.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/playlistItems",
+      "params": {
+        "part": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated: snippet, contentDetails, id, status.",
+          "example": "snippet,contentDetails"
+        },
+        "playlistId": {
+          "in": "query",
+          "type": "string",
+          "description": "Playlist id. Give exactly one of playlistId or id."
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated playlist item ids."
+        },
+        "videoId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items containing this video."
+        },
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 50, default 5."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+      "verified": {
+        "docs": "https://developers.google.com/youtube/v3/docs/playlistItems/list"
+      }
+    },
+    {
+      "id": "youtube.playlists.list",
+      "name": "List playlists",
+      "summary": "A channel's playlists, or playlists by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/playlists",
+      "params": {
+        "part": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated: snippet, contentDetails, id, status, player, localizations.",
+          "example": "snippet,contentDetails"
+        },
+        "channelId": {
+          "in": "query",
+          "type": "string",
+          "description": "Give exactly one of channelId or id."
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated playlist ids."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string"
+        },
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 50, default 5."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://developers.google.com/youtube/v3/docs/playlists/list",
+      "verified": {
+        "docs": "https://developers.google.com/youtube/v3/docs/playlists/list"
+      }
+    },
+    {
+      "id": "youtube.comments.threads",
+      "name": "List comment threads of a video or channel",
+      "summary": "Top-level comments with optional replies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/commentThreads",
+      "params": {
+        "part": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated: snippet, replies, id.",
+          "example": "snippet,replies"
+        },
+        "videoId": {
+          "in": "query",
+          "type": "string",
+          "description": "Give exactly one of videoId, allThreadsRelatedToChannelId, id."
+        },
+        "allThreadsRelatedToChannelId": {
+          "in": "query",
+          "type": "string"
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated thread ids."
+        },
+        "searchTerms": {
+          "in": "query",
+          "type": "string",
+          "description": "Only comments matching these terms. Not with id."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Default time.",
+          "enum": [
+            "time",
+            "relevance"
+          ]
+        },
+        "textFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "Default html.",
+          "enum": [
+            "html",
+            "plainText"
+          ]
+        },
+        "maxResults": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 100, default 20. Not with id."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous answer."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://developers.google.com/youtube/v3/docs/commentThreads/list",
+      "verified": {
+        "docs": "https://developers.google.com/youtube/v3/docs/commentThreads/list"
+      },
+      "notes": [
+        "Videos with comments disabled answer 403 commentsDisabled.",
+        "replies in the answer holds only some replies; fetch the rest with the comments list endpoint by parentId."
+      ]
+    }
+  ]
+}

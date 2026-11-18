@@ -1,13 +1,18 @@
 """Brave search's option mappings, and Brave answer: its path, model, and how its streamed answer is read.
 
 Kept apart from :mod:`web_router.constants`, which every other provider's
-settings share, so that file stops growing. Brave's host and auth header stay
-there, beside its search settings.
+settings share, so that file stops growing.
 """
 
 from __future__ import annotations
 
 from web_router.types_options import Recency
+
+BRAVE_BASE_URL = "https://api.search.brave.com"
+BRAVE_SEARCH_PATH = "/res/v1/web/search"
+BRAVE_API_KEY_HEADER = "X-Subscription-Token"
+BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
+"""Brave wraps query terms in these; they are its markup, not page content."""
 
 # Verified live on 2026-11-03. POST /res/v1/chat/completions with model `brave`
 # answers OpenAI-style. Citations come only on a streamed call with
@@ -82,5 +87,8 @@ MSG_BRAVE_SEARCH_VALUES = (
     + ", ".join(sorted(BRAVE_COUNTRIES))
     + ", and locale at a language "
     "it lists (pt and zh alone are refused, as each could be either of two). Ask for one of those, leave it "
-    "unset, or name another provider -- see the search table in README.md."
+    "unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )
+
+BRAVE_REFUSED_KEY_CODE = "SUBSCRIPTION_TOKEN_INVALID"
+"""The ``error.code`` Brave answers a refused subscription token with, under HTTP 422 rather than a 401 or 403."""

@@ -1,0 +1,404 @@
+{
+  "vendor": "usgs-earthquake",
+  "name": "USGS Earthquake Catalog",
+  "category": "environment",
+  "summary": "The USGS ComCat earthquake catalog over the FDSN event web service: search and count events worldwide by time, area, magnitude and depth, or fetch one event.",
+  "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+  "base_url": "https://earthquake.usgs.gov/fdsnws/event/1",
+  "notes": [
+    "Keyless. Without format the answer is QuakeML XML; pass format=geojson for JSON.",
+    "At most 20,000 events per query (larger limits answer 400). Page with limit and the 1-based offset, or split the time window.",
+    "Without starttime only the last 30 days are searched. Times are UTC.",
+    "USGS asks automated applications to prefer its real-time GeoJSON feeds when they suffice."
+  ],
+  "sources": [
+    "https://earthquake.usgs.gov/fdsnws/event/1/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "usgs-earthquake.events.search",
+      "name": "Search earthquakes",
+      "summary": "Events matching time, rectangle or circle, magnitude, depth and impact filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "geojson, csv, kml, quakeml/xml or text; the default is quakeml (XML), so pass geojson.",
+          "example": "geojson"
+        },
+        "starttime": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601, UTC unless a zone is given; default now minus 30 days.",
+          "example": "2024-01-01"
+        },
+        "endtime": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601; default now.",
+          "example": "2024-01-31"
+        },
+        "updatedafter": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events updated after this ISO 8601 time."
+        },
+        "minlatitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Rectangle south edge, -90..90."
+        },
+        "maxlatitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Rectangle north edge, -90..90."
+        },
+        "minlongitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Rectangle west edge, -360..360."
+        },
+        "maxlongitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Rectangle east edge, -360..360."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Circle centre latitude."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Circle centre longitude."
+        },
+        "maxradiuskm": {
+          "in": "query",
+          "type": "number",
+          "description": "Circle radius in km (exclusive with maxradius)."
+        },
+        "maxradius": {
+          "in": "query",
+          "type": "number",
+          "description": "Circle radius in degrees, 0..180."
+        },
+        "minmagnitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum magnitude.",
+          "example": 4.5
+        },
+        "maxmagnitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum magnitude."
+        },
+        "mindepth": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum depth in km, -100..1000."
+        },
+        "maxdepth": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum depth in km, -100..1000."
+        },
+        "eventtype": {
+          "in": "query",
+          "type": "string",
+          "description": "Event type; earthquake excludes blasts and other non-earthquakes."
+        },
+        "alertlevel": {
+          "in": "query",
+          "type": "string",
+          "description": "PAGER alert level.",
+          "enum": [
+            "green",
+            "yellow",
+            "orange",
+            "red"
+          ]
+        },
+        "minsig": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum significance."
+        },
+        "reviewstatus": {
+          "in": "query",
+          "type": "string",
+          "description": "automatic, reviewed or all (default).",
+          "enum": [
+            "automatic",
+            "reviewed",
+            "all"
+          ]
+        },
+        "catalog": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to one catalog (catalogs.list)."
+        },
+        "contributor": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to one contributor."
+        },
+        "producttype": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events with this product, e.g. shakemap, losspager, dyfi, moment-tensor."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most events, 1..20000.",
+          "example": 100
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based position of the first event."
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "time (newest first, default), time-asc, magnitude (largest first), magnitude-asc.",
+          "enum": [
+            "time",
+            "time-asc",
+            "magnitude",
+            "magnitude-asc"
+          ]
+        }
+      },
+      "job": "events.list",
+      "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "verified": {
+        "docs": "https://earthquake.usgs.gov/fdsnws/event/1/"
+      }
+    },
+    {
+      "id": "usgs-earthquake.events.get",
+      "name": "Get one earthquake",
+      "summary": "One event by id, with all origins, magnitudes, moment tensors and focal mechanisms.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/query",
+      "params": {
+        "eventid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Data-center event id, as events.search returns it."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "geojson, csv, kml or quakeml/xml.",
+          "example": "geojson"
+        }
+      },
+      "job": "events.get",
+      "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "verified": {
+        "docs": "https://earthquake.usgs.gov/fdsnws/event/1/"
+      }
+    },
+    {
+      "id": "usgs-earthquake.events.count",
+      "name": "Count earthquakes",
+      "summary": "How many events match the same filters as events.search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/count",
+      "params": {
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "geojson, csv, kml, quakeml/xml or text; the default is quakeml (XML), so pass geojson.",
+          "example": "geojson"
+        },
+        "starttime": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601, UTC unless a zone is given; default now minus 30 days.",
+          "example": "2024-01-01"
+        },
+        "endtime": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601; default now.",
+          "example": "2024-01-31"
+        },
+        "updatedafter": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events updated after this ISO 8601 time."
+        },
+        "minlatitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Rectangle south edge, -90..90."
+        },
+        "maxlatitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Rectangle north edge, -90..90."
+        },
+        "minlongitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Rectangle west edge, -360..360."
+        },
+        "maxlongitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Rectangle east edge, -360..360."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Circle centre latitude."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Circle centre longitude."
+        },
+        "maxradiuskm": {
+          "in": "query",
+          "type": "number",
+          "description": "Circle radius in km (exclusive with maxradius)."
+        },
+        "maxradius": {
+          "in": "query",
+          "type": "number",
+          "description": "Circle radius in degrees, 0..180."
+        },
+        "minmagnitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum magnitude.",
+          "example": 4.5
+        },
+        "maxmagnitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum magnitude."
+        },
+        "mindepth": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum depth in km, -100..1000."
+        },
+        "maxdepth": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum depth in km, -100..1000."
+        },
+        "eventtype": {
+          "in": "query",
+          "type": "string",
+          "description": "Event type; earthquake excludes blasts and other non-earthquakes."
+        },
+        "alertlevel": {
+          "in": "query",
+          "type": "string",
+          "description": "PAGER alert level.",
+          "enum": [
+            "green",
+            "yellow",
+            "orange",
+            "red"
+          ]
+        },
+        "minsig": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum significance."
+        },
+        "reviewstatus": {
+          "in": "query",
+          "type": "string",
+          "description": "automatic, reviewed or all (default).",
+          "enum": [
+            "automatic",
+            "reviewed",
+            "all"
+          ]
+        },
+        "catalog": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to one catalog (catalogs.list)."
+        },
+        "contributor": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to one contributor."
+        },
+        "producttype": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events with this product, e.g. shakemap, losspager, dyfi, moment-tensor."
+        }
+      },
+      "notes": [
+        "format here is text (default), geojson or xml."
+      ],
+      "job": "events.list",
+      "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "verified": {
+        "docs": "https://earthquake.usgs.gov/fdsnws/event/1/"
+      }
+    },
+    {
+      "id": "usgs-earthquake.catalogs.list",
+      "name": "List catalogs",
+      "summary": "The catalogs that can be passed as catalog.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/catalogs",
+      "params": {},
+      "job": "reference.codes",
+      "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "verified": {
+        "docs": "https://earthquake.usgs.gov/fdsnws/event/1/"
+      }
+    },
+    {
+      "id": "usgs-earthquake.contributors.list",
+      "name": "List contributors",
+      "summary": "The contributors that can be passed as contributor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/contributors",
+      "params": {},
+      "job": "reference.codes",
+      "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "verified": {
+        "docs": "https://earthquake.usgs.gov/fdsnws/event/1/"
+      }
+    },
+    {
+      "id": "usgs-earthquake.enums.list",
+      "name": "List parameter values",
+      "summary": "Known enumerated values (catalogs, contributors, event types, product types).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/application.json",
+      "params": {},
+      "job": "reference.codes",
+      "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "verified": {
+        "docs": "https://earthquake.usgs.gov/fdsnws/event/1/"
+      }
+    }
+  ]
+}

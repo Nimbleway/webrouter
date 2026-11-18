@@ -1,0 +1,323 @@
+{
+  "vendor": "hyperliquid",
+  "name": "Hyperliquid",
+  "category": "finance",
+  "summary": "Market data (mid prices, order books, candles, funding) and public account state from the Hyperliquid exchange's keyless info endpoint.",
+  "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint",
+  "base_url": "https://api.hyperliquid.xyz",
+  "notes": [
+    "Keyless. Every read is a POST to /info with a JSON body whose 'type' picks the query; reads over POST change nothing.",
+    "Timestamps (startTime, endTime and every time in answers) are epoch MILLISECONDS. Prices and sizes come back as strings.",
+    "Coin names: a perp is its name from meta (BTC); a spot pair is PURR/USDC for PURR and @{index} for others, the index being the pair's position in spotMeta's universe; HIP-3 perps carry the dex prefix (xyz:XYZ100).",
+    "Time-range answers are capped (500 elements per the general docs, 2000 for fills); page by sending the last returned timestamp as the next startTime.",
+    "For an account query, use the master or sub-account address, not an agent wallet's address, or the answer is empty."
+  ],
+  "sources": [
+    "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint",
+    "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "hyperliquid.mids.all",
+      "name": "Get mid prices of all coins",
+      "summary": "The current mid price of every coin, keyed by coin name.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/info",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be allMids.",
+          "enum": [
+            "allMids"
+          ],
+          "example": "allMids"
+        },
+        "dex": {
+          "in": "body",
+          "type": "string",
+          "description": "Perp dex name; empty or omitted is the first perp dex. Spot mids appear only with the first perp dex."
+        }
+      },
+      "notes": [
+        "A read over POST. Falls back to the last trade price when a book is empty."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint",
+      "verified": {
+        "docs": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint"
+      }
+    },
+    {
+      "id": "hyperliquid.book.l2",
+      "name": "Get a coin's order book",
+      "summary": "Level-2 order book snapshot of one coin, up to 20 levels per side.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/info",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be l2Book.",
+          "enum": [
+            "l2Book"
+          ],
+          "example": "l2Book"
+        },
+        "coin": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Coin name (see the vendor notes for spot and HIP-3 naming).",
+          "example": "BTC"
+        },
+        "nSigFigs": {
+          "in": "body",
+          "type": "integer",
+          "description": "Aggregate levels to this many significant figures: 2, 3, 4 or 5 (null for full precision).",
+          "enum": [
+            2,
+            3,
+            4,
+            5
+          ]
+        },
+        "mantissa": {
+          "in": "body",
+          "type": "integer",
+          "description": "1, 2 or 5; allowed only when nSigFigs is 5.",
+          "enum": [
+            1,
+            2,
+            5
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint",
+      "verified": {
+        "docs": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint"
+      }
+    },
+    {
+      "id": "hyperliquid.candles",
+      "name": "Get candles for a coin",
+      "summary": "OHLCV candles of one coin over a time range.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/info",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be candleSnapshot.",
+          "enum": [
+            "candleSnapshot"
+          ],
+          "example": "candleSnapshot"
+        },
+        "req": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{coin, interval, startTime, endTime}; times in epoch ms. Intervals: 1m, 3m, 5m, 15m, 30m, 1h, 2h, 4h, 8h, 12h, 1d, 3d, 1w, 1M.",
+          "example": {
+            "coin": "BTC",
+            "interval": "1h",
+            "startTime": 1700000000000,
+            "endTime": 1700086400000
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Only the 5,000 most recent candles of an interval are available."
+      ],
+      "job": "market.history",
+      "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint",
+      "verified": {
+        "docs": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint"
+      }
+    },
+    {
+      "id": "hyperliquid.perps.meta_and_contexts",
+      "name": "Get perpetuals metadata and market contexts",
+      "summary": "The perp universe (names, size decimals, max leverage) with each asset's mark price, funding, open interest and volume.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/info",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be metaAndAssetCtxs.",
+          "enum": [
+            "metaAndAssetCtxs"
+          ],
+          "example": "metaAndAssetCtxs"
+        },
+        "dex": {
+          "in": "body",
+          "type": "string",
+          "description": "Perp dex name; empty or omitted is the first perp dex."
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals",
+      "verified": {
+        "docs": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals"
+      }
+    },
+    {
+      "id": "hyperliquid.funding.history",
+      "name": "Get a coin's funding rate history",
+      "summary": "Historical funding rates of one perp over a time range.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/info",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be fundingHistory.",
+          "enum": [
+            "fundingHistory"
+          ],
+          "example": "fundingHistory"
+        },
+        "coin": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Perp name.",
+          "example": "ETH"
+        },
+        "startTime": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Start, epoch ms, inclusive.",
+          "example": 1700000000000
+        },
+        "endTime": {
+          "in": "body",
+          "type": "integer",
+          "description": "End, epoch ms, inclusive; defaults to now."
+        }
+      },
+      "notes": [
+        "A read over POST. Capped per answer; page from the last returned time."
+      ],
+      "job": "market.history",
+      "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals",
+      "verified": {
+        "docs": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals"
+      }
+    },
+    {
+      "id": "hyperliquid.account.state",
+      "name": "Get an account's perp positions and margin",
+      "summary": "Open perp positions, margin summary and withdrawable balance of one address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/info",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be clearinghouseState.",
+          "enum": [
+            "clearinghouseState"
+          ],
+          "example": "clearinghouseState"
+        },
+        "user": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "42-character hex address of the master or sub-account.",
+          "example": "0x0000000000000000000000000000000000000000"
+        },
+        "dex": {
+          "in": "body",
+          "type": "string",
+          "description": "Perp dex name; empty or omitted is the first perp dex."
+        }
+      },
+      "notes": [
+        "A read over POST. Public data: any address can be queried."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals",
+      "verified": {
+        "docs": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals"
+      }
+    },
+    {
+      "id": "hyperliquid.account.fills",
+      "name": "Get an account's fills over a time range",
+      "summary": "Trade fills of one address between two times.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/info",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Must be userFillsByTime.",
+          "enum": [
+            "userFillsByTime"
+          ],
+          "example": "userFillsByTime"
+        },
+        "user": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "42-character hex address.",
+          "example": "0x0000000000000000000000000000000000000000"
+        },
+        "startTime": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Start, epoch ms, inclusive.",
+          "example": 1700000000000
+        },
+        "endTime": {
+          "in": "body",
+          "type": "integer",
+          "description": "End, epoch ms, inclusive; defaults to now."
+        },
+        "aggregateByTime": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Combine partial fills of one crossing order."
+        }
+      },
+      "notes": [
+        "A read over POST. At most 2,000 fills per answer, and only the 10,000 most recent fills are reachable."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint",
+      "verified": {
+        "docs": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint"
+      }
+    }
+  ]
+}

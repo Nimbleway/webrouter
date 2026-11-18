@@ -12,6 +12,19 @@ from typing import Any, Literal, get_args
 
 from web_router._chains import chain as _chain
 from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
+from web_router.constants_extract import MCP_DESC_EXTRACT, MCP_EXTRACT_PROPERTIES
+from web_router.constants_litellm import LITELLM_AUTO_SETTINGS, LITELLM_ENV_BY_PROVIDER
+from web_router.constants_live_data import (
+    MCP_DESC_LIVE_DATA,
+    MCP_DESC_LIVE_DATA_SOURCE,
+    MCP_DESC_LIVE_DATA_SOURCES,
+    MCP_LIVE_DATA_PROPERTIES,
+    MCP_LIVE_DATA_SOURCE_PROPERTIES,
+    MCP_LIVE_DATA_SOURCES_PROPERTIES,
+    MCP_TOOL_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA_SOURCE,
+    MCP_TOOL_LIVE_DATA_SOURCES,
+)
 from web_router.constants_mcp import (
     MCP_BUDGET_START_PROPERTIES,
     MCP_DESC_BUDGET_START,
@@ -24,6 +37,7 @@ from web_router.constants_mcp import (
 )
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
+from web_router.constants_vendors_mcp import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -34,7 +48,6 @@ from web_router.types import (
     BrowserRequest,
     BrowserState,
     ExtractFormat,
-    ExtractRequest,
     FieldPath,
     JobState,
     Provider,
@@ -57,9 +70,13 @@ PROVIDER_EXA = Provider.EXA.value
 PROVIDER_PARALLEL = Provider.PARALLEL.value
 PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
 PROVIDER_LINKUP = Provider.LINKUP.value
+PROVIDER_SELTZ = Provider.SELTZ.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
+PROVIDER_OCTEN = Provider.OCTEN.value
+PROVIDER_KEIROLABS = Provider.KEIROLABS.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
+PROVIDER_VALYU = Provider.VALYU.value
 PROVIDER_AGENTCORE = Provider.AGENTCORE.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
@@ -99,16 +116,15 @@ MAX_INHERITS_FROM_AUTO: tuple[str, ...] = ("chain", "members_config")
 DEFAULT_PROVIDER = PROVIDER_AUTO
 """Used when the caller names no provider anywhere.
 
-``auto`` needs no credential, so an unconfigured router still searches instead
-of raising about a key the caller never mentioned. Naming a provider explicitly
-keeps the old behaviour: a missing key for *that* provider is still an error.
+``auto`` needs no credential, so an unconfigured router still searches instead of raising about a key the caller
+never mentioned. Naming a provider explicitly keeps the old behaviour: a missing key for *that* provider is still
+an error.
 """
 
 # --- Install extras ---------------------------------------------------------
 
-# Extras are named after the methods you call, not the backends behind them, so
-# a provider maps to the extra that installs it rather than owning one of its
-# own. See the comment over [project.optional-dependencies] in pyproject.toml.
+# Extras are named after the methods you call, not the backends behind them, so a provider maps to the extra that
+# installs it rather than owning one of its own. See the comment over [project.optional-dependencies] in pyproject.toml.
 EXTRA_SEARCH = "search"
 EXTRA_EXTRACT = "extract"
 EXTRA_RESEARCH = "research"
@@ -120,18 +136,16 @@ EXTRA_ALL = "all"
 EXTRA_MCP = "mcp"
 """The one extra that is not named after a method.
 
-``search``, ``extract`` and ``research`` install backends for a method you
-call. ``mcp`` installs a way to *reach* those methods from somewhere else, so
-it names a transport instead -- the deliberate exception to the rule the
+``search``, ``extract`` and ``research`` install backends for a method you call. ``mcp`` installs a way to *reach*
+those methods from somewhere else, so it names a transport instead -- the deliberate exception to the rule the
 comment over [project.optional-dependencies] states.
 """
 
 EXTRA_AWS = "aws"
 """botocore, for the backends reached through an AWS account -- ``agentcore`` so far.
 
-The second exception to the method rule: botocore is a large install that
-signs requests for one cloud, and a ``search`` install that never touches AWS
-should not carry it. ``all`` includes it.
+The second exception to the method rule: botocore is a large install that signs requests for one cloud, and a
+``search`` install that never touches AWS should not carry it. ``all`` includes it.
 """
 
 # --- Credentials ------------------------------------------------------------
@@ -145,9 +159,13 @@ ENV_EXA_API_KEY = "EXA_API_KEY"
 ENV_PARALLEL_API_KEY = "PARALLEL_API_KEY"
 ENV_PERPLEXITY_API_KEY = "PERPLEXITY_API_KEY"
 ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
+ENV_SELTZ_API_KEY = "SELTZ_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
+ENV_OCTEN_API_KEY = "OCTEN_API_KEY"
+ENV_KEIROLABS_API_KEY = "KEIROLABS_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
+ENV_VALYU_API_KEY = "VALYU_API_KEY"
 ENV_AGENTCORE_GATEWAY_URL = "AGENTCORE_GATEWAY_URL"
 ENV_OXYLABS_USERNAME = "OXYLABS_USERNAME"
 ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
@@ -172,27 +190,30 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_PARALLEL: ENV_PARALLEL_API_KEY,
     PROVIDER_PERPLEXITY: ENV_PERPLEXITY_API_KEY,
     PROVIDER_LINKUP: ENV_LINKUP_API_KEY,
+    PROVIDER_SELTZ: ENV_SELTZ_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
+    PROVIDER_OCTEN: ENV_OCTEN_API_KEY,
+    PROVIDER_KEIROLABS: ENV_KEIROLABS_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
+    PROVIDER_VALYU: ENV_VALYU_API_KEY,
     # Not a credential: the AWS one comes from botocore's chain. The gateway is
     # what has to exist before a call can be worth trying.
     PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
     PROVIDER_YOU_MCP: None,
     PROVIDER_EXA_MCP: None,
     PROVIDER_PARALLEL_MCP: None,
+    **LITELLM_ENV_BY_PROVIDER,
     PROVIDER_AUTO: None,
 }
 """Which variable holds each provider's credential; ``None`` means it needs none.
 
-A table rather than a class attribute so :func:`configured_providers` can answer
-without importing a single provider module, and with it every optional SDK.
-``tests/test_contract.py`` checks it against the registry.
+A table rather than a class attribute so :func:`configured_providers` can answer without importing a single
+provider module, and with it every optional SDK. ``tests/test_contract.py`` checks it against the registry.
 
-Search only -- :data:`EXTRACT_ENV_BY_PROVIDER` is the same table for extract.
-The two are separate because the two method registries are: a name that serves
-both appears in each, and one that serves only extract appears in neither this
-nor :func:`available_providers`.
+Search only -- :data:`EXTRACT_ENV_BY_PROVIDER` is the same table for extract. The two are separate because the
+two method registries are: a name that serves both appears in each, and one that serves only extract appears in
+neither this nor :func:`available_providers`.
 """
 
 EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -213,20 +234,9 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each extract provider needs, all of them; ``()`` means none.
 
-A tuple rather than a single name because two backends need more than a key:
-Oxylabs authenticates with a username and password, and Bright Data needs the
-zone that routes the request beside its token. ``jina`` needs nothing -- a key
-only raises its rate limit -- and ``auto`` needs whatever its chain does.
-"""
-
-TEMPLATE_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
-    PROVIDER_NIMBLE: (ENV_NIMBLE_API_KEY,),
-}
-"""Which variables each template provider needs, all of them.
-
-Shaped like :data:`EXTRACT_ENV_BY_PROVIDER`. A template run fetches and
-parses a page on the backend's account, so there is no keyless tier, and no
-``auto``: a template's name belongs to one vendor.
+A tuple rather than a single name because two backends need more than a key: Oxylabs authenticates with a
+username and password, and Bright Data needs the zone that routes the request beside its token. ``jina`` needs
+nothing -- a key only raises its rate limit -- and ``auto`` needs whatever its chain does.
 """
 
 RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -304,11 +314,10 @@ same request behaving differently for reasons the caller never chose.
 FOLLOW_REDIRECTS = False
 """Provider clients never follow redirects, and this is pinned rather than inherited.
 
-httpx replays request headers -- the auth header included -- to the redirect
-target, and does not strip them when that target is a different host. A search
-endpoint has no legitimate reason to redirect, so following one is either a
-misconfiguration or an attempt to collect the credential. Surfacing it as an
-error is the safe reading of both. See :data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
+httpx replays request headers -- the auth header included -- to the redirect target, and does not strip them when that
+target is a different host. A search endpoint has no legitimate reason to redirect, so following one is either a
+misconfiguration or an attempt to collect the credential. Surfacing it as an error is the safe reading of both. See
+:data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
 """
 
 MSG_HTTP_ERROR = "HTTP {status}: {body}"
@@ -374,12 +383,12 @@ HTTP 200 and no content, so the status is the only thing that distinguishes a
 fetched page from one that was refused.
 """
 
-NIMBLE_TEMPLATE_SUCCESS_STATUS = NIMBLE_EXTRACT_SUCCESS_STATUS
-"""A template run answers with the same task envelope as an extract, and the same one ``status`` means fetched."""
+NIMBLE_LIVE_DATA_SUCCESS_STATUS = NIMBLE_EXTRACT_SUCCESS_STATUS
+"""A Nimble live data run answers with an extract's task envelope, and the same one ``status`` means fetched."""
 
-NIMBLE_TEMPLATE_PARSING_ERROR_STATUS = "error"
-NIMBLE_TEMPLATE_PARSING_SUCCESS_STATUS = "success"
-"""What ``data.parsing`` says when a template reports how it did rather than the record itself.
+NIMBLE_LIVE_DATA_PARSING_ERROR_STATUS = "error"
+NIMBLE_LIVE_DATA_PARSING_SUCCESS_STATUS = "success"
+"""What ``data.parsing`` says when a Nimble template reports how it did rather than the record itself.
 
 Verified live on 2026-10-22: a successful run put the record straight under
 ``data.parsing`` -- its keys the template's own output fields -- which is the
@@ -388,12 +397,14 @@ third shape the SDK's ``DataParsing`` union allows. The other two wrap it: a
 beside an ``error``. All three are read; only the last is a failure.
 """
 
-NIMBLE_TEMPLATE_STATUS_FIELD = "status"
-NIMBLE_TEMPLATE_RECORD_FIELD = "entities"
-NIMBLE_TEMPLATE_ERROR_FIELD = "error"
+NIMBLE_LIVE_DATA_STATUS_FIELD = "status"
+NIMBLE_LIVE_DATA_RECORD_FIELD = "entities"
+NIMBLE_LIVE_DATA_ERROR_FIELD = "error"
 
-NIMBLE_TEMPLATE_RECORD_SHAPE: frozenset[str] = frozenset({NIMBLE_TEMPLATE_STATUS_FIELD, NIMBLE_TEMPLATE_RECORD_FIELD})
-NIMBLE_TEMPLATE_ERROR_SHAPE: frozenset[str] = frozenset({NIMBLE_TEMPLATE_STATUS_FIELD, NIMBLE_TEMPLATE_ERROR_FIELD})
+NIMBLE_LIVE_DATA_RECORD_SHAPE: frozenset[str] = frozenset(
+    {NIMBLE_LIVE_DATA_STATUS_FIELD, NIMBLE_LIVE_DATA_RECORD_FIELD}
+)
+NIMBLE_LIVE_DATA_ERROR_SHAPE: frozenset[str] = frozenset({NIMBLE_LIVE_DATA_STATUS_FIELD, NIMBLE_LIVE_DATA_ERROR_FIELD})
 """The exact keys of the SDK's two wrapped shapes; a dict with any other key beside them is a bare record."""
 
 # --- You.com ----------------------------------------------------------------
@@ -421,16 +432,14 @@ TAVILY_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
     # much text each result carries, include_raw_content adds the page body.
     #
     # Two traps here, both of which have already caught this table once:
-    # `chunks_per_source` rode **kwargs here once and did nothing, which made
-    # `fast` an exact duplicate of `lite` (verified live: byte-identical
-    # snippets across every query tried). And Tavily has since grown its own
-    # `fast`/`ultra-fast` depths, which are latency tiers rather than content
-    # tiers; our `fast` must not be mapped onto them just because it matches.
+    # `chunks_per_source` rode **kwargs here once and did nothing, which made `fast` an exact duplicate of `lite`
+    # (verified live: byte-identical snippets across every query tried). And Tavily has since grown its own
+    # `fast`/`ultra-fast` depths, which are latency tiers rather than content tiers; our `fast` must not be mapped onto
+    # them just because it matches.
     #
-    # `advanced` buys a modest content bump over `basic` -- roughly +17% of
-    # snippet, and steadier across queries -- and costs two API credits rather
-    # than one. That is the honest middle rung: Tavily's own step change in
-    # volume is raw content, which is what `deep` asks for.
+    # `advanced` buys a modest content bump over `basic` -- roughly +17% of snippet, and steadier across queries -- and
+    # costs two API credits rather than one. That is the honest middle rung: Tavily's own step change in volume is raw
+    # content, which is what `deep` asks for.
     #
     # `lite` runs long of the shared definition (a snippet of about 500
     # characters): `basic` returns up to three chunks of about 500 each, so the
@@ -528,12 +537,11 @@ joins the default chain as though its key were in the environment. Any other
 backend would only fail to start on it, so a client there counts for nothing.
 """
 
-AUTO_SETTING_PROVIDERS: dict[str, str] = {PROVIDER_AGENTCORE: "gateway_url"}
+AUTO_SETTING_PROVIDERS: dict[str, str] = {PROVIDER_AGENTCORE: "gateway_url", **LITELLM_AUTO_SETTINGS}
 """The backends configured in code by a setting rather than a key, and that setting's name.
 
-``agentcore`` takes no key -- its credential is the AWS one botocore resolves -- so
-the gateway URL is what says it is set up, in ``provider_config`` as in the
-environment's ``AGENTCORE_GATEWAY_URL``.
+``agentcore`` takes no key -- its credential is the AWS one botocore resolves -- so the gateway URL says it is set
+up, as ``AGENTCORE_GATEWAY_URL`` does. A LiteLLM search provider's ``base_url`` stands in for its proxy URL.
 """
 
 AUTO_PREFERRED: tuple[str, ...] = _chain("search", "preferred")
@@ -553,14 +561,14 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek`` and
-``agentcore`` joined after the scan that set the order, and the ranking set has
-no rows for them. A backend that joins later goes at the end of the file's
-``appended``, so joining changes no environment's routing; ``make chains`` moves
-it ahead of the keyless tier only once frozen results rank it.
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen`` and
+``keirolabs`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
+later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it
+ahead of the keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
+    (PROVIDER_NIMBLE, {"allow_keyless": True}),
     (PROVIDER_TAVILY, {"allow_keyless": True}),
     (PROVIDER_YOU_MCP, {}),
     (PROVIDER_EXA_MCP, {}),
@@ -569,14 +577,10 @@ AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
 )
 """Tried when no credential is available, in order. Unmeasured, hand-ordered: never ranked by ``make chains``.
 
-Ordered rather than random on purpose: a router that picks a different backend
-each run returns different result counts and content lengths for the same
-query, and a bug reported against it cannot be reproduced. The chain still
-gives what random was reaching for -- if one anonymous tier is rate-limited,
-the next one answers. Exa's and Parallel's MCP servers joined last (2026-10-01),
-so a keyless call reaches them only when Tavily and You.com fail, and none that
-was being served moves. Their order between them is not yet backed by a scan.
-Keenable's ``/public`` endpoint joined after them (2026-10-13) on the same terms.
+Ordered rather than random, so a bug reported against it can be reproduced; if
+one anonymous tier is rate-limited, the next one answers. Nimble leads (2026-11-15);
+Exa's and Parallel's MCP servers (2026-10-01) and Keenable's ``/public`` endpoint
+(2026-10-13) joined at the end, their order not yet backed by a scan.
 """
 
 AUTO_SUPPORTED_PARAMETERS = NORMALIZED_PARAMETERS
@@ -616,6 +620,7 @@ wants another order passes their own ``chain``.
 """
 
 AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
+    (PROVIDER_NIMBLE, {"allow_keyless": True}),
     (PROVIDER_TAVILY, {"allow_keyless": True}),
     (PROVIDER_JINA, {}),
     (PROVIDER_FIRECRAWL, {"allow_keyless": True}),
@@ -626,6 +631,8 @@ AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
 Firecrawl joined last (2026-10-01, documented at docs.firecrawl.dev/rate-limits),
 so it is reached only when the two before it fail and no call already served
 moves. Keenable's ``/public`` fetch joined after it (2026-10-13) on the same terms.
+Nimble's keyless tier joined first (2026-11-15), so a keyless extract goes to
+Nimble and falls back to the others when its daily cap is spent.
 """
 
 AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
@@ -723,7 +730,7 @@ MSG_AUTO_UNFORMATTED = "returns only {formats}"
 
 MSG_AUTO_SEARCH_NO_MEMBER = (
     "No backend in its chain maps it, so nothing was searched: {skipped}. Drop the option, set a "
-    "credential for a backend that maps it, or name one -- see the search table in README.md."
+    "credential for a backend that maps it, or name one -- see the search table at https://docs.webrouter.net/providers#search."
 )
 """Replaces the ``provider_options`` advice, which ``auto`` cannot act on. Raised before any member is tried."""
 
@@ -737,13 +744,13 @@ MSG_MAX_BAD_HEDGE = "hedge is the seconds the first backend runs alone, a number
 
 MSG_AUTO_EXTRACT_NO_MEMBER = (
     "No backend in its chain returns it, so nothing was fetched: {skipped}. Ask for one of those, set a "
-    "credential for a backend that returns it, or name one -- see the extract table in README.md."
+    "credential for a backend that returns it, or name one -- see the extract table at https://docs.webrouter.net/providers#extract."
 )
 """Replaces the usual advice on the format error. Raised before any member is tried."""
 
 MSG_AUTO_EXTRACT_UNMAPPED = (
     "No backend in its chain maps it, so nothing was fetched: {skipped}. Drop the option, set a "
-    "credential for a backend that maps it, or name one -- see the extract table in README.md."
+    "credential for a backend that maps it, or name one -- see the extract table at https://docs.webrouter.net/providers#extract."
 )
 """The same for an option -- ``profile`` -- that no member returning the format maps."""
 
@@ -957,15 +964,15 @@ INTEGRATION_ROUTING_GUIDE_INTRO = (
 INTEGRATION_ROUTING_GUIDE_METHODS: dict[str, str] = {
     "search": (
         "{search} finds pages: ranked results, each with a title, a URL and the text the backend returned, "
-        "in about a second. Start here for every fact you need. Search for one fact at a time rather than the "
+        "in a few seconds. Start here for every fact you need. Search for one fact at a time rather than the "
         "whole question -- a question with several parts is several searches -- and make independent searches "
         "in parallel. When the results do not settle a fact, rephrase and search again rather than guess."
     ),
     "extract": (
-        "{extract} reads the full page at URLs you already have, in about a second each. Use it when a result "
+        "{extract} reads the full page at URLs you already have, in a few seconds. Use it when a result "
         "is clearly the right page but its text is cut off or lacks the detail you need -- a table, a list, a "
-        "figure, a date. Pass only URLs a search returned, up to five at a time. It does not find pages; "
-        "search does."
+        "figure, a date. Pass URLs a search returned, the user gave, or a canonical page you know (a project's "
+        "releases page, the official docs), up to five at a time. It does not find pages; search does."
     ),
     "answer": (
         "{answer} returns a backend's written answer to one question, with the pages it rests on, in a few "
@@ -1024,10 +1031,8 @@ promptly.
 JOB_TIMEOUT_ERROR_SUFFIXES = ("TimeoutError", "TimeoutException")
 """How a poll's failure is recognized as a timed-out request: by the names of its exception classes.
 
-By name rather than by type because the job core imports no HTTP client or SDK:
-``TimeoutError`` (``asyncio``'s is the same class), httpx's
-``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in
-one of these.
+By name rather than by type because the job core imports no HTTP client or SDK: ``TimeoutError`` (``asyncio``'s
+is the same class), httpx's ``TimeoutException`` family and Stainless SDKs' ``APITimeoutError`` all end in one of these.
 """
 
 JOB_POLL_BACKOFF = 1.5
@@ -2333,7 +2338,7 @@ MSG_AUTO_RESEARCH_EXHAUSTED = "no backend in the chain started the run: {failure
 
 MSG_AUTO_RESEARCH_NO_CAPABLE_BACKEND = (
     "No configured research backend maps it, so no run was started: {skipped}. Drop the option, "
-    "or set a credential for a backend that maps it -- see the research table in README.md."
+    "or set a credential for a backend that maps it -- see the research table at https://docs.webrouter.net/providers#research."
 )
 """Replaces the usual advice on the parameter error, which points at ``provider_options`` --
 something ``auto`` does not have. Reported before any run starts, so nothing is billed for a
@@ -2387,13 +2392,13 @@ A level no member in the chain serves raises, naming why each one was passed ove
 
 MSG_AUTO_BROWSER_NO_ELIGIBLE = (
     "In the `auto` browser chain, {skipped}. Drop the option, set a credential for a backend that "
-    "maps it, or name one -- see the browser table in README.md."
+    "maps it, or name one -- see https://docs.webrouter.net/browser"
 )
 """Raised before anything is opened, so nothing is billed for a session no member could honour."""
 
 MSG_AUTO_BROWSER_NO_ELIGIBLE_MISSING = (
     "In the `auto` browser chain, {skipped}. Set the option a backend needs, leave the one that needs "
-    "it unset, or name a backend -- see the browser table in README.md."
+    "it unset, or name a backend -- see https://docs.webrouter.net/browser"
 )
 """Raised instead when a member would have served the request but for an option it needs beside another."""
 
@@ -2442,10 +2447,8 @@ MSG_MISSING_SETTING = (
 
 MSG_UNKNOWN_PROVIDER = "Unknown provider {name!r}. Available providers: {available}."
 
-MSG_PROVIDER_NOT_INSTALLED = (
-    "Provider {name!r} requires an optional dependency. Install it with: "
-    "uv sync --extra {extra} in your web-router clone, or make setup for every extra"
-)
+INSTALL_EXTRA = 'pip install "webrouter[{extra}]" (or uv sync --extra {extra} in a web-router clone)'
+MSG_PROVIDER_NOT_INSTALLED = "Provider {name!r} requires an optional dependency. Install it with: " + INSTALL_EXTRA
 
 MSG_UNSUPPORTED_PARAMETERS = "Provider {provider!r} does not map {names}."
 
@@ -2462,7 +2465,7 @@ MSG_OPTION_VALUE = "{name}={value!r}"
 
 MSG_UNSUPPORTED_STEALTH = (
     "It serves {levels}. Ask for one of those, leave stealth unset for the backend's own default, or "
-    "name a provider that serves the level -- see the browser table in README.md."
+    "name a provider that serves the level -- see https://docs.webrouter.net/browser"
 )
 """Follows :data:`MSG_UNSUPPORTED_VALUES` for a stealth level: another level is never served in its place."""
 
@@ -2482,15 +2485,6 @@ MSG_UNSUPPORTED_PROXY_COUNTRY = (
 MSG_SEARCH_FAILED = "search failed: {error}"
 
 MSG_EXTRACT_FAILED = "extract failed: {error}"
-
-MSG_TEMPLATE_FAILED = "template run failed: {error}"
-
-MSG_TEMPLATES_FAILED = "listing templates failed: {error}"
-
-MSG_TEMPLATE_GET_FAILED = "fetching template {name!r} failed: {error}"
-
-MSG_TEMPLATE_NOT_FOUND = "the backend has no template named {name!r}"
-"""An unknown template name, as a backend reports it -- Nimble with a 404 on describe and on run."""
 
 MSG_RESEARCH_FAILED = "research failed: {error}"
 
@@ -2696,7 +2690,7 @@ MSG_BROWSER_LEAKED = (
     "context manager, or call release() on it."
 )
 
-MSG_EXTRACT_BAD_STATUS = "the backend fetched nothing and reported status {status!r}"
+MSG_EXTRACT_BAD_STATUS = "the page came back with status {status!r}"
 
 MSG_EXTRACT_UNSUCCESSFUL = "the backend reported the fetch as unsuccessful and gave no reason"
 
@@ -2715,28 +2709,8 @@ Not a case any provider here should reach: it means a payload was shaped in a
 way its mapping did not expect. Saying so beats returning an empty response.
 """
 
-MSG_TEMPLATE_BAD_STATUS = "the backend fetched nothing for template {template!r} and reported status {status!r}"
-
-MSG_TEMPLATE_PARSING_FAILED = "the backend fetched the page but template {template!r} failed to parse it: {error}"
-
-MSG_TEMPLATE_PAGE_FAILED = "the site answered template {template!r} with HTTP {status}, so there is no page to parse"
-"""A fetch the site refused: the envelope says ``success`` and the page body is an error page.
-
-Verified on a recorded response: a run on a page that does not exist comes
-back ``status: success`` with ``status_code: 404`` and a "record" whose
-title is the error page's. A record parsed from an error page is not the
-record the template promises, so the run is a failure.
-"""
-
-NIMBLE_TEMPLATE_FAILED_STATUS_FLOOR = 400
+NIMBLE_LIVE_DATA_FAILED_STATUS_FLOOR = 400
 """The first HTTP status that means the site did not serve the page; everything from here up is a failed run."""
-
-MSG_TEMPLATE_NO_RECORD = "the backend fetched the page but answered without a record for template {template!r}"
-"""Stands in when a fetched page carries no parsed record and no reason.
-
-Not a case Nimble reaches: a run either parses, or says in ``data.parsing``
-that it failed. Saying so beats returning an empty record as the answer.
-"""
 
 MSG_REDIRECTS_WITH_CREDENTIAL = (
     "Provider {provider!r} refuses follow_redirects=True while it is sending a credential. "
@@ -2797,14 +2771,6 @@ MSG_EVALS_JUDGE_STOPPED = "the reply stopped on {stop_reason!r} before it was fi
 
 MSG_EVALS_ROW_OUTCOME = "an EvaluationRow carries exactly one of grade and error, and failed_at with the error alone"
 
-
-# --- Brave ------------------------------------------------------------------
-
-BRAVE_BASE_URL = "https://api.search.brave.com"
-BRAVE_SEARCH_PATH = "/res/v1/web/search"
-BRAVE_API_KEY_HEADER = "X-Subscription-Token"
-BRAVE_HIGHLIGHT_TAGS = ("<strong>", "</strong>")
-"""Brave wraps query terms in these; they are its markup, not page content."""
 
 # --- Exa --------------------------------------------------------------------
 
@@ -3142,9 +3108,6 @@ MCP_MSG_INSTRUCTIONS_NO_KEYS = (
 
 MCP_TOOL_SEARCH = "search"
 MCP_TOOL_EXTRACT = "extract"
-MCP_TOOL_TEMPLATES = "templates"
-MCP_TOOL_TEMPLATE = "template"
-MCP_TOOL_RUN_TEMPLATE = "run_template"
 MCP_TOOL_ANSWER = "answer"
 MCP_TOOL_RESEARCH = "research"
 MCP_TOOL_RESEARCH_STATUS = "research_status"
@@ -3450,8 +3413,6 @@ MCP_HANDLE_TEMPLATE = "{tool}-{number:04d}"
 
 MCP_TRUNCATION_MARKER = " ... [truncated]"
 
-MCP_JSON_INDENT = 2
-
 MCP_REDACTED = "[redacted]"
 """What a browse result shows in place of a URL or value that would hand the model a credential."""
 
@@ -3589,7 +3550,6 @@ MCP_MIME_JSON = "application/json"
 MCP_ARG_PROVIDER = "provider"
 MCP_ARG_HANDLE = "handle"
 
-MCP_METHOD_TEMPLATE = "template"
 MCP_METHOD_BROWSER = AUTO_CHAIN_BROWSER
 """How the capabilities resource keys a method whose tools are not named after it.
 
@@ -3597,53 +3557,6 @@ The three template tools share one registry, and the browser tools' method is
 ``open_browser``; the browser's key is its ``chain`` entry, so the resource and
 ``provider_config`` speak the same name.
 """
-
-# `profile` is left out on purpose, as on `browser_open`: a saved, logged-in
-# identity is the user's own, set in code, never from a conversation.
-MCP_EXTRACT_PROPERTIES: dict[str, dict[str, Any]] = {
-    "urls": {
-        "type": "array",
-        "items": {"type": "string"},
-        "minItems": 1,
-        "description": _described(ExtractRequest, "urls"),
-    },
-    "format": {
-        "type": "string",
-        "enum": list(get_args(ExtractFormat)),
-        "description": (
-            "Which representation of each page to return. A backend that cannot produce it says so "
-            "rather than returning a different one."
-        ),
-    },
-}
-
-MCP_TEMPLATES_PROPERTIES: dict[str, dict[str, Any]] = {
-    "limit": {"type": "integer", "minimum": 1, "description": "How many templates to list. Unset, the backend's page."},
-    "offset": {"type": "integer", "minimum": 0, "description": "How many to skip first, for the next page."},
-}
-
-MCP_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
-    "name": {"type": "string", "description": "The template's name, as `templates` lists it."},
-}
-
-MCP_RUN_TEMPLATE_PROPERTIES: dict[str, dict[str, Any]] = {
-    "template": {"type": "string", "description": "The template's name, as `templates` lists it."},
-    "inputs": {
-        "type": "object",
-        "description": (
-            "The template's inputs, named by its input_schema from `template` -- a URL for some, an id, "
-            "a slug or a search term for others. Omit it only for a template whose schema names nothing."
-        ),
-    },
-    "format": {
-        "type": "string",
-        "enum": list(get_args(ExtractFormat)),
-        "description": (
-            "Also return the page the record came from, in this representation. Unset returns the record alone, "
-            "which is usually all you need."
-        ),
-    },
-}
 
 MCP_RESEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {"type": "string", "description": _described(ResearchRequest, "query")},
@@ -3735,35 +3648,32 @@ MCP_ARG_STEALTH = "stealth"
 MCP_BROWSER_OPEN_PROPERTIES: dict[str, dict[str, Any]] = {
     "headless": {
         "type": "boolean",
-        "description": "Run without a visible window. With `local`, false opens a window on this machine's screen.",
+        "description": "With `local`, false shows a window on this machine.",
     },
     "timeout": {
         "type": "number",
         "exclusiveMinimum": 0,
         "maximum": MCP_BROWSER_SESSION_TIMEOUT_LIMIT,
-        "description": (
-            f"Seconds the session may live, however busy it is: at most, and when unset, "
-            f"{MCP_BROWSER_SESSION_TIMEOUT_LIMIT:g}s."
-        ),
+        "description": f"Seconds the session may live; unset, {MCP_BROWSER_SESSION_TIMEOUT_LIMIT:g}.",
     },
     "idle_timeout": {
         "type": "number",
         "exclusiveMinimum": 0,
         "maximum": MCP_BROWSER_SESSION_TIMEOUT_LIMIT,
-        "description": "Seconds the backend may let the session sit unused before ending it itself.",
+        "description": "Seconds unused before the backend ends it.",
     },
     "viewport": {
         "type": "object",
         "properties": {"width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}},
         "required": ["width", "height"],
         "additionalProperties": False,
-        "description": "The size of the page the session renders, in CSS pixels.",
+        "description": "In CSS pixels.",
     },
     "proxy_country": {"type": "string", "description": "Country code the session's traffic exits from, e.g. 'US'."},
     MCP_ARG_STEALTH: {
         "type": "string",
         "enum": list(get_args(StealthLevel)),
-        "description": "How hard the backend hides automation: 'off', 'low' or 'high'. Unset, its default.",
+        "description": "How hard it hides automation. Unset, the backend's default.",
     },
     "solve_captchas": {"type": "boolean", "description": _described(BrowserRequest, "solve_captchas")},
 }
@@ -3774,23 +3684,17 @@ _MCP_ACTION_TIMEOUT_PROPERTY: dict[str, Any] = {
     "type": "number",
     "exclusiveMinimum": 0,
     "maximum": MCP_BROWSER_ACTION_TIMEOUT_LIMIT,
-    "description": (
-        f"Seconds this action may take. Unset, {BROWSER_ACTION_TIMEOUT:g}s; "
-        f"at most {MCP_BROWSER_ACTION_TIMEOUT_LIMIT:g}s."
-    ),
+    "description": f"Seconds; unset, {BROWSER_ACTION_TIMEOUT:g}.",
 }
 
 _MCP_TARGET_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_REF: {
         "type": "string",
-        "description": (
-            "The element's ref from the latest `browser_snapshot`, exactly as printed after `ref=` -- "
-            "for `[ref=e14]`, pass 'e14'. Pass this or `selector`, not both."
-        ),
+        "description": "A ref from the latest `browser_snapshot`: for `[ref=e14]`, 'e14'. This or `selector`.",
     },
     MCP_ARG_SELECTOR: {
         "type": "string",
-        "description": "A CSS or Playwright selector, e.g. 'button[type=submit]'. Pass this or `ref`, not both.",
+        "description": "A CSS or Playwright selector. This or `ref`.",
     },
 }
 
@@ -3811,10 +3715,7 @@ MCP_BROWSER_SNAPSHOT_PROPERTIES: dict[str, dict[str, Any]] = {
         "type": "integer",
         "minimum": 1,
         "maximum": MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT,
-        "description": (
-            f"Cap on the tree, in characters. Unset, {MCP_BROWSER_SNAPSHOT_MAX_CHARS}; at most "
-            f"{MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT}."
-        ),
+        "description": "Cap on the tree, in characters.",
     },
     "timeout": _MCP_ACTION_TIMEOUT_PROPERTY,
 }
@@ -3862,9 +3763,9 @@ MCP_BROWSER_CLOSE_PROPERTIES: dict[str, dict[str, Any]] = {MCP_ARG_SESSION_ID: _
 MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_SEARCH: MCP_SEARCH_PROPERTIES,
     MCP_TOOL_EXTRACT: MCP_EXTRACT_PROPERTIES,
-    MCP_TOOL_TEMPLATES: MCP_TEMPLATES_PROPERTIES,
-    MCP_TOOL_TEMPLATE: MCP_TEMPLATE_PROPERTIES,
-    MCP_TOOL_RUN_TEMPLATE: MCP_RUN_TEMPLATE_PROPERTIES,
+    MCP_TOOL_LIVE_DATA_SOURCES: MCP_LIVE_DATA_SOURCES_PROPERTIES,
+    MCP_TOOL_LIVE_DATA_SOURCE: MCP_LIVE_DATA_SOURCE_PROPERTIES,
+    MCP_TOOL_LIVE_DATA: MCP_LIVE_DATA_PROPERTIES,
     MCP_TOOL_ANSWER: MCP_ANSWER_PROPERTIES,
     MCP_TOOL_RESEARCH: MCP_RESEARCH_PROPERTIES,
     MCP_TOOL_RESEARCH_STATUS: MCP_RESEARCH_STATUS_PROPERTIES,
@@ -3884,6 +3785,7 @@ MCP_TOOL_PROPERTIES: dict[str, dict[str, dict[str, Any]]] = {
     MCP_TOOL_WEB_RUN: MCP_WEB_RUN_PROPERTIES,
     MCP_TOOL_BUDGET_START: MCP_BUDGET_START_PROPERTIES,
     MCP_TOOL_BUDGET_STATUS: {},
+    **VENDOR_MCP_PROPERTIES,
 }
 """Each tool's input schema, minus the ``provider`` argument.
 
@@ -3895,10 +3797,10 @@ backends actually configured there -- see
 MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_SEARCH: ("query",),
     MCP_TOOL_EXTRACT: ("urls",),
-    # `provider` is required here and nowhere else: a template's name belongs to one vendor.
-    MCP_TOOL_TEMPLATES: (MCP_ARG_PROVIDER,),
-    MCP_TOOL_TEMPLATE: ("name", MCP_ARG_PROVIDER),
-    MCP_TOOL_RUN_TEMPLATE: ("template", MCP_ARG_PROVIDER),
+    # Not `provider`: unnamed, the listing asks every live data backend and each row names its own.
+    MCP_TOOL_LIVE_DATA_SOURCES: (),
+    MCP_TOOL_LIVE_DATA_SOURCE: ("name",),
+    MCP_TOOL_LIVE_DATA: ("source",),
     # Not `provider`: unnamed, the router's default answers -- `auto`, the configured backends in ranked order.
     MCP_TOOL_ANSWER: ("query",),
     MCP_TOOL_RESEARCH: ("query",),
@@ -3920,49 +3822,16 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_WEB_RUN: ("prompt",),
     MCP_TOOL_BUDGET_START: ("max_cost_usd", "time_limit_s"),
     MCP_TOOL_BUDGET_STATUS: (),
+    **VENDOR_MCP_REQUIRED,
 }
-
-MCP_PROVIDER_DESCRIPTION = "The backend to use, of those configured here; omit it and the router picks one."
 
 # A tool description is the routing decision: the model choosing between the tools is the actual router
 # (`web_run` hands it to ours), and latency and cost are what it chooses on.
 
-MCP_DESC_EXTRACT = (
-    "Read pages you already have URLs for, as markdown, HTML or plain text, in about a second for a small "
-    "batch. It reads pages, it does not find them: pass URLs from `search`, the user or a page you read. A "
-    "page whose content needs a login, a form or clicks cannot be read this way; that is `browser_open`'s. "
-    "provider='max' races every configured backend and returns the first answer, at one fetch per backend "
-    "per URL: use it only when the user asked for speed over cost."
-)
-
-MCP_DESC_TEMPLATES = (
-    "List a vendor's Extract Templates: saved, site-specific extractions, each turning one kind of page -- a "
-    "product page, a job listing, a results page -- into a record with fixed fields. Free, about a second. "
-    "Each row names the inputs a run must pass (`required_inputs`) and one recorded input (`sample_inputs`). "
-    "Call it before `run_template` to find one for the site at hand, paging with `limit` and `offset`; "
-    "`template` then gives the full schemas."
-)
-
-MCP_DESC_TEMPLATE = (
-    "Describe one Extract Template: its input_schema, what `run_template` must pass as `inputs`; its "
-    "output_schema, what the record holds; and `samples`, recorded runs to copy a first call from. Free, "
-    "about a second. Read it before running a template you have not run in this conversation."
-)
-
-MCP_DESC_RUN_TEMPLATE = (
-    "Run an Extract Template on one page and get its record back: the page's fields, parsed by an extraction "
-    "built for that site. About a second, and bills one template run at the vendor's per-run rate. Use it "
-    "when `templates` lists one for the site and item at hand; `extract` reads a page no template covers. "
-    "`inputs` are the template's own, from `template`: a URL for some, an id, a slug or a search term for "
-    "others. A run the backend could not complete is an error, never an empty record."
-)
-
 MCP_DESC_RESEARCH = (
-    "Start an agentic research run: the backend searches, reads and cross-checks over many turns, which takes "
-    "MINUTES and bills for the run. Worth it for what a handful of searches cannot settle -- a comparison "
-    "across sources, a structured dataset, enriching records you hold; a lookup is `search`'s. It waits "
-    "{wait:g}s, then hands back a handle: poll `research_status` with it, since calling this again starts, "
-    "and pays for, a second run."
+    "Start an agentic research run: many turns of searching and reading, which takes MINUTES and bills "
+    "for the run. For comparisons, datasets or enriching records; a lookup is `search`'s. After {wait:g}s "
+    "it returns a handle: poll `research_status`, since calling this again pays for a second run."
 )
 
 MCP_DESC_RESEARCH_STATUS = (
@@ -3970,11 +3839,10 @@ MCP_DESC_RESEARCH_STATUS = (
 )
 
 MCP_DESC_BROWSE = (
-    "Hand a task to a hosted browser agent that clicks, types and reads through pages until it is done, "
-    "which takes MINUTES and bills for the run. Worth it for what needs a browser -- a form, a site's own "
-    "search, a page behind interaction; a page you have the URL of is `extract`'s. It waits {wait:g}s, then "
-    "hands back a handle: poll `browse_status` with it, since calling this again starts, and pays for, a "
-    "second task."
+    "Hand a task to a hosted browser agent that clicks and types until done: MINUTES, billed per task. "
+    "For forms, a site's own search, pages behind interaction; a URL you have is `extract`'s. After "
+    "{wait:g}s it returns a handle: poll `browse_status`, since calling this again pays for a second "
+    "task."
 )
 
 MCP_DESC_BROWSE_STATUS = (
@@ -3983,27 +3851,22 @@ MCP_DESC_BROWSE_STATUS = (
 )
 
 MCP_DESC_FETCH_RAW = (
-    "Return the backend's full, unshaped payload for a handle an earlier result carried. Instant -- nothing "
-    "is called again -- but it can be very large: ask for it when a result says it was cut and you need "
-    "the rest. Session URLs and credentials in a browse or browser payload are redacted."
+    "The backend's full, unshaped payload for a handle: instant, but can be very large. Use it when a "
+    "result was cut and you need the rest. Session URLs and credentials in browser payloads are redacted."
 )
 
 MCP_DESC_LOAD_ENV = (
-    "Load API keys from a .env file on this machine, so the backends they unlock work at once, without a "
-    "restart. Instant. Call it only with a path the user gave you: ask them where their .env is, and never ask "
-    "them to paste a key. Only the provider credentials web-router reads are taken, and a variable already set "
-    "keeps its value. The result names the variables loaded -- never their values -- and the backends now "
-    "configured. Set `remember`, which has the server read the file on every start, only when the user asks."
+    "Load API keys from a .env file the user names, so their backends work at once. Ask where it is; "
+    "never ask for a key. Only provider credentials are read, an already-set variable wins, and only "
+    "names are returned. Set `remember` (read it on every start) only when the user asks."
 )
 
 MCP_DESC_BROWSER_OPEN = (
-    "Open a browser session you drive yourself and get a `session_id` for the other browser_* tools. Takes "
-    "a few seconds. A cloud backend BILLS FOR EVERY MINUTE it is open; `local` runs a browser on this machine "
-    "for free, and with headless=false opens a visible window there. Use it for logins, forms, multi-step "
-    "portals and results gated on the user's own details, and ask the user first. Call `browser_close` when "
-    "done; a session idle for {idle:g}s is released anyway, and at most {max_sessions} are open at once. "
-    "With no `provider`, `stealth`, `proxy_country` or `solve_captchas` route past `local` to a BILLED "
-    "vendor. Only http(s) pages open."
+    "Open a browser session you drive with the other browser_* tools. A cloud backend BILLS FOR EVERY MINUTE; "
+    "`local` is free on this machine, and headless=false shows its window. For logins, forms and portals: "
+    "ask the user first, and `browser_close` when done (idle {idle:g}s ends it; at most {max_sessions} "
+    "open). Unset `provider` with `stealth`, `proxy_country` or `solve_captchas` routes to a BILLED "
+    "vendor."
 )
 
 MCP_DESC_BROWSER_GOTO = (
@@ -4012,10 +3875,9 @@ MCP_DESC_BROWSER_GOTO = (
 )
 
 MCP_DESC_BROWSER_SNAPSHOT = (
-    "Read the page as its accessibility tree, one element per line, each tagged `[ref=eN]` -- the "
-    "view to act from. Pass a ref to `browser_click` or `browser_type`. A ref is good until the next "
-    "snapshot or navigation, so snapshot again after anything changes the page. Capped at "
-    "{max_chars} characters unless you pass `max_chars`; the result says when it was cut."
+    "The page's accessibility tree, one element per line tagged `[ref=eN]` for `browser_click` and "
+    "`browser_type`. Refs last until the next snapshot or navigation. Capped at {max_chars} characters "
+    "unless `max_chars` says otherwise."
 )
 
 MCP_DESC_BROWSER_CLICK = (
@@ -4031,15 +3893,13 @@ MCP_DESC_BROWSER_TYPE = (
 MCP_DESC_BROWSER_PRESS = "Press a key on whatever has focus: 'Enter', 'Escape', 'Tab', 'ArrowDown', 'Control+A'."
 
 MCP_DESC_BROWSER_SCREENSHOT = (
-    "Take a PNG screenshot of the page, returned as an image. The viewport by default; `full_page` "
-    "captures the whole scrollable page, which can be large. Use `browser_snapshot` to find things to "
-    "click -- a screenshot carries no refs."
+    "A PNG of the viewport, or the whole page with `full_page`. It carries no refs: use "
+    "`browser_snapshot` to find things to click."
 )
 
 MCP_DESC_BROWSER_READ = (
-    "Read the page as it is now -- after your clicks and typing -- as rendered text or live HTML, "
-    "shaped like an `extract` result. Shortened to fit a context window; `fetch_raw` with its handle "
-    "returns the whole page."
+    "Read the page as it is now, as text or live HTML, shaped like an `extract` result; `fetch_raw` with "
+    "its handle returns all of it."
 )
 
 MCP_DESC_BROWSER_CLOSE = (
@@ -4050,9 +3910,9 @@ MCP_DESC_BROWSER_CLOSE = (
 MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_SEARCH: MCP_DESC_SEARCH,
     MCP_TOOL_EXTRACT: MCP_DESC_EXTRACT,
-    MCP_TOOL_TEMPLATES: MCP_DESC_TEMPLATES,
-    MCP_TOOL_TEMPLATE: MCP_DESC_TEMPLATE,
-    MCP_TOOL_RUN_TEMPLATE: MCP_DESC_RUN_TEMPLATE,
+    MCP_TOOL_LIVE_DATA_SOURCES: MCP_DESC_LIVE_DATA_SOURCES,
+    MCP_TOOL_LIVE_DATA_SOURCE: MCP_DESC_LIVE_DATA_SOURCE,
+    MCP_TOOL_LIVE_DATA: MCP_DESC_LIVE_DATA,
     MCP_TOOL_ANSWER: MCP_DESC_ANSWER,
     MCP_TOOL_RESEARCH: MCP_DESC_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS: MCP_DESC_RESEARCH_STATUS,
@@ -4072,6 +3932,7 @@ MCP_TOOL_DESCRIPTIONS: dict[str, str] = {
     MCP_TOOL_WEB_RUN: MCP_DESC_WEB_RUN,
     MCP_TOOL_BUDGET_START: MCP_DESC_BUDGET_START,
     MCP_TOOL_BUDGET_STATUS: MCP_DESC_BUDGET_STATUS,
+    **VENDOR_MCP_DESCRIPTIONS,
 }
 
 MCP_MSG_NO_BACKEND = " NOTHING IS CONFIGURED FOR THIS METHOD on this machine, so every call will fail."
@@ -4084,10 +3945,6 @@ MCP_MSG_ENV_HINT = (
     ".env in {user_dir}, or call load_env with the path of one. Only the file's path is ever needed -- "
     "never paste a key into the conversation."
 )
-
-MCP_MSG_ENV_MISSING = "There is no file at {path}, so nothing was loaded. Ask the user where their .env file is."
-
-MCP_MSG_ENV_UNREADABLE = "{path} could not be read as a .env file ({reason}), so nothing was loaded."
 
 MCP_MSG_ENV_NO_CREDENTIALS = (
     "{path} sets none of the provider credentials this server reads, so nothing was loaded -- anything "
@@ -4107,12 +3964,9 @@ MCP_MSG_ENV_NOTHING_NEW = (
 
 MCP_MSG_ENV_REMEMBERED = "The path is recorded in {pointer}; the server reads that file every time it starts."
 
-MCP_MSG_TRUNCATED = (
-    "Shortened to fit a context window: long text is cut at a word boundary and marked "
-    "{marker!r}.{dropped} Call fetch_raw with handle {handle!r} for the backend's untouched payload."
-)
+MCP_MSG_TRUNCATED = "Cut to fit.{dropped} fetch_raw with this handle returns it all."
 
-MCP_MSG_DROPPED = " {dropped} of {total} items did not fit and were left out."
+MCP_MSG_DROPPED = " {dropped} of {total} items left out."
 
 MCP_MSG_OVERSIZED = (
     "{field} is {size} characters and cannot be cut without changing what it means, so it was left out "
@@ -4147,8 +4001,8 @@ MCP_MSG_REDACTED = (
 MCP_MSG_UNKNOWN_TOOL = "Unknown tool {name!r}. This server serves: {tools}."
 
 MCP_MSG_UNKNOWN_HANDLE = (
-    "Unknown handle {handle!r}. Handles come back from search, extract, templates, template, "
-    "run_template, answer, research, browse and browser_read, and only the {limit} most recent are kept."
+    "Unknown handle {handle!r}. Handles come back from search, extract, live_data_sources, "
+    "live_data_source, live_data, answer, research, browse and browser_read, and only the {limit} most recent are kept."
 )
 
 MCP_MSG_NOT_A_JOB = (

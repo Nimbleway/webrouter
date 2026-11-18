@@ -1,0 +1,866 @@
+{
+  "vendor": "ahrefs",
+  "name": "Ahrefs",
+  "category": "seo",
+  "summary": "Ahrefs API v3: Domain Rating, backlinks, referring domains, organic keywords, top pages and keyword metrics.",
+  "docs_url": "https://docs.ahrefs.com/api/docs/introduction.md",
+  "pricing_url": "https://ahrefs.com/pricing",
+  "base_url": "https://api.ahrefs.com/v3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AHREFS_API_KEY"
+        ],
+        "description": "An Ahrefs API v3 key (Account settings > API keys; workspace owners and admins only). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "API access needs an eligible paid plan; other plans only get a limited set of free test queries.",
+    "Billing is in API units: each request costs max(50, per-row cost x rows), where a field costs 1 unit by default and some metrics 5 or 10. Select few columns and set limit.",
+    "60 requests per minute by default; 429 also comes from load-based throttling.",
+    "Most site-explorer and keyword calls require select (columns) and date; dates are YYYY-MM-DD."
+  ],
+  "sources": [
+    "https://docs.ahrefs.com/api/docs/introduction.md",
+    "https://docs.ahrefs.com/api/docs/limits-consumption.md",
+    "https://docs.ahrefs.com/openapi.json",
+    "https://docs.ahrefs.com/reference/site-explorer.json",
+    "https://docs.ahrefs.com/reference/keywords-explorer.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ahrefs.domain_rating",
+      "name": "Get Domain Rating",
+      "summary": "Domain Rating (0-100) and Ahrefs Rank of a domain on a date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/site-explorer/domain-rating",
+      "params": {
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Date to report on, YYYY-MM-DD.",
+          "required": true,
+          "example": "2026-11-01"
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or URL.",
+          "required": true,
+          "example": "ahrefs.com"
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "csv",
+            "xml",
+            "php"
+          ]
+        }
+      },
+      "job": "domain.rank",
+      "docs_url": "https://docs.ahrefs.com/reference/site-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/site-explorer.json"
+      }
+    },
+    {
+      "id": "ahrefs.metrics",
+      "name": "Get site organic and paid metrics",
+      "summary": "Organic keywords, traffic and value, plus paid metrics, for a domain or URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/site-explorer/metrics",
+      "params": {
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Date to report on, YYYY-MM-DD.",
+          "required": true,
+          "example": "2026-11-01"
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or URL.",
+          "required": true,
+          "example": "ahrefs.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Scope of the target.",
+          "enum": [
+            "exact",
+            "prefix",
+            "domain",
+            "subdomains"
+          ]
+        },
+        "protocol": {
+          "in": "query",
+          "type": "string",
+          "description": "Protocol of the target.",
+          "enum": [
+            "both",
+            "http",
+            "https"
+          ]
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+          "example": "us"
+        },
+        "volume_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Search volume mode; affects volume, traffic and traffic value.",
+          "enum": [
+            "monthly",
+            "average"
+          ]
+        },
+        "traffic_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Organic traffic mode.",
+          "enum": [
+            "static",
+            "adaptive"
+          ]
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "csv",
+            "xml",
+            "php"
+          ]
+        }
+      },
+      "job": "domain.overview",
+      "docs_url": "https://docs.ahrefs.com/reference/site-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/site-explorer.json"
+      }
+    },
+    {
+      "id": "ahrefs.backlinks_stats",
+      "name": "Get backlink totals",
+      "summary": "Live and all-time backlink and referring-domain counts for a target.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/site-explorer/backlinks-stats",
+      "params": {
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Date to report on, YYYY-MM-DD.",
+          "required": true,
+          "example": "2026-11-01"
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or URL.",
+          "required": true,
+          "example": "ahrefs.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Scope of the target.",
+          "enum": [
+            "exact",
+            "prefix",
+            "domain",
+            "subdomains"
+          ]
+        },
+        "protocol": {
+          "in": "query",
+          "type": "string",
+          "description": "Protocol of the target.",
+          "enum": [
+            "both",
+            "http",
+            "https"
+          ]
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "csv",
+            "xml",
+            "php"
+          ]
+        }
+      },
+      "job": "backlinks.summary",
+      "docs_url": "https://docs.ahrefs.com/reference/site-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/site-explorer.json"
+      }
+    },
+    {
+      "id": "ahrefs.backlinks",
+      "name": "List backlinks",
+      "summary": "Backlinks to a target with the columns you select.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/site-explorer/all-backlinks",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return (see the response schema in the reference).",
+          "required": true
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression; syntax at docs.ahrefs.com/api/docs/filter-syntax.md. Its column names differ from select."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Columns to order by, with optional :asc/:desc."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Manual timeout in seconds."
+        },
+        "aggregation": {
+          "in": "query",
+          "type": "string",
+          "description": "Grouping: similar_links, 1_per_domain or all.",
+          "enum": [
+            "similar_links",
+            "1_per_domain",
+            "all"
+          ]
+        },
+        "history": {
+          "in": "query",
+          "type": "string",
+          "description": "Add lost links: live (none), since:<YYYY-MM-DD>, or all_time."
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or URL.",
+          "required": true,
+          "example": "ahrefs.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Scope of the target.",
+          "enum": [
+            "exact",
+            "prefix",
+            "domain",
+            "subdomains"
+          ]
+        },
+        "protocol": {
+          "in": "query",
+          "type": "string",
+          "description": "Protocol of the target.",
+          "enum": [
+            "both",
+            "http",
+            "https"
+          ]
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "csv",
+            "xml",
+            "php"
+          ]
+        }
+      },
+      "job": "backlinks.list",
+      "docs_url": "https://docs.ahrefs.com/reference/site-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/site-explorer.json"
+      },
+      "notes": [
+        "Cost grows with rows x columns: select only the columns needed and set limit."
+      ]
+    },
+    {
+      "id": "ahrefs.refdomains",
+      "name": "List referring domains",
+      "summary": "Domains linking to a target, with the columns you select.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/site-explorer/refdomains",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return (see the response schema in the reference).",
+          "required": true
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression; syntax at docs.ahrefs.com/api/docs/filter-syntax.md. Its column names differ from select."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Columns to order by, with optional :asc/:desc."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Manual timeout in seconds."
+        },
+        "history": {
+          "in": "query",
+          "type": "string",
+          "description": "Add lost links: live (none), since:<YYYY-MM-DD>, or all_time."
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or URL.",
+          "required": true,
+          "example": "ahrefs.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Scope of the target.",
+          "enum": [
+            "exact",
+            "prefix",
+            "domain",
+            "subdomains"
+          ]
+        },
+        "protocol": {
+          "in": "query",
+          "type": "string",
+          "description": "Protocol of the target.",
+          "enum": [
+            "both",
+            "http",
+            "https"
+          ]
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "csv",
+            "xml",
+            "php"
+          ]
+        }
+      },
+      "job": "backlinks.refdomains",
+      "docs_url": "https://docs.ahrefs.com/reference/site-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/site-explorer.json"
+      }
+    },
+    {
+      "id": "ahrefs.organic_keywords",
+      "name": "List organic keywords",
+      "summary": "Keywords a target ranks for in organic search, with position, volume and traffic.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/site-explorer/organic-keywords",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return (see the response schema in the reference).",
+          "required": true
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression; syntax at docs.ahrefs.com/api/docs/filter-syntax.md. Its column names differ from select."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Columns to order by, with optional :asc/:desc."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Manual timeout in seconds."
+        },
+        "volume_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Search volume mode; affects volume, traffic and traffic value.",
+          "enum": [
+            "monthly",
+            "average"
+          ]
+        },
+        "traffic_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Organic traffic mode.",
+          "enum": [
+            "static",
+            "adaptive"
+          ]
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Date to report on, YYYY-MM-DD.",
+          "required": true,
+          "example": "2026-11-01"
+        },
+        "date_compared": {
+          "in": "query",
+          "type": "string",
+          "description": "Date to compare with, YYYY-MM-DD."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+          "example": "us"
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or URL.",
+          "required": true,
+          "example": "ahrefs.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Scope of the target.",
+          "enum": [
+            "exact",
+            "prefix",
+            "domain",
+            "subdomains"
+          ]
+        },
+        "protocol": {
+          "in": "query",
+          "type": "string",
+          "description": "Protocol of the target.",
+          "enum": [
+            "both",
+            "http",
+            "https"
+          ]
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "php",
+            "xml"
+          ]
+        }
+      },
+      "job": "domain.keywords.organic",
+      "docs_url": "https://docs.ahrefs.com/reference/site-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/site-explorer.json"
+      }
+    },
+    {
+      "id": "ahrefs.top_pages",
+      "name": "List top pages by traffic",
+      "summary": "A target's pages ranked by organic traffic.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/site-explorer/top-pages",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return (see the response schema in the reference).",
+          "required": true
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression; syntax at docs.ahrefs.com/api/docs/filter-syntax.md. Its column names differ from select."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Columns to order by, with optional :asc/:desc."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Manual timeout in seconds."
+        },
+        "volume_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Search volume mode; affects volume, traffic and traffic value.",
+          "enum": [
+            "monthly",
+            "average"
+          ]
+        },
+        "traffic_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Organic traffic mode.",
+          "enum": [
+            "static",
+            "adaptive"
+          ]
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Date to report on, YYYY-MM-DD.",
+          "required": true,
+          "example": "2026-11-01"
+        },
+        "date_compared": {
+          "in": "query",
+          "type": "string",
+          "description": "Date to compare with, YYYY-MM-DD."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country code (ISO 3166-1 alpha-2).",
+          "example": "us"
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or URL.",
+          "required": true,
+          "example": "ahrefs.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Scope of the target.",
+          "enum": [
+            "exact",
+            "prefix",
+            "domain",
+            "subdomains"
+          ]
+        },
+        "protocol": {
+          "in": "query",
+          "type": "string",
+          "description": "Protocol of the target.",
+          "enum": [
+            "both",
+            "http",
+            "https"
+          ]
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "csv",
+            "xml",
+            "php"
+          ]
+        }
+      },
+      "job": "domain.pages",
+      "docs_url": "https://docs.ahrefs.com/reference/site-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/site-explorer.json"
+      }
+    },
+    {
+      "id": "ahrefs.keywords_overview",
+      "name": "Get keyword metrics",
+      "summary": "Volume, difficulty, CPC, clicks and other metrics for given keywords.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/keywords-explorer/overview",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return (see the response schema in the reference).",
+          "required": true
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression; syntax at docs.ahrefs.com/api/docs/filter-syntax.md. Its column names differ from select."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Columns to order by, with optional :asc/:desc."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Manual timeout in seconds."
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated keywords.",
+          "example": "seo tools"
+        },
+        "keyword_list_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "An existing keyword list's ID, instead of keywords."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code, or all (then keywords or keyword_list_id is required).",
+          "required": true,
+          "example": "us"
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or URL, used with target_position."
+        },
+        "target_position": {
+          "in": "query",
+          "type": "string",
+          "description": "Keep keywords where the target ranks in_top10 or in_top100.",
+          "enum": [
+            "in_top10",
+            "in_top100"
+          ]
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Scope of the target.",
+          "enum": [
+            "exact",
+            "prefix",
+            "domain",
+            "subdomains"
+          ]
+        },
+        "volume_monthly_date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, YYYY-MM-DD, for volume_monthly_history."
+        },
+        "volume_monthly_date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "End, YYYY-MM-DD, for volume_monthly_history."
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "php",
+            "xml"
+          ]
+        }
+      },
+      "job": "keywords.volume",
+      "docs_url": "https://docs.ahrefs.com/reference/keywords-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/keywords-explorer.json"
+      }
+    },
+    {
+      "id": "ahrefs.matching_terms",
+      "name": "Find matching keyword ideas",
+      "summary": "Keyword ideas containing the seed keywords' words, with metrics.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/keywords-explorer/matching-terms",
+      "params": {
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return (see the response schema in the reference).",
+          "required": true
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression; syntax at docs.ahrefs.com/api/docs/filter-syntax.md. Its column names differ from select."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Columns to order by, with optional :asc/:desc."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Manual timeout in seconds."
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated seed keywords.",
+          "example": "seo tools"
+        },
+        "keyword_list_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "An existing keyword list's ID, instead of keywords."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code, or all.",
+          "required": true,
+          "example": "us"
+        },
+        "terms": {
+          "in": "query",
+          "type": "string",
+          "description": "all ideas, questions only, or global (including translations).",
+          "enum": [
+            "all",
+            "questions",
+            "global"
+          ]
+        },
+        "match_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "terms: words in any order; phrase: exact order.",
+          "enum": [
+            "terms",
+            "phrase"
+          ]
+        },
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "php",
+            "xml"
+          ]
+        }
+      },
+      "job": "keywords.ideas",
+      "docs_url": "https://docs.ahrefs.com/reference/keywords-explorer.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/reference/keywords-explorer.json"
+      },
+      "notes": [
+        "limit max is 150000; each row costs units."
+      ]
+    },
+    {
+      "id": "ahrefs.limits",
+      "name": "Get API limits and usage",
+      "summary": "The subscription's API unit limit and usage.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/subscription-info/limits-and-usage",
+      "params": {
+        "output": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; default json.",
+          "enum": [
+            "json",
+            "csv",
+            "xml",
+            "php"
+          ]
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.ahrefs.com/openapi.json",
+      "verified": {
+        "docs": "https://docs.ahrefs.com/openapi.json"
+      },
+      "notes": [
+        "Free: consumes no API units."
+      ]
+    }
+  ]
+}

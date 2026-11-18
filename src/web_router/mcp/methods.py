@@ -18,35 +18,40 @@ from web_router.constants import (
     DELEGATING_PROVIDERS,
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
+    MCP_ARG_PROVIDER,
     MCP_METHOD_BROWSER,
-    MCP_METHOD_TEMPLATE,
     MCP_TOOL_ANSWER,
     MCP_TOOL_BROWSE,
     MCP_TOOL_BROWSER_OPEN,
     MCP_TOOL_EXTRACT,
     MCP_TOOL_RESEARCH,
-    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
-    MCP_TOOL_TEMPLATE,
-    MCP_TOOL_TEMPLATES,
+    PROVIDER_AUTO,
     RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_live_data import (
+    LIVE_DATA_ENV_BY_PROVIDER,
+    MCP_METHOD_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA_SOURCE,
+    MCP_TOOL_LIVE_DATA_SOURCES,
+)
+from web_router.live_data_backends import custom_live_data_backends
 from web_router.mcp.env_credentials import env_names
 from web_router.providers.base import _BaseProvider
 from web_router.registry import (
     configured_browse_providers,
     configured_browser_providers,
     configured_extract_providers,
+    configured_live_data_providers,
     configured_providers,
     configured_research_providers,
-    configured_template_providers,
     get_browse_provider_class,
     get_browser_provider_class,
     get_extract_provider_class,
+    get_live_data_provider_class,
     get_provider_class,
     get_research_provider_class,
-    get_template_provider_class,
 )
 from web_router.registry_answer import configured_answer_providers, get_answer_provider_class
 from web_router.types import (
@@ -55,9 +60,9 @@ from web_router.types import (
     EXTRACT_PARAMETERS,
     NORMALIZED_PARAMETERS,
     RESEARCH_PARAMETERS,
-    TEMPLATE_PARAMETERS,
 )
 from web_router.types_answer import ANSWER_PARAMETERS
+from web_router.types_live_data import LIVE_DATA_PARAMETERS
 
 
 @dataclass(frozen=True)
@@ -65,7 +70,7 @@ class Method:
     """What a provider-picking tool needs to know about the library method behind it."""
 
     key: str
-    """How the capabilities resource names the method: the tool's own name, but ``template`` and ``open_browser``."""
+    """How the capabilities resource names the method: the tool's own name, but ``live_data`` and ``open_browser``."""
     configured: Callable[[], list[str]]
     """Which backends this install can actually serve it with."""
     cls: Callable[[str], type[_BaseProvider]]
@@ -76,8 +81,14 @@ class Method:
     """The arguments a backend may or may not map, as opposed to the ones every backend takes."""
 
 
-_TEMPLATE_METHOD = Method(
-    MCP_METHOD_TEMPLATE, configured_template_providers, get_template_provider_class, TEMPLATE_ENV_BY_PROVIDER
+def _configured_answer() -> list[str]:
+    """Answer's backends with a key, led by ``auto`` once there is one, as research's are; nothing with none."""
+    names = configured_answer_providers()
+    return [PROVIDER_AUTO, *names] if names else []
+
+
+_LIVE_DATA_METHOD = Method(
+    MCP_METHOD_LIVE_DATA, configured_live_data_providers, get_live_data_provider_class, LIVE_DATA_ENV_BY_PROVIDER
 )
 
 METHODS: dict[str, Method] = {
@@ -92,12 +103,12 @@ METHODS: dict[str, Method] = {
         EXTRACT_PARAMETERS,
     ),
     # Listing and describing take no option a backend may decline; a run takes the template's.
-    MCP_TOOL_TEMPLATES: _TEMPLATE_METHOD,
-    MCP_TOOL_TEMPLATE: _TEMPLATE_METHOD,
-    MCP_TOOL_RUN_TEMPLATE: replace(_TEMPLATE_METHOD, options=TEMPLATE_PARAMETERS),
+    MCP_TOOL_LIVE_DATA_SOURCES: _LIVE_DATA_METHOD,
+    MCP_TOOL_LIVE_DATA_SOURCE: _LIVE_DATA_METHOD,
+    MCP_TOOL_LIVE_DATA: replace(_LIVE_DATA_METHOD, options=LIVE_DATA_PARAMETERS),
     MCP_TOOL_ANSWER: Method(
         MCP_TOOL_ANSWER,
-        configured_answer_providers,
+        _configured_answer,
         get_answer_provider_class,
         ANSWER_ENV_BY_PROVIDER,
         ANSWER_PARAMETERS,
@@ -135,6 +146,19 @@ EACH_METHOD: tuple[Method, ...] = tuple({method.key: method for method in METHOD
 """Every method once, in the order the capabilities resource lists them."""
 
 
+def unconfigured_live_data(tool: str, arguments: Mapping[str, Any]) -> Method | None:
+    """``tool``'s method when it is a live data tool called without ``provider`` and no backend can serve it.
+
+    The schema then offers no ``provider``, and a call without one would ask
+    every backend and find none, so the tool says what would add one instead.
+    A custom backend registered in code counts as one that can.
+    """
+    method = METHODS.get(tool)
+    if method is None or method.key != MCP_METHOD_LIVE_DATA or arguments.get(MCP_ARG_PROVIDER) is not None:
+        return None
+    return None if method.configured() or custom_live_data_backends() else method
+
+
 def configured() -> dict[str, list[str]]:
     """The backends configured here, per method, keyed as the capabilities resource names them."""
     return {method.key: method.configured() for method in EACH_METHOD}
@@ -167,7 +191,7 @@ def usable(method: Method) -> bool:
     of their own -- they need whatever their chain does. For search and extract
     that chain ends in a keyless backend and always works; for research and
     browse every backend bills, so ``auto`` alone means nothing here can
-    actually run. Answer's ``auto`` is not listed among its backends, so it is usable exactly when a
+    actually run. Answer's ``auto`` is listed only beside a backend with a key, so it is usable exactly when a
     key is there.
     """
     return any(provider not in DELEGATING_PROVIDERS for provider in method.configured())

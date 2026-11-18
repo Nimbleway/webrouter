@@ -49,15 +49,15 @@ def test_latency_is_unknown_where_nothing_measured_it() -> None:
     ("method", "mode", "expected"),
     [
         ("search", "default", None),
-        ("search", "@deep", "deep"),
-        ("search", "ultra-fast", ":ultra-fast"),
-        ("search", "ultra-fast@deep", ":ultra-fast@deep"),
+        *[("search", old, new) for old, new in (("ultra-fast", "tavily-ultra-fast"), ("@deep", "deep"))],
+        ("search", "ultra-fast@deep", "tavily-ultra-fast+deep"),
+        *[("search", canonical, canonical) for canonical in ("tavily-ultra-fast", "fast", "tavily-fast+deep")],
         ("research", "low", "low"),
         ("research", "default", None),
     ],
 )
 def test_a_frozen_mode_maps_to_the_price_lists_mode(method: str, mode: str, expected: str | None) -> None:
-    assert latency._benchmarks()[0].price_mode(method, mode) == expected
+    assert latency._benchmarks()[0].price_mode("tavily", method, mode) == expected
 
 
 def _frozen(

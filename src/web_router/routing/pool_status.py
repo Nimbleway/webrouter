@@ -1,4 +1,4 @@
-"""Where a shared budget stands: what :meth:`~web_router.BudgetScope.status` returns. Experimental."""
+"""Where a shared budget stands: what :meth:`~web_router.BudgetScope.status` returns."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, kw_only=True)
 class BudgetStatus:
-    """Where a shared budget stands. Experimental."""
+    """Where a shared budget stands."""
 
     spent_usd: float
     """The estimates settled by calls that have ended, failed attempts included."""

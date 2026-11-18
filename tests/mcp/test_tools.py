@@ -16,7 +16,7 @@ import pytest
 from tests.conftest import FakeBrowseProvider, FakeResearchProvider
 from tests.mcp.conftest import FAKE
 from tests.providers._answer_stub import stub_answer_api
-from web_router.client import AsyncWebRouter
+from web_router import AsyncWebRouter, BrowseProgress
 from web_router.constants import (
     AUTO_KEYLESS,
     ENV_BRAVE_API_KEY,
@@ -29,7 +29,6 @@ from web_router.constants import (
     ENV_PERPLEXITY_API_KEY,
     ENV_TAVILY_API_KEY,
     MCP_BROWSER_TOOLS,
-    MCP_METHOD_TEMPLATE,
     MCP_REDACTED,
     MCP_RESOURCE_URI,
     MCP_TOOL_ANSWER,
@@ -41,10 +40,7 @@ from web_router.constants import (
     MCP_TOOL_LOAD_ENV,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
-    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
-    MCP_TOOL_TEMPLATE,
-    MCP_TOOL_TEMPLATES,
     PROVIDER_AUTO,
     PROVIDER_BRAVE,
     PROVIDER_EXA_MCP,
@@ -56,9 +52,14 @@ from web_router.constants import (
     PROVIDER_TAVILY,
     PROVIDER_YOU_MCP,
 )
+from web_router.constants_live_data import (
+    MCP_TOOL_LIVE_DATA,
+    MCP_TOOL_LIVE_DATA_SOURCE,
+    MCP_TOOL_LIVE_DATA_SOURCES,
+)
 from web_router.mcp.env import user_config_dir
-from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.server import call_tool, list_resources, list_tools, read_resource
+from web_router.mcp.session_tools import SESSION_TOOLS
 from web_router.mcp.tools import WebRouterTools
 from web_router.registry import (
     get_browser_provider_class,
@@ -68,7 +69,7 @@ from web_router.registry import (
     unregister_browse_provider,
     unregister_research_provider,
 )
-from web_router.types import BrowseProgress, BrowseRequest, BrowseStep
+from web_router.types import BrowseRequest, BrowseStep
 
 
 def _tool(session: WebRouterTools, name: str) -> Any:
@@ -84,9 +85,9 @@ def test_serves_every_tool_in_order(tools: WebRouterTools) -> None:
     assert [tool.name for tool in list_tools(tools).tools] == [
         MCP_TOOL_SEARCH,
         MCP_TOOL_EXTRACT,
-        MCP_TOOL_TEMPLATES,
-        MCP_TOOL_TEMPLATE,
-        MCP_TOOL_RUN_TEMPLATE,
+        MCP_TOOL_LIVE_DATA_SOURCES,
+        MCP_TOOL_LIVE_DATA_SOURCE,
+        MCP_TOOL_LIVE_DATA,
         MCP_TOOL_ANSWER,
         MCP_TOOL_RESEARCH,
         MCP_TOOL_RESEARCH_STATUS,
@@ -94,7 +95,7 @@ def test_serves_every_tool_in_order(tools: WebRouterTools) -> None:
         MCP_TOOL_BROWSE_STATUS,
         MCP_TOOL_FETCH_RAW,
         MCP_TOOL_LOAD_ENV,
-        *ROUTING_TOOLS,
+        *SESSION_TOOLS,
         *MCP_BROWSER_TOOLS,
     ]
 
@@ -147,7 +148,7 @@ def test_a_method_with_only_delegating_providers_configured_is_not_usable() -> N
 
 def test_the_extract_tool_says_what_max_costs(tools: WebRouterTools) -> None:
     description = _tool(tools, MCP_TOOL_EXTRACT).description
-    assert "provider='max'" in description and "one fetch per backend" in description
+    assert "provider='max'" in description and "one fetch each" in description
 
 
 def test_a_key_appears_in_the_enum_for_every_method_it_serves(
@@ -165,7 +166,7 @@ def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, mon
     search = set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
     research = set(_tool(tools, MCP_TOOL_RESEARCH).input_schema["properties"])
     keyless = set().union(*(get_provider_class(name).supported_parameters for name, _ in AUTO_KEYLESS))
-    assert search == {"query", "provider", *keyless}
+    assert search == {"query", "provider", "data_apis", "data_apis_only", "configured_only", *keyless}
     assert {"include_domains", "exclude_domains", "records"}.isdisjoint(research)
 
     # A backend that maps it brings it back, for the model to name through `provider`.
@@ -228,7 +229,7 @@ def test_research_says_so_when_nothing_can_serve_it(
 
 
 def test_the_wait_budget_is_in_the_research_description(tools: WebRouterTools) -> None:
-    assert "waits 0s" in _tool(tools, MCP_TOOL_RESEARCH).description
+    assert "After 0s" in _tool(tools, MCP_TOOL_RESEARCH).description
 
 
 async def test_search_round_trip(tools: WebRouterTools) -> None:
@@ -262,113 +263,6 @@ async def test_extract_drops_raw_and_fetch_raw_returns_it(tools: WebRouterTools)
 
     raw = _payload(await call_tool(tools, MCP_TOOL_FETCH_RAW, {"handle": shaped["handle"]}))
     assert raw["raw"] == [{"urls": ["https://example.com"]}]
-
-
-async def test_templates_lists_the_catalogue_and_template_describes_one(tools: WebRouterTools) -> None:
-    listed = _payload(await call_tool(tools, MCP_TOOL_TEMPLATES, {"limit": 10, "provider": FAKE}))
-
-    assert listed["provider"] == FAKE
-    assert [row["name"] for row in listed["templates"]] == ["books_pdp", "jobs_listing"]
-    assert listed["total"] == 2 and listed["limit"] == 10
-    # A listing is the few words a template is picked by, plus what a run must pass; the schemas are `template`'s.
-    assert "input_schema" not in listed["templates"][0]
-    assert listed["templates"][0]["required_inputs"] == ["url"]
-    assert listed["templates"][0]["sample_inputs"] == {"url": "https://example.com/p/1"}
-    assert listed["handle"].startswith(MCP_TOOL_TEMPLATES)
-
-    described = _payload(await call_tool(tools, MCP_TOOL_TEMPLATE, {"name": "books_pdp", "provider": FAKE}))
-
-    assert described["template"]["name"] == "books_pdp"
-    assert described["template"]["input_schema"]["required"] == ["url"]
-    assert described["template"]["output_schema"]["properties"]["title"] == {"type": "string"}
-    assert described["template"]["samples"] == [{"input": {"url": "https://example.com/p/1"}, "output": {"title": "A"}}]
-    assert tools.router.get_template_provider(FAKE).listed == [(10, None)]  # type: ignore[attr-defined]
-
-
-async def test_run_template_passes_the_inputs_through_and_returns_the_record(tools: WebRouterTools) -> None:
-    inputs = {"url": "https://example.com/page"}
-    shaped = _payload(
-        await call_tool(tools, MCP_TOOL_RUN_TEMPLATE, {"template": "books_pdp", "inputs": inputs, "provider": FAKE})
-    )
-
-    assert shaped["provider"] == FAKE
-    assert shaped["template"] == "books_pdp"
-    assert shaped["data"] == {"title": "Example", "inputs": inputs}
-    assert shaped["document"] is None, "no format asked for means no page beside the record"
-    assert "raw" not in shaped and "inputs" not in shaped
-
-    request = tools.router.get_template_provider(FAKE).requests[-1]  # type: ignore[attr-defined]
-    assert request.inputs == inputs and request.format is None
-
-    raw = _payload(await call_tool(tools, MCP_TOOL_FETCH_RAW, {"handle": shaped["handle"]}))
-    assert raw["raw"] == {"template": "books_pdp", "inputs": inputs}
-
-
-async def test_run_template_with_a_format_returns_the_page_beside_the_record(tools: WebRouterTools) -> None:
-    shaped = _payload(
-        await call_tool(
-            tools,
-            MCP_TOOL_RUN_TEMPLATE,
-            {"template": "books_pdp", "inputs": {}, "format": "markdown", "provider": FAKE},
-        )
-    )
-
-    assert shaped["document"]["format"] == "markdown"
-    assert shaped["document"]["content"] == "# Page"
-
-
-async def test_run_template_without_the_template_names_it(tools: WebRouterTools) -> None:
-    result = await call_tool(tools, MCP_TOOL_RUN_TEMPLATE, {"inputs": {"url": "https://example.com"}, "provider": FAKE})
-
-    assert result.is_error
-    assert "'template'" in result.content[0].text
-
-
-async def test_the_template_tools_require_the_provider(
-    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A template's name belongs to one vendor, so these three tools alone make `provider` required."""
-    # A key, so the schema has a `provider` to require; with none the tool is dead and lists no provider at all.
-    monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
-    for name, arguments in (
-        (MCP_TOOL_TEMPLATES, {}),
-        (MCP_TOOL_TEMPLATE, {"name": "books_pdp"}),
-        (MCP_TOOL_RUN_TEMPLATE, {"template": "books_pdp"}),
-    ):
-        result = await call_tool(tools, name, arguments)
-        assert result.is_error and "'provider'" in result.content[0].text, name
-        assert "provider" in _tool(tools, name).input_schema["required"]
-    assert "provider" not in _tool(tools, MCP_TOOL_EXTRACT).input_schema["required"]
-
-
-def test_the_template_tools_say_so_when_nothing_can_serve_them(
-    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # A template run fetches on the backend's account, so with no key the
-    # three tools are dead and say so, naming the variable that would fix it.
-    for name in (MCP_TOOL_TEMPLATES, MCP_TOOL_TEMPLATE, MCP_TOOL_RUN_TEMPLATE):
-        assert "NOTHING IS CONFIGURED" in _tool(tools, name).description
-        assert ENV_NIMBLE_API_KEY in _tool(tools, name).description
-        schema = _tool(tools, name).input_schema
-        assert "provider" not in schema["properties"] and "provider" not in schema["required"]
-
-    monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
-    for name in (MCP_TOOL_TEMPLATES, MCP_TOOL_TEMPLATE, MCP_TOOL_RUN_TEMPLATE):
-        assert "NOTHING IS CONFIGURED" not in _tool(tools, name).description
-        assert _tool(tools, name).input_schema["properties"]["provider"]["enum"] == ["nimble"]
-
-
-def test_the_capabilities_key_the_template_tools_method_once(
-    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    body = json.loads(read_resource(tools, MCP_RESOURCE_URI).contents[0].text)
-
-    assert body[MCP_METHOD_TEMPLATE] == [], "no keyless tier and no auto"
-    assert MCP_TOOL_TEMPLATES not in body and MCP_TOOL_RUN_TEMPLATE not in body
-    assert body["unlock"][MCP_METHOD_TEMPLATE] == {"nimble": [ENV_NIMBLE_API_KEY]}
-
-    monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")
-    assert MCP_METHOD_TEMPLATE not in tools.capabilities()["unlock"]
 
 
 async def test_fetch_raw_refuses_a_handle_it_never_issued(tools: WebRouterTools) -> None:
@@ -618,7 +512,7 @@ def test_browse_takes_exactly_the_routers_arguments(tools: WebRouterTools, no_ke
     }
     assert schema["properties"]["provider"]["enum"] == [PROVIDER_AUTO]
     assert schema["required"] == ["task"]
-    assert "waits 0s" in _tool(tools, MCP_TOOL_BROWSE).description
+    assert "After 0s" in _tool(tools, MCP_TOOL_BROWSE).description
 
 
 def test_browse_says_so_when_nothing_can_serve_it(
@@ -650,9 +544,7 @@ async def test_browse_that_finishes_inside_the_budget_answers_outright(tools: We
     assert payload["state"] == "completed"
     assert payload["answer"] == "the answer"
     assert payload["structured"] == {"ok": True}
-    assert payload["steps"] == [
-        {"action": "navigate", "url": "https://example.com", "detail": None, "screenshot_url": None}
-    ]
+    assert payload["steps"] == [{"action": "navigate", "url": "https://example.com"}], "no empty keys"
     assert payload["handle"].startswith(MCP_TOOL_BROWSE)
     assert "raw" not in payload
     request = tools.router.get_browse_provider(FAKE).requests[-1]  # type: ignore[attr-defined]
@@ -839,7 +731,7 @@ def test_the_server_steers_an_interactive_page_to_a_browser_the_user_agrees_to(t
     assert "browser_open" in described["extract"]
     opener = described.get("browser_open")
     if opener is not None:  # listed only where Playwright imports
-        assert "logins, forms, multi-step portals" in opener and "headless=false" in opener
+        assert "logins, forms and portals" in opener and "headless=false" in opener
         assert "BILLS FOR EVERY MINUTE" in opener  # the billing warning stays
 
 
@@ -867,7 +759,6 @@ async def test_answer_round_trip_and_fetch_raw(tools: WebRouterTools, fake_answe
     assert payload["provider"] == FAKE
     assert payload["answer"] == "the answer"
     assert payload["outcome"] == "complete"
-    assert payload["citation_count"] == 1
     assert payload["citations"][0]["url"] == "https://example.com"
     assert payload["handle"].startswith(MCP_TOOL_ANSWER)
     request = tools.router.get_answer_provider(FAKE).requests[-1]  # type: ignore[attr-defined]
@@ -883,7 +774,7 @@ async def test_answer_needs_no_provider_argument(no_keys: None, monkeypatch: pyt
     monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
     session = WebRouterTools(AsyncWebRouter())
     schema = _tool(session, MCP_TOOL_ANSWER).input_schema
-    assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
+    assert schema["properties"]["provider"]["enum"] == ["auto", PROVIDER_LINKUP]
     assert "provider" not in schema["required"]
 
     auto = session.router.get_answer_provider()
@@ -906,7 +797,7 @@ def test_answer_says_so_when_nothing_can_serve_it(
     monkeypatch.setenv(ENV_LINKUP_API_KEY, "x")
     schema = _tool(tools, MCP_TOOL_ANSWER).input_schema
     assert "NOTHING IS CONFIGURED" not in _tool(tools, MCP_TOOL_ANSWER).description
-    assert schema["properties"]["provider"]["enum"] == [PROVIDER_LINKUP]
+    assert schema["properties"]["provider"]["enum"] == ["auto", PROVIDER_LINKUP]
 
 
 def test_answer_offers_only_the_options_a_configured_backend_maps(

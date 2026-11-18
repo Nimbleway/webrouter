@@ -159,7 +159,7 @@ def test_with_no_router_the_call_runs_as_before(tool: Tool, called: list[str]) -
 @pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
 @pytest.mark.parametrize(
     "route_tools",
-    ["search", ["search", "open_browser"], ["run_template"], ["plan"]],
+    ["search", ["search", "open_browser"], ["live_data"], ["plan"]],
     ids=["str", "browser", "tpl", "x"],
 )
 def test_route_tools_takes_only_the_five_tools(cls: type, route_tools: Any) -> None:
@@ -172,4 +172,4 @@ def test_both_routers_take_the_same_routing_arguments() -> None:
     for cls in (WebRouter, AsyncWebRouter):
         parameters = inspect.signature(cls).parameters
         assert all(parameters[name].kind is inspect.Parameter.KEYWORD_ONLY for name in names)
-        assert (parameters["router"].default, parameters["fail_on_router_error"].default) == (None, False)
+        assert (parameters["router"].default, parameters["fail_on_router_error"].default) == ("rules", False)

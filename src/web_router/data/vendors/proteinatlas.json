@@ -1,0 +1,115 @@
+{
+  "vendor": "proteinatlas",
+  "name": "Human Protein Atlas",
+  "category": "science",
+  "summary": "Human protein and RNA expression across tissues, cells and subcellular locations, per gene or as a custom table for a gene search.",
+  "docs_url": "https://www.proteinatlas.org/about/help/dataaccess",
+  "base_url": "https://www.proteinatlas.org",
+  "notes": [
+    "Keyless. Genes are addressed by Ensembl gene ID (ENSG...).",
+    "The per-gene XML is the most complete record; JSON and TSV carry the same data in a flatter form.",
+    "search_download.php needs search, format and columns; columns are short specifiers (g gene name, gs synonyms, eg Ensembl ID, up UniProt, chr chromosome, pc protein class, scl subcellular location, rnats RNA tissue specificity, and over 150 more listed on the help page)."
+  ],
+  "sources": [
+    "https://www.proteinatlas.org/about/help/dataaccess"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "proteinatlas.gene.json",
+      "name": "Get a gene's atlas record as JSON",
+      "summary": "Expression, localization, protein class and evidence for one gene.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ensembl_id}.json",
+      "params": {
+        "ensembl_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ensembl gene ID.",
+          "example": "ENSG00000134057"
+        }
+      },
+      "job": "science.proteins.get",
+      "docs_url": "https://www.proteinatlas.org/about/help/dataaccess",
+      "verified": {
+        "docs": "https://www.proteinatlas.org/about/help/dataaccess"
+      }
+    },
+    {
+      "id": "proteinatlas.gene.xml",
+      "name": "Get a gene's full atlas record as XML",
+      "summary": "The most comprehensive per-gene record, including antibody and per-tissue detail.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ensembl_id}.xml",
+      "params": {
+        "ensembl_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Ensembl gene ID.",
+          "example": "ENSG00000134057"
+        }
+      },
+      "job": "science.proteins.get",
+      "docs_url": "https://www.proteinatlas.org/about/help/dataaccess",
+      "verified": {
+        "docs": "https://www.proteinatlas.org/about/help/dataaccess"
+      }
+    },
+    {
+      "id": "proteinatlas.search.download",
+      "name": "Download chosen columns for a gene search",
+      "summary": "A table of the requested columns for every gene matching an atlas search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/search_download.php",
+      "params": {
+        "search": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Atlas search string selecting the genes.",
+          "example": "P53"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "json",
+            "tsv"
+          ],
+          "example": "json"
+        },
+        "columns": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated column specifiers, e.g. g,gs,eg,up,scl.",
+          "example": "g,gs"
+        },
+        "compress": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "yes",
+            "no"
+          ],
+          "description": "Gzip the result.",
+          "example": "no"
+        }
+      },
+      "notes": [
+        "400 means a bad request or too many results; narrow the search."
+      ],
+      "job": "science.proteins.search",
+      "docs_url": "https://www.proteinatlas.org/about/help/dataaccess",
+      "verified": {
+        "docs": "https://www.proteinatlas.org/about/help/dataaccess"
+      }
+    }
+  ]
+}

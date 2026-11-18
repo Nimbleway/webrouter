@@ -12,15 +12,16 @@ from web_router.constants import (
     MCP_ARG_PROVIDER,
     MCP_ARG_STEALTH,
     MCP_TOOL_BROWSER_OPEN,
+    MCP_TOOL_EXTRACT,
     MCP_TOOL_PROPERTIES,
-    MCP_TOOL_RUN_TEMPLATE,
     MCP_TOOL_SEARCH,
 )
+from web_router.constants_live_data import MCP_TOOL_LIVE_DATA
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.mcp.chains import CHAIN_OF
-from web_router.mcp.methods import METHODS
-from web_router.providers.base import BrowserProvider, SearchProvider, TemplateProvider, _BaseProvider
+from web_router.mcp.methods import METHODS, keyed
+from web_router.providers.base import BrowserProvider, LiveDataProvider, SearchProvider, _BaseProvider
 from web_router.types import ExtractFormat, SearchDepth, StealthLevel
 
 if TYPE_CHECKING:
@@ -54,7 +55,7 @@ def serving(tool: str, providers: list[str], router: AsyncWebRouter) -> list[typ
 
 NARROWED: dict[str, tuple[str, tuple[str, ...], type[_BaseProvider], str]] = {
     MCP_TOOL_BROWSER_OPEN: (MCP_ARG_STEALTH, get_args(StealthLevel), BrowserProvider, "stealth_levels"),
-    MCP_TOOL_RUN_TEMPLATE: (MCP_ARG_FORMAT, get_args(ExtractFormat), TemplateProvider, "supported_formats"),
+    MCP_TOOL_LIVE_DATA: (MCP_ARG_FORMAT, get_args(ExtractFormat), LiveDataProvider, "supported_formats"),
     MCP_TOOL_SEARCH: ("search_depth", get_args(SearchDepth), SearchProvider, "depth_levels"),
 }
 """Per tool, an option whose choices differ per backend: the option, its choices, and where a backend lists its own.
@@ -82,13 +83,22 @@ def narrow(tool: str, properties: dict[str, Any], serving: list[type[_BaseProvid
         del properties[name]
 
 
+BILLED_WHEN_KEYED = frozenset({MCP_TOOL_SEARCH, MCP_TOOL_EXTRACT})
+"""Tools free on their keyless tier and billed once a paid backend is configured."""
+
+
 def tool_annotations(tool: str) -> ToolAnnotations:
     """``tool``'s behaviour hints, from :data:`MCP_TOOL_HINTS`; its title rides on the tool itself.
 
-    Destructive and idempotent mean something only for a tool that is not
-    read-only, so a read-only tool leaves them out of the list every turn pays for.
+    ``search`` and ``extract`` are free on the keyless tier, so they are
+    read-only until a paid backend is configured for them: ``auto`` tries a
+    keyed backend first, and each of its calls bills. Destructive and
+    idempotent mean something only for a tool that is not read-only, so a
+    read-only tool leaves them out of the list every turn pays for.
     """
     _, read_only, destructive, idempotent, open_world = MCP_TOOL_HINTS[tool]
+    if tool in BILLED_WHEN_KEYED and keyed(METHODS[tool]):
+        read_only, idempotent = False, False
     return ToolAnnotations(
         read_only_hint=read_only,
         destructive_hint=None if read_only else destructive,

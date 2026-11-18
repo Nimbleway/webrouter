@@ -1,0 +1,397 @@
+{
+  "vendor": "supadata",
+  "name": "Supadata",
+  "category": "scraping",
+  "summary": "Transcripts and metadata of YouTube, TikTok, Instagram, X and Facebook videos, YouTube search, AI extraction from video, and web page scraping to Markdown.",
+  "docs_url": "https://docs.supadata.ai/api-reference/introduction",
+  "pricing_url": "https://supadata.ai/pricing",
+  "base_url": "https://api.supadata.ai/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SUPADATA_API_KEY"
+        ],
+        "description": "a Supadata API key (dash.supadata.ai > API key). Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billed in credits; every response carries an x-billable-requests header with the credits it used (on a 202 job answer it is a precharge estimate, reconciled when the job finishes). Polling a job is free.",
+    "Transcript, extract and crawl can answer 202 with a jobId instead of a result: poll the matching job endpoint until it is done.",
+    "Transcript chunks give offset and duration in milliseconds.",
+    "Crawl, YouTube batch jobs, playlist and channel metadata and transcript translation are in the API but not in this entry."
+  ],
+  "sources": [
+    "https://docs.supadata.ai/llms.txt",
+    "https://docs.supadata.ai/api-reference/v1-openapi.json",
+    "https://docs.supadata.ai/get-transcript",
+    "https://docs.supadata.ai/get-metadata",
+    "https://docs.supadata.ai/get-extract",
+    "https://docs.supadata.ai/youtube/search",
+    "https://docs.supadata.ai/web/scrape"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "supadata.transcript.get",
+      "name": "Get a video transcript",
+      "summary": "Existing or AI-generated transcript of a video on YouTube, TikTok, Instagram, X or Facebook, or of a media file.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/transcript",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Video or post URL: YouTube, TikTok, Instagram, X (Twitter), Facebook, or a public media file URL. URL-encode it.",
+          "example": "https://youtu.be/dQw4w9WgXcQ"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Preferred transcript language, ISO 639-1; falls back to the first available language."
+        },
+        "text": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true returns plain text instead of timestamped chunks. Default false."
+        },
+        "chunkSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum characters per chunk, 50 to 10000; only when text=false."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "native: only an existing transcript; generate: always AI-generate; auto (default): native, else generate. A file URL is always generate.",
+          "enum": [
+            "native",
+            "auto",
+            "generate"
+          ]
+        }
+      },
+      "notes": [
+        "1 credit for a native transcript; 2 credits per minute of video for a generated one. A 206 (transcript unavailable) still costs 1 credit. Use mode=native to avoid AI generation costs.",
+        "A long video answers 202 with a jobId; poll supadata.transcript.job."
+      ],
+      "job": "video.transcript",
+      "docs_url": "https://docs.supadata.ai/get-transcript",
+      "verified": {
+        "docs": "https://docs.supadata.ai/get-transcript"
+      }
+    },
+    {
+      "id": "supadata.transcript.job",
+      "name": "Get a transcript job result",
+      "summary": "Status and, when done, the transcript of a job started by supadata.transcript.get.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/transcript/{jobId}",
+      "params": {
+        "jobId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The jobId from a 202 answer."
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://docs.supadata.ai/api-reference/endpoint/transcript/transcript-get",
+      "verified": {
+        "docs": "https://docs.supadata.ai/api-reference/endpoint/transcript/transcript-get"
+      }
+    },
+    {
+      "id": "supadata.metadata.get",
+      "name": "Get media metadata",
+      "summary": "Unified metadata (title, author, stats, media) of a YouTube, TikTok, Instagram, X or Facebook post.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/metadata",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL of the post or video."
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "video.metadata",
+      "docs_url": "https://docs.supadata.ai/get-metadata",
+      "verified": {
+        "docs": "https://docs.supadata.ai/get-metadata"
+      }
+    },
+    {
+      "id": "supadata.youtube.search",
+      "name": "Search YouTube",
+      "summary": "Videos, channels, playlists or movies matching a query, with filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/youtube/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query.",
+          "example": "Never Gonna Give You Up"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Content type, default all.",
+          "enum": [
+            "all",
+            "video",
+            "channel",
+            "playlist",
+            "movie"
+          ]
+        },
+        "uploadDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Upload date filter (videos and movies only).",
+          "enum": [
+            "all",
+            "hour",
+            "today",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "duration": {
+          "in": "query",
+          "type": "string",
+          "description": "short <4 min, medium 4-20 min, long >20 min (videos and movies only).",
+          "enum": [
+            "all",
+            "short",
+            "medium",
+            "long"
+          ]
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order, default relevance.",
+          "enum": [
+            "relevance",
+            "rating",
+            "date",
+            "views"
+          ]
+        },
+        "features": {
+          "in": "query",
+          "type": "array",
+          "description": "Feature filters, repeated: hd, subtitles, creative-commons, 3d, live, 4k, 360, location, hdr, vr180."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 5000. When set, the API pages for you and returns up to this many results with no nextPageToken."
+        },
+        "nextPageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous page; other filters are then ignored (query is still required)."
+        }
+      },
+      "notes": [
+        "Without limit: 1 credit per page and a nextPageToken. With limit: ceil(limit / 20) credits."
+      ],
+      "job": "video.search",
+      "docs_url": "https://docs.supadata.ai/youtube/search",
+      "verified": {
+        "docs": "https://docs.supadata.ai/youtube/search"
+      }
+    },
+    {
+      "id": "supadata.youtube.channel_videos",
+      "name": "List a YouTube channel's video IDs",
+      "summary": "Video, Short and live-stream IDs of a channel.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/youtube/channel/videos",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Channel URL, handle or ID.",
+          "example": "@rickastley"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to 5000, default 30."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Which videos, default all (regular videos first, then Shorts, then live).",
+          "enum": [
+            "all",
+            "video",
+            "short",
+            "live"
+          ]
+        }
+      },
+      "notes": [
+        "Returns IDs only; get details with supadata.metadata.get."
+      ],
+      "job": "social.posts",
+      "docs_url": "https://docs.supadata.ai/api-reference/endpoint/youtube/channel-videos",
+      "verified": {
+        "docs": "https://docs.supadata.ai/api-reference/endpoint/youtube/channel-videos"
+      }
+    },
+    {
+      "id": "supadata.web.scrape",
+      "name": "Scrape a web page to Markdown",
+      "summary": "Main content of one page as Markdown, with its links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/web/scrape",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Page URL."
+        },
+        "noLinks": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true strips Markdown links from the content."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Preferred content language, ISO 639-1 (sets Accept-Language). Default en."
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.supadata.ai/web/scrape",
+      "verified": {
+        "docs": "https://docs.supadata.ai/web/scrape"
+      }
+    },
+    {
+      "id": "supadata.web.map",
+      "name": "Map a website's links",
+      "summary": "All links found across a website.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/web/map",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Website URL."
+        }
+      },
+      "job": "web.map",
+      "docs_url": "https://docs.supadata.ai/api-reference/endpoint/web/map",
+      "verified": {
+        "docs": "https://docs.supadata.ai/api-reference/endpoint/web/map"
+      }
+    },
+    {
+      "id": "supadata.extract.start",
+      "name": "Extract structured data from a video",
+      "summary": "Start an AI job that watches a video and returns data shaped by a prompt and/or JSON Schema.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/extract",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Video or post URL: YouTube, TikTok, Instagram, X (Twitter), Facebook, or a public media file URL. URL-encode it."
+        },
+        "prompt": {
+          "in": "body",
+          "type": "string",
+          "description": "What to extract, in plain language. Required unless schema is set; do not put JSON structure here."
+        },
+        "schema": {
+          "in": "body",
+          "type": "object",
+          "description": "JSON Schema of the output. Required unless prompt is set. Large maxItems/maxLength bounds are rejected with 400 before any credits are used."
+        }
+      },
+      "notes": [
+        "Starts a billed job: it only produces data and changes nothing else in your account.",
+        "A read over POST that spends credits. Asynchronous: returns a jobId; poll supadata.extract.result.",
+        "Videos up to 3 hours and 2 GB, public only."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.supadata.ai/get-extract",
+      "verified": {
+        "docs": "https://docs.supadata.ai/get-extract"
+      }
+    },
+    {
+      "id": "supadata.extract.result",
+      "name": "Get an extract job result",
+      "summary": "Status and, when done, the extracted data of a job from supadata.extract.start.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/extract/{jobId}",
+      "params": {
+        "jobId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The jobId from supadata.extract.start."
+        }
+      },
+      "job": "jobs.result",
+      "docs_url": "https://docs.supadata.ai/api-reference/endpoint/extract/extract-get",
+      "verified": {
+        "docs": "https://docs.supadata.ai/api-reference/endpoint/extract/extract-get"
+      }
+    },
+    {
+      "id": "supadata.account.get",
+      "name": "Get account and credit usage",
+      "summary": "Organization, plan and credit usage.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/me",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://docs.supadata.ai/api-reference/endpoint/account/me",
+      "verified": {
+        "docs": "https://docs.supadata.ai/api-reference/endpoint/account/me"
+      }
+    }
+  ]
+}

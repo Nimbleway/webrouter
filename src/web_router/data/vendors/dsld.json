@@ -1,0 +1,273 @@
+{
+  "vendor": "dsld",
+  "name": "NIH Dietary Supplement Label Database (DSLD)",
+  "category": "health",
+  "summary": "Full label contents of dietary supplements sold in the US: ingredients, amounts, claims, brands and market status, from the NIH Office of Dietary Supplements.",
+  "docs_url": "https://api.ods.od.nih.gov/dsld/docs",
+  "base_url": "https://api.ods.od.nih.gov/dsld",
+  "notes": [
+    "Keyless; data under CC0 1.0.",
+    "Paging uses from (default 0) and size; size defaults to 1000, so set it small (e.g. 10-25) to keep answers manageable.",
+    "Search hits carry the DSLD label id; labels.get returns the full label."
+  ],
+  "sources": [
+    "https://api.ods.od.nih.gov/dsld/docs"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "dsld.labels.search",
+      "name": "Search supplement labels",
+      "summary": "Labels matching a term, narrowed by ingredient, brand, product type, form, claim, market status or entry year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v9/search-filter",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search term; quotes for an exact phrase, * for no term.",
+          "example": "vitamin d"
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "0",
+            "1",
+            "2"
+          ],
+          "description": "2 all, 1 on market, 0 off market."
+        },
+        "ingredient_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ingredient names."
+        },
+        "apply_synonyms": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "Yes",
+            "No"
+          ],
+          "description": "Match ingredient synonyms; default Yes."
+        },
+        "ingredient_category": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: amino_acid, animal_part_or_source, blend, botanical, sugars, complex_carbohydrate, enzyme, fat, fatty_acid, fiber, hormone, chemical, bacteria, protein, vitamin, mineral, other, tbd."
+        },
+        "brand": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated brand names."
+        },
+        "product_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated product names; each must contain the search term."
+        },
+        "product_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated LanguaL product type codes (a1299-a1326) as listed in the docs."
+        },
+        "supplement_form": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated LanguaL form codes (e0155-e0177) as listed in the docs."
+        },
+        "target_group": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated target group codes: p0250, p0192, p0266, p0253."
+        },
+        "claim_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated claim codes: p0065, p0265, p0124, p0264, p0115, p0276."
+        },
+        "label_claim": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated dietary claim terms."
+        },
+        "date_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest entry year, YYYY."
+        },
+        "date_end": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest entry year, YYYY."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "_score",
+            "entryDate",
+            "fullName.keyword"
+          ]
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction."
+        },
+        "from": {
+          "in": "query",
+          "type": "integer",
+          "description": "First record, default 0."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return.",
+          "example": 10
+        }
+      },
+      "job": "health.supplements.search",
+      "docs_url": "https://api.ods.od.nih.gov/dsld/docs",
+      "verified": {
+        "docs": "https://api.ods.od.nih.gov/dsld/docs"
+      }
+    },
+    {
+      "id": "dsld.labels.get",
+      "name": "Get one supplement label",
+      "summary": "A label's full contents: product, brand, ingredients with amounts and daily values, claims, form and market status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v9/label/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "DSLD label id.",
+          "example": "20581"
+        }
+      },
+      "job": "health.supplements.get",
+      "docs_url": "https://api.ods.od.nih.gov/dsld/docs",
+      "verified": {
+        "docs": "https://api.ods.od.nih.gov/dsld/docs"
+      }
+    },
+    {
+      "id": "dsld.brands.products",
+      "name": "List a brand's products",
+      "summary": "Products sold under one brand.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v9/brand-products",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Brand name."
+        },
+        "from": {
+          "in": "query",
+          "type": "integer",
+          "description": "First record, default 0."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return.",
+          "example": 25
+        }
+      },
+      "job": "health.supplements.search",
+      "docs_url": "https://api.ods.od.nih.gov/dsld/docs",
+      "verified": {
+        "docs": "https://api.ods.od.nih.gov/dsld/docs"
+      }
+    },
+    {
+      "id": "dsld.ingredients.groups",
+      "name": "Browse ingredient groups",
+      "summary": "Ingredient groups starting with a letter, or matched against group synonyms.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v9/ingredient-groups",
+      "params": {
+        "term": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A single letter, or Other for names starting with a digit."
+        },
+        "method": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search method; factsheet matches the term against each group's synonyms."
+        },
+        "from": {
+          "in": "query",
+          "type": "integer",
+          "description": "First record, default 0."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return."
+        }
+      },
+      "job": "health.supplements.search",
+      "docs_url": "https://api.ods.od.nih.gov/dsld/docs",
+      "verified": {
+        "docs": "https://api.ods.od.nih.gov/dsld/docs"
+      }
+    },
+    {
+      "id": "dsld.labels.histogram",
+      "name": "Count labels over time",
+      "summary": "Number of matching labels per period, for the same filters as labels.search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v9/search-filter-histogram",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search term; * for no term.",
+          "example": "melatonin"
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "0",
+            "1",
+            "2"
+          ],
+          "description": "2 all, 1 on market, 0 off market."
+        },
+        "ingredient_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ingredient names."
+        },
+        "brand": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated brand names."
+        }
+      },
+      "job": "health.supplements.search",
+      "docs_url": "https://api.ods.od.nih.gov/dsld/docs",
+      "verified": {
+        "docs": "https://api.ods.od.nih.gov/dsld/docs"
+      }
+    }
+  ]
+}

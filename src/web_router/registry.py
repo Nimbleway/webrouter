@@ -1,21 +1,19 @@
 """Provider registry, one table per method.
 
-Providers are looked up by name and imported lazily, so installing web-router
-without a provider's optional dependency stays valid until that provider is
-actually requested.
+Providers are looked up by name and imported lazily, so installing web-router without a provider's optional
+dependency stays valid until that provider is actually requested.
 
-There is a table per method rather than per vendor, because a name does not
-imply a capability: ``brave`` searches and cannot extract, ``oxylabs`` extracts
-and cannot search, and ``nimble`` searches, extracts, runs templates
-and researches through four different classes.
-Asking the wrong table for a name reports it as unknown and lists the ones that
-method does serve, which is the honest answer.
+There is a table per method rather than per vendor, because a name does not imply a capability: ``brave``
+searches and cannot extract, ``oxylabs`` extracts and cannot search, and ``nimble`` searches, extracts, runs
+templates and researches through four different classes. Asking the wrong table for a name reports it as unknown
+and lists the ones that method does serve, which is the honest answer.
 """
 
 from __future__ import annotations
 
 import importlib
 import os
+from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from web_router.constants import (
@@ -23,45 +21,45 @@ from web_router.constants import (
     BROWSE_ENV_BY_PROVIDER,
     BROWSER_ENV_BY_PROVIDER,
     ENV_BY_PROVIDER,
-    EXTRA_ALL,
     EXTRA_AWS,
     EXTRA_EXTRACT,
     EXTRA_RESEARCH,
     EXTRA_SEARCH,
     EXTRACT_ENV_BY_PROVIDER,
     PROVIDER_AGENTCORE,
-    PROVIDER_ANCHOR,
     PROVIDER_AUTO,
     PROVIDER_BRAVE,
     PROVIDER_BRIGHTDATA,
-    PROVIDER_BROWSER_USE,
     PROVIDER_BROWSERBASE,
     PROVIDER_DEEPSEEK,
     PROVIDER_EXA,
     PROVIDER_EXA_MCP,
     PROVIDER_FIRECRAWL,
-    PROVIDER_HYPERBROWSER,
     PROVIDER_JINA,
     PROVIDER_KEENABLE,
-    PROVIDER_KERNEL,
+    PROVIDER_KEIROLABS,
     PROVIDER_LINKUP,
-    PROVIDER_LOCAL,
     PROVIDER_MAX,
     PROVIDER_NIMBLE,
+    PROVIDER_OCTEN,
     PROVIDER_OXYLABS,
     PROVIDER_PARALLEL,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
-    PROVIDER_SKYVERN,
-    PROVIDER_STEEL,
+    PROVIDER_SELTZ,
     PROVIDER_TAVILY,
+    PROVIDER_VALYU,
     PROVIDER_WEBIQ,
     PROVIDER_YOU,
     PROVIDER_YOU_MCP,
     RESEARCH_ENV_BY_PROVIDER,
-    TEMPLATE_ENV_BY_PROVIDER,
 )
+from web_router.constants_browse import BUILTIN_BROWSE_PROVIDERS, BUILTIN_BROWSER_PROVIDERS
+from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as _SEARCH_SETTINGS
+from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
+from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
+from web_router.providers._pinning import pinned_class
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:
@@ -69,18 +67,16 @@ if TYPE_CHECKING:
         BrowseProvider,
         BrowserProvider,
         ExtractProvider,
+        LiveDataProvider,
         ResearchProvider,
         SearchProvider,
-        TemplateProvider,
         _BaseProvider,
     )
 
 _ProviderT = TypeVar("_ProviderT", bound="_BaseProvider")
 
-# name -> (module path, class name, pip extra that supplies its SDK)
-#
-# Extras are per method, so every backend in a table points at the same one.
-# The column stays because it is what ProviderNotInstalledError quotes back.
+# name -> (module path, class name, pip extra that supplies its SDK). Extras are per method, so every backend in
+# a table points at the same one; the column stays because it is what ProviderNotInstalledError quotes back.
 _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_NIMBLE: ("web_router.providers.nimble", "NimbleProvider", EXTRA_SEARCH),
     PROVIDER_TAVILY: ("web_router.providers.tavily", "TavilyProvider", EXTRA_SEARCH),
@@ -90,13 +86,20 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_PARALLEL: ("web_router.providers.parallel_search", "ParallelProvider", EXTRA_SEARCH),
     PROVIDER_PERPLEXITY: ("web_router.providers.perplexity", "PerplexityProvider", EXTRA_SEARCH),
     PROVIDER_LINKUP: ("web_router.providers.linkup", "LinkupProvider", EXTRA_SEARCH),
+    PROVIDER_SELTZ: ("web_router.providers.seltz", "SeltzProvider", EXTRA_SEARCH),
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQProvider", EXTRA_SEARCH),
+    PROVIDER_OCTEN: ("web_router.providers.octen", "OctenProvider", EXTRA_SEARCH),
+    PROVIDER_KEIROLABS: ("web_router.providers.keirolabs", "KeirolabsProvider", EXTRA_SEARCH),
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableProvider", EXTRA_SEARCH),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekProvider", EXTRA_SEARCH),
+    PROVIDER_VALYU: ("web_router.providers.valyu", "ValyuProvider", EXTRA_SEARCH),
     PROVIDER_AGENTCORE: ("web_router.providers.agentcore", "AgentCoreProvider", EXTRA_AWS),
     PROVIDER_YOU_MCP: ("web_router.providers.you_mcp", "YouMcpProvider", EXTRA_SEARCH),
     PROVIDER_EXA_MCP: ("web_router.providers.exa_mcp", "ExaMcpProvider", EXTRA_SEARCH),
     PROVIDER_PARALLEL_MCP: ("web_router.providers.parallel_mcp", "ParallelMcpProvider", EXTRA_SEARCH),
+    PROVIDER_EXA_LITELLM: ("web_router.providers.litellm", "ExaLiteLLMProvider", EXTRA_SEARCH),
+    PROVIDER_TAVILY_LITELLM: ("web_router.providers.litellm", "TavilyLiteLLMProvider", EXTRA_SEARCH),
+    PROVIDER_PARALLEL_LITELLM: ("web_router.providers.litellm", "ParallelLiteLLMProvider", EXTRA_SEARCH),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoProvider", AUTO_EXTRA),
 }
 
@@ -119,9 +122,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
 
 # A template run is the Extract API's, so the class ships with the extract extra.
 # No `auto`: a template's name belongs to one vendor, so there is nothing to route.
-_BUILTIN_TEMPLATE_PROVIDERS: dict[str, tuple[str, str, str]] = {
-    PROVIDER_NIMBLE: ("web_router.providers.nimble_template", "NimbleTemplateProvider", EXTRA_EXTRACT),
-}
+_BUILTIN_LIVE_DATA_PROVIDERS = BUILTIN_LIVE_DATA_PROVIDERS
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_NIMBLE: ("web_router.providers.nimble", "NimbleResearchProvider", EXTRA_RESEARCH),
@@ -132,30 +133,13 @@ _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoResearchProvider", AUTO_EXTRA),
 }
 
-# Opening a session needs only httpx, which `all` installs, so the vendors name `all` rather
-# than `browser`, which is Playwright for the handle's page actions and not needed to open one.
-# `local` needs only the standard library, so its column is never quoted.
-_BUILTIN_BROWSER_PROVIDERS: dict[str, tuple[str, str, str]] = {
-    PROVIDER_STEEL: ("web_router.providers.steel", "SteelBrowserProvider", EXTRA_ALL),
-    PROVIDER_BROWSERBASE: ("web_router.providers.browserbase", "BrowserbaseBrowserProvider", EXTRA_ALL),
-    PROVIDER_HYPERBROWSER: ("web_router.providers.hyperbrowser", "HyperbrowserBrowserProvider", EXTRA_ALL),
-    PROVIDER_ANCHOR: ("web_router.providers.anchor", "AnchorBrowserProvider", EXTRA_ALL),
-    PROVIDER_KERNEL: ("web_router.providers.kernel", "KernelBrowserProvider", EXTRA_ALL),
-    PROVIDER_LOCAL: ("web_router.providers.local", "LocalBrowserProvider", EXTRA_ALL),
-    PROVIDER_AUTO: ("web_router.providers.auto_browser", "AutoBrowserProvider", AUTO_EXTRA),
-}
+_BUILTIN_BROWSER_PROVIDERS = BUILTIN_BROWSER_PROVIDERS
 
-# Task backends are plain httpx, which `all` installs, as for the browser table.
-_BUILTIN_BROWSE_PROVIDERS: dict[str, tuple[str, str, str]] = {
-    PROVIDER_BROWSER_USE: ("web_router.providers.browser_use", "BrowserUseBrowseProvider", EXTRA_ALL),
-    PROVIDER_BROWSERBASE: ("web_router.providers.browserbase", "BrowserbaseBrowseProvider", EXTRA_ALL),
-    PROVIDER_SKYVERN: ("web_router.providers.skyvern", "SkyvernBrowseProvider", EXTRA_ALL),
-    PROVIDER_AUTO: ("web_router.providers.auto", "AutoBrowseProvider", AUTO_EXTRA),
-}
+_BUILTIN_BROWSE_PROVIDERS = BUILTIN_BROWSE_PROVIDERS
 
 _CUSTOM_PROVIDERS: dict[str, type[SearchProvider]] = {}
 _CUSTOM_EXTRACT_PROVIDERS: dict[str, type[ExtractProvider]] = {}
-_CUSTOM_TEMPLATE_PROVIDERS: dict[str, type[TemplateProvider]] = {}
+_CUSTOM_LIVE_DATA_PROVIDERS: dict[str, type[LiveDataProvider]] = {}
 _CUSTOM_RESEARCH_PROVIDERS: dict[str, type[ResearchProvider]] = {}
 _CUSTOM_BROWSER_PROVIDERS: dict[str, type[BrowserProvider]] = {}
 _CUSTOM_BROWSE_PROVIDERS: dict[str, type[BrowseProvider]] = {}
@@ -181,14 +165,14 @@ def unregister_extract_provider(name: str | Provider) -> None:
     _CUSTOM_EXTRACT_PROVIDERS.pop(provider_name(name), None)
 
 
-def register_template_provider(name: str | Provider, provider_cls: type[TemplateProvider]) -> None:
+def register_live_data_provider(name: str | Provider, provider_cls: type[LiveDataProvider]) -> None:
     """Register an Extract Template provider class under ``name``, overriding any builtin of that name."""
-    _CUSTOM_TEMPLATE_PROVIDERS[provider_name(name)] = provider_cls
+    _CUSTOM_LIVE_DATA_PROVIDERS[provider_name(name)] = provider_cls
 
 
-def unregister_template_provider(name: str | Provider) -> None:
+def unregister_live_data_provider(name: str | Provider) -> None:
     """Remove a previously registered custom template provider. A no-op if it was never registered."""
-    _CUSTOM_TEMPLATE_PROVIDERS.pop(provider_name(name), None)
+    _CUSTOM_LIVE_DATA_PROVIDERS.pop(provider_name(name), None)
 
 
 def register_research_provider(name: str | Provider, provider_cls: type[ResearchProvider]) -> None:
@@ -231,9 +215,9 @@ def available_extract_providers() -> list[str]:
     return sorted(set(_BUILTIN_EXTRACT_PROVIDERS) | set(_CUSTOM_EXTRACT_PROVIDERS))
 
 
-def available_template_providers() -> list[str]:
+def available_live_data_providers() -> list[str]:
     """Every Extract Template provider name the router knows, installed or not."""
-    return sorted(set(_BUILTIN_TEMPLATE_PROVIDERS) | set(_CUSTOM_TEMPLATE_PROVIDERS))
+    return sorted(set(_BUILTIN_LIVE_DATA_PROVIDERS) | set(_CUSTOM_LIVE_DATA_PROVIDERS))
 
 
 def available_research_providers() -> list[str]:
@@ -259,16 +243,19 @@ def _is_set(env_var: str) -> bool:
 def configured_providers() -> list[str]:
     """Every builtin search provider you currently have a credential for, plus the keyless ones.
 
-    Reports what the environment makes usable, which
-    :func:`available_providers` deliberately does not: that lists every name
-    the router knows, key or no key.
+    Reports what the environment makes usable, which :func:`available_providers` deliberately does not: that
+    lists every name the router knows, key or no key.
 
-    This reads environment variables only. A key passed as ``provider_config``
-    is invisible here, and a key that is present may still be rejected by the
-    service -- so treat this as "worth trying", not as a guarantee, and let the
-    provider itself raise when a credential is actually missing or bad.
+    This reads environment variables only. A key passed as ``provider_config`` is invisible here, and a key that is
+    present may still be rejected by the service -- so treat this as "worth trying", not as a guarantee, and let the
+    provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside its
+    credential -- a LiteLLM proxy's URL -- is reported only when it has both.
     """
-    return sorted(name for name, env_var in ENV_BY_PROVIDER.items() if env_var is None or _is_set(env_var))
+    return sorted(
+        name
+        for name, env_var in ENV_BY_PROVIDER.items()
+        if (env_var is None or _is_set(env_var)) and all(map(_is_set, _SEARCH_SETTINGS.get(name, ())))
+    )
 
 
 def configured_extract_providers() -> list[str]:
@@ -283,7 +270,7 @@ def configured_extract_providers() -> list[str]:
     )
 
 
-def configured_template_providers() -> list[str]:
+def configured_live_data_providers() -> list[str]:
     """Every builtin template provider you currently have credentials for.
 
     The same caveats as :func:`configured_providers`. A template run fetches
@@ -291,16 +278,15 @@ def configured_template_providers() -> list[str]:
     no ``auto``; with no key at all this is empty.
     """
     return sorted(
-        name for name, env_vars in TEMPLATE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
+        name for name, env_vars in LIVE_DATA_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
     )
 
 
 def configured_research_providers() -> list[str]:
     """Every builtin research provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. Shorter than the other two
-    in practice: every research backend bills for the run, so there is no
-    keyless member to pad it out, and with no key at all this is empty but for
+    The same caveats as :func:`configured_providers`. Shorter than the other two in practice: every research backend
+    bills for the run, so there is no keyless member to pad it out, and with no key at all this is empty but for
     ``auto`` -- which will then say which variables would fix it.
     """
     return sorted(
@@ -311,9 +297,8 @@ def configured_research_providers() -> list[str]:
 def configured_browser_providers() -> list[str]:
     """Every builtin browser provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. A cloud browser bills
-    for every minute it is open; ``local`` needs no key and is always listed,
-    whether or not a browser is installed for it to launch.
+    The same caveats as :func:`configured_providers`. A cloud browser bills for every minute it is open; ``local`` needs
+    no key and is always listed, whether or not a browser is installed for it to launch.
     """
     return sorted(
         name for name, env_vars in BROWSER_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -364,13 +349,9 @@ def _resolve(
 
 
 def get_provider_class(name: str | Provider) -> type[SearchProvider]:
-    """Resolve a search provider name to its class, importing the module on first use."""
-    return _resolve(
-        name,
-        builtin=_BUILTIN_PROVIDERS,
-        custom=_CUSTOM_PROVIDERS,
-        available=available_providers(),
-    )
+    """Resolve a search provider name to its class, importing the module on first use; ``exa:exa-instant`` pins."""
+    resolve = partial(_resolve, builtin=_BUILTIN_PROVIDERS, custom=_CUSTOM_PROVIDERS, available=available_providers())
+    return pinned_class(name, resolve)
 
 
 def get_extract_provider_class(name: str | Provider) -> type[ExtractProvider]:
@@ -393,19 +374,19 @@ def create_extract_provider(name: str | Provider, **kwargs: Any) -> ExtractProvi
     return get_extract_provider_class(name)(**kwargs)
 
 
-def get_template_provider_class(name: str | Provider) -> type[TemplateProvider]:
+def get_live_data_provider_class(name: str | Provider) -> type[LiveDataProvider]:
     """Resolve an Extract Template provider name to its class, importing the module on first use."""
     return _resolve(
         name,
-        builtin=_BUILTIN_TEMPLATE_PROVIDERS,
-        custom=_CUSTOM_TEMPLATE_PROVIDERS,
-        available=available_template_providers(),
+        builtin=_BUILTIN_LIVE_DATA_PROVIDERS,
+        custom=_CUSTOM_LIVE_DATA_PROVIDERS,
+        available=available_live_data_providers(),
     )
 
 
-def create_template_provider(name: str | Provider, **kwargs: Any) -> TemplateProvider:
+def create_live_data_provider(name: str | Provider, **kwargs: Any) -> LiveDataProvider:
     """Instantiate an Extract Template provider by name, passing ``kwargs`` to its constructor."""
-    return get_template_provider_class(name)(**kwargs)
+    return get_live_data_provider_class(name)(**kwargs)
 
 
 def get_research_provider_class(name: str | Provider) -> type[ResearchProvider]:

@@ -1,0 +1,619 @@
+{
+  "vendor": "tikhub",
+  "name": "TikHub",
+  "category": "social",
+  "summary": "Public data from TikTok, Instagram, YouTube and X (and many other platforms) over one API: profiles, posts, comments and search.",
+  "docs_url": "https://docs.tikhub.io/",
+  "base_url": "https://api.tikhub.io",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "TIKHUB_API_KEY"
+        ],
+        "description": "A TikHub API token (tikhub.io user center > API token)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "The full catalog has hundreds of endpoints (Douyin, Xiaohongshu, Bilibili, Weibo and more, plus 'web_v2' and app variants); this file names the main reads for TikTok, Instagram, YouTube and X.",
+    "Identifiers vary per call: TikTok lists want secUid, Instagram posts want a numeric user_id (look it up with the profile call), X accepts screen_name or rest_id.",
+    "Paging tokens differ per endpoint (cursor, offset plus search_id, max_id, min_id, continuation_token).",
+    "Calls are billed per request from your TikHub balance; account.info shows the account."
+  ],
+  "sources": [
+    "https://docs.tikhub.io/",
+    "https://api.tikhub.io/openapi.json"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "tikhub.account.info",
+      "name": "Get your TikHub account",
+      "summary": "Account details tied to the API token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/tikhub/user/get_user_info",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.account.daily_usage",
+      "name": "Get daily usage",
+      "summary": "Daily usage of the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/tikhub/user/get_user_daily_usage",
+      "params": {},
+      "job": "account.usage",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.tiktok.profile",
+      "name": "Get a TikTok profile",
+      "summary": "Profile by username or secUid; send at least one.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/tiktok/web/fetch_user_profile",
+      "params": {
+        "uniqueId": {
+          "in": "query",
+          "type": "string",
+          "description": "Public TikTok username (preferred over secUid)."
+        },
+        "secUid": {
+          "in": "query",
+          "type": "string",
+          "description": "TikTok's opaque user id."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.tiktok.posts",
+      "name": "List a TikTok user's videos",
+      "summary": "Videos by secUid, up to 15 per page, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/tiktok/web/fetch_user_post",
+      "params": {
+        "secUid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TikTok's opaque user id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cursor from the previous response."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "coverFormat": {
+          "in": "query",
+          "type": "integer"
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.tiktok.post",
+      "name": "Get a TikTok video",
+      "summary": "Details of one video by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/tiktok/web/fetch_post_detail",
+      "params": {
+        "itemId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Video id."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region code such as US, GB, JP."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.tiktok.comments",
+      "name": "List comments on a TikTok video",
+      "summary": "Comments of a video, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/tiktok/web/fetch_post_comment",
+      "params": {
+        "aweme_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Video id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cursor from the previous response."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "current_region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region code."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.tiktok.search",
+      "name": "Search TikTok videos",
+      "summary": "Videos by keyword, paged by offset and search_id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/tiktok/web/fetch_search_video",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keyword."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset from the previous response."
+        },
+        "search_id": {
+          "in": "query",
+          "type": "string",
+          "description": "search_id from the previous response; needed when paging."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.instagram.profile",
+      "name": "Get an Instagram profile",
+      "summary": "Profile data by username.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/instagram/v1/fetch_user_info_by_username",
+      "params": {
+        "username": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Instagram username."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.instagram.posts",
+      "name": "List an Instagram user's posts",
+      "summary": "Posts by user id (not username), paged by max_id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/instagram/v1/fetch_user_posts",
+      "params": {
+        "user_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Instagram user id."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "max_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor for the next page."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.instagram.post",
+      "name": "Get an Instagram post by URL",
+      "summary": "Post details from a post URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/instagram/v1/fetch_post_by_url",
+      "params": {
+        "post_url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Post URL."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.instagram.comments",
+      "name": "List comments on an Instagram post",
+      "summary": "Comments by media id, popular or recent, paged by min_id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/instagram/v1/fetch_post_comments_v2",
+      "params": {
+        "media_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Post media id."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "popular or recent."
+        },
+        "min_id": {
+          "in": "query",
+          "type": "string",
+          "description": "next_min_id from the previous response."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.youtube.search",
+      "name": "Search YouTube videos",
+      "summary": "Videos by keyword with language, country and sort options.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/youtube/web/search_video",
+      "params": {
+        "search_query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keyword."
+        },
+        "language_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en-US."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order."
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code, e.g. US."
+        },
+        "continuation_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.youtube.channel",
+      "name": "Get a YouTube channel",
+      "summary": "Channel information by channel id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/youtube/web/get_channel_info",
+      "params": {
+        "channel_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube channel id."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.youtube.video",
+      "name": "Get a YouTube video",
+      "summary": "Video details by id; need_format=true trims the raw player data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/youtube/web_v2/get_video_info",
+      "params": {
+        "video_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video id."
+        },
+        "language_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en-US."
+        },
+        "need_format": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for cleaned, trimmed data."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.youtube.comments",
+      "name": "List comments on a YouTube video",
+      "summary": "First-level comments, top or newest.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/youtube/web_v2/get_video_comments",
+      "params": {
+        "video_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video id."
+        },
+        "language_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en-US."
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code, e.g. US."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "top or newest.",
+          "enum": [
+            "top",
+            "newest"
+          ]
+        },
+        "continuation_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response."
+        },
+        "need_format": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for cleaned, trimmed data."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.youtube.channel_videos",
+      "name": "List a YouTube channel's videos",
+      "summary": "Uploads of a channel, paged by continuation_token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/youtube/web_v2/get_channel_videos",
+      "params": {
+        "channel_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube channel id."
+        },
+        "language_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en-US."
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code, e.g. US."
+        },
+        "continuation_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Token from the previous response."
+        },
+        "need_format": {
+          "in": "query",
+          "type": "boolean",
+          "description": "True for cleaned, trimmed data."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.x.profile",
+      "name": "Get an X profile",
+      "summary": "Profile by screen name or numeric id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/twitter/web/fetch_user_profile",
+      "params": {
+        "screen_name": {
+          "in": "query",
+          "type": "string",
+          "description": "X username (screen name)."
+        },
+        "rest_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "X numeric user id; wins over screen_name."
+        }
+      },
+      "job": "social.profile",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.x.user_posts",
+      "name": "List an X user's posts",
+      "summary": "Posts by screen name or id, paged by cursor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/twitter/web/fetch_user_post_tweet",
+      "params": {
+        "screen_name": {
+          "in": "query",
+          "type": "string",
+          "description": "X username (screen name)."
+        },
+        "rest_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "X numeric user id; wins over screen_name."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous response."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.x.post",
+      "name": "Get a tweet",
+      "summary": "One tweet by id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/twitter/web/fetch_tweet_detail",
+      "params": {
+        "tweet_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Tweet id."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    },
+    {
+      "id": "tikhub.x.search",
+      "name": "Search X posts",
+      "summary": "Posts matching a keyword.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/twitter/web/fetch_search_timeline",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search keyword."
+        },
+        "search_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Search tab (e.g. Top, Latest)."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor from the previous response."
+        }
+      },
+      "job": "social.search",
+      "docs_url": "https://api.tikhub.io/openapi.json",
+      "verified": {
+        "docs": "https://api.tikhub.io/openapi.json"
+      }
+    }
+  ]
+}

@@ -43,7 +43,7 @@ paths only. `load_env(remember=true)` records the path, never a copy of the
 keys. What this does not prevent: a model steered by a page it read could call
 `load_env` on a file someone planted on the machine, adding a key for a backend
 you hold none for, and later calls through `auto` could then run on that
-account. See [docs/mcp.md](docs/mcp.md#loading-keys-mid-conversation-load_env).
+account. See [the MCP guide](https://docs.webrouter.net/mcp-server#loading-keys-mid-conversation-load_env).
 
 ### Redirects are not followed
 
@@ -83,9 +83,9 @@ sees every URL you pass — including one that is itself sensitive, such as a
 signed or single-use link. Name a provider and it is the one you named.
 
 The default provider, `auto`, chooses for you: the backends you hold a
-credential for first, then the anonymous tiers those vendors publish — Tavily's
-keyless mode then You.com's open MCP endpoint for a search, Tavily's keyless
-mode then Jina Reader for an extract. So **a router you have not configured
+credential for first, then the anonymous tiers those vendors publish — Nimble's
+keyless tier, then Tavily's keyless mode and You.com's open MCP endpoint for a
+search; Nimble's, then Tavily's keyless mode and Jina Reader for an extract. So **a router you have not configured
 still sends queries and URLs to a third party you did not name**, under that
 vendor's terms for anonymous use rather than under an account you control.
 

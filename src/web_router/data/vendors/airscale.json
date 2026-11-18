@@ -1,0 +1,338 @@
+{
+  "vendor": "airscale",
+  "name": "Airscale",
+  "category": "enrichment",
+  "summary": "Find professional and personal emails and mobile numbers, search people and companies, and extract LinkedIn profiles.",
+  "docs_url": "https://docs.airscale.io/api-reference/api-overview",
+  "pricing_url": "https://airscale.io/pricing",
+  "base_url": "https://api.airscale.io/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AIRSCALE_API_KEY"
+        ],
+        "description": "An Airscale workspace API key (Settings > API key). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is a POST with a JSON body, reads included.",
+    "Credits are charged only on success; not_found results are free. Costs are per endpoint (see each).",
+    "Rate limits are per endpoint and per workspace (see each); 429 means wait for the window to reset.",
+    "A client timeout or 502 does not prove the call was not charged: check the balance before retrying.",
+    "Monitors (job change, new hire, post engagement), post scraping and bulk email finding are not in this entry."
+  ],
+  "sources": [
+    "https://docs.airscale.io/api-reference/api-overview.md",
+    "https://docs.airscale.io/api-reference/authentication.md",
+    "https://docs.airscale.io/api-reference/rate-limits.md",
+    "https://docs.airscale.io/llms.txt"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "airscale.credits.get",
+      "name": "Get credit balance",
+      "summary": "Remaining credits of the workspace.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/credits",
+      "notes": [
+        "A read over POST with no body. Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.airscale.io/api-reference/credit-count",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/credit-count"
+      }
+    },
+    {
+      "id": "airscale.email.find",
+      "name": "Find a professional email",
+      "summary": "Verified work email from a LinkedIn URL or a name plus company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/email",
+      "params": {
+        "linkedin_profile_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn person profile URL; enough on its own."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name (needed with last_name when no profile URL)."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain (or company_name).",
+          "example": "example.org"
+        },
+        "company_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        }
+      },
+      "notes": [
+        "A read over POST. 2 credits when found. 3,000 requests a minute.",
+        "Without linkedin_profile_url, first_name, last_name and domain or company_name are all required; full_name is not accepted."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.airscale.io/api-reference/email-finder",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/email-finder"
+      }
+    },
+    {
+      "id": "airscale.phone.find",
+      "name": "Find a mobile number",
+      "summary": "Mobile phone numbers for a LinkedIn profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/phone",
+      "params": {
+        "linkedin_profile_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn person profile URL.",
+          "example": "https://www.linkedin.com/in/example-person-000000"
+        }
+      },
+      "notes": [
+        "A read over POST. 40 credits when found. phone_numbers is the primary number, all_phone_numbers the full list. 6,000 requests a minute."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://docs.airscale.io/api-reference/mobile-finder",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/mobile-finder"
+      }
+    },
+    {
+      "id": "airscale.personal_email.find",
+      "name": "Find a personal email",
+      "summary": "Personal email address for a LinkedIn profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/personal-email",
+      "params": {
+        "linkedin_profile_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn person profile URL.",
+          "example": "https://www.linkedin.com/in/example-person-000000"
+        },
+        "verification": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true (or \"yes\") turns on verification; anything else leaves it off."
+        }
+      },
+      "notes": [
+        "A read over POST. 3 to 12 credits when found, depending on the source; needs at least 3 credits to start. A 502 can come after a charge. 2,000 requests a minute."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.airscale.io/api-reference/personal-email",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/personal-email"
+      }
+    },
+    {
+      "id": "airscale.people.search",
+      "name": "Search people",
+      "summary": "Leads matching person, role, company and past-experience filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/find-people",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filters, e.g. {\"jobTitle\": {\"include\": [\"Founder\"]}}; the filter keys are on the docs page."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size, 1 to 100."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous page, unchanged, with the same query."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credit per lead returned; empty pages are free. 6 requests a second.",
+        "POST /find-people/count takes the same query and is free."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.airscale.io/api-reference/find-people",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/find-people"
+      }
+    },
+    {
+      "id": "airscale.companies.search",
+      "name": "Search companies",
+      "summary": "Companies matching firmographic, location, event, intent and technology filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/find-companies",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filters; valid values come from the company filter-values endpoint (docs page)."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Zero-based page, default 0."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page size 1 to 100, default 50."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor from the previous page; its saved size wins."
+        }
+      },
+      "notes": [
+        "A read over POST. 0.1 credit per company returned. Cursor paging reaches at most 10,000 companies per search. 6 requests a second.",
+        "Booleans such as hasWebsite must be JSON booleans, not strings."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.airscale.io/api-reference/find-companies",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/find-companies"
+      }
+    },
+    {
+      "id": "airscale.profile.get",
+      "name": "Extract a LinkedIn person profile",
+      "summary": "Structured profile from a LinkedIn /in/ URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/profile",
+      "params": {
+        "linkedin_profile_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn person profile URL.",
+          "example": "https://www.linkedin.com/in/example-person-000000"
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit for an /in/ profile (0.5 for /company/ or /school/); failures are free. 404 means no profile. 3,000 requests a minute."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.airscale.io/api-reference/extract-people-profile",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/extract-people-profile"
+      }
+    },
+    {
+      "id": "airscale.company.get",
+      "name": "Extract a LinkedIn company profile",
+      "summary": "Structured organization profile from a LinkedIn /company/ or /school/ URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company",
+      "params": {
+        "linkedin_profile_url": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "LinkedIn company or school URL.",
+          "example": "https://www.linkedin.com/in/example-person-000000"
+        }
+      },
+      "notes": [
+        "A read over POST. 0.5 credit when found. 3,000 requests a minute."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.airscale.io/api-reference/extract-company-profile",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/extract-company-profile"
+      }
+    },
+    {
+      "id": "airscale.reverse_email",
+      "name": "Find a person from an email",
+      "summary": "Person profile behind an email address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/reverse-email",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email address."
+        }
+      },
+      "notes": [
+        "A read over POST. 2 credits when found. A miss is the bare JSON string \"not found\", free. Profile keys are camelCase and nested (profile.firstName). 25 requests a second."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.airscale.io/api-reference/reverse-email",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/reverse-email"
+      }
+    },
+    {
+      "id": "airscale.domain_to_linkedin",
+      "name": "Find a company's LinkedIn URL from its domain",
+      "summary": "LinkedIn company URL for a domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/domain-to-linkedin",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Hostname only, no scheme or path.",
+          "example": "example.org"
+        },
+        "idempotency_key": {
+          "in": "header",
+          "type": "string",
+          "description": "Reuse for retries of the same domain: replays for 7 days without a new charge.",
+          "wire_name": "Idempotency-Key"
+        }
+      },
+      "notes": [
+        "A read over POST. 0.5 credit when found; 404 (no match) and 504 (timeout) are free. Takes up to 120 s. 180 requests a minute."
+      ],
+      "job": "company.links",
+      "docs_url": "https://docs.airscale.io/api-reference/domain-to-linkedin",
+      "verified": {
+        "docs": "https://docs.airscale.io/api-reference/domain-to-linkedin"
+      }
+    }
+  ]
+}

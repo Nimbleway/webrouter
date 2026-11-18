@@ -37,7 +37,7 @@
   ],
   "source": [
     "https://docs.parallel.ai/search/search-mcp",
-    "https://search.parallel.ai/mcp tools/list (web_search inputSchema, checked 2026-11-09)"
+    "web_search tool inputSchema, from tools/list on https://search.parallel.ai/mcp (2026-11-09)"
   ],
   "verified": {
     "max_results": "live: tests/test_integration_surface.py::test_max_results_is_an_upper_bound"

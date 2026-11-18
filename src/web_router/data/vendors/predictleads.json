@@ -1,0 +1,1243 @@
+{
+  "vendor": "predictleads",
+  "name": "PredictLeads",
+  "category": "company-data",
+  "summary": "Company intelligence: job openings, technology detections, news and financing events, connections and more for 120M+ companies.",
+  "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+  "pricing_url": "https://www.predictleads.com/pricing",
+  "base_url": "https://predictleads.com/api/v3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "PREDICTLEADS_API_KEY"
+        ],
+        "description": "a PredictLeads API key (Your Subscription Plans page in the PredictLeads dashboard)"
+      },
+      "api_token": {
+        "env": [
+          "PREDICTLEADS_API_TOKEN"
+        ],
+        "description": "the PredictLeads API token that goes with the key (same page)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      },
+      {
+        "in": "header",
+        "name": "X-Api-Token",
+        "value": "{api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Plan-based monthly request limits; each call costs credits (shown per endpoint) and the X-Credits-Used response header says how many. At the limit every call answers 402.",
+    "Lists are paginated with page and limit; send page to get meta.count in the answer. Array filters are comma-separated strings.",
+    "Company is identified by its id or by domain.",
+    "The Follow and Unfollow endpoints (which drive webhook delivery) are not listed. v4 beta docs exist separately."
+  ],
+  "sources": [
+    "https://docs.predictleads.com/v3/api_endpoints"
+  ],
+  "endpoints": [
+    {
+      "id": "predictleads.subscription.get",
+      "name": "Get API subscription",
+      "summary": "Subscription status, monthly credit limit and usage.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api_subscription",
+      "notes": [
+        "Costs nothing (free)."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.request_logs.list",
+      "name": "List API request logs",
+      "summary": "Your own API request log entries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api_request_logs",
+      "params": {
+        "requested_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only requests made after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "requested_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only requests made before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs nothing (free)."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.followings.list",
+      "name": "List followed companies",
+      "summary": "Companies you follow for webhook delivery.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/followings",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.company.get",
+      "name": "Get a company",
+      "summary": "Company profile: name, description, location, ticker, language.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{id_or_domain}",
+      "params": {
+        "id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.companies.discover",
+      "name": "Discover companies",
+      "summary": "Companies filtered by location, size, NAICS code, industry and revenue, ordered by last update.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discover/companies",
+      "params": {
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results in this country name or state name/abbreviation.",
+          "example": "United States"
+        },
+        "sizes": {
+          "in": "query",
+          "type": "array",
+          "description": "Company sizes, comma-separated: 1, 2-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5001-10000, 10001+.",
+          "example": "1,2-10,11-50"
+        },
+        "naics_codes": {
+          "in": "query",
+          "type": "array",
+          "description": "NAICS codes, comma-separated."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "One industry name from PredictLeads' list of 494 (for example 'Advertising Services')."
+        },
+        "revenue_range_low": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only companies with revenue at or above this.",
+          "example": 1000000
+        },
+        "revenue_range_high": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only companies with revenue at or below this.",
+          "example": 100000000
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 30, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per record.",
+        "Returns an estimated total count."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.extended_company.get",
+      "name": "Get an extended company",
+      "summary": "Extended company profile with additional fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/extended_companies/{id_or_domain}",
+      "params": {
+        "id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        }
+      },
+      "notes": [
+        "Costs 2 credits per call."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.extended_companies.discover",
+      "name": "Discover extended companies",
+      "summary": "Extended company records filtered by location, size, NAICS code and industry.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discover/extended_companies",
+      "params": {
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results in this country name or state name/abbreviation.",
+          "example": "United States"
+        },
+        "sizes": {
+          "in": "query",
+          "type": "array",
+          "description": "Company sizes, comma-separated: 1, 2-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5001-10000, 10001+.",
+          "example": "1,2-10,11-50"
+        },
+        "naics_codes": {
+          "in": "query",
+          "type": "array",
+          "description": "NAICS codes, comma-separated."
+        },
+        "industry": {
+          "in": "query",
+          "type": "string",
+          "description": "One industry name from PredictLeads' list of 494 (for example 'Advertising Services')."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 30, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 2 credits per record."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.companies.similar",
+      "name": "Get similar companies",
+      "summary": "Companies similar to a given one, with a reason for the top 20.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/similar_companies",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 20, max 50."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per record."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.jobs.company",
+      "name": "Get a company's job openings",
+      "summary": "Job openings sourced from the company's own site.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/job_openings",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "active_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only openings not closed, seen in the last 5 days and found in the last year."
+        },
+        "not_closed": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Like active_only without the last_seen_at condition."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results in this country name or state name/abbreviation.",
+          "example": "United States"
+        },
+        "first_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only openings first seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "first_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only openings first seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "last_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only openings last seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "last_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only openings last seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "with_description_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only openings with a description."
+        },
+        "with_location_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only openings with a location."
+        },
+        "categories": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated categories, such as sales, engineering, marketing, software_development.",
+          "example": "sales,engineering"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.jobs.get",
+      "name": "Get a job opening by id",
+      "summary": "One job opening.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/job_openings/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Job opening uuid."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.jobs.discover",
+      "name": "Discover job openings",
+      "summary": "Openings across companies by O*NET occupation code, title, seniority and company location; last year only.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discover/job_openings",
+      "params": {
+        "onet_codes": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated O*NET codes."
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results in this country name or state name/abbreviation.",
+          "example": "United States"
+        },
+        "active_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only openings that are not closed and seen in the last 5 days."
+        },
+        "found_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only openings found after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "seniority": {
+          "in": "query",
+          "type": "string",
+          "description": "Seniority of the opening.",
+          "enum": [
+            "not_set",
+            "founder",
+            "c_level",
+            "partner",
+            "president",
+            "vice_president",
+            "head",
+            "director",
+            "manager",
+            "mid_senior",
+            "junior"
+          ]
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Titles containing all of these words.",
+          "example": "product manager"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 30, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per record.",
+        "Returns an estimated total count."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.technology_detections.company",
+      "name": "Get a company's technology detections",
+      "summary": "Technologies the company uses, as detections with first and last seen dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/technology_detections",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "first_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only detections first seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "first_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only detections first seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "last_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only detections last seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "last_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only detections last seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.technology_detections.discover",
+      "name": "Discover companies using a technology",
+      "summary": "Companies detected using a given technology, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discover/technologies/{technology_id_or_fuzzy_name}/technology_detections",
+      "params": {
+        "technology_id_or_fuzzy_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Technology id or fuzzy name; ids come from technologies.list.",
+          "example": "hubspot"
+        },
+        "first_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only detections first seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "first_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only detections first seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "last_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only detections last seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "last_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only detections last seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "company_location": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results in this country name or state name/abbreviation.",
+          "example": "United States"
+        },
+        "company_sizes": {
+          "in": "query",
+          "type": "array",
+          "description": "Company sizes, comma-separated."
+        },
+        "company_naics_codes": {
+          "in": "query",
+          "type": "array",
+          "description": "Company NAICS codes, comma-separated."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 30, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per record.",
+        "Returns an estimated total count."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.technologies.list",
+      "name": "List tracked technologies",
+      "summary": "The technologies PredictLeads tracks (about 240,000), optionally by fuzzy name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/technologies",
+      "params": {
+        "fuzzy_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by fuzzy name."
+        },
+        "order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Order; fuzzy_score_desc only with fuzzy_name. Default created_at_asc.",
+          "enum": [
+            "created_at_asc",
+            "created_at_desc",
+            "fuzzy_score_desc"
+          ]
+        },
+        "parent_technology_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only technologies whose direct parent has this id."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 3 credits per call."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.technologies.get",
+      "name": "Get a technology by id or fuzzy name",
+      "summary": "One technology.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/technologies/{id_or_fuzzy_name}",
+      "params": {
+        "id_or_fuzzy_name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Technology id or fuzzy name.",
+          "example": "hubspot"
+        }
+      },
+      "notes": [
+        "Costs 3 credits per call."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.news.company",
+      "name": "Get a company's news events",
+      "summary": "Categorized news events (acquisitions, launches, hires and more) for a company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/news_events",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results in this country name or state name/abbreviation.",
+          "example": "United States"
+        },
+        "found_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events found after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "found_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events found before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "categories": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated event categories, such as acquires, merges_with, signs_new_client.",
+          "example": "acquires,merges_with"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.news.get",
+      "name": "Get a news event by id",
+      "summary": "One news event.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/news_events/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "News event uuid."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.news.discover",
+      "name": "Discover news events",
+      "summary": "Categorized news events across companies, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discover/news_events",
+      "params": {
+        "categories": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated event categories.",
+          "example": "acquires,merges_with"
+        },
+        "company_location": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results in this country name or state name/abbreviation.",
+          "example": "United States"
+        },
+        "company_sizes": {
+          "in": "query",
+          "type": "array",
+          "description": "Company sizes, comma-separated."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 30, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per record."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.financing.company",
+      "name": "Get a company's financing events",
+      "summary": "Funding rounds extracted from news events.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/financing_events",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "first_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events first seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "first_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only events first seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.financing.discover",
+      "name": "Discover financing events",
+      "summary": "Funding events filtered by normalized financing type, company location, size and NAICS codes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discover/financing_events",
+      "params": {
+        "financing_types_normalized": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated normalized types such as seed, series_a, series_b.",
+          "example": "seed,series_a"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 30, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per record.",
+        "The docs also list location, size and NAICS filters whose exact names are on the docs page."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.sec_filings.company",
+      "name": "Get a company's SEC filings",
+      "summary": "SEC filings, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/sec_filings",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "form_types": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated form types: 6-K, 8-K, 10-K, 10-Q, 20-F, 40-F, 25.",
+          "example": "10-K,8-K"
+        },
+        "filed_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only filings after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "filed_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only filings before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 10, max 50."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.connections.company",
+      "name": "Get a company's connections",
+      "summary": "Partners, vendors, investors and other categorized relationships.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/connections",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "first_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only connections first seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "first_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only connections first seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "categories": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated categories, such as partner, vendor, integration, investor.",
+          "example": "partner,vendor"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.subpages.company",
+      "name": "Get a company's subpages",
+      "summary": "Website subpages with categories and cleaned markdown text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/subpages",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "first_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only subpages first seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "first_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only subpages first seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "web.extract",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.github.company",
+      "name": "Get a company's GitHub repositories",
+      "summary": "Public repositories of the company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/github_repositories",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "first_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only repositories first seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "first_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only repositories first seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.products.company",
+      "name": "Get a company's products",
+      "summary": "Products and services found on the company's site.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{company_id_or_domain}/products",
+      "params": {
+        "company_id_or_domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company's id or domain.",
+          "example": "stripe.com"
+        },
+        "first_seen_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only products first seen after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "first_seen_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only products first seen before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "categories": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated categories: product, service, solution and one more.",
+          "example": "product,service"
+        },
+        "subcategories": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated subcategories such as industry, use_case, pricing_tier."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 100, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per call."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    },
+    {
+      "id": "predictleads.startup_posts.discover",
+      "name": "Discover startup platform posts",
+      "summary": "Latest posts on startup platforms by hiring or launching companies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/discover/startup_platform_posts",
+      "params": {
+        "published_at_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Only posts after this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "published_at_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only posts before this date (ISO 8601).",
+          "example": "2024-09-25"
+        },
+        "post_types": {
+          "in": "query",
+          "type": "array",
+          "description": "Comma-separated post types: show_hn, job_hn.",
+          "example": "show_hn,job_hn"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1. Without it the meta count is left out of the answer."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, default 30, max 1000."
+        }
+      },
+      "notes": [
+        "Costs 1 credit per record."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.predictleads.com/v3/api_endpoints",
+      "verified": {
+        "docs": "https://docs.predictleads.com/v3/api_endpoints"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

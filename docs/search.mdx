@@ -1,0 +1,164 @@
+---
+title: "Search options"
+description: "Search the web through any provider with one call: result count, search depth, effort, recency and refused values."
+sidebarTitle: "Search"
+icon: "magnifying-glass"
+---
+
+```python
+response = router.search(
+    "nvidia q3 earnings",
+    max_results=10,
+    search_depth="fast",  # "lite" | "fast" | "deep"
+    include_domains=["reuters.com", "bloomberg.com"],
+    exclude_domains=["example.com"],
+    country="US",
+    locale="en",
+    recency="week",  # "day" | "week" | "month" | "year"
+    effort="low",  # "low" | "medium" | "high" | "max"
+)
+```
+
+Every option except `query` is optional. Which ones a given provider maps is in
+the [search support table](/providers#search); setting one it does not map raises rather than being
+ignored, and so does a value it cannot serve (a depth level it lacks, a country
+off its list) before anything is sent, so `auto` passes that backend over.
+
+That is the whole surface. It is deliberately small: these are the options that
+mean the same thing on every backend, so code written against them keeps working
+when you switch providers. `search_depth` is how much text comes back per
+result; `effort` is how hard the backend looks. The exact field each backend
+sends is in its `contracts/search/<name>.json`.
+
+## Timeout
+
+```python
+response = router.search("nvidia q3 earnings", timeout=5)
+```
+
+`timeout=` caps how many seconds the call waits. Under `auto`, a backend is
+tried only while time is left, and one whose measured p90 latency would not fit
+is passed over before it is called; running out raises `DeadlineExceededError`,
+naming each backend tried. Without it a call waits on each backend's own HTTP
+timeout, 60 seconds by default, for each backend `auto` tries. `timeout=5` is
+the same as `budget=Budget(time_limit_s=5)`; see
+[Running in production](/production#timeouts).
+## Data APIs that match the search
+
+A search also lists the data APIs whose catalog entries match the query — a
+vendor's own API, such as Datadog's monitors or Google Ads' reports (see
+[Vendor data](/vendors)) — under `response.data_apis`, beside the web
+results:
+
+```python
+response = router.search("datadog monitors")
+response.data_apis[0].endpoint  # 'datadog.monitors.list', the name call_vendor takes
+response.data_apis[0].configured  # False until its credentials are set
+response.data_apis[0].missing  # the variable to set for each one that is not
+```
+
+Matching reads the local catalog, so it costs nothing and calls nothing; a match
+is never run, and calling it stays `call_vendor()`'s. A search lists a data API
+only when the query names it — by its id (`datadog`, `google ads`) or a
+distinctive word of its name (`edgar`) — and asks for something it serves: another
+query word in an endpoint's id or job, or, for an API named by its id, in an
+endpoint's name or summary. A query that names an API and nothing else lists
+its first read endpoints. Only read endpoints are listed, at most three, so an
+everyday web search lists none. A catalog that fails to load is logged and
+skipped, and the web results come back as usual. `data_apis=False` leaves them out,
+`configured_only=True` keeps the ones you hold credentials for, and
+`data_apis_only=True` lists them alone and calls no web backend (its
+`provider` is `"data-apis"`); it refuses every web option but `max_results`,
+which then caps the matches.
+
+## Search depth
+
+Three levels, each defined by size, mapped onto each backend's own knobs. A
+backend whose longest body is short of a page refuses `deep` rather than serving
+less under its name.
+
+| Depth | What you get | Nimble | Tavily | You.com, You.com MCP | Exa, Exa MCP | WebIQ | Parallel | Perplexity | Keenable | Brave | DeepSeek |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `lite` | A snippet, up to about 500 characters | `lite` | `basic`, cut to 500 | no extraction, cut to 500 | highlights ≤ 500, cut to 500 | passage ≤ 500 | excerpts ≤ 500, cut to 500 | 100 tokens a page | snippet ≤ 500 | its snippets, cut to 500 | its default |
+| `fast` | A truncated body, a few thousand characters | `standard` | `advanced` | `highlights` | text ≤ 3,000 | passage ≤ 3,000 | excerpts ≤ 3,000 | 1,024 tokens a page | snippet ≤ 3,000 | refused | refused |
+| `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
+
+Octen serves `fast` (`full_content` at its default of 2,048 tokens a page) and `deep` (100,000 tokens, its
+maximum), and refuses `lite`: its default highlight runs to about 2,000 characters. Linkup, AgentCore and
+Parallel MCP do not map it. Where a vendor's size setting
+does not bind (Tavily's `basic` returns up to three chunks of about 500
+characters, You.com's snippets can run past 500, Exa's highlights cap,
+Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
+summary, and Brave has no size setting at all), WebRouter cuts `lite` to a snippet of about 500
+characters itself; the vendor's full text stays in `raw`.
+Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
+
+`result.content` always holds the fullest text available. Some backends return
+the body in the field others use for the snippet; that is normalized away, so
+`content` is the field to read whatever the backend did.
+
+`result.description` is the provider's snippet **when it returns one as a
+separate field**. Not every backend does at every depth: Nimble at `fast`
+returns the page body and no snippet, so `description` holds that body and is
+identical to `content`. Read `description` when you want the short form and
+have checked your backend supplies one; read `content` when you want text.
+
+## Effort
+
+`effort` is anchored on each backend's own tiers: `medium` is what it does
+unset, `low` its fastest tier, `max` its most thorough, and `high` between them
+or the same as `max`. A backend with fewer tiers serves several levels with one
+setting rather than raising. **Higher effort costs more and takes longer, by a
+vendor-specific amount; leave it unset unless needed.**
+
+| Effort | Exa | Exa MCP | Linkup | Parallel | Perplexity | Keenable |
+| --- | --- | --- | --- | --- | --- | --- |
+| `low` | `lite` | `lite` | `flash` | `turbo` | `fast` | `realtime` |
+| `medium` | its default | its default | `fast` | `fast` | its default | its default |
+| `high` | `deep-lite` | its default | `standard` | `advanced` | its default | `pro` |
+| `max` | `deep` | its default | `deep` | `advanced` | its default | `pro` |
+
+Linkup bills `deep` at ten times its other depths, and Parallel `advanced` at
+five times `fast`. Parallel refuses `low` beside a domain filter with a path,
+which its turbo mode cannot take. The other backends have no search tier and
+refuse `effort`.
+
+## Recency
+
+`recency` keeps to sources the backend dates within the last day, week, month
+or year, by publication date where it has one. A backend that takes a start
+date gets today (UTC) minus 1, 7, 30 or 365 days.
+
+| Backend | Sent as |
+| --- | --- |
+| Nimble | `time_range` |
+| Tavily | `time_range` with `filter_by_published_date`, so pages it cannot date are dropped |
+| You.com, You.com MCP | `freshness` |
+| Brave | `freshness`, by the date Brave holds for a page (published or last modified) |
+| Perplexity | `search_recency_filter` |
+| Exa, Exa MCP, Linkup, Parallel, AgentCore | a start date (`startPublishedDate`, `fromDate`, `after_date`, `publishedDateFilter.from`) |
+| Keenable | `published_after` (`1d`, `7d`, `1mo`, `1y`) |
+| DeepSeek | `after:YYYY-MM-DD` in the query |
+| Valyu | `start_date` |
+| Seltz | `from_date` as an offset from now (`now-1d`, `now-7d`, `now-1M`, `now-1y`): month and year are calendar ones |
+| Octen | `time_range` (`day`, `week`, `month`, `year`) |
+
+WebIQ and Parallel MCP do not map it.
+
+## Values a backend refuses
+
+Each of these raises `UnsupportedParameterError` before anything is sent. A
+query too long for its operators raises `ProviderError` instead. `auto` moves
+on to the next eligible backend.
+
+| Backend | Refused |
+| --- | --- |
+| You.com, You.com MCP | A `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once |
+| Brave | A `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
+| Tavily | A `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
+| Parallel | A `country` off its 37 codes; both domain lists at once; more than 200 domains |
+| Perplexity | Both domain lists at once; more than 20 domains; a `locale` that is not a bare two-letter language (`en`, not `en-US`) |
+| WebIQ | A `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
+| Keenable | More than one `include_domains` entry |
+| DeepSeek | A query past 128 characters with its operators |
+| Brave, WebIQ, DeepSeek, You.com MCP | A domain filter that is not a host name, optionally with a path, because it goes into the query as `site:`. For You.com MCP, this applies only to `include_domains`; `exclude_domains` is a tool argument |

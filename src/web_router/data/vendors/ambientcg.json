@@ -1,0 +1,142 @@
+{
+  "vendor": "ambientcg",
+  "name": "ambientCG",
+  "category": "media",
+  "summary": "CC0 PBR materials, HDRIs, decals and 3D models from ambientCG: search assets with their metadata and download links, and list categories and collections.",
+  "docs_url": "https://docs.ambientcg.com/api/v3/",
+  "base_url": "https://ambientcg.com/api/v3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AMBIENTCG_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional API token shown at ambientCG.com/activate to Patreon supporters; it unlocks their tier's benefits (early access, exclusive files)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Keyless for the public CC0 library; a token only adds Patreon benefits.",
+    "Read-only: every v3 call is a GET.",
+    "Run by one person: the operator warns it may be less reliable than an enterprise API, so cache results."
+  ],
+  "sources": [
+    "https://docs.ambientcg.com/api/",
+    "https://docs.ambientcg.com/api/v3/",
+    "https://docs.ambientcg.com/api/v3/assets/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ambientcg.assets.search",
+      "name": "Search assets",
+      "summary": "Assets matching keywords, type, technique, id or release date, with the metadata and download links chosen by include.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/assets",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords separated by commas or spaces, combined with AND.",
+          "example": "sand"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated (OR) data types: material, hdri, substance, decal, atlas, 3d-model, plain-image, brush, terrain, hdri-element. An invalid value returns nothing.",
+          "example": "material"
+        },
+        "technique": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated (OR) creation techniques, e.g. surface-photogrammetry, surface-fully-procedural, model-photogrammetry, hdri-bracketed-panorama."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "popular",
+            "latest",
+            "downloads",
+            "oldest",
+            "random",
+            "alphabet"
+          ],
+          "description": "Order; popular when unset or unrecognized."
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated asset ids, e.g. PavingStones036; unknown ids are ignored."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Only assets released on this day, YYYY-MM-DD."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 1 to 500; 100 by default."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip; only applies when limit is set."
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return: type, releaseDate, shortDescription, longDescription, title, url, tags, colors, dimensions, downloadStatistics, maps, technique, downloads, relations, collections, previews, thumbnails.",
+          "example": "title,tags,downloads"
+        }
+      },
+      "notes": [
+        "Download URLs are only in the response when include contains downloads."
+      ],
+      "job": "media.stock.search",
+      "docs_url": "https://docs.ambientcg.com/api/v3/assets/",
+      "verified": {
+        "docs": "https://docs.ambientcg.com/api/v3/assets/"
+      }
+    },
+    {
+      "id": "ambientcg.categories.list",
+      "name": "List categories",
+      "summary": "Metadata about every asset category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/categories",
+      "params": {},
+      "job": "media.stock.filters",
+      "docs_url": "https://docs.ambientcg.com/api/v3/categories/",
+      "verified": {
+        "docs": "https://docs.ambientcg.com/api/v3/categories/"
+      }
+    },
+    {
+      "id": "ambientcg.collections.list",
+      "name": "List collections",
+      "summary": "Metadata about every asset collection.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/collections",
+      "params": {},
+      "job": "media.stock.filters",
+      "docs_url": "https://docs.ambientcg.com/api/v3/collections/",
+      "verified": {
+        "docs": "https://docs.ambientcg.com/api/v3/collections/"
+      }
+    }
+  ]
+}

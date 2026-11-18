@@ -34,8 +34,8 @@ returns the first answer, empty or not.
 Research is the exception to the fallback: there is no keyless tier after the
 credentialed ones, because every research backend bills for the run. It is also
 the one method where the choice outlives the call -- a run is a job, so the
-member that accepted it is the one every later poll goes back to. An Extract
-Template run has no keyless tier either -- it fetches and parses on the
+member that accepted it is the one every later poll goes back to. A live data
+run has no keyless tier either -- it fetches and parses on the
 backend's account -- but it is a call, not a job, so a member that refused
 falls through to the next as a search does.
 
@@ -49,6 +49,7 @@ member that accepted it.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
+from functools import partial
 from typing import Any, ClassVar
 
 from web_router.constants import (
@@ -92,30 +93,27 @@ from web_router.constants import (
 )
 from web_router.constants_search import MSG_AUTO_REFUSES
 from web_router.exceptions import (
-    DeadlineExceededError,
     MissingParameterError,
     ProviderError,
     ProviderNotInstalledError,
     UnsupportedParameterError,
     WebRouterError,
 )
+from web_router.providers._attempt_loop import MODE_CLASHES, Walk, answered_unless, arun, held_or_raise, raising, run
 from web_router.providers._auto_extract import extract_eligible
+from web_router.providers._auto_extract_chain import aextract_down_chain, extract_down_chain
 from web_router.providers._chain import (
-    _RECOVERABLE,
     _ChainSpec,
     _empty_extract,
     _empty_search,
-    _held_or_raise,
     _keyed_chain,
     _keyless_after,
-    _member_options,
     _members_and_chain,
     _no_backend,
-    _nothing_started,
     _quoted,
     _valued,
 )
-from web_router.providers._chain_deadline import _held_or_late, _late_answer
+from web_router.providers._members import BuiltMembers, _Members
 from web_router.providers.auto_browser import AutoBrowserProvider as AutoBrowserProvider
 from web_router.providers.base import (
     BrowseJob,
@@ -125,10 +123,8 @@ from web_router.providers.base import (
     ResearchProvider,
     SearchProvider,
 )
-from web_router.routing.attempts import admitted, failed, in_call_order
 from web_router.types import (
     EXTRACT_PARAMETERS,
-    BrowseProgress,
     BrowseRequest,
     ExtractFormat,
     ExtractRequest,
@@ -138,15 +134,15 @@ from web_router.types import (
     SearchRequest,
     SearchResponse,
 )
+from web_router.types_browse import BrowseProgress
 
 
-class AutoProvider(SearchProvider):
+class AutoProvider(BuiltMembers, SearchProvider):
     """Searches through the first backend that answers, credentialed ones first.
 
-    Declares every option some member maps, and sends each request only to the
-    members that map every option it sets -- read from their classes, so one
-    passed over is never built or called. With none left it raises before
-    searching anything, naming what each member lacked.
+    Declares every option some member maps, and sends each request only to the members that map every option it
+    sets -- read from their classes, so one passed over is never built or called. With none left it raises before
+    searching anything, naming what each member lacked. A pinned member its mode refuses is passed over when tried.
     """
 
     name: ClassVar[str] = PROVIDER_AUTO
@@ -182,9 +178,8 @@ class AutoProvider(SearchProvider):
             chain, members_config, AUTO_CHAIN_SEARCH, self.default_chain
         )
         self.fallback_on_empty = fallback_on_empty
-        # Keyed by position, not by name: the same provider can appear twice on different terms -- Tavily keyed, then
-        # Tavily keyless.
-        self._members: dict[int, SearchProvider] = {}
+        # Keyed by position, not name: a provider can appear twice on different terms -- Tavily keyed, then keyless.
+        self._members: _Members[SearchProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -205,53 +200,26 @@ class AutoProvider(SearchProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_provider)
+
+    def _walk(self, request: SearchRequest) -> Walk:
+        return Walk.over(
+            self._eligible(request),
+            tool="search",
+            owner=self.name,
+            member=self._member,
+            method="search",
+            exhausted=held_or_raise(self.name),
+            final=answered_unless(_empty_search, self.fallback_on_empty),
+            refusals=MODE_CLASHES,
+            built=self._members,
+        )
 
     def _search(self, request: SearchRequest) -> SearchResponse:
-        failures: dict[str, WebRouterError] = {}
-        held: SearchResponse | None = None
-        for position, provider_name in in_call_order("search", self._eligible(request)):
-            if (late := _late_answer(held, self.name, failures)) is not None:
-                return late
-            if not admitted("search", provider_name, request):
-                continue
-            try:
-                response = self._member(position).search(request)
-            except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name, "search")
-            except _RECOVERABLE as exc:
-                failed(failures, "search", provider_name, exc)
-                continue
-            if not (self.fallback_on_empty and _empty_search(response)):
-                return response
-            # Not `held or response`: an empty response is falsy, having no length.
-            held = response if held is None else held
-        return _held_or_raise(held, self.name, failures)
+        return run(self._walk(request), request).response  # type: ignore[no-any-return]
 
     async def _asearch(self, request: SearchRequest) -> SearchResponse:
-        failures: dict[str, WebRouterError] = {}
-        held: SearchResponse | None = None
-        for position, provider_name in in_call_order("search", self._eligible(request)):
-            if (late := _late_answer(held, self.name, failures)) is not None:
-                return late
-            if not admitted("search", provider_name, request):
-                continue
-            try:
-                response = await self._member(position).asearch(request)
-            except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name, "search")
-            except _RECOVERABLE as exc:
-                failed(failures, "search", provider_name, exc)
-                continue
-            if not (self.fallback_on_empty and _empty_search(response)):
-                return response
-            held = response if held is None else held
-        return _held_or_raise(held, self.name, failures)
+        return (await arun(self._walk(request), request)).response  # type: ignore[no-any-return]
 
     def _eligible(self, request: SearchRequest) -> list[tuple[int, str]]:
         """The chain members that map every option this request sets, at the value it is set to, in order.
@@ -308,7 +276,7 @@ class AutoProvider(SearchProvider):
             await member.aclose()
 
 
-class AutoExtractProvider(ExtractProvider):
+class AutoExtractProvider(BuiltMembers, ExtractProvider):
     """Extracts through the first backend that answers, credentialed ones first.
 
     Declares every format some member returns, and sends each request only to
@@ -321,8 +289,7 @@ class AutoExtractProvider(ExtractProvider):
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_PARAMETERS
     supported_formats: ClassVar[frozenset[ExtractFormat]] = AUTO_EXTRACT_FORMATS
     default_format: ClassVar[ExtractFormat] = AUTO_EXTRACT_DEFAULT_FORMAT
-    # The members each batch as their own API allows, so there is nothing to split up here: one delegated call carries
-    # the whole request.
+    # The members each batch as their own API allows, so nothing is split up here: one delegated call carries it all.
     batches_urls: ClassVar[bool] = True
 
     def __init__(
@@ -346,7 +313,7 @@ class AutoExtractProvider(ExtractProvider):
             chain, members_config, AUTO_CHAIN_EXTRACT, self.default_chain
         )
         self.fallback_on_empty = fallback_on_empty
-        self._members: dict[int, ExtractProvider] = {}
+        self._members: _Members[ExtractProvider] = _Members()
 
     @staticmethod
     def default_chain(in_code: Collection[str] = ()) -> tuple[tuple[str, dict[str, Any]], ...]:
@@ -367,54 +334,26 @@ class AutoExtractProvider(ExtractProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_extract_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_extract_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_extract_provider)
+
+    def _walk(self, request: ExtractRequest) -> Walk:
+        return Walk.over(
+            self._eligible(request),
+            tool="extract",
+            owner=self.name,
+            member=self._member,
+            method="extract",
+            exhausted=held_or_raise(self.name),
+            final=answered_unless(_empty_extract, self.fallback_on_empty),
+            built=self._members,
+        )
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        delegated = self._delegated(request, urls)
-        failures: dict[str, WebRouterError] = {}
-        held: ExtractResponse | None = None
-        for position, provider_name in in_call_order("extract", self._eligible(request)):
-            if (late := _late_answer(held, self.name, failures)) is not None:
-                return late
-            if not admitted("extract", provider_name, delegated):
-                continue
-            try:
-                response = self._member(position).extract(delegated)
-            except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name, "extract")
-            except _RECOVERABLE as exc:
-                failed(failures, "extract", provider_name, exc)
-                continue
-            if not (self.fallback_on_empty and _empty_extract(response)):
-                return response
-            held = response if held is None else held
-        return _held_or_raise(held, self.name, failures)
+        """The first answer, with each URL it failed tried on the members after it; see :mod:`._auto_extract_chain`."""
+        return extract_down_chain(self._walk(request), self._delegated(request, urls), urls)
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        delegated = self._delegated(request, urls)
-        failures: dict[str, WebRouterError] = {}
-        held: ExtractResponse | None = None
-        for position, provider_name in in_call_order("extract", self._eligible(request)):
-            if (late := _late_answer(held, self.name, failures)) is not None:
-                return late
-            if not admitted("extract", provider_name, delegated):
-                continue
-            try:
-                response = await self._member(position).aextract(delegated)
-            except DeadlineExceededError as exc:
-                return _held_or_late(held, self.name, failures, exc, provider_name, "extract")
-            except _RECOVERABLE as exc:
-                failed(failures, "extract", provider_name, exc)
-                continue
-            if not (self.fallback_on_empty and _empty_extract(response)):
-                return response
-            held = response if held is None else held
-        return _held_or_raise(held, self.name, failures)
+        return await aextract_down_chain(self._walk(request), self._delegated(request, urls), urls)
 
     def _eligible(self, request: ExtractRequest) -> list[tuple[int, str]]:
         """The chain members that return the format and map every other option set; see :func:`extract_eligible`."""
@@ -461,7 +400,7 @@ class AutoResearchProvider(ResearchProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_RESEARCH, self.default_chain
         )
-        self._members: dict[int, ResearchProvider] = {}
+        self._members: _Members[ResearchProvider] = _Members()
         # A run belongs to the backend that accepted it: its id means nothing to the others, so the member that answered
         # is kept and every later poll goes back to it rather than re-entering the chain.
         self._jobs: dict[str, ResearchJob] = {}
@@ -477,49 +416,29 @@ class AutoResearchProvider(ResearchProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_research_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_research_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_research_provider)
+
+    def _walk(self, request: ResearchRequest) -> Walk:
+        # Only a failure that proves nothing started tries the next member: a run is billed once accepted.
+        return Walk.over(
+            self._eligible(request),
+            tool="research",
+            owner=self.name,
+            member=self._member,
+            method="submit",
+            exhausted=raising(partial(_no_backend, self.name)),
+            hops=False,
+        )
 
     def _start(self, request: ResearchRequest) -> ResearchProgress:
-        eligible = self._eligible(request)
-        failures: dict[str, WebRouterError] = {}
-        for position, provider_name in in_call_order("research", eligible):
-            if not admitted("research", provider_name, request):
-                continue
-            try:
-                job = self._member(position).submit(request)
-            except _RECOVERABLE as exc:
-                # A 5xx, a read timeout or an unreadable answer may come after the backend created the run, so only a
-                # failure that proves nothing started may try the next member -- a run is billed from the moment it was
-                # accepted.
-                if not _nothing_started(exc):
-                    raise
-                failed(failures, "research", provider_name, exc)
-                continue
-            # Registered from the start progress, with no poll first: a poll that failed here would leave a billed run
-            # with no handle to it.
-            return self._took(provider_name, job)
-        raise _no_backend(self.name, failures)
+        # Registered from the start progress, with no poll first: a poll that failed here would leave a billed run
+        # with no handle to it.
+        ran = run(self._walk(request), request)
+        return self._took(ran.provider, ran.response)
 
     async def _astart(self, request: ResearchRequest) -> ResearchProgress:
-        eligible = self._eligible(request)
-        failures: dict[str, WebRouterError] = {}
-        for position, provider_name in in_call_order("research", eligible):
-            if not admitted("research", provider_name, request):
-                continue
-            try:
-                job = await self._member(position).asubmit(request)
-            except _RECOVERABLE as exc:
-                if not _nothing_started(exc):
-                    raise
-                failed(failures, "research", provider_name, exc)
-                continue
-            return self._took(provider_name, job)
-        raise _no_backend(self.name, failures)
+        ran = await arun(self._walk(request), request)
+        return self._took(ran.provider, ran.response)
 
     def _eligible(self, request: ResearchRequest) -> list[tuple[int, str]]:
         """The chain members that map everything this request asks for.
@@ -663,7 +582,7 @@ class AutoBrowseProvider(BrowseProvider):
         self._members_config, self._chain = _members_and_chain(
             chain, members_config, AUTO_CHAIN_BROWSE, self.default_chain
         )
-        self._members: dict[int, BrowseProvider] = {}
+        self._members: _Members[BrowseProvider] = _Members()
         # As for research: a task id means nothing to a backend that did not issue it, so every later poll goes back to
         # the member that took it.
         self._jobs: dict[str, BrowseJob] = {}
@@ -679,46 +598,27 @@ class AutoBrowseProvider(BrowseProvider):
         """Build and cache one member. Imported here so the chain stays lazy."""
         from web_router.registry import create_browse_provider
 
-        if position not in self._members:
-            provider_name, options = self._chain[position]
-            self._members[position] = create_browse_provider(
-                provider_name, **_member_options(self._members_config, provider_name, options)
-            )
-        return self._members[position]
+        return self._members.member(position, self._chain, self._members_config, create_browse_provider)
+
+    def _walk(self, request: BrowseRequest) -> Walk:
+        # As for research: only a failure that proves no task was created tries the next member.
+        return Walk.over(
+            self._eligible(request),
+            tool="browse",
+            owner=self.name,
+            member=self._member,
+            method="submit",
+            exhausted=raising(self._no_backend),
+            hops=False,
+        )
 
     def _start(self, request: BrowseRequest) -> BrowseProgress:
-        failures: dict[str, WebRouterError] = {}
-        for position, provider_name in in_call_order("browse", self._eligible(request)):
-            if not admitted("browse", provider_name, request):
-                continue
-            try:
-                job = self._member(position).submit(request)
-            except _RECOVERABLE as exc:
-                # A 5xx, a read timeout or an unreadable answer may come after the vendor created the task, so only a
-                # failure that proves nothing started may try the next member.
-                if not _nothing_started(exc):
-                    raise
-                failed(failures, "browse", provider_name, exc)
-                continue
-            # Registered from the start progress, with no poll first: a poll that failed here would leave a billed task
-            # with no handle to it.
-            return self._took(provider_name, job)
-        raise self._no_backend(failures)
+        ran = run(self._walk(request), request)
+        return self._took(ran.provider, ran.response)
 
     async def _astart(self, request: BrowseRequest) -> BrowseProgress:
-        failures: dict[str, WebRouterError] = {}
-        for position, provider_name in in_call_order("browse", self._eligible(request)):
-            if not admitted("browse", provider_name, request):
-                continue
-            try:
-                job = await self._member(position).asubmit(request)
-            except _RECOVERABLE as exc:
-                if not _nothing_started(exc):
-                    raise
-                failed(failures, "browse", provider_name, exc)
-                continue
-            return self._took(provider_name, job)
-        raise self._no_backend(failures)
+        ran = await arun(self._walk(request), request)
+        return self._took(ran.provider, ran.response)
 
     def _no_backend(self, failures: dict[str, WebRouterError]) -> WebRouterError:
         return _no_backend(

@@ -10,7 +10,8 @@ from typing import Any, Literal
 
 MCP_SERVER_INSTRUCTIONS = (
     "Search, read and research the web through whichever backends this machine holds keys for; each tool's "
-    "description says what it costs and how long it takes. "
+    "description says what it costs and how long it takes, and its `provider` lists only the backends "
+    "configured here -- omit it and the router picks one. "
     "When a lookup ends at a page that needs interaction -- a login, a form, a multi-step portal, a "
     "result gated on the user's own details -- do not stop at describing the steps: tell the user a "
     "browser could finish the task and ask before opening one. For a page that needs the user's own "
@@ -50,7 +51,7 @@ MCP_ROUTER_OFF = "off"
 
 MCP_URL_POLICY: Literal["public_only"] = "public_only"
 """The ``url_policy`` ``web_run``'s plans hold to, and the check every URL an agent passes ``extract``,
-``browse`` (``start_url``) and ``run_template`` (a URL-valued input) meets before anything is sent.
+``browse`` (``start_url``) and ``live_data`` (a URL-valued input) meets before anything is sent.
 
 A prompt or a page cannot steer the user's keyed account at loopback, private
 or metadata hosts, or hand a vendor a ``file:`` URL. The browser tools keep
@@ -60,7 +61,7 @@ port: other loopback and private hosts are admitted.
 """
 
 MCP_URL_POLICY_NOTE = (
-    "Holds for web_run's plans and for the URLs passed to extract, browse and run_template, which are refused "
+    "Holds for web_run's plans and for the URLs passed to extract, browse and live_data, which are refused "
     "before anything is sent. The browser tools have their own guard, which refuses cloud metadata hosts and "
     "the browser's debugging port but admits other loopback and private hosts."
 )
@@ -132,18 +133,16 @@ MCP_BUDGET_START_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_DESC_WEB_RUN = (
-    "Hand a request in plain words to web-router's router, which picks the method and backends and runs it: "
-    "by default a prompt naming a URL is read (`extract`) and anything else searched. Use it when you would "
-    "rather not choose; call a tool directly for its options. `dry_run=true` returns the plan -- method, "
-    "options, backend order and decision record -- and bills nothing. The result is shaped like the "
-    "method's own, with the method that ran and the decision record."
+    "Hand a request in plain words to web-router's router, which picks the method and backends and runs "
+    "it (by default: a URL is read, a report or comparison researched -- billed, minutes long, so set "
+    "`max_cost_usd` -- anything else searched). Call a tool directly for its options. "
+    "`dry_run=true` returns the plan and bills nothing."
 )
 
 MCP_DESC_BUDGET_START = (
-    "Start a new task budget, `max_cost_usd` at estimated list prices and `time_limit_s` from now, that "
-    "every billed tool then spends from; a call that does not fit is refused before anything bills. State "
-    "both limits each time: the previous task's budget closes. The operator's ceiling, if set, still caps "
-    "it. Under a cost cap a backend whose price is unknown never runs."
+    "Start a task budget, `max_cost_usd` at list prices and `time_limit_s` from now, that every billed "
+    "tool spends from; a call that does not fit is refused before it bills. It replaces the previous one, "
+    "and the operator's ceiling still caps it."
 )
 
 MCP_DESC_BUDGET_STATUS = (
@@ -187,6 +186,10 @@ MCP_MSG_REMOTE_URL = "{env_var}=remote needs {url_var}, the router service's htt
 MCP_MSG_CEILING_VALUE = "{env_var}={value!r} is not a positive number."
 MCP_MSG_BUDGET_LIMIT = "{tool}: `{name}` must be a positive number, got {value!r}."
 
-MCP_PRICE_RUN_TEMPLATE = "run_template"
+MCP_PRICE_LIVE_DATA = "live_data"
 MCP_PRICE_OPEN_BROWSER = "open_browser"
 """The price list's methods for the two billed tools no ``auto`` hooks, which the server charges itself."""
+
+MCP_MSG_ENV_MISSING = "There is no file at {path}, so nothing was loaded. Ask the user where their .env file is."
+
+MCP_MSG_ENV_UNREADABLE = "{path} could not be read as a .env file ({reason}), so nothing was loaded."

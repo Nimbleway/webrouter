@@ -1,0 +1,291 @@
+{
+  "vendor": "openmart",
+  "name": "Openmart",
+  "category": "company-data",
+  "summary": "A local business database: search businesses and brands, with company enrichment from a website.",
+  "docs_url": "https://app.openmart.com/api-docs",
+  "base_url": "https://api.openmart.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENMART_API_KEY"
+        ],
+        "description": "an Openmart API key (Openmart account > API management)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-priced; a 402 'Credit limit reached' means the team balance is empty. Check it with account.credit_balance.",
+    "Contact lookups (decision makers, company emails and phones, known people, tech stack) run as batch tasks that take a JSON array as the request body and return a batch_id to poll. The catalog's body model is an object, so they are not listed.",
+    "X-API-Key is accepted too, but Bearer is the recommended header."
+  ],
+  "sources": [
+    "https://app.openmart.com/api-docs",
+    "https://app.openmart.com/api-docs/quickstart",
+    "https://app.openmart.com/api-docs/search-businesses",
+    "https://app.openmart.com/api-docs/search-brands"
+  ],
+  "endpoints": [
+    {
+      "id": "openmart.account.credit_balance",
+      "name": "Get credit balance",
+      "summary": "Remaining team credits and the current billing period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/credit-balance",
+      "job": "account.usage",
+      "docs_url": "https://app.openmart.com/api-docs/get-credit-balance",
+      "verified": {
+        "docs": "https://app.openmart.com/api-docs/get-credit-balance"
+      }
+    },
+    {
+      "id": "openmart.businesses.search",
+      "name": "Search local businesses",
+      "summary": "Find businesses by keyword, location and attributes (website, contact info, number of locations).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The type of business to find.",
+          "example": "hair salons"
+        },
+        "location": {
+          "in": "body",
+          "type": "array",
+          "description": "Where to search: objects with country, optional state and city.",
+          "example": [
+            {
+              "country": "USA",
+              "state": "CA",
+              "city": "San Francisco"
+            }
+          ]
+        },
+        "has_website": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only businesses with a website."
+        },
+        "has_valid_website": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only businesses with a valid website."
+        },
+        "has_contact_info": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only businesses with contact information."
+        },
+        "min_locations": {
+          "in": "body",
+          "type": "integer",
+          "description": "Only businesses with at least this many locations.",
+          "example": 3
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return.",
+          "example": 10
+        },
+        "cursor": {
+          "in": "body",
+          "type": "array",
+          "description": "The cursor of the last result of the previous page, [match_score, id]."
+        },
+        "estimate_total": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return an approximate total; the answer is then {data, total_count}."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters are in the body.",
+        "Page by sending the last result's cursor back as cursor.",
+        "When a record has contacts_locked: true, raw business email and phone are withheld; they come from the separate enrichment (task) endpoints, which this entry does not list because they take a JSON array as the body."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.openmart.com/api-docs/search-businesses",
+      "verified": {
+        "docs": "https://app.openmart.com/api-docs/search-businesses"
+      }
+    },
+    {
+      "id": "openmart.businesses.search_ids",
+      "name": "Search business ids only (fast)",
+      "summary": "Same search, returning only id, place_id, match_score and cursor, at a reduced rate per row.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/search/only_ids",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The type of business to find.",
+          "example": "hair salons"
+        },
+        "location": {
+          "in": "body",
+          "type": "array",
+          "description": "Where to search: objects with country, optional state and city.",
+          "example": [
+            {
+              "country": "USA",
+              "state": "CA",
+              "city": "San Francisco"
+            }
+          ]
+        },
+        "has_website": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only businesses with a website."
+        },
+        "has_valid_website": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only businesses with a valid website."
+        },
+        "has_contact_info": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only businesses with contact information."
+        },
+        "min_locations": {
+          "in": "body",
+          "type": "integer",
+          "description": "Only businesses with at least this many locations.",
+          "example": 3
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to return.",
+          "example": 10
+        },
+        "cursor": {
+          "in": "body",
+          "type": "array",
+          "description": "The cursor of the last result of the previous page, [match_score, id]."
+        },
+        "estimate_total": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return an approximate total; the answer is then {data, total_count}."
+        }
+      },
+      "notes": [
+        "A read over POST. Takes the same body as businesses.search.",
+        "Hydrating the rows later uses GET endpoints that need a JSON body, which this entry cannot send."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.openmart.com/api-docs/search-business-ids-fast",
+      "verified": {
+        "docs": "https://app.openmart.com/api-docs/search-business-ids-fast"
+      }
+    },
+    {
+      "id": "openmart.company.enrich",
+      "name": "Enrich a company from its website",
+      "summary": "Matching Openmart business records for a website.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/enrich_company",
+      "params": {
+        "website": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The company website.",
+          "example": "https://bluebottlecoffee.com"
+        },
+        "location": {
+          "in": "body",
+          "type": "array",
+          "description": "Optional location objects to narrow the match.",
+          "example": [
+            {
+              "country": "US"
+            }
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Max records."
+        },
+        "estimate_total": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return an approximate total."
+        }
+      },
+      "notes": [
+        "A read over POST. Rows have the same shape as businesses.search."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://app.openmart.com/api-docs/enrich-company",
+      "verified": {
+        "docs": "https://app.openmart.com/api-docs/enrich-company"
+      }
+    },
+    {
+      "id": "openmart.brands.search",
+      "name": "Search brands",
+      "summary": "Brands (all stores sharing one business identity), deduplicated at company level; filter by term, location, store count and ownership type.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/brands/search",
+      "params": {
+        "search_param": {
+          "in": "body",
+          "type": "object",
+          "description": "{search_term, location [{country, state, city}], num_stores [{ge, gt, le, lt}], ownership_type [INDEPENDENT, FAMILY, FRANCHISE, CHAIN]}. Location defaults to US when left out.",
+          "example": {
+            "search_term": "coffee shop",
+            "location": [
+              {
+                "country": "US",
+                "state": "CA"
+              }
+            ]
+          }
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "{limit (default 100, max 500), encoded_cursor from the previous response}."
+        },
+        "estimate_total": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return an approximate total."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "The response has encoded_cursor for the next page; empty on the last page."
+      ],
+      "job": "company.search",
+      "docs_url": "https://app.openmart.com/api-docs/search-brands",
+      "verified": {
+        "docs": "https://app.openmart.com/api-docs/search-brands"
+      }
+    }
+  ],
+  "curated": "2026-11-08"
+}

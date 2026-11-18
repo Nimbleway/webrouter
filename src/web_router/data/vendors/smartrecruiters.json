@@ -1,0 +1,177 @@
+{
+  "vendor": "smartrecruiters",
+  "name": "SmartRecruiters",
+  "category": "company-data",
+  "summary": "Public job postings and departments of companies hiring on SmartRecruiters (Posting API).",
+  "docs_url": "https://developers.smartrecruiters.com/docs/posting-api",
+  "base_url": "https://api.smartrecruiters.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SMARTRECRUITERS_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional SmartRecruiters API key, sent as x-smarttoken. Public postings need no key."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-smarttoken",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Keyless for public postings. companyIdentifier is the company's SmartRecruiters id, as in its careers URL (jobs.smartrecruiters.com/<companyIdentifier>).",
+    "Only postings the company published through SmartRecruiters are returned; internal postings need an OAuth token with internal_postings_read, which this entry does not set up.",
+    "Paging is offset + limit (max 100); the response gives totalFound."
+  ],
+  "sources": [
+    "https://developers.smartrecruiters.com/docs/posting-api",
+    "https://developers.smartrecruiters.com/llms.txt",
+    "https://developers.smartrecruiters.com/reference/v1listpostings.md",
+    "https://developers.smartrecruiters.com/reference/v1getposting.md",
+    "https://developers.smartrecruiters.com/reference/v1listdepartments.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "smartrecruiters.postings.list",
+      "name": "List a company's job postings",
+      "summary": "Active postings published by one company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{companyIdentifier}/postings",
+      "params": {
+        "companyIdentifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company identifier."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text search on job title and location."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Postings to return, max 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Postings to skip."
+        },
+        "destination": {
+          "in": "query",
+          "type": "string",
+          "description": "PUBLIC only public postings; the others need internal access.",
+          "enum": [
+            "PUBLIC",
+            "INTERNAL",
+            "INTERNAL_OR_PUBLIC"
+          ]
+        },
+        "locationType": {
+          "in": "query",
+          "type": "array",
+          "description": "Location types; repeat for several.",
+          "enum": [
+            "REMOTE",
+            "HYBRID",
+            "ONSITE",
+            "ANY"
+          ]
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code."
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Region."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "City."
+        },
+        "department": {
+          "in": "query",
+          "type": "string",
+          "description": "Department id (from the departments call)."
+        },
+        "language": {
+          "in": "query",
+          "type": "array",
+          "description": "Job ad language codes (ISO 639-1, plus en-GB, fr-CA, pt-BR, pt-PT, zh-TW, zh-CN)."
+        },
+        "releasedAfter": {
+          "in": "query",
+          "type": "string",
+          "description": "Only postings released after this ISO 8601 date-time."
+        }
+      },
+      "job": "jobs.search",
+      "docs_url": "https://developers.smartrecruiters.com/reference/v1listpostings",
+      "verified": {
+        "docs": "https://developers.smartrecruiters.com/reference/v1listpostings"
+      }
+    },
+    {
+      "id": "smartrecruiters.postings.get",
+      "name": "Get one job posting",
+      "summary": "Full posting, with job ad sections and apply URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{companyIdentifier}/postings/{postingId}",
+      "params": {
+        "companyIdentifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company identifier."
+        },
+        "postingId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Posting id or uuid, from the list."
+        }
+      },
+      "job": "jobs.posting.get",
+      "docs_url": "https://developers.smartrecruiters.com/reference/v1getposting",
+      "verified": {
+        "docs": "https://developers.smartrecruiters.com/reference/v1getposting"
+      }
+    },
+    {
+      "id": "smartrecruiters.departments.list",
+      "name": "List a company's departments",
+      "summary": "Departments (id, label) to filter postings by.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{companyIdentifier}/departments",
+      "params": {
+        "companyIdentifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company identifier."
+        }
+      },
+      "job": "jobs.departments",
+      "docs_url": "https://developers.smartrecruiters.com/reference/v1listdepartments",
+      "verified": {
+        "docs": "https://developers.smartrecruiters.com/reference/v1listdepartments"
+      }
+    }
+  ]
+}

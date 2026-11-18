@@ -1,7 +1,7 @@
 """The URLs an agent hands the direct tools, screened before anything is sent.
 
 ``web_run``'s plans hold to ``url_policy="public_only"`` in the library; the
-direct ``extract``, ``browse`` and ``run_template`` tools hold their own URLs to
+direct ``extract``, ``browse`` and ``live_data`` tools hold their own URLs to
 the same check here, so a page that steers the model cannot have the user's
 keyed account hand a vendor a ``file:``, loopback, private or metadata URL.
 """

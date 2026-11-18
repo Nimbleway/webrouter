@@ -1,0 +1,347 @@
+{
+  "vendor": "openfunnel",
+  "name": "OpenFunnel",
+  "category": "company-data",
+  "summary": "Find lookalike companies from seeds or a description, companies by the tech in their job posts, and qualify one company against criteria.",
+  "docs_url": "https://docs.openfunnel.dev",
+  "base_url": "https://api.openfunnel.dev",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENFUNNEL_API_KEY"
+        ],
+        "description": "An OpenFunnel API key. Sent in X-API-Key (not Bearer)."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits: lookalikes 1 per company returned, tech-stack search 0.5 per company, deep research one per-workspace charge per success; lookup, options, balance and job polling are free. Empty results are free; responses echo credits_consumed.",
+    "Country filters take ISO 3166-1 alpha-3 codes (USA, GBR, DEU), never alpha-2. Repeat the parameter for several values.",
+    "The synchronous lookalike search returns at most 100 and has no offset; for more, use the bulk job (up to 10,000)."
+  ],
+  "sources": [
+    "https://docs.openfunnel.dev/llms.txt",
+    "https://docs.openfunnel.dev/agent-primitives/openapi.json",
+    "https://docs.openfunnel.dev/agent-primitives/credits.md"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "openfunnel.lookalikes.search",
+      "name": "Find lookalike companies",
+      "summary": "Companies like 1 to 10 seed domains and/or matching a description.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/account/search-lookalikes",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Description of the companies; required unless seed_domains is sent.",
+          "example": "Healthcare companies building with voice AI"
+        },
+        "seed_domains": {
+          "in": "query",
+          "type": "array",
+          "description": "Up to 10 seed company domains."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Companies to return, default 10, max 100. Set it."
+        },
+        "min_employees": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employees, inclusive."
+        },
+        "max_employees": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employees, inclusive."
+        },
+        "funding_stages": {
+          "in": "query",
+          "type": "array",
+          "description": "Funding stages (values from openfunnel.firmographic_options)."
+        },
+        "locations": {
+          "in": "query",
+          "type": "array",
+          "description": "HQ country, ISO alpha-3."
+        }
+      },
+      "notes": [
+        "1 credit per company returned."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.openfunnel.dev/agent-primitives/search-lookalikes",
+      "verified": {
+        "docs": "https://docs.openfunnel.dev/agent-primitives/search-lookalikes"
+      }
+    },
+    {
+      "id": "openfunnel.lookalikes.bulk_start",
+      "name": "Start a bulk lookalike search",
+      "summary": "Async lookalike search for up to 10,000 companies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/account/search-lookalikes-bulk",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Description; required unless seed_domains is sent."
+        },
+        "seed_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 10 seed company domains."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Companies, default 100, max 10,000."
+        },
+        "min_employees": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum employees."
+        },
+        "max_employees": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum employees."
+        },
+        "funding_stages": {
+          "in": "body",
+          "type": "array",
+          "description": "Funding stages."
+        },
+        "locations": {
+          "in": "body",
+          "type": "array",
+          "description": "HQ country, ISO alpha-3; EU expands to the 27 member states."
+        }
+      },
+      "notes": [
+        "A read over POST. Returns job_id; poll openfunnel.lookalikes.bulk_get. Billed once on completion, 1 credit per company delivered."
+      ],
+      "job": "jobs.start",
+      "docs_url": "https://docs.openfunnel.dev/agent-primitives/search-lookalikes-bulk",
+      "verified": {
+        "docs": "https://docs.openfunnel.dev/agent-primitives/search-lookalikes-bulk"
+      }
+    },
+    {
+      "id": "openfunnel.lookalikes.bulk_get",
+      "name": "Poll and page a bulk lookalike job",
+      "summary": "Job status and one page of result rows.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/account/search-lookalikes-bulk/{job_id}",
+      "params": {
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "job_id from the bulk start."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous page; omit for the first."
+        }
+      },
+      "notes": [
+        "Free. status runs pending, running, completed or failed; a null next_cursor on a running job does not mean done."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.openfunnel.dev/helpers/search-lookalikes-bulk-results",
+      "verified": {
+        "docs": "https://docs.openfunnel.dev/helpers/search-lookalikes-bulk-results"
+      }
+    },
+    {
+      "id": "openfunnel.tech.companies",
+      "name": "Find companies by technology in their job posts",
+      "summary": "Companies whose recent job postings mention a technology, ranked by matching posts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/tech/companies",
+      "params": {
+        "tech": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Technology to look for.",
+          "example": "Snowflake"
+        },
+        "variations": {
+          "in": "query",
+          "type": "array",
+          "description": "Alternate phrasings, OR-matched."
+        },
+        "lookback_days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Days to look back, 1 to 365, default 365."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "1-based page of 50; follow has_more."
+        },
+        "enrich": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add firmographics to each company."
+        },
+        "include_evidence": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Default true: one highlighted job snippet per company; false is about 6x faster."
+        },
+        "hq_country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "HQ country, ISO alpha-3."
+        },
+        "min_employee_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employees (turns on enrich)."
+        },
+        "max_employee_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employees (turns on enrich)."
+        },
+        "exclude_company_slugs": {
+          "in": "query",
+          "type": "array",
+          "description": "LinkedIn company slugs to leave out."
+        }
+      },
+      "notes": [
+        "0.5 credit per company. Job aggregators and the technology's own vendor are excluded by default."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://docs.openfunnel.dev/agent-primitives/search-companies-by-tech-stack",
+      "verified": {
+        "docs": "https://docs.openfunnel.dev/agent-primitives/search-companies-by-tech-stack"
+      }
+    },
+    {
+      "id": "openfunnel.research.deep",
+      "name": "Qualify one company against criteria",
+      "summary": "Answers an activity question (from job posts) and/or a team question (from LinkedIn people), with evidence.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/research/deep",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "stripe.com"
+        },
+        "activity_question": {
+          "in": "body",
+          "type": "string",
+          "description": "What to look for in the company's recent job postings."
+        },
+        "qualifier_question": {
+          "in": "body",
+          "type": "string",
+          "description": "Criteria about who works there or how the org is shaped."
+        },
+        "timeframe_days": {
+          "in": "body",
+          "type": "integer",
+          "description": "Lookback for the activity question, default 90, max 365."
+        },
+        "max_jobs_to_check": {
+          "in": "body",
+          "type": "integer",
+          "description": "Job posts scored, default 25, max 200; more is slower."
+        }
+      },
+      "notes": [
+        "A read over POST. One charge per successful call, priced per workspace. Send at least one of the two questions."
+      ],
+      "job": "company.qualify",
+      "docs_url": "https://docs.openfunnel.dev/agent-primitives/deep-research",
+      "verified": {
+        "docs": "https://docs.openfunnel.dev/agent-primitives/deep-research"
+      }
+    },
+    {
+      "id": "openfunnel.companies.lookup",
+      "name": "Resolve companies to canonical records",
+      "summary": "Up to 100 companies by name, domain or LinkedIn URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/account/lookup-companies",
+      "params": {
+        "companies": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "1 to 100 objects, each with any of name, domain, linkedin_url.",
+          "example": [
+            {
+              "domain": "stripe.com"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Free. Domain and LinkedIn match exactly; name is fuzzy."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.openfunnel.dev/helpers/lookup-companies",
+      "verified": {
+        "docs": "https://docs.openfunnel.dev/helpers/lookup-companies"
+      }
+    },
+    {
+      "id": "openfunnel.firmographic_options",
+      "name": "List firmographic filter values",
+      "summary": "Accepted funding stages, locations and employee bounds.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/account/firmographic-options",
+      "notes": [
+        "Free; static, cache it."
+      ],
+      "job": "reference.filters",
+      "docs_url": "https://docs.openfunnel.dev/helpers/list-firmographic-options",
+      "verified": {
+        "docs": "https://docs.openfunnel.dev/helpers/list-firmographic-options"
+      }
+    },
+    {
+      "id": "openfunnel.credits.balance",
+      "name": "Get credit balance",
+      "summary": "Allowance, credits consumed and remaining.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/credits/balance",
+      "job": "account.usage",
+      "docs_url": "https://docs.openfunnel.dev/helpers/get-credit-balance",
+      "verified": {
+        "docs": "https://docs.openfunnel.dev/helpers/get-credit-balance"
+      }
+    }
+  ]
+}

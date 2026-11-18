@@ -1,0 +1,449 @@
+{
+  "vendor": "fundable",
+  "name": "Fundable",
+  "category": "company-data",
+  "summary": "Venture funding data: deals (rounds), startups with their latest round, investor firms and people, by filters or identifier.",
+  "docs_url": "https://docs.tryfundable.ai/api-reference/introduction",
+  "pricing_url": "https://www.tryfundable.ai/api-access/",
+  "base_url": "https://www.tryfundable.ai/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FUNDABLE_API_KEY"
+        ],
+        "description": "A Fundable API key (vg_..., tryfundable.ai/api-access), sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credit-metered; every response reports credits_used. The search endpoints (/company/search, /investor/search ...) and alerts use 0 credits. 402 means insufficient credits, 429 a rate limit.",
+    "Pages are 0-based; page_size up to 500 (default 10 on the POST discovery calls).",
+    "Pick by result type: POST /companies for company sourcing (latest_deal filters apply to the latest round only), POST /deals for rounds across full histories. Resolve place and industry names with the location and industry search endpoints before using them as filters.",
+    "Person email and phone unlocks (5 credits each) are not in this entry."
+  ],
+  "sources": [
+    "https://docs.tryfundable.ai/api-reference/introduction",
+    "https://docs.tryfundable.ai/authentication",
+    "https://docs.tryfundable.ai/openapi.json"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "fundable.companies.search",
+      "name": "Discover companies",
+      "summary": "Companies with metadata and their full latest deal, by company, latest-deal and investor filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/companies",
+      "params": {
+        "identifiers": {
+          "in": "body",
+          "type": "object",
+          "description": "Look up specific companies by UUID, domain, LinkedIn or Crunchbase."
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters: search_query, min_relevance, locations, industries, super_categories, employee_count, ipo_status, total_raised_min, total_raised_max."
+        },
+        "latest_deal": {
+          "in": "body",
+          "type": "object",
+          "description": "Latest-round filters: financing_types, size_min, size_max, date_start, date_end, created_start, created_end, investor_ids."
+        },
+        "investors": {
+          "in": "body",
+          "type": "object",
+          "description": "Investor participation across all rounds (firm or person UUIDs)."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, from 0."
+        },
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, up to 500, default 10."
+        },
+        "sort_by": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order; ignored when company.search_query is set.",
+          "enum": [
+            "most_recent_raise",
+            "oldest_raise",
+            "most_recent_founded",
+            "oldest_founded",
+            "largest_valuation",
+            "smallest_valuation",
+            "largest_total_raise",
+            "smallest_total_raise",
+            "most_funding_rounds",
+            "most_investors"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST."
+      ],
+      "job": "company.funding",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/companies/list",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/companies/list"
+      }
+    },
+    {
+      "id": "fundable.deals.search",
+      "name": "Find funding rounds",
+      "summary": "Rounds across complete company histories, by deal, company and investor filters; companies and investors come back as ids.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/deals",
+      "params": {
+        "identifiers": {
+          "in": "body",
+          "type": "object",
+          "description": "Look up specific deals by UUID."
+        },
+        "deal": {
+          "in": "body",
+          "type": "object",
+          "description": "Deal filters: financing_types, size_min, size_max, date_start, date_end, created_start, created_end."
+        },
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "Company filters: company_ids, locations, industries, super_categories, employee_count, ipo_status, total_raised_min, total_raised_max."
+        },
+        "investors": {
+          "in": "body",
+          "type": "object",
+          "description": "Investor participation (firm or person UUIDs)."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, from 0."
+        },
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, up to 500, default 10."
+        },
+        "sort_by": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "most_recent_deal",
+            "oldest_deal",
+            "largest_raise",
+            "smallest_raise"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Use deals.investors for a round's full investor lineup."
+      ],
+      "job": "company.funding",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/deals/list",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/deals/list"
+      }
+    },
+    {
+      "id": "fundable.deals.get",
+      "name": "Get a deal",
+      "summary": "Full details of one funding round.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/deals/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Deal UUID."
+        }
+      },
+      "job": "company.funding",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/deals/get",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/deals/get"
+      }
+    },
+    {
+      "id": "fundable.deals.investors",
+      "name": "Get a deal's investors",
+      "summary": "The investors in one round.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/deals/{id}/investors",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Deal UUID."
+        }
+      },
+      "job": "company.investments",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/deals/investors",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/deals/investors"
+      }
+    },
+    {
+      "id": "fundable.company.get",
+      "name": "Get a company",
+      "summary": "One company's profile and latest round with its investors; pass one identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Fundable UUID."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or full URL.",
+          "example": "stripe.com"
+        },
+        "linkedin": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL."
+        },
+        "crunchbase": {
+          "in": "query",
+          "type": "string",
+          "description": "Crunchbase organization URL."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/companies/get",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/companies/get"
+      }
+    },
+    {
+      "id": "fundable.company.deals",
+      "name": "Get a company's funding history",
+      "summary": "Every deal for one company, paged; pass one identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/deals",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Fundable UUID."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or full URL.",
+          "example": "stripe.com"
+        },
+        "linkedin": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL."
+        },
+        "crunchbase": {
+          "in": "query",
+          "type": "string",
+          "description": "Crunchbase organization URL."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 0."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1-500."
+        }
+      },
+      "job": "company.funding",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/companies/deals",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/companies/deals"
+      }
+    },
+    {
+      "id": "fundable.company.lookup",
+      "name": "Search a company by name",
+      "summary": "Matching companies for a fuzzy name or an uncertain identifier; pass exactly one parameter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company/search",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Fuzzy company name.",
+          "example": "stripe"
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or full URL.",
+          "example": "stripe.com"
+        },
+        "linkedin": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL."
+        },
+        "crunchbase": {
+          "in": "query",
+          "type": "string",
+          "description": "Crunchbase organization URL."
+        }
+      },
+      "notes": [
+        "0 credits."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/companies/search",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/companies/search"
+      }
+    },
+    {
+      "id": "fundable.investor.get",
+      "name": "Get an investor",
+      "summary": "One investor firm's profile, statistics and portfolio summary; pass one identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/investor",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Fundable UUID."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Investor domain or URL.",
+          "example": "sequoiacap.com"
+        },
+        "linkedin": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL."
+        },
+        "crunchbase": {
+          "in": "query",
+          "type": "string",
+          "description": "Crunchbase organization URL."
+        }
+      },
+      "job": "company.investments",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/investors/get",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/investors/get"
+      }
+    },
+    {
+      "id": "fundable.investor.deals",
+      "name": "Get an investor's deals",
+      "summary": "Deals an investor firm took part in, paged; pass one identifier.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/investor/deals",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Fundable UUID."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or full URL.",
+          "example": "stripe.com"
+        },
+        "linkedin": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL."
+        },
+        "crunchbase": {
+          "in": "query",
+          "type": "string",
+          "description": "Crunchbase organization URL."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 0."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1-500."
+        }
+      },
+      "job": "company.investments",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/investors/deals",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/investors/deals"
+      }
+    },
+    {
+      "id": "fundable.investor.lookup",
+      "name": "Search investors by name",
+      "summary": "Matching investor firms for a fuzzy name or identifier; pass exactly one parameter.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/investor/search",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Fuzzy investor name."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Domain or full URL.",
+          "example": "stripe.com"
+        },
+        "linkedin": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL."
+        },
+        "crunchbase": {
+          "in": "query",
+          "type": "string",
+          "description": "Crunchbase organization URL."
+        }
+      },
+      "notes": [
+        "0 credits."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.tryfundable.ai/api-reference/investors/search",
+      "verified": {
+        "docs": "https://docs.tryfundable.ai/api-reference/investors/search"
+      }
+    }
+  ]
+}

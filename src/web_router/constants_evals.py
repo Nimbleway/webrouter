@@ -23,8 +23,6 @@ EVALS_QUESTION_SETS: dict[str, tuple[str, tuple[str, ...]]] = {
     "frames": ("frames", ()),
     "sealqa-0": ("sealqa", ("seal-0",)),
     "sealqa-hard": ("sealqa", ("seal-hard",)),
-    "due-diligence": ("public_benchmarks", ("due-diligence",)),
-    "lead-enrichment": ("public_benchmarks", ("lead-enrichment",)),
     EVALS_CSV_SET: ("from_csv", ()),
 }
 """Each question set by the name a caller picks it with: the :class:`~web_router.evals.Dataset` loader that reads
@@ -95,35 +93,6 @@ it by id (alphaXiv, Hugging Face's paper page, Semantic Scholar); and the ids of
 of older releases its dataset card links. Only these are withheld, so an unrelated paper on arXiv or dataset on
 Hugging Face still reaches the judge -- checked against the card at the pinned commit on 2026-10-08.
 """
-
-PUBLIC_BENCHMARKS_COMMIT = "PENDING-PUBLIC-BENCHMARKS-MERGE"
-"""The commit of Nimbleway/Public-benchmarks the unlabeled sets are read at.
-
-A placeholder until the pull request adding the sets there is merged; it becomes that merge commit before a release,
-and moving it afterwards is a deliberate change, as on the other pinned sets.
-"""
-
-PUBLIC_BENCHMARKS_URL = (
-    "https://raw.githubusercontent.com/Nimbleway/Public-benchmarks/{commit}/{folder}/data/questions.csv"
-)
-"""Where a set published in Nimbleway/Public-benchmarks is read from: its folder's ``data/questions.csv``."""
-
-PUBLIC_BENCHMARKS_SETS: dict[str, str] = {
-    "due-diligence": "Due-Diligence-Benchmark",
-    "lead-enrichment": "Lead-Enrichment-Benchmark",
-}
-"""Each unlabeled set published in Nimbleway/Public-benchmarks, by name -> its folder there.
-
-``due-diligence``: questions people search for when researching a company or fund to invest in.
-``lead-enrichment``: questions people search for about a company they want to sell to. Neither carries answers.
-"""
-
-PUBLIC_BENCHMARKS_QUESTION_COLUMN = "question"
-
-PUBLIC_BENCHMARKS_ANSWER_COLUMN = "answer"
-"""Read as gold when a set has it; every other column (``category`` and the like) is ignored."""
-
-MSG_EVALS_UNKNOWN_PUBLIC_SET = "Public-benchmarks has no question set {name!r}; choose one of {sets}."
 
 MSG_EVALS_UNANSWERED = (
     "evaluate() grades each answer against the dataset's gold, and {name!r} has {count} question(s) with none "

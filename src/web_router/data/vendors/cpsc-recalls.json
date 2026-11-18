@@ -1,0 +1,268 @@
+{
+  "vendor": "cpsc-recalls",
+  "name": "CPSC Recalls (SaferProducts.gov)",
+  "category": "government",
+  "summary": "US Consumer Product Safety Commission product recalls: products, hazards, injuries, remedies, manufacturers, retailers and UPCs, searchable by field and date.",
+  "docs_url": "https://www.cpsc.gov/s3fs-public/RecallRetrievalWebServicesProgrammersGuide20180917.pdf",
+  "base_url": "https://www.saferproducts.gov/RestWebServices",
+  "notes": [
+    "Keyless. Default output is XML; always pass format=json.",
+    "Every field filter is a case-insensitive substring match ('child' matches 'Fairchild').",
+    "Parameter names must be spelled exactly as listed; an unknown one is ignored and the call returns every recall (over 8,000 records). Always narrow with a date range or field.",
+    "All matches come back in one array; there is no paging."
+  ],
+  "sources": [
+    "https://www.cpsc.gov/s3fs-public/RecallRetrievalWebServicesProgrammersGuide20180917.pdf"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "cpsc-recalls.recalls.search",
+      "name": "Search recalls",
+      "summary": "Recalls with their products, hazards, injuries, remedies, firms, images and UPCs as nested collections.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/Recall",
+      "params": {
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; XML when unset. Pass json.",
+          "enum": [
+            "json",
+            "xml"
+          ],
+          "example": "json"
+        },
+        "RecallNumber": {
+          "in": "query",
+          "type": "string",
+          "description": "CPSC recall number."
+        },
+        "RecallID": {
+          "in": "query",
+          "type": "string",
+          "description": "CPSC recall id."
+        },
+        "RecallDateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest recall date, yyyy-MM-dd.",
+          "example": "2026-10-01"
+        },
+        "RecallDateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest recall date, yyyy-MM-dd.",
+          "example": "2026-10-31"
+        },
+        "LastPublishDateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest last-published date, yyyy-MM-dd."
+        },
+        "LastPublishDateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest last-published date, yyyy-MM-dd."
+        },
+        "RecallTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of the recall title.",
+          "example": "stroller"
+        },
+        "RecallDescription": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of the recall description."
+        },
+        "ProductName": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a product name."
+        },
+        "Hazard": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a hazard.",
+          "example": "pinch"
+        },
+        "Injury": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of an injury description."
+        },
+        "Manufacturer": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a manufacturer name."
+        },
+        "Retailer": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a retailer name."
+        },
+        "Importer": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of an importer name."
+        },
+        "Distributor": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a distributor name."
+        },
+        "ManufacturerCountry": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a manufacturing country."
+        },
+        "UPC": {
+          "in": "query",
+          "type": "string",
+          "description": "Product UPC."
+        },
+        "Remedy": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of the remedy."
+        },
+        "RemedyOption": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a remedy option."
+        }
+      },
+      "job": "recalls.search",
+      "docs_url": "https://www.cpsc.gov/s3fs-public/RecallRetrievalWebServicesProgrammersGuide20180917.pdf",
+      "verified": {
+        "docs": "https://www.cpsc.gov/s3fs-public/RecallRetrievalWebServicesProgrammersGuide20180917.pdf"
+      }
+    },
+    {
+      "id": "cpsc-recalls.recalls.search_flat",
+      "name": "Search recalls (flat)",
+      "summary": "The same search with each collection flattened into pipe-separated, quoted strings, for tabular use.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/RecallDelimited",
+      "params": {
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Output format; XML when unset. Pass json.",
+          "enum": [
+            "json",
+            "xml"
+          ],
+          "example": "json"
+        },
+        "RecallNumber": {
+          "in": "query",
+          "type": "string",
+          "description": "CPSC recall number."
+        },
+        "RecallID": {
+          "in": "query",
+          "type": "string",
+          "description": "CPSC recall id."
+        },
+        "RecallDateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest recall date, yyyy-MM-dd.",
+          "example": "2026-10-01"
+        },
+        "RecallDateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest recall date, yyyy-MM-dd.",
+          "example": "2026-10-31"
+        },
+        "LastPublishDateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest last-published date, yyyy-MM-dd."
+        },
+        "LastPublishDateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest last-published date, yyyy-MM-dd."
+        },
+        "RecallTitle": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of the recall title.",
+          "example": "stroller"
+        },
+        "RecallDescription": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of the recall description."
+        },
+        "ProductName": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a product name."
+        },
+        "Hazard": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a hazard.",
+          "example": "pinch"
+        },
+        "Injury": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of an injury description."
+        },
+        "Manufacturer": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a manufacturer name."
+        },
+        "Retailer": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a retailer name."
+        },
+        "Importer": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of an importer name."
+        },
+        "Distributor": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a distributor name."
+        },
+        "ManufacturerCountry": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a manufacturing country."
+        },
+        "UPC": {
+          "in": "query",
+          "type": "string",
+          "description": "Product UPC."
+        },
+        "Remedy": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of the remedy."
+        },
+        "RemedyOption": {
+          "in": "query",
+          "type": "string",
+          "description": "Substring of a remedy option."
+        }
+      },
+      "job": "recalls.search",
+      "docs_url": "https://www.cpsc.gov/s3fs-public/RecallRetrievalWebServicesProgrammersGuide20180917.pdf",
+      "verified": {
+        "docs": "https://www.cpsc.gov/s3fs-public/RecallRetrievalWebServicesProgrammersGuide20180917.pdf"
+      }
+    }
+  ]
+}

@@ -33,3 +33,13 @@ def chains() -> dict[str, Any]:
 def chain(method: str, part: str) -> tuple[str, ...]:
     """One list of a method's generated order: ``preferred``, or search's ``appended``."""
     return tuple(chains()[method][part])
+
+
+def measured_cost(method: str, provider: str) -> float | None:
+    """The mean cost per call the benchmark behind ``method``'s order measured for ``provider``; ``None`` unmeasured.
+
+    Each is the backend's own stated cost averaged over the scan's questions, at its default mode.
+    """
+    row = chains().get(method, {}).get("measured", {}).get(provider) or {}
+    cost = row.get("cost_usd")
+    return float(cost) if isinstance(cost, int | float) and not isinstance(cost, bool) else None

@@ -1,0 +1,303 @@
+{
+  "vendor": "openverse",
+  "name": "Openverse",
+  "category": "media",
+  "summary": "Search openly licensed and public-domain images and audio (Creative Commons and similar) with license, creator and attribution for each work.",
+  "docs_url": "https://api.openverse.org/v1/",
+  "base_url": "https://api.openverse.org",
+  "notes": [
+    "Keyless: anonymous requests are rate limited; registered clients get slightly higher limits and larger pages. Exceeding a limit returns 429, and rate-limited responses carry headers with the remaining allowance.",
+    "Search is for the top results, not bulk download: only a few thousand results per query can be paged, and asking for a page beyond page_count is rejected. Anonymous callers also get smaller pages.",
+    "Use the attribution field of each result when reusing a work; licenses differ per item (by, by-sa, cc0, pdm, ...).",
+    "Parameters prefixed unstable__ are experimental and may change without notice."
+  ],
+  "sources": [
+    "https://api.openverse.org/v1/",
+    "https://api.openverse.org/v1/schema/"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "openverse.images.search",
+      "name": "Search images",
+      "summary": "Openly licensed images matching a query or a creator, title or tag, filtered by license, source, category, size and aspect ratio.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/images/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text query, at most 200 characters.",
+          "example": "red fox"
+        },
+        "creator": {
+          "in": "query",
+          "type": "string",
+          "description": "Search by creator only; ignored when q is present."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Search by title only; cannot be used with q. Fuzzy match."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Search by tag only; cannot be used with q. Fuzzy match."
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated source_names from images.stats."
+        },
+        "excluded_source": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated source_names to exclude."
+        },
+        "license": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated licenses: by, by-nc, by-nc-nd, by-nc-sa, by-nd, by-sa, cc0, nc-sampling+, pdm, sampling+."
+        },
+        "license_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated license types: all, all-cc, commercial, modification.",
+          "example": "commercial"
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated categories: digitized_artwork, illustration, photograph."
+        },
+        "aspect_ratio": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: square, tall, wide."
+        },
+        "size": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: large, medium, small."
+        },
+        "extension": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated file extensions."
+        },
+        "mature": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include sensitive content; false by default."
+        },
+        "filter_dead": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Filter out results whose links return 404; true by default."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 20 by default, capped lower for anonymous callers."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://api.openverse.org/v1/#tag/images/operation/images_search",
+      "verified": {
+        "docs": "https://api.openverse.org/v1/schema/"
+      }
+    },
+    {
+      "id": "openverse.images.get",
+      "name": "Get an image",
+      "summary": "One image's URL, creator, license, license URL, provider, source, dimensions, tags and attribution text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/images/{identifier}/",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The image id (a UUID) from a search result."
+        }
+      },
+      "job": "media.stock.get",
+      "docs_url": "https://api.openverse.org/v1/#tag/images/operation/images_detail",
+      "verified": {
+        "docs": "https://api.openverse.org/v1/schema/"
+      }
+    },
+    {
+      "id": "openverse.images.related",
+      "name": "List related images",
+      "summary": "Images related to a given image.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/images/{identifier}/related/",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The image id (a UUID)."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://api.openverse.org/v1/#tag/images/operation/images_related",
+      "verified": {
+        "docs": "https://api.openverse.org/v1/schema/"
+      }
+    },
+    {
+      "id": "openverse.images.stats",
+      "name": "List image sources",
+      "summary": "Every image source with its source_name, display name, URL and number of images.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/images/stats/",
+      "params": {},
+      "job": "coverage.list",
+      "docs_url": "https://api.openverse.org/v1/#tag/images/operation/images_stats",
+      "verified": {
+        "docs": "https://api.openverse.org/v1/schema/"
+      }
+    },
+    {
+      "id": "openverse.audio.search",
+      "name": "Search audio",
+      "summary": "Openly licensed audio tracks matching a query or a creator, title or tag, filtered by license, source, category and length.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/audio/",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Full-text query, at most 200 characters.",
+          "example": "rain ambience"
+        },
+        "creator": {
+          "in": "query",
+          "type": "string",
+          "description": "Search by creator only; ignored when q is present."
+        },
+        "title": {
+          "in": "query",
+          "type": "string",
+          "description": "Search by title only; cannot be used with q."
+        },
+        "tags": {
+          "in": "query",
+          "type": "string",
+          "description": "Search by tag only; cannot be used with q."
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated source_names from audio.stats."
+        },
+        "excluded_source": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated source_names to exclude."
+        },
+        "license": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated licenses: by, by-nc, by-nc-nd, by-nc-sa, by-nd, by-sa, cc0, nc-sampling+, pdm, sampling+."
+        },
+        "license_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated license types: all, all-cc, commercial, modification."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: audiobook, music, news, podcast, pronunciation, sound_effect."
+        },
+        "length": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: long, medium, short, shortest."
+        },
+        "extension": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated file extensions."
+        },
+        "mature": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include sensitive content; false by default."
+        },
+        "peaks": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include waveform peaks."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 20 by default."
+        }
+      },
+      "job": "media.stock.search",
+      "docs_url": "https://api.openverse.org/v1/#tag/audio/operation/audio_search",
+      "verified": {
+        "docs": "https://api.openverse.org/v1/schema/"
+      }
+    },
+    {
+      "id": "openverse.audio.get",
+      "name": "Get an audio track",
+      "summary": "One track's URL, creator, license, genres, duration, bit rate, sample rate, alternative files and attribution text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/audio/{identifier}/",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The audio id (a UUID) from a search result."
+        }
+      },
+      "notes": [
+        "duration is in milliseconds."
+      ],
+      "job": "media.stock.get",
+      "docs_url": "https://api.openverse.org/v1/#tag/audio/operation/audio_detail",
+      "verified": {
+        "docs": "https://api.openverse.org/v1/schema/"
+      }
+    },
+    {
+      "id": "openverse.audio.stats",
+      "name": "List audio sources",
+      "summary": "Every audio source with its source_name, display name, URL and number of tracks.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/audio/stats/",
+      "params": {},
+      "job": "coverage.list",
+      "docs_url": "https://api.openverse.org/v1/#tag/audio/operation/audio_stats",
+      "verified": {
+        "docs": "https://api.openverse.org/v1/schema/"
+      }
+    }
+  ]
+}

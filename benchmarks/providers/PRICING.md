@@ -23,15 +23,16 @@ than estimated, and one that bills by tokens has no per-call figure
 before quoting a figure, and update the row's `checked` date when you do.
 
 **Mode** is the data's key: `default` for a call that sets nothing,
-web-router's own `search_depth` or `effort` value, or a vendor mode from
-`modes.json` written with a leading `:`. Marked "(default)", it is what a
+web-router's own `search_depth` or `effort` value, or a vendor mode a provider
+class declares, spelled with the backend's name first (`tavily-ultra-fast`), as
+`web_router.modes` reads a mode id. Marked "(default)", it is what a
 call that sets nothing gets.
 
-**How a setup reaches a mode.** `provider@lite|fast|deep` uses web-router's
-normalized `search_depth`, where the backend maps it. `provider:mode` sends a
-vendor mode from [`modes.json`](modes.json) through `provider_options`. A mode
-marked unverified has not yet been shown by a live call to do what its docs
-say.
+**How a setup reaches a mode.** A setup is the id `provider=` pins:
+`provider:lite|fast|deep` uses web-router's normalized `search_depth`, where the
+backend maps it, and `provider:<vendor part>` (`tavily:tavily-ultra-fast`) sends
+the wire the provider class declares for it. A mode marked unverified has not
+yet been shown by a live call to do what its docs say.
 
 ## Search
 
@@ -40,9 +41,9 @@ say.
 <!-- prices: method=search provider=nimble -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| `lite` | `nimble@lite` | `search_depth=lite` | Titles, URLs, snippets | $1.10 per 1k | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
-| `fast` (default) | `nimble`, `nimble@fast` | `search_depth=standard` (the default) | ~2K characters per result | $5 per 1k; standard depth | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
-| `deep` | `nimble@deep` (standard), `nimble:full-content@lite` | `+ full_content=true` | The whole page, scraped live | $15 per 1k; estimate is the derived upper bound: Nimble states $5 per 1k at standard depth plus $1 per 1k URLs for `full_content`, which web-router always sends at this depth, and Nimble does not state its default result count, so this assumes 10 results: $5 + 10 × $1 = $15 per 1k (derived, not stated by Nimble) | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
+| `lite` | `nimble:lite` | `search_depth=lite` | Titles, URLs, snippets | $1.10 per 1k | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
+| `fast` (default) | `nimble`, `nimble:fast` | `search_depth=standard` (the default) | ~2K characters per result | $5 per 1k; standard depth | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
+| `deep` | `nimble:deep` | `+ full_content=true` | The whole page, scraped live | $15 per 1k; estimate is the derived upper bound: Nimble states $5 per 1k at standard depth plus $1 per 1k URLs for `full_content`, which web-router always sends at this depth, and Nimble does not state its default result count, so this assumes 10 results: $5 + 10 × $1 = $15 per 1k (derived, not stated by Nimble) | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 **Standard is $5.00 (checked 2026-10-02).** nimbleway.com/pricing headlines
@@ -65,11 +66,11 @@ A credit costs $0.008 on pay-as-you-go ([api credits](https://docs.tavily.com/do
 <!-- prices: method=search provider=tavily -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| `lite` (default) | `tavily`, `tavily@lite` | `search_depth=basic` (the default) | Several snippets per URL | $8 per 1k; 1 credit at $0.008 | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
-| `fast` | `tavily@fast` | `search_depth=advanced` | Most relevant snippets, slower | $16 per 1k; 2 credits | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
-| `deep` | `tavily@deep` | `advanced + include_raw_content` | Adds the page body | $16 per 1k; 2 credits | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
-| `:fast` | `tavily:fast` (unverified) | `search_depth=fast` | Lower latency | $8 per 1k; 1 credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
-| `:ultra-fast` | `tavily:ultra-fast` (unverified) | `search_depth=ultra-fast` | Lowest latency, one summary per URL | $8 per 1k; 1 credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `lite` (default) | `tavily`, `tavily:lite` | `search_depth=basic` (the default) | Several snippets per URL | $8 per 1k; 1 credit at $0.008 | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `fast` | `tavily:fast` | `search_depth=advanced` | Most relevant snippets, slower | $16 per 1k; 2 credits | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `deep` | `tavily:deep` | `advanced + include_raw_content` | Adds the page body | $16 per 1k; 2 credits | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `tavily-fast` | `tavily:tavily-fast` (unverified) | `search_depth=fast` | Lower latency | $8 per 1k; 1 credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
+| `tavily-ultra-fast` | `tavily:tavily-ultra-fast` (unverified) | `search_depth=ultra-fast` | Lowest latency, one summary per URL | $8 per 1k; 1 credit | [docs.tavily.com](https://docs.tavily.com/documentation/api-reference/endpoint/search) | 2026-10-07 |
 <!-- /prices -->
 
 `auto_parameters=true` (Tavily picks the settings) costs 2 credits. Plans:
@@ -82,12 +83,12 @@ $220, Growth 100,000 for $500.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `exa` | `type=auto` (the default) | Balances quality and speed | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:highlights` | `exa:highlights` | `contents.highlights` instead of text | Query-relevant highlights instead of page text | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:instant` | `exa:instant` (unverified) | `type=instant` | Fastest | $14 per 1k; estimate is the derived upper bound: Exa states $4 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $9–14 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:fast` | `exa:fast` (unverified) | `type=fast` | Low latency | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:deep-lite` | `exa:deep-lite` (unverified) | `type=deep-lite` | Light research with synthesis, ~4s | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:deep` | `exa:deep` (unverified) | `type=deep` | Multi-step research | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
-| `:deep-reasoning` | not in modes.json | `type=deep-reasoning` | Stronger reasoning | $25 per 1k; estimate is the derived upper bound: Exa states $15 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $20–25 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-highlights` | `exa:exa-highlights` | `contents.highlights` instead of text | Query-relevant highlights instead of page text | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-instant` | `exa:exa-instant` (unverified) | `type=instant` | Fastest | $14 per 1k; estimate is the derived upper bound: Exa states $4 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $9–14 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-fast` | `exa:exa-fast` (unverified) | `type=fast` | Low latency | $17 per 1k; estimate is the derived upper bound: Exa states $7 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $12–17 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-deep-lite` | `exa:exa-deep-lite` (unverified) | `type=deep-lite` | Light research with synthesis, ~4s | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-deep` | `exa:exa-deep` (unverified) | `type=deep` | Multi-step research | $22 per 1k; estimate is the derived upper bound: Exa states $12 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $17–22 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
+| `exa-deep-reasoning` | `exa:exa-deep-reasoning` (unverified) | `type=deep-reasoning` | Stronger reasoning | $25 per 1k; estimate is the derived upper bound: Exa states $15 per 1k plus contents at $1 per 1k pages per content type, and web-router asks for text on 5–10 results, so roughly $20–25 per 1k (derived, not stated by Exa) | [exa.ai](https://exa.ai/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 Contents are billed per page per content type, $1 per 1k each: text, highlights
@@ -102,9 +103,7 @@ highlights at the same rate. Results beyond 10 are +$1 per 1k.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `perplexity` | `search_type=web` (the default) | General web search | $5 per 1k | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
-| `:fast` | `perplexity:fast` (unverified) | `search_type=fast` | Lower latency, lower cost | $1 per 1k | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
-| `:context-low` | `perplexity:context-low` (unverified) | `search_context_size=low` (high is the default) | Content per page | not stated for the Search API (the page prices context size for Sonar only) | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
-| `:context-medium` | `perplexity:context-medium` (unverified) | `search_context_size=medium` (high is the default) | Content per page | not stated for the Search API (the page prices context size for Sonar only) | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
+| `perplexity-fast` | `perplexity:perplexity-fast` (unverified) | `search_type=fast` | Lower latency, lower cost | $1 per 1k | [docs.perplexity.ai](https://docs.perplexity.ai/getting-started/pricing) | 2026-10-07 |
 <!-- /prices -->
 
 A request with several queries is billed as one request.
@@ -115,7 +114,7 @@ A request with several queries is billed as one request.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `brave` | Search plan | Full web results | $5 per 1k; $5 free credit per month | [brave.com](https://brave.com/search/api/) | 2026-10-07 |
-| `:extra-snippets` | `brave:extra-snippets` (unverified) | `extra_snippets=true` | Up to 5 extra excerpts per result | $5 per 1k; included in the search price | [api-dashboard.search.brave.com](https://api-dashboard.search.brave.com/app/documentation/web-search/query) | 2026-10-07 |
+| `brave-extra-snippets` | `brave:brave-extra-snippets` (unverified) | `extra_snippets=true` | Up to 5 extra excerpts per result | $5 per 1k; included in the search price | [api-dashboard.search.brave.com](https://api-dashboard.search.brave.com/app/documentation/web-search/query) | 2026-10-07 |
 <!-- /prices -->
 
 The Answers plan (summarized, cited answers) is priced under [Answer](#answer).
@@ -127,9 +126,9 @@ The LLM Context endpoint (ranked page chunks for an LLM) has no stated price.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `parallel` | `mode=fast` on `/v1/search` | What web-router calls: fast pinned, Parallel's replacement for the beta default; latency measured on /v1beta | fast lists $1 per 1k; left unknown until route-eval re-runs on /v1, since a price reorders auto's chain | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
-| `:turbo` | `parallel:turbo` (unverified) | `mode=turbo` (v1) | ~200 ms, English and Japanese only | $1 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
-| `:basic` | `parallel:basic` (unverified) | `mode=basic` (v1) | Longer snippets, ~1 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
-| `:advanced` | `parallel:advanced` (unverified) | `mode=advanced` (v1, the default) | Advanced retrieval, ~3 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `parallel-turbo` | `parallel:parallel-turbo` (unverified) | `mode=turbo` (v1) | ~200 ms, English and Japanese only | $1 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `parallel-basic` | `parallel:parallel-basic` (unverified) | `mode=basic` (v1) | Longer snippets, ~1 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
+| `parallel-advanced` | `parallel:parallel-advanced` (unverified) | `mode=advanced` (/v1's own default; web-router sends `fast`) | Advanced retrieval, ~3 s | $5 per 1k | [docs.parallel.ai](https://docs.parallel.ai/search/modes) | 2026-11-09 |
 <!-- /prices -->
 
 web-router calls `/v1/search` with `mode=fast` pinned: unset, `/v1` runs
@@ -145,10 +144,10 @@ across Parallel's APIs rather than Search alone.
 <!-- prices: method=search provider=you,you-mcp -->
 | Backend | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|---|
-| you | `lite` (default) | `you`, `you@lite` | No extraction (the default) | Snippets | $5 per 1k | [you.com](https://you.com/pricing) | 2026-10-07 |
-| you | `fast` | `you@fast` | `extraction_mode=highlights` | Query-relevant passages | $5 per 1k; no separate charge stated | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
-| you | `deep` | `you@deep` | `extraction_mode=full_page` | The whole page | $15 per 1k; estimate is the derived upper bound: You.com states $5 per 1k plus $1 per 1k pages fetched live, `full_page` can fetch every result live, and an unset `max_results` gets You.com's default of 10 results, so $5 + 10 × $1 = $15 per 1k (derived, not stated by You.com) | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
-| you | `:full-page-cache` | `you:full-page-cache` (unverified) | `full_page` from cache only | The whole page, cached copies only | $5 per 1k; cached pages are free | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
+| you | `lite` (default) | `you`, `you:lite` | No extraction (the default) | Snippets | $5 per 1k | [you.com](https://you.com/pricing) | 2026-10-07 |
+| you | `fast` | `you:fast` | `extraction_mode=highlights` | Query-relevant passages | $5 per 1k; no separate charge stated | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
+| you | `deep` | `you:deep` | `extraction_mode=full_page` | The whole page | $15 per 1k; estimate is the derived upper bound: You.com states $5 per 1k plus $1 per 1k pages fetched live, `full_page` can fetch every result live, and an unset `max_results` gets You.com's default of 10 results, so $5 + 10 × $1 = $15 per 1k (derived, not stated by You.com) | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
+| you | `you-full-page-cache` | `you:you-full-page-cache` (unverified) | `full_page` from cache only | The whole page, cached copies only | $5 per 1k; cached pages are free | [you.com](https://you.com/docs/guides/search) | 2026-10-07 |
 | you-mcp | default | `you-mcp` | Free MCP (`you-mcp`) | Search through the keyless endpoint | free; 100 queries a day | [you.com](https://you.com/docs/build-with-agents/mcp-server) | 2026-10-07 |
 <!-- /prices -->
 
@@ -160,10 +159,10 @@ for; `sourcedAnswer` and `structured` add $0.001 at every depth. 4,000 queries a
 <!-- prices: method=search provider=linkup -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| `:flash` | `linkup:flash` | `depth=flash` | Snippets, about 0.5 s | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
+| `linkup-flash` | `linkup:linkup-flash` | `depth=flash` | Snippets, about 0.5 s | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
 | default | `linkup` | `depth=fast` (sent on every search) | Snippets, about 1 s; Linkup's recommended default | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
-| `:standard` | `linkup:standard` | `depth=standard` | Snippets, one agentic pass for multi-topic queries | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
-| `:deep` | `linkup:deep` | `depth=deep` | Snippets, several search iterations, 6 to 16 s | $50 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
+| `linkup-standard` | `linkup:linkup-standard` | `depth=standard` | Snippets, one agentic pass for multi-topic queries | $5 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
+| `linkup-deep` | `linkup:linkup-deep` | `depth=deep` | Snippets, several search iterations, 6 to 16 s | $50 per 1k | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/search/overview.md) | 2026-10-07 |
 <!-- /prices -->
 
 Latencies are from the 2026-09-30 live checks. All four depths returned snippets
@@ -195,7 +194,7 @@ capped at 1,000 requests an hour per IP ([rate limits](https://docs.keenable.ai/
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `keenable` | `mode=pro` (Keenable's default; web-router sends none) | Titles, URLs, a snippet per result | one credit per search; 100k requests a month free, then not published; $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
-| `:realtime` | `keenable:realtime` | `mode=realtime` | The same, faster; billed as its own SKU | one credit per search; 100k requests a month free, then not published; $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
+| `keenable-realtime` | `keenable:keenable-realtime` | `mode=realtime` | The same, faster; billed as its own SKU | one credit per search; 100k requests a month free, then not published; $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
 <!-- /prices -->
 
 ### DeepSeek
@@ -211,7 +210,60 @@ requests a second.
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
 | default | `deepseek` | default (`need_content` false) | Titles, URLs, a snippet and a summary per result | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
-| `:content` | `deepseek:content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
+| `deepseek-content` | `deepseek:deepseek-content` | `need_content=true` | The same, plus the page body | $0.75 per 1k; successful requests only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
+<!-- /prices -->
+
+### Valyu
+
+Per result, not per request: a web or news result is 0.1 credit, and $10 buys
+1,600 credits pay-as-you-go, so a search of 10 web results costs about $0.006
+([pricing](https://docs.valyu.ai/pricing)). The default of 5 results costs half
+that. web-router sends `search_type=web`; Valyu's own default also searches
+datasets, priced per 1,000 results at up to $30. Accounts get free credits each
+month.
+
+<!-- prices: method=search provider=valyu -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `valyu` | default (`search_type=web`) | Titles, URLs, a relevance score and the page body per result | $6.25 per 1k; searches of 10 web results: 0.1 credit per result, at $10 per 1,600 credits pay-as-you-go; dataset results cost more | [docs.valyu.ai](https://docs.valyu.ai/pricing) | 2026-11-12 |
+<!-- /prices -->
+
+### Seltz
+
+Per search, however many documents it returns ([pricing](https://docs.seltz.ai/pricing)): $5 per 1k on
+the Pro tier, which Seltz uses unless `tier` says otherwise, and $3 per 1k on Base. New accounts get $20
+of credit.
+
+<!-- prices: method=search provider=seltz -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `seltz` | default (`tier=pro`) | URLs, dates and the document body per result; no titles | $5 per 1k; Pro tier, the default; $3 per 1k with `tier=base` | [docs.seltz.ai](https://docs.seltz.ai/pricing) | 2026-11-12 |
+<!-- /prices -->
+
+### Octen
+
+Per call ([pricing](https://docs.octen.ai/overview/pricing)): Web Search lists at $5 per 1k, currently
+$1. Full content, which `search_depth` `fast` and `deep` turn on, adds $0.50 per 1k results. New accounts get $5
+of balance, and a payment method is required to use the API.
+
+<!-- prices: method=search provider=octen -->
+| Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|
+| default | `octen` | default (highlights, no `full_content`) | Titles, URLs, dates and a query-relevant highlight per result | $1 per 1k; 80% off the $5 list price; full content $0.50 per 1k results on top | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+| `fast` | `octen:fast` | `full_content.enable=true` | Adds each result's page body | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+| `deep` | `octen:deep` | `full_content` up to 100,000 tokens | Adds a longer page body per result | $1 per 1k; full content is free for the first 10 results, then $0.50 per 1k results | [docs.octen.ai](https://docs.octen.ai/overview/pricing) | 2026-11-12 |
+<!-- /prices -->
+
+### Keirolabs
+
+Per search, however many results it returns ([pricing](https://keirolabs.cloud/pricing)): $0.10 per 1k on
+the Essential plan ($29.99 a month, 300,000 searches included), $0.06 per 1k on Pro and $0.03 per 1k on
+Startup.
+
+<!-- prices: method=search provider=keirolabs -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `keirolabs` | default (lite search) | Titles, URLs and a snippet per result; no page body or date | $0.10 per 1k; Essential plan ($29.99 a month, 300k searches included); $0.06 per 1k on Pro, $0.03 per 1k on Startup | [keirolabs.cloud](https://keirolabs.cloud/pricing) | 2026-11-12 |
 <!-- /prices -->
 
 ### AWS AgentCore Web Search
@@ -239,6 +291,19 @@ check what a run keeps before adding one.
 
 You.com's keyless MCP is priced in its own section above.
 
+### Search through a LiteLLM proxy
+
+Exa, Tavily and Parallel search sent through a LiteLLM proxy's `/v1/search`, which bills each call to the LiteLLM
+key at the proxy's own cost map. These are LiteLLM's published defaults; an operator may set others.
+
+<!-- prices: method=search provider=exa-litellm,tavily-litellm,parallel-litellm -->
+| Backend | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|
+| exa-litellm | `exa-litellm` | Exa's own mapping, sent through the proxy | Exa search, billed to the LiteLLM key | $5 per 1k; LiteLLM's cost map bills `exa_ai/search` per query: $0.005 for up to 25 results, $0.025 above | [github.com](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json) | 2026-11-12 |
+| tavily-litellm | `tavily-litellm` | Tavily's own mapping, sent through the proxy | Tavily search, billed to the LiteLLM key | $8 per 1k; LiteLLM's cost map: `tavily/search` $0.008 a query, `tavily/search-advanced` $0.016 | [github.com](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json) | 2026-11-12 |
+| parallel-litellm | `parallel-litellm` | Parallel's own mapping, sent through the proxy | Parallel search, billed to the LiteLLM key | $5 per 1k; LiteLLM's cost map: `parallel_ai/search` $0.005 a query | [github.com](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json) | 2026-11-12 |
+<!-- /prices -->
+
 ## Extract (page reading)
 
 <!-- prices: method=extract -->
@@ -262,12 +327,15 @@ You.com's keyless MCP is priced in its own section above.
 ## Templates (Extract Templates)
 
 Not benchmarked; listed because a run bills on the vendor's account, and
-because the `run_template` MCP tool and the README point here for the figure.
+because the `live_data` MCP tool and the docs live data page (docs/live-data.mdx) point here for the figure.
 
-<!-- prices: method=run_template -->
-| What web-router sends | Estimated price | Source | Checked |
-|---|---|---|---|
-| `extract.templates.run`, one template and its inputs, one page | $3 per 1k; per run, one flat rate for every template; successes only; listing and describing templates are free | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-28 |
+<!-- prices: method=live_data -->
+| Backend | What web-router sends | Estimated price | Source | Checked |
+|---|---|---|---|---|
+| nimble | `extract.templates.run`, one template and its inputs, one page | $3 per 1k; per run, one flat rate for every template; successes only; listing and describing templates are free | [docs.nimbleway.com](https://docs.nimbleway.com/nimble-sdk/admin/pricing) | 2026-10-28 |
+| apify | `run-sync-get-dataset-items`, one Actor and its input | set per Actor: free, per dataset item, or per event, plus platform compute units; see each Actor's Store page | [apify.com](https://apify.com/pricing) | 2026-11-09 |
+| brightdata | `/datasets/v3/scrape`, one scraper and one input | $1.50 per 1k records pay as you go ($1.30 on Scale), so a run costs per record returned, which is not known before it runs; unknown here so a cost cap never under-reserves | [brightdata.com](https://brightdata.com/pricing/web-scraper) | 2026-11-09 |
+| oxylabs | Web API dedicated scrapers, `POST /v1/scrape/{scraper}` (or its async job), `output: ["json"]` | per result, and a run returns one result per page it asks for (`pages`), so it costs per result returned, which is not known before the run. Rates are set by scraper and monthly volume: Amazon $0.25-0.50, Google $0.50-1.35, ChatGPT, Perplexity and Gemini $1.30-1.50 per 1k results. Credits come from a monthly plan, from $15 | [oxylabs.io](https://oxylabs.io/products/scraper-api/web/pricing) | 2026-11-11 |
 <!-- /prices -->
 
 **One rate, not per template (checked 2026-10-28).** The template API

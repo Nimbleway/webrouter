@@ -1,0 +1,545 @@
+{
+  "vendor": "datalegion",
+  "name": "Data Legion",
+  "category": "enrichment",
+  "summary": "Person and company enrichment and SQL-style search over 188M+ person and 71M+ company profiles, with optional contact data.",
+  "docs_url": "https://www.datalegion.ai/docs/api-reference/overview",
+  "pricing_url": "https://www.datalegion.ai/pricing",
+  "base_url": "https://api.datalegion.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DATALEGION_API_KEY"
+        ],
+        "description": "A Data Legion API key (dashboard, after sign-up). Sent in the API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Prepaid credits: 1 credit = 1 record returned; the price per credit depends on the product bought (base or premium, with or without contact data). Credits-Used and Credits-Remaining response headers report the charge.",
+    "Rate limits per account: enrichment 100/min, search and discover 10/min (search 5/min on a free trial); 429 carries Retry-After.",
+    "Free-trial person results redact contact data until a card is verified.",
+    "Search takes SQL without LIMIT/OFFSET: use limit, offset (max 10000) and cursor. A 408 timeout is not charged.",
+    "Bulk enrichment and data-issue reports are documented but not in this entry."
+  ],
+  "sources": [
+    "https://www.datalegion.ai/llms.txt",
+    "https://www.datalegion.ai/llms-full.txt",
+    "https://www.datalegion.ai/docs/api-reference/openapi.json",
+    "https://www.datalegion.ai/docs/api-reference/overview"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "datalegion.person.enrich",
+      "name": "Enrich a person",
+      "summary": "Best matching person profile (work history, education, skills, socials; contact data on contact plans) from an identifier, or a name plus context.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/enrich",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address.",
+          "example": "jane.doe@example.com"
+        },
+        "phone": {
+          "in": "body",
+          "type": "string",
+          "description": "Phone number; normalized to E.164."
+        },
+        "social_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn, X, GitHub or Facebook profile URL."
+        },
+        "linkedin_id": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn numeric id."
+        },
+        "legion_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Data Legion person id."
+        },
+        "email_hash": {
+          "in": "body",
+          "type": "string",
+          "description": "SHA-256, SHA-1 or MD5 of the normalized email."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name; with last_name needs a context field."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "full_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name of two or more words, instead of first and last."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, website or social URL (context)."
+        },
+        "job_title": {
+          "in": "body",
+          "type": "string",
+          "description": "Job title (context)."
+        },
+        "school": {
+          "in": "body",
+          "type": "string",
+          "description": "School name, website or social URL (context)."
+        },
+        "city": {
+          "in": "body",
+          "type": "string",
+          "description": "City (context)."
+        },
+        "state": {
+          "in": "body",
+          "type": "string",
+          "description": "State name or code (context)."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Country name or code (context)."
+        },
+        "postal_code": {
+          "in": "body",
+          "type": "string",
+          "description": "ZIP or postal code (context)."
+        },
+        "address": {
+          "in": "body",
+          "type": "string",
+          "description": "Full address, parsed into parts (context)."
+        },
+        "birth_date": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD, YYYY-MM or YYYY; context or a narrowing qualifier."
+        },
+        "min_confidence": {
+          "in": "body",
+          "type": "string",
+          "description": "Lowest match confidence to return.",
+          "enum": [
+            "high",
+            "moderate",
+            "low"
+          ]
+        },
+        "required_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Fields a match must have, else it is dropped and not billed, e.g. work_email or emails.type:personal."
+        },
+        "titlecase": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Title-case text fields (names, titles, companies, locations)."
+        },
+        "include_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to return; all if omitted."
+        },
+        "exclude_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to leave out, applied after include_fields."
+        }
+      },
+      "notes": [
+        "A read over POST. Needs one primary identifier (email, phone, social_url, linkedin_id, legion_id, email_hash) or a first and last name plus a context field; otherwise 400.",
+        "1 credit per record returned; 404 when nothing matches."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://www.datalegion.ai/docs/api-reference/person-enrichment",
+      "verified": {
+        "docs": "https://www.datalegion.ai/docs/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "datalegion.person.search",
+      "name": "Search people with SQL",
+      "summary": "People matching a SQL WHERE clause over 100+ profile columns, with an exact or estimated total.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "SQL 'SELECT * FROM people WHERE ...' without LIMIT/OFFSET (an Elasticsearch-style query object is also accepted).",
+          "required": true,
+          "example": "SELECT * FROM people WHERE company_name ILIKE '%google%' AND state = 'california'"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results, default 1, max 100."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, 0-10000; use cursor beyond."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor of the previous page; send without offset and with the same query."
+        },
+        "titlecase": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Title-case text fields (names, titles, companies, locations)."
+        },
+        "include_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to return; all if omitted."
+        },
+        "exclude_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to leave out, applied after include_fields."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per record returned; total (with the Total-Count-Status header) gives the match count, so limit 1 sizes a market cheaply.",
+        "10 requests a minute (5 on a free trial)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://www.datalegion.ai/docs/api-reference/person-search",
+      "verified": {
+        "docs": "https://www.datalegion.ai/docs/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "datalegion.person.discover",
+      "name": "Discover people in plain English",
+      "summary": "People matching a natural-language description; the SQL it generated comes back as generated_query.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person/discover",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-English description.",
+          "required": true,
+          "example": "VPs of Engineering at fintech companies in New York"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results, default 1, max 100."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, 0-10000."
+        },
+        "titlecase": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Title-case text fields (names, titles, companies, locations)."
+        },
+        "include_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to return; all if omitted."
+        },
+        "exclude_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to leave out, applied after include_fields."
+        }
+      },
+      "notes": [
+        "A read over POST. Beta and enterprise-only (not on self-serve plans)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://www.datalegion.ai/docs/api-reference/person-discovery",
+      "verified": {
+        "docs": "https://www.datalegion.ai/docs/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "datalegion.company.enrich",
+      "name": "Enrich a company",
+      "summary": "Best matching company profile (firmographics, locations, workforce data) by domain, name, LinkedIn id, social URL, ticker or Legion id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/enrich",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Website domain.",
+          "example": "google.com"
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name (fuzzy)."
+        },
+        "linkedin_id": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn company numeric id."
+        },
+        "social_url": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn, Facebook, Crunchbase, X or GitHub company URL."
+        },
+        "ticker_symbol": {
+          "in": "body",
+          "type": "string",
+          "description": "Stock ticker, e.g. GOOGL."
+        },
+        "legion_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Data Legion company id."
+        },
+        "industry": {
+          "in": "body",
+          "type": "string",
+          "description": "Narrows a name match, e.g. software development."
+        },
+        "min_confidence": {
+          "in": "body",
+          "type": "string",
+          "description": "Lowest match confidence to return.",
+          "enum": [
+            "high",
+            "moderate",
+            "low"
+          ]
+        },
+        "required_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Fields a match must have, else it is dropped and not billed."
+        },
+        "titlecase": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Title-case text fields (names, titles, companies, locations)."
+        },
+        "include_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to return; all if omitted."
+        },
+        "exclude_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to leave out, applied after include_fields."
+        }
+      },
+      "notes": [
+        "A read over POST. Needs at least one identifier; industry alone is not enough. 1 credit per record returned."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://www.datalegion.ai/docs/api-reference/company-enrichment",
+      "verified": {
+        "docs": "https://www.datalegion.ai/docs/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "datalegion.company.search",
+      "name": "Search companies with SQL",
+      "summary": "Companies matching a SQL WHERE clause over 50+ firmographic and workforce columns.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "SQL 'SELECT * FROM companies WHERE ...' without LIMIT/OFFSET (an Elasticsearch-style query object is also accepted).",
+          "required": true,
+          "example": "SELECT * FROM companies WHERE industry ILIKE '%software%' AND legion_employee_count > 100"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results, default 1, max 100."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, 0-10000; use cursor beyond."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "next_cursor of the previous page; send without offset and with the same query."
+        },
+        "titlecase": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Title-case text fields (names, titles, companies, locations)."
+        },
+        "include_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to return; all if omitted."
+        },
+        "exclude_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to leave out, applied after include_fields."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per record returned. An industry value no record holds returns an empty page free, with a Search-Warning header."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.datalegion.ai/docs/api-reference/company-search",
+      "verified": {
+        "docs": "https://www.datalegion.ai/docs/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "datalegion.company.discover",
+      "name": "Discover companies in plain English",
+      "summary": "Companies matching a natural-language description, with the generated SQL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company/discover",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Plain-English description.",
+          "required": true,
+          "example": "AI startups in San Francisco with over 50 employees"
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results, default 1, max 100."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip, 0-10000."
+        },
+        "titlecase": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Title-case text fields (names, titles, companies, locations)."
+        },
+        "include_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to return; all if omitted."
+        },
+        "exclude_fields": {
+          "in": "body",
+          "type": "string",
+          "description": "Comma-separated fields to leave out, applied after include_fields."
+        }
+      },
+      "notes": [
+        "A read over POST. Beta and enterprise-only."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.datalegion.ai/docs/api-reference/company-discovery",
+      "verified": {
+        "docs": "https://www.datalegion.ai/docs/api-reference/openapi.json"
+      }
+    },
+    {
+      "id": "datalegion.utility.validate",
+      "name": "Validate input fields",
+      "summary": "Format checks and suggestions for person or company fields before an enrich or search call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/utility/validate",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email."
+        },
+        "phone": {
+          "in": "body",
+          "type": "string",
+          "description": "Phone."
+        },
+        "full_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name."
+        },
+        "social_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Social URL."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company."
+        },
+        "ticker_symbol": {
+          "in": "body",
+          "type": "string",
+          "description": "Ticker."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Country."
+        },
+        "state": {
+          "in": "body",
+          "type": "string",
+          "description": "State."
+        },
+        "birth_date": {
+          "in": "body",
+          "type": "string",
+          "description": "Birth date."
+        }
+      },
+      "notes": [
+        "A read over POST. 100 requests a minute."
+      ],
+      "job": "contact.verify",
+      "docs_url": "https://www.datalegion.ai/docs/api-reference/utility-validate",
+      "verified": {
+        "docs": "https://www.datalegion.ai/docs/api-reference/openapi.json"
+      }
+    }
+  ]
+}

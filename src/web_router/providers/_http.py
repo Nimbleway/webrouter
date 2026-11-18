@@ -20,9 +20,8 @@ To add a search backend::
         def _to_response(self, request, payload): ...
 
 An extract backend is the same shape, against :class:`HttpExtractProvider`,
-with ``extract_path`` in place of ``search_path`` and a list of URLs passed
-alongside the request. An answer backend is the search shape again, against
-:class:`HttpAnswerProvider`, with ``answer_path``.
+with ``extract_path`` and a list of URLs beside the request; an answer backend,
+against :class:`HttpAnswerProvider`, with ``answer_path``.
 
 A browse backend, against :class:`HttpBrowseProvider`, implements the job's
 ``_start`` and ``_fetch`` over the request helpers it is given, as a research
@@ -40,6 +39,7 @@ from __future__ import annotations
 
 import abc
 import contextlib
+import threading
 from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Any, ClassVar, Generic, Literal, TypeVar
@@ -62,7 +62,7 @@ from web_router.constants import (
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._clamp import clamped
 from web_router.providers._deadline import job_budget, research_budget
-from web_router.providers._utils import compact, error_detail, resolve_api_key
+from web_router.providers._utils import WarmClients, compact, error_detail, resolve_api_key
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
     BrowseProvider,
@@ -90,7 +90,7 @@ _RequestT = TypeVar("_RequestT", SearchRequest, AnswerRequest)
 _ResponseT = TypeVar("_ResponseT", SearchResponse, AnswerResponse)
 
 
-class _HttpProvider(_BaseProvider):
+class _HttpProvider(WarmClients, _BaseProvider):
     """A provider backed by a plain HTTP endpoint."""
 
     base_url: ClassVar[str]
@@ -135,8 +135,7 @@ class _HttpProvider(_BaseProvider):
         url = base_url or self.base_url
         super().__init__(api_key=key, base_url=url, timeout=timeout, **kwargs)
 
-        # Merge rather than replace: a caller passing headers= must not silently
-        # drop the auth header and get an unexplained 401.
+        # Merged, not replaced: a caller's headers= must not drop the auth header.
         headers = {"Accept": "application/json"}
         if key is not None:
             headers.update(self._auth_headers(key))
@@ -150,16 +149,15 @@ class _HttpProvider(_BaseProvider):
             "base_url": url,
             "timeout": timeout,
             "headers": headers,
-            # Pinned rather than left to httpx's default, so the credential
-            # cannot travel to a host this provider never meant to call.
+            # Pinned, not httpx's default, so the credential never travels to a host this provider did not mean to call.
             "follow_redirects": follow_redirects,
             **compact(kwargs),
         }
-        # Built on first use, and only the one actually used: constructing both
-        # eagerly left a sync caller holding an open async connection pool that
-        # close() had no way to shut down.
+        # Built on first use, and only the one used: building both eagerly left a sync caller holding an async pool
+        # close() could not shut. The lock stops threads sharing one router from each building, and leaking, a client.
         self._sync: httpx.Client | None = None
         self._async: httpx.AsyncClient | None = None
+        self._client_lock = threading.Lock()
 
     def _clamped(self) -> dict[str, Any]:
         """A one-call request's timeout under a deadline; see :func:`~web_router.providers._deadline.clamped`."""
@@ -181,14 +179,16 @@ class _HttpProvider(_BaseProvider):
 
     @property
     def _client(self) -> httpx.Client:
-        if self._sync is None:
-            self._sync = httpx.Client(**self._client_kwargs)
+        with self._client_lock:
+            if self._sync is None:
+                self._sync = httpx.Client(**self._client_kwargs)
         return self._sync
 
     @property
     def _async_client(self) -> httpx.AsyncClient:
-        if self._async is None:
-            self._async = httpx.AsyncClient(**self._client_kwargs)
+        with self._client_lock:
+            if self._async is None:
+                self._async = httpx.AsyncClient(**self._client_kwargs)
         return self._async
 
     def _payload(self, response: httpx.Response) -> dict[str, Any]:
@@ -210,24 +210,24 @@ class _HttpProvider(_BaseProvider):
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            detail = MSG_HTTP_ERROR.format(
-                status=exc.response.status_code,
-                body=exc.response.text[:HTTP_ERROR_BODY_LIMIT],
-            )
-            raise ProviderError(self.name, detail, original=exc) from exc
+            body = exc.response.text[:HTTP_ERROR_BODY_LIMIT]
+            detail = MSG_HTTP_ERROR.format(status=exc.response.status_code, body=body)
+            raise ProviderError(self.name, detail, original=exc, kind=self._error_kind(exc)) from exc
+
+    def _error_kind(self, exc: httpx.HTTPStatusError) -> str | None:
+        """The failure's kind when the body says more than its status; ``None`` classifies it by status."""
+        return None
 
     def close(self) -> None:
-        # Via the attribute, not the property: closing must never be the thing
-        # that constructs a client.
+        # Via the attribute, not the property: closing must never construct a client.
         if self._sync is not None:
             self._sync.close()
 
     async def aclose(self) -> None:
         if self._async is not None:
             await self._async.aclose()
-        # An async caller may still have built a sync client -- through the
-        # sync path, or a library that probed it -- and aclose() is the only
-        # shutdown they will call.
+        # An async caller may still have built a sync client -- through the sync path, or a library that probed it --
+        # and aclose() is the only shutdown they will call.
         self.close()
 
 
@@ -345,8 +345,7 @@ class HttpResearchProvider(_HttpProvider, ResearchProvider):
             **kwargs: As :class:`_HttpProvider`.
         """
         super().__init__(timeout=timeout, **kwargs)
-        # Kept beside the client's own: every request clamps down from here to
-        # whatever the caller has left, and never up.
+        # Kept beside the client's own: every request clamps down from here to whatever the caller has left, never up.
         self._research_timeout = timeout
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:

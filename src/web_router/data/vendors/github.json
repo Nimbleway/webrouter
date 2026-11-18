@@ -1,0 +1,482 @@
+{
+  "vendor": "github",
+  "name": "GitHub",
+  "category": "developer",
+  "summary": "Repositories, issues, pull requests, commits and code search on GitHub through its REST API.",
+  "docs_url": "https://docs.github.com/en/rest",
+  "pricing_url": "https://github.com/pricing",
+  "base_url": "https://api.github.com",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "GITHUB_TOKEN",
+          "GH_TOKEN"
+        ],
+        "required": false,
+        "description": "a GitHub personal access token (Settings > Developer settings > Personal access tokens), fine-grained with read access to the repositories you need. Optional for public data, needed for private repositories, code search and writes"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {token}",
+        "optional": true
+      }
+    ]
+  },
+  "headers": {
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2026-03-10"
+  },
+  "notes": [
+    "Works without a token for public data, at 60 requests an hour per IP; a token raises that to 5,000 an hour. Search has its own per-minute limits.",
+    "Paging: per_page up to 100 (default 30) and page; the Link response header carries the next and last page URLs.",
+    "Times are ISO 8601 UTC, YYYY-MM-DDTHH:MM:SSZ.",
+    "Pull requests are issues too: comments on a PR conversation go through the issues endpoints, and issue numbers and PR numbers share one sequence."
+  ],
+  "sites": [
+    "github.com"
+  ],
+  "sources": [
+    "https://docs.github.com/en/rest/search/search",
+    "https://docs.github.com/en/rest/repos/repos",
+    "https://docs.github.com/en/rest/repos/contents",
+    "https://docs.github.com/en/rest/issues/issues",
+    "https://docs.github.com/en/rest/issues/comments",
+    "https://docs.github.com/en/rest/pulls/pulls",
+    "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api",
+    "https://docs.github.com/en/rest/using-the-rest-api/using-pagination-in-the-rest-api"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "github.search.repositories",
+      "name": "Search repositories",
+      "summary": "Repositories matching keywords and qualifiers (language:, stars:, topic:, org:...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/repositories",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Keywords and qualifiers.",
+          "example": "web scraping language:python stars:>500"
+        },
+        "sort": {
+          "in": "query",
+          "description": "Sort field; default best match.",
+          "enum": [
+            "stars",
+            "forks",
+            "help-wanted-issues",
+            "updated"
+          ]
+        },
+        "order": {
+          "in": "query",
+          "description": "desc (default) or asc; only with sort.",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, at most 100; default 30."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "notes": [
+        "Search allows 30 requests a minute authenticated, 10 without a token, and returns at most 1,000 results per query."
+      ],
+      "job": "code.repos.search",
+      "docs_url": "https://docs.github.com/en/rest/search/search#search-repositories",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/search/search#search-repositories"
+      }
+    },
+    {
+      "id": "github.search.issues",
+      "name": "Search issues and pull requests",
+      "summary": "Issues and PRs across GitHub matching keywords and qualifiers (repo:, is:pr, is:open, author:, label:...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/issues",
+      "params": {
+        "q": {
+          "in": "query",
+          "required": true,
+          "description": "Keywords and qualifiers; include is:issue or is:pr.",
+          "example": "repo:python/cpython is:issue is:open label:type-bug"
+        },
+        "sort": {
+          "in": "query",
+          "description": "Sort field; default best match.",
+          "enum": [
+            "comments",
+            "reactions",
+            "reactions-+1",
+            "reactions--1",
+            "reactions-smile",
+            "reactions-thinking_face",
+            "reactions-heart",
+            "reactions-tada",
+            "interactions",
+            "created",
+            "updated"
+          ]
+        },
+        "order": {
+          "in": "query",
+          "description": "desc (default) or asc; only with sort.",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "advanced_search": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to use advanced issue search (AND/OR and parentheses)."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, at most 100; default 30."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "code.issues.search",
+      "docs_url": "https://docs.github.com/en/rest/search/search#search-issues-and-pull-requests",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/search/search#search-issues-and-pull-requests"
+      }
+    },
+    {
+      "id": "github.repos.get",
+      "name": "Get a repository",
+      "summary": "Description, stars, forks, open issues, topics, license, default branch and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}",
+      "params": {
+        "owner": {
+          "in": "path",
+          "required": true,
+          "description": "Account that owns the repository (not case sensitive).",
+          "example": "python"
+        },
+        "repo": {
+          "in": "path",
+          "required": true,
+          "description": "Repository name without .git (not case sensitive).",
+          "example": "cpython"
+        }
+      },
+      "job": "code.repos.get",
+      "docs_url": "https://docs.github.com/en/rest/repos/repos#get-a-repository",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/repos/repos#get-a-repository"
+      }
+    },
+    {
+      "id": "github.repos.readme",
+      "name": "Get a repository's README",
+      "summary": "The README of the default branch or a given ref.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/readme",
+      "params": {
+        "owner": {
+          "in": "path",
+          "required": true,
+          "description": "Account that owns the repository (not case sensitive).",
+          "example": "python"
+        },
+        "repo": {
+          "in": "path",
+          "required": true,
+          "description": "Repository name without .git (not case sensitive).",
+          "example": "cpython"
+        },
+        "ref": {
+          "in": "query",
+          "description": "Commit, branch or tag; default the default branch."
+        }
+      },
+      "job": "code.repos.readme",
+      "docs_url": "https://docs.github.com/en/rest/repos/contents#get-a-repository-readme",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/repos/contents#get-a-repository-readme"
+      }
+    },
+    {
+      "id": "github.issues.list",
+      "name": "List a repository's issues",
+      "summary": "Issues and pull requests in a repository, filtered by state, labels, assignee and date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/issues",
+      "params": {
+        "owner": {
+          "in": "path",
+          "required": true,
+          "description": "Account that owns the repository (not case sensitive).",
+          "example": "python"
+        },
+        "repo": {
+          "in": "path",
+          "required": true,
+          "description": "Repository name without .git (not case sensitive).",
+          "example": "cpython"
+        },
+        "state": {
+          "in": "query",
+          "description": "Default open.",
+          "enum": [
+            "open",
+            "closed",
+            "all"
+          ]
+        },
+        "labels": {
+          "in": "query",
+          "description": "Comma-separated label names."
+        },
+        "assignee": {
+          "in": "query",
+          "description": "A login, 'none' or '*'."
+        },
+        "creator": {
+          "in": "query",
+          "description": "Login of the issue's author."
+        },
+        "mentioned": {
+          "in": "query",
+          "description": "A login mentioned in the issue."
+        },
+        "milestone": {
+          "in": "query",
+          "description": "Milestone number, '*' or 'none'."
+        },
+        "type": {
+          "in": "query",
+          "description": "Issue type name, '*' or 'none'."
+        },
+        "sort": {
+          "in": "query",
+          "description": "Default created.",
+          "enum": [
+            "created",
+            "updated",
+            "comments"
+          ]
+        },
+        "direction": {
+          "in": "query",
+          "description": "Default desc.",
+          "enum": [
+            "desc",
+            "asc"
+          ]
+        },
+        "since": {
+          "in": "query",
+          "description": "Only issues updated after this time, YYYY-MM-DDTHH:MM:SSZ."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, at most 100; default 30."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "notes": [
+        "Pull requests are returned too; they carry a 'pull_request' key. Filter them out for issues only."
+      ],
+      "job": "code.issues.list",
+      "docs_url": "https://docs.github.com/en/rest/issues/issues#list-repository-issues",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/issues/issues#list-repository-issues"
+      }
+    },
+    {
+      "id": "github.issues.get",
+      "name": "Get an issue",
+      "summary": "One issue or pull request by number, with body, labels, state and counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}",
+      "params": {
+        "owner": {
+          "in": "path",
+          "required": true,
+          "description": "Account that owns the repository (not case sensitive).",
+          "example": "python"
+        },
+        "repo": {
+          "in": "path",
+          "required": true,
+          "description": "Repository name without .git (not case sensitive).",
+          "example": "cpython"
+        },
+        "issue_number": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The issue number."
+        }
+      },
+      "notes": [
+        "301 means the issue was transferred, 410 that it was deleted."
+      ],
+      "job": "code.issues.get",
+      "docs_url": "https://docs.github.com/en/rest/issues/issues#get-an-issue",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/issues/issues#get-an-issue"
+      }
+    },
+    {
+      "id": "github.issues.comments",
+      "name": "List an issue's comments",
+      "summary": "Comments on an issue or pull request conversation, oldest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}/comments",
+      "params": {
+        "owner": {
+          "in": "path",
+          "required": true,
+          "description": "Account that owns the repository (not case sensitive).",
+          "example": "python"
+        },
+        "repo": {
+          "in": "path",
+          "required": true,
+          "description": "Repository name without .git (not case sensitive).",
+          "example": "cpython"
+        },
+        "issue_number": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The issue or PR number."
+        },
+        "since": {
+          "in": "query",
+          "description": "Only comments updated after this time, YYYY-MM-DDTHH:MM:SSZ."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, at most 100; default 30."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "code.issues.comments",
+      "docs_url": "https://docs.github.com/en/rest/issues/comments#list-issue-comments",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/issues/comments#list-issue-comments"
+      }
+    },
+    {
+      "id": "github.pulls.get",
+      "name": "Get a pull request",
+      "summary": "One PR with title, body, state, merge status, head and base, and diff stats.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/pulls/{pull_number}",
+      "params": {
+        "owner": {
+          "in": "path",
+          "required": true,
+          "description": "Account that owns the repository (not case sensitive).",
+          "example": "python"
+        },
+        "repo": {
+          "in": "path",
+          "required": true,
+          "description": "Repository name without .git (not case sensitive).",
+          "example": "cpython"
+        },
+        "pull_number": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The PR number."
+        }
+      },
+      "job": "code.pulls.get",
+      "docs_url": "https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request"
+      }
+    },
+    {
+      "id": "github.pulls.files",
+      "name": "List a pull request's files",
+      "summary": "Files a PR changes, with status, additions, deletions and patch.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/pulls/{pull_number}/files",
+      "params": {
+        "owner": {
+          "in": "path",
+          "required": true,
+          "description": "Account that owns the repository (not case sensitive).",
+          "example": "python"
+        },
+        "repo": {
+          "in": "path",
+          "required": true,
+          "description": "Repository name without .git (not case sensitive).",
+          "example": "cpython"
+        },
+        "pull_number": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The PR number."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, at most 100; default 30."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "notes": [
+        "At most 3,000 files in total across pages."
+      ],
+      "job": "code.pulls.files",
+      "docs_url": "https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files",
+      "verified": {
+        "docs": "https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files"
+      }
+    }
+  ]
+}

@@ -1,0 +1,282 @@
+{
+  "vendor": "coresignal",
+  "name": "Coresignal",
+  "category": "company-data",
+  "summary": "Fresh company, employee and job data from professional-network sources: search for IDs, then collect or enrich records.",
+  "docs_url": "https://docs.coresignal.com",
+  "pricing_url": "https://coresignal.com/pricing/",
+  "base_url": "https://api.coresignal.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CORESIGNAL_API_KEY"
+        ],
+        "description": "a Coresignal API key from the dashboard (https://dashboard.coresignal.com)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Two-step flow: a search returns only record IDs (1,000 per page); collect or enrich returns the data and spends credits (402 when out of credits; x-credits-remaining header shows the balance).",
+    "Data API rate limit is 5 to 100 requests per second depending on the plan.",
+    "Coresignal also offers jobs, posts and other datasets under the same host; only company and employee endpoints are listed here."
+  ],
+  "sources": [
+    "https://docs.coresignal.com/api-introduction/authorization.md",
+    "https://docs.coresignal.com/api-introduction/credits.md",
+    "https://docs.coresignal.com/api-introduction/rate-limits.md",
+    "https://docs.coresignal.com/company-data/api/collect.md",
+    "https://docs.coresignal.com/company-data/api/enrich.md",
+    "https://docs.coresignal.com/company-data/api/search-preview.md",
+    "https://docs.coresignal.com/employee-data/api/collect.md"
+  ],
+  "curated": "2026-11-08",
+  "endpoints": [
+    {
+      "id": "coresignal.company.search",
+      "name": "Search companies (Elasticsearch DSL)",
+      "summary": "Returns matching company IDs only; fetch records with company.collect.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/cdapi/v2/company_multi_source/search/es_dsl",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The Elasticsearch DSL query clause: the value of the top-level query key, e.g. {bool: {should: [...]}}.",
+          "example": {
+            "bool": {
+              "should": [
+                {
+                  "query_string": {
+                    "query": "it",
+                    "default_field": "company_name",
+                    "default_operator": "and"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "Optional sort clauses."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Value of the previous response header x-next-page-after, for the next page of 1,000 IDs."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries.",
+        "Results come 1,000 IDs per page; response headers x-next-page-after, x-total-pages and x-total-results drive paging."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.coresignal.com/company-data/api/elasticsearch-dsl.md",
+      "verified": {
+        "docs": "https://docs.coresignal.com/company-data/api/elasticsearch-dsl.md"
+      }
+    },
+    {
+      "id": "coresignal.company.search_preview",
+      "name": "Preview a company search",
+      "summary": "A few fields from the top matches, up to 20 results, in real time.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/cdapi/v2/company_multi_source/search/es_dsl/preview",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The Elasticsearch DSL query clause: the value of the top-level query key, e.g. {bool: {should: [...]}}.",
+          "example": {
+            "bool": {
+              "should": [
+                {
+                  "query_string": {
+                    "query": "it",
+                    "default_field": "company_name",
+                    "default_operator": "and"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number for the preview."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. Costs credits per query."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.coresignal.com/company-data/api/search-preview.md",
+      "verified": {
+        "docs": "https://docs.coresignal.com/company-data/api/search-preview.md"
+      }
+    },
+    {
+      "id": "coresignal.company.collect",
+      "name": "Collect a company record",
+      "summary": "The full company record or selected bundles.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cdapi/v2/company_multi_source/collect/{company}",
+      "params": {
+        "company": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company ID from a search, or a profile URL or shorthand name.",
+          "example": "12345678"
+        },
+        "bundle": {
+          "in": "query",
+          "type": "array",
+          "description": "Bundles to return (repeat the parameter): core_company_data, financial_information, growth_signals, workforce_intelligence, company_intelligence. Core data is always included."
+        },
+        "fields": {
+          "in": "query",
+          "type": "array",
+          "description": "Return only these fields (repeat the parameter); a field outside the chosen bundles gives 400."
+        }
+      },
+      "notes": [
+        "Core data costs 10 credits; the first extra bundle 4, each further bundle 2."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.coresignal.com/company-data/api/collect.md",
+      "verified": {
+        "docs": "https://docs.coresignal.com/company-data/api/collect.md"
+      }
+    },
+    {
+      "id": "coresignal.company.enrich",
+      "name": "Enrich a company from its website",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cdapi/v2/company_multi_source/enrich",
+      "params": {
+        "website": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company website URL.",
+          "example": "thermofisher.com"
+        },
+        "bundle": {
+          "in": "query",
+          "type": "array",
+          "description": "Bundles to return (repeat the parameter): core_company_data, financial_information, growth_signals, workforce_intelligence, company_intelligence. Core data is always included."
+        },
+        "fields": {
+          "in": "query",
+          "type": "array",
+          "description": "Return only these fields (repeat the parameter); a field outside the chosen bundles gives 400."
+        }
+      },
+      "notes": [
+        "Core data costs 10 credits; the first extra bundle 4, each further bundle 2."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.coresignal.com/company-data/api/enrich.md",
+      "verified": {
+        "docs": "https://docs.coresignal.com/company-data/api/enrich.md"
+      }
+    },
+    {
+      "id": "coresignal.employee.search",
+      "name": "Search employees (Elasticsearch DSL)",
+      "summary": "Returns matching employee IDs only; fetch records with employee.collect.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/cdapi/v2/employee_multi_source/search/es_dsl",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The Elasticsearch DSL query clause: the value of the top-level query key, e.g. {bool: {should: [...]}}.",
+          "example": {
+            "bool": {
+              "should": [
+                {
+                  "query_string": {
+                    "query": "it",
+                    "default_field": "company_name",
+                    "default_operator": "and"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "Optional sort clauses."
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Value of the previous response header x-next-page-after, for the next page of 1,000 IDs."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries. 1,000 IDs per page; see x-next-page-after."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.coresignal.com/employee-data/api/elasticsearch-dsl.md",
+      "verified": {
+        "docs": "https://docs.coresignal.com/employee-data/api/elasticsearch-dsl.md"
+      }
+    },
+    {
+      "id": "coresignal.employee.collect",
+      "name": "Collect an employee record",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cdapi/v2/employee_multi_source/collect/{employee}",
+      "params": {
+        "employee": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Employee ID from a search, or a profile URL or shorthand name."
+        },
+        "bundle": {
+          "in": "query",
+          "type": "array",
+          "description": "Bundles to return (repeat the parameter): core_employee_data, employer_information, career_intelligence, social_influence. Core data is always included."
+        },
+        "fields": {
+          "in": "query",
+          "type": "array",
+          "description": "Return only these fields (repeat the parameter); a field outside the chosen bundles gives 400."
+        }
+      },
+      "notes": [
+        "Core data costs 10 credits; the first extra bundle 4, each further bundle 3."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.coresignal.com/employee-data/api/collect.md",
+      "verified": {
+        "docs": "https://docs.coresignal.com/employee-data/api/collect.md"
+      }
+    }
+  ]
+}

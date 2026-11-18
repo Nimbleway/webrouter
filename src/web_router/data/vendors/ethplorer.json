@@ -1,0 +1,303 @@
+{
+  "vendor": "ethplorer",
+  "name": "Ethplorer",
+  "category": "finance",
+  "summary": "Ethereum token and wallet data from Ethplorer: token info and prices, wallet balances, token transfers, transactions and top holders.",
+  "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "ETHPLORER_HOST"
+      ],
+      "default": "api.ethplorer.io",
+      "choices": [
+        "api.ethplorer.io",
+        "api.binplorer.com",
+        "api.worldplorer.com",
+        "api.lineaplorer.build"
+      ],
+      "description": "Chain: api.ethplorer.io Ethereum mainnet, api.binplorer.com BNB Chain, api.worldplorer.com World Chain, api.lineaplorer.build Linea."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ETHPLORER_API_KEY"
+        ],
+        "description": "an Ethplorer personal API key (ethplorer.io account, API panel); 'freekey' works for development"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apiKey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The shared development key 'freekey' is limited to 2 requests/second, 20/min, 100/hour, 1000/day, 100 operations per response and timestamps at most 30 days old. A free personal key allows 10 requests/second, 1000 operations and 1 year.",
+    "Token values are raw integers in the token's smallest unit, as strings; divide by 10^decimals from the token info.",
+    "History endpoints page backwards with timestamp: pass the oldest timestamp you received to get older operations."
+  ],
+  "sources": [
+    "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+  ],
+  "curated": "2026-11-09",
+  "endpoints": [
+    {
+      "id": "ethplorer.address.info",
+      "name": "Get wallet balances",
+      "summary": "ETH balance and token holdings (with prices) of an address, or details of a token contract.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getAddressInfo/{address}",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet or contract address.",
+          "example": "0xff71cb760666ab06aa73f34995b42dd4b85ea07b"
+        },
+        "token": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this token contract's balance."
+        },
+        "showETHTotals": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add total incoming and outgoing ETH."
+        },
+        "showTxsCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add incoming and outgoing transaction counts."
+        }
+      },
+      "notes": [
+        "freekey lists at most 100 token balances."
+      ],
+      "job": "crypto.price",
+      "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+      "verified": {
+        "docs": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+      }
+    },
+    {
+      "id": "ethplorer.token.info",
+      "name": "Get token info",
+      "summary": "Name, symbol, decimals, supply, holders count and price of a token contract.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getTokenInfo/{address}",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Token contract address.",
+          "example": "0xf3db5fa2c66b7af3eb0c0b782510816cbe4813b8"
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+      "verified": {
+        "docs": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+      }
+    },
+    {
+      "id": "ethplorer.token.history",
+      "name": "Get token operations",
+      "summary": "Latest transfers, mints or burns of a token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getTokenHistory/{address}",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Token contract address."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "all",
+            "mint",
+            "burn"
+          ],
+          "description": "Operation type; default all."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max operations, default 10, up to 1000 (100 on freekey)."
+        },
+        "timestamp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix timestamp to list from (older operations)."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+      "verified": {
+        "docs": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+      }
+    },
+    {
+      "id": "ethplorer.address.history",
+      "name": "Get wallet token operations",
+      "summary": "Latest token operations involving an address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getAddressHistory/{address}",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address."
+        },
+        "token": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this token contract."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max operations, default 10, up to 1000 (100 on freekey)."
+        },
+        "timestamp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix timestamp to list from."
+        }
+      },
+      "job": "account.history",
+      "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+      "verified": {
+        "docs": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+      }
+    },
+    {
+      "id": "ethplorer.address.transactions",
+      "name": "Get wallet ETH transactions",
+      "summary": "Latest ETH transactions of an address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getAddressTransactions/{address}",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max transactions, default 10, up to 1000."
+        },
+        "timestamp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix timestamp to list from."
+        },
+        "showZeroValues": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include zero-value transactions; default false."
+        }
+      },
+      "job": "account.history",
+      "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+      "verified": {
+        "docs": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+      }
+    },
+    {
+      "id": "ethplorer.tx.info",
+      "name": "Get transaction details",
+      "summary": "A transaction's details and the token operations in it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getTxInfo/{hash}",
+      "params": {
+        "hash": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Transaction hash."
+        }
+      },
+      "job": "account.history",
+      "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+      "verified": {
+        "docs": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+      }
+    },
+    {
+      "id": "ethplorer.token.top_holders",
+      "name": "Get top token holders",
+      "summary": "Largest holders of a token with balances and shares.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getTopTokenHolders/{address}",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Token contract address."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max holders, default 10, up to 1000 (100 on freekey)."
+        }
+      },
+      "job": "company.shareholders",
+      "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+      "verified": {
+        "docs": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+      }
+    },
+    {
+      "id": "ethplorer.top",
+      "name": "List top tokens",
+      "summary": "Top tokens by trade volume, market cap or operation count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/getTop",
+      "params": {
+        "criteria": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "trade",
+            "cap",
+            "count"
+          ],
+          "description": "Sort: trade volume (default), cap or count of operations."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max entries, up to 50 (default 50)."
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API",
+      "verified": {
+        "docs": "https://github.com/EverexIO/Ethplorer/wiki/Ethplorer-API"
+      }
+    }
+  ]
+}
