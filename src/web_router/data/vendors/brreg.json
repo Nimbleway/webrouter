@@ -1,0 +1,435 @@
+{
+  "vendor": "brreg",
+  "name": "Brønnøysund Register Centre (Enhetsregisteret)",
+  "category": "company-data",
+  "summary": "Norway's Central Coordinating Register for Legal Entities: search and look up companies and their establishments by organisation number, with roles (board, CEO, auditor), group structure and change feeds.",
+  "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+  "base_url": "https://data.brreg.no/enhetsregisteret/api",
+  "notes": [
+    "Keyless open data under the Norwegian licence for public data (NLOD).",
+    "An organisation number (organisasjonsnummer) is 9 digits. An enhet is a legal entity; an underenhet is one of its establishments (business locations).",
+    "Paging is page (0-based) and size, default 20; (page+1)*size may not exceed 10,000 or the call is a 400. For the full register use the nightly bulk downloads instead, which this entry does not list.",
+    "Parameter and field names are Norwegian. List filters take comma-separated values."
+  ],
+  "sources": [
+    "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "brreg.entities.search",
+      "name": "Search legal entities",
+      "summary": "Legal entities (enheter) matching a name and filters: form, industry code, address, employees, registry flags, bankruptcy and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enheter",
+      "params": {
+        "navn": {
+          "in": "query",
+          "type": "string",
+          "description": "Entity name, free text of 1 to 180 characters.",
+          "example": "Equinor"
+        },
+        "navnMetodeForSoek": {
+          "in": "query",
+          "type": "string",
+          "description": "Name search method; the only value is FORTLOEPENDE (continuous match).",
+          "enum": [
+            "FORTLOEPENDE"
+          ]
+        },
+        "organisasjonsnummer": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 9-digit organisation numbers, up to 2000."
+        },
+        "overordnetEnhet": {
+          "in": "query",
+          "type": "string",
+          "description": "Organisation number of the parent unit in the public sector."
+        },
+        "organisasjonsform": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated organisation form codes, e.g. AS,ENK.",
+          "example": "AS"
+        },
+        "naeringskode": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated industry (NACE) codes, e.g. 41.109,01.1."
+        },
+        "kommunenummer": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 4-digit municipality numbers; matches the business or postal address.",
+          "example": "0301"
+        },
+        "forretningsadresse_postnummer": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "forretningsadresse.postnummer",
+          "description": "Comma-separated 4-digit postcodes of the business address."
+        },
+        "forretningsadresse_poststed": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "forretningsadresse.poststed",
+          "description": "Postal town of the business address, free text.",
+          "example": "OSLO"
+        },
+        "hjemmeside": {
+          "in": "query",
+          "type": "string",
+          "description": "The entity's website, e.g. www.brreg.no."
+        },
+        "fraAntallAnsatte": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employees: 0, 1 or more than 4."
+        },
+        "tilAntallAnsatte": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employees: 0, 4 or more than 4."
+        },
+        "konkurs": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Whether the entity is bankrupt."
+        },
+        "underAvvikling": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Whether the entity is being wound up."
+        },
+        "registrertIMvaregisteret": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Whether the entity is in the VAT register."
+        },
+        "registrertIForetaksregisteret": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Whether the entity is in the Register of Business Enterprises."
+        },
+        "fraStiftelsesdato": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest founding date, yyyy-MM-dd."
+        },
+        "tilStiftelsesdato": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest founding date, yyyy-MM-dd."
+        },
+        "fraRegistreringsdatoEnhetsregisteret": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest registration date in the register, yyyy-MM-dd."
+        },
+        "tilRegistreringsdatoEnhetsregisteret": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest registration date in the register, yyyy-MM-dd."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Field and direction, e.g. antallAnsatte,DESC or organisasjonsnummer,ASC.",
+          "example": "antallAnsatte,DESC"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 0."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 20."
+        }
+      },
+      "notes": [
+        "Results stop at 10,000 per query: (page+1)*size over 10,000 is a 400."
+      ],
+      "job": "company.search",
+      "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+      "verified": {
+        "docs": "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+      }
+    },
+    {
+      "id": "brreg.entities.get",
+      "name": "Get a legal entity",
+      "summary": "One legal entity by organisation number: name, form, addresses, industry codes, employees, founding date, registry flags and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enheter/{orgnr}",
+      "params": {
+        "orgnr": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit organisation number.",
+          "example": "923609016"
+        }
+      },
+      "notes": [
+        "A deleted entity answers 410 Gone with its deletion date rather than 404."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+      "verified": {
+        "docs": "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+      }
+    },
+    {
+      "id": "brreg.entities.roles",
+      "name": "Get an entity's roles",
+      "summary": "Every role registered on an entity, by role group: CEO, board chair and members, auditor, accountant, contact person and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enheter/{orgnr}/roller",
+      "params": {
+        "orgnr": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit organisation number.",
+          "example": "923609016"
+        }
+      },
+      "notes": [
+        "Roles are public, but the register's law only allows showing a person's roles across entities for business entities, not voluntary organisations. Birth numbers need the separate authorised API (Maskinporten), not this one."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+      "verified": {
+        "docs": "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+      }
+    },
+    {
+      "id": "brreg.entities.legal_roles",
+      "name": "Get roles an entity holds in other entities",
+      "summary": "The roles one entity holds in other entities, e.g. as participant, accountant or auditor.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/roller/enheter/{orgnr}/juridiskeroller",
+      "params": {
+        "orgnr": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit organisation number.",
+          "example": "923609016"
+        },
+        "searchAfter": {
+          "in": "query",
+          "type": "string",
+          "description": "Next batch: the last value from the previous batch."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Entities per batch."
+        }
+      },
+      "notes": [
+        "Pages with searchAfter (last value of the previous batch), not page numbers."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+      "verified": {
+        "docs": "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+      }
+    },
+    {
+      "id": "brreg.entities.group_structure",
+      "name": "Get a group structure",
+      "summary": "The hierarchy of companies linked to an entity (parent and subsidiaries in its corporate group).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/konsernstruktur/{orgnr}",
+      "params": {
+        "orgnr": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit organisation number.",
+          "example": "923609016"
+        }
+      },
+      "job": "company.ownership",
+      "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+      "verified": {
+        "docs": "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+      }
+    },
+    {
+      "id": "brreg.establishments.search",
+      "name": "Search establishments",
+      "summary": "Sub-entities (underenheter, business locations) by name, parent entity, form, industry, location address, employees and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/underenheter",
+      "params": {
+        "navn": {
+          "in": "query",
+          "type": "string",
+          "description": "Establishment name, free text of 1 to 180 characters."
+        },
+        "overordnetEnhet": {
+          "in": "query",
+          "type": "string",
+          "description": "Organisation number of the parent legal entity: lists its establishments.",
+          "example": "923609016"
+        },
+        "organisasjonsnummer": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 9-digit organisation numbers, up to 2000."
+        },
+        "organisasjonsform": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated organisation form codes, e.g. BEDR,AAFY."
+        },
+        "naeringskode": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated industry (NACE) codes."
+        },
+        "kommunenummer": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 4-digit municipality numbers; matches the location or postal address."
+        },
+        "beliggenhetsadresse_postnummer": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "beliggenhetsadresse.postnummer",
+          "description": "Comma-separated 4-digit postcodes of the location address."
+        },
+        "fraAntallAnsatte": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employees: 0, 1 or more than 4."
+        },
+        "tilAntallAnsatte": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employees: 0, 4 or more than 4."
+        },
+        "fraOppstartsdato": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest start date, yyyy-MM-dd."
+        },
+        "tilOppstartsdato": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest start date, yyyy-MM-dd."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Field and direction, e.g. antallAnsatte,DESC."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 0."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, default 20."
+        }
+      },
+      "notes": [
+        "Results stop at 10,000 per query: (page+1)*size over 10,000 is a 400."
+      ],
+      "job": "company.offices",
+      "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+      "verified": {
+        "docs": "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+      }
+    },
+    {
+      "id": "brreg.establishments.get",
+      "name": "Get an establishment",
+      "summary": "One sub-entity by organisation number: name, parent entity, location address, industry, employees and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/underenheter/{orgnr}",
+      "params": {
+        "orgnr": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "9-digit organisation number of the establishment."
+        }
+      },
+      "job": "company.offices",
+      "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+      "verified": {
+        "docs": "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+      }
+    },
+    {
+      "id": "brreg.entities.updates",
+      "name": "List entity updates",
+      "summary": "Change events (new, changed, deleted, removed) on legal entities since a timestamp or update id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/oppdateringer/enheter",
+      "params": {
+        "dato": {
+          "in": "query",
+          "type": "string",
+          "description": "Updates published from this time on, yyyy-MM-dd'T'HH:mm:ss.SSS'Z'.",
+          "example": "2026-11-01T00:00:00.000Z"
+        },
+        "updatedBefore": {
+          "in": "query",
+          "type": "string",
+          "description": "Updates published up to this time, same format."
+        },
+        "oppdateringsid": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only updates from this update id on (1 or more)."
+        },
+        "organisasjonsnummer": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated organisation numbers to limit the feed to."
+        },
+        "includeChanges": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the field changes behind each update."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events per page, 1 to 10,000, default 20."
+        }
+      },
+      "notes": [
+        "Each event names the entity and the change type; fetch the entity again for its new state. A Fjernet (removed) event means copies must drop the entity."
+      ],
+      "job": "company.history",
+      "docs_url": "https://data.brreg.no/enhetsregisteret/api/docs/index.html",
+      "verified": {
+        "docs": "https://data.brreg.no/enhetsregisteret/api/docs/index.html"
+      }
+    }
+  ]
+}

@@ -1,0 +1,684 @@
+{
+  "vendor": "amplitude",
+  "name": "Amplitude",
+  "category": "analytics",
+  "summary": "Product analytics from an Amplitude project: saved chart results, event segmentation, funnels, retention, active users, revenue LTV and a user's event stream.",
+  "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+  "pricing_url": "https://amplitude.com/pricing",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "AMPLITUDE_HOST"
+      ],
+      "default": "amplitude.com",
+      "choices": [
+        "amplitude.com",
+        "analytics.eu.amplitude.com"
+      ],
+      "description": "amplitude.com for US projects, analytics.eu.amplitude.com for EU data residency."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AMPLITUDE_API_KEY"
+        ],
+        "description": "the project's API key (Organization settings > Projects > the project), the Basic auth username"
+      },
+      "secret_key": {
+        "env": [
+          "AMPLITUDE_SECRET_KEY"
+        ],
+        "description": "the same project's secret key, the Basic auth password"
+      }
+    },
+    "basic": {
+      "username": "{api_key}",
+      "password": "{secret_key}"
+    }
+  },
+  "notes": [
+    "Keys belong to one project: every call reads that project only.",
+    "Dates are YYYYMMDD without dashes; times follow the project's time zone. Event and property names with spaces must be URL encoded (the client does this).",
+    "Limits: 5 concurrent requests per key. Queries also spend a per-project cost budget (1,000 concurrent, 108,000 per hour): cost = days x conditions x query-type cost, at least 10, with ranges under 7 days counted as 7. 429 when exceeded; honour Retry-After.",
+    "Events (e, e2, se, re) are JSON objects {event_type, filters, group_by}; filters are [{subprop_type: event|user, subprop_key, subprop_op, subprop_value: [..]}] with ops is, is not, contains, does not contain, less, greater, set is, ... Custom user properties take a gp: prefix."
+  ],
+  "sources": [
+    "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "amplitude.charts.query",
+      "name": "Get a saved chart's results",
+      "summary": "The results of a chart saved in Amplitude, by its id, as JSON.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/3/chart/{chart_id}/query",
+      "params": {
+        "chart_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The chart id from the chart's URL."
+        }
+      },
+      "notes": [
+        "The answer's shape depends on the chart type, and follows the chart's current definition: edits to the chart change it.",
+        "A chart from another project answers 400; use that project's keys."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.events.segmentation",
+      "name": "Query event segmentation",
+      "summary": "Uniques, totals, DAU share, averages or a formula for up to two events over time, optionally grouped by properties.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/events/segmentation",
+      "params": {
+        "e": {
+          "in": "query",
+          "type": "object",
+          "required": true,
+          "description": "The event: {event_type, filters?, group_by?}. Custom events take a ce: prefix; _active is any active event, _all any event, revenue_amount revenue.",
+          "example": {
+            "event_type": "_active"
+          }
+        },
+        "e2": {
+          "in": "query",
+          "type": "object",
+          "description": "A second event, same shape, for two-event metrics and formulas."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYYMMDD (no dashes).",
+          "example": "20261001"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYYMMDD, inclusive.",
+          "example": "20261031"
+        },
+        "m": {
+          "in": "query",
+          "type": "string",
+          "description": "Metric: uniques (default), totals, pct_dau, average; histogram, sums or value_avg (need a group_by in e); formula.",
+          "enum": [
+            "uniques",
+            "totals",
+            "pct_dau",
+            "average",
+            "histogram",
+            "sums",
+            "value_avg",
+            "formula"
+          ]
+        },
+        "n": {
+          "in": "query",
+          "type": "string",
+          "description": "User type: any or active.",
+          "enum": [
+            "any",
+            "active"
+          ]
+        },
+        "i": {
+          "in": "query",
+          "type": "integer",
+          "description": "Interval: -300000 (real time, up to 2 days), -3600000 (hourly, up to 7 days), 1 (daily, default, up to 365 days), 7 (weekly) or 30 (monthly).",
+          "enum": [
+            -300000,
+            -3600000,
+            1,
+            7,
+            30
+          ]
+        },
+        "s": {
+          "in": "query",
+          "type": "array",
+          "description": "Segment definitions, a JSON array: property filters [{prop, op, values}] (prop 'userdata_cohort' with a cohort id filters to a cohort) or performed-event filters. Omit for all users.",
+          "style": "json",
+          "example": [
+            {
+              "prop": "country",
+              "op": "is",
+              "values": [
+                "United States"
+              ]
+            }
+          ]
+        },
+        "g": {
+          "in": "query",
+          "type": "array",
+          "description": "Up to two group-by properties, each sent as its own g. gp: prefix for custom user properties."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Group-by values returned: 1,000 by default, 20,000 at most."
+        },
+        "formula": {
+          "in": "query",
+          "type": "string",
+          "description": "Required when m is formula, e.g. UNIQUES(A)/UNIQUES(B); A is e, B is e2."
+        },
+        "rollingWindow": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rolling window, in intervals."
+        },
+        "rollingAverage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rolling average, in intervals."
+        }
+      },
+      "job": "analytics.events",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.funnels.query",
+      "name": "Query a funnel",
+      "summary": "Step-by-step and cumulative conversion with transition times for a sequence of events.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/funnels",
+      "params": {
+        "e": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "One event object per step, in order; each is sent as its own e.",
+          "example": [
+            {
+              "event_type": "ce:Viewed product"
+            },
+            {
+              "event_type": "ce:Purchased"
+            }
+          ]
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYYMMDD (no dashes).",
+          "example": "20261001"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYYMMDD, inclusive.",
+          "example": "20261031"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "ordered (default), unordered, or sequential (no other events between steps).",
+          "enum": [
+            "ordered",
+            "unordered",
+            "sequential"
+          ]
+        },
+        "n": {
+          "in": "query",
+          "type": "string",
+          "description": "active (default) or new users.",
+          "enum": [
+            "active",
+            "new"
+          ]
+        },
+        "i": {
+          "in": "query",
+          "type": "integer",
+          "description": "Interval: -300000 (real time, up to 2 days), -3600000 (hourly, up to 7 days), 1 (daily, default, up to 365 days), 7 (weekly) or 30 (monthly).",
+          "enum": [
+            -300000,
+            -3600000,
+            1,
+            7,
+            30
+          ]
+        },
+        "s": {
+          "in": "query",
+          "type": "array",
+          "description": "Segment definitions, a JSON array: property filters [{prop, op, values}] (prop 'userdata_cohort' with a cohort id filters to a cohort) or performed-event filters. Omit for all users.",
+          "style": "json",
+          "example": [
+            {
+              "prop": "country",
+              "op": "is",
+              "values": [
+                "United States"
+              ]
+            }
+          ]
+        },
+        "g": {
+          "in": "query",
+          "type": "string",
+          "description": "One property to group by: a built-in (country, platform, os, version, ...) or gp:<custom user property>. Only with a single segment."
+        },
+        "cs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Conversion window in seconds; 2,592,000 (30 days) by default."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Group-by values returned, at most 1,000 (the default)."
+        }
+      },
+      "job": "analytics.funnel",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.retention.query",
+      "name": "Query retention",
+      "summary": "N-day, unbounded or bracket retention from a start event to a return event.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/retention",
+      "params": {
+        "se": {
+          "in": "query",
+          "type": "object",
+          "required": true,
+          "description": "Start event object; event_type _new (new users), _active, or any event.",
+          "example": {
+            "event_type": "_new"
+          }
+        },
+        "re": {
+          "in": "query",
+          "type": "object",
+          "required": true,
+          "description": "Return event object; event_type _all, _active, or any event.",
+          "example": {
+            "event_type": "_active"
+          }
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYYMMDD (no dashes).",
+          "example": "20261001"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYYMMDD, inclusive.",
+          "example": "20261031"
+        },
+        "rm": {
+          "in": "query",
+          "type": "string",
+          "description": "Method: nday (default), rolling (unbounded), bracket, nday_or_before.",
+          "enum": [
+            "nday",
+            "rolling",
+            "bracket",
+            "nday_or_before"
+          ]
+        },
+        "rb": {
+          "in": "query",
+          "type": "array",
+          "description": "Brackets, required with rm=bracket: [[start, end]] with end exclusive, e.g. [[0,5]] for day 0 to 4.",
+          "style": "json"
+        },
+        "i": {
+          "in": "query",
+          "type": "integer",
+          "description": "Interval: 1 (daily, default), 7 (weekly) or 30 (monthly).",
+          "enum": [
+            1,
+            7,
+            30
+          ]
+        },
+        "s": {
+          "in": "query",
+          "type": "array",
+          "description": "Segment definitions, a JSON array: property filters [{prop, op, values}] (prop 'userdata_cohort' with a cohort id filters to a cohort) or performed-event filters. Omit for all users.",
+          "style": "json",
+          "example": [
+            {
+              "prop": "country",
+              "op": "is",
+              "values": [
+                "United States"
+              ]
+            }
+          ]
+        },
+        "g": {
+          "in": "query",
+          "type": "string",
+          "description": "One property to group by: a built-in (country, platform, os, version, ...) or gp:<custom user property>. Only with a single segment."
+        }
+      },
+      "notes": [
+        "In each value list, index 0 is the cohort size and index N+1 is retention N intervals out (index 1 is day 0). Dates come newest first."
+      ],
+      "job": "analytics.retention",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.users.active",
+      "name": "Count active or new users",
+      "summary": "Daily, weekly or monthly active or new user counts, optionally segmented and grouped.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/users",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYYMMDD (no dashes).",
+          "example": "20261001"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYYMMDD, inclusive.",
+          "example": "20261031"
+        },
+        "m": {
+          "in": "query",
+          "type": "string",
+          "description": "active (default) or new.",
+          "enum": [
+            "active",
+            "new"
+          ]
+        },
+        "i": {
+          "in": "query",
+          "type": "integer",
+          "description": "Interval: 1 (daily, default), 7 (weekly) or 30 (monthly).",
+          "enum": [
+            1,
+            7,
+            30
+          ]
+        },
+        "s": {
+          "in": "query",
+          "type": "array",
+          "description": "Segment definitions, a JSON array: property filters [{prop, op, values}] (prop 'userdata_cohort' with a cohort id filters to a cohort) or performed-event filters. Omit for all users.",
+          "style": "json",
+          "example": [
+            {
+              "prop": "country",
+              "op": "is",
+              "values": [
+                "United States"
+              ]
+            }
+          ]
+        },
+        "g": {
+          "in": "query",
+          "type": "string",
+          "description": "One property to group by: a built-in (country, platform, os, version, ...) or gp:<custom user property>. Only with a single segment."
+        }
+      },
+      "job": "analytics.users.active",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.users.composition",
+      "name": "Break users down by a property",
+      "summary": "Unique users per value of one property (country, platform, a custom user property...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/composition",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYYMMDD (no dashes).",
+          "example": "20261001"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYYMMDD, inclusive.",
+          "example": "20261031"
+        },
+        "p": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The property: version, country, city, region, DMA, language, platform, os, device, start_version, paying, or gp:<custom user property>.",
+          "example": "country"
+        }
+      },
+      "job": "analytics.users.composition",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.sessions.average",
+      "name": "Get average session length",
+      "summary": "Average session length per day, in seconds.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/sessions/average",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYYMMDD (no dashes).",
+          "example": "20261001"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYYMMDD, inclusive.",
+          "example": "20261031"
+        }
+      },
+      "job": "analytics.sessions",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.revenue.ltv",
+      "name": "Get revenue lifetime value",
+      "summary": "ARPU, ARPPU, total revenue or paying users by cohort day, with n-day values up to 90 days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/revenue/ltv",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYYMMDD (no dashes).",
+          "example": "20261001"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYYMMDD, inclusive.",
+          "example": "20261031"
+        },
+        "m": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 ARPU (default), 1 ARPPU, 2 total revenue, 3 paying users.",
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "i": {
+          "in": "query",
+          "type": "integer",
+          "description": "Interval: 1 (daily, default), 7 (weekly) or 30 (monthly).",
+          "enum": [
+            1,
+            7,
+            30
+          ]
+        },
+        "s": {
+          "in": "query",
+          "type": "array",
+          "description": "Segment definitions, a JSON array: property filters [{prop, op, values}] (prop 'userdata_cohort' with a cohort id filters to a cohort) or performed-event filters. Omit for all users.",
+          "style": "json",
+          "example": [
+            {
+              "prop": "country",
+              "op": "is",
+              "values": [
+                "United States"
+              ]
+            }
+          ]
+        },
+        "g": {
+          "in": "query",
+          "type": "string",
+          "description": "One property to group by: a built-in (country, platform, os, version, ...) or gp:<custom user property>. Only with a single segment."
+        }
+      },
+      "job": "analytics.revenue",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.events.list",
+      "name": "List event types",
+      "summary": "Every visible event type with this week's totals and its hidden or deleted flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/events/list",
+      "params": {},
+      "job": "analytics.events.list",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.users.search",
+      "name": "Find a user",
+      "summary": "Amplitude ids matching a user id, device id, Amplitude id or user id prefix.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/usersearch",
+      "params": {
+        "user": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "An Amplitude id, device id, user id, or the start of a user id."
+        }
+      },
+      "notes": [
+        "No match is a 200 with type 'nomatch' and an empty matches list.",
+        "Shares a per-project budget with user activity: 10 concurrent and 360 per hour."
+      ],
+      "job": "analytics.users",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    },
+    {
+      "id": "amplitude.users.activity",
+      "name": "Get a user's event stream",
+      "summary": "A user's events, newest or oldest first, and their profile summary.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/2/useractivity",
+      "params": {
+        "user": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The Amplitude id (find it with users.search)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events to skip from the start of the stream."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events to return, up to 1,000 (the default); may return a few more to keep sessions whole."
+        },
+        "direction": {
+          "in": "query",
+          "type": "string",
+          "description": "latest (default) or earliest.",
+          "enum": [
+            "latest",
+            "earliest"
+          ]
+        }
+      },
+      "notes": [
+        "Shares a per-project budget with user search: 10 concurrent and 360 per hour."
+      ],
+      "job": "analytics.users.activity",
+      "docs_url": "https://amplitude.com/docs/apis/analytics/dashboard-rest",
+      "verified": {
+        "docs": "https://amplitude.com/docs/apis/analytics/dashboard-rest"
+      }
+    }
+  ]
+}

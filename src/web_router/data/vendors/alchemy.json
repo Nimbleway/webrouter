@@ -1,0 +1,607 @@
+{
+  "vendor": "alchemy",
+  "name": "Alchemy",
+  "category": "finance",
+  "summary": "Blockchain data APIs across EVM networks: ERC-20 balances and metadata, asset transfer history, NFT ownership and metadata, and current and historical token prices.",
+  "docs_url": "https://www.alchemy.com/docs/data",
+  "pricing_url": "https://www.alchemy.com/pricing",
+  "base_url": "https://{network}.g.alchemy.com",
+  "hosts": {
+    "prices": "https://api.g.alchemy.com/prices/v1"
+  },
+  "settings": {
+    "network": {
+      "env": [
+        "ALCHEMY_NETWORK"
+      ],
+      "default": "eth-mainnet",
+      "choices": [
+        "eth-mainnet",
+        "eth-sepolia",
+        "base-mainnet",
+        "polygon-mainnet",
+        "arb-mainnet",
+        "opt-mainnet",
+        "bnb-mainnet",
+        "avax-mainnet",
+        "zksync-mainnet",
+        "linea-mainnet",
+        "worldchain-mainnet",
+        "scroll-mainnet",
+        "zora-mainnet",
+        "mantle-mainnet",
+        "unichain-mainnet",
+        "abstract-mainnet",
+        "ink-mainnet"
+      ],
+      "description": "Network the token, transfer and NFT calls read, e.g. eth-mainnet, base-mainnet, polygon-mainnet. Prices calls ignore it."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ALCHEMY_API_KEY"
+        ],
+        "description": "An Alchemy API key (dashboard.alchemy.com). Sent as an Authorization Bearer header rather than in the URL."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Usage is billed in compute units per call (listed per endpoint); throughput is capped per plan.",
+    "Token, transfer and NFT calls go to the network set in ALCHEMY_NETWORK; not every API runs on every network.",
+    "JSON-RPC calls (token and transfer) answer with result or error inside a 200; check error."
+  ],
+  "sources": [
+    "https://www.alchemy.com/docs/data",
+    "https://www.alchemy.com/docs/how-to-use-api-keys-in-http-headers",
+    "https://www.alchemy.com/docs/reference/prices-api-quickstart",
+    "https://www.alchemy.com/docs/reference/compute-unit-costs",
+    "https://www.alchemy.com/docs/data/token-api/token-api-endpoints/alchemy-get-token-balances",
+    "https://www.alchemy.com/docs/data/token-api/token-api-endpoints/alchemy-get-token-metadata",
+    "https://www.alchemy.com/docs/data/transfers-api/transfers-endpoints/alchemy-get-asset-transfers",
+    "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-nf-ts-for-owner-v-3",
+    "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-owners-for-contract-v-3",
+    "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-nf-ts-for-contract-v-3",
+    "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-nft-metadata-v-3",
+    "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-contract-metadata-v-3",
+    "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-symbol",
+    "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-address",
+    "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-historical-token-prices"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "alchemy.token.balances",
+      "name": "Get an address's ERC-20 balances",
+      "summary": "ERC-20 balances of a wallet on the configured network.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2",
+      "params": {
+        "jsonrpc": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Always 2.0.",
+          "example": "2.0",
+          "enum": [
+            "2.0"
+          ]
+        },
+        "id": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Request id; always 1.",
+          "example": 1,
+          "enum": [
+            1
+          ]
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Always alchemy_getTokenBalances.",
+          "example": "alchemy_getTokenBalances",
+          "enum": [
+            "alchemy_getTokenBalances"
+          ]
+        },
+        "params": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "[address, tokenSpec, options]: tokenSpec is \"erc20\" (every ERC-20 held), \"NATIVE_TOKEN\" or a list of token contracts; options is {pageKey, maxCount}.",
+          "example": [
+            "0x0000000000000000000000000000000000000001",
+            "erc20"
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as a JSON-RPC POST.",
+        "20 compute units.",
+        "tokenBalance is a hex string in the token's smallest unit; get decimals from alchemy.token.metadata."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://www.alchemy.com/docs/data/token-api/token-api-endpoints/alchemy-get-token-balances",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/data/token-api/token-api-endpoints/alchemy-get-token-balances"
+      }
+    },
+    {
+      "id": "alchemy.token.metadata",
+      "name": "Get ERC-20 token metadata",
+      "summary": "Name, symbol, decimals and logo of a token contract.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2",
+      "params": {
+        "jsonrpc": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Always 2.0.",
+          "example": "2.0",
+          "enum": [
+            "2.0"
+          ]
+        },
+        "id": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Request id; always 1.",
+          "example": 1,
+          "enum": [
+            1
+          ]
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Always alchemy_getTokenMetadata.",
+          "example": "alchemy_getTokenMetadata",
+          "enum": [
+            "alchemy_getTokenMetadata"
+          ]
+        },
+        "params": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "[contractAddress].",
+          "example": [
+            "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as a JSON-RPC POST.",
+        "10 compute units."
+      ],
+      "job": "crypto.assets",
+      "docs_url": "https://www.alchemy.com/docs/data/token-api/token-api-endpoints/alchemy-get-token-metadata",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/data/token-api/token-api-endpoints/alchemy-get-token-metadata"
+      }
+    },
+    {
+      "id": "alchemy.transfers.list",
+      "name": "List asset transfers",
+      "summary": "Historical native, internal, ERC-20, ERC-721 and ERC-1155 transfers from or to addresses.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2",
+      "params": {
+        "jsonrpc": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Always 2.0.",
+          "example": "2.0",
+          "enum": [
+            "2.0"
+          ]
+        },
+        "id": {
+          "in": "body",
+          "type": "integer",
+          "required": true,
+          "description": "Request id; always 1.",
+          "example": 1,
+          "enum": [
+            1
+          ]
+        },
+        "method": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Always alchemy_getAssetTransfers.",
+          "example": "alchemy_getAssetTransfers",
+          "enum": [
+            "alchemy_getAssetTransfers"
+          ]
+        },
+        "params": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "[{category (required list: external, internal, erc20, erc721, erc1155, specialnft), fromBlock, toBlock, fromAddress, toAddress, contractAddresses, excludeZeroValue, order (asc or desc), withMetadata, maxCount (hex, default 0x3e8), pageKey}].",
+          "example": [
+            {
+              "fromBlock": "0x0",
+              "toAddress": "0x5c43B1eD97e52d009611D89b74fA829FE4ac56b1",
+              "category": [
+                "erc721",
+                "erc1155"
+              ],
+              "withMetadata": true,
+              "order": "desc"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as a JSON-RPC POST.",
+        "Blocks and maxCount are hex strings; maxCount defaults to 0x3e8 (1000) per page; pass the returned pageKey for the next.",
+        "internal transfers exist only on Ethereum, Polygon, Base and Arc mainnets; withMetadata (block timestamps) only on ETH, Base, Polygon, Arbitrum and Optimism.",
+        "value is null for ERC-721 transfers and tokens of unknown decimals; rawContract carries the raw amount."
+      ],
+      "job": "crypto.transfers",
+      "docs_url": "https://www.alchemy.com/docs/data/transfers-api/transfers-endpoints/alchemy-get-asset-transfers",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/data/transfers-api/transfers-endpoints/alchemy-get-asset-transfers"
+      }
+    },
+    {
+      "id": "alchemy.nft.for_owner",
+      "name": "List NFTs owned by an address",
+      "summary": "Every NFT a wallet holds on the configured network, with metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nft/v3/getNFTsForOwner",
+      "params": {
+        "owner": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Owner address (ENS name on Ethereum mainnet).",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "contractAddresses": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these NFT contracts, at most 45.",
+          "wire_name": "contractAddresses[]"
+        },
+        "withMetadata": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include metadata; default true. false is smaller and faster."
+        },
+        "orderBy": {
+          "in": "query",
+          "type": "string",
+          "description": "transferTime: newest received first (only on some networks). Unset: by contract and token ID.",
+          "enum": [
+            "transferTime"
+          ]
+        },
+        "excludeFilters": {
+          "in": "query",
+          "type": "array",
+          "description": "Drop SPAM and/or AIRDROPS. Not with includeFilters.",
+          "wire_name": "excludeFilters[]"
+        },
+        "spamConfidenceLevel": {
+          "in": "query",
+          "type": "string",
+          "description": "Spam level filtered out: VERY_HIGH, HIGH, MEDIUM or LOW.",
+          "enum": [
+            "VERY_HIGH",
+            "HIGH",
+            "MEDIUM",
+            "LOW"
+          ]
+        },
+        "tokenUriTimeoutInMs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Milliseconds to wait for the metadata host; 0 reads only the cache."
+        },
+        "pageKey": {
+          "in": "query",
+          "type": "string",
+          "description": "pageKey from the previous page."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "NFTs per page, at most 100 (default)."
+        }
+      },
+      "job": "nft.holdings",
+      "docs_url": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-nf-ts-for-owner-v-3",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-nf-ts-for-owner-v-3"
+      }
+    },
+    {
+      "id": "alchemy.nft.for_contract",
+      "name": "List the NFTs in a contract",
+      "summary": "Tokens of an NFT collection with metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nft/v3/getNFTsForContract",
+      "params": {
+        "contractAddress": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ERC-721 or ERC-1155 contract.",
+          "example": "0xe785E82358879F061BC3dcAC6f0444462D4b5330"
+        },
+        "withMetadata": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include metadata; default true."
+        },
+        "startToken": {
+          "in": "query",
+          "type": "string",
+          "description": "Token ID to start from (hex or decimal), for paging."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "NFTs to return; default 100."
+        },
+        "tokenUriTimeoutInMs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Milliseconds to wait for the metadata host; 0 reads only the cache."
+        }
+      },
+      "notes": [
+        "Page with startToken: pass the pageKey from the previous response as startToken."
+      ],
+      "job": "nft.collection",
+      "docs_url": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-nf-ts-for-contract-v-3",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-nf-ts-for-contract-v-3"
+      }
+    },
+    {
+      "id": "alchemy.nft.metadata",
+      "name": "Get one NFT's metadata",
+      "summary": "Name, image, attributes, token URI and contract details of one token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nft/v3/getNFTMetadata",
+      "params": {
+        "contractAddress": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "NFT contract.",
+          "example": "0xe785E82358879F061BC3dcAC6f0444462D4b5330"
+        },
+        "tokenId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Token ID, hex or decimal.",
+          "example": "44"
+        },
+        "tokenType": {
+          "in": "query",
+          "type": "string",
+          "description": "ERC721 or ERC1155; faster when given.",
+          "enum": [
+            "ERC721",
+            "ERC1155"
+          ]
+        },
+        "tokenUriTimeoutInMs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Milliseconds to wait for the metadata host; 0 reads only the cache."
+        }
+      },
+      "job": "nft.metadata",
+      "docs_url": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-nft-metadata-v-3",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-nft-metadata-v-3"
+      }
+    },
+    {
+      "id": "alchemy.nft.contract_metadata",
+      "name": "Get an NFT collection's metadata",
+      "summary": "Collection name, symbol, supply, token type and deployer; OpenSea data on ETH and Polygon only.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nft/v3/getContractMetadata",
+      "params": {
+        "contractAddress": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "NFT contract.",
+          "example": "0xe785E82358879F061BC3dcAC6f0444462D4b5330"
+        }
+      },
+      "job": "nft.collection",
+      "docs_url": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-contract-metadata-v-3",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-metadata-endpoints/get-contract-metadata-v-3"
+      }
+    },
+    {
+      "id": "alchemy.nft.owners_for_contract",
+      "name": "List an NFT collection's owners",
+      "summary": "Addresses holding any token of a contract, optionally with balances per token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nft/v3/getOwnersForContract",
+      "params": {
+        "contractAddress": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "NFT contract.",
+          "example": "0x495f947276749ce646f68ac8c248420045cb7b5e"
+        },
+        "withTokenBalances": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add each owner's balance per token ID; default false."
+        },
+        "pageKey": {
+          "in": "query",
+          "type": "string",
+          "description": "Only for contracts with more than 50,000 owners: pageKey from the previous page."
+        }
+      },
+      "job": "crypto.holders",
+      "docs_url": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-owners-for-contract-v-3",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-owners-for-contract-v-3"
+      }
+    },
+    {
+      "id": "alchemy.prices.by_symbol",
+      "name": "Get current token prices by symbol",
+      "summary": "Latest USD prices for up to 25 token symbols.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tokens/by-symbol",
+      "params": {
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated symbols, at most 25.",
+          "example": "ETH,BTC,USDT"
+        }
+      },
+      "notes": [
+        "40 compute units. A symbol that fails carries its own error field."
+      ],
+      "job": "crypto.price",
+      "host": "prices",
+      "docs_url": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-symbol",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-symbol"
+      }
+    },
+    {
+      "id": "alchemy.prices.by_address",
+      "name": "Get current token prices by contract",
+      "summary": "Latest prices for tokens named by network and contract address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/tokens/by-address",
+      "params": {
+        "addresses": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "List of {network, address}, e.g. network eth-mainnet.",
+          "example": [
+            {
+              "network": "eth-mainnet",
+              "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as POST.",
+        "40 compute units."
+      ],
+      "job": "crypto.price",
+      "host": "prices",
+      "docs_url": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-address",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-address"
+      }
+    },
+    {
+      "id": "alchemy.prices.historical",
+      "name": "Get historical token prices",
+      "summary": "Price series for one token over a time range, by symbol or by network and contract.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/tokens/historical",
+      "params": {
+        "symbol": {
+          "in": "body",
+          "type": "string",
+          "description": "Token symbol, e.g. ETH. Or give network and address instead.",
+          "example": "ETH"
+        },
+        "network": {
+          "in": "body",
+          "type": "string",
+          "description": "Network ID with address, e.g. eth-mainnet."
+        },
+        "address": {
+          "in": "body",
+          "type": "string",
+          "description": "Token contract, with network."
+        },
+        "startTime": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Start, ISO 8601 or Unix seconds.",
+          "example": "2024-01-01T00:00:00Z"
+        },
+        "endTime": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "End, ISO 8601 or Unix seconds.",
+          "example": "2024-01-31T23:59:59Z"
+        },
+        "interval": {
+          "in": "body",
+          "type": "string",
+          "description": "5m (range up to 7 days), 1h (30 days) or 1d (1 year, default).",
+          "enum": [
+            "5m",
+            "1h",
+            "1d"
+          ]
+        },
+        "withMarketData": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add market cap and volume; default false."
+        }
+      },
+      "notes": [
+        "A read sent as POST.",
+        "40 compute units."
+      ],
+      "job": "market.history",
+      "host": "prices",
+      "docs_url": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-historical-token-prices",
+      "verified": {
+        "docs": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-historical-token-prices"
+      }
+    }
+  ]
+}

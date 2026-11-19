@@ -1,0 +1,199 @@
+{
+  "vendor": "ipqualityscore",
+  "name": "IPQualityScore",
+  "category": "verification",
+  "summary": "Fraud and risk scoring for IP addresses (proxy, VPN, Tor, bot, recent abuse, location), email addresses (validity, deliverability, disposable, spam trap, leaks) and phone numbers (validity, carrier, line type, risk).",
+  "docs_url": "https://www.ipqualityscore.com/documentation/overview",
+  "pricing_url": "https://www.ipqualityscore.com/plans",
+  "base_url": "https://www.ipqualityscore.com/api/json",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "IPQS_API_KEY"
+        ],
+        "description": "An IPQS API key (IPQS account dashboard). Sent in the IPQS-KEY header rather than the URL path."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "IPQS-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Lookups draw on the plan's credits; always check success, which is false when the account is out of credits (a soft failure can also lack the usual fields).",
+    "A 403 means a rate limit; 500, 502 and 503 are system errors. Treat every field as nullable: new fields appear without notice.",
+    "fraud_score runs 0 to 100: IPQS treats 85 and up as highly suspicious and 90 and up as high risk.",
+    "Fraud reporting, custom tracking variables (userID, transactionID), allowlist/blocklist edits, CSV bulk uploads and postbacks are not in this entry. The URL scanner and credit usage APIs take the key only in the URL path, which this entry does not do."
+  ],
+  "sources": [
+    "https://www.ipqualityscore.com/documentation/overview",
+    "https://www.ipqualityscore.com/documentation/about-ipqs-apis/submitting-data-to-ipqs-apis",
+    "https://www.ipqualityscore.com/documentation/about-ipqs-apis/api-style-guide",
+    "https://www.ipqualityscore.com/documentation/about-ipqs-apis/fraud-prevention-scoring",
+    "https://www.ipqualityscore.com/documentation/proxy-detection-api/overview",
+    "https://www.ipqualityscore.com/documentation/proxy-detection-api/advanced-options",
+    "https://www.ipqualityscore.com/documentation/email-validation-api/overview",
+    "https://www.ipqualityscore.com/documentation/email-validation-api/advanced-options",
+    "https://www.ipqualityscore.com/documentation/email-validation-api/response-parameters",
+    "https://www.ipqualityscore.com/documentation/phone-number-validation-api/overview",
+    "https://www.ipqualityscore.com/documentation/phone-number-validation-api/advanced-options"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "ipqualityscore.ip.check",
+      "name": "Score an IP for proxy, VPN and fraud risk",
+      "summary": "Fraud score, proxy, VPN, active VPN, Tor, bot, crawler, recent and frequent abuse flags, connection type, ISP, ASN, organization and location for an IP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ip",
+      "params": {
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The IPv4 or IPv6 address to check.",
+          "example": "192.0.2.110"
+        },
+        "strictness": {
+          "in": "query",
+          "type": "integer",
+          "description": "How deep the check goes, 0 to 3. Start at 0 or 1; 2 and up produce false positives."
+        },
+        "user_agent": {
+          "in": "query",
+          "type": "string",
+          "description": "The user's browser user agent, for bot and device checks."
+        },
+        "user_language": {
+          "in": "query",
+          "type": "string",
+          "description": "The user's language header."
+        },
+        "fast": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip slower forensic checks for a quicker answer."
+        },
+        "mobile": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Score as a mobile device; for mobile lookups without a user agent."
+        },
+        "allow_public_access_points": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Bypass some checks for schools, research institutions and corporate networks."
+        },
+        "lighter_penalties": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Lower scores for mixed-quality IPs to cut false positives."
+        }
+      },
+      "notes": [
+        "To match the IPQS website's free lookup tool, use strictness=0, allow_public_access_points=true, lighter_penalties=true, mobile=true."
+      ],
+      "job": "ip.reputation",
+      "docs_url": "https://www.ipqualityscore.com/documentation/proxy-detection-api/overview",
+      "verified": {
+        "docs": "https://www.ipqualityscore.com/documentation/proxy-detection-api/advanced-options"
+      }
+    },
+    {
+      "id": "ipqualityscore.email.check",
+      "name": "Verify an email and score its risk",
+      "summary": "Validity, deliverability (high, medium, low), overall score 0 to 4, disposable, catch-all, honeypot/spam trap, recent abuse, leaked and fraud score for an email address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to check.",
+          "example": "noreply@ipqualityscore.com"
+        },
+        "fast": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip the SMTP check with the mail provider; syntax, DNS and risk scoring still run."
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds to wait for the mail provider, 1 to 60 (default 7; IPQS suggests 20 when speed is not critical)."
+        },
+        "suggest_domain": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Always check the domain for typos, not only when the address is invalid or abusive."
+        },
+        "strictness": {
+          "in": "query",
+          "type": "integer",
+          "description": "Spam trap and honeypot detection strictness, 0 to 2."
+        },
+        "abuse_strictness": {
+          "in": "query",
+          "type": "integer",
+          "description": "Strictness of the recent_abuse pattern model, 0 to 2."
+        }
+      },
+      "notes": [
+        "overall_score: 0 invalid, 1 DNS valid but mail server unreachable, 2 temporary rejection, 3 accepts all mail, 4 verified mailbox. A timeout sets timed_out true.",
+        "IPQS documents a header-key form for this API; its table names the ip URL but passes an email parameter, so the email path used here is a reading of that table."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://www.ipqualityscore.com/documentation/email-validation-api/overview",
+      "verified": {
+        "docs": "https://www.ipqualityscore.com/documentation/email-validation-api/advanced-options"
+      }
+    },
+    {
+      "id": "ipqualityscore.phone.check",
+      "name": "Validate a phone number and score its risk",
+      "summary": "Validity, active status, carrier, line type (VOIP, landline, wireless, prepaid), country, owner name where available, and fraud score for a phone number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/phone",
+      "params": {
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The phone number, preferably with country code.",
+          "example": "18007132618"
+        },
+        "strictness": {
+          "in": "query",
+          "type": "integer",
+          "description": "Reputation check strictness; start at 0 and raise to 1 or 2."
+        },
+        "country": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "country[]",
+          "description": "Countries the number likely belongs to; needed when the number has fewer than 10 digits.",
+          "example": [
+            "US",
+            "CA"
+          ]
+        }
+      },
+      "notes": [
+        "Owner names come mostly for US and Canadian numbers, with limited coverage elsewhere."
+      ],
+      "job": "phone.validate",
+      "docs_url": "https://www.ipqualityscore.com/documentation/phone-number-validation-api/overview",
+      "verified": {
+        "docs": "https://www.ipqualityscore.com/documentation/phone-number-validation-api/advanced-options"
+      }
+    }
+  ]
+}

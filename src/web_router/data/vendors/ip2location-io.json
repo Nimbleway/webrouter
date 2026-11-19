@@ -1,0 +1,157 @@
+{
+  "vendor": "ip2location-io",
+  "name": "IP2Location.io",
+  "category": "maps",
+  "summary": "IP geolocation with ISP, ASN, usage type, mobile carrier and proxy/fraud data (by plan), plus domain WHOIS records and the domains hosted on an IP.",
+  "docs_url": "https://www.ip2location.io/ip2location-documentation",
+  "pricing_url": "https://www.ip2location.io/pricing",
+  "base_url": "https://api.ip2location.io",
+  "hosts": {
+    "whois": "https://api.ip2whois.com/v2",
+    "domains": "https://domains.ip2whois.com"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "IP2LOCATIONIO_API_KEY"
+        ],
+        "required": false,
+        "description": "An IP2Location.io API key (free plan sign-up at ip2location.io). Sent as a Bearer token. IP geolocation works without one; WHOIS and hosted domains need it."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Without a key, geolocation allows 1,000 queries a day, reset at 00:00 UTC; a Free Plan key raises that to 50,000 a month.",
+    "Which fields come back depends on the plan: the basic response is location, time zone, ASN and is_proxy; higher plans add ISP, domain, usage type, mobile carrier, proxy details, fraud score and more."
+  ],
+  "sources": [
+    "https://www.ip2location.io/ip2location-documentation",
+    "https://www.ip2location.io/ip2whois-documentation",
+    "https://www.ip2location.io/ip2whois-domains-documentation"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "ip2location-io.ip.lookup",
+      "name": "Geolocate an IP address",
+      "summary": "Country, region, city, coordinates, ZIP code, time zone, ASN and AS name, proxy flag, and on higher plans ISP, domain, net speed, usage type, carrier, currency, language and proxy/fraud details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "description": "IPv4 or IPv6 address; the caller's own IP when left out.",
+          "example": "8.8.8.8"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Translate continent, country, region and city names (Plus and Security plans only; others get error 10004).",
+          "enum": [
+            "ar",
+            "cs",
+            "da",
+            "de",
+            "en",
+            "es",
+            "et",
+            "fi",
+            "fr",
+            "ga",
+            "it",
+            "ja",
+            "ko",
+            "ms",
+            "nl",
+            "pt",
+            "ru",
+            "sv",
+            "tr",
+            "vi",
+            "zh-cn",
+            "zh-tw"
+          ]
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://www.ip2location.io/ip2location-documentation",
+      "verified": {
+        "docs": "https://www.ip2location.io/ip2location-documentation"
+      }
+    },
+    {
+      "id": "ip2location-io.domain.whois",
+      "name": "Get a domain's WHOIS record",
+      "summary": "Creation, update and expiry dates, domain age, registrar, registrant, admin, tech and billing contacts, status and nameservers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "host": "whois",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain name.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Needs an API key, sent as a Bearer token (the key query parameter is the documented alternative)."
+      ],
+      "job": "domain.whois",
+      "docs_url": "https://www.ip2location.io/ip2whois-documentation",
+      "verified": {
+        "docs": "https://www.ip2location.io/ip2whois-documentation"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    },
+    {
+      "id": "ip2location-io.ip.domains",
+      "name": "List domains hosted on an IP",
+      "summary": "The domain names hosted on an IPv4 or IPv6 address, 100 per page, with the total count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domains",
+      "host": "domains",
+      "params": {
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 or IPv6 address.",
+          "example": "8.8.8.8"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Result page, default 1; total_pages says how many there are."
+        }
+      },
+      "notes": [
+        "Needs an API key, sent as a Bearer token (the key query parameter is the documented alternative)."
+      ],
+      "job": "ip.domains",
+      "docs_url": "https://www.ip2location.io/ip2whois-domains-documentation",
+      "verified": {
+        "docs": "https://www.ip2location.io/ip2whois-domains-documentation"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    }
+  ]
+}
