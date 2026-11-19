@@ -1,0 +1,338 @@
+{
+  "vendor": "nvd",
+  "name": "NIST National Vulnerability Database (NVD)",
+  "category": "security",
+  "summary": "CVE records enriched by NIST with CVSS scores, CWE weaknesses, CPE applicability and KEV dates, their change history, and the CPE product dictionary.",
+  "docs_url": "https://nvd.nist.gov/developers/start-here",
+  "base_url": "https://services.nvd.nist.gov/rest/json",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "NVD_API_KEY"
+        ],
+        "required": false,
+        "description": "Optional NVD API key (nvd.nist.gov/developers/request-an-api-key), sent in the apiKey header; it raises the rate limit tenfold."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "apiKey",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Rate limit per rolling 30 seconds: 5 requests without a key, 50 with one; NIST still asks for a pause of a few seconds between requests. Excess requests are blocked by the firewall.",
+    "Any date range (published, modified, KEV, change) must have both ends and span at most 120 consecutive days.",
+    "Paging is offset-based: read totalResults and repeat with startIndex advanced by resultsPerPage.",
+    "Value-less flags (hasKev, noRejected, keywordExactMatch, isVulnerable and similar) are documented as bare query keys and are not in these entries.",
+    "NIST asks applications to show: 'This product uses data from the NVD API but is not endorsed or certified by the NVD.'"
+  ],
+  "sources": [
+    "https://nvd.nist.gov/developers/start-here",
+    "https://nvd.nist.gov/developers/vulnerabilities",
+    "https://nvd.nist.gov/developers/products"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "nvd.cves.search",
+      "name": "Search CVEs",
+      "summary": "CVE records with NVD's CVSS, CWE, CPE configurations, references and KEV fields, filtered by ID, keyword, product, severity or date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cves/2.0",
+      "params": {
+        "cveIds": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated CVE IDs, up to 100.",
+          "example": "CVE-2021-44228"
+        },
+        "keywordSearch": {
+          "in": "query",
+          "type": "string",
+          "description": "Words that must all appear in the current description (prefix match on each word).",
+          "example": "Microsoft Outlook"
+        },
+        "cpeName": {
+          "in": "query",
+          "type": "string",
+          "description": "A CPE 2.3 name; part, vendor, product and version must not be '*'. Returns the CVEs whose applicability matches it.",
+          "example": "cpe:2.3:o:microsoft:windows_10:1607:*:*:*:*:*:*:*"
+        },
+        "virtualMatchString": {
+          "in": "query",
+          "type": "string",
+          "description": "A CPE match string, broader than cpeName; ignored when cpeName is also sent."
+        },
+        "versionStart": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of a version range; needs versionStartType and virtualMatchString."
+        },
+        "versionStartType": {
+          "in": "query",
+          "type": "string",
+          "description": "Whether versionStart is included.",
+          "enum": [
+            "including",
+            "excluding"
+          ]
+        },
+        "versionEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "End of a version range; needs versionEndType and virtualMatchString."
+        },
+        "versionEndType": {
+          "in": "query",
+          "type": "string",
+          "description": "Whether versionEnd is included.",
+          "enum": [
+            "including",
+            "excluding"
+          ]
+        },
+        "cveTag": {
+          "in": "query",
+          "type": "string",
+          "description": "Only records carrying this CVE tag.",
+          "enum": [
+            "disputed",
+            "unsupported-when-assigned",
+            "exclusively-hosted-service"
+          ]
+        },
+        "cvssV3Severity": {
+          "in": "query",
+          "type": "string",
+          "description": "CVSS v3 qualitative severity. Not combinable with the v2 or v4 severity.",
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL"
+          ]
+        },
+        "cvssV4Severity": {
+          "in": "query",
+          "type": "string",
+          "description": "CVSS v4 qualitative severity. Not combinable with the v2 or v3 severity.",
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL"
+          ]
+        },
+        "cvssV2Severity": {
+          "in": "query",
+          "type": "string",
+          "description": "CVSS v2 severity; NVD stopped scoring v2 in July 2022.",
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+          ]
+        },
+        "cvssV3Metrics": {
+          "in": "query",
+          "type": "string",
+          "description": "Full or partial CVSS v3 vector string.",
+          "example": "AV:N/AC:L"
+        },
+        "cvssV4Metrics": {
+          "in": "query",
+          "type": "string",
+          "description": "Full or partial CVSS v4 vector string."
+        },
+        "cweId": {
+          "in": "query",
+          "type": "string",
+          "description": "Weakness ID; NVD-CWE-Other and NVD-CWE-noinfo also work.",
+          "example": "CWE-287"
+        },
+        "sourceIdentifier": {
+          "in": "query",
+          "type": "string",
+          "description": "Only CVEs from this data source.",
+          "example": "cve@mitre.org"
+        },
+        "pubStartDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Published from; needs pubEndDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "pubEndDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Published until; needs pubStartDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "lastModStartDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Last modified from; needs lastModEndDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "lastModEndDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Last modified until; needs lastModStartDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "kevStartDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Added to CISA KEV from; needs kevEndDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "kevEndDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Added to CISA KEV until; needs kevStartDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "resultsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per response; default and maximum 2,000."
+        },
+        "startIndex": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first record; add resultsPerPage until totalResults is reached."
+        }
+      },
+      "notes": [
+        "Leave every filter out to page through the whole database, sorted by published date.",
+        "A 200 with no results can mean the filter matched nothing, not an error; a 4xx usually means a filter value or combination NVD rejects."
+      ],
+      "job": "security.vulns.search",
+      "docs_url": "https://nvd.nist.gov/developers/vulnerabilities",
+      "verified": {
+        "docs": "https://nvd.nist.gov/developers/vulnerabilities"
+      }
+    },
+    {
+      "id": "nvd.cves.history",
+      "name": "Get CVE change history",
+      "summary": "Change events (analysis, modification, rejection, KEV updates) for CVEs, with what was added, changed or removed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cvehistory/2.0",
+      "params": {
+        "cveIds": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated CVE IDs, up to 100.",
+          "example": "CVE-2019-1010218"
+        },
+        "changeStartDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Changed from; needs changeEndDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "changeEndDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Changed until; needs changeStartDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "eventName": {
+          "in": "query",
+          "type": "string",
+          "description": "One change event type.",
+          "enum": [
+            "CVE Received",
+            "Initial Analysis",
+            "Reanalysis",
+            "CVE Modified",
+            "Modified Analysis",
+            "CVE Translated",
+            "Vendor Comment",
+            "CVE Source Update",
+            "CPE Deprecation Remap",
+            "CWE Remap",
+            "Reference Tag Update",
+            "CVE Rejected",
+            "CVE Unrejected",
+            "CVE CISA KEV Update",
+            "Data Remediation",
+            "CVE Status Change"
+          ]
+        },
+        "resultsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events per response; default and maximum 5,000."
+        },
+        "startIndex": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first event."
+        }
+      },
+      "job": "security.vulns.history",
+      "docs_url": "https://nvd.nist.gov/developers/vulnerabilities",
+      "verified": {
+        "docs": "https://nvd.nist.gov/developers/vulnerabilities"
+      }
+    },
+    {
+      "id": "nvd.cpes.search",
+      "name": "Search the CPE product dictionary",
+      "summary": "CPE names and titles from the Official CPE Dictionary, to find the cpeName a CVE search needs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/cpes/2.0",
+      "params": {
+        "keywordSearch": {
+          "in": "query",
+          "type": "string",
+          "description": "Words that must all appear in the CPE title or reference links.",
+          "example": "Red Hat"
+        },
+        "cpeMatchString": {
+          "in": "query",
+          "type": "string",
+          "description": "A CPE match string; returns every dictionary name it matches.",
+          "example": "cpe:2.3:o:microsoft:windows_10"
+        },
+        "cpeNameId": {
+          "in": "query",
+          "type": "string",
+          "description": "One CPE record by UUID."
+        },
+        "matchCriteriaId": {
+          "in": "query",
+          "type": "string",
+          "description": "CPE names for a match-criteria UUID, as found in a CVE's configurations."
+        },
+        "lastModStartDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Modified from; needs lastModEndDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "lastModEndDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Modified until; needs lastModStartDate. Extended ISO-8601, e.g. 2024-01-01T00:00:00.000Z; give a '+' offset as is, since the call encodes it."
+        },
+        "resultsPerPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per response; default and maximum 10,000."
+        },
+        "startIndex": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based index of the first record."
+        }
+      },
+      "job": "security.products.search",
+      "docs_url": "https://nvd.nist.gov/developers/products",
+      "verified": {
+        "docs": "https://nvd.nist.gov/developers/products"
+      }
+    }
+  ]
+}

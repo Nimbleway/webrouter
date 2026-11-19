@@ -1,0 +1,153 @@
+{
+  "vendor": "verisign-rdap",
+  "name": "Verisign RDAP (.com, .net)",
+  "category": "security",
+  "summary": "Verisign's registry RDAP service for .com and .net: domain registration status, dates, registrar and name servers, name server and registrar lookups.",
+  "docs_url": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/",
+  "base_url": "https://rdap.verisign.com",
+  "notes": [
+    "Keyless. Answers are RDAP JSON (RFC 9083) under ICANN's gTLD RDAP profile, and use is subject to Verisign's RDAP terms of service.",
+    "This is the registry's record; registrant contact data, where published, is with the sponsoring registrar."
+  ],
+  "sources": [
+    "https://www.verisign.com/news-insights/registration-data-access-protocol/help/",
+    "https://rdap.verisign.com/com/v1/help"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "verisign-rdap.domain.get",
+      "name": "Get a .com or .net domain's registry record",
+      "summary": "The registry's RDAP record for a domain: registrar, status codes, registration dates and name servers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{tld}/v1/domain/{domain}",
+      "params": {
+        "tld": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Registry: com or net.",
+          "example": "com",
+          "enum": [
+            "com",
+            "net"
+          ]
+        },
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain name in that TLD.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "A 404 means the domain is not registered."
+      ],
+      "job": "domain.whois",
+      "docs_url": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/",
+      "verified": {
+        "docs": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/"
+      }
+    },
+    {
+      "id": "verisign-rdap.nameserver.get",
+      "name": "Get a name server",
+      "summary": "The registry's record of a name server host.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{tld}/v1/nameserver/{nameserver}",
+      "params": {
+        "tld": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Registry: com or net.",
+          "example": "com",
+          "enum": [
+            "com",
+            "net"
+          ]
+        },
+        "nameserver": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Name server host name.",
+          "example": "ns1.example.com"
+        }
+      },
+      "job": "domain.dns",
+      "docs_url": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/",
+      "verified": {
+        "docs": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/"
+      }
+    },
+    {
+      "id": "verisign-rdap.nameservers.by_ip",
+      "name": "Find name servers by IP",
+      "summary": "Name server hosts registered with a given IP address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{tld}/v1/nameservers",
+      "params": {
+        "tld": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Registry: com or net.",
+          "example": "com",
+          "enum": [
+            "com",
+            "net"
+          ]
+        },
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Name server IP address."
+        }
+      },
+      "job": "domain.dns",
+      "docs_url": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/",
+      "verified": {
+        "docs": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/"
+      }
+    },
+    {
+      "id": "verisign-rdap.registrar.get",
+      "name": "Get a registrar",
+      "summary": "A registrar's record, by registrar name or IANA registrar ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{tld}/v1/entity/{handle}",
+      "params": {
+        "tld": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Registry: com or net.",
+          "example": "com",
+          "enum": [
+            "com",
+            "net"
+          ]
+        },
+        "handle": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Registrar name or IANA registrar ID.",
+          "example": "292"
+        }
+      },
+      "job": "domain.registrar",
+      "docs_url": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/",
+      "verified": {
+        "docs": "https://www.verisign.com/news-insights/registration-data-access-protocol/help/"
+      }
+    }
+  ]
+}
