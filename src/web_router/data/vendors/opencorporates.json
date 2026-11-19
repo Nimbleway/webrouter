@@ -1,0 +1,526 @@
+{
+  "vendor": "opencorporates",
+  "name": "OpenCorporates",
+  "category": "company-data",
+  "summary": "An open database of companies from official registers worldwide: legal entities with officers, filings, control (beneficial ownership) statements and gazette notices.",
+  "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+  "base_url": "https://api.opencorporates.com/v0.4",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "OPENCORPORATES_API_KEY"
+        ],
+        "description": "An OpenCorporates API token (opencorporates.com > API account). Sent as the api_token query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_token",
+        "value": "{api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "A key is required on every call; daily and monthly call quotas depend on the plan. Daily usage resets at midnight UTC; check it with opencorporates.account.status.",
+    "Lists page with page and per_page: 30 per page by default, up to 100, and page stops at 100.",
+    "Date filters take one date or a range start:end with either end open (2020-01-01: or :2020-12-31). Term filters take one term, a comma list (match all) or a pipe list (match any).",
+    "Data is under the Open Database Licence (share-alike, attribution): link each company's opencorporates_url when you show it. A company temporarily redacted answers 503."
+  ],
+  "sources": [
+    "https://api.opencorporates.com/documentation/API-Reference"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "opencorporates.companies.search",
+      "name": "Search companies",
+      "summary": "Companies whose current or previous name holds every word searched, filtered by jurisdiction, status, type, industry code, address and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Name words, any order; end with * for a prefix match (Barclays Bank*).",
+          "example": "barclays bank"
+        },
+        "jurisdiction_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Jurisdiction code(s), term filter, e.g. gb or us_de."
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code(s): covers every jurisdiction in a multi-jurisdiction country such as the US."
+        },
+        "company_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Company type as the register names it."
+        },
+        "current_status": {
+          "in": "query",
+          "type": "string",
+          "description": "Status as the register names it, e.g. Active."
+        },
+        "industry_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Industry code uids, code scheme and code joined by a hyphen, e.g. eu_nace_2-869."
+        },
+        "registered_address": {
+          "in": "query",
+          "type": "string",
+          "description": "Address words to match, e.g. 52 London."
+        },
+        "incorporation_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Incorporation date or range, e.g. 2013-12-03:2014-05-22."
+        },
+        "dissolution_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Dissolution date or range."
+        },
+        "created_at": {
+          "in": "query",
+          "type": "string",
+          "description": "Date or range the company was added to OpenCorporates."
+        },
+        "updated_at": {
+          "in": "query",
+          "type": "string",
+          "description": "Date or range the company record last changed."
+        },
+        "inactive": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for inactive companies only, false to exclude them."
+        },
+        "branch": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for branches only, false to exclude them."
+        },
+        "nonprofit": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for nonprofit types only, false to exclude them."
+        },
+        "identifier_uids": {
+          "in": "query",
+          "type": "string",
+          "description": "Third-party identifiers (business, charity or tax numbers) to match."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to search: name, normalised_name, company_number, heavily_normalised_number, native_company_number, previous_names, postal_codes, trademark_registration_mark_texts."
+        },
+        "normalise_company_name": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to normalise q first (Ltd to Limited, Corp to Corporation)."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Ordering: alphabetical by default; score, or newest first by created_at, updated_at, incorporation_date or dissolution_date.",
+          "enum": [
+            "score",
+            "created_at",
+            "updated_at",
+            "incorporation_date",
+            "dissolution_date"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "notes": [
+        "Unlike the website, the API does not normalise names unless normalise_company_name=true."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.companies.get",
+      "name": "Get a company",
+      "summary": "Core register data for one company: name, number, type, status, incorporation and dissolution dates, registered address, industry codes, previous names, officers, recent filings and data held.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{jurisdiction_code}/{company_number}",
+      "params": {
+        "jurisdiction_code": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code: a two-letter ISO country code (gb, es) or an underscored subdivision code (us_de, us_mi).",
+          "example": "gb"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number given by the register.",
+          "example": "00102498"
+        },
+        "sparse": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to leave out filings and other data: faster and smaller."
+        }
+      },
+      "notes": [
+        "inactive=true is OpenCorporates' mapping of dissolved, removed or liquidated statuses; a missing flag does not mean the company is active."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.companies.filings",
+      "name": "List a company's filings",
+      "summary": "Statutory filings for one company, with date, title, type and a link to the document where the register offers it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{jurisdiction_code}/{company_number}/filings",
+      "params": {
+        "jurisdiction_code": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code: a two-letter ISO country code (gb, es) or an underscored subdivision code (us_de, us_mi).",
+          "example": "gb"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number given by the register.",
+          "example": "00102498"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "company.documents",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.companies.statements",
+      "name": "List a company's statements",
+      "summary": "Statements of fact about one company from public records or users: subsidiaries, shareholdings, licences, branch relationships, with provenance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{jurisdiction_code}/{company_number}/statements",
+      "params": {
+        "jurisdiction_code": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Jurisdiction code: a two-letter ISO country code (gb, es) or an underscored subdivision code (us_de, us_mi).",
+          "example": "gb"
+        },
+        "company_number": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The company number given by the register.",
+          "example": "00102498"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "company.ownership",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.officers.search",
+      "name": "Search officers",
+      "summary": "Directors, officers and agents whose name holds every word searched, with their company and position.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/officers/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Name words, any order.",
+          "example": "john smith"
+        },
+        "jurisdiction_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Jurisdiction code(s)."
+        },
+        "position": {
+          "in": "query",
+          "type": "string",
+          "description": "Position, e.g. director, ceo, agent."
+        },
+        "date_of_birth": {
+          "in": "query",
+          "type": "string",
+          "description": "Date of birth or range (held for UK directors only)."
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Address words to match."
+        },
+        "inactive": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for inactive officers only, false to exclude them."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "score for relevance; alphabetical by default.",
+          "enum": [
+            "score"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.officers.get",
+      "name": "Get an officer",
+      "summary": "One officer: name, position, company, start and end dates, address and date of birth where known.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/officers/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenCorporates officer id.",
+          "example": "32609673"
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.control_statements.search",
+      "name": "Search control statements",
+      "summary": "Beneficial ownership and control statements: who controls an entity, by what mechanism, and whether they are ultimate beneficial owners.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/statements/control_statements/search",
+      "params": {
+        "controlled_entity_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Name of the controlled entity."
+        },
+        "controlling_entities_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Name of a controlling entity."
+        },
+        "is_ultimate_beneficial_owner": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for statements naming ultimate beneficial owners."
+        },
+        "has_controlling_entities": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for statements that name any controlling entity."
+        },
+        "control_mechanisms_mechanism_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Control types, e.g. share ownership or voting rights."
+        },
+        "controlling_entities_entity_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Controlling entity types, e.g. company or person."
+        },
+        "created_at": {
+          "in": "query",
+          "type": "string",
+          "description": "Date or range the statement was added."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "score for relevance; newest first by default.",
+          "enum": [
+            "score"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "company.ownership",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.gazette_notices.search",
+      "name": "Search gazette notices",
+      "summary": "Official gazette notices (insolvencies, dissolutions and other legal notices) matching every word searched.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/statements/gazette_notices/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Words to match, any order.",
+          "example": "liquidation"
+        },
+        "jurisdiction_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Jurisdiction code(s)."
+        },
+        "publication_title": {
+          "in": "query",
+          "type": "string",
+          "description": "The publication the notice appeared in."
+        },
+        "normalised_classification_level_1": {
+          "in": "query",
+          "type": "string",
+          "description": "Notice type."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "score for relevance; newest published first by default.",
+          "enum": [
+            "score"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; at most 100."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "company.insolvency",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.jurisdictions.match",
+      "name": "Match a jurisdiction name",
+      "summary": "The jurisdiction code for a country or state written in any common form (GB, United Kingdom, Delaware (USA)).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jurisdictions/match",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Jurisdiction name or code as written.",
+          "required": true,
+          "example": "The Netherlands"
+        },
+        "related_jurisdiction_code": {
+          "in": "query",
+          "type": "string",
+          "description": "A hint to disambiguate, e.g. us for Georgia the state."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    },
+    {
+      "id": "opencorporates.account.status",
+      "name": "Get account usage",
+      "summary": "Plan, expiry, and calls used and remaining today and this month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account_status",
+      "job": "account.usage",
+      "docs_url": "https://api.opencorporates.com/documentation/API-Reference",
+      "verified": {
+        "docs": "https://api.opencorporates.com/documentation/API-Reference"
+      }
+    }
+  ]
+}

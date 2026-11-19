@@ -1,0 +1,755 @@
+{
+  "vendor": "forager",
+  "name": "Forager",
+  "category": "enrichment",
+  "summary": "People and organization data: role and company search, person lookup by LinkedIn slug, reverse email and phone lookup, work and personal emails and phone numbers.",
+  "docs_url": "https://docs.forager.ai/",
+  "base_url": "https://api-v2.forager.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FORAGER_API_KEY"
+        ],
+        "description": "A Forager API key (app.forager.ai). Sent in the X-API-KEY header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Almost every path carries your numeric account id; get it once from forager.account.current.",
+    "Searches and lookups are POST with a JSON body but only read. Each spends credits at the rate your plan sets for that kind of call.",
+    "Filters that take lists of locations, industries, skills, keywords or organizations want Forager ids from the reference.* lookups.",
+    "Job post search, bulk work email lookups, feedback submission and API key management are not in this entry."
+  ],
+  "sources": [
+    "https://docs.forager.ai/",
+    "https://docs.forager.ai/openapi",
+    "https://docs.forager.ai/_bundle/openapi.yaml"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "forager.account.current",
+      "name": "Get the current user and accounts",
+      "summary": "The key's user and the accounts it belongs to, with their ids and subscriptions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/users/current/",
+      "notes": [
+        "Free. Every other call needs an account id from accounts[].id here."
+      ],
+      "job": "account.validate",
+      "docs_url": "https://docs.forager.ai/openapi/users/users_current_retrieve.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/users/users_current_retrieve.md"
+      }
+    },
+    {
+      "id": "forager.account.credits_spent",
+      "name": "Get credits spent in a period",
+      "summary": "Total credits charged to the subscription between two timestamps.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/{account_id}/subscriptions/balance_change_logs/totals/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "date_created_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, ISO 8601 date-time."
+        },
+        "date_created_end": {
+          "in": "query",
+          "type": "string",
+          "description": "End, ISO 8601 date-time."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.forager.ai/openapi/users/subscriptions_balance_change_logs_totals_retrieve.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/users/subscriptions_balance_change_logs_totals_retrieve.md"
+      }
+    },
+    {
+      "id": "forager.person.get",
+      "name": "Look up a person",
+      "summary": "Profile, role history and linked organizations of one person, by Forager id or LinkedIn slug.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/{account_id}/datastorage/person_detail_lookup/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "person_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "Forager person id, from a search."
+        },
+        "linkedin_public_identifier": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile slug, the part after linkedin.com/in/.",
+          "example": "williamhgates"
+        }
+      },
+      "notes": [
+        "A read over POST. Give person_id or linkedin_public_identifier.",
+        "Charged per lookup at the plan's person-details rate."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.forager.ai/openapi/people/datastorage_person_detail_lookup_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/people/datastorage_person_detail_lookup_create.md"
+      }
+    },
+    {
+      "id": "forager.person.reverse_email",
+      "name": "Find the person behind an email",
+      "summary": "Person details for a personal email address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/{account_id}/datastorage/person_detail_reverse_lookup/by_email/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The person's personal email address."
+        }
+      },
+      "notes": [
+        "A read over POST. Charged at the plan's reverse-email rate."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.forager.ai/openapi/people/datastorage_person_detail_reverse_lookup_by_email_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/people/datastorage_person_detail_reverse_lookup_by_email_create.md"
+      }
+    },
+    {
+      "id": "forager.person.reverse_phone",
+      "name": "Find the person behind a phone number",
+      "summary": "Person details for a phone number.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/{account_id}/datastorage/person_detail_reverse_lookup/by_phone_number/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "phone_number": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The phone number, international format."
+        }
+      },
+      "notes": [
+        "A read over POST. Charged at the plan's reverse-phone rate."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.forager.ai/openapi/people/datastorage_person_detail_reverse_lookup_by_phone_number_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/people/datastorage_person_detail_reverse_lookup_by_phone_number_create.md"
+      }
+    },
+    {
+      "id": "forager.person.phones",
+      "name": "Find a person's phone numbers",
+      "summary": "Verified phone numbers for one person.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/{account_id}/datastorage/person_contacts_lookup/phone_numbers/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "person_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "Forager person id, from a search."
+        },
+        "linkedin_public_identifier": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile slug, the part after linkedin.com/in/.",
+          "example": "williamhgates"
+        },
+        "quality_tier": {
+          "in": "body",
+          "type": "string",
+          "description": "highest_quality (default): only numbers that passed the strictest check. most_coverage: every verified number, at its own higher rate.",
+          "enum": [
+            "highest_quality",
+            "most_coverage"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Charged only when a number comes back."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://docs.forager.ai/openapi/phones/datastorage_person_contacts_lookup_phone_numbers_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/phones/datastorage_person_contacts_lookup_phone_numbers_create.md"
+      }
+    },
+    {
+      "id": "forager.person.personal_emails",
+      "name": "Find a person's personal emails",
+      "summary": "Personal addresses on consumer webmail (Gmail, Outlook, Yahoo...) for one person.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/{account_id}/datastorage/person_contacts_lookup/personal_emails/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "person_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "Forager person id, from a search."
+        },
+        "linkedin_public_identifier": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn profile slug, the part after linkedin.com/in/.",
+          "example": "williamhgates"
+        }
+      },
+      "notes": [
+        "A read over POST. Corporate, school and custom-domain addresses are never returned.",
+        "No result is 200 with an empty body and costs nothing."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.forager.ai/openapi/personal-emails/datastorage_person_contacts_lookup_personal_emails_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/personal-emails/datastorage_person_contacts_lookup_personal_emails_create.md"
+      }
+    },
+    {
+      "id": "forager.person.work_email",
+      "name": "Start a work email lookup",
+      "summary": "Starts a deliverability-checked work email search for one person; answers with a job_id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2/{account_id}/datastorage/person_contacts_lookup/work_emails/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name; needs last_name and domain."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Employer domain; a full URL is reduced to its domain.",
+          "example": "acme.com"
+        },
+        "linkedin_public_identifier": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn slug, instead of name and domain: the current employer is taken from Forager's record."
+        }
+      },
+      "notes": [
+        "Starts a billed job: credits are charged once, only when an address is found; nothing else in the account changes.",
+        "Give first_name, last_name and domain, or linkedin_public_identifier alone; a domain with a slug is refused.",
+        "Asynchronous: poll forager.person.work_email_result with job_id until status is completed or failed (Retry-After says when). Rate limited for interactive use."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.forager.ai/openapi/work-emails/v2_datastorage_person_contacts_lookup_work_emails_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/work-emails/v2_datastorage_person_contacts_lookup_work_emails_create.md"
+      }
+    },
+    {
+      "id": "forager.person.work_email_result",
+      "name": "Get a work email lookup",
+      "summary": "Status of a work email lookup and, once done, the addresses found with their verdicts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/{account_id}/datastorage/person_contacts_lookup/work_emails/{job_id}/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "job_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "job_id from forager.person.work_email."
+        }
+      },
+      "notes": [
+        "Free. status: queued, running, awaiting_provider, completed, failed; result is found or not_found once terminal."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://docs.forager.ai/openapi/work-emails/v2_datastorage_person_contacts_lookup_work_emails_retrieve.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/work-emails/v2_datastorage_person_contacts_lookup_work_emails_retrieve.md"
+      }
+    },
+    {
+      "id": "forager.person.search",
+      "name": "Search people by role",
+      "summary": "People matching role, person and employer filters, with their role history and organizations.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/{account_id}/datastorage/person_role_search/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "role_title": {
+          "in": "body",
+          "type": "string",
+          "description": "Role title; boolean text query.",
+          "example": "\"head of sales\""
+        },
+        "role_is_current": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only current roles."
+        },
+        "role_description": {
+          "in": "body",
+          "type": "string",
+          "description": "Role description; boolean text query."
+        },
+        "person_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Person name; boolean text query."
+        },
+        "person_headline": {
+          "in": "body",
+          "type": "string",
+          "description": "Headline; boolean text query."
+        },
+        "person_skills": {
+          "in": "body",
+          "type": "array",
+          "description": "Skill ids from forager.reference.skills."
+        },
+        "person_locations": {
+          "in": "body",
+          "type": "array",
+          "description": "Location ids from forager.reference.locations."
+        },
+        "person_industries": {
+          "in": "body",
+          "type": "array",
+          "description": "Industry ids from forager.reference.industries."
+        },
+        "person_linkedin_public_identifiers": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn profile slugs."
+        },
+        "organizations": {
+          "in": "body",
+          "type": "array",
+          "description": "Organization ids from forager.reference.organizations."
+        },
+        "organization_domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Employer domains."
+        },
+        "organization_locations": {
+          "in": "body",
+          "type": "array",
+          "description": "Employer location ids."
+        },
+        "organization_industries": {
+          "in": "body",
+          "type": "array",
+          "description": "Employer industry ids."
+        },
+        "organization_employees_start": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum employer headcount."
+        },
+        "organization_employees_end": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum employer headcount."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters go in a JSON body; nothing is saved.",
+        "Charged per call at the plan's role-search rate. List filters take Forager ids from the reference.* lookups, not names."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.forager.ai/openapi/people/datastorage_person_role_search_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/people/datastorage_person_role_search_create.md"
+      }
+    },
+    {
+      "id": "forager.company.search",
+      "name": "Search organizations",
+      "summary": "Organizations matching firmographic, funding, web and hiring filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/{account_id}/datastorage/organization_search/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "description": {
+          "in": "body",
+          "type": "string",
+          "description": "Text in the company description."
+        },
+        "organization_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Organization ids from forager.reference.organizations."
+        },
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains."
+        },
+        "locations": {
+          "in": "body",
+          "type": "array",
+          "description": "Location ids."
+        },
+        "industries": {
+          "in": "body",
+          "type": "array",
+          "description": "Industry ids."
+        },
+        "keywords": {
+          "in": "body",
+          "type": "array",
+          "description": "Keyword ids from forager.reference.keywords."
+        },
+        "employees_start": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum headcount."
+        },
+        "employees_end": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum headcount."
+        },
+        "revenue_start": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum revenue."
+        },
+        "revenue_end": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum revenue."
+        },
+        "founded_date_start": {
+          "in": "body",
+          "type": "string",
+          "description": "Founded on or after (date)."
+        },
+        "founded_date_end": {
+          "in": "body",
+          "type": "string",
+          "description": "Founded on or before (date)."
+        },
+        "funding_total_start": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum total funding."
+        },
+        "funding_total_end": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum total funding."
+        },
+        "linkedin_public_identifiers": {
+          "in": "body",
+          "type": "array",
+          "description": "LinkedIn company slugs, the part after linkedin.com/company/."
+        },
+        "job_post_title": {
+          "in": "body",
+          "type": "string",
+          "description": "Hiring for: job post title, boolean text query."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters go in a JSON body; nothing is saved.",
+        "Charged per call at the plan's organization-search rate."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.forager.ai/openapi/organizations/datastorage_organization_search_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/organizations/datastorage_organization_search_create.md"
+      }
+    },
+    {
+      "id": "forager.website.get",
+      "name": "Look up a website",
+      "summary": "A domain's web rank, traffic and detected web technologies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/{account_id}/datastorage/website_detail_lookup/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "The domain.",
+          "example": "stripe.com"
+        },
+        "organization_id": {
+          "in": "body",
+          "type": "integer",
+          "description": "Forager organization id, instead of a domain."
+        },
+        "organization_linkedin_public_identifier": {
+          "in": "body",
+          "type": "string",
+          "description": "LinkedIn company slug, instead of a domain."
+        }
+      },
+      "notes": [
+        "A read over POST. Charged at the plan's technologies-lookup rate."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://docs.forager.ai/openapi/websites/datastorage_website_detail_lookup_create.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/websites/datastorage_website_detail_lookup_create.md"
+      }
+    },
+    {
+      "id": "forager.reference.organizations",
+      "name": "Look up organization ids",
+      "summary": "Organization ids by name or domain, for the search filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/{account_id}/datastorage/autocomplete/organizations/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Organization name or domain."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        }
+      },
+      "job": "company.suggest",
+      "docs_url": "https://docs.forager.ai/openapi/autocomplete/v1_organization_lookup.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/autocomplete/v1_organization_lookup.md"
+      }
+    },
+    {
+      "id": "forager.reference.locations",
+      "name": "Look up location ids",
+      "summary": "Location ids by city, state, country or continent.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/{account_id}/datastorage/autocomplete/locations/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City, state, country or continent."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://docs.forager.ai/openapi/autocomplete/v1_location_lookup.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/autocomplete/v1_location_lookup.md"
+      }
+    },
+    {
+      "id": "forager.reference.industries",
+      "name": "Look up industry ids",
+      "summary": "Industry ids by name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/{account_id}/datastorage/autocomplete/industries/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Industry name."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        }
+      },
+      "job": "reference.industries",
+      "docs_url": "https://docs.forager.ai/openapi/autocomplete/v1_industry_lookup.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/autocomplete/v1_industry_lookup.md"
+      }
+    },
+    {
+      "id": "forager.reference.keywords",
+      "name": "Look up organization keyword ids",
+      "summary": "Organization keyword ids by name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/{account_id}/datastorage/autocomplete/organization_keywords/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keyword."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        }
+      },
+      "job": "reference.keywords",
+      "docs_url": "https://docs.forager.ai/openapi/autocomplete/v1_organization_keyword_lookup.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/autocomplete/v1_organization_keyword_lookup.md"
+      }
+    },
+    {
+      "id": "forager.reference.skills",
+      "name": "Look up person skill ids",
+      "summary": "Person skill ids by name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/{account_id}/datastorage/autocomplete/person_skills/",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Your Forager account id: accounts[].id from forager.account.current."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Skill name."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        }
+      },
+      "job": "reference.keywords",
+      "docs_url": "https://docs.forager.ai/openapi/autocomplete/v1_person_skill_lookup.md",
+      "verified": {
+        "docs": "https://docs.forager.ai/openapi/autocomplete/v1_person_skill_lookup.md"
+      }
+    }
+  ]
+}

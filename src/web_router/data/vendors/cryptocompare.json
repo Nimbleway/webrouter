@@ -1,0 +1,505 @@
+{
+  "vendor": "cryptocompare",
+  "name": "CryptoCompare",
+  "category": "finance",
+  "summary": "Crypto market data from CryptoCompare, now CoinDesk Data: reference index and exchange prices, OHLCV history, asset profiles and rankings, and crypto news.",
+  "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+  "base_url": "https://data-api.cryptocompare.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CRYPTOCOMPARE_API_KEY"
+        ],
+        "required": false,
+        "description": "A CoinDesk Data (formerly CryptoCompare) API key from developers.coindesk.com. Sent as the api_key query parameter; some endpoints work without one."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "This is the Data API (data-api.cryptocompare.com, also served at data-api.coindesk.com); the older min-api endpoints are not in this entry.",
+    "Pairs are written BASE-QUOTE (BTC-USD). Index endpoints take an index family as market (cadli by default); spot endpoints take an exchange.",
+    "List-valued inputs (instruments, assets, groups, categories) are comma-separated strings.",
+    "Rate limits apply per second, minute, hour, day and month; going over returns 429."
+  ],
+  "sources": [
+    "https://developers.coindesk.com/documentation/data-api/introduction",
+    "https://data-api.coindesk.com/info/v1/openapi"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "cryptocompare.index.latest_tick",
+      "name": "Get the latest index price for crypto pairs",
+      "summary": "Current index value (default CADLI) with OHLC and change over several windows, for one or more pairs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/index/cc/v1/latest/tick",
+      "params": {
+        "market": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Index family, e.g. cadli (24-hour volume-weighted reference index), ccix.",
+          "example": "cadli"
+        },
+        "instruments": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated pairs, e.g. BTC-USD,ETH-USD.",
+          "example": "BTC-USD,ETH-USD"
+        },
+        "groups": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field groups to return; empty returns all."
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.index.historical_days",
+      "name": "Get daily index candles for a pair",
+      "summary": "Daily open, high, low, close and volume of an index instrument.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/index/cc/v1/historical/days",
+      "params": {
+        "market": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Index family, e.g. cadli.",
+          "example": "cadli"
+        },
+        "instrument": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One pair, e.g. BTC-USD.",
+          "example": "BTC-USD"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points to return, 1-5000; default 30.",
+          "example": 30
+        },
+        "to_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last point's Unix time (seconds), inclusive; for paging backwards."
+        },
+        "aggregate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points merged into each returned candle, 1-30; default 1."
+        },
+        "fill": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false skips periods without trading; default true."
+        },
+        "groups": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field groups to return; empty returns all."
+        },
+        "response_format": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON (default) or CSV.",
+          "enum": [
+            "JSON",
+            "CSV"
+          ]
+        }
+      },
+      "notes": [
+        "Page backwards with to_ts: the oldest timestamp of one batch comes back again as the newest of the next, so step it back by one interval (86400 s daily, 3600 s hourly)."
+      ],
+      "job": "market.history",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.index.historical_hours",
+      "name": "Get hourly index candles for a pair",
+      "summary": "Hourly open, high, low, close and volume of an index instrument.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/index/cc/v1/historical/hours",
+      "params": {
+        "market": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Index family, e.g. cadli.",
+          "example": "cadli"
+        },
+        "instrument": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One pair, e.g. BTC-USD.",
+          "example": "BTC-USD"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points to return, 1-2000; default 30.",
+          "example": 30
+        },
+        "to_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last point's Unix time (seconds), inclusive; for paging backwards."
+        },
+        "aggregate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points merged into each returned candle, 1-30; default 1."
+        },
+        "fill": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false skips periods without trading; default true."
+        },
+        "groups": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field groups to return; empty returns all."
+        },
+        "response_format": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON (default) or CSV.",
+          "enum": [
+            "JSON",
+            "CSV"
+          ]
+        }
+      },
+      "notes": [
+        "Page backwards with to_ts: the oldest timestamp of one batch comes back again as the newest of the next, so step it back by one interval (86400 s daily, 3600 s hourly)."
+      ],
+      "job": "market.history",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.spot.latest_tick",
+      "name": "Get the latest price on one exchange",
+      "summary": "Latest trade price and rolling volume and OHLC for pairs on one exchange.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/spot/v1/latest/tick",
+      "params": {
+        "market": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Exchange, e.g. coinbase, kraken, binance.",
+          "example": "coinbase"
+        },
+        "instruments": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated pairs, mapped (BTC-USD) or as the exchange names them (XXBTZUSD).",
+          "example": "BTC-USD,ETH-USD"
+        },
+        "groups": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field groups to return; empty returns all."
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.spot.historical_days",
+      "name": "Get daily candles for a pair on one exchange",
+      "summary": "Daily OHLC and base/quote volume of one exchange instrument.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/spot/v1/historical/days",
+      "params": {
+        "market": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Exchange, e.g. kraken.",
+          "example": "kraken"
+        },
+        "instrument": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One pair, mapped (BTC-USD) or as the exchange names it.",
+          "example": "BTC-USD"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points to return, 1-5000; default 30.",
+          "example": 30
+        },
+        "to_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last point's Unix time (seconds), inclusive; for paging backwards."
+        },
+        "aggregate": {
+          "in": "query",
+          "type": "integer",
+          "description": "Points merged into each returned candle, 1-30; default 1."
+        },
+        "fill": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false skips periods without trading; default true."
+        },
+        "groups": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field groups to return; empty returns all."
+        },
+        "response_format": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON (default) or CSV.",
+          "enum": [
+            "JSON",
+            "CSV"
+          ]
+        }
+      },
+      "notes": [
+        "Page backwards with to_ts: the oldest timestamp of one batch comes back again as the newest of the next, so step it back by one interval (86400 s daily, 3600 s hourly)."
+      ],
+      "job": "market.history",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.asset.metadata",
+      "name": "Get asset profiles",
+      "summary": "Description, classification, supply, price, market cap and links for one or more assets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/asset/v2/metadata",
+      "params": {
+        "assets": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated asset symbols or CoinDesk asset IDs.",
+          "example": "BTC,ETH"
+        },
+        "asset_lookup_priority": {
+          "in": "query",
+          "type": "string",
+          "description": "What assets holds: SYMBOL (default), ID or URI.",
+          "enum": [
+            "SYMBOL",
+            "ID",
+            "URI"
+          ]
+        },
+        "quote_asset": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency for price and market cap values; default USD.",
+          "example": "USD"
+        },
+        "groups": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated field groups to return; empty returns all."
+        }
+      },
+      "job": "crypto.assets",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.asset.top_list",
+      "name": "Rank crypto assets",
+      "summary": "Assets ranked by market cap, volume, price or change, page by page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/asset/v1/top/list",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, 1-1000; default 1.",
+          "example": 1
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 10-100; default 100.",
+          "example": 50
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Field to rank by, e.g. CIRCULATING_MKT_CAP_USD (default), TOTAL_MKT_CAP_USD, PRICE_USD.",
+          "example": "CIRCULATING_MKT_CAP_USD"
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "description": "DESC (default) or ASC.",
+          "enum": [
+            "DESC",
+            "ASC"
+          ]
+        },
+        "toplist_quote_asset": {
+          "in": "query",
+          "type": "string",
+          "description": "Quote asset for values; default USD.",
+          "example": "USD"
+        },
+        "asset_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this asset type, e.g. BLOCKCHAIN or TOKEN; empty for all.",
+          "example": "TOKEN"
+        }
+      },
+      "job": "crypto.assets",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.asset.search",
+      "name": "Search crypto assets",
+      "summary": "Assets matching a symbol, name or ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/asset/v1/search",
+      "params": {
+        "search_string": {
+          "in": "query",
+          "type": "string",
+          "description": "Text matched against the start of symbols and anywhere in names; a number matches asset IDs.",
+          "example": "bitcoin"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100; default 20."
+        }
+      },
+      "job": "crypto.assets",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.news.latest",
+      "name": "List the latest crypto news articles",
+      "summary": "Newest articles from crypto news sources, filtered by language, source and category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/news/v1/article/list",
+      "params": {
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "EN (default), ES, TR, FR, JP or PT.",
+          "enum": [
+            "EN",
+            "ES",
+            "TR",
+            "FR",
+            "JP",
+            "PT"
+          ]
+        },
+        "source_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated source keys; empty for every active source."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated categories to include."
+        },
+        "exclude_categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated categories to leave out."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles, 1-100; default 50.",
+          "example": 10
+        },
+        "to_ts": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only articles published at or before this Unix time."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      }
+    },
+    {
+      "id": "cryptocompare.admin.rate_limit",
+      "name": "Check the key's rate limit",
+      "summary": "Current usage against the key's rate limits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/admin/v2/rate/limit",
+      "notes": [
+        "Needs an API key, and the call itself counts against the limit; the X-RateLimit-* headers returned on responses give the same without a call."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://developers.coindesk.com/documentation/data-api/introduction",
+      "verified": {
+        "docs": "https://data-api.coindesk.com/info/v1/openapi"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    }
+  ]
+}

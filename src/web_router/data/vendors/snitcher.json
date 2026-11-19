@@ -1,0 +1,339 @@
+{
+  "vendor": "snitcher",
+  "name": "Snitcher",
+  "category": "analytics",
+  "summary": "B2B website visitor identification: the companies Snitcher identified from the IP addresses visiting your own website, with their sessions, page events and contacts.",
+  "docs_url": "https://docs.snitcher.com/product/rest-api/introduction",
+  "base_url": "https://api.snitcher.com/v1",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "SNITCHER_API_TOKEN"
+        ],
+        "description": "A Snitcher personal access token (app.snitcher.com > Settings > Account > API). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Reads your own workspaces only: companies are those identified on sites running the Snitcher tracker. There is no server-side lookup of an arbitrary IP; the real-time Spotter identification runs in the browser on authorised domains.",
+    "Rate limit: 60 requests a minute per token; 429 says Too Many Attempts.",
+    "Paging: page and size (1-1000); page x size may not exceed 25,000 rows, so narrow by date instead of paging deeper.",
+    "Revealing contact emails or phones, tags, custom fields and workspace settings are writes or spend reveal credits and are not in this entry."
+  ],
+  "sources": [
+    "https://docs.snitcher.com/llms.txt",
+    "https://docs.snitcher.com/product/rest-api/introduction",
+    "https://docs.snitcher.com/product/spotter/installation",
+    "https://docs.snitcher.com/api-reference/workspaces/get-the-users-workspaces",
+    "https://docs.snitcher.com/api-reference/organisations/list-organisations",
+    "https://docs.snitcher.com/api-reference/organisations/get-an-organisation",
+    "https://docs.snitcher.com/api-reference/sessions/overview-of-the-sessions-in-a-date-range",
+    "https://docs.snitcher.com/api-reference/sessions/overview-of-the-sessions-of-an-organisation",
+    "https://docs.snitcher.com/api-reference/contacts/get-contacts-for-an-organisation",
+    "https://docs.snitcher.com/api-reference/segments/list-all-segments-in-a-workspace",
+    "https://docs.snitcher.com/api-reference/workspaces/get-the-workspaces-contact-reveal-credit-balance"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "snitcher.workspaces.list",
+      "name": "List workspaces",
+      "summary": "The workspaces (tracked websites) your token can read, with their UUIDs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/workspaces",
+      "params": {
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page x size may not exceed 25,000 rows."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page, 1-1000."
+        }
+      },
+      "job": "analytics.accounts.list",
+      "docs_url": "https://docs.snitcher.com/api-reference/workspaces/get-the-users-workspaces",
+      "verified": {
+        "docs": "https://docs.snitcher.com/api-reference/workspaces/get-the-users-workspaces.md"
+      }
+    },
+    {
+      "id": "snitcher.organisations.list",
+      "name": "List identified companies",
+      "summary": "Companies identified visiting a workspace's site, optionally on a day or date range, by name or segment.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/workspaces/{workspaceUuid}/organisations",
+      "params": {
+        "workspaceUuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Workspace UUID, from snitcher.workspaces.list."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "One day (YYYY-MM-DD); not with date_from/date_to.",
+          "example": "2026-11-01"
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, inclusive."
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, inclusive."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name contains this text."
+        },
+        "segmentUuid": {
+          "in": "query",
+          "type": "string",
+          "description": "Only companies in this segment."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page x size may not exceed 25,000 rows."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page, 1-1000."
+        }
+      },
+      "job": "analytics.visitors.companies",
+      "docs_url": "https://docs.snitcher.com/api-reference/organisations/list-organisations",
+      "verified": {
+        "docs": "https://docs.snitcher.com/api-reference/organisations/list-organisations.md"
+      }
+    },
+    {
+      "id": "snitcher.organisations.get",
+      "name": "Get an identified company",
+      "summary": "One identified company and the details Snitcher holds on it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/workspaces/{workspaceUuid}/organisations/{organisationUuid}",
+      "params": {
+        "workspaceUuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Workspace UUID, from snitcher.workspaces.list."
+        },
+        "organisationUuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organisation UUID, from snitcher.organisations.list."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.snitcher.com/api-reference/organisations/get-an-organisation",
+      "verified": {
+        "docs": "https://docs.snitcher.com/api-reference/organisations/get-an-organisation.md"
+      }
+    },
+    {
+      "id": "snitcher.sessions.list",
+      "name": "List visit sessions",
+      "summary": "Visit sessions in a date range across all companies, with their events (pageviews, forms, clicks, downloads, custom events).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/workspaces/{workspaceUuid}/sessions",
+      "params": {
+        "workspaceUuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Workspace UUID, from snitcher.workspaces.list."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "One day (YYYY-MM-DD); not with date_from/date_to.",
+          "example": "2026-11-01"
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, inclusive."
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, inclusive."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Visited URL contains this text."
+        },
+        "referrer": {
+          "in": "query",
+          "type": "string",
+          "description": "Referrer contains this text."
+        },
+        "visitor_uuid": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this visitor's sessions (the tracker's anonymous_id)."
+        },
+        "segmentUuid": {
+          "in": "query",
+          "type": "string",
+          "description": "Only sessions matching this segment."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page x size may not exceed 25,000 rows."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page, 1-1000."
+        }
+      },
+      "notes": [
+        "date or date_from is required, or the call is a 400. Form-submit events can carry the values visitors typed."
+      ],
+      "job": "analytics.sessions",
+      "docs_url": "https://docs.snitcher.com/api-reference/sessions/overview-of-the-sessions-in-a-date-range",
+      "verified": {
+        "docs": "https://docs.snitcher.com/api-reference/sessions/overview-of-the-sessions-in-a-date-range.md"
+      }
+    },
+    {
+      "id": "snitcher.organisations.sessions",
+      "name": "List a company's sessions",
+      "summary": "One identified company's visit sessions with their events.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/workspaces/{workspaceUuid}/organisations/{organisationUuid}/sessions",
+      "params": {
+        "workspaceUuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Workspace UUID, from snitcher.workspaces.list."
+        },
+        "organisationUuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Organisation UUID, from snitcher.organisations.list."
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "One day (YYYY-MM-DD); not with date_from/date_to.",
+          "example": "2026-11-01"
+        },
+        "date_from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, inclusive."
+        },
+        "date_to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, inclusive."
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Visited URL contains this text."
+        },
+        "referrer": {
+          "in": "query",
+          "type": "string",
+          "description": "Referrer contains this text."
+        },
+        "visitor_uuid": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this visitor's sessions."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number; page x size may not exceed 25,000 rows."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows per page, 1-1000."
+        }
+      },
+      "job": "analytics.sessions",
+      "docs_url": "https://docs.snitcher.com/api-reference/sessions/overview-of-the-sessions-of-an-organisation",
+      "verified": {
+        "docs": "https://docs.snitcher.com/api-reference/sessions/overview-of-the-sessions-of-an-organisation.md"
+      }
+    },
+    {
+      "id": "snitcher.segments.list",
+      "name": "List segments",
+      "summary": "The saved company segments of a workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/workspaces/{workspaceUuid}/segments",
+      "params": {
+        "workspaceUuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Workspace UUID, from snitcher.workspaces.list."
+        }
+      },
+      "job": "analytics.segments",
+      "docs_url": "https://docs.snitcher.com/api-reference/segments/list-all-segments-in-a-workspace",
+      "verified": {
+        "docs": "https://docs.snitcher.com/api-reference/segments/list-all-segments-in-a-workspace.md"
+      }
+    },
+    {
+      "id": "snitcher.contact_credits.get",
+      "name": "Get contact reveal credits",
+      "summary": "Reveal credits available, used, and when the billing cycle resets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/workspaces/{workspaceUuid}/contact-credits",
+      "params": {
+        "workspaceUuid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Workspace UUID, from snitcher.workspaces.list."
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://docs.snitcher.com/api-reference/workspaces/get-the-workspaces-contact-reveal-credit-balance",
+      "verified": {
+        "docs": "https://docs.snitcher.com/api-reference/workspaces/get-the-workspaces-contact-reveal-credit-balance.md"
+      }
+    }
+  ]
+}

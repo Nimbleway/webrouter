@@ -1,0 +1,499 @@
+{
+  "vendor": "hg-insights",
+  "name": "HG Insights",
+  "category": "company-data",
+  "summary": "Technographics and IT spend intelligence: which products and vendors a company has installed, its IT spend by category, firmographics, corporate hierarchy, intent signals and contracts.",
+  "docs_url": "https://data-docs.hginsights.com/v2/guides/overview",
+  "base_url": "https://api.hginsights.com/data-api/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HG_API_KEY"
+        ],
+        "description": "An HG Insights v2 API key (admin.hginsights.com > Settings > API Keys, admin only; starts hg_v2_). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Needs an HG Platform subscription with credits. Enrich, hierarchy, intent and contract calls spend credits by the data returned; match, search, catalog and credits are free but need a positive balance. Out of credits answers 402.",
+    "Re-enriching the same company within the 12-month contract is free; intent calls are charged every time.",
+    "Rate limits by plan: Sandbox 2 requests a second and 1,000 a day, Standard 25 a second and 50,000 a day. A batch counts as one request. 429 comes with x-ratelimit-reset.",
+    "Company ids are hex strings; get them from hg-insights.companies.match or search, or pass domains."
+  ],
+  "sources": [
+    "https://data-docs.hginsights.com/llms.txt",
+    "https://data-docs.hginsights.com/v2/openapi.md",
+    "https://data-docs.hginsights.com/_bundle/v2/openapi.yaml",
+    "https://data-docs.hginsights.com/v2/guides/authentication.md",
+    "https://data-docs.hginsights.com/v2/guides/rate-limiting.md",
+    "https://data-docs.hginsights.com/v2/guides/credits-and-usage.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "hg-insights.companies.match",
+      "name": "Match companies",
+      "summary": "HG company records for up to 10 companies given by name, domain and/or country, best match first, in input order.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/companies/match",
+      "params": {
+        "companies": {
+          "in": "body",
+          "type": "array",
+          "description": "1-10 companies, each with at least one of name, domain, country (name or ISO alpha-2), and an optional customer_id echoed back.",
+          "required": true,
+          "example": [
+            {
+              "name": "Salesforce",
+              "domain": "salesforce.com"
+            }
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Matches per company, at most 10."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Free."
+      ],
+      "job": "company.match",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/companies/match_companies",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/companies/match_companies.md"
+      }
+    },
+    {
+      "id": "hg-insights.companies.enrich",
+      "name": "Enrich companies",
+      "summary": "Firmographics, installed technologies, IT spend, contracts and other data groups for up to 25 companies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/companies/enrich",
+      "params": {
+        "companies": {
+          "in": "body",
+          "type": "object",
+          "description": "The companies: {\"ids\": [hex HG ids]} or {\"domains\": [...]}, up to 25, never both.",
+          "required": true,
+          "example": {
+            "domains": [
+              "salesforce.com"
+            ]
+          }
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Data groups to return: firmographics, technographics, spend, ai_spend, contracts (needs the contracts entitlement), ai_maturity, cloud_maturity, mentions, statistics, market_benchmarks.",
+          "required": true,
+          "example": [
+            "firmographics",
+            "technographics"
+          ]
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional filters per group, e.g. {\"technographics\": {\"vendors\": {\"names\": [\"Salesforce\"]}, \"product_categories\": {\"names\": [\"CRM\"]}, \"country\": {\"codes\": [\"US\"]}}}; spend, ai_spend and mentions take their own filters."
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "Paging of the nested technographics, spend, ai_spend and mentions lists."
+        },
+        "contracts": {
+          "in": "body",
+          "type": "object",
+          "description": "Options for the contracts group."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Spends credits by the groups asked for and the data found; estimate first with hg-insights.companies.enrich_estimate."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/companies/enrich_companies",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/companies/enrich_companies.md"
+      }
+    },
+    {
+      "id": "hg-insights.companies.enrich_estimate",
+      "name": "Estimate an enrichment's credits",
+      "summary": "The maximum credits an enrich request would spend, the balance, and whether it suffices, without returning data.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/companies/enrich/estimate",
+      "params": {
+        "companies": {
+          "in": "body",
+          "type": "object",
+          "description": "The companies: {\"ids\": [hex HG ids]} or {\"domains\": [...]}, up to 25, never both.",
+          "required": true,
+          "example": {
+            "domains": [
+              "salesforce.com"
+            ]
+          }
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Data groups to return: firmographics, technographics, spend, ai_spend, contracts (needs the contracts entitlement), ai_maturity, cloud_maturity, mentions, statistics, market_benchmarks.",
+          "required": true,
+          "example": [
+            "firmographics",
+            "technographics"
+          ]
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "The same filters as the enrich call."
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "The same paging of nested technographics, spend, ai_spend and mentions lists as the enrich call."
+        },
+        "contracts": {
+          "in": "body",
+          "type": "object",
+          "description": "The same contracts options as the enrich call: filters (active_only, vendor_names up to 10), limit and offset per company."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Free. Send the same body as the enrich call."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/companies/estimate_companies_enrich",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/companies/estimate_companies_enrich.md"
+      }
+    },
+    {
+      "id": "hg-insights.companies.search",
+      "name": "Search companies",
+      "summary": "Companies matching firmographic, installed-product, spend, intent, hierarchy, AI-maturity or scoring filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/companies/search",
+      "params": {
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Fields to return: id, name, domain, domain_normalized.",
+          "required": true,
+          "example": [
+            "id",
+            "name",
+            "domain"
+          ]
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filter groups: firmographics (country_codes, employees, revenue, industries, naics_codes, sic_codes, company_level, ...), installs (products, vendors, product_categories), spend, ai_spend, intent, corporate_hierarchy, company_identifiers, scoring. List items take {\"ids\": [...], \"inclusion_method\": \"ANY_PRESENT\"}.",
+          "required": true,
+          "example": {
+            "firmographics": {
+              "country_codes": [
+                {
+                  "ids": [
+                    "US"
+                  ],
+                  "inclusion_method": "ANY_PRESENT"
+                }
+              ],
+              "employees": {
+                "min": 1000
+              }
+            },
+            "installs": {
+              "vendors": [
+                {
+                  "ids": [
+                    316
+                  ],
+                  "inclusion_method": "ANY_PRESENT"
+                }
+              ]
+            }
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Companies to return, at most 100."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Companies to skip, at most 24,999."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort objects, e.g. [{\"field\": \"name\", \"direction\": \"ASC\"}]."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Free. Results stop at 25,000 per query: segment with filters. Vendor and product ids come from hg-insights.products.search and hg-insights.catalog.vendors."
+      ],
+      "job": "company.search",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/companies/search_companies_v2",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/companies/search_companies_v2.md"
+      }
+    },
+    {
+      "id": "hg-insights.companies.hierarchy",
+      "name": "Get corporate hierarchy",
+      "summary": "A company's corporate family as a tree or flat list: the whole group, its children, or its parents up to the group HQ.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/companies/hierarchy",
+      "params": {
+        "hierarchy": {
+          "in": "body",
+          "type": "object",
+          "description": "The company: {\"id\": ...} or {\"domain\": ...}.",
+          "required": true,
+          "example": {
+            "domain": "salesforce.com"
+          }
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "full (whole group from the group HQ), children (below the company) or parents (chain up to the group HQ).",
+          "required": true,
+          "enum": [
+            "full",
+            "children",
+            "parents"
+          ]
+        },
+        "format": {
+          "in": "body",
+          "type": "string",
+          "description": "tree (default) or list; the countries, regions and tiers filters need list.",
+          "enum": [
+            "tree",
+            "list"
+          ]
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional: countries, regions, tiers (list format only), max_tier (both formats)."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Spends credits by the data returned."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/companies/company_hierarchy",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/companies/company_hierarchy.md"
+      }
+    },
+    {
+      "id": "hg-insights.intent.enrich",
+      "name": "Get intent signals",
+      "summary": "Topic-based intent and buyer-intent activities for one company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/intent/enrich",
+      "params": {
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "The company: {\"id\": hex HG id} or {\"domain\": ...}, exactly one.",
+          "required": true,
+          "example": {
+            "domain": "salesforce.com"
+          }
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Sections: summary, topics, activities; summary alone is free.",
+          "example": [
+            "summary"
+          ]
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional filters to narrow the results."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records per section, at most 200."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records to skip per section."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Charged per topic and activity record returned, on every call; ask for fields [\"summary\"] first for a free overview."
+      ],
+      "job": "company.intent",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/intent/intent_enrich",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/intent/intent_enrich.md"
+      }
+    },
+    {
+      "id": "hg-insights.technographics.time_series",
+      "name": "Get technology usage over time",
+      "summary": "Monthly usage intensity per product for one company, as dense time series.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/technographics/time-series",
+      "params": {
+        "company": {
+          "in": "body",
+          "type": "object",
+          "description": "The company: {\"id\": hex HG id} or {\"domain\": ...}, exactly one.",
+          "required": true,
+          "example": {
+            "domain": "salesforce.com"
+          }
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional product filters."
+        },
+        "max_products": {
+          "in": "body",
+          "type": "integer",
+          "description": "Products to return, at most 50."
+        },
+        "time_range": {
+          "in": "body",
+          "type": "object",
+          "description": "Optional time range."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/time-series/technographics_time_series",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/time-series/technographics_time_series.md"
+      }
+    },
+    {
+      "id": "hg-insights.products.search",
+      "name": "Search the product catalog",
+      "summary": "Products HG tracks, with vendor and category, by name and other filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/products/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Product filters; vendor_id/vendor_ids and category_id/category_ids are mutually exclusive."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Products to return, at most 100."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Products to skip."
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort objects."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Free."
+      ],
+      "job": "reference.products",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/products/v2_search_products",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/products/v2_search_products.md"
+      }
+    },
+    {
+      "id": "hg-insights.catalog.vendors",
+      "name": "List technology vendors",
+      "summary": "Vendors in HG's catalog, optionally by name, with their ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/catalog/vendors",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Name contains, case-insensitive.",
+          "example": "Salesforce"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, default 10."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip."
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "reference.vendors",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/catalog/v2_list_vendors",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/catalog/v2_list_vendors.md"
+      }
+    },
+    {
+      "id": "hg-insights.credits.get",
+      "name": "Get credit balance",
+      "summary": "Credit balance, contract dates and data entitlements of the organisation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credits",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://data-docs.hginsights.com/v2/openapi/credits/get_credits",
+      "verified": {
+        "docs": "https://data-docs.hginsights.com/v2/openapi/credits/get_credits.md"
+      }
+    }
+  ]
+}

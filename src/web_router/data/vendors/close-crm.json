@@ -1,0 +1,672 @@
+{
+  "vendor": "close-crm",
+  "name": "Close",
+  "category": "analytics",
+  "summary": "A Close CRM organization: leads, contacts, opportunities, activities and tasks, advanced-filter search, and activity and pipeline reports.",
+  "docs_url": "https://developer.close.com/api/overview",
+  "pricing_url": "https://www.close.com/pricing",
+  "base_url": "https://api.close.com/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CLOSE_API_KEY"
+        ],
+        "description": "a Close API key (Settings > Developer > API Keys); it acts as its user in one organization"
+      }
+    },
+    "basic": {
+      "username": "{api_key}",
+      "password": ""
+    }
+  },
+  "notes": [
+    "Ids carry a type prefix: lead_, cont_, oppo_, user_, orga_, stat_, save_.",
+    "List calls page with _limit and _skip; advanced-filter search pages with a cursor that expires after 30 seconds. Custom field values appear as custom.cf_... keys.",
+    "Rate limits are per endpoint group, per API key, with an organization limit three times higher. On 429 wait the rate_reset seconds the answer gives; the RateLimit header shows limit, remaining and reset.",
+    "Money values (opportunity value, revenue) are in cents."
+  ],
+  "sources": [
+    "https://developer.close.com/api/overview",
+    "https://developer.close.com/api/overview/api-key-authentication",
+    "https://developer.close.com/api/overview/rate-limits",
+    "https://developer.close.com/api/overview/pagination",
+    "https://developer.close.com/api/resources/reporting",
+    "https://developer.close.com/openapi.json",
+    "https://developer.close.com/api/resources/advanced-filtering"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "close-crm.me",
+      "name": "Get the key's user",
+      "summary": "The API key's user with their id and organization ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/me/",
+      "params": {
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma separated."
+        }
+      },
+      "job": "account.validate",
+      "docs_url": "https://developer.close.com/api/resources/users/get-me",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/users/get-me"
+      }
+    },
+    {
+      "id": "close-crm.leads.list",
+      "name": "List leads",
+      "summary": "Leads (companies) the key can see, most recently updated first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lead/",
+      "params": {
+        "_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 200; 100 when omitted."
+        },
+        "_skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, for paging (at most 250,000; 35,000 for some organizations)."
+        },
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma separated; _all adds optional ones such as primary_email."
+        }
+      },
+      "notes": [
+        "Comes from the search index, so very recent changes may be missing. To filter, use close-crm.search."
+      ],
+      "job": "crm.companies.list",
+      "docs_url": "https://developer.close.com/api/resources/leads/list",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/leads/list"
+      }
+    },
+    {
+      "id": "close-crm.leads.get",
+      "name": "Get a lead",
+      "summary": "One lead with its contacts, opportunities, tasks and custom fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lead/{id}/",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The lead id (lead_...)."
+        },
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma separated; _all adds optional ones such as primary_email."
+        }
+      },
+      "job": "crm.companies.get",
+      "docs_url": "https://developer.close.com/api/resources/leads/get",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/leads/get"
+      }
+    },
+    {
+      "id": "close-crm.contacts.list",
+      "name": "List contacts",
+      "summary": "Contacts, newest first, for the organization or one lead.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/contact/",
+      "params": {
+        "_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 1000; 100 when omitted."
+        },
+        "_skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, for paging (at most 15,000)."
+        },
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma separated."
+        },
+        "lead_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only contacts on this lead. Required when the key's user lacks the View All Leads permission."
+        }
+      },
+      "job": "crm.contacts.list",
+      "docs_url": "https://developer.close.com/api/resources/contacts/list",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/contacts/list"
+      }
+    },
+    {
+      "id": "close-crm.opportunities.list",
+      "name": "List opportunities",
+      "summary": "Deals filtered by owner, status, value period and dates, with totals across all matches.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opportunity/",
+      "params": {
+        "_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; 100 when omitted, at most 250 with an API key."
+        },
+        "_skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, for paging (at most 250,000)."
+        },
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma separated."
+        },
+        "lead_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only opportunities on this lead."
+        },
+        "user_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only opportunities owned by this user or group id."
+        },
+        "status_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this status id."
+        },
+        "status_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only statuses of this type: active, won or lost.",
+          "enum": [
+            "active",
+            "won",
+            "lost"
+          ]
+        },
+        "status_label": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this status label, case-insensitive."
+        },
+        "date_won__gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Won on or after this date (YYYY-MM-DD)."
+        },
+        "date_won__lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Won on or before this date (YYYY-MM-DD)."
+        },
+        "date_created__gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Created at or after this time; ISO 8601 date or time; no offset means UTC."
+        },
+        "date_created__lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Created at or before this time; ISO 8601 date or time; no offset means UTC."
+        },
+        "date_updated__gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated at or after this time; ISO 8601 date or time; no offset means UTC."
+        },
+        "value_period": {
+          "in": "query",
+          "type": "string",
+          "description": "one_time, monthly or annual.",
+          "enum": [
+            "one_time",
+            "monthly",
+            "annual"
+          ]
+        },
+        "lead_saved_search_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only opportunities on leads in this lead Smart View (save_...)."
+        },
+        "is_stalled": {
+          "in": "query",
+          "type": "string",
+          "description": "true for stalled opportunities only, false for the others.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "_order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "date_won, date_updated, date_created, confidence, user_name, value, annualized_value or annualized_expected_value; prefix - for descending."
+        },
+        "_group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Group by user_id, date_won__week, date_won__month, date_won__quarter or date_won__year; data then holds groups."
+        }
+      },
+      "notes": [
+        "Values are in cents. The answer also carries totals over every match (total_results, total_value_one_time, total_value_monthly, total_value_annual...)."
+      ],
+      "job": "crm.deals.list",
+      "docs_url": "https://developer.close.com/api/resources/opportunities/list",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/opportunities/list"
+      }
+    },
+    {
+      "id": "close-crm.activities.list",
+      "name": "List activities",
+      "summary": "Calls, emails, notes, meetings, SMS and status changes, by lead, contact, user, type or date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/activity/",
+      "params": {
+        "_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 100; 100 when omitted."
+        },
+        "_skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, for paging (at most 250,000)."
+        },
+        "lead_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Lead ids, comma separated."
+        },
+        "contact_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Contact ids, comma separated."
+        },
+        "user_id": {
+          "in": "query",
+          "type": "string",
+          "description": "User ids, comma separated."
+        },
+        "_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Activity types, comma separated, e.g. Call, Email, Note, Meeting, SMS, LeadStatusChange."
+        },
+        "date_created__gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Created at or after this time."
+        },
+        "date_created__lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Created at or before this time."
+        },
+        "activity_at__gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Happened at or after this time."
+        },
+        "activity_at__lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Happened at or before this time."
+        },
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma separated."
+        }
+      },
+      "notes": [
+        "Some filters (user_id, contact_id, several types) only work together with a single lead_id."
+      ],
+      "job": "crm.activities.list",
+      "docs_url": "https://developer.close.com/api/resources/activities",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/activities"
+      }
+    },
+    {
+      "id": "close-crm.tasks.list",
+      "name": "List tasks",
+      "summary": "Tasks and inbox items, filtered by assignee, lead, completion, type or due date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/task/",
+      "params": {
+        "_limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, up to 1000; 100 when omitted."
+        },
+        "_skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, for paging."
+        },
+        "assigned_to": {
+          "in": "query",
+          "type": "string",
+          "description": "Only tasks assigned to this user id."
+        },
+        "lead_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only tasks on this lead."
+        },
+        "is_complete": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for completed, false for open tasks."
+        },
+        "_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Task type; lead (tasks on a lead) when omitted, all for every inbox item.",
+          "enum": [
+            "all",
+            "lead",
+            "outgoing_call",
+            "draft_email",
+            "draft_sms",
+            "incoming_email",
+            "lead_suggestion_incoming_email",
+            "incoming_sms",
+            "incoming_whatsapp_message",
+            "missed_call",
+            "voicemail",
+            "opportunity_due",
+            "answered_detached_call",
+            "email_followup",
+            "opportunities_awaiting_action_notification"
+          ]
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "description": "inbox (open, due by today), future (open, due later) or archive (completed).",
+          "enum": [
+            "inbox",
+            "future",
+            "archive"
+          ]
+        },
+        "date__gte": {
+          "in": "query",
+          "type": "string",
+          "description": "Due on or after this date or time; ISO 8601 date or time; no offset means UTC."
+        },
+        "date__lte": {
+          "in": "query",
+          "type": "string",
+          "description": "Due on or before this date or time; ISO 8601 date or time; no offset means UTC."
+        },
+        "_order_by": {
+          "in": "query",
+          "type": "string",
+          "description": "date, due_date, date_created or date_updated; prefix - for descending. -date_created when omitted."
+        },
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, comma separated."
+        }
+      },
+      "job": "crm.tasks.list",
+      "docs_url": "https://developer.close.com/api/resources/tasks/list",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/tasks/list"
+      }
+    },
+    {
+      "id": "close-crm.search",
+      "name": "Search with advanced filters",
+      "summary": "Leads, contacts, opportunities, activities or tasks matching a filter tree, the query language behind Smart Views.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/data/search/",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The filter tree: an and query holding an object_type query and field_condition queries.",
+          "example": {
+            "type": "and",
+            "queries": [
+              {
+                "type": "object_type",
+                "object_type": "contact"
+              },
+              {
+                "type": "field_condition",
+                "field": {
+                  "type": "regular_field",
+                  "object_type": "contact",
+                  "field_name": "title"
+                },
+                "condition": {
+                  "type": "text",
+                  "mode": "full_words",
+                  "value": "CEO"
+                }
+              }
+            ]
+          }
+        },
+        "_fields": {
+          "in": "body",
+          "type": "object",
+          "description": "Fields to return per object type, e.g. {\"lead\": [\"id\", \"display_name\"]}. Without it only ids come back."
+        },
+        "_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page; 10 when omitted."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "The cursor from the previous page; it expires after 30 seconds."
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort fields; sort by something stable such as date_created when paging."
+        },
+        "include_counts": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Add the number of matches as count."
+        },
+        "results_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most results across all pages; 0 with include_counts only counts."
+        }
+      },
+      "notes": [
+        "A POST that only searches; it changes no data.",
+        "Field names and conditions are listed on the Advanced Filtering Fields page; custom fields are custom.cf_..."
+      ],
+      "job": "crm.search",
+      "docs_url": "https://developer.close.com/api/resources/advanced-filtering/search",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/advanced-filtering/search"
+      }
+    },
+    {
+      "id": "close-crm.reports.activity",
+      "name": "Get an activity report",
+      "summary": "Calls, emails, meetings and other activity metrics per period (overview) or per user (comparison).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/report/activity/",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "overview (per time period) or comparison (per user).",
+          "enum": [
+            "overview",
+            "comparison"
+          ]
+        },
+        "metrics": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Metric names from close-crm.reports.activity_metrics.",
+          "example": [
+            "calls.outbound.all.count",
+            "emails.sent.all.count"
+          ]
+        },
+        "datetime_range": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"start\": ISO time, \"end\": ISO time}. Give this or relative_range.",
+          "example": {
+            "start": "2026-11-01T00:00:00Z",
+            "end": "2026-11-08T00:00:00Z"
+          }
+        },
+        "relative_range": {
+          "in": "body",
+          "type": "string",
+          "description": "Named range instead of datetime_range.",
+          "enum": [
+            "today",
+            "this-week",
+            "this-month",
+            "this-quarter",
+            "this-year",
+            "yesterday",
+            "last-week",
+            "last-month",
+            "last-quarter",
+            "last-year",
+            "all-time"
+          ]
+        },
+        "query": {
+          "in": "body",
+          "type": "object",
+          "description": "Limit to a Smart View: {\"type\": \"saved_search\", \"saved_search_id\": \"save_...\"}."
+        },
+        "users": {
+          "in": "body",
+          "type": "array",
+          "description": "User ids to limit the report to."
+        }
+      },
+      "notes": [
+        "A POST that only reads a report.",
+        "Durations are in seconds and revenue in cents."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://developer.close.com/api/resources/reporting/get-activity",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/reporting/get-activity"
+      }
+    },
+    {
+      "id": "close-crm.reports.activity_metrics",
+      "name": "List activity report metrics",
+      "summary": "The metric names an activity report accepts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/report/activity/metrics/",
+      "params": {},
+      "job": "analytics.metadata",
+      "docs_url": "https://developer.close.com/api/resources/reporting/list-activity-metrics",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/reporting/list-activity-metrics"
+      }
+    },
+    {
+      "id": "close-crm.reports.opportunity_statuses",
+      "name": "Get the opportunity status report",
+      "summary": "Per status: opportunities at the start and end of a period, and the moves in and out, overall or for a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/report/statuses/opportunity/{org_id}/",
+      "params": {
+        "org_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The organization id (orga_...), from close-crm.me."
+        },
+        "date_start": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of the period; overall when the range is omitted."
+        },
+        "date_end": {
+          "in": "query",
+          "type": "string",
+          "description": "End of the period."
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "A search query limiting the opportunities; not with smart_view_id."
+        },
+        "smart_view_id": {
+          "in": "query",
+          "type": "string",
+          "description": "A Smart View limiting the opportunities; not with query."
+        },
+        "user_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this user's opportunities."
+        }
+      },
+      "notes": [
+        "Values are in cents."
+      ],
+      "job": "crm.pipelines.report",
+      "docs_url": "https://developer.close.com/api/resources/reporting/get-opportunity-statuses",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/reporting/get-opportunity-statuses"
+      }
+    },
+    {
+      "id": "close-crm.pipelines.list",
+      "name": "List pipelines",
+      "summary": "Every opportunity pipeline with its ordered statuses.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pipeline/",
+      "params": {},
+      "job": "crm.pipelines",
+      "docs_url": "https://developer.close.com/api/resources/pipelines/list",
+      "verified": {
+        "docs": "https://developer.close.com/api/resources/pipelines/list"
+      }
+    }
+  ]
+}
