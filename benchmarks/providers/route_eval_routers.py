@@ -19,8 +19,9 @@ from pathlib import Path
 from typing import Any
 
 from _tools_effort_plan import EXTRACT
+from route_eval_fitted import FITTED, fitted_router
 from route_eval_merge import request_for
-from route_eval_paths import MIXED, RESEARCH, path_router
+from route_eval_paths import MIXED, RESEARCH, SEP, path_router
 from route_eval_rank import cost_key, cost_of, latency_key
 from route_eval_sets import Question
 
@@ -59,7 +60,7 @@ read on a mixed set, to order its read and research paths.
 """
 
 MSG_BAD_ROUTER = (
-    "{spec!r}: a router is static, oracle, always:<backend> (always:<path> on a mixed set), router:<name>, "
+    "{spec!r}: a router is static, oracle, fitted, always:<backend> (always:<path> on a mixed set), router:<name>, "
     "module:attr or path/file.py:attr"
 )
 MSG_NAMED_NO_PROMPT = (
@@ -79,8 +80,8 @@ def static_router(method: str) -> Router:
         return path_router(STATIC_ORDER)
     order = STATIC_ORDER.get(method, ())
 
-    def route(q: Question) -> list[str]:
-        return [p for p in order if p in q.rows] + [p for p in q.candidates if p not in order]
+    def route(q: Question) -> list[str]:  # backends only: a vendor mode runs where a router ranks it
+        return [p for p in order if p in q.rows] + [p for p in q.candidates if p not in order and SEP not in p]
 
     return route
 
@@ -153,6 +154,8 @@ def load_router(spec: str, method: str) -> Router:
         return static_router(method)
     if spec == ORACLE:
         return oracle_router(method)
+    if spec == FITTED:
+        return fitted_router(method)
     if spec.startswith(ALWAYS):
         return always_router(spec.removeprefix(ALWAYS))
     if spec.startswith(NAMED):
