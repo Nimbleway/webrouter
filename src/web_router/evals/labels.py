@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
 
@@ -22,6 +22,14 @@ class EndpointLabel:
     name: ClassVar[str]
     model: str
     base_url: str | None
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """A subclass that sets no ``name`` of its own is labelled by its class, ``GradingFails(openai)``: it may
+        grade differently, so its figures must not combine with its parent's. One that grades exactly as its
+        parent (one that only meters, say) says so by setting ``name`` to the parent's."""
+        super().__init_subclass__(**kwargs)
+        if "name" not in cls.__dict__ and getattr(cls, "name", None):
+            cls.name = f"{cls.__name__}({cls.name})"
 
     @property
     def label(self) -> str:

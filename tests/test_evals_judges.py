@@ -178,3 +178,12 @@ def test_a_model_that_refuses_a_fixed_temperature_gets_none(model: str) -> None:
     """gpt-6-luna answers temperature=0 with a 400 ("only the default (1) value is supported")."""
     assert OpenAIJudge(model, api_key="k").temperature is None
     assert OpenAIJudge("gpt-4o", api_key="k").temperature == 0.0
+
+
+def test_a_subclass_with_no_name_of_its_own_is_labelled_by_its_class() -> None:
+    """It may grade differently, so its figures must not combine with the built-in judge's."""
+    changed = type("GradingFails", (OpenAIJudge,), {})
+    same = type("Metered", (OpenAIJudge,), {"name": OpenAIJudge.name})
+    assert changed("gpt-4o", api_key="k").label == "GradingFails(openai):gpt-4o"
+    assert same("gpt-4o", api_key="k").label == "openai:gpt-4o"
+    assert type("Mine", (LiteLLMJudge,), {})("openai/x").label == "Mine(litellm):openai/x"

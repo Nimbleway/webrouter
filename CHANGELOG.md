@@ -36,7 +36,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Changed
 
 - `OpenAIJudge` leaves the `gpt-6` family at its default temperature, as it does `gpt-5`: `gpt-6-luna` answers `temperature=0` with a 400.
-- A judge failure in an `evaluate()` row reads `the judge failed at synthesis: …` (or `grading`), and the benchmark scans grade one test answer before any search, so a judge that cannot run stops the scan before anything is billed.
+- A judge failure in an `evaluate()` row reads `the judge failed at synthesis: …` (or `grading`), and the benchmark scans grade one test answer before any search (retried once after 10 s, so a busy model host does not cancel the scan), so a judge that cannot run stops the scan before anything is billed. A subclass of a built-in judge that sets no `name` is labelled by its class, as in `GradingFails(openai):gpt-4o`.
 - A judge pointed at another endpoint (`base_url`) adds the host to its label, as in `openai:glm-5@models.example.com`, so its figures never combine with the vendor's own.
 - Data API discovery no longer takes "close", "contact", "here", "reverse" or "tomorrow" alone as naming a data API, so an everyday search such as "weather in paris tomorrow" lists none; `close crm`, `here maps`, `reverse contact` and `tomorrow io` still name theirs.
 

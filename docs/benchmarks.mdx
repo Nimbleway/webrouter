@@ -213,7 +213,11 @@ report = router.evaluate(dataset, judge=MyJudge())
 
 `evaluate()` calls the judge's `check()` before the first search, so override
 it to raise on a setup that cannot work — the built-in judges raise there on a
-missing SDK or key.
+missing SDK or key. A subclass of a built-in judge that sets no `name`
+of its own is labelled by its class (`GradingFails(openai):gpt-4o`), since it may
+grade differently; set `name` to the parent's only when it grades exactly as
+the parent does. Claude models may reply with a thinking block before the text:
+read the reply's text blocks, not its first block.
 
 ### Scoring an answer with no gold one
 

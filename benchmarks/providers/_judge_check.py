@@ -8,6 +8,7 @@ scan searches every question and only then finds every row failed at the judge.
 from __future__ import annotations
 
 import argparse
+import asyncio
 from typing import Any
 
 from web_router.constants_evals import EVALS_DEFAULT_JUDGE_SPEC, EVALS_JUDGE_SPEC_HELP
@@ -15,14 +16,25 @@ from web_router.evals import Judge, judge_from
 
 JUDGE_PROBE = ("What is 2 + 2?", "4", "4")
 """One question the judge must grade before any backend is asked, so a judge that cannot run costs no search."""
+PROBE_RETRY_SECONDS = 10.0
+"""The wait before the test grade's one retry: long enough for a model host's brief 429 or 503 to pass."""
 MSG_JUDGE_FAILED = "The judge could not grade a test answer, so no backend was asked: {error}"
 
 
 async def check_judge(judge: Any) -> None:
-    """Check the judge's setup, then grade one known answer; any failure closes it and stops the scan."""
+    """Check the judge's setup, then grade one known answer; any failure closes it and stops the scan.
+
+    A setup failure (no SDK, no key) stops at once. A failed test grade is tried
+    once more after ``PROBE_RETRY_SECONDS``: a busy model host should not cancel a
+    scan, while a retired model or a refused parameter fails both times.
+    """
     try:
         judge.check()
-        await judge.agrade(*JUDGE_PROBE)
+        try:
+            await judge.agrade(*JUDGE_PROBE)
+        except Exception:  # once more: a busy host recovers, a dead model fails again and stops below
+            await asyncio.sleep(PROBE_RETRY_SECONDS)
+            await judge.agrade(*JUDGE_PROBE)
     except Exception as exc:  # whatever the judge's SDK raises, the scan must stop on it
         await judge.aclose()
         raise SystemExit(MSG_JUDGE_FAILED.format(error=exc)) from exc
