@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-377 vendors, 2739 endpoints.
+382 vendors, 2766 endpoints.
 
 ### advertising
 
@@ -401,13 +401,18 @@ Maps, places, routing and geolocation.
 | [API Ninjas](https://api-ninjas.com/api) `apininjas` | One key for many small reference-data APIs: WHOIS and DNS, IP geolocation, sanctions screening, earnings call transcripts, geocoding and more. | 8 read | key in header | `APININJAS_API_KEY` | docs 2026-11-09 |
 | [ArcGIS Online](https://developers.arcgis.com/rest/users-groups-and-items/search/) `arcgis` | Search ArcGIS Online's public content (feature layers, map services, web maps, datasets) and read an item's metadata and data. | 4 read | key in query | `ARCGIS_API_KEY` | docs 2026-11-09 |
 | [Foursquare Places API](https://docs.foursquare.com/fsq-developers-places/reference/places-api-overview) `foursquare` | Search 100M+ points of interest by name, category or location, and read a place's details, tips and photos. | 6 read | key in header | `FOURSQUARE_API_KEY` | docs 2026-11-09 |
+| [Geoapify](https://apidocs.geoapify.com/) `geoapify` | Geocoding, address autocomplete, points of interest by category, place details and turn-by-turn routing, built on OpenStreetMap data. | 6 read | key in query | `GEOAPIFY_API_KEY` | docs 2026-11-16 |
 | [Google Business Profile](https://developers.google.com/my-business) `google-business-profile` | Your Google Business Profile locations and their customer reviews. | 3 read | OAuth refresh token | `GOOGLE_BUSINESS_PROFILE_CLIENT_ID`, `GOOGLE_BUSINESS_PROFILE_CLIENT_SECRET`, `GOOGLE_BUSINESS_PROFILE_REFRESH_TOKEN` | docs 2026-11-08 |
 | [Google Maps Platform](https://developers.google.com/maps/documentation) `google-maps` | Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups. | 6 read | key in query | `GOOGLE_MAPS_API_KEY` | docs 2026-11-09 |
 | [GraphHopper Directions API](https://docs.graphhopper.com/) `graphhopper` | Routing, distance matrices, isochrones and geocoding on OpenStreetMap data. | 5 read | key in query | `GRAPHHOPPER_API_KEY` | docs 2026-11-09 |
+| [HERE](https://docs.here.com/geocoding-and-search/docs/introduction-to-here-geocoding-search-api-v7) `here-maps` | HERE Geocoding & Search v7 (geocode, reverse geocode, place search by text or category, lookup by id) and Routing v8 (traffic-aware routes for cars, trucks, walking and more). | 6 read | key in query | `HERE_API_KEY` | docs 2026-11-16 |
 | [ipapi.is](https://ipapi.is/developers.html) `ipapiis` | IP address intelligence: geolocation, ASN, owning company and abuse contact, and VPN, proxy, Tor, datacenter and crawler detection. | 3 read | key in query | `IPAPI_IS_API_KEY` | docs 2026-11-09 |
+| [ipdata](https://docs.ipdata.co/docs/getting-started) `ipdata` | IP geolocation with ASN, company, mobile carrier, time zone, currency and threat data (Tor, proxy, VPN, datacenter, known attacker or abuser, blocklists), plus detailed ASN records. | 3 read | key in query | `IPDATA_API_KEY` | docs 2026-11-16 |
 | [IPinfo](https://ipinfo.io/developers/ipinfo-api) `ipinfo` | IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans. | 3 read | key in header | `IPINFO_TOKEN` | docs 2026-11-09 |
 | [Mapbox](https://docs.mapbox.com/api/overview/) `mapbox` | Geocoding, place and POI search, driving/walking/cycling directions, travel-time matrices and isochrones. | 8 read | key in query | `MAPBOX_ACCESS_TOKEN` | docs 2026-11-09 |
 | [Mapillary](https://www.mapillary.com/developer/api-documentation) `mapillary` | Street-level imagery from Meta's Mapillary: find geotagged photos by area, point, sequence or creator, and map features (signs, objects) detected in them. | 6 read | key in header | `MAPILLARY_ACCESS_TOKEN` | docs 2026-11-09 |
+| [TomTom](https://docs.tomtom.com/search-api/documentation/product-information/introduction) `tomtom` | TomTom's Search API (free-text and POI search, nearby places, geocoding, reverse geocoding) and Routing API (traffic-aware routes for cars, trucks, bikes and walking). | 5 read | key in query | `TOMTOM_API_KEY` | docs 2026-11-16 |
+| [Yelp Fusion](https://docs.developer.yelp.com/docs/places-authentication) `yelp` | Yelp's Places API (Fusion): search local businesses by term, location, category and price, match a known business, and read its details, hours and review excerpts. | 7 read | key in header | `YELP_API_KEY` | docs 2026-11-16 |
 
 ### environment
 
