@@ -171,3 +171,23 @@ def test_live_extract_returns_page_content() -> None:
 
     assert response.provider == "exa"
     assert response.documents[0].content
+
+
+def test_the_page_status_exa_reports_for_a_failed_url_is_kept_so_a_gone_page_reads_as_target(
+    extractor: ExaExtractProvider,
+) -> None:
+    gone, blocked = "https://gone.example", "https://blocked.example"
+    payload = {
+        "results": [],
+        "statuses": [
+            {"id": gone, "status": "error", "error": {"tag": "CRAWL_NOT_FOUND", "httpStatusCode": 404}},
+            {"id": blocked, "status": "error", "error": {"tag": "CRAWL_TIMEOUT", "httpStatusCode": None}},
+        ],
+    }
+
+    failures = extractor._to_response(ExtractRequest(urls=[gone, blocked]), [gone, blocked], payload).failures
+
+    assert [(f.url, f.error, f.status_code, f.kind) for f in failures] == [
+        (gone, "CRAWL_NOT_FOUND", 404, "target"),
+        (blocked, "CRAWL_TIMEOUT", None, "upstream"),
+    ]
