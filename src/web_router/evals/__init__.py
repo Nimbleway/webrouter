@@ -6,11 +6,16 @@ test set, or a CSV of your own -- through several providers, has a
 against the gold, and reports a score per provider. The judge is a model, and
 the report names it: accuracy here is that model's judgment of that
 backend's retrieval, comparable with figures the same judge produced.
+:func:`judge_from` picks a judge by name, a :class:`Judge` subclass of your own
+included, and a :class:`Scorer` rates answers that have no gold one.
 """
 
 from web_router.evals.datasets import Dataset, Question
 from web_router.evals.judge import AnthropicJudge, Judge, OpenAIJudge
+from web_router.evals.judge_litellm import LiteLLMJudge
+from web_router.evals.judges import judge_from
 from web_router.evals.run import aevaluate, evaluate
+from web_router.evals.scorer import Scorecard, Scorer
 from web_router.evals.types import EvaluationReport, EvaluationRow, FailedAt, Grade, ProviderScore
 
 __all__ = [
@@ -21,9 +26,13 @@ __all__ = [
     "FailedAt",
     "Grade",
     "Judge",
+    "LiteLLMJudge",
     "OpenAIJudge",
     "ProviderScore",
     "Question",
+    "Scorecard",
+    "Scorer",
     "aevaluate",
     "evaluate",
+    "judge_from",
 ]

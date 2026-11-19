@@ -50,7 +50,8 @@ from _questions import (
 from answer_report import BASELINE_KEYS, check_baseline, markdown, stated_cost, stated_tokens, summarize
 
 from web_router import AsyncWebRouter
-from web_router.evals import Dataset, OpenAIJudge
+from web_router.constants_evals import EVALS_DEFAULT_JUDGE_SPEC, EVALS_JUDGE_SPEC_HELP
+from web_router.evals import Dataset, Judge, judge_from
 from web_router.exceptions import WebRouterError
 from web_router.registry_answer import configured_answer_providers
 
@@ -65,7 +66,7 @@ MSG_NO_PROVIDERS = "No answer backend is configured: set a key for one (see .env
 
 
 async def answer_row(
-    router: AsyncWebRouter, judge: OpenAIJudge, dataset: Dataset, provider: str, question: str, target: str
+    router: AsyncWebRouter, judge: Judge, dataset: Dataset, provider: str, question: str, target: str
 ) -> dict[str, Any]:
     """One backend's answer to one question, graded -- or why it was not.
 
@@ -123,7 +124,7 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
     providers = setup["providers"]
     print(f"{len(providers)} answer backends x {len(dataset)} questions -> {args.out}: {', '.join(providers)}")
     labels = [label for label, _ in setup["breakdowns"]]
-    judge = OpenAIJudge()
+    judge = judge_from(args.judge)
     judge.check()
     await check_judge(judge)
     setup["judge"] = judge.label
@@ -156,6 +157,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     question_args(parser)
     parser.add_argument("--providers", default=None, help="comma-separated (default: every configured answer backend)")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY, help="questions at once")
+    parser.add_argument(
+        "--judge", default=EVALS_DEFAULT_JUDGE_SPEC, help=EVALS_JUDGE_SPEC_HELP.format(default=EVALS_DEFAULT_JUDGE_SPEC)
+    )
     parser.add_argument(
         "--baseline", type=Path, default=None, help="a finished search scan of the same questions, to set beside"
     )

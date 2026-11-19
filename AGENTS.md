@@ -163,8 +163,13 @@ src/web_router/
 │   │                   SealQA, or a CSV; seeded sampling; answer-key pages withheld
 │   ├── judge.py        Judge ABC, OpenAIJudge and AnthropicJudge: synthesize,
 │   │                   then grade
+│   ├── judge_litellm.py LiteLLMJudge: any model LiteLLM reaches — [evals-litellm]
+│   ├── judges.py       judge_from(): a judge by name, a --judge flag's value
+│   ├── labels.py       judge_label() / EndpointLabel: a model judge's label, its host off the vendor's
+│   ├── scorer.py       Scorer ABC and Scorecard: an answer rated with no gold one
 │   ├── run.py          the loop: benchmark per question, judge per row, score
 │   └── prompts/        the SimpleQA grader prompt, vendored verbatim
+├── constants_evals.py  the default judge's name, --judge's help, judge_from()'s and the scorer's messages
 ├── constants.py        shared env var registries, timeouts and message templates;
 │                       a provider's own go in constants_<provider>.py (older
 │                       providers' are still here)
@@ -660,6 +665,13 @@ a comparison of vendor tiers is one `evaluate()` per depth on the same dataset,
 never a per-provider override.
 A `Dataset` is a pydantic model and iterates as its fields: loop over
 `.questions`.
+The judge is one per run but not one forever: `judge_from()` names it
+(`openai:gpt-4o` by default, `anthropic`, `litellm:<model>`, or a caller's
+`package.module:Class`), every benchmark's `--judge` takes that string, and a
+judge on another endpoint puts the host in its label. A `Scorer` is the other
+judgment, for answers with no gold: it returns a `Scorecard` naming the scorer
+and is never mixed into an `EvaluationReport`. The library ships the
+interface, not a scorer.
 
 **An integration fixes the router's options when the tool is built.** The
 LangChain, Claude and OpenAI tools take the query or the URLs from the model
