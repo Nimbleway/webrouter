@@ -8,6 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- `hop_timeout=` on the router caps each backend `auto` tries, so one that hangs no longer takes the whole `timeout=`, and `timeout_cooldown=True` passes a backend over for 30 s after three timeouts in a row. Both are off by default.
 - Vendor catalog: OpenCage Geocoding, MaxMind, IP2Location.io, Ipregistry and Abstract API, with 14 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 470 vendors and 3,472 endpoints.
 - Vendor catalog: Mention, Moltbook, Sprout Social, Crossref and Wikidata, with 42 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 465 vendors and 3,458 endpoints.
 - Vendor catalog: Libraries.io, crates.io, RubyGems.org, APIs.guru and Affinity, with 54 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 460 vendors and 3,416 endpoints.
