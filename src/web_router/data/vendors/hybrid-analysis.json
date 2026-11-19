@@ -1,0 +1,344 @@
+{
+  "vendor": "hybrid-analysis",
+  "name": "Hybrid Analysis",
+  "category": "security",
+  "summary": "Malware sandbox reports from the free Falcon Sandbox service: search by hash or by file, network, family and ATT&CK terms, file overviews, report summaries and the latest detonations.",
+  "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+  "base_url": "https://hybrid-analysis.com/api/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HYBRID_ANALYSIS_API_KEY"
+        ],
+        "description": "A Hybrid Analysis API key (profile > API key tab > Create API key), sent in the api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Keys have an authorization level (restricted, default, elevated, super); a free unvetted account gets a restricted key, enough for search and report reads.",
+    "The key's quota is reported in the response headers.",
+    "File and URL submission, quick scans, overview refreshes, abuse reports and sample or dropped-file downloads are not in this entry."
+  ],
+  "sources": [
+    "https://hybrid-analysis.com/docs/api/v2",
+    "https://hybrid-analysis.com/bff/api-docs/v2"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "hybrid-analysis.search.hash",
+      "name": "Find reports for a file hash",
+      "summary": "Every sandbox report for a file, from its MD5, SHA-1, SHA-256 or SHA-512.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/hash",
+      "params": {
+        "hash": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "MD5, SHA-1, SHA-256 or SHA-512."
+        }
+      },
+      "job": "security.file.report",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.search.terms",
+      "name": "Search reports by terms",
+      "summary": "Sandbox reports matching file, network, verdict, family, tag, ATT&CK or date criteria.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/terms",
+      "params": {
+        "filename": {
+          "in": "body",
+          "type": "string",
+          "description": "File name.",
+          "example": "invoice.exe"
+        },
+        "filetype": {
+          "in": "body",
+          "type": "string",
+          "description": "File type keyword (docx, peexe, pdf, script...).",
+          "example": "docx"
+        },
+        "filetype_desc": {
+          "in": "body",
+          "type": "string",
+          "description": "File type description.",
+          "example": "PE32 executable"
+        },
+        "env_id": {
+          "in": "body",
+          "type": "string",
+          "description": "Sandbox environment ID (see system.environments)."
+        },
+        "country": {
+          "in": "body",
+          "type": "string",
+          "description": "Three-letter ISO country.",
+          "example": "swe"
+        },
+        "verdict": {
+          "in": "body",
+          "type": "integer",
+          "description": "1 whitelisted, 2 no verdict, 3 no specific threat, 4 suspicious, 5 malicious.",
+          "example": 5
+        },
+        "av_detect": {
+          "in": "body",
+          "type": "string",
+          "description": "AV multiscan detection range, 0 to 100.",
+          "example": "50-70"
+        },
+        "vx_family": {
+          "in": "body",
+          "type": "string",
+          "description": "Substring of the AV family name.",
+          "example": "nemucod"
+        },
+        "tag": {
+          "in": "body",
+          "type": "string",
+          "description": "Hashtag.",
+          "example": "ransomware"
+        },
+        "date_from": {
+          "in": "body",
+          "type": "string",
+          "description": "From, as 'Y-m-d H:i'.",
+          "example": "2026-01-01 00:00"
+        },
+        "date_to": {
+          "in": "body",
+          "type": "string",
+          "description": "To, as 'Y-m-d H:i'."
+        },
+        "port": {
+          "in": "body",
+          "type": "integer",
+          "description": "Contacted port.",
+          "example": 8080
+        },
+        "host": {
+          "in": "body",
+          "type": "string",
+          "description": "Contacted host IP.",
+          "example": "192.168.0.1"
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Contacted domain.",
+          "example": "checkip.dyndns.org"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Substring of an HTTP request.",
+          "example": "google"
+        },
+        "similar_to": {
+          "in": "body",
+          "type": "string",
+          "description": "SHA-256 of a sample to find similar ones."
+        },
+        "context": {
+          "in": "body",
+          "type": "string",
+          "description": "SHA-256 of a sample whose context to search."
+        },
+        "imp_hash": {
+          "in": "body",
+          "type": "string",
+          "description": "Import hash."
+        },
+        "ssdeep": {
+          "in": "body",
+          "type": "string",
+          "description": "ssdeep fuzzy hash."
+        },
+        "authentihash": {
+          "in": "body",
+          "type": "string",
+          "description": "Authenticode hash."
+        },
+        "uses_tactic": {
+          "in": "body",
+          "type": "string",
+          "description": "A MITRE ATT&CK tactic."
+        },
+        "uses_technique": {
+          "in": "body",
+          "type": "string",
+          "description": "A MITRE ATT&CK technique."
+        }
+      },
+      "body_type": "form",
+      "notes": [
+        "A read over POST, sent as a form: the terms are search filters and nothing is submitted."
+      ],
+      "job": "security.file.search",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.overview.get",
+      "name": "Get a file overview",
+      "summary": "Verdict, threat score, AV multiscan results, tags, family and related reports for a SHA-256 across all its analyses.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/overview/{sha256}",
+      "params": {
+        "sha256": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SHA-256 of the file."
+        }
+      },
+      "job": "security.file.report",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.overview.summary",
+      "name": "Get a short file overview",
+      "summary": "The summary form of a file's overview.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/overview/{sha256}/summary",
+      "params": {
+        "sha256": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SHA-256 of the file."
+        }
+      },
+      "job": "security.file.report",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.report.summary",
+      "name": "Get a report summary",
+      "summary": "One sandbox report: verdict, threat score, signatures, contacted hosts and domains, processes, MITRE ATT&CK and extracted files.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/report/{id}/summary",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Report ID: a job ID, or sha256:environmentId."
+        }
+      },
+      "job": "security.file.report",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.report.state",
+      "name": "Get a report's state",
+      "summary": "Where a submission's analysis stands (IN_QUEUE, IN_PROGRESS, SUCCESS, ERROR; PARTIAL_SUCCESS for containers).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/report/{id}/state",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Report ID: a job ID, or sha256:environmentId."
+        }
+      },
+      "job": "security.analysis.status",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.report.children",
+      "name": "List a report's child reports",
+      "summary": "Report IDs of the files inside an archive or container sample.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/report/{id}/children",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Report ID: a job ID, or sha256:environmentId."
+        }
+      },
+      "job": "security.file.report",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.feed.detonation",
+      "name": "List the latest reports",
+      "summary": "The 250 most recent sandbox reports with basic information.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/feed/detonation",
+      "job": "security.threats.feed",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.environments.list",
+      "name": "List sandbox environments",
+      "summary": "The sandbox execution environments with their IDs, descriptions and architecture.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/system/environments",
+      "job": "reference.codes",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    },
+    {
+      "id": "hybrid-analysis.key.current",
+      "name": "Get the key's authorization level",
+      "summary": "The API key's authorization level and owner.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/key/current",
+      "job": "account.usage",
+      "docs_url": "https://hybrid-analysis.com/docs/api/v2",
+      "verified": {
+        "docs": "https://hybrid-analysis.com/docs/api/v2"
+      }
+    }
+  ]
+}
