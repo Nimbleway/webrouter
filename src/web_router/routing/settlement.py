@@ -11,6 +11,8 @@ charge, in the call's own cap and in every shared budget it reserves in:
   the response carries the backend's own reported cost, is charged that
   instead of its estimate.
 
+Only the ledger of the call the attempt was made in settles it; the calls it
+is nested in, which counted it toward their own caps, are settled to match.
 The decision record keeps the estimate of an answered attempt; a refunded
 attempt's estimate there is ``0``, as nothing ran.
 """
@@ -20,16 +22,18 @@ from __future__ import annotations
 from web_router.constants_cost import COST_REPORTED
 from web_router.exceptions import WebRouterError
 from web_router.providers._chain import nothing_started
+from web_router.routing.budget_hooks import LEDGERS, check_own
 from web_router.routing.ledger import Ledger, _Tried
 
 
 def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> None:
     """Charge nothing for the call's open attempt, ``call_id``, when ``exc`` proves it never started.
 
-    Only the open attempt in the call's own trail: one an enclosing call
-    counted, or one already taken back, is left as it is.
+    Only the open attempt in the call's own trail, and only by the ledger of
+    the call it was made in: an enclosing call's ledger, told of a nested
+    call's failure, leaves its own open attempt as it is.
     """
-    if not isinstance(exc, WebRouterError) or not nothing_started(exc):
+    if not isinstance(exc, WebRouterError) or not nothing_started(exc) or not check_own(ledger)():
         return
     with ledger._lock:
         opened = ledger.trail.open
@@ -38,6 +42,7 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
         tried = ledger.tried[opened.attempt]
         _charge(ledger, tried, 0.0)
         tried.est_cost_usd = 0.0
+    _match_enclosing(ledger, tried, 0.0)
 
 
 def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
@@ -47,8 +52,22 @@ def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
         return
     with ledger._lock:
         answering = ledger._answered(getattr(response, "provider", None), empty)
-        if answering is not None:
-            _charge(ledger, ledger.tried[answering], cost)
+        if answering is None:
+            return
+        tried = ledger.tried[answering]
+        _charge(ledger, tried, cost)
+    _match_enclosing(ledger, tried, cost)
+
+
+def _match_enclosing(ledger: Ledger, settled: _Tried, cost: float) -> None:
+    """Charge ``cost`` for ``settled``'s attempt in every enclosing call's ledger that counted it too."""
+    for enclosing in LEDGERS.get():
+        if enclosing is ledger:
+            continue
+        with enclosing._lock:
+            counted = next((tried for tried in enclosing.tried if tried.attempt is settled.attempt), None)
+            if counted is not None:
+                _charge(enclosing, counted, cost)
 
 
 def _charge(ledger: Ledger, tried: _Tried, cost: float) -> None:
