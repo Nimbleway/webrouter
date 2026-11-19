@@ -1,0 +1,162 @@
+{
+  "vendor": "mailgun",
+  "name": "Mailgun",
+  "category": "verification",
+  "summary": "Mailgun Validate: single email validation with result, risk, reasons, disposable and role flags, plus the status and summaries of bulk validation and list health preview jobs. Sending is not covered.",
+  "docs_url": "https://documentation.mailgun.com/docs/validate/api-overview",
+  "pricing_url": "https://www.mailgun.com/pricing/",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "MAILGUN_API_HOST"
+      ],
+      "default": "api.mailgun.net",
+      "choices": [
+        "api.mailgun.net",
+        "api.eu.mailgun.net"
+      ],
+      "description": "API host: api.mailgun.net (US) or api.eu.mailgun.net for an EU account."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MAILGUN_API_KEY"
+        ],
+        "description": "A Mailgun API key (Mailgun dashboard > API Security). Sent as HTTP Basic auth with the username 'api'."
+      }
+    },
+    "basic": {
+      "username": "api",
+      "password": "{api_key}"
+    }
+  },
+  "notes": [
+    "Only the Validate (address verification) API is in this entry; nothing here sends mail. Starting, promoting or cancelling bulk jobs and list health previews is left out.",
+    "Validation is limited to a set number of active requests at a time; a 429 means wait and retry."
+  ],
+  "sources": [
+    "https://documentation.mailgun.com/docs/validate/single-valid-ir",
+    "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final",
+    "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final/validations/get-v4-address-validate",
+    "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final/list-health-preview/get-v4-address-validate-preview--list-id-",
+    "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final/list-health-preview/get-v4-address-validate-preview"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "mailgun.address.validate",
+      "name": "Validate one email",
+      "summary": "Result (deliverable, undeliverable, do_not_send, catch_all, unknown), risk (low, medium, high, unknown), reason list, disposable and role flags, typo suggestion, root address and engagement data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/address/validate",
+      "params": {
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to validate, at most 512 characters.",
+          "example": "foo@mailgun.com"
+        },
+        "provider_lookup": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Let Mailgun contact the mailbox provider when its own data is not enough (default true). With false, an address it knows nothing about returns unknown with reason no_data."
+        }
+      },
+      "notes": [
+        "reason is an array: empty for a clean deliverable result, else codes such as mailbox_does_not_exist, no_mx, catch_all, accept_all, mailbox_is_disposable_address, high_risk_domain, immature_domain, smtp_timeout."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://documentation.mailgun.com/docs/validate/single-valid-ir",
+      "verified": {
+        "docs": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final/validations/get-v4-address-validate"
+      }
+    },
+    {
+      "id": "mailgun.bulk.list",
+      "name": "List bulk validation jobs",
+      "summary": "Every bulk validation job on the account with status, quantity, records processed, counts by result, risk and engagement, and JSON/CSV download links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/address/validate/bulk",
+      "params": {
+        "account_id": {
+          "in": "header",
+          "type": "string",
+          "required": true,
+          "wire_name": "X-Mailgun-Account-Id",
+          "description": "Your Mailgun account ID."
+        }
+      },
+      "job": "email.verify.batch.status",
+      "docs_url": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final",
+      "verified": {
+        "docs": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final"
+      }
+    },
+    {
+      "id": "mailgun.bulk.get",
+      "name": "Get a bulk validation job",
+      "summary": "One bulk job's status, quantity, records processed, counts by result, risk and engagement, and JSON/CSV download links once done.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/address/validate/bulk/{list_id}",
+      "params": {
+        "list_id": {
+          "in": "path",
+          "required": true,
+          "description": "The list ID of the job."
+        },
+        "account_id": {
+          "in": "header",
+          "type": "string",
+          "required": true,
+          "wire_name": "X-Mailgun-Account-Id",
+          "description": "Your Mailgun account ID."
+        }
+      },
+      "job": "email.verify.batch.status",
+      "docs_url": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final",
+      "verified": {
+        "docs": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final"
+      }
+    },
+    {
+      "id": "mailgun.preview.list",
+      "name": "List list health preview jobs",
+      "summary": "All list health previews started on the account, with status, quantity and summary.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/address/validate/preview",
+      "job": "email.verify.batch.status",
+      "docs_url": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final/list-health-preview/get-v4-address-validate-preview",
+      "verified": {
+        "docs": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final/list-health-preview/get-v4-address-validate-preview"
+      }
+    },
+    {
+      "id": "mailgun.preview.get",
+      "name": "Get a list health preview job",
+      "summary": "One list health preview: status, quantity, validity and a summary estimated from a sample of the list.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/address/validate/preview/{list_id}",
+      "params": {
+        "list_id": {
+          "in": "path",
+          "required": true,
+          "description": "The list health preview ID."
+        }
+      },
+      "job": "email.verify.batch.status",
+      "docs_url": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final/list-health-preview/get-v4-address-validate-preview--list-id-",
+      "verified": {
+        "docs": "https://documentation.mailgun.com/docs/validate/oas/openapi-validate-final/list-health-preview/get-v4-address-validate-preview--list-id-"
+      }
+    }
+  ]
+}
