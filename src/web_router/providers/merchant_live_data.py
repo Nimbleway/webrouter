@@ -89,7 +89,8 @@ class MerchantLiveDataProvider(HttpLiveDataProvider, RegistryReader):
 
     def _run(self, request: LiveDataRequest) -> LiveDataResponse:
         domain, inputs = self._checked(request)
-        plan = plan_for(self._record(domain, self._snapshot()), domain, self._snapshot())
+        snapshot_id = self._snapshot()
+        plan = plan_for(self._record(domain, snapshot_id), domain, snapshot_id)
         gate(plan, inputs, self.agent_profile_url)
         version = plan.protocol_version or PROTOCOL_VERSION_FALLBACK
         headers = {"Accept": MCP_ACCEPT, MCP_VERSION_HEADER: version}
@@ -124,7 +125,7 @@ class MerchantLiveDataProvider(HttpLiveDataProvider, RegistryReader):
         """The store and the validated inputs; a name that is not a host, a bad input or a reserved option raises."""
         domain = request.source.strip().lower()
         if not DOMAIN.match(domain):
-            raise LiveDataSourceNotFoundError(self.name, request.source, hint="A source is a store's domain.")
+            raise LiveDataSourceNotFoundError(self.name, request.source, hint=" A source is a store's domain.")
         if clash := sorted(set(request.provider_options) & RESERVED_OPTIONS):
             raise ProviderError(self.name, MSG_RESERVED_OPTION.format(keys=clash), kind=ERROR_KIND_BAD_REQUEST)
         try:
@@ -189,7 +190,7 @@ class MerchantLiveDataProvider(HttpLiveDataProvider, RegistryReader):
     def _domain(self, name: str) -> str:
         domain = name.strip().lower()
         if not DOMAIN.match(domain):
-            raise LiveDataSourceNotFoundError(self.name, name, hint="A source is a store's domain.")
+            raise LiveDataSourceNotFoundError(self.name, name, hint=" A source is a store's domain.")
         return domain
 
     def _described(self, plan: Plan) -> LiveDataSource:

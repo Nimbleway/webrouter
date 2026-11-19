@@ -195,9 +195,13 @@ Every response names its `provider` and keeps the vendor's untouched payload in
 ## A store's own agent interface (`merchant`)
 
 <Warning>
-`merchant` is new. It reads a hosted registry of stores that publish an agent interface; the registry is configurable
-(`registry_url`) while its public address is being set up.
+`merchant` is new. It reads a hosted registry of stores that publish an agent interface, at
+`https://shopping.nimbleway.com/agent-access/v1/`; the address is configurable (`registry_url`).
 </Warning>
+
+Each call fetches the store's record, `domains/{domain}.json`, from the registry, so whoever hosts the registry sees which
+stores you look up (the pointer and the index carry no query). If that matters, mirror the registry and point
+`registry_url` at your copy.
 
 Some stores publish a UCP-over-MCP endpoint of their own that answers a catalog search with the store's own product
 records. `merchant` calls it for one exact domain, and nothing is discovered at request time: the registry says which

@@ -4,9 +4,21 @@ from __future__ import annotations
 
 import pytest
 
-from tests._merchant_fake import DOMAIN, ENDPOINT, PRODUCT, PROFILE, SNAPSHOT, Merchant, pointer, record, router_config
+from tests._merchant_fake import (
+    DOMAIN,
+    ENDPOINT,
+    PRODUCT,
+    PROFILE,
+    REGISTRY,
+    SNAPSHOT,
+    Merchant,
+    pointer,
+    record,
+    router_config,
+)
 from web_router import AsyncWebRouter, ConfigurationError, LiveDataSourceNotFoundError, ProviderError, WebRouter
 from web_router.exceptions_merchant import MerchantNotValidatedError, MerchantRouteError
+from web_router.providers.merchant_live_data import MerchantLiveDataProvider
 
 
 def ask(merchant: Merchant, query: str = "shoe", source: str = DOMAIN, options: dict | None = None, **inputs: object):  # type: ignore[type-arg]
@@ -212,6 +224,42 @@ def test_a_store_that_refuses_the_initialized_notice_stops_the_call_before_the_s
         with pytest.raises(ProviderError, match="HTTP 429"):
             ask(merchant)
     assert merchant.store_calls() == ["initialize", "notifications/initialized"], "the search was never sent"
+
+
+def test_an_event_stream_reads_data_without_a_space_and_a_data_split_over_lines() -> None:
+    from web_router.providers.merchant_mcp import _last_event_data
+
+    stream = 'event: message\ndata:{"a": 1}\n\nevent: message\ndata: {"result":\ndata: {"x": 2}}\n\n'
+    assert _last_event_data(stream) == '{"result":\n{"x": 2}}'
+    assert _last_event_data("event: ping\n\n") == ""
+
+
+def test_a_stores_429_is_a_rate_limit_not_an_upstream_error() -> None:
+    merchant = Merchant(notice_status=429)
+    with pytest.raises(ProviderError) as raised:
+        ask(merchant)
+    assert raised.value.kind == "rate_limit"
+
+
+def test_the_snapshot_is_read_once_per_call_even_when_the_pointer_expires_at_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("web_router.providers.merchant_registry.REGISTRY_POINTER_TTL_S", 0)
+    merchant = Merchant()
+    ask(merchant)
+    assert [url for _, url, _ in merchant.seen if url.endswith("latest.json")] == [REGISTRY + "latest.json"], (
+        "the record is checked against the snapshot the call started with"
+    )
+
+
+def test_an_old_snapshots_records_and_index_are_dropped_when_the_pointer_moves() -> None:
+    merchant = Merchant()
+    provider = MerchantLiveDataProvider(agent_profile_url=PROFILE, registry_url=REGISTRY, transport=merchant.transport)
+    provider._records[("old-snapshot", DOMAIN)] = {}
+    provider._indexes["old-snapshot"] = []
+    provider._remember(merchant.latest)
+    assert provider._records == {} and provider._indexes == {}
+    provider.close()
 
 
 def test_a_reply_with_no_product_list_raises_rather_than_returning_nothing() -> None:

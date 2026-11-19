@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from web_router.constants import MCP_JSONRPC_VERSION, MCP_SSE_DATA_PREFIX
+from web_router.constants import MCP_JSONRPC_VERSION
 from web_router.constants_merchant import (
     CLIENT_NAME,
     CONTENT_TYPE_EVENT_STREAM,
@@ -19,7 +19,7 @@ from web_router.constants_merchant import (
     UCP_AGENT_META,
 )
 from web_router.exceptions import ProviderError
-from web_router.types_errors import ERROR_KIND_UPSTREAM
+from web_router.types_errors import ERROR_KIND_RATE_LIMIT, ERROR_KIND_UPSTREAM
 from web_router.types_merchant import MerchantInputs
 
 __all__ = ["catalog", "envelope", "initialize", "negotiated_version", "products", "result_of", "search", "session"]
@@ -40,7 +40,18 @@ def initialize(version: str) -> dict[str, Any]:
 def ensure_ok(response: httpx.Response) -> None:
     """A store that answers with an HTTP error stops the call; nothing after it is sent."""
     if response.status_code >= httpx.codes.BAD_REQUEST:
-        raise ProviderError(PROVIDER_MERCHANT, f"HTTP {response.status_code}", kind=ERROR_KIND_UPSTREAM)
+        kind = ERROR_KIND_RATE_LIMIT if response.status_code == httpx.codes.TOO_MANY_REQUESTS else ERROR_KIND_UPSTREAM
+        raise ProviderError(PROVIDER_MERCHANT, f"HTTP {response.status_code}", kind=kind)
+
+
+def _last_event_data(stream: str) -> str:
+    """The data of the last server-sent event that has any: its ``data:`` lines, joined."""
+    last = ""
+    for event in stream.replace("\r\n", "\n").split("\n\n"):
+        data = [line[5:].removeprefix(" ") for line in event.split("\n") if line.startswith("data:")]
+        if data:
+            last = "\n".join(data)
+    return last
 
 
 def result_of(response: httpx.Response) -> dict[str, Any]:
@@ -48,8 +59,7 @@ def result_of(response: httpx.Response) -> dict[str, Any]:
     ensure_ok(response)
     text = response.text
     if response.headers.get("content-type", "").startswith(CONTENT_TYPE_EVENT_STREAM):
-        lines = [line[len(MCP_SSE_DATA_PREFIX) :] for line in text.splitlines() if line.startswith(MCP_SSE_DATA_PREFIX)]
-        text = lines[-1] if lines else ""
+        text = _last_event_data(text)
     body = json.loads(text) if text.strip() else {}
     if isinstance(body, dict) and body.get("error"):
         raise ProviderError(PROVIDER_MERCHANT, str(body["error"])[:300], kind=ERROR_KIND_UPSTREAM)

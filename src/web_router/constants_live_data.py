@@ -70,9 +70,9 @@ MCP_METHOD_LIVE_DATA: Final = "live_data"
 MCP_LIVE_DATA_SOURCES_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {
         "type": "string",
-        "description": "A site, brand or kind of page, e.g. 'amazon product'.",
+        "description": "A site, brand or kind of page, e.g. 'amazon product'. Unset, the catalogue in order.",
     },
-    "limit": {"type": "integer", "minimum": 1, "description": "How many sources to list."},
+    "limit": {"type": "integer", "minimum": 1, "description": "How many sources to list. Unset, the backend's page."},
     "offset": {"type": "integer", "minimum": 0, "description": "How many to skip first, for the next page."},
 }
 

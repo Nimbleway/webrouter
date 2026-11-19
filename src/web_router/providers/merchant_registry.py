@@ -69,6 +69,8 @@ class RegistryReader:
     def _remember(self, document: Any) -> str:
         snapshot_id = read_pointer(document)
         self._pointer = (snapshot_id, time.monotonic())
+        self._records = {key: value for key, value in self._records.items() if key[0] == snapshot_id}
+        self._indexes = {key: value for key, value in self._indexes.items() if key == snapshot_id}
         return snapshot_id
 
     # -- sync ----------------------------------------------------------------
@@ -133,6 +135,6 @@ class RegistryReader:
         original = error.original
         if isinstance(original, httpx.HTTPStatusError) and original.response.status_code == httpx.codes.NOT_FOUND:
             return LiveDataSourceNotFoundError(
-                PROVIDER_MERCHANT, domain, original=original, hint=f"It is not in registry snapshot {snapshot_id}."
+                PROVIDER_MERCHANT, domain, original=original, hint=f" It is not in registry snapshot {snapshot_id}."
             )
         return error
