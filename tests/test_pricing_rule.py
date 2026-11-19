@@ -32,7 +32,9 @@ def test_a_floor_row_is_an_unknown_price_for_a_candidate(monkeypatch: pytest.Mon
 
 
 def test_a_floor_row_fits_no_cost_cap_for_a_mapped_effort_or_a_routers_depth(monkeypatch: pytest.MonkeyPatch) -> None:
-    floor = SimpleNamespace(estimate_usd=0.001, estimate_is_floor=True, mode="low", results_assumed=None)
+    floor = SimpleNamespace(
+        unit="per_1k", default=False, estimate_usd=0.001, estimate_is_floor=True, mode="low", results_assumed=None
+    )
     monkeypatch.setattr(prices, "price", lambda *_: floor)
     assert "no known price" in (effort_misfit("parallel", "low", Budget(max_cost_usd=1000.0)) or "")
     decision = RouteDecision(
@@ -44,7 +46,9 @@ def test_a_floor_row_fits_no_cost_cap_for_a_mapped_effort_or_a_routers_depth(mon
 
 @pytest.mark.parametrize(("cost", "fits"), [(0.01 + 5e-10, True), (0.01 + 1e-6, False)], ids=["in-tolerance", "over"])
 def test_the_candidate_builder_and_the_ledger_draw_the_cap_at_one_line(cost: float, fits: bool) -> None:
-    row = SimpleNamespace(estimate_usd=cost, estimate_is_floor=False, mode=None, results_assumed=None)
+    row = SimpleNamespace(
+        unit="per_1k", default=False, estimate_usd=cost, estimate_is_floor=False, mode=None, results_assumed=None
+    )
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(prices, "price", lambda *_: row)
         patch.setattr(prices, "estimate_latency", lambda *_: None)

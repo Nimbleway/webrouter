@@ -27,7 +27,8 @@ decision a call runs with, :mod:`.url_policy` the URLs a call may send,
 :mod:`.attempts` the seam in ``auto``'s fallback loops, :mod:`.registry`
 routers by name, :mod:`.wire` the JSON wire format, :mod:`.remote` the
 built-in router that speaks it over HTTP, :mod:`.decider_router` a router
-made of a decider, which the built-in ``llm`` and ``systemone`` routers are,
+made of a decider, which the built-in ``llm``, ``systemone`` and
+``gemini`` routers are,
 and :mod:`.fallback` the built-in router that asks others in turn, answering a
 :class:`CompositeDecision`.
 """

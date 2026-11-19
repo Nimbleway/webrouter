@@ -137,7 +137,7 @@ def test_a_backend_router_is_skipped_on_a_mixed_default_set_and_refused_on_a_nam
         route_eval.evaluate_set("mixed-tiny", ["always:nimble"], floor=0.05, folder=tmp_path)
 
     load_set = route_eval.load_set
-    monkeypatch.setattr(route_eval, "load_set", lambda name, _, joined: load_set(name, tmp_path, joined))
+    monkeypatch.setattr(route_eval, "load_set", lambda name, _, joined, modes: load_set(name, tmp_path, joined, modes))
     monkeypatch.setattr(route_eval, "DEFAULT_SETS", ("mixed-tiny",))
     with pytest.raises(SystemExit, match="a candidate in none of the sets: mixed-tiny"):
         route_eval.main(["--router", "always:nimble"])

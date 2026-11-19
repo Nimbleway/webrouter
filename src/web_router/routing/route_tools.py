@@ -1,11 +1,18 @@
-"""Which tools ask the attached router: the caller's ``route_tools``, else the router's own, else all five."""
+"""Which tools ask the attached router, and whether it is shown vendor modes: the caller's choice, else the router's."""
 
 from __future__ import annotations
 
 from collections.abc import Collection
 from typing import get_args
 
-from web_router.constants_invoke import MSG_ROUTE_TOOLS, MSG_ROUTER_ROUTE_TOOLS, ROUTER_ROUTE_TOOLS_ATTR
+from web_router.constants_invoke import (
+    MSG_ROUTE_MODES,
+    MSG_ROUTE_TOOLS,
+    MSG_ROUTER_ROUTE_MODES,
+    MSG_ROUTER_ROUTE_TOOLS,
+    ROUTER_ROUTE_MODES_ATTR,
+    ROUTER_ROUTE_TOOLS_ATTR,
+)
 from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import ToolName
 
@@ -36,3 +43,21 @@ def checked_route_tools(route_tools: Collection[ToolName] | None, router: object
         known = ", ".join(get_args(ToolName))
         raise ConfigurationError(message.format(known=known, got=route_tools))
     return frozenset(tools)
+
+
+def checked_route_modes(route_modes: object, router: object = None) -> bool:
+    """Whether the router is shown a candidate per vendor mode: the caller's ``route_modes``, else the router's own,
+    else no.
+
+    Raises:
+        ConfigurationError: for a ``route_modes`` -- the caller's, or the one ``router`` declares -- that is not a bool.
+    """
+    message = MSG_ROUTE_MODES
+    if route_modes is None:
+        route_modes = getattr(router, ROUTER_ROUTE_MODES_ATTR, None)
+        message = MSG_ROUTER_ROUTE_MODES
+    if route_modes is None:
+        return False
+    if not isinstance(route_modes, bool):
+        raise ConfigurationError(message.format(got=route_modes))
+    return route_modes

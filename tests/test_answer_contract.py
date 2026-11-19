@@ -60,7 +60,7 @@ def _refuse_every_call(request: httpx.Request) -> httpx.Response:
 def test_router_answer_exposes_every_shared_option(method: object) -> None:
     """The two answer signatures restate AnswerRequest's fields, so guard the copies."""
     exposed = set(inspect.signature(method).parameters) - ROUTER_ONLY_ARGUMENTS
-    assert exposed == ANSWER_PARAMETERS | ANSWER_ALWAYS_SENT - {"query"}
+    assert exposed == ANSWER_PARAMETERS | ANSWER_ALWAYS_SENT - {"query", "mode"}  # a mode is pinned through provider=
 
 
 def test_answer_parameters_tracks_the_model() -> None:

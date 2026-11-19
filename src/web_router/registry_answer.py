@@ -8,6 +8,7 @@ lookup helpers it reuses; that module does not import this one.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from web_router import registry
@@ -23,6 +24,7 @@ from web_router.constants import (
     PROVIDER_YOU,
 )
 from web_router.exceptions import NoAnswerProviderError
+from web_router.providers._pinning import pinned_class
 from web_router.registry import _is_set, _resolve
 from web_router.types import Provider, provider_name
 
@@ -83,13 +85,9 @@ def configured_answer_providers() -> list[str]:
 
 
 def get_answer_provider_class(name: str | Provider) -> type[AnswerProvider]:
-    """Resolve an answer provider name to its class, importing the module on first use."""
-    return _resolve(
-        name,
-        builtin=_BUILTIN_ANSWER_PROVIDERS,
-        custom=_CUSTOM_ANSWER_PROVIDERS,
-        available=available_answer_providers(),
-    )
+    """Resolve an answer provider name to its class, on first use; ``linkup:linkup-deep`` pins."""
+    tables: dict[str, Any] = {"builtin": _BUILTIN_ANSWER_PROVIDERS, "custom": _CUSTOM_ANSWER_PROVIDERS}
+    return pinned_class(name, partial(_resolve, **tables, available=available_answer_providers()), "answer")
 
 
 def create_answer_provider(name: str | Provider, **kwargs: Any) -> AnswerProvider:

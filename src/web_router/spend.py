@@ -1,4 +1,4 @@
-"""A spend log: one line per call a router answered, and a report of it by backend, method and day.
+"""A spend log: one line per call a router answered or attempt that failed, and a report of it.
 
 ``router.log_spend("spend.jsonl")`` appends a :class:`SpendEntry` to that file
 after every search, extract, answer, research and browse call the router
@@ -10,8 +10,10 @@ What it logs is what the response says: the backend that answered, its
 ``cost_usd`` and whether that was ``reported`` or ``estimated``, and the
 seconds the call took. With a budget or a router, ``call_estimate_usd`` is the
 decision record's estimate for the whole call, attempts that failed before the
-answer included; otherwise it is the answer's own estimate. A call that raised
-logs nothing. The file holds no prompt, query or URL, only the decision's id.
+answer included; otherwise it is the answer's own estimate. Each attempt that
+failed or answered empty before the answer has a line of its own, with its
+``outcome`` and ``error``, and so does a call that raised: a backend may bill a
+timeout. The file holds no prompt, query or URL, only the decision's id.
 
 A sink that raises does not fail the call: the router logs a warning on the
 ``web_router`` logger and returns the response.
@@ -30,18 +32,21 @@ from typing import Any, Literal, Protocol, runtime_checkable
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from web_router.constants_cost import COST_REPORTED
-from web_router.constants_spend import MSG_SPEND_LINE_SKIPPED, MSG_SPEND_REPORT_KEY, SPEND_REPORT_KEYS
+from web_router.constants_spend import MSG_SPEND_LINE_SKIPPED, MSG_SPEND_REPORT_KEY, OUTCOME_ANSWERED, SPEND_REPORT_KEYS
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.types_cost import CostSource
 
-SpendKey = Literal["day", "provider", "method", "cost_source"]
+SpendKey = Literal["day", "provider", "method", "cost_source", "outcome"]
 """What a report can group by."""
 
 DEFAULT_KEYS: tuple[SpendKey, ...] = ("day", "provider", "method")
 
+SpendOutcome = Literal["answered", "failed", "empty"]
+"""What a logged attempt came to: the call's answer, a failure, or an empty answer the call moved past."""
+
 
 class SpendEntry(BaseModel):
-    """One call a router answered: when, which method and backend, what it cost and took."""
+    """One call a router answered, or one attempt that did not: when, which method and backend, cost and time."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -59,6 +64,8 @@ class SpendEntry(BaseModel):
     )
     elapsed_s: float | None = Field(default=None, allow_inf_nan=False, description="Wall-clock seconds the call took.")
     decision_id: str | None = Field(default=None, description="The decision record's id, when it has one.")
+    outcome: SpendOutcome = Field(default=OUTCOME_ANSWERED, description="answered, failed or empty.")
+    error: str | None = Field(default=None, description="Why a failed attempt failed: its HTTP status or error kind.")
 
     @field_validator("at")
     @classmethod
@@ -87,12 +94,19 @@ class SpendRow(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     key: dict[str, str] = Field(description="The group's value for each key the report grouped by.")
-    calls: int = 0
-    cost_usd: float = Field(default=0.0, description="Every known cost in the group, summed.")
+    calls: int = Field(default=0, description="Calls answered.")
+    failed_attempts: int = Field(default=0, description="Attempts that failed or answered empty.")
+    cost_usd: float = Field(default=0.0, description="Every known cost in the group, failed attempts' too, summed.")
     reported_usd: float = Field(default=0.0, description="The part of cost_usd the backends stated.")
     estimated_usd: float = Field(default=0.0, description="The part of cost_usd estimated from list prices.")
     unpriced_calls: int = Field(default=0, description="Calls with no known cost, left out of cost_usd.")
-    elapsed_s: float = Field(default=0.0, description="Seconds the calls took, summed.")
+    elapsed_s: float = Field(
+        default=0.0,
+        description=(
+            "Seconds the answered calls took, the failed attempts they moved past included. "
+            "A failed line's seconds stay on that line and are not summed here."
+        ),
+    )
 
 
 class SpendLog:
@@ -140,7 +154,7 @@ def _parsed(line: str) -> SpendEntry | None:
 
 
 def spend_report(entries: Iterable[SpendEntry], by: Sequence[SpendKey] = DEFAULT_KEYS) -> list[SpendRow]:
-    """``entries`` grouped by ``by`` -- any of day, provider, method and cost_source -- each group summed.
+    """``entries`` grouped by ``by`` -- any of day, provider, method, cost_source and outcome -- each summed.
 
     Rows come sorted by their key. Raises :class:`~web_router.InvalidParameterError` for another key.
     """
@@ -161,10 +175,13 @@ def _value(entry: SpendEntry, key: str) -> str:
 
 
 def _add(row: SpendRow, entry: SpendEntry) -> None:
-    row.calls += 1
-    row.elapsed_s += entry.elapsed_s or 0.0
+    answered = entry.outcome == OUTCOME_ANSWERED
+    row.calls += answered
+    row.failed_attempts += not answered
+    if answered:  # an attempt's seconds are already in its call's own line
+        row.elapsed_s += entry.elapsed_s or 0.0
     if entry.cost_usd is None:
-        row.unpriced_calls += 1
+        row.unpriced_calls += answered
         return
     row.cost_usd += entry.cost_usd
     if entry.cost_source == COST_REPORTED:

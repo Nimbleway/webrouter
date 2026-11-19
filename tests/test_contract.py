@@ -86,7 +86,7 @@ ENV_VARS = (
 def test_router_search_exposes_every_shared_option(method: object) -> None:
     """The two search signatures and SearchOptions restate SearchRequest's fields, so guard the copies."""
     exposed = set(inspect.signature(method).parameters) - ROUTER_ONLY_ARGUMENTS
-    assert exposed == NORMALIZED_PARAMETERS | ALWAYS_SENT - {"query"}
+    assert exposed == NORMALIZED_PARAMETERS | ALWAYS_SENT - {"query", "mode"}  # a mode is pinned through provider=
     assert set(SearchOptions.__annotations__) == NORMALIZED_PARAMETERS
 
 

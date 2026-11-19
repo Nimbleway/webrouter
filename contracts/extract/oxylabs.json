@@ -32,10 +32,18 @@
       "text": {
         "refused": "UnsupportedFormatError"
       }
+    },
+    "mode": {
+      "oxylabs-render": {
+        "body.render": "html"
+      }
     }
   },
   "not_mapped": [
     "profile"
+  ],
+  "offers": [
+    "oxylabs-render"
   ],
   "default_format": "html",
   "batches_urls": false,
@@ -45,16 +53,13 @@
     "https://developers.oxylabs.io/products/web-scraper-api/features/result-processing-and-storage/output-types/markdown-output"
   ],
   "verified": {
-    "format": "docs: https://developers.oxylabs.io/products/web-scraper-api/features/result-processing-and-storage/output-types/markdown-output"
+    "format": "docs: https://developers.oxylabs.io/products/web-scraper-api/features/result-processing-and-storage/output-types/markdown-output",
+    "mode.oxylabs-render": "docs: https://oxylabs.io/products/scraper-api/web/pricing"
   },
   "vendor_options": {
     "geo_location": {
       "status": "passthrough",
       "note": "Country, state, city or post code the proxy fetches from."
-    },
-    "render": {
-      "status": "passthrough",
-      "note": "html enables JavaScript rendering; png returns a screenshot, which web-router does not read."
     },
     "browser_instructions": {
       "status": "passthrough",

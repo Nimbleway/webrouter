@@ -86,6 +86,7 @@ from web_router.exceptions import (
     describe,
 )
 from web_router.live_data_compat import TemplateMethods
+from web_router.modes import ModeDeclarations
 from web_router.providers._credential import _CredentialMixin
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
 from web_router.providers._error_pages import named_failures, split_error_pages
@@ -135,16 +136,15 @@ _ResponseT = TypeVar("_ResponseT")
 _ResponseT_co = TypeVar("_ResponseT_co", covariant=True)
 
 
-class _BaseProvider(_CredentialMixin, _DeadlineMixin, abc.ABC):
+class _BaseProvider(ModeDeclarations, _CredentialMixin, _DeadlineMixin, abc.ABC):
     """What a provider is, whichever method it serves."""
 
     name: ClassVar[str]
 
     supported_parameters: ClassVar[frozenset[str]] = frozenset()
-    """Normalized options this backend maps.
-
-    Anything outside this set is rejected rather than dropped, so a call never silently runs without something the
-    caller asked for. See :meth:`~web_router.types.NormalizedRequest.normalized_parameters` for everything on offer.
+    """Normalized options this backend maps: anything else is rejected rather than dropped, so a call never silently
+    runs without something the caller asked for. See
+    :meth:`~web_router.types.NormalizedRequest.normalized_parameters` for everything on offer.
     """
 
     def __init__(self, *, api_key: str | None = None, **kwargs: Any) -> None:

@@ -3,12 +3,13 @@
 Each member is priced and timed by :mod:`.pricing`'s rule, the one
 the budget's ledger charges by, and dropped, with why, when the budget leaves
 it out. A member whose price or p90 is unknown, that is keyless, that carries
-``provider_options`` or whose place route-eval did not rank is unmeasured.
+``provider_options`` or whose place route-eval did not rank is unmeasured; so is every vendor mode, which
+route-eval ranks none of.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from functools import cache
 
@@ -22,7 +23,8 @@ from web_router.constants_candidates import (
     RANKED_METHODS,
 )
 from web_router.routing.attempts import Attempt
-from web_router.routing.contract import Budget, Candidate, ToolName
+from web_router.routing.candidate_modes import ModeEntry
+from web_router.routing.contract import Budget, Candidate, ToolName, candidate_id
 from web_router.routing.pricing import attempt_cost, attempt_p90, misfit
 from web_router.types import NormalizedRequest
 
@@ -38,6 +40,12 @@ class Found:
     priced: dict[ToolName, NormalizedRequest] = field(default_factory=dict)
     cost_order: dict[ToolName, list[str]] = field(default_factory=dict)
 
+    def unbuilt(self, tool: ToolName, unbuilt: dict[str, str]) -> None:
+        """Drop each member of ``tool`` that cannot be built, with why, unless it was built at another place."""
+        for name, why in unbuilt.items():
+            if (unbuilt_id := candidate_id(tool, name)) not in self.seen:
+                self.dropped[unbuilt_id] = why
+
 
 def price_members(
     tool: ToolName,
@@ -45,21 +53,45 @@ def price_members(
     eligible: Sequence[tuple[str, bool]],
     budget: Budget | None,
     found: Found,
+    modes: Callable[[str], Sequence[ModeEntry]] | None = None,
 ) -> None:
-    """Price and time each of ``tool``'s eligible members on ``request``; keep the ones ``budget`` leaves in."""
+    """Price and time each of ``tool``'s eligible members on ``request``, each followed by the ``modes`` it offers;
+    keep the ones ``budget`` leaves in. A mode whose id names a chain entry pinned to it, such as
+    ``exa:exa-instant``, is left to that entry: the entry is the candidate a decision can run."""
+    members = {candidate_id(tool, name) for name, _ in eligible}
     for name, keyless in eligible:
-        attempt = Attempt(tool=tool, provider=name, request=request)
-        cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
-        candidate = Candidate(tool=tool, provider=name, est_cost_usd=cost, est_latency_s=p90)
-        if candidate.id in found.seen:
+        if candidate_id(tool, name) in found.seen:
             continue  # a member listed twice is one candidate, at its first place
-        found.seen.add(candidate.id)
-        if (why := over_budget(cost, p90, budget)) is not None:
-            found.dropped[candidate.id] = why
-            continue
-        found.kept.append(candidate)
-        if cost is None or p90 is None or keyless or request.provider_options or name not in _ranked(tool):
-            found.unmeasured.append(candidate.id)
+        for mode, at in [(None, request), *(modes(name) if modes else ())]:
+            if mode is None or candidate_id(tool, name, mode) not in members:
+                _place(tool, name, mode, at, keyless, budget, found)
+
+
+def _place(
+    tool: ToolName,
+    name: str,
+    mode: str | None,
+    at: NormalizedRequest | str,
+    keyless: bool,
+    budget: Budget | None,
+    found: Found,
+) -> None:
+    """One candidate, priced on ``at`` -- its request, or why its member refuses the mode -- kept or dropped."""
+    cid = candidate_id(tool, name, mode)
+    if cid in found.seen:
+        return
+    found.seen.add(cid)
+    if isinstance(at, str):
+        found.dropped[cid] = at
+        return
+    attempt = Attempt(tool=tool, provider=name, request=at)
+    cost, p90 = attempt_cost(attempt), attempt_p90(attempt)
+    if (why := over_budget(cost, p90, budget)) is not None:
+        found.dropped[cid] = why
+        return
+    found.kept.append(Candidate(tool=tool, provider=name, mode=mode, est_cost_usd=cost, est_latency_s=p90))
+    if cost is None or p90 is None or keyless or at.provider_options or mode or name not in _ranked(tool):
+        found.unmeasured.append(cid)
 
 
 _DROPPED = {

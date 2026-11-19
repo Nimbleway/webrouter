@@ -31,7 +31,6 @@ every error the model reads says in words that the call did not run or failed.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from web_router.constants import (
@@ -40,11 +39,11 @@ from web_router.constants import (
     OPENAI_TOOL_MESSAGE_ROLE,
     OPENAI_TOOL_TYPE,
 )
-from web_router.integrations import _tools
-from web_router.integrations._tools import routing_guide
+from web_router.integrations import _result, _tools
+from web_router.integrations._guide import routing_guide
 
 
-class ToolResult(_tools.ToolResult):
+class ToolResult(_result.ToolResult):
     """One tool call's outcome: what the model reads, and everything it does not.
 
     ``is_error`` is for the caller; the model has only ``content``, which
@@ -106,23 +105,11 @@ class WebRouterTools(_tools.WebRouterTools[ToolResult]):
         ``arguments`` is the call's JSON string as OpenAI hands it over, or
         that string already decoded.
         """
-        return self._call(name, _decoded(arguments))
+        return self._call(name, arguments)
 
     async def acall(self, name: str, arguments: str | dict[str, Any]) -> ToolResult:
         """Run one tool call the model made, on the async router -- or the sync one on a worker thread."""
-        return await self._acall(name, _decoded(arguments))
-
-
-def _decoded(arguments: str | dict[str, Any]) -> dict[str, Any]:
-    # Arguments that are not a JSON object break the schema as a missing field
-    # does, so they get the same answer: an error result naming what the tool needs.
-    if isinstance(arguments, dict):
-        return arguments
-    try:
-        decoded = json.loads(arguments)
-    except ValueError:
-        return {}
-    return decoded if isinstance(decoded, dict) else {}
+        return await self._acall(name, arguments)
 
 
 __all__ = ["ToolResult", "WebRouterTools", "routing_guide"]

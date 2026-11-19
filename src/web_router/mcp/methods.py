@@ -26,7 +26,6 @@ from web_router.constants import (
     MCP_TOOL_EXTRACT,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_SEARCH,
-    PROVIDER_AUTO,
     RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.constants_live_data import (
@@ -40,12 +39,6 @@ from web_router.live_data_backends import custom_live_data_backends
 from web_router.mcp.env_credentials import env_names
 from web_router.providers.base import _BaseProvider
 from web_router.registry import (
-    configured_browse_providers,
-    configured_browser_providers,
-    configured_extract_providers,
-    configured_live_data_providers,
-    configured_providers,
-    configured_research_providers,
     get_browse_provider_class,
     get_browser_provider_class,
     get_extract_provider_class,
@@ -53,7 +46,8 @@ from web_router.registry import (
     get_provider_class,
     get_research_provider_class,
 )
-from web_router.registry_answer import configured_answer_providers, get_answer_provider_class
+from web_router.registry_answer import get_answer_provider_class
+from web_router.registry_methods import CONFIGURED_BY_METHOD, configured_by_method
 from web_router.types import (
     BROWSE_PARAMETERS,
     BROWSER_PARAMETERS,
@@ -81,23 +75,24 @@ class Method:
     """The arguments a backend may or may not map, as opposed to the ones every backend takes."""
 
 
-def _configured_answer() -> list[str]:
-    """Answer's backends with a key, led by ``auto`` once there is one, as research's are; nothing with none."""
-    names = configured_answer_providers()
-    return [PROVIDER_AUTO, *names] if names else []
-
-
 _LIVE_DATA_METHOD = Method(
-    MCP_METHOD_LIVE_DATA, configured_live_data_providers, get_live_data_provider_class, LIVE_DATA_ENV_BY_PROVIDER
+    MCP_METHOD_LIVE_DATA,
+    CONFIGURED_BY_METHOD[MCP_METHOD_LIVE_DATA],
+    get_live_data_provider_class,
+    LIVE_DATA_ENV_BY_PROVIDER,
 )
 
 METHODS: dict[str, Method] = {
     MCP_TOOL_SEARCH: Method(
-        MCP_TOOL_SEARCH, configured_providers, get_provider_class, ENV_BY_PROVIDER, NORMALIZED_PARAMETERS
+        MCP_TOOL_SEARCH,
+        CONFIGURED_BY_METHOD[MCP_TOOL_SEARCH],
+        get_provider_class,
+        ENV_BY_PROVIDER,
+        NORMALIZED_PARAMETERS,
     ),
     MCP_TOOL_EXTRACT: Method(
         MCP_TOOL_EXTRACT,
-        configured_extract_providers,
+        CONFIGURED_BY_METHOD[MCP_TOOL_EXTRACT],
         get_extract_provider_class,
         EXTRACT_ENV_BY_PROVIDER,
         EXTRACT_PARAMETERS,
@@ -108,28 +103,28 @@ METHODS: dict[str, Method] = {
     MCP_TOOL_LIVE_DATA: replace(_LIVE_DATA_METHOD, options=LIVE_DATA_PARAMETERS),
     MCP_TOOL_ANSWER: Method(
         MCP_TOOL_ANSWER,
-        _configured_answer,
+        CONFIGURED_BY_METHOD[MCP_TOOL_ANSWER],
         get_answer_provider_class,
         ANSWER_ENV_BY_PROVIDER,
         ANSWER_PARAMETERS,
     ),
     MCP_TOOL_RESEARCH: Method(
         MCP_TOOL_RESEARCH,
-        configured_research_providers,
+        CONFIGURED_BY_METHOD[MCP_TOOL_RESEARCH],
         get_research_provider_class,
         RESEARCH_ENV_BY_PROVIDER,
         RESEARCH_PARAMETERS,
     ),
     MCP_TOOL_BROWSE: Method(
         MCP_TOOL_BROWSE,
-        configured_browse_providers,
+        CONFIGURED_BY_METHOD[MCP_TOOL_BROWSE],
         get_browse_provider_class,
         BROWSE_ENV_BY_PROVIDER,
         BROWSE_PARAMETERS,
     ),
     MCP_TOOL_BROWSER_OPEN: Method(
         MCP_METHOD_BROWSER,
-        configured_browser_providers,
+        CONFIGURED_BY_METHOD[MCP_METHOD_BROWSER],
         get_browser_provider_class,
         BROWSER_ENV_BY_PROVIDER,
         BROWSER_PARAMETERS,
@@ -161,7 +156,7 @@ def unconfigured_live_data(tool: str, arguments: Mapping[str, Any]) -> Method | 
 
 def configured() -> dict[str, list[str]]:
     """The backends configured here, per method, keyed as the capabilities resource names them."""
-    return {method.key: method.configured() for method in EACH_METHOD}
+    return configured_by_method()
 
 
 def unlock() -> dict[str, dict[str, list[str]]]:

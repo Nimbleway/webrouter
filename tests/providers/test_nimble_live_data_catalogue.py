@@ -107,3 +107,29 @@ def test_a_malformed_sample_is_skipped_and_a_sample_with_no_input_takes_none(
         LiveDataSample(input={}, output=RECORD),
         LiveDataSample(input={}, output=RECORD),
     ]
+
+
+def test_a_public_listing_row_takes_its_site_and_kind_from_the_row(provider: NimbleLiveDataProvider) -> None:
+    """A public template's listing row has no version: its metadata sits on the row, as a recorded listing showed."""
+    item = {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "name": "books_pdp",
+        "privacy": "public",
+        "managed_by": "community",
+        "metadata": {
+            "description": "Extracts book product details.",
+            "domain": "books.example",
+            "entity_type": "Product Detail Page (PDP)",
+            "display_name": "Books - Book Detail",
+        },
+    }
+
+    template = to_source(provider.name, item)
+
+    assert template.domain == "books.example"
+    assert template.entity_type == "Product Detail Page (PDP)"
+    assert template.description == "Extracts book product details."
+    assert template.extra["display_name"] == "Books - Book Detail"
+    assert "metadata" not in template.extra
+    # The row says nothing of a version, so none is claimed: describe the template to see it.
+    assert template.published is False and template.version is None

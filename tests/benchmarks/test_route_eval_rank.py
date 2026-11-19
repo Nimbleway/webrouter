@@ -95,7 +95,7 @@ def test_a_row_failed_on_a_rate_limit_or_quota_is_left_out_not_counted_a_miss(ro
 def test_a_vendor_mode_or_depth_row_is_priced_as_the_price_list_keys_it(route_eval_rank: ModuleType) -> None:
     vendor = route_eval_rank.cost_of(_row("tavily", "correct", mode="ultra-fast"))
     depth = route_eval_rank.cost_of(_row("tavily", "correct", mode="@deep"))
-    assert vendor is not None and vendor == prices.estimate("tavily", "search", ":ultra-fast")
+    assert vendor is not None and vendor == prices.estimate("tavily", "search", "tavily-ultra-fast")
     assert depth is not None and depth == prices.estimate("tavily", "search", "deep") and depth != vendor
 
 

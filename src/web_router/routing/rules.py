@@ -52,6 +52,7 @@ class RulesRouter:
     """:func:`rules` as ``router="rules"`` builds it: asked by ``plan()`` and ``run()`` alone, named ``rules``."""
 
     route_tools: tuple[ToolName, ...] = ()
+    route_modes = False
     router_name = RULES_ROUTER_NAME
 
     def route(self, req: RouteRequest) -> RouteDecision:
