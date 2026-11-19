@@ -37,6 +37,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Fixed
 
 - `plan()` and `run()` recognize HTTP(S) URLs with uppercase or mixed-case schemes, preserving the path and query and applying the URL policy as usual.
+- Under `auto`, an extract that retried a failed URL on a later backend could return its documents out of the order asked for. A page the first backend echoed under the URL it resolved to was sorted after the retried pages: Nimble and Keenable echo a slash added to a bare host, a redirect followed and a fragment dropped, and Jina the added slash. Each page now sorts by the URL it answers, so the documents come back in the order asked, as the Extract guide says.
 
 ## [0.14.0] - 2026-11-19
 
@@ -78,7 +79,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - A backend skipped while it cools down now records `cooling_down` as its hop's `error` in `RouteDecision.hops`, instead of the status that started the cooldown (such as `"429"`), and the spend log leaves it out, since no request was sent.
 ### Fixed
 
-- Under `auto`, an extract that retried a failed URL on a later backend could return its documents out of the order asked for. A page the first backend echoed under the URL it resolved to was sorted after the retried pages: Nimble and Keenable echo a slash added to a bare host, a redirect followed and a fragment dropped, and Jina the added slash. Each page now sorts by the URL it answers, so the documents come back in the order asked, as the Extract guide says.
 - Experimental routing on vendor modes: a backend the router names only in a mode runs in that mode alone, a backend-wide exclusion holds when only its modes are offered, an excluded attempt no longer keeps the router's order under a cost cap, a refused mode under a cap ends with its own error, not a budget skip, a depth or effort is not priced on a backend that runs only in modes, and the decider's reason quotes the score the attempts ranked on.
 - Docs: the footer no longer shifts when the "Made by Nimble" label opens on hover; below 640px wide the label stays closed, since it does not fit the row. Wide tables keep their first column in view while they scroll sideways, so the provider matrix keeps its provider names on a phone.
 - Docs: the configuration page lists `extract` for `BROWSERBASE_API_KEY`, which already serves Browserbase Fetch, and the browser page's Steel note now splits its options into those verified live, those mapped from Steel's documentation and awaiting a live run, and those reachable only through `provider_options`, instead of saying none were mapped.
