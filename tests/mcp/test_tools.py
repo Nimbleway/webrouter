@@ -745,7 +745,7 @@ def test_the_capabilities_say_which_keys_would_unlock_more(
     assert "tavily" not in unlock["search"], "a backend with its key is not listed"
     assert unlock["extract"]["oxylabs"] == ["OXYLABS_USERNAME", "OXYLABS_PASSWORD"]
     assert "steel" in unlock["browser"] and "local" not in unlock["browser"]
-    assert "every capability is available" in tools.instructions()
+    assert "`unlock` names the variable" in tools.instructions()
 
 
 # -- answer ------------------------------------------------------------------
