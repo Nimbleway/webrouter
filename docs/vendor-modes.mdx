@@ -213,7 +213,10 @@ Each attempt runs in its own mode. The mode replaces any `search_depth` or
 `attempts` does not name in any mode run after them, at their default mode:
 a backend named only in its modes runs in those modes alone. Excluding
 `search:exa` excludes every Exa mode; excluding `search:exa:exa-deep`
-excludes that one only. Under a cost cap the router's order is kept.
+excludes that one only. As with any exclusion, one that would leave the
+method nothing to run is ignored: if the excluded mode is the only one
+`attempts` names and the call has no other backend, that mode still runs.
+Under a cost cap the router's order is kept.
 
 When an attempt fails:
 
