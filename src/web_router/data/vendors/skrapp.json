@@ -1,0 +1,433 @@
+{
+  "vendor": "skrapp",
+  "name": "Skrapp",
+  "category": "enrichment",
+  "summary": "Work email finding and verification, phone lookup, and company search, snapshots and enrichment.",
+  "docs_url": "https://skrapp.io/api",
+  "pricing_url": "https://skrapp.io/pricing",
+  "base_url": "https://api.skrapp.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SKRAPP_API_KEY"
+        ],
+        "description": "A Skrapp API key (skrapp.io account > API). Sent in the X-Access-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Access-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Email search, verification, company enrich and phone lookup spend credits; account, company search and snapshot are free.",
+    "Company calls return X-RateLimit-* headers, and a 429 carries Retry-After.",
+    "Bulk email search, bulk phone and bulk company enrich, and list management are not in this entry."
+  ],
+  "sources": [
+    "https://skrapp.io/api"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "skrapp.account.get",
+      "name": "Get account and credits",
+      "summary": "Credit quota and usage (credit.email) and the 50 most recent lists.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2/account",
+      "notes": [
+        "Free. Remaining credits are credit.email.quota minus credit.email.used."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://skrapp.io/api#account",
+      "verified": {
+        "docs": "https://skrapp.io/api#account"
+      }
+    },
+    {
+      "id": "skrapp.email.find",
+      "name": "Find a work email",
+      "summary": "A person's business email from their name and company, checked for deliverability.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/people/email",
+      "params": {
+        "firstName": {
+          "in": "query",
+          "type": "string",
+          "description": "First name, with lastName."
+        },
+        "lastName": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name, with firstName."
+        },
+        "fullName": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name, instead of firstName and lastName; wins when both are sent."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain; a URL is reduced to its domain. Wins over company.",
+          "example": "example.com"
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, used when no domain is given."
+        },
+        "linkedinUrl": {
+          "in": "query",
+          "type": "string",
+          "description": "The person's LinkedIn profile URL, to pin the person."
+        },
+        "companyId": {
+          "in": "query",
+          "type": "string",
+          "description": "The company's LinkedIn id (digits); helps but does not replace domain or company."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country name or ISO alpha-2; picks the country email domain of large companies."
+        },
+        "includeCompanyData": {
+          "in": "query",
+          "type": "string",
+          "description": "Exactly true to add companyData, at no extra cost.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "waitVerifier": {
+          "in": "query",
+          "type": "string",
+          "description": "true (default): verify before answering, so quality.status is final.",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "notes": [
+        "1 credit per email found for the first time; not found is free, and invalid or unknown results are refunded on paid plans.",
+        "Send a name (firstName + lastName, or fullName) and a company (domain or company). Times out after 10 seconds with 408, uncharged.",
+        "Free plans: 150 searches per user and per IP a day; paid plans are unlimited while more than 10% of credits remain."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://skrapp.io/api#email-finder",
+      "verified": {
+        "docs": "https://skrapp.io/api#email-finder"
+      }
+    },
+    {
+      "id": "skrapp.phone.find",
+      "name": "Find a person's phone numbers",
+      "summary": "Mobile, direct or company numbers from a LinkedIn profile, or a name with a company or country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/people/phone",
+      "params": {
+        "linkedinUrl": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL, slug or Sales Navigator id; enough alone."
+        },
+        "firstName": {
+          "in": "query",
+          "type": "string",
+          "description": "First name, with lastName."
+        },
+        "lastName": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "fullName": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name, instead of first and last."
+        },
+        "companyDomain": {
+          "in": "query",
+          "type": "string",
+          "description": "The person's company domain; tried before companyName."
+        },
+        "companyName": {
+          "in": "query",
+          "type": "string",
+          "description": "The person's company name."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-2 country; narrows a name-only search, or ranks numbers from it first.",
+          "example": "GB"
+        }
+      },
+      "notes": [
+        "5 credits per person number found, 1 when only company numbers come back; not found is free. The charge is in cost.",
+        "Check confidence (high, medium, low) on name-based matches before using a number."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://skrapp.io/api#people-phone",
+      "verified": {
+        "docs": "https://skrapp.io/api#people-phone"
+      }
+    },
+    {
+      "id": "skrapp.company.search",
+      "name": "Search companies",
+      "summary": "Companies by keywords, firmographics, location, size, revenue and more, paginated.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v3/companies/search",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset, a multiple of size; below 100 on free plans, 1,000 on paid."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size, 1-100 (free plans at most 20), default 20."
+        },
+        "lead_counts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add lead_count per company (default true); false is faster."
+        },
+        "keywords": {
+          "in": "body",
+          "type": "array",
+          "description": "1-10 terms matched in the description and tags.",
+          "example": [
+            "cybersecurity"
+          ]
+        },
+        "keywordsMatch": {
+          "in": "body",
+          "type": "string",
+          "description": "any (default) or all.",
+          "enum": [
+            "any",
+            "all"
+          ]
+        },
+        "companyName": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        },
+        "companyDomains": {
+          "in": "body",
+          "type": "array",
+          "description": "Website domains."
+        },
+        "companyIndustries": {
+          "in": "body",
+          "type": "array",
+          "description": "Industry labels, e.g. Software Development."
+        },
+        "companyTypes": {
+          "in": "body",
+          "type": "array",
+          "description": "Public Company, Privately Held, Subsidiary, Non-Profit, ..."
+        },
+        "companySizeRanges": {
+          "in": "body",
+          "type": "array",
+          "description": "1-10, 11-50, 51-200, 201-500, 501-1,000, 1,001-5,000, 5,001-10,000, 10,001+."
+        },
+        "companyYearMin": {
+          "in": "body",
+          "type": "integer",
+          "description": "Founded in or after."
+        },
+        "companyYearMax": {
+          "in": "body",
+          "type": "integer",
+          "description": "Founded in or before."
+        },
+        "geoCountries": {
+          "in": "body",
+          "type": "array",
+          "description": "Headquarters countries, e.g. France."
+        },
+        "geoStates": {
+          "in": "body",
+          "type": "array",
+          "description": "Headquarters states or regions."
+        },
+        "geoCities": {
+          "in": "body",
+          "type": "array",
+          "description": "Headquarters cities."
+        },
+        "revenueMin": {
+          "in": "body",
+          "type": "number",
+          "description": "Minimum annual revenue."
+        },
+        "revenueMax": {
+          "in": "body",
+          "type": "number",
+          "description": "Maximum annual revenue."
+        },
+        "isPublic": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Publicly traded or not."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters go in the body. Free: no credits.",
+        "Free plans 20 calls a minute and 50 a day, paid 100 and 2,000. Funding, hiring, technology, growth and similar premium filters need a paid plan or the 14-day trial, else 403.",
+        "Pass a result's internal_id (not its id) to company.snapshot and company.enrich."
+      ],
+      "job": "company.search",
+      "docs_url": "https://skrapp.io/api#company-search",
+      "verified": {
+        "docs": "https://skrapp.io/api#company-search"
+      }
+    },
+    {
+      "id": "skrapp.company.snapshot",
+      "name": "Get a company card",
+      "summary": "Name, website, industry, size, revenue range, headquarters and founding year of one company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/companies/snapshot",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Internal company id (a search result's internal_id, kept as a string), not the encoded id."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website or email domain.",
+          "example": "stripe.com"
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name; the most popular match wins, so prefer domain or id."
+        }
+      },
+      "notes": [
+        "Free. Send exactly one of id, domain or name. Free plans 500 distinct companies a day, paid 5,000; repeat views the same day are free."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://skrapp.io/api#company-snapshot",
+      "verified": {
+        "docs": "https://skrapp.io/api#company-snapshot"
+      }
+    },
+    {
+      "id": "skrapp.company.enrich",
+      "name": "Enrich a company",
+      "summary": "Detailed company data in chosen categories: firmographics, headcount, financials, funding, hiring, technographics, traffic and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v3/companies/enrich",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "Internal company id (a search result's internal_id, kept as a string), not the encoded id."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company website or email domain.",
+          "example": "stripe.com"
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name; the most popular match wins, so prefer domain or id."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated keys: signals, headcount, financials, hiring, funding, technographics, acquisitions, firmographics, competitors, social, traffic, contacts; omit or all for every one.",
+          "example": "firmographics,funding"
+        }
+      },
+      "notes": [
+        "1-5 credits per category the first time your account enriches it for that company (all 12 cost 25); repeats are free. total_cost gives the charge.",
+        "Send exactly one of id, domain or name. 402 when credits are short, 404 when no company matches; neither is charged."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://skrapp.io/api#company-enrich",
+      "verified": {
+        "docs": "https://skrapp.io/api#company-enrich"
+      }
+    },
+    {
+      "id": "skrapp.email.verify",
+      "name": "Verify an email",
+      "summary": "Deliverability status of one email address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/verify",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The address to check."
+        },
+        "enrich": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds companyData for professional addresses, at no extra cost."
+        }
+      },
+      "notes": [
+        "1 credit per email, free if your account already verified or found it; a malformed address is answered invalid and still charged. The charge is in consumedCredit.",
+        "Free plans 100 checks per IP a day."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://skrapp.io/api#email-verifier",
+      "verified": {
+        "docs": "https://skrapp.io/api#email-verifier"
+      }
+    },
+    {
+      "id": "skrapp.email.verify_bulk",
+      "name": "Verify several emails",
+      "summary": "Deliverability status of 2 to 50 addresses in one synchronous call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/verify_bulk",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "2 to 50 addresses, sent as repeated email parameters."
+        }
+      },
+      "notes": [
+        "1 credit per email; the balance must cover them all. Match results by email, not position: a failed address can be missing."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://skrapp.io/api#bulk-email-verifier",
+      "verified": {
+        "docs": "https://skrapp.io/api#bulk-email-verifier"
+      }
+    }
+  ]
+}

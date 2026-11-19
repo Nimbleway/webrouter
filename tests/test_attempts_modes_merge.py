@@ -36,7 +36,7 @@ def _merged(decision: RouteDecision, budget: Budget | None = None) -> Any:
 def test_the_attempts_rank_the_method_modes_included_and_the_other_backends_follow_in_static_order() -> None:
     merged = _merged(RouteDecision(attempts=[INSTANT, DEEP, TAVILY], tools=["extract"], providers={"search": ["exa"]}))
     assert merged.tool == "search", "attempts replace tools"
-    assert merged.providers == ("exa:exa-instant", "exa:exa-deep", "tavily", "brave", "exa")
+    assert merged.providers == ("exa:exa-instant", "exa:exa-deep", "tavily", "brave"), "exa runs in its modes only"
     assert merged.record()["merged"][:2] == [INSTANT, DEEP]
     assert not {INSTANT, DEEP} & set(merged.notes.ignored), "a mode attempts run is not noted as not run"
 
@@ -55,7 +55,7 @@ def test_excluding_a_backend_excludes_every_mode_of_it() -> None:
 
 def test_excluding_a_mode_excludes_that_mode_only() -> None:
     merged = _merged(RouteDecision(attempts=[INSTANT, DEEP, TAVILY], exclude={DEEP: "too dear"}))
-    assert merged.providers == ("exa:exa-instant", "tavily", "brave", "exa")
+    assert merged.providers == ("exa:exa-instant", "tavily", "brave")
 
 
 def test_a_methods_other_options_still_apply_with_attempts() -> None:

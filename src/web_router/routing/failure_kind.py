@@ -10,7 +10,9 @@ from what :class:`~web_router.exceptions.ProviderError` already says, its
 2. ``kind`` ``local`` or ``target``: no backend could do better, so the call
    raises, as it always has.
 3. Anything else stops the backend for the call: its later attempts are passed
-   over, each recorded as :data:`BACKEND_FAILED`.
+   over, each recorded as :data:`BACKEND_FAILED`. The one exception is a
+   timeout whose next mode's p90 fits the time left
+   (:mod:`web_router.providers._mode_timeout`).
 
 The rule is narrow on purpose: it reads the status the error carries and walks
 no cause chain, so a status it cannot read stops the backend.

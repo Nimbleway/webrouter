@@ -1,8 +1,7 @@
 """One budgeted call's ledger: whether each attempt fits what is left, and what the call spent.
 
-:func:`~web_router.routing.budget.budget_scope` keeps one per
-call and asks :meth:`Ledger.admit` before every attempt, ``auto``'s members
-and a named backend alike.
+:func:`~web_router.routing.budget.budget_scope` keeps one per call and asks :meth:`Ledger.admit` before
+every attempt, ``auto``'s members and a named backend alike.
 
 Money is always an estimate: each attempt is charged its list price by
 :mod:`.pricing`'s rule when it starts, whether it then answers or fails,
@@ -15,9 +14,8 @@ bounds it, unless the budget is strict. Inside a shared budget
 (:mod:`.pool`) an attempt that fits the call is then reserved in the pool,
 and skipped when the pool refuses it.
 
-A routed call with no budget keeps a ledger too, on a :class:`~web_router.Budget`
-that caps nothing: it skips nothing, and records what the call tried and the
-failures it moved past.
+A routed call with no budget keeps a ledger too, on a :class:`~web_router.Budget` that caps nothing: it skips
+nothing, and records what the call tried and the failures it moved past.
 """
 
 from __future__ import annotations
@@ -78,6 +76,8 @@ class Ledger:
     """What the call reserved in :attr:`pool` for its own attempts, settled when it ends."""
     tried: list[_Tried] = field(default_factory=list)
     skipped: dict[str, str] = field(default_factory=dict)
+    sent: bool = False
+    """Set once a backend was sent a request, kept when a refused mode is taken back from :attr:`tried`."""
     trail: HopTrail = field(default_factory=HopTrail)
     unmeasured: list[str] = field(default_factory=list)
     stamp: dict[str, Any] = field(default_factory=dict)
@@ -112,9 +112,10 @@ class Ledger:
             self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt))
             return True
 
-    def undo(self, attempt: Attempt, *, release: bool = False) -> None:
-        """Take back ``attempt``, a nested call's it refused or a refused mode; ``release`` frees its reservation."""
+    def undo(self, attempt: Attempt, *, release: bool = False, sent: bool = False) -> None:
+        """Take back ``attempt``: a nested call's it refused, or a mode refused once ``sent``; ``release`` frees it."""
         with self._lock:
+            self.sent = self.sent or sent
             at = next((i for i in reversed(range(len(self.tried))) if self.tried[i].attempt is attempt), None)
             cost = 0.0 if at is None else self.tried.pop(at).est_cost_usd or 0.0
             self.spent -= cost
@@ -192,8 +193,7 @@ class Ledger:
         """The call's attempts, hops and estimated spend, written into ``into`` (a router's record) or a new one.
 
         ``answered`` is the provider the response names, ``empty`` whether it is an empty answer; ``ran`` is its
-        position in ``into``'s ``merged``.
-        """
+        position in ``into``'s ``merged``."""
         into = into or DecisionRecord()
         into = into if into.decision_id else into.model_copy(update=self.stamp)
         with self._lock:

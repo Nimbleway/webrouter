@@ -1,0 +1,605 @@
+{
+  "vendor": "intrinio",
+  "name": "Intrinio",
+  "category": "finance",
+  "summary": "US equity data: end-of-day, intraday and realtime stock prices, company profiles and search, standardized financial statements, financial metrics history and company news.",
+  "docs_url": "https://docs.intrinio.com/documentation/api_v2/getting_started",
+  "pricing_url": "https://intrinio.com/pricing",
+  "base_url": "https://api-v2.intrinio.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "INTRINIO_API_KEY"
+        ],
+        "description": "An Intrinio API key (account.intrinio.com). Sent as an Authorization Bearer header; an api_key query parameter also works."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Access is per data-feed subscription: an endpoint is usable only with a feed that covers it.",
+    "Limits depend on the subscription: requests per day (reset at midnight Eastern), per minute and per second; over a limit returns 429 with the reason.",
+    "Paged endpoints return 100 rows and a next_page token; pass it back until it is null. page_size above 100 is limited to 1 request a minute (free) or a second (paid)."
+  ],
+  "sources": [
+    "https://docs.intrinio.com/documentation/api_v2/getting_started",
+    "https://docs.intrinio.com/documentation/api_v2/authentication",
+    "https://docs.intrinio.com/documentation/api_v2/paging",
+    "https://docs.intrinio.com/documentation/api_v2/limits",
+    "https://docs.intrinio.com/documentation/web_api/get_security_stock_prices_v2",
+    "https://docs.intrinio.com/documentation/web_api/get_security_realtime_price_v2",
+    "https://docs.intrinio.com/documentation/web_api/get_security_interval_prices_v2",
+    "https://docs.intrinio.com/documentation/web_api/get_company_v2",
+    "https://docs.intrinio.com/documentation/web_api/search_companies_v2",
+    "https://docs.intrinio.com/documentation/web_api/get_company_fundamentals_v2",
+    "https://docs.intrinio.com/documentation/web_api/get_fundamental_standardized_financials_v2",
+    "https://docs.intrinio.com/documentation/web_api/get_company_data_point_number_v2",
+    "https://docs.intrinio.com/documentation/web_api/get_company_historical_data_v2",
+    "https://docs.intrinio.com/documentation/web_api/get_company_news_v2"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "intrinio.security.prices",
+      "name": "Get end-of-day stock prices",
+      "summary": "Daily, weekly, monthly, quarterly or yearly OHLCV with split- and dividend-adjusted values.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/securities/{identifier}/prices",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Security: ticker, FIGI, ISIN, CUSIP or Intrinio ID.",
+          "example": "AAPL"
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "On or after, YYYY-MM-DD.",
+          "example": "2024-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "On or before, YYYY-MM-DD."
+        },
+        "frequency": {
+          "in": "query",
+          "type": "string",
+          "description": "daily (default), weekly, monthly, quarterly or yearly.",
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly",
+            "quarterly",
+            "yearly"
+          ]
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 100, up to 10,000 (stricter rate limit above 100)."
+        },
+        "next_page": {
+          "in": "query",
+          "type": "string",
+          "description": "next_page value from the previous response."
+        }
+      },
+      "notes": [
+        "intraperiod true means the period is not finished: close is the latest price, not the official close."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_security_stock_prices_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_security_stock_prices_v2"
+      }
+    },
+    {
+      "id": "intrinio.security.realtime_price",
+      "name": "Get the realtime stock price",
+      "summary": "Last trade, top bid and ask, day open, high, low and volume, and previous close.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/securities/{identifier}/prices/realtime",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Security: ticker, FIGI, ISIN, CUSIP or Intrinio ID.",
+          "example": "AAPL"
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated sources, e.g. iex,delayed_sip; default the best one the key can use.",
+          "example": "iex,delayed_sip"
+        }
+      },
+      "notes": [
+        "What sources a key can read depends on its subscriptions."
+      ],
+      "job": "market.quote",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_security_realtime_price_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_security_realtime_price_v2"
+      }
+    },
+    {
+      "id": "intrinio.security.interval_prices",
+      "name": "Get intraday price bars",
+      "summary": "Minute or hourly OHLCV bars with average price, change and bid/ask for a security.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/securities/{identifier}/prices/intervals",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Security: ticker, FIGI, ISIN, CUSIP or Intrinio ID.",
+          "example": "AAPL"
+        },
+        "interval_size": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Bar size.",
+          "example": "60m",
+          "enum": [
+            "1m",
+            "5m",
+            "10m",
+            "15m",
+            "30m",
+            "60m",
+            "1h"
+          ]
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Data source, e.g. realtime, delayed, nasdaq_basic, cboe_one."
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date, YYYY-MM-DD.",
+          "example": "2023-01-01"
+        },
+        "start_time": {
+          "in": "query",
+          "type": "string",
+          "description": "Start time on start_date, hh:mm:ss."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End date, YYYY-MM-DD.",
+          "example": "2023-02-01"
+        },
+        "end_time": {
+          "in": "query",
+          "type": "string",
+          "description": "End time on end_date, hh:mm:ss."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Time zone for the input and output times, e.g. America/New_York."
+        },
+        "split_adjusted": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Split-adjusted values; default false."
+        },
+        "include_quote_only_bars": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include bars with quotes but no trades."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 100, up to 10,000 (stricter rate limit above 100)."
+        },
+        "next_page": {
+          "in": "query",
+          "type": "string",
+          "description": "next_page value from the previous response."
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_security_interval_prices_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_security_interval_prices_v2"
+      }
+    },
+    {
+      "id": "intrinio.company.get",
+      "name": "Look up a company",
+      "summary": "Ticker, CIK, LEI, SIC, description, CEO, addresses and website of a company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{identifier}",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company: ticker, CIK, LEI or Intrinio ID.",
+          "example": "AAPL"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_company_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_company_v2"
+      }
+    },
+    {
+      "id": "intrinio.company.search",
+      "name": "Search companies",
+      "summary": "Companies whose ticker or name matches a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Text matched against ticker and name.",
+          "example": "Apple"
+        },
+        "active": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: traded in the last 14 days; false: not traded. Unset: all."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "starts_with: match the start of the ticker or name.",
+          "enum": [
+            "starts_with"
+          ]
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return."
+        }
+      },
+      "job": "company.search",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/search_companies_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/search_companies_v2"
+      }
+    },
+    {
+      "id": "intrinio.company.fundamentals",
+      "name": "List a company's fundamentals",
+      "summary": "Filed statements of a company (one per statement, year and period) with the IDs used to fetch their data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{identifier}/fundamentals",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company: ticker, CIK, LEI or Intrinio ID.",
+          "example": "AAPL"
+        },
+        "filed_after": {
+          "in": "query",
+          "type": "string",
+          "description": "Filed on or after, YYYY-MM-DD."
+        },
+        "filed_before": {
+          "in": "query",
+          "type": "string",
+          "description": "Filed on or before, YYYY-MM-DD."
+        },
+        "reported_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only as-reported fundamentals."
+        },
+        "fiscal_year": {
+          "in": "query",
+          "type": "integer",
+          "description": "Fiscal year.",
+          "example": 2023
+        },
+        "statement_code": {
+          "in": "query",
+          "type": "string",
+          "description": "income_statement, balance_sheet_statement, cash_flow_statement or calculations.",
+          "enum": [
+            "income_statement",
+            "balance_sheet_statement",
+            "cash_flow_statement",
+            "calculations"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "QTR, YTD, FY or TTM.",
+          "enum": [
+            "QTR",
+            "YTD",
+            "FY",
+            "TTM"
+          ]
+        },
+        "fundamental_type": {
+          "in": "query",
+          "type": "string",
+          "description": "reported, restated or calculated.",
+          "enum": [
+            "reported",
+            "restated",
+            "calculated"
+          ]
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Period on or after, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Period on or before, YYYY-MM-DD."
+        },
+        "latest_only": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only the latest fundamental per period."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 100, up to 10,000 (stricter rate limit above 100)."
+        },
+        "next_page": {
+          "in": "query",
+          "type": "string",
+          "description": "next_page value from the previous response."
+        }
+      },
+      "notes": [
+        "Feed the returned IDs (or a ticker-statement-year-period code) to intrinio.fundamental.standardized_financials."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_company_fundamentals_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_company_fundamentals_v2"
+      }
+    },
+    {
+      "id": "intrinio.fundamental.standardized_financials",
+      "name": "Get standardized financial statements",
+      "summary": "Income statement, balance sheet, cash flow or 100+ calculated metrics for one filing period, normalized across companies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fundamentals/{id}/standardized_financials",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Fundamental ID, or ticker-statement-year-period, e.g. AAPL-income_statement-2023-FY.",
+          "example": "AAPL-income_statement-2018-Q1"
+        }
+      },
+      "notes": [
+        "Periods: FY, Q1-Q4, Q1TTM-Q3TTM and Q2YTD-Q3YTD; the balance sheet has FY and Q1-Q4 only."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_fundamental_standardized_financials_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_fundamental_standardized_financials_v2"
+      }
+    },
+    {
+      "id": "intrinio.company.data_point",
+      "name": "Get the latest value of a metric",
+      "summary": "Current value of one data tag (e.g. marketcap) for a company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{identifier}/data_point/{tag}/number",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company: ticker, CIK, LEI or Intrinio ID.",
+          "example": "AAPL"
+        },
+        "tag": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Intrinio data tag, e.g. marketcap.",
+          "example": "marketcap"
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_company_data_point_number_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_company_data_point_number_v2"
+      }
+    },
+    {
+      "id": "intrinio.company.historical_data",
+      "name": "Get a metric's history",
+      "summary": "Historical values of one data tag for a company, by frequency or fiscal period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{identifier}/historical_data/{tag}",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company: ticker, CIK, LEI or Intrinio ID.",
+          "example": "AAPL"
+        },
+        "tag": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Intrinio data tag, e.g. marketcap.",
+          "example": "marketcap"
+        },
+        "frequency": {
+          "in": "query",
+          "type": "string",
+          "description": "daily, weekly, monthly, quarterly or yearly.",
+          "enum": [
+            "daily",
+            "weekly",
+            "monthly",
+            "quarterly",
+            "yearly"
+          ]
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "FY, QTR or TTM.",
+          "enum": [
+            "FY",
+            "QTR",
+            "TTM"
+          ]
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "On or after, YYYY-MM-DD."
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "On or before, YYYY-MM-DD."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "description": "asc or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 100, up to 10,000 (stricter rate limit above 100)."
+        },
+        "next_page": {
+          "in": "query",
+          "type": "string",
+          "description": "next_page value from the previous response."
+        }
+      },
+      "job": "market.fundamentals",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_company_historical_data_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_company_historical_data_v2"
+      }
+    },
+    {
+      "id": "intrinio.company.news",
+      "name": "List news about a company",
+      "summary": "Latest and past news headlines, summaries and links for a US-listed company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{identifier}/news",
+      "params": {
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company: ticker, CIK, LEI or Intrinio ID.",
+          "example": "AAPL"
+        },
+        "specific_source": {
+          "in": "query",
+          "type": "string",
+          "description": "yahoo, moody, moody_us_news or moody_us_press_releases; default the best available.",
+          "enum": [
+            "yahoo",
+            "moody",
+            "moody_us_news",
+            "moody_us_press_releases"
+          ]
+        },
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "On or after, YYYY-MM-DD; default yesterday.",
+          "example": "2024-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "On or before, YYYY-MM-DD."
+        },
+        "sentiment": {
+          "in": "query",
+          "type": "string",
+          "description": "positive, neutral or negative (not for yahoo).",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ]
+        },
+        "topic": {
+          "in": "query",
+          "type": "string",
+          "description": "Topic filter (not for yahoo)."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language filter (not for yahoo)."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page; default 100, up to 10,000 (stricter rate limit above 100)."
+        },
+        "next_page": {
+          "in": "query",
+          "type": "string",
+          "description": "next_page value from the previous response."
+        }
+      },
+      "notes": [
+        "start_date defaults to yesterday: set it to see older stories."
+      ],
+      "job": "news.search",
+      "docs_url": "https://docs.intrinio.com/documentation/web_api/get_company_news_v2",
+      "verified": {
+        "docs": "https://docs.intrinio.com/documentation/web_api/get_company_news_v2"
+      }
+    }
+  ]
+}

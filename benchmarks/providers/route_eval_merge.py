@@ -28,11 +28,14 @@ import math
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
+from _frozen_checks import DEFAULT_MODE
 from _tools_effort_plan import ANSWER, EXTRACT, RESEARCH, SEARCH_EXTRACT
+from frozen import price_mode
 from route_eval_paths import MIXED, SEP
 
 from web_router import prices
-from web_router.routing.contract import Candidate, RouteDecision, RouteRequest
+from web_router.routing.contract import Candidate, RouteDecision, RouteRequest, candidate_id
+from web_router.routing.entry_names import split_entry
 from web_router.routing.merge import FallbackReason, Merged, merge
 
 if TYPE_CHECKING:
@@ -45,8 +48,9 @@ FROZEN_PAGES = "frozen:pages"
 
 
 def method_of(q: Question) -> str:
-    """The question's method, or ``mixed`` when its candidates are paths."""
-    if any(SEP in candidate for candidate in q.rows):
+    """The question's method, or ``mixed`` when its candidates are paths: ids led by their row's method, where a
+    vendor mode's entry (``exa:exa-deep``) is led by its backend."""
+    if any(cid.split(SEP)[0] == row["method"] for cid, row in q.rows.items()):
         return MIXED
     return str(next(iter(q.rows.values()))["method"])
 
@@ -58,18 +62,24 @@ def _pairs(q: Question, method: str) -> dict[tuple[str, str], None]:
     return dict.fromkeys((TOOL_OF_PATH[path.split(SEP)[0]], path.split(SEP)[1]) for path in q.candidates)
 
 
-def _candidate(tool: str, provider: str) -> Candidate:
-    latency = prices.estimate_latency(provider, tool)
+def _candidate(tool: str, entry: str) -> Candidate:
+    """``entry``'s candidate, a vendor mode's (``exa:exa-deep``) priced and timed at that mode."""
+    provider, mode = split_entry(entry, ())
+    priced = price_mode(provider, tool, mode or DEFAULT_MODE)
+    latency = prices.estimate_latency(provider, tool, priced)
     return Candidate(
         tool=tool,  # type: ignore[arg-type]  # a frozen set's method is a tool by construction
         provider=provider,
-        est_cost_usd=prices.estimate(provider, tool),
+        mode=mode,
+        est_cost_usd=prices.estimate(provider, tool, priced),
         est_latency_s=None if latency is None else latency[1],
     )
 
 
 def request_for(q: Question) -> RouteRequest:
     """What a router is shown for ``q``: one candidate per (tool, provider), the method pinned on a one-method set.
+
+    A vendor mode the set was loaded with (``--modes``) is a candidate of its own, ``search:exa:exa-deep``.
 
     The prompt is empty unless ``--joined`` gave the question's text; route-eval never times a router out.
     """
@@ -134,6 +144,14 @@ def _path_of(merged: Merged, provider: str, ids: Sequence[str], method: str) -> 
     return next((found[mode] for mode in modes if mode in found), None)
 
 
+def _as_decision(ranking: list[str], method: str) -> RouteDecision:
+    """A ranking as a decision: its backends as ``providers``, or as ``attempts`` once it names a vendor mode,
+    which only ``attempts`` run (``exa:exa-deep`` as ``search:exa:exa-deep``)."""
+    if not any(SEP in p for p in ranking):
+        return RouteDecision(providers={method: ranking})  # type: ignore[dict-item]
+    return RouteDecision(attempts=[candidate_id(method, *split_entry(p, ())) for p in ranking])
+
+
 def walk(
     answer: Any, q: Question, fallback_order: Callable[[Question], list[str]], failure: FallbackReason | None
 ) -> tuple[list[str | None], bool]:
@@ -150,9 +168,10 @@ def walk(
         known = [p for p in dict.fromkeys(answer) if p in q.rows]
         return list(dict.fromkeys((*known, *static))), not known
     ranking = isinstance(answer, list)
-    decision = RouteDecision(providers={method: answer}) if ranking else answer  # type: ignore[dict-item]
+    decision = _as_decision(answer, method) if ranking else answer
     merged = merge(request_for(q), decision, _by_tool(static, method), failure=failure)  # type: ignore[arg-type]
     asked = decision.providers if isinstance(decision, RouteDecision) and not ranking else None
     named = ranking or bool((asked or {}).get(merged.tool))
     failed = merged.notes.fallback is not None or (named and not merged.notes.ranked)
-    return [_path_of(merged, provider, static, method) for provider in merged.providers], failed
+    ids = [*static, *(cid for cid in q.candidates if cid not in static)]  # a vendor mode is in no static order
+    return [_path_of(merged, provider, ids, method) for provider in merged.providers], failed

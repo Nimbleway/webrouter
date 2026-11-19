@@ -38,7 +38,7 @@ async def test_one_call_asks_backend_then_mode_with_the_key_in_its_own_header(mo
     assert list(body["questions"]["backend"]["criteria"]) == ["search:tavily", "search:exa"]
     assert list(body["questions"]["mode"]["criteria"]) == ["search:exa:exa-instant", "search:exa:exa-deep"]
     assert decision.attempts == ["search:exa:exa-deep", "search:tavily", "search:exa:exa-instant"]  # 0.49, 0.3, 0.21
-    assert decision.reason == f"gemini({sent.url.host}): search:exa:exa-deep, p=0.70"
+    assert decision.reason == f"gemini({sent.url.host}): search:exa:exa-deep, p=0.49"
 
 
 async def test_without_modes_it_asks_the_backend_question_only(monkeypatch: pytest.MonkeyPatch) -> None:
