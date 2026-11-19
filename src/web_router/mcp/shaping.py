@@ -53,15 +53,15 @@ from web_router.types_browse import BrowseProgress
 
 
 def max_response_chars() -> int:
-    """How large one shaped result may be, from the environment or the default.
+    """How large one shaped result may be: the environment's value, or the default if it is unparseable or below 1.
 
-    An unparseable value falls back to the default rather than raising: a stdio server that
-    refuses to start over a typo in a client config is worse than one using its own number.
+    It never raises: a server that refuses to start over a typo in a client config is worse than one using its default.
     """
     try:
-        return int(os.environ[ENV_MCP_MAX_CHARS])
+        chars = int(os.environ[ENV_MCP_MAX_CHARS])
     except (KeyError, ValueError):
-        return MCP_MAX_RESPONSE_CHARS
+        chars = 0
+    return chars if chars > 0 else MCP_MAX_RESPONSE_CHARS
 
 
 def render(payload: Any) -> str:
