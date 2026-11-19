@@ -185,6 +185,34 @@ def test_an_extract_reply_without_a_results_list_raises(extractor: SpecStreamExt
         extractor._to_response(ExtractRequest(urls=["https://a.com"]), ["https://a.com"], body)
 
 
+@pytest.mark.parametrize("status", ["blocked", "not_found", "empty", "unsupported", "invalid_url", "failed"])
+def test_a_page_whose_status_is_not_ok_is_a_failed_url(extractor: SpecStreamExtractProvider, status: str) -> None:
+    urls = ["https://a.com", "https://b.com"]
+    blocked = {"url": "https://b.com", "status": status, "text": "Access denied", "status_code": 403}
+    body = {"data": {"results": [EXTRACT_REPLY["data"]["results"][0], blocked]}}
+
+    response = extractor._to_response(ExtractRequest(urls=urls), urls, body)
+
+    assert [document.url for document in response.documents] == ["https://a.com"]
+    (failure,) = response.failures
+    assert failure.url == "https://b.com" and status in failure.error and failure.status_code == 403
+
+
+def test_a_blocked_page_reaches_the_caller_as_a_failure_not_a_document(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SPECSTREAM_API_KEY", "test-key")
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        (url,) = json.loads(request.content)["urls"]
+        item = {"url": url, "status": "ok", "text": "Body."} if url == "https://a.com" else {"url": url, "status": "blocked"}
+        return httpx.Response(200, json={"data": {"results": [item]}})
+
+    extractor = SpecStreamExtractProvider(transport=httpx.MockTransport(answer))
+    response = extractor.extract(ExtractRequest(urls=["https://a.com", "https://b.com"]))
+
+    assert [document.url for document in response.documents] == ["https://a.com"]
+    assert [failure.url for failure in response.failures] == ["https://b.com"]
+
+
 @pytest.mark.integration
 def test_live_search_returns_web_results() -> None:
     if not os.environ.get("SPECSTREAM_API_KEY"):

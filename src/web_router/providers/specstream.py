@@ -16,12 +16,14 @@ from typing import Any, ClassVar, Literal
 from web_router.constants import ENV_SPECSTREAM_API_KEY, PROVIDER_SPECSTREAM
 from web_router.constants_specstream import (
     MSG_SPECSTREAM_NO_LIST,
+    MSG_SPECSTREAM_PAGE_FAILED,
     SPECSTREAM_API_KEY_PREFIX,
     SPECSTREAM_BASE_URL,
     SPECSTREAM_EXTRACT_DEFAULT_FORMAT,
     SPECSTREAM_EXTRACT_FORMATS,
     SPECSTREAM_EXTRACT_PATH,
     SPECSTREAM_MAX_RESULTS,
+    SPECSTREAM_PAGE_OK,
     SPECSTREAM_SEARCH_PARAMETERS,
     SPECSTREAM_SEARCH_PATH,
 )
@@ -31,6 +33,7 @@ from web_router.providers._utils import best_text, build_payload
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
+    ExtractFailure,
     ExtractFormat,
     ExtractRequest,
     ExtractResponse,
@@ -119,16 +122,26 @@ class SpecStreamExtractProvider(HttpExtractProvider):
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         body_format = self.format_of(request)
-        documents = [
-            ExtractedDocument(
-                url=item.get("url") or "",
-                title=item.get("title") or "",
-                content=item.get("text") or "",
-                format=body_format,
-                status_code=item.get("status_code"),
-                published_date=item.get("published") or None,
-                extra={k: v for k, v in item.items() if k not in _MAPPED_DOCUMENT_FIELDS},
+        documents: list[ExtractedDocument] = []
+        failures: list[ExtractFailure] = []
+        for item in _data_list(self.name, payload, "results"):
+            url = item.get("url") or ""
+            status = item.get("status")
+            # The API answers 200 for a page it could not read and says why in status, so that
+            # page fails here and auto can try the next backend for it.
+            if status != SPECSTREAM_PAGE_OK:
+                error = MSG_SPECSTREAM_PAGE_FAILED.format(status=status)
+                failures.append(ExtractFailure(url=url, error=error, status_code=item.get("status_code")))
+                continue
+            documents.append(
+                ExtractedDocument(
+                    url=url,
+                    title=item.get("title") or "",
+                    content=item.get("text") or "",
+                    format=body_format,
+                    status_code=item.get("status_code"),
+                    published_date=item.get("published") or None,
+                    extra={k: v for k, v in item.items() if k not in _MAPPED_DOCUMENT_FIELDS},
+                )
             )
-            for item in _data_list(self.name, payload, "results")
-        ]
-        return ExtractResponse(provider=self.name, documents=documents, raw=[payload])
+        return ExtractResponse(provider=self.name, documents=documents, failures=failures, raw=[payload])
