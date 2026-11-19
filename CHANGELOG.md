@@ -8,6 +8,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+### Fixed
+
+## [0.14.0] - 2026-11-19
+
+### Added
+
 - `LiveDataBackendChoiceError`, a `ConfigurationError`, for a bare live data source name that several configured backends could serve; `providers` names them, and `provider=` picks one. An `except ConfigurationError` still catches it. The `webrouter` command exits 2 on it, a choice to make, rather than 3, a key missing.
 - A `webrouter` command line: `search`, `extract`, `answer`, `research`, `browse`, `live-data sources|source|run` and `providers` as shell commands, each calling the public method with the same validation and routing. stdout is the response as one JSON object, without the backend's `raw` payload unless `--raw` asks for it. A failure leaves stdout empty, prints `{"error": {"type", "message"}}` on stderr and exits 1 when the call failed, 2 when it was refused before anything was sent (a cost cap nothing fits included), and 3 when a key or an extra is missing; Ctrl-C exits 130 with the same envelope. `--max-cost USD` caps a call's estimated cost as `Budget(max_cost_usd=...)` does. Also runs as `python -m web_router.cli`. See [Command line](https://docs.webrouter.net/cli).
 - Vendor modes you can pin: `search(provider="exa:exa-instant")`, or the same id as a chain entry, runs Exa in its `instant` search type. Exa, Tavily, Parallel, Linkup, Perplexity, Keenable, You.com, Brave and DeepSeek declare their tiers (`exa-instant`, `tavily-ultra-fast`, `linkup-deep`, ...), contents (`exa-highlights`, `you-full-page-cache`) and flags (`brave-extra-snippets`, `deepseek-content`) on the provider class. A pin can name a depth too (`exa:exa-instant+lite`). The mode is merged into the request body before `provider_options`, and refused with `InvalidParameterError` before anything is sent when the caller set something it would overwrite: a `provider_options` key it writes, another `search_depth`, or an `effort` that writes the same field. A pinned search is priced as its mode: `cost_usd` on the response and the budget's charge. Each search contract lists the wire of every mode under `options.mode` and what a router may pick under `offers`. `benchmarks/providers/modes.json` is gone: a scan setup is the id `provider=` takes (`tavily:tavily-ultra-fast`), and `tavily:ultra-fast` without `@` no longer reads as a vendor mode; a frozen row from an older scan's bare `tavily:fast` (Tavily's tier then) now prices as the `fast` depth.
