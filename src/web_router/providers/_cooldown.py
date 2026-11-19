@@ -24,6 +24,7 @@ from web_router.constants_production import (
     COOLDOWN_FALLBACK_S,
     COOLDOWN_MAX_S,
     COOLDOWN_STATUSES,
+    HOP_CODE_COOLING_DOWN,
     LOG_COOLDOWN_SET,
     MSG_COOLING_DOWN,
 )
@@ -37,6 +38,13 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 logger = logging.getLogger(__name__)
+
+
+class CoolingDownError(ProviderError):
+    """``auto`` passed a backend over while it cools down: no request was sent, so nothing was billed."""
+
+    hop_code = HOP_CODE_COOLING_DOWN
+    """What a decision record's hop says for it, in place of the status that started the cooldown."""
 
 
 class Cooldowns:
@@ -89,13 +97,13 @@ class Cooldowns:
                 return None
             return left, entry[1]
 
-    def refusal(self, provider: str) -> ProviderError | None:
+    def refusal(self, provider: str) -> CoolingDownError | None:
         """The error ``auto`` records for passing ``provider`` over while it cools down; ``None`` when it may run."""
         left = self.remaining(provider)
         if left is None:
             return None
         seconds, status = left
-        error = ProviderError(
+        error = CoolingDownError(
             provider, MSG_COOLING_DOWN.format(status=status or _RATE_LIMIT, seconds=seconds), kind=_RATE_LIMIT
         )
         error.status_code = status

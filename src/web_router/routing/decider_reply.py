@@ -37,6 +37,16 @@ def unit_number(value: object) -> TypeGuard[int | float]:
         return False
 
 
+def score_order(value: object) -> float:
+    """A score's sort key; anything but a number from 0 to 1 sorts last, for :func:`checked_reply` to refuse."""
+    return float(value) if unit_number(value) else -math.inf
+
+
+def rank(scores: Mapping[str, object]) -> list[str]:
+    """The ids by score, highest first, ties in the order ``scores`` lists them."""
+    return sorted(scores, key=lambda cid: score_order(scores[cid]), reverse=True)
+
+
 def checked_reply(reply: object, options: Mapping[str, str], name: str) -> DeciderReply:
     """``reply`` once its ranking, scores and confidence fit the question's ``options``.
 

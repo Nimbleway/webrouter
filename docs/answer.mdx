@@ -102,6 +102,6 @@ the variables to set. On a router whose default is not an answer backend
 (`WebRouter("nimble")`), the one answer backend you hold a key for serves the
 call; with several, name one, or pass `provider="auto"`.
 
-"Answer" means two other things nearby. `SearchResponse.answer` is an answer a
-search backend volunteered beside its results, unasked (You.com's knowledge
-panel); `answer()` is one you asked for, with its sources.
+`answer()` is an answer you asked for, with the sources it cites.
+`SearchResponse.answer` is different: text a search backend volunteered beside
+its results, unasked (You.com's knowledge panel), with no citations of its own.

@@ -1793,7 +1793,7 @@ def test_a_web_router_arm_never_shows_the_agent_an_answer_key_page(
     search, read, mixed = asyncio.run(go())
     assert search.response.results == [] and "example.com" not in search.content
     assert search.response.answer is None
-    assert read.is_error and "answer key" in read.content
+    assert read.is_error and "kind=target" in read.content and "answer key" in str(read.error)
     assert [d.url for d in mixed.response.documents] == ["https://other.org/b"]
     assert row.withheld == 3
 

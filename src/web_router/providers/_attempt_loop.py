@@ -1,10 +1,12 @@
 """One walk down an ``auto`` chain: each member in the call's order, until one answers.
 
 Every ``auto`` method walks its members here, sync and async: search, extract,
-answer, research and browse. Before each member the call's hook is asked
-(:func:`~web_router.routing.attempts.admitted`), and a member that fails is
-recorded (:func:`~web_router.routing.attempts.failed`), which raises when no
-other member could do better. What the walks differ in, :class:`Walk` says:
+answer, research and browse. Each step is an attempt, a member in the vendor
+mode the call's order names for it (:mod:`._attempt_step`): before it the
+call's hook is asked (:func:`~web_router.routing.attempts.admits`), and one
+that fails is recorded (:func:`~web_router.routing.attempts.failed`), which
+raises when no other member could do better. What the walks differ in,
+:class:`Walk` says:
 
 - ``hops``: the one-call chains (search, extract, answer) call each member
   through :func:`~._hop.hop`, which passes over a member while it cools down
@@ -32,16 +34,18 @@ from typing import Any, Generic, TypeVar
 from web_router.constants import AUTO_AGGREGATE_FAILURE
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.providers._chain import _RECOVERABLE, _held_or_raise, _nothing_started
+from web_router.providers._attempt_step import Failures, Tried, failure, prepared, priced, refused
+from web_router.providers._chain import RECOVERABLE, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
-from web_router.routing.attempts import admitted, failed, in_call_order, noted
+from web_router.routing.attempts import in_call_order
 from web_router.routing.contract import ToolName
+from web_router.routing.entry_names import entry_name
 
 _Res = TypeVar("_Res")
 
-Order = list[tuple[int, str]]
-"""The members to try, as (chain position, name), in call order."""
+Order = list[tuple[int, str, str | None]]
+"""The members to try, as (chain position, name, vendor mode), in call order; a mode of ``None`` is the default."""
 
 MODE_CLASHES: tuple[type[WebRouterError], ...] = (InvalidParameterError,)
 """A pinned member refusing the call's options before sending (``exa:exa-instant`` with ``effort``): try the next.
@@ -49,7 +53,6 @@ MODE_CLASHES: tuple[type[WebRouterError], ...] = (InvalidParameterError,)
 Called directly, the same pin raises; in a chain whose every member refuses, the first refusal is raised as it came.
 """
 
-Failures = dict[str, WebRouterError]
 Exhausted = Callable[[Any, Failures, list[WebRouterError]], Any]
 """Given the first empty answer held, each member's failure and the refusals: what a walk with no answer ends on."""
 
@@ -78,7 +81,7 @@ class Walk:
     """The members built so far, by chain position: a failure's says whether it held a credential to refuse."""
 
     @classmethod
-    def over(cls, eligible: Order, **fields: Any) -> Walk:
+    def over(cls, eligible: list[tuple[int, str]], **fields: Any) -> Walk:
         """A walk over ``eligible``, in the call's order for its ``tool``."""
         return cls(order=in_call_order(fields["tool"], eligible), **fields)
 
@@ -90,19 +93,6 @@ class Ran(Generic[_Res]):
     response: _Res
     provider: str = ""
     rest: Order = field(default_factory=list)
-
-
-@dataclass
-class _Tried:
-    """What a walk has met so far: each member's failure, the refusals, the first empty answer."""
-
-    failures: Failures = field(default_factory=dict)
-    refused: list[WebRouterError] = field(default_factory=list)
-    held: Any = None
-
-    def hold(self, response: object) -> None:
-        # Not `held or response`: an empty response is falsy, having no length.
-        self.held = response if self.held is None else self.held
 
 
 def answered_unless(empty: Callable[[Any], bool], fallback_on_empty: bool) -> Callable[[Any], bool]:
@@ -126,24 +116,24 @@ def raising(error: Callable[[Failures], WebRouterError]) -> Exhausted:
 
 def run(walk: Walk, request: Any) -> Ran[Any]:
     """Walk ``walk``'s members with ``request`` until one answers."""
-    tried = _Tried()
-    for index, (position, name) in enumerate(walk.order):
+    tried = Tried()
+    for index, (position, name, mode) in enumerate(walk.order):
         if (late := _late(walk, tried)) is not None:
             return Ran(late)
-        if not admitted(walk.tool, name, request):
+        if (attempt := prepared(walk, tried, position, name, mode, request)) is None:
             continue
         try:
             call = getattr(walk.member(position), walk.method)
-            response = hop(walk.tool, name, call, request) if walk.hops else call(request)
+            response = hop(walk.tool, name, call, attempt.request) if walk.hops else call(attempt.request)
         except _deadline(walk) as exc:
-            return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, name, walk.tool))
+            return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, entry_name(name, mode), walk.tool))
         except walk.refusals as exc:
-            _refused(walk, tried, name, exc)
+            refused(walk, tried, attempt, exc)
             continue
-        except _RECOVERABLE as exc:
-            _failed(walk, tried, position, name, exc)
+        except RECOVERABLE as exc:
+            failure(walk, tried, position, exc, name, mode, attempt)
             continue
-        if walk.final(response):
+        if walk.final(response := priced(response, walk.member(position), attempt)):
             return Ran(response, name, walk.order[index + 1 :])
         tried.hold(response)
     return Ran(walk.exhausted(tried.held, tried.failures, tried.refused))
@@ -151,30 +141,30 @@ def run(walk: Walk, request: Any) -> Ran[Any]:
 
 async def arun(walk: Walk, request: Any) -> Ran[Any]:
     """Async counterpart of :func:`run`."""
-    tried = _Tried()
-    for index, (position, name) in enumerate(walk.order):
+    tried = Tried()
+    for index, (position, name, mode) in enumerate(walk.order):
         if (late := _late(walk, tried)) is not None:
             return Ran(late)
-        if not admitted(walk.tool, name, request):
+        if (attempt := prepared(walk, tried, position, name, mode, request)) is None:
             continue
         try:
             call = getattr(walk.member(position), f"a{walk.method}")
-            response = await (ahop(walk.tool, name, call, request) if walk.hops else call(request))
+            response = await (ahop(walk.tool, name, call, attempt.request) if walk.hops else call(attempt.request))
         except _deadline(walk) as exc:
-            return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, name, walk.tool))
+            return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, entry_name(name, mode), walk.tool))
         except walk.refusals as exc:
-            _refused(walk, tried, name, exc)
+            refused(walk, tried, attempt, exc)
             continue
-        except _RECOVERABLE as exc:
-            _failed(walk, tried, position, name, exc)
+        except RECOVERABLE as exc:
+            failure(walk, tried, position, exc, name, mode, attempt)
             continue
-        if walk.final(response):
+        if walk.final(response := priced(response, walk.member(position), attempt)):
             return Ran(response, name, walk.order[index + 1 :])
         tried.hold(response)
     return Ran(walk.exhausted(tried.held, tried.failures, tried.refused))
 
 
-def _late(walk: Walk, tried: _Tried) -> Any:
+def _late(walk: Walk, tried: Tried) -> Any:
     """For a one-call chain out of time, the first empty answer held, else it raises the deadline; else ``None``."""
     return _late_answer(tried.held, walk.owner, tried.failures) if walk.hops else None
 
@@ -182,15 +172,3 @@ def _late(walk: Walk, tried: _Tried) -> Any:
 def _deadline(walk: Walk) -> tuple[type[DeadlineExceededError], ...]:
     """What ends a one-call chain at the deadline; a job chain lets it raise as it came."""
     return (DeadlineExceededError,) if walk.hops else ()
-
-
-def _refused(walk: Walk, tried: _Tried, name: str, exc: WebRouterError) -> None:
-    tried.refused.append(exc)
-    noted(walk.tool, name, exc)
-
-
-def _failed(walk: Walk, tried: _Tried, position: int, name: str, exc: WebRouterError) -> None:
-    """Record ``name``'s failure and move on; raise it when moving on could bill twice or would not help."""
-    if not walk.hops and not _nothing_started(exc):
-        raise exc
-    failed(tried.failures, walk.tool, name, exc, walk.built.get(position))

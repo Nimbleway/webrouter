@@ -56,8 +56,8 @@ a router, `response.decision` lists each with its estimate and seconds, and
 
 | Method | $0 backends | Cheapest listed | Notes |
 | --- | --- | --- | --- |
-| `search` | `you-mcp`, `exa-mcp`, `parallel-mcp` (keyless) | `deepseek`, $0.00075 | Keyless Nimble and Tavily are priced as with a key, $0.005 and $0.008; keyless Keenable has no price, so a cost cap skips it |
-| `extract` | none | `deepseek`, $0.00075 a page | Keyless Nimble and Tavily are priced as with a key, $0.001 and $0.008 a page; keyless Jina is free at 20 requests a minute but billed by tokens with a key, so a cost cap skips it |
+| `search` | `you-mcp`, `exa-mcp`, `parallel-mcp` (keyless) | `deepseek`, $0.00075 | Keyless Nimble, Tavily and Keenable are priced as with a key, $0.005, $0.008 and $0.004 |
+| `extract` | none | `deepseek`, $0.00075 a page | Keyless Nimble, Tavily and Keenable are priced as with a key, $0.001, $0.008 and $0.004 a page; keyless Jina is free at 20 requests a minute but billed by tokens with a key, so a cost cap skips it |
 | `answer` | none | `perplexity`, about $0.0012 (measured) | Then Brave ($0.004 plus tokens, a floor a cap skips), Exa and You.com ($0.005) |
 | `research` | none | `parallel`, $0.005 a run at `effort="low"` | Nimble at its default and at `max`, and You.com, have no known price; Perplexity is billed by tokens |
 | `browse` | none | `browser-use`, $0.01 a task plus steps | Its price is a floor, so a cost cap skips it |
@@ -92,9 +92,9 @@ failed attempt still counts.
   (Perplexity's answer), and is unknown otherwise (Perplexity's research).
 - **Free tiers.** The keyless MCP search endpoints (`you-mcp`, `exa-mcp`,
   `parallel-mcp`) are priced $0, so a cost cap does not skip them. Keyless
-  Nimble and Tavily are priced as with a key -- a search $0.005 and $0.008, a
-  page $0.001 and $0.008 -- so their calls count against a cap and in the
-  spend log. Keyless Keenable has no price, so a cost cap skips it.
+  Nimble, Tavily and Keenable are priced as with a key -- a search $0.005,
+  $0.008 and $0.004, a page $0.001, $0.008 and $0.004 -- so their calls count
+  against a cap and in the spend log.
 - **Unknown p90.** Under a time cap, a backend with no measured p90 runs
   within the time left; `strict=True` skips it instead. Research's p90 comes
   from the effort table first, then the price list.

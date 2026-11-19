@@ -35,9 +35,17 @@
       "sample": {
         "body.contextId": "profile-id"
       }
+    },
+    "mode": {
+      "browserbase-proxies": {
+        "body.proxies": true
+      }
     }
   },
   "not_mapped": [],
+  "offers": [
+    "browserbase-proxies"
+  ],
   "default_format": "html",
   "batches_urls": false,
   "source": [
@@ -46,16 +54,13 @@
   ],
   "verified": {
     "format": "live: tests/providers/test_browserbase_extract.py::test_live_fetch_returns_markdown_and_html",
-    "profile": "live: tests/providers/test_browserbase_extract.py::test_live_a_cookie_saved_in_a_session_rides_along_on_a_fetch_naming_its_context"
+    "profile": "live: tests/providers/test_browserbase_extract.py::test_live_a_cookie_saved_in_a_session_rides_along_on_a_fetch_naming_its_context",
+    "mode.browserbase-proxies": "docs: https://www.browserbase.com/pricing"
   },
   "vendor_options": {
     "allowRedirects": {
       "status": "passthrough",
       "note": "Boolean, off by default; with it off a redirect comes back as the target's own status_code."
-    },
-    "proxies": {
-      "status": "passthrough",
-      "note": "Boolean; routes the fetch through Browserbase's proxies."
     }
   }
 }

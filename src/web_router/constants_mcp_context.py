@@ -81,3 +81,4 @@ MCP_COST_DIGITS = 6
 
 MCP_MSG_ERROR_FACTS = " (kind={kind}, retryable={retryable})"
 """Appended to a failed tool call's text when the error says what kind it was, so a model branches on fields."""
+MCP_LOG_TOOL_RAISED = "A tool raised %s: %s\n%s"

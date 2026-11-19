@@ -64,6 +64,95 @@ the date it was checked, for reading accuracy against cost. Its tables are
 generated from `src/web_router/data/prices.json`, the list `web_router.prices`
 reads; change a price there and run `make prices`.
 
+### Vendor modes on SealQA-hard
+
+Frozen as [`sealqa-hard-254-modes`](#frozen-results): 25 mode setups on all
+254 SealQA Seal-Hard questions (seed 0, 5 results, judged by `openai:gpt-4o`),
+beside the same backends at their defaults, run the same day (2026-11-16). Compare a
+mode with that day's default, not with `sealqa-hard-254`: every default rose
+since October (Perplexity 48 to 85), and these scans withheld the set's own
+pages from the judge, which October's did not. With 254 questions, a gap under
+about 8 correct (3 points) is noise. Price is the list price per 1,000
+searches at the scan's 5 results; where it grows with results (Exa, Nimble
+`deep`, You.com `deep`), the 10-result upper bound in `prices.json` follows in
+brackets. p90 is what `make latency` wrote to `prices.json` (a default's pools its earlier
+runs too). A failed search counts as a miss.
+
+| Backend | Setup | Correct | vs default | $/1k | p90 |
+| --- | --- | --- | --- | --- | --- |
+| Exa | default | 63 | | 12 (17) | 6.3s |
+| | `exa-deep-reasoning` | 88 | +25 | 20 (25) | 11.1s |
+| | `exa-deep` | 86 | +23 | 17 (22) | 7.8s |
+| | `exa-highlights` | 76 | +13 | 12 (17) | 3.8s |
+| | `exa-deep-lite` | 66 | +3 | 17 (22) | 2.9s |
+| | `exa-fast` | 59 | -4 | 12 (17) | 0.7s |
+| | `exa-instant` | 51 | -12 | 9 (14) | 0.6s |
+| Parallel | default | 68 | | unknown | 3.1s |
+| | `parallel-advanced` | 85 | +17 | 5 | 3.9s |
+| | `parallel-basic` | 64 | -4 | 5 | 3.3s |
+| | `parallel-turbo` | 62 | -6 | 1 | 0.6s |
+| Linkup | default | 59 | | 5 | 1.0s |
+| | `linkup-deep` | 78 | +19 | 50 | 32.0s |
+| | `linkup-standard` | 55 | -4 | 5 | 1.6s |
+| | `linkup-flash` | 42 | -17 | 5 | 0.5s |
+| Perplexity | default | 85 | | 5 | 1.7s |
+| | `perplexity-fast` | 71 | -14 | 1 | 0.4s |
+| Tavily | default (`lite`) | 43 | | 8 | 4.0s |
+| | `fast` | 67 | +24 | 16 | 3.7s |
+| | `tavily-fast` | 46 | +3 | 8 | 0.9s |
+| | `deep` | 28 | -15 | 16 | 4.1s |
+| | `tavily-ultra-fast` | 21 | -22 | 8 | 0.7s |
+| You.com | default (`lite`) | 42 | | 5 | 0.8s |
+| | `fast` | 66 | +24 | 5 | 1.1s |
+| | `you-full-page-cache` | 44 | +2 | 5 | 1.2s |
+| | `deep` | 41 | -1 | 10 (15) | 6.8s |
+| Nimble | default (`fast`) | 53 | | 5 | 1.3s |
+| | `deep` | 40 | -13 | 10 (15) | 7.5s |
+| | `lite` | 21 | -32 | 1.1 | 10.4s |
+| Keenable | default | 53 | | 4 | 0.6s |
+| | `keenable-realtime` | 58 | +5 | 4 | 0.5s |
+| Brave | default | 48 | | 5 | 0.9s |
+| | `brave-extra-snippets` | 48 | 0 | 5 | 1.2s |
+| DeepSeek | default | 42 | | 0.75 | 0.6s |
+| | `deepseek-content` | 43 | +1 | 0.75 | 0.7s |
+
+WebIQ's default is in the set but answered none: every call was refused
+(HTTP 401) that day. DeepSeek refused the 97 questions longer than its
+128-character limit in both setups. Rate limits cost Exa 2-5 searches per mode
+and Linkup 2-7, and You.com `deep` hit 7 HTTP 504s.
+
+What it says:
+
+- The mode moves a backend as far as switching backends does: Exa spans 51-88,
+  Linkup 42-78, Tavily 21-67.
+- Seven modes clearly beat their default: Exa `exa-deep`, `exa-deep-reasoning`
+  and `exa-highlights`, Parallel `parallel-advanced`, Linkup `linkup-deep`, and
+  the `fast` depth on Tavily and You.com.
+- Some are as accurate as the default and faster or cheaper: Exa `exa-fast`
+  (p90 0.7s against 6.3s), Tavily `tavily-fast` (0.9s against 4.0s, same price)
+  and Parallel `parallel-turbo` ($1 per 1k).
+- Perplexity `perplexity-fast`, both Nimble depths, Tavily `deep` and
+  `tavily-ultra-fast`, Linkup `linkup-flash` and You.com `deep` lose to the
+  default; Brave's extra snippets and DeepSeek's content change nothing.
+- More text did not score better: Tavily `deep` and You.com `deep` score below
+  `fast`, and Nimble `lite` has 145 answers graded not attempted. Read a judge's
+  grades on very long or very short results before offering a depth.
+
+The `offers` this suggests, each a mode that beats the default or matches it
+for less time or money, with any mode another one beats on accuracy, price and
+p90 left out (`exa-deep-reasoning` is within noise of `exa-deep`, dearer and
+slower):
+
+| Backend | Proposed `offers` |
+| --- | --- |
+| Exa | `exa-deep`, `exa-highlights`, `exa-fast` |
+| Parallel | `parallel-advanced`, `parallel-turbo` |
+| Linkup | `linkup-deep` |
+| Tavily | `fast`, `tavily-fast` |
+| You.com | `fast` |
+| Perplexity, Nimble, Brave, DeepSeek | none: the default only |
+| Keenable | `keenable-realtime` |
+
 ## Adding backends to a finished scan
 
 A backend that failed during a run, or one added later, can run on the
@@ -318,9 +407,10 @@ the unit tests run it too.
 The latency in `src/web_router/data/prices.json` comes from these files:
 `make latency` pools every set that covers a (provider, method, mode), counts
 only the rows with no error, and writes each row's p50, p90, sample size, runs
-and date. It leaves out a set that repeats an earlier set's questions by the
-same method (`sealqa-hard-254-twin`) and a mixed set (`tools-effort-60`, whose
-answer rows are copies), so no question counts twice. A frozen setup with no
+and date. It leaves out a setup (a backend at one mode) that repeats an earlier
+set's questions by the same method, such as `sealqa-hard-254-twin`'s two
+backends or the defaults beside `sealqa-hard-254-modes`, and a mixed set
+(`tools-effort-60`, whose answer rows are copies), so no question counts twice. A frozen setup with no
 price row is reported and left out, never given one.
 
 The committed rows carry no question or answer text, only a `question_id`:
@@ -334,6 +424,7 @@ they come back. SimpleQA is from `openai/simple-evals` (MIT), SealQA from
 | --- | --- | --- | --- |
 | `sealqa-hard-254` | 254 | 2540 | Every SealQA Seal-Hard question, one search per backend, ten backends |
 | `sealqa-hard-254-twin` | 254 | 508 | The same questions again on two backends: the run-to-run noise floor |
+| `sealqa-hard-254-modes` | 254 | 9144 | [25 vendor modes](#vendor-modes-on-sealqa-hard) and eleven defaults, run the same day; its scans withheld the set's own pages from the judge, so it stands apart from `sealqa-hard-254`. The modes scan predates canonical ids, so its labels are frozen as them: its `tavily:fast`, Tavily's tier then, is `tavily-fast`, and `tavily@fast` is the `fast` depth |
 | `simpleqa-300-v2` | 300 | 3600 | 300 SimpleQA questions (seed 0), ten backends, with Keenable and DeepSeek added later on the same questions |
 | `answer-simpleqa-300` | 300 | 1500 | The same 300 SimpleQA questions through `answer()`, five backends |
 | `tools-effort-60` | 60 | 1150 | [The tool and effort set](#the-tool-and-effort-set): 60 questions through search then read, extract, `answer()` and `research()` at each effort; the easy questions' answer rows are copied from `answer-simpleqa-300`. Most Perplexity research rows and some Brave answers failed during the run; `failed_rows` in the manifest has every count |
@@ -386,8 +477,12 @@ By default it scores `sealqa-hard-254` and `simpleqa-300-v2`, SimpleQA being
 the control set where routing should gain nothing, and `tools-effort-60`
 ([below](#tool-choice-and-effort)). A router is `static`
 (`auto`'s order today), `oracle` (the backend that got each question right,
-cheapest first: the ceiling), `always:<backend>`, or your own callable as
-`module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
+cheapest first: the ceiling), `always:<backend>`, a built-in or registered
+router by name as `router:<name>` (`router:gemini`, built with no
+`router_config`: it reads its preset's key and each question bills its vendor,
+which the cost columns do not count; it routes on each question's text, so it
+needs `--joined`),
+or your own callable as `module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
 as the yardsticks. Your callable is a router of the library's contract
 (`web_router.routing`): it takes a `RouteRequest` -- one candidate per backend
 the set has rows for, with its list price and p90, and the method pinned -- and

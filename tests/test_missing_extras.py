@@ -1,4 +1,4 @@
-"""A missing optional dependency names the extra that installs it, and ``all`` carries the MCP server."""
+"""A missing optional dependency names the extra that installs it; `all` and `mcp` carry what they promise."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ def test_the_mcp_command_without_its_extra_prints_the_install_line(
     monkeypatch.setattr(builtins, "__import__", _failing_import("web_router.mcp.server", "mcp"))
 
     with pytest.raises(SystemExit) as exited:
-        mcp_cli.main()
+        mcp_cli.main([])
 
     assert exited.value.code == 1
     assert 'pip install "webrouter[mcp]"' in capsys.readouterr().err
@@ -45,7 +45,7 @@ def test_an_unrelated_missing_module_is_not_reported_as_the_extra(monkeypatch: p
     monkeypatch.setattr(builtins, "__import__", _failing_import("web_router.mcp.server", "no_such_module"))
 
     with pytest.raises(ModuleNotFoundError, match="no_such_module"):
-        mcp_cli.main()
+        mcp_cli.main([])
 
 
 def test_the_http_base_classes_without_httpx_name_the_search_extra(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -64,3 +64,10 @@ def test_all_installs_the_mcp_server_and_the_console_script_can_name_its_extra()
 
     assert "mcp" in all_extra.split("[")[1].rstrip("]").split(",")
     assert project["scripts"]["web-router-mcp"] == "web_router.mcp_cli:main"
+
+
+def test_the_mcp_extra_carries_the_browser_tools() -> None:
+    """A plain ``webrouter[mcp]`` install lists every tool, the browser_* ones included."""
+    (bundled, *_) = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["optional-dependencies"]["mcp"]
+
+    assert "browser" in bundled.split("[")[1].rstrip("]").split(",")

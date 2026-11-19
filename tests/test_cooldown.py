@@ -95,7 +95,7 @@ def test_auto_passes_a_cooling_backend_over_without_calling_it() -> None:
     assert first.provider == second.provider == "backup"
     assert _Throttled.calls == 1, "the second call never reached the throttled backend"
     hop = second.decision.hops[0]
-    assert hop.id == "search:throttled" and hop.error == "429"
+    assert hop.id == "search:throttled" and hop.error == "cooling_down", "named for the cooldown, not its 429"
 
 
 async def test_the_async_router_cools_down_the_same_way() -> None:

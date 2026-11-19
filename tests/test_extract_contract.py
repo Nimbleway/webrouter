@@ -79,7 +79,7 @@ def _request_shape(provider: ExtractProvider, request: ExtractRequest, urls: lis
 def test_router_extract_exposes_every_shared_option(method: object) -> None:
     """The two extract signatures restate ExtractRequest's fields, so guard the copies."""
     exposed = set(inspect.signature(method).parameters) - ROUTER_ONLY_ARGUMENTS
-    assert exposed == EXTRACT_PARAMETERS | EXTRACT_ALWAYS_SENT - {"urls"}
+    assert exposed == EXTRACT_PARAMETERS | EXTRACT_ALWAYS_SENT - {"urls", "mode"}  # a mode is pinned through provider=
 
 
 def test_every_provider_declares_where_its_credentials_come_from() -> None:

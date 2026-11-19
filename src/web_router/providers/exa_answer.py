@@ -12,6 +12,7 @@ from typing import Any, ClassVar
 
 from web_router.constants import ENV_EXA_API_KEY, EXA_API_KEY_HEADER, EXA_BASE_URL, PROVIDER_EXA
 from web_router.constants_exa import EXA_ANSWER_CITATION_TEXT_FIELD, EXA_ANSWER_PATH, EXA_COST_PATH
+from web_router.constants_mode_parts_answer import EXA_ANSWER_TIERS
 from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpAnswerProvider
 from web_router.providers._search_text import as_snippet
@@ -38,6 +39,7 @@ class ExaAnswerProvider(HttpAnswerProvider):
     """
 
     name: ClassVar[str] = PROVIDER_EXA
+    tiers = EXA_ANSWER_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset()
 
     base_url: ClassVar[str] = EXA_BASE_URL
@@ -46,7 +48,7 @@ class ExaAnswerProvider(HttpAnswerProvider):
     api_key_header: ClassVar[str] = EXA_API_KEY_HEADER
 
     def _build_payload(self, request: AnswerRequest) -> dict[str, Any]:
-        return build_payload(request, query=request.query)
+        return build_payload(request, None, self, query=request.query)
 
     def _to_response(self, request: AnswerRequest, payload: dict[str, Any]) -> AnswerResponse:
         answer = payload.get("answer")

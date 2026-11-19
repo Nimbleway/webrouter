@@ -114,13 +114,13 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> _Clock:
 def test_router_browse_exposes_every_shared_option(method: object) -> None:
     """The two browse signatures restate BrowseRequest's fields, so guard the copies."""
     exposed = set(inspect.signature(method).parameters) - ROUTER_ONLY_ARGUMENTS - {"timeout"}
-    assert exposed == BROWSE_PARAMETERS | BROWSE_ALWAYS_SENT - {"task"}
+    assert exposed == BROWSE_PARAMETERS | BROWSE_ALWAYS_SENT - {"task", "mode"}  # a mode is pinned through provider=
 
 
 @pytest.mark.parametrize("method", [WebRouter.submit_browse, AsyncWebRouter.submit_browse], ids=["sync", "async"])
 def test_submitting_takes_the_same_request_minus_the_wait(method: object) -> None:
     exposed = set(inspect.signature(method).parameters) - ROUTER_ONLY_ARGUMENTS
-    assert exposed == BROWSE_PARAMETERS | BROWSE_ALWAYS_SENT - {"task"}
+    assert exposed == BROWSE_PARAMETERS | BROWSE_ALWAYS_SENT - {"task", "mode"}  # a mode is pinned through provider=
 
 
 def test_the_request_carries_no_model_choice() -> None:

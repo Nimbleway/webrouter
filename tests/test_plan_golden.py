@@ -104,7 +104,7 @@ def _golden(tool: str, case: str) -> dict[str, Any]:
         "ranked": [f"{tool}:second"],
         "merged": ids,
         "ran": 2,
-        "hops": [(ids[0], "ConfigurationError"), (ids[1], "429" if skipped else "ConfigurationError")],
+        "hops": [(ids[0], "ConfigurationError"), (ids[1], "cooling_down" if skipped else "ConfigurationError")],
         "attempts": ids,
         "reason": "ranked",
         "provider": "third",

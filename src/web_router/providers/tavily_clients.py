@@ -60,6 +60,8 @@ def sdk_errors(provider: str, message: str) -> Iterator[None]:
         if kind is None:
             raise
         error = ProviderError(provider, message.format(error=describe(exc)), original=exc, kind=kind)
+        if kind == ERROR_KIND_BAD_REQUEST and error.status_code is None:
+            error.status_code = 400  # the status a refused request stands for, so a refused vendor mode reads as one
         if isinstance(exc, TavilyKeylessLimitError) and exc.retry_after_seconds is not None:
             error.retry_after = float(exc.retry_after_seconds)
         raise error from exc

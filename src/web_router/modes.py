@@ -6,14 +6,13 @@ this order: a tier, a depth, then flags sorted. A slot left empty is the backend
 - A **tier** (:class:`Tier`) sets a vendor field (Exa's ``type``); a depth that writes the same field is refused.
 - The **depth** slot holds a normalized level, bare (``lite``, ``fast``, ``deep``; ``low`` ... ``max`` for
   research), or a **content** (:class:`Content`), which replaces what depth sends and names the level it stands for.
-- A **flag** (:class:`Flag`) writes a field no tier or other flag writes; a depth that sends that field another way
-  is refused (``deepseek-content`` takes ``deep``, not ``lite``).
+- A **flag** (:class:`Flag`) writes its own field; a depth sending it another way is refused (``deepseek-content``).
 
-A vendor part is spelled with its provider's name first (``exa-instant``), so it can never be read as a normalized
-level, and the parser learns each part's slot from the provider's declarations. Input in any order comes out canonical
-(``exa-highlights+exa-instant`` is ``exa-instant+exa-highlights``). The old spellings parse for one release:
-``tavily:ultra-fast@deep`` and ``:ultra-fast``. :mod:`web_router.providers._modes` merges a part's ``wire`` into
-the request a pinned id sends.
+A vendor part is spelled with its provider's name first (``exa-instant``), never read as a normalized level, and the
+parser learns each part's slot from the provider's declarations; its ``does`` tells a router what it changes. Input in
+any order comes out canonical (``exa-highlights+exa-instant`` is ``exa-instant+exa-highlights``). The old spellings
+parse for one release: ``tavily:ultra-fast@deep`` and ``:ultra-fast``. :mod:`web_router.providers._modes` merges a
+part's ``wire`` into the request a pinned id sends.
 """
 
 from __future__ import annotations
@@ -53,6 +52,7 @@ class Tier:
     """A vendor tier: ``wire`` is the payload change it makes, to fields depth never writes (Exa's ``type``)."""
 
     wire: Mapping[str, Any] = field(default_factory=dict)
+    does: str = ""
 
 
 @dataclass(frozen=True)
@@ -61,6 +61,7 @@ class Content:
 
     as_depth: str
     wire: Mapping[str, Any] = field(default_factory=dict)
+    does: str = ""
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,7 @@ class Flag:
 
     wire: Mapping[str, Any] = field(default_factory=dict)
     writes: str | None = None
+    does: str = ""
 
 
 class Declared(Protocol):
@@ -139,8 +141,7 @@ def split_mode(provider: str, parts: Iterable[str], declared: Declared = NO_MODE
         keys = [declared.flags[n].writes or n for n in names] if slot == KIND_FLAG else names
         if len(keys) > (len(set(keys)) if slot == KIND_FLAG else 1):
             raise InvalidParameterError(MODE_FIELD, MSG_MODE_TWICE.format(mode=PART_SEP.join(parts), slot=slot))
-    tier, depth = (found[slot][0] if found[slot] else None for slot in ("tier", "depth"))
-    return Slots(tier, depth, tuple(sorted(found[KIND_FLAG])))
+    return Slots(next(iter(found["tier"]), None), next(iter(found["depth"]), None), tuple(sorted(found[KIND_FLAG])))
 
 
 def legacy_parts(provider: str, vendor: str, depth: str = "") -> list[str]:

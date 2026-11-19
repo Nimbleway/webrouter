@@ -35,7 +35,7 @@ router = WebRouter(
 
 ## The id
 
-An id is `provider[:mode]`, or `search:provider[:mode]` with the method named.
+An id is `provider[:mode]`, or `search:provider[:mode]` (`extract:`, `answer:`, `browse:`) with the method named.
 A mode has up to three slots, joined with `+`, always in this order:
 
 1. a **tier**: a vendor setting (Exa's `type`). It combines with a depth unless
@@ -69,12 +69,57 @@ twice, raises `InvalidParameterError`.
 | Brave | | | `brave-extra-snippets` |
 | DeepSeek | | | `deepseek-content` |
 
+An extract backend declares tiers and flags only, since an extract has no
+depth; a mode never writes the URLs:
+
+| Backend | Tiers | Flags |
+|---|---|---|
+| Tavily | `tavily-advanced` | |
+| Linkup | `linkup-pro` | `linkup-render-js` |
+| Oxylabs | `oxylabs-render` | |
+| Nimble | `nimble-vx8`, `nimble-vx8-pro`, `nimble-vx10`, `nimble-vx10-pro`, `nimble-max` | |
+| Exa | | `exa-highlights`, `exa-summary` |
+| Browserbase | | `browserbase-proxies` |
+
+`extract(urls, provider="tavily:tavily-advanced")` pins one, as does the same id
+in an extract chain. When a chain retries the URLs one member failed on the
+members after it, each runs the retried URLs in its own pinned mode. Nimble
+publishes no price per driver, so its drivers other than `nimble-max` are
+unpriced, and never run under a cost cap.
+
+An answer backend declares tiers only; a mode never writes the question:
+
+| Backend | Tiers |
+|---|---|
+| Exa | `exa-fast`, `exa-pro`, `exa-research` (`model`) |
+| Linkup | `linkup-flash`, `linkup-standard`, `linkup-deep` (`depth`; unset is `fast`) |
+| Perplexity | `perplexity-low`, `perplexity-medium`, `perplexity-high` (`effort`; unset is `fast`) |
+
+`answer(question, provider="linkup:linkup-deep")` pins one, as does the same id
+in an answer chain. Linkup prices each depth; Exa publishes one `/answer` price
+that names no model, so its tiers are unpriced (the response still states its
+own cost), and Perplexity bills tokens, so its tiers are unknown before the
+call.
+
+A browse backend declares tiers only; a mode never writes the task or
+`start_url`:
+
+| Backend | Tiers |
+|---|---|
+| Browser Use | `browser-use-<model>` for `gpt-5.6-luna`, `gemini-flash-lite-latest`, `gemini-flash-latest`, `gemini-3-flash-preview`, `o3`, `claude-sonnet-5`, `claude-sonnet-4-5-20250929`, `claude-opus-4-8` (`llm`) |
+| Skyvern | `skyvern-2.0`, `skyvern-3.0`, `skyvern-openai-cua`, `skyvern-anthropic-cua`, `skyvern-ui-tars` (`engine`) |
+
+`browse(task, provider="browser-use:browser-use-o3")` and `submit_browse` pin
+one. Browser Use prices each model per agent step and Skyvern sells credits by
+plan, so no browse tier has a price before the task runs, and none runs under a
+cost cap.
+
 Each provider class carries its parts (`ExaProvider.tiers`, `.contents`,
 `.flags`), with the request-body change each one makes. Tavily's
 `tavily-fast` is Tavily's own tier, not web-router's `fast` depth, which sends
 `advanced`.
 
-A backend's contract (`contracts/search/<provider>.json`) lists the body change
+A backend's contract (`contracts/<method>/<provider>.json`) lists the body change
 of every part under `options.mode`, and the modes a router may pick under
 `offers`: each tier at the default depth, each depth level and content at the
 default tier, and each flag. `verified["mode.<part>"]` says whether a live call
@@ -102,19 +147,22 @@ you set something it would overwrite:
 - an option that writes the same field to another value: Exa's `effort` with an
   Exa tier, Tavily's `search_depth` with a Tavily tier, Parallel's or
   Keenable's `effort` with one of their tiers, DeepSeek's `lite` with
-  `deepseek-content`.
+  `deepseek-content`;
+- a level the request has no option for: an extract, answer or browse mode
+  names no depth (`tavily:tavily-advanced+lite`).
 
 ## What it costs
 
-A pinned search is priced as its mode, by the price list's order:
+A pinned search, extract, answer or browse task is priced as its mode, by the price list's order:
 
 1. the row for the canonical mode;
 2. else its tier's row, when that row assumes the mode's depth, plus each
    flag's added price;
 3. else unknown.
 
-That price is the response's `cost_usd` (`cost_source="estimated"` unless the
-backend states one), and what a budget charges. An unknown price never fits
+An extract's price is per URL. That price is the response's `cost_usd`
+(`cost_source="estimated"` unless the backend states one), and what a budget
+charges. An unknown price never fits
 under a cost cap. Cooldowns stay keyed by backend: a rate limit on one mode
 cools every mode of that backend.
 
@@ -127,9 +175,83 @@ read, but a search with it is refused: Tavily's tier and `deep` both set
 `search_depth`. `tavily:ultra-fast` without `@` is no vendor mode, and
 `tavily:fast` is the `fast` depth, where an older scan meant Tavily's tier.
 
+## Showing modes to a router
+
+A router can be shown each search backend's modes as candidates of their own,
+opt in, with `route_modes=True`:
+
+```python
+router = WebRouter(router=my_router, route_modes=True)
+```
+
+Each backend's candidate (`search:exa`) is then followed by one per mode it
+offers (`search:exa:exa-instant`), with `mode` set and its own estimated cost
+and p90. A mode the request rules out -- a `search_depth` you set that it
+would overwrite, a `provider_options` key it writes -- is left out, recorded
+with why, and a budget prefilters modes as it does backends. A router that
+declares a `route_modes` attribute opts itself in; yours, when you pass one,
+wins. The built-in routers declare `False`. The `remote` router is shown modes
+only when its `router_config` sets `"route_modes": True`: your `True` does not
+opt it in, and your `False` turns modes off for it too. A `fallback` member
+that does not opt in is shown backends only. A remote
+request carries at most 64 candidates in all: past that, the modes lowest in
+their method's order are left out.
+
+## A router picks modes
+
+A router picks modes with `RouteDecision.attempts`: candidate ids, best first,
+which replace `tools` and `providers` when set. One backend may appear in
+several modes:
+
+```python
+RouteDecision(attempts=["search:exa:exa-instant", "search:exa:exa-deep", "search:tavily"])
+```
+
+Each attempt runs in its own mode. The mode replaces any `search_depth` or
+`effort` the router set in `params`; every other option still applies, and a
+`search_depth` you set binds every attempt. The call's backends that
+`attempts` does not name run after them, at their default mode. Excluding
+`search:exa` excludes every Exa mode; excluding `search:exa:exa-deep`
+excludes that one only. Under a cost cap the router's order is kept.
+
+When an attempt fails:
+
+- A backend that refuses the mode's request (a 400 or 422, and not out of
+  credit) is not charged for it, and its next attempt runs.
+- A failure that no other backend could do better on (a `local` or `target`
+  error) raises, as it does without modes.
+- Any other failure, an auth error, a 429, a 5xx or a timeout among them,
+  stops that backend for the call: its later attempts are passed over, each
+  recorded as `backend_failed`. A 429 or 402 cools down the backend, every
+  mode with it, as it always has.
+
+The decision record lists each attempt by its full id, with `mode` set, and
+the answer's `cost_usd` is the price of the mode that answered.
+
+## Deciders and the built-in routers
+
+The built-in routers declare `route_modes=False`; pass `route_modes=True` to
+show them modes. A decider's option for a mode names it and says what each of
+its parts does, such as `search on exa in mode exa-instant (Exa's instant
+search, its fastest), $0.005, p90 0.9s`, so no two modes of one backend read
+the same. When it ranks a mode, its decision fills `attempts`.
+
+A decider that scores its options has the backend and its modes scored apart:
+the backend's own id (`search:exa`) scores the backend, and each of its modes
+takes its share of that backend's mode scores. Attempts rank by the product,
+so with `search:exa` at 0.6, `search:tavily` at 0.4, and Exa's instant and
+deep modes at 0.7 and 0.3, the order is `exa-instant` (0.42), `tavily`
+(0.40), `exa-deep` (0.18). Across methods, the order the decider first names
+them in is kept, so splitting a backend's score over its modes never moves the
+call to another method. A backend whose modes are scored runs in those modes. Without a score for every ranked id, or for a ranked mode's backend,
+the attempts keep the decider's order.
+
+`cheapest_first` shown modes answers `attempts` for the method the call runs:
+each backend and mode by its own estimated cost. `rules` picks the method
+only, so it never names one.
+
 ## Not yet
 
-Routing on modes is not on yet: a router picks backends at their default mode,
-and a vendor mode runs only when you pin it. Extract, answer, research and
-browse have no vendor modes yet. See [Smart routing](/smart-routing) for what a
-router picks today.
+Routing on modes is opt-in and covers search only: an extract, answer or
+browse mode runs only when you pin it. Research has no vendor modes yet. See
+[Smart routing](/smart-routing) for what a router picks today.

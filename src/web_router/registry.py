@@ -355,13 +355,9 @@ def get_provider_class(name: str | Provider) -> type[SearchProvider]:
 
 
 def get_extract_provider_class(name: str | Provider) -> type[ExtractProvider]:
-    """Resolve an extract provider name to its class, importing the module on first use."""
-    return _resolve(
-        name,
-        builtin=_BUILTIN_EXTRACT_PROVIDERS,
-        custom=_CUSTOM_EXTRACT_PROVIDERS,
-        available=available_extract_providers(),
-    )
+    """Resolve an extract provider name to its class, on first use; ``tavily:tavily-advanced`` pins."""
+    tables: dict[str, Any] = {"builtin": _BUILTIN_EXTRACT_PROVIDERS, "custom": _CUSTOM_EXTRACT_PROVIDERS}
+    return pinned_class(name, partial(_resolve, **tables, available=available_extract_providers()), "extract")
 
 
 def create_provider(name: str | Provider, **kwargs: Any) -> SearchProvider:
@@ -420,13 +416,9 @@ def create_browser_provider(name: str | Provider, **kwargs: Any) -> BrowserProvi
 
 
 def get_browse_provider_class(name: str | Provider) -> type[BrowseProvider]:
-    """Resolve a browse provider name to its class, importing the module on first use."""
-    return _resolve(
-        name,
-        builtin=_BUILTIN_BROWSE_PROVIDERS,
-        custom=_CUSTOM_BROWSE_PROVIDERS,
-        available=available_browse_providers(),
-    )
+    """Resolve a browse provider name to its class, on first use; ``skyvern:skyvern-2.0`` pins."""
+    tables: dict[str, Any] = {"builtin": _BUILTIN_BROWSE_PROVIDERS, "custom": _CUSTOM_BROWSE_PROVIDERS}
+    return pinned_class(name, partial(_resolve, **tables, available=available_browse_providers()), "browse")
 
 
 def create_browse_provider(name: str | Provider, **kwargs: Any) -> BrowseProvider:
