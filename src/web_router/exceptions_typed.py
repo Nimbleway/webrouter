@@ -6,11 +6,19 @@ Kept apart from :mod:`web_router.exceptions`, so that file stops growing.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from typing import Any
+from typing import Any, Final
 
 from web_router.constants_errors import MSG_INVALID_PARAMETER
 from web_router.exceptions import ProviderError, WebRouterError
 from web_router.types_errors import ERROR_KIND_UPSTREAM, ExtractFailure
+from web_router.types_errors_network import ERROR_KIND_NETWORK_BLOCKED, NETWORK_KINDS, request_host
+
+MSG_NO_HOST_REACHABLE: Final = (
+    "no backend host is reachable from this machine: {hosts}. A proxy or firewall refused each one, or its name did "
+    "not resolve: allow these hosts, or set a key for a backend whose host is allowed "
+    "(https://docs.webrouter.net/production#network-access)"
+)
+"""The whole message when every backend of a chain failed on this side's network, naming the hosts to allow."""
 
 
 class InvalidParameterError(WebRouterError, ValueError):
@@ -36,11 +44,19 @@ class AllProvidersFailedError(ProviderError):
     :attr:`kind` is the members' shared kind when they agree (every key refused
     is ``auth``), else ``upstream``; it is :attr:`retryable` when any member's
     failure was.
+
+    When every backend failed on this machine's network (``network_blocked``
+    or ``unreachable``), the message is one line naming the hosts to allow,
+    and :attr:`blocked_hosts` lists them; otherwise that list is empty.
     """
 
     def __init__(self, provider: str, message: str, failures: Mapping[str, WebRouterError]) -> None:
         kinds = {getattr(exc, "kind", None) for exc in failures.values()}
         shared = kinds.pop() if len(kinds) == 1 else None
+        self.blocked_hosts = blocked_hosts(failures)
+        if self.blocked_hosts:
+            message = MSG_NO_HOST_REACHABLE.format(hosts=", ".join(self.blocked_hosts))
+            shared = shared or ERROR_KIND_NETWORK_BLOCKED  # a proxy refusing some hosts and DNS failing others
         super().__init__(provider, message, kind=shared or ERROR_KIND_UPSTREAM)
         self.failures = dict(failures)
         self.status_code = self.status_code or shared_status(
@@ -71,3 +87,14 @@ def shared_status(statuses: Iterable[int | None]) -> int | None:
     """The one status every failure answered with, else ``None``: a summary names a status only when all agree."""
     found = set(statuses)
     return found.pop() if len(found) == 1 else None
+
+
+def blocked_hosts(failures: Mapping[str, BaseException]) -> list[str]:
+    """Each host this machine could not reach, when every failure was its network's; else none, as one was not.
+
+    A backend whose error carries no request is named by itself, so no failure drops out of the list.
+    """
+    if not failures or any(getattr(exc, "kind", None) not in NETWORK_KINDS for exc in failures.values()):
+        return []
+    hosts = (request_host(getattr(exc, "original", None)) or name for name, exc in failures.items())
+    return list(dict.fromkeys(hosts))

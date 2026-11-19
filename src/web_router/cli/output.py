@@ -28,6 +28,7 @@ from web_router.constants_cli import (
 from web_router.exceptions import (
     ConfigurationError,
     MissingParameterError,
+    ProviderError,
     ProviderNotInstalledError,
     UnsupportedFormatError,
     UnsupportedParameterError,
@@ -38,7 +39,7 @@ from web_router.exceptions_provider import (
     NoAnswerProviderError,
     ProviderNotFoundError,
 )
-from web_router.exceptions_typed import InvalidParameterError
+from web_router.exceptions_typed import AllProvidersFailedError, InvalidParameterError
 
 # First match wins, so a subclass must come before its base. A pydantic ValidationError is not here: the
 # library turns a caller's bad value into InvalidParameterError, so one reaching the command is a backend
@@ -104,9 +105,24 @@ def _excluded(value: Any) -> Any:
 def write_error(error: BaseException, stream: IO[str]) -> int:
     """Print ``error`` as the JSON envelope on ``stream`` and return the status to exit with."""
     kind = CLI_USAGE_ERROR if isinstance(error, UsageError) else type(error).__name__
-    envelope = {"error": {"type": kind, "message": str(error) or kind}}
+    envelope = {"error": {"type": kind, "message": str(error) or kind, **_failure_facts(error)}}
     print(json.dumps(envelope, ensure_ascii=_ascii_only(stream)), file=stream)
     return exit_code(error)
+
+
+def _failure_facts(error: BaseException) -> dict[str, Any]:
+    """A backend failure's ``kind``; for a chain, each backend's own kind, and the hosts to allow when none was reached.
+
+    The message stays one plain line; these fields let a caller branch without reading it.
+    """
+    if not isinstance(error, ProviderError):
+        return {}
+    facts: dict[str, Any] = {"kind": error.kind}
+    if isinstance(error, AllProvidersFailedError):
+        facts["hops"] = {name: getattr(exc, "kind", None) or type(exc).__name__ for name, exc in error.failures.items()}
+        if error.blocked_hosts:
+            facts["blocked_hosts"] = error.blocked_hosts
+    return facts
 
 
 def exit_code(error: BaseException) -> int:
