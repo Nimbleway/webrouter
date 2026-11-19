@@ -54,3 +54,30 @@ def test_a_shown_ipv6_host_keeps_its_brackets_and_drops_its_scope_id() -> None:
 def test_a_non_ascii_host_is_shown_whole_as_the_ascii_a_browser_maps_it_to() -> None:
     assert host_of("https://münchen.de/x?token=1") == "https://xn--mnchen-3ya.de"
     assert host_of("https://köln.de/") != host_of("https://münchen.de/"), "two refused hosts keep two keys"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Summarize “https://example.com/report”",
+        "Summarize \u2018https://example.com/report\u2019",
+        "Summarize «https://example.com/report»",
+        "请总结 https://example.com/report\uff0c谢谢",
+        "見て https://example.com/report。",
+        "参考「https://example.com/report」",
+        "Summarize **https://example.com/report**",
+    ],
+    ids=["curly-double", "curly-single", "guillemets", "cjk-comma", "cjk-full-stop", "cjk-brackets", "md-bold"],
+)
+def test_typographic_quotes_cjk_punctuation_and_emphasis_end_a_url(text: str) -> None:
+    assert urls_in(text) == ["https://example.com/report"]
+
+
+def test_a_non_ascii_path_keeps_its_letters_and_its_dash() -> None:
+    for url in ("https://de.wikipedia.org/wiki/München", "https://en.wikipedia.org/wiki/Mason\u2013Dixon_line"):
+        assert urls_in(f"see {url}.") == [url]
+
+
+def test_a_markdown_link_whose_text_is_a_url_yields_its_target_too() -> None:
+    text = "see [https://example.com](https://example.com/pricing) and https://other.com/x"
+    assert urls_in(text) == ["https://example.com", "https://example.com/pricing", "https://other.com/x"]

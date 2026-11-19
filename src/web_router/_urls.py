@@ -13,9 +13,9 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from web_router.constants_merge import HOST_CHARS, URL_HIDDEN
-from web_router.constants_urls import URL_BRACKETS, URL_TRAILING_PUNCTUATION
+from web_router.constants_urls import URL_BRACKETS, URL_PROSE_STOPS, URL_TRAILING_PUNCTUATION
 
-_URL = re.compile(r"https?://[^\s<>\"'`]+", re.IGNORECASE)
+_URL = re.compile(rf"https?://[^\s<>\"'`{URL_PROSE_STOPS}]+", re.IGNORECASE)
 
 
 def _url_end(text: str) -> int:
@@ -36,7 +36,15 @@ def _trimmed(match: str) -> str:
 
 def urls_in(text: str) -> list[str]:
     """The URLs in ``text``: a closing bracket kept only when the URL opened it, no sentence-ending punctuation."""
-    return [_trimmed(match) for match in _URL.findall(text)]
+    found: list[str] = []
+    match = _URL.search(text)
+    while match:
+        url = _trimmed(match.group())
+        found.append(url)
+        # Resume where the URL ended, not where the match did: in ``[https://a](https://b)`` the match runs on
+        # through the link's target, which is cut off with the ``]`` and would otherwise never be found.
+        match = _URL.search(text, match.start() + len(url))
+    return found
 
 
 def host_of(url: str) -> str:

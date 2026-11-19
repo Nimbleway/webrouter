@@ -46,6 +46,12 @@ def test_a_url_named_twice_is_planned_once() -> None:
 
 
 @pytest.mark.usefixtures("called")
+def test_a_url_in_curly_quotes_or_a_markdown_link_is_planned_without_its_punctuation() -> None:
+    plan = _wr().plan(f"compare \u201c{URL}\u201d with [{URL}]({URL}/pricing)", tool="extract")
+    assert plan.params["urls"] == [URL, f"{URL}/pricing"]
+
+
+@pytest.mark.usefixtures("called")
 def test_a_router_failure_plans_the_static_order() -> None:
     plan = _wr(router=lambda req: 1 / 0).plan(PROMPT)
     assert (plan.tool, plan.decision.reason) == ("search", "router_error")
