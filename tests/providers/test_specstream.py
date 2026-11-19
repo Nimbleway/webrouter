@@ -106,7 +106,7 @@ def test_a_reply_without_a_sources_list_is_an_error_not_an_empty_search(
 ) -> None:
     monkeypatch.setenv("SPECSTREAM_API_KEY", "test-key")
     provider = SpecStreamProvider(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body)))
-    with pytest.raises(ProviderError, match="data.sources"):
+    with pytest.raises(ProviderError, match=r"data\.sources"):
         provider.search(SearchRequest(query="q"))
 
 
@@ -181,7 +181,7 @@ def test_the_extract_reply_maps_from_data_results(extractor: SpecStreamExtractPr
 
 @pytest.mark.parametrize("body", [{}, {"results": []}, {"data": {}}, {"data": {"results": None}}])
 def test_an_extract_reply_without_a_results_list_raises(extractor: SpecStreamExtractProvider, body: dict) -> None:
-    with pytest.raises(ProviderError, match="data.results"):
+    with pytest.raises(ProviderError, match=r"data\.results"):
         extractor._to_response(ExtractRequest(urls=["https://a.com"]), ["https://a.com"], body)
 
 
@@ -203,7 +203,11 @@ def test_a_blocked_page_reaches_the_caller_as_a_failure_not_a_document(monkeypat
 
     def answer(request: httpx.Request) -> httpx.Response:
         (url,) = json.loads(request.content)["urls"]
-        item = {"url": url, "status": "ok", "text": "Body."} if url == "https://a.com" else {"url": url, "status": "blocked"}
+        item = (
+            {"url": url, "status": "ok", "text": "Body."}
+            if url == "https://a.com"
+            else {"url": url, "status": "blocked"}
+        )
         return httpx.Response(200, json={"data": {"results": [item]}})
 
     extractor = SpecStreamExtractProvider(transport=httpx.MockTransport(answer))

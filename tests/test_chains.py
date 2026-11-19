@@ -29,6 +29,7 @@ README_NAMES = {
     "Seltz": "seltz",
     "Octen": "octen",
     "Keirolabs": "keirolabs",
+    "SpecStream": "specstream",
     "AgentCore": "agentcore",
     "Exa LiteLLM": "exa-litellm",
     "Tavily LiteLLM": "tavily-litellm",

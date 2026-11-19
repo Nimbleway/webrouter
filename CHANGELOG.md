@@ -6,6 +6,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+### Added
+
+- SpecStream as a search and extract backend: `search(provider="specstream")` over `GET /v1/web-search` and `extract(provider="specstream")` over `POST /v1/extract`, reading `SPECSTREAM_API_KEY`. Search maps `max_results` onto `num` (at most 100); `passages`, `speed` and the other query fields go through `provider_options`. Extract returns `markdown` (the default) or `text`, and a page whose `status` is not `ok` comes back as a failed URL. `auto` tries it after the keyless tier, with a key.
+
 ## [0.14.0] - 2026-11-19
 
 ### Added

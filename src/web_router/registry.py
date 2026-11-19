@@ -47,9 +47,9 @@ from web_router.constants import (
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
     PROVIDER_SELTZ,
+    PROVIDER_SPECSTREAM,
     PROVIDER_TAVILY,
     PROVIDER_VALYU,
-    PROVIDER_SPECSTREAM,
     PROVIDER_WEBIQ,
     PROVIDER_YOU,
     PROVIDER_YOU_MCP,
@@ -264,9 +264,8 @@ def configured_providers() -> list[str]:
 def configured_extract_providers() -> list[str]:
     """Every builtin extract provider you currently have credentials for, plus the keyless ones.
 
-    The same caveats as :func:`configured_providers`. A backend needing more
-    than one variable -- Oxylabs its username and password, Bright Data its
-    token and zone -- is reported only when it has all of them.
+    The same caveats as :func:`configured_providers`. A backend needing more than one variable -- Oxylabs its
+    username and password, Bright Data its token and zone -- is reported only when it has all of them.
     """
     return sorted(
         name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -276,9 +275,8 @@ def configured_extract_providers() -> list[str]:
 def configured_live_data_providers() -> list[str]:
     """Every builtin template provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. A template run fetches
-    and parses on the backend's account, so there is no keyless member and
-    no ``auto``; with no key at all this is empty.
+    The same caveats as :func:`configured_providers`. A template run fetches and parses on the backend's account,
+    so there is no keyless member and no ``auto``; with no key at all this is empty.
     """
     return sorted(
         name for name, env_vars in LIVE_DATA_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -311,9 +309,8 @@ def configured_browser_providers() -> list[str]:
 def configured_browse_providers() -> list[str]:
     """Every builtin browse provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. No keyless tier: every
-    task backend bills for the run, so with no key at all this is empty but for
-    ``auto`` -- which will then say which variables would fix it.
+    The same caveats as :func:`configured_providers`. No keyless tier: every task backend bills for the run, so
+    with no key at all this is empty but for ``auto`` -- which will then say which variables would fix it.
     """
     return sorted(
         name for name, env_vars in BROWSE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
