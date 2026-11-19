@@ -187,6 +187,34 @@ def test_a_store_that_needs_the_callers_profile_is_not_called_without_one(monkey
     assert merchant.store_calls() == []
 
 
+@pytest.mark.parametrize("blank", ["", "   ", "\t\n"])
+def test_a_blank_agent_profile_counts_as_none_given(blank: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("WEB_ROUTER_MERCHANT_AGENT_PROFILE_URL", blank)
+    merchant = Merchant()
+    config = router_config(merchant)
+    config["merchant"]["agent_profile_url"] = blank
+    assert MerchantLiveDataProvider(**config["merchant"]).agent_profile_url is None
+    with (
+        WebRouter("nimble", provider_config=config) as router,
+        pytest.raises(ConfigurationError, match="agent profile"),
+    ):
+        router.live_data(DOMAIN, {"query": "shoe"}, provider="merchant")
+    assert merchant.store_calls() == []
+
+
+def test_a_profile_url_is_trimmed_before_it_is_sent() -> None:
+    merchant = Merchant()
+    config = router_config(merchant)
+    config["merchant"]["agent_profile_url"] = "  https://agent.example/profile.json \n"
+    assert MerchantLiveDataProvider(**config["merchant"]).agent_profile_url == "https://agent.example/profile.json"
+
+
+def test_following_redirects_is_refused_because_the_stores_host_is_checked_only_before_the_call() -> None:
+    config = router_config(Merchant())
+    with pytest.raises(ConfigurationError, match="follow_redirects"):
+        MerchantLiveDataProvider(**config["merchant"], follow_redirects=True)
+
+
 @pytest.mark.parametrize("reserved", ["catalog", "meta"])
 def test_provider_options_cannot_replace_the_gated_catalog_or_the_identity(reserved: str) -> None:
     merchant = Merchant()

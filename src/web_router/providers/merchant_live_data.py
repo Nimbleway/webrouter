@@ -23,13 +23,14 @@ from web_router.constants_merchant import (
     ENV_MERCHANT_AGENT_PROFILE_URL,
     MCP_VERSION_HEADER,
     MSG_BAD_INPUTS,
+    MSG_REDIRECTS_REFUSED,
     MSG_RESERVED_OPTION,
     PROTOCOL_VERSION_FALLBACK,
     PROVIDER_MERCHANT,
     REGISTRY_URL,
     RESERVED_OPTIONS,
 )
-from web_router.exceptions import ProviderError
+from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers.merchant_mcp import (
@@ -80,9 +81,12 @@ class MerchantLiveDataProvider(HttpLiveDataProvider, RegistryReader):
             registry_url: Where the registry is published; the default is the hosted one.
             timeout: Seconds per request, to the registry and to the store.
         """
+        if kwargs.get("follow_redirects"):  # the base class pins redirects off only for a provider that holds a key
+            raise ConfigurationError(MSG_REDIRECTS_REFUSED)
         url = (registry_url or REGISTRY_URL).rstrip("/") + "/"
         super().__init__(base_url=url, timeout=timeout, **kwargs)
-        self.agent_profile_url = agent_profile_url or os.environ.get(ENV_MERCHANT_AGENT_PROFILE_URL) or None
+        profile = (agent_profile_url or os.environ.get(ENV_MERCHANT_AGENT_PROFILE_URL) or "").strip()
+        self.agent_profile_url = profile or None
         self._init_registry()
 
     # -- run -----------------------------------------------------------------

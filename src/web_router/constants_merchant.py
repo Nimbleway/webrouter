@@ -53,6 +53,10 @@ MSG_NEEDS_PROFILE = (
     "{domain} requires the caller's agent profile URL: pass "
     "provider_config={{'merchant': {{'agent_profile_url': ...}}}} or set " + ENV_MERCHANT_AGENT_PROFILE_URL + "."
 )
+MSG_REDIRECTS_REFUSED = (
+    "Provider 'merchant' refuses follow_redirects=True: the route's host is checked before the call, and a "
+    "redirect (307, 308) would send the search and the caller's agent profile URL to a host that was never checked."
+)
 MSG_STORE_ERROR = "{domain} answered the call with an error: {detail}"
 MSG_NO_PRODUCTS_FIELD = "{domain} answered, but its reply carries no product list this client can read"
 MSG_BAD_INPUTS = "inputs for {domain} are not valid: {reason}"
