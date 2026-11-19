@@ -19,7 +19,7 @@ attempt's estimate there is ``0``, as nothing ran.
 
 from __future__ import annotations
 
-from web_router.constants_cost import COST_REPORTED
+from web_router.constants_cost import COST_STATED
 from web_router.exceptions import WebRouterError
 from web_router.providers._chain import nothing_started
 from web_router.routing.budget_hooks import LEDGERS, check_own
@@ -46,9 +46,10 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
 
 
 def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
-    """Charge the attempt whose answer ``response`` is (``empty``: an empty one) its reported cost, if it states one."""
+    """Charge the attempt whose answer ``response`` is (``empty``: an empty one) the cost it states: reported, or a
+    keyless call's $0."""
     cost = getattr(response, "cost_usd", None)
-    if cost is None or getattr(response, "cost_source", None) != COST_REPORTED:
+    if cost is None or getattr(response, "cost_source", None) not in COST_STATED:
         return
     with ledger._lock:
         answering = ledger._answered(getattr(response, "provider", None), empty)

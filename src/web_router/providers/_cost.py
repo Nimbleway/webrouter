@@ -12,7 +12,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from web_router.constants_cost import COST_CURRENCY_FIELD, COST_CURRENCY_USD, COST_REPORTED
+from web_router.constants_cost import COST_CURRENCY_FIELD, COST_CURRENCY_USD, COST_KEYLESS, COST_REPORTED
 
 
 def stated_cost(payload: Any, *path: str) -> dict[str, Any]:
@@ -37,3 +37,12 @@ def stated_cost(payload: Any, *path: str) -> dict[str, Any]:
     if not math.isfinite(cost) or cost < 0:
         return {}
     return {"cost_usd": cost, "cost_source": COST_REPORTED}
+
+
+def keyless_cost(provider: object) -> dict[str, Any]:
+    """``cost_usd=0.0`` and ``cost_source="keyless"`` when ``provider`` calls with no credential; ``{}`` with one.
+
+    For a backend's keyless tier (``allow_keyless``), which bills nothing. A budget charges the call its list
+    price before it starts, since it cannot tell the tier then, and settles it to $0 when it answers.
+    """
+    return {} if getattr(provider, "holds_credential", True) else {"cost_usd": 0.0, "cost_source": COST_KEYLESS}
