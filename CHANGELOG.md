@@ -6,10 +6,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
-### Added
-
-### Fixed
-
 ## [0.14.0] - 2026-11-19
 
 ### Added
