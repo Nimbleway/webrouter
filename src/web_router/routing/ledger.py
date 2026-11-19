@@ -75,6 +75,7 @@ class Ledger:
     reserved: float = 0.0
     """What the call reserved in :attr:`pool` for its own attempts, settled when it ends."""
     tried: list[_Tried] = field(default_factory=list)
+    parts: list[_Tried] = field(default_factory=list)  # read part of an answer another attempt's response carries
     skipped: dict[str, str] = field(default_factory=dict)
     sent: bool = False
     """Set once a backend was sent a request, kept when a refused mode is taken back from :attr:`tried`."""
@@ -161,11 +162,6 @@ class Ledger:
         """Note that ``provider`` failed and the call moved on, by :func:`~.record.error_code` or the code given."""
         with self._lock:
             self.trail.fail(candidate_id(tool, provider), exc if isinstance(exc, str) else error_code(exc))
-
-    def contributed(self, tool: str, provider: str) -> None:
-        """Note that ``provider`` read part of the answer though another member's response carries it."""
-        with self._lock:
-            self.trail.answered(candidate_id(tool, provider))
 
     def _answered(self, provider: str | None, empty: bool) -> int | None:
         """The attempt whose response the call returned, ``provider``'s.

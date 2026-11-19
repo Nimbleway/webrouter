@@ -8,8 +8,9 @@ charge, in the call's own cap and in every shared budget it reserves in:
   work -- the failures :func:`~web_router.providers._chain.nothing_started`
   names, a 4xx refusal or a connection never made -- is charged nothing;
 - :func:`settle_reported`: the attempt whose answer the call returns, when
-  the response carries the backend's own reported cost, is charged that
-  instead of its estimate.
+  the response states its cost -- reported, or a keyless call's $0 -- is
+  charged that instead of its estimate, and the attempts that read part of
+  the same answer nothing, as the stated cost is all of theirs.
 
 Only the ledger of the call the attempt was made in settles it; the calls it
 is nested in, which counted it toward their own caps, are settled to match.
@@ -56,8 +57,12 @@ def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
         if answering is None:
             return
         tried = ledger.tried[answering]
-        _charge(ledger, tried, cost)
-    _match_enclosing(ledger, tried, cost)
+        # The attempts that read part of the same answer (an extract's retry) are in its cost: they settle to none.
+        parts = [part for part in ledger.parts if part is not tried and any(part is t for t in ledger.tried)]
+        for each, charge in [(tried, cost), *((part, 0.0) for part in parts)]:
+            _charge(ledger, each, charge)
+    for each, charge in [(tried, cost), *((part, 0.0) for part in parts)]:
+        _match_enclosing(ledger, each, charge)
 
 
 def _match_enclosing(ledger: Ledger, settled: _Tried, cost: float) -> None:

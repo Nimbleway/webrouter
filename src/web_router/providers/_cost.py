@@ -45,4 +45,13 @@ def keyless_cost(provider: object) -> dict[str, Any]:
     For a backend's keyless tier (``allow_keyless``), which bills nothing. A budget charges the call its list
     price before it starts, since it cannot tell the tier then, and settles it to $0 when it answers.
     """
-    return {} if getattr(provider, "holds_credential", True) else {"cost_usd": 0.0, "cost_source": COST_KEYLESS}
+    if getattr(provider, "holds_credential", True) or _sends_auth_header(provider):
+        return {}
+    return {"cost_usd": 0.0, "cost_source": COST_KEYLESS}
+
+
+def _sends_auth_header(provider: object) -> bool:
+    """Whether an HTTP provider's client sends its credential header anyway, set by the caller's ``headers=``."""
+    header = getattr(provider, "api_key_header", None)
+    headers = (getattr(provider, "_client_kwargs", None) or {}).get("headers") or {}
+    return isinstance(header, str) and header.lower() in {str(name).lower() for name in headers}
