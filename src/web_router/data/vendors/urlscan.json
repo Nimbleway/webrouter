@@ -1,0 +1,238 @@
+{
+  "vendor": "urlscan",
+  "name": "urlscan.io",
+  "category": "security",
+  "summary": "Search and read existing urlscan.io website scans (requests, IPs, domains, certificates, verdicts), hostname history, and on Pro, malicious-observable lookups and similar pages.",
+  "docs_url": "https://docs.urlscan.io/pages/api-intro",
+  "pricing_url": "https://urlscan.io/pricing/",
+  "base_url": "https://urlscan.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "URLSCAN_API_KEY"
+        ],
+        "required": false,
+        "description": "A urlscan.io API key (created in your urlscan.io user account), sent in the api-key header. Without one, quotas are minimal."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "api-key",
+        "value": "{api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "Quotas are per action (search, result...) and per minute, hour and day, with fixed windows resetting on the minute, hour and midnight UTC; only HTTP 200s count. X-Rate-Limit-* headers report the window closest to running out; over it is a 429.",
+    "Submitting a scan is left out on purpose: a scan publishes the URL's page to urlscan.io (public by default). So are visibility changes, saved searches, subscriptions, incidents and live scans.",
+    "Queries use Elasticsearch query-string syntax with case-sensitive field names (page.domain:example.com); escape reserved characters and narrow with a date filter such as date:>now-7d."
+  ],
+  "sources": [
+    "https://docs.urlscan.io/pages/api-intro",
+    "https://docs.urlscan.io/apis/urlscan-openapi",
+    "https://docs.urlscan.io/_spec/apis/urlscan-openapi.yaml",
+    "https://docs.urlscan.io/pages/api-rate-limits",
+    "https://docs.urlscan.io/pages/hostname-history",
+    "https://docs.urlscan.io/pages/search-general"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "urlscan.search",
+      "name": "Search existing scans",
+      "summary": "Historical scans (and, on Pro, hostnames, certificates, incidents and notifications) matching an Elasticsearch query-string query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Elasticsearch query string over scan fields.",
+          "example": "page.domain:example.com AND date:>now-7d"
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, up to 10,000 (plan limits apply)."
+        },
+        "search_after": {
+          "in": "query",
+          "type": "string",
+          "description": "The sort value of the last (oldest) result from the previous call, comma-separated, to get the next page."
+        },
+        "datasource": {
+          "in": "query",
+          "type": "string",
+          "description": "Data source: scans (default) or, on urlscan Pro, hostnames, incidents, notifications, certificates.",
+          "enum": [
+            "scans",
+            "hostnames",
+            "incidents",
+            "notifications",
+            "certificates"
+          ]
+        },
+        "collapse": {
+          "in": "query",
+          "type": "string",
+          "description": "Field to collapse results on, within the current page only."
+        }
+      },
+      "notes": [
+        "Paging: pass the last result's sort as search_after and stop when fewer than size results come back; has_more is only meaningful past 10,000 and total is capped at 10,000.",
+        "Finds public scans by anyone plus your own unlisted and private ones. Free and unauthenticated searches may be limited to recent history (search_date_limit_days in the answer)."
+      ],
+      "job": "security.url.search",
+      "docs_url": "https://docs.urlscan.io/apis/urlscan-openapi",
+      "verified": {
+        "docs": "https://docs.urlscan.io/apis/urlscan-openapi"
+      }
+    },
+    {
+      "id": "urlscan.result.get",
+      "name": "Get a scan result",
+      "summary": "The full stored result of an existing scan: the page, its requests, contacted IPs and domains, and verdicts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/result/{scanId}/",
+      "params": {
+        "scanId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Scan UUID, as found in search results."
+        }
+      },
+      "job": "security.url.report",
+      "docs_url": "https://docs.urlscan.io/apis/urlscan-openapi",
+      "verified": {
+        "docs": "https://docs.urlscan.io/apis/urlscan-openapi"
+      }
+    },
+    {
+      "id": "urlscan.hostname.history",
+      "name": "Get a hostname's history",
+      "summary": "Historical observations for a hostname from the Hostnames data source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/hostname/{hostname}",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Hostname.",
+          "example": "example.com"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to return, 10 to 10,000, default 1,000."
+        },
+        "pageState": {
+          "in": "query",
+          "type": "string",
+          "description": "pageState from the previous answer, for more results."
+        }
+      },
+      "job": "domain.dns.history",
+      "docs_url": "https://docs.urlscan.io/pages/hostname-history",
+      "verified": {
+        "docs": "https://docs.urlscan.io/pages/hostname-history"
+      }
+    },
+    {
+      "id": "urlscan.malicious.lookup",
+      "name": "Look up an observable in malicious scans",
+      "summary": "How often an IP, hostname, domain or URL appeared in malicious scan results, with first and last seen times (urlscan Pro).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/malicious/{type}/{value}",
+      "params": {
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "ip, hostname (exact host), domain (apex, covers subdomains) or url.",
+          "enum": [
+            "ip",
+            "hostname",
+            "domain",
+            "url"
+          ]
+        },
+        "value": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The observable; a url must be URL-encoded.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "urlscan Pro only."
+      ],
+      "job": "security.url.report",
+      "docs_url": "https://docs.urlscan.io/apis/urlscan-openapi",
+      "verified": {
+        "docs": "https://docs.urlscan.io/apis/urlscan-openapi"
+      }
+    },
+    {
+      "id": "urlscan.result.similar",
+      "name": "Find structurally similar scans",
+      "summary": "Scans whose page structure resembles a given scan's (urlscan Pro).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/pro/result/{scanId}/similar/",
+      "params": {
+        "scanId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The scan to compare to."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra query filter."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per call."
+        },
+        "search_after": {
+          "in": "query",
+          "type": "string",
+          "description": "For older results, as in search."
+        }
+      },
+      "notes": [
+        "urlscan Pro only."
+      ],
+      "job": "security.url.search",
+      "docs_url": "https://docs.urlscan.io/apis/urlscan-openapi",
+      "verified": {
+        "docs": "https://docs.urlscan.io/apis/urlscan-openapi"
+      }
+    },
+    {
+      "id": "urlscan.quotas.get",
+      "name": "Get API quotas",
+      "summary": "Available and used quotas per action and window.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/quotas",
+      "job": "account.usage",
+      "docs_url": "https://docs.urlscan.io/apis/urlscan-openapi",
+      "verified": {
+        "docs": "https://docs.urlscan.io/apis/urlscan-openapi"
+      }
+    }
+  ]
+}

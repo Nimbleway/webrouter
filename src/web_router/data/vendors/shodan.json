@@ -1,0 +1,341 @@
+{
+  "vendor": "shodan",
+  "name": "Shodan",
+  "category": "security",
+  "summary": "Internet-wide scan data: services and banners seen on any IP, host search with facets, and DNS data for domains.",
+  "docs_url": "https://developer.shodan.io/api",
+  "pricing_url": "https://account.shodan.io/billing",
+  "base_url": "https://api.shodan.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SHODAN_API_KEY"
+        ],
+        "description": "A Shodan API key (account.shodan.io), sent as the key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Query credits come with the plan: filtered searches, pages past the first and DNS domain lookups spend them; api.info shows what is left.",
+    "Search syntax is the website's: free text plus filter:value pairs (search.filters lists them).",
+    "On-demand scans, network alerts, notifiers, bulk data and organization calls are not in this entry."
+  ],
+  "sources": [
+    "https://developer.shodan.io/api"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "shodan.host.get",
+      "name": "Get a host",
+      "summary": "Every service (banner) Shodan has seen on an IP, with ports, hostnames, org and location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shodan/host/{ip}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Host IP address.",
+          "example": "8.8.8.8"
+        },
+        "history": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return all historical banners too; default false."
+        },
+        "minify": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only ports and general host info, no banners; default false."
+        }
+      },
+      "job": "security.ip.report",
+      "docs_url": "https://developer.shodan.io/api#shodan-host-details",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#shodan-host-details"
+      }
+    },
+    {
+      "id": "shodan.host.search",
+      "name": "Search hosts",
+      "summary": "Banners matching a Shodan query, 100 per page, with optional facet summaries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shodan/host/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Shodan search query; filters go inline as filter:value.",
+          "example": "apache country:DE"
+        },
+        "facets": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated facets, each optionally property:count (country:100).",
+          "example": "org,os"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of 100 results, default 1."
+        },
+        "minify": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Truncate large fields such as http.html; default true."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return.",
+          "example": "ip_str,port,org,http.title"
+        }
+      },
+      "notes": [
+        "Costs 1 query credit when the query has a filter, and 1 more per 100 results past page 1. Use host.count first to size a query for free."
+      ],
+      "job": "security.hosts.search",
+      "docs_url": "https://developer.shodan.io/api#shodan-host-search",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#shodan-host-search"
+      }
+    },
+    {
+      "id": "shodan.host.count",
+      "name": "Count hosts for a query",
+      "summary": "The total matching a Shodan query plus facet summaries, without results.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shodan/host/count",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Shodan search query; filters go inline as filter:value.",
+          "example": "apache country:DE"
+        },
+        "facets": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated facets, each optionally property:count (country:100).",
+          "example": "org,os"
+        }
+      },
+      "notes": [
+        "Uses no query credits."
+      ],
+      "job": "security.hosts.count",
+      "docs_url": "https://developer.shodan.io/api#shodan-host-count",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#shodan-host-count"
+      }
+    },
+    {
+      "id": "shodan.search.facets",
+      "name": "List search facets",
+      "summary": "Property names usable as facets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shodan/host/search/facets",
+      "job": "reference.codes",
+      "docs_url": "https://developer.shodan.io/api#shodan-facets",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#shodan-facets"
+      }
+    },
+    {
+      "id": "shodan.search.filters",
+      "name": "List search filters",
+      "summary": "Filter names usable in a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shodan/host/search/filters",
+      "job": "reference.codes",
+      "docs_url": "https://developer.shodan.io/api#shodan-filters",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#shodan-filters"
+      }
+    },
+    {
+      "id": "shodan.search.tokens",
+      "name": "Parse a query",
+      "summary": "Which filters a query string uses and with what values.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shodan/host/search/tokens",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Shodan search query; filters go inline as filter:value.",
+          "example": "apache country:DE"
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://developer.shodan.io/api#shodan-host-search-tokens",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#shodan-host-search-tokens"
+      }
+    },
+    {
+      "id": "shodan.ports.list",
+      "name": "List crawled ports",
+      "summary": "Port numbers Shodan's crawlers look at.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shodan/ports",
+      "job": "reference.codes",
+      "docs_url": "https://developer.shodan.io/api#shodan-ports",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#shodan-ports"
+      }
+    },
+    {
+      "id": "shodan.dns.domain",
+      "name": "Get a domain's subdomains and DNS records",
+      "summary": "Subdomains and their A, AAAA, CNAME, NS, SOA, MX and TXT records with last-seen dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dns/domain/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain name.",
+          "example": "cnn.com"
+        },
+        "history": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include historical DNS data; default false."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this record type.",
+          "enum": [
+            "A",
+            "AAAA",
+            "CNAME",
+            "NS",
+            "SOA",
+            "MX",
+            "TXT"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of 100 results, default 1; 'more' in the answer says another page exists."
+        }
+      },
+      "notes": [
+        "1 query credit per lookup."
+      ],
+      "job": "domain.dns",
+      "docs_url": "https://developer.shodan.io/api#dns-domain",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#dns-domain"
+      }
+    },
+    {
+      "id": "shodan.dns.resolve",
+      "name": "Resolve hostnames",
+      "summary": "IP addresses for a list of hostnames.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dns/resolve",
+      "params": {
+        "hostnames": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated hostnames.",
+          "example": "google.com,bing.com"
+        }
+      },
+      "job": "domain.dns",
+      "docs_url": "https://developer.shodan.io/api#dns-resolve",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#dns-resolve"
+      }
+    },
+    {
+      "id": "shodan.dns.reverse",
+      "name": "Reverse-resolve IPs",
+      "summary": "Hostnames defined for a list of IP addresses.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dns/reverse",
+      "params": {
+        "ips": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated IP addresses.",
+          "example": "8.8.8.8,1.1.1.1"
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://developer.shodan.io/api#dns-reverse",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#dns-reverse"
+      }
+    },
+    {
+      "id": "shodan.queries.search",
+      "name": "Search saved queries",
+      "summary": "Search queries other users saved to Shodan's public directory.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/shodan/query/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What to look for in the saved queries.",
+          "example": "webcam"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        }
+      },
+      "job": "security.hosts.queries",
+      "docs_url": "https://developer.shodan.io/api#shodan-query-search",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#shodan-query-search"
+      }
+    },
+    {
+      "id": "shodan.api.info",
+      "name": "Get API plan and credits",
+      "summary": "Plan, remaining query and scan credits and usage limits for the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api-info",
+      "job": "account.usage",
+      "docs_url": "https://developer.shodan.io/api#api-info",
+      "verified": {
+        "docs": "https://developer.shodan.io/api#api-info"
+      }
+    }
+  ]
+}

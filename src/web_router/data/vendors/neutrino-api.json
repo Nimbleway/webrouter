@@ -1,0 +1,341 @@
+{
+  "vendor": "neutrino-api",
+  "name": "Neutrino API",
+  "category": "verification",
+  "summary": "Email syntax/DNS validation and SMTP verification, phone number validation and HLR lookups, IP geolocation, IP probing (hosting, VPN, proxy, ASN), IP blocklists and DNSBL host reputation, and domain intelligence.",
+  "docs_url": "https://www.neutrinoapi.com/api/api-basics/",
+  "pricing_url": "https://www.neutrinoapi.com/plans/",
+  "base_url": "https://neutrinoapi.net",
+  "auth": {
+    "credentials": {
+      "user_id": {
+        "env": [
+          "NEUTRINO_USER_ID"
+        ],
+        "description": "Your Neutrino API user ID (the fixed ID of your account). Sent in the User-ID header."
+      },
+      "api_key": {
+        "env": [
+          "NEUTRINO_API_KEY"
+        ],
+        "description": "A Neutrino API key (generated in your Neutrino account). Sent in the API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "User-ID",
+        "value": "{user_id}"
+      },
+      {
+        "in": "header",
+        "name": "API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every API takes its parameters over GET or POST; this entry uses GET. Field names in responses are kebab-case by default (output-case can switch to camel or snake).",
+    "Each API has its own rate and concurrency limits, listed per endpoint; past the concurrency limit the error code is 06 TOO MANY CONNECTIONS.",
+    "SMS Verify, Phone Verify and Phone Playback send messages or calls and are not in this entry; nor are the browser, HTML render and imaging APIs."
+  ],
+  "sources": [
+    "https://www.neutrinoapi.com/api/api-basics/",
+    "https://www.neutrinoapi.com/api/email-validate/",
+    "https://www.neutrinoapi.com/api/email-verify/",
+    "https://www.neutrinoapi.com/api/phone-validate/",
+    "https://www.neutrinoapi.com/api/hlr-lookup/",
+    "https://www.neutrinoapi.com/api/ip-info/",
+    "https://www.neutrinoapi.com/api/ip-probe/",
+    "https://www.neutrinoapi.com/api/ip-blocklist/",
+    "https://www.neutrinoapi.com/api/host-reputation/",
+    "https://www.neutrinoapi.com/api/domain-lookup/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "neutrino-api.email.validate",
+      "name": "Validate an email address (syntax and DNS)",
+      "summary": "Syntax, domain and MX checks, freemail, disposable and role (is-personal) flags, mail provider and domain status, with optional typo fixing.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email-validate",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address.",
+          "example": "tech@neutrinoapi.com"
+        },
+        "fix_typos": {
+          "in": "query",
+          "type": "boolean",
+          "wire_name": "fix-typos",
+          "description": "Try to fix common domain, TLD and freemail typos (default false)."
+        }
+      },
+      "notes": [
+        "Does not contact the mailbox: valid means the syntax, domain and MX servers work, not that the user exists. Use neutrino-api.email.verify for that.",
+        "domain-status: ok, invalid, no-service (null MX), no-mail, mx-invalid, mx-bogon, resolv-error. Up to 500 requests per second."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://www.neutrinoapi.com/api/email-validate/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/email-validate/"
+      }
+    },
+    {
+      "id": "neutrino-api.email.verify",
+      "name": "Verify an email mailbox over SMTP",
+      "summary": "Everything email validate returns plus an SMTP check: verified, SMTP status and response, catch-all and deferred flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/email-verify",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address.",
+          "example": "tech@neutrinoapi.com"
+        },
+        "fix_typos": {
+          "in": "query",
+          "type": "boolean",
+          "wire_name": "fix-typos",
+          "description": "Try to fix common typos first (default false)."
+        }
+      },
+      "notes": [
+        "Slow and variable: 1 to 120 seconds, so a call can outlast call_vendor's fixed 60-second timeout; retry a timed-out call. Limited to 2 requests per second and 50 at once."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://www.neutrinoapi.com/api/email-verify/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/email-verify/"
+      }
+    },
+    {
+      "id": "neutrino-api.phone.validate",
+      "name": "Validate a phone number",
+      "summary": "Whether a number is valid, its type (mobile, fixed-line, premium-rate, toll-free, voip), international and local formats, country, location and prefix network.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/phone-validate",
+      "params": {
+        "number": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The phone number, in E.164 or local format; local format needs country_code or ip.",
+          "example": "+6495552000"
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "country-code",
+          "description": "ISO 2-letter country to read a local number in.",
+          "example": "NZ"
+        },
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "description": "A user's IP address; the number is read in that IP's country."
+        }
+      },
+      "notes": [
+        "Does not contact the network; for live carrier status use neutrino-api.phone.hlr. Up to 500 requests per second."
+      ],
+      "job": "phone.validate",
+      "docs_url": "https://www.neutrinoapi.com/api/phone-validate/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/phone-validate/"
+      }
+    },
+    {
+      "id": "neutrino-api.phone.hlr",
+      "name": "Look up a mobile number's live network status (HLR)",
+      "summary": "HLR status, current, origin and ported networks, ported and roaming flags, MCC/MNC and number type for a mobile number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/hlr-lookup",
+      "params": {
+        "number": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The phone number, in E.164 or local format; local format needs country_code.",
+          "example": "+447700900123"
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "country-code",
+          "description": "ISO 2-letter country to read a local number in."
+        }
+      },
+      "notes": [
+        "Queries the mobile network, taking 1 to 5 seconds; limited to 20 requests per second and 50 at once."
+      ],
+      "job": "phone.carrier",
+      "docs_url": "https://www.neutrinoapi.com/api/hlr-lookup/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/hlr-lookup/"
+      }
+    },
+    {
+      "id": "neutrino-api.ip.info",
+      "name": "Geolocate an IP address",
+      "summary": "Country, region, city, coordinates, time zone, currency and language for an IPv4 or IPv6 address, with bogon and v6 flags and optional reverse DNS.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ip-info",
+      "params": {
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 or IPv6 address; CIDR notation is accepted.",
+          "example": "1.1.1.1"
+        },
+        "reverse_lookup": {
+          "in": "query",
+          "type": "boolean",
+          "wire_name": "reverse-lookup",
+          "description": "Also do a reverse DNS (PTR) lookup; adds delay."
+        }
+      },
+      "notes": [
+        "Up to 500 requests per second."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://www.neutrinoapi.com/api/ip-info/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/ip-info/"
+      }
+    },
+    {
+      "id": "neutrino-api.ip.probe",
+      "name": "Probe an IP's network and provider",
+      "summary": "Provider, provider type, hosting, ISP, VPN and proxy flags, VPN domain, ASN, AS CIDR, domains and age, plus location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ip-probe",
+      "params": {
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 or IPv6 address; CIDR notation is accepted.",
+          "example": "1.1.1.1"
+        }
+      },
+      "notes": [
+        "Runs live probes: 1 to 60 seconds, at most 10 requests per second."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://www.neutrinoapi.com/api/ip-probe/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/ip-probe/"
+      }
+    },
+    {
+      "id": "neutrino-api.ip.blocklist",
+      "name": "Check an IP against threat blocklists",
+      "summary": "Whether an IP is listed, on which blocklists, first and last seen, hits, and proxy, Tor, VPN, malware, spyware, bot, spam-bot, exploit-bot and hijacked flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ip-blocklist",
+      "params": {
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 or IPv6 address, with or without a port, or CIDR; with a comma-separated list the first non-bogon address is checked.",
+          "example": "1.1.1.1"
+        },
+        "vpn_lookup": {
+          "in": "query",
+          "type": "boolean",
+          "wire_name": "vpn-lookup",
+          "description": "Include public VPN provider addresses (default false)."
+        }
+      },
+      "notes": [
+        "Up to 500 requests per second."
+      ],
+      "job": "ip.reputation",
+      "docs_url": "https://www.neutrinoapi.com/api/ip-blocklist/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/ip-blocklist/"
+      }
+    },
+    {
+      "id": "neutrino-api.host.reputation",
+      "name": "Check a host against DNS blocklists",
+      "summary": "Whether an IP, domain or URL is listed on DNSBL zones, with each list's name, rating, TXT record and return code.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/host-reputation",
+      "params": {
+        "host": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "An IP address, domain, FQDN or URL; a domain or URL is checked against URI DNSBLs.",
+          "example": "neutrinoapi.com"
+        },
+        "list_rating": {
+          "in": "query",
+          "type": "integer",
+          "wire_name": "list-rating",
+          "description": "Only check lists with this rating or better (default 3)."
+        },
+        "zones": {
+          "in": "query",
+          "type": "string",
+          "description": "Only check these DNSBL zones, comma-separated."
+        }
+      },
+      "notes": [
+        "Slow: 5 to 20 seconds, at most 1 request per second and 25 at once."
+      ],
+      "job": "domain.blacklists",
+      "docs_url": "https://www.neutrinoapi.com/api/host-reputation/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/host-reputation/"
+      }
+    },
+    {
+      "id": "neutrino-api.domain.lookup",
+      "name": "Look up a domain's registration and reputation",
+      "summary": "Validity, TLD, rank, registration and expiry dates, age, registrar, mail and website status and providers, and adult, malicious, government and blocklist flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain-lookup",
+      "params": {
+        "host": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A domain, hostname, FQDN, URL, HTML link or email address; IDNs may be unicode or punycode.",
+          "example": "neutrinoapi.com"
+        },
+        "live": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Run live checks on domains not seen before (default true); set false for consistently fast replies."
+        }
+      },
+      "notes": [
+        "15 ms to 5 s depending on live; at most 10 requests per second."
+      ],
+      "job": "domain.lookup",
+      "docs_url": "https://www.neutrinoapi.com/api/domain-lookup/",
+      "verified": {
+        "docs": "https://www.neutrinoapi.com/api/domain-lookup/"
+      }
+    }
+  ]
+}
