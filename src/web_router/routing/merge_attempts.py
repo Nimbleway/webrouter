@@ -71,11 +71,17 @@ def kept_exclusions(
     candidates: Sequence[Candidate], tool: str, ranked: Sequence[str], excluded: Mapping[str, str]
 ) -> dict[str, str]:
     """Rule 3: ``excluded`` whole, unless it leaves ``tool`` nothing to run -- no ``ranked`` entry, and no
-    backend :func:`in_modes` leaves out -- and then without ``tool``'s own."""
+    backend :func:`in_modes` leaves out. Then, when only backends named in their modes are left, those modes'
+    exclusions are lifted and every other holds; with nothing left at all, none of ``tool``'s holds."""
     pool, moded = _by_entry(candidates, tool, excluded), in_modes(candidates, tool, ranked)
     if any(name in pool for name in ranked) or any(c.is_backend and c.provider not in moded for c in pool.values()):
         return dict(excluded)
-    return {cid: why for cid, why in excluded.items() if not cid.startswith(candidate_id(tool, ""))}
+    named = _by_entry(candidates, tool, ())
+    if pool:
+        lift = {named[name].id for name in ranked if name in named and named[name].provider in pool}
+    else:
+        lift = {cid for cid in excluded if cid.startswith(candidate_id(tool, ""))}
+    return {cid: why for cid, why in excluded.items() if cid not in lift}
 
 
 def ranks(candidates: Sequence[Candidate], tool: str, attempts: Sequence[str], excluded: Mapping[str, str]) -> bool:

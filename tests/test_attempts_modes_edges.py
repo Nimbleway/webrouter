@@ -58,6 +58,13 @@ def test_an_excluded_sole_mode_of_the_only_backend_still_runs_in_that_mode() -> 
     assert merged.providers == ("exa:exa-instant",), "rule 3 ignores the exclusion; a mode-only backend is not run bare"  # type: ignore[attr-defined]
 
 
+def test_lifting_an_excluded_sole_mode_keeps_every_other_exclusion() -> None:
+    exclude = {INSTANT: "too thin", "search:tavily": "slow", "search:brave": "down"}
+    merged = _merged((EXA, EXA_INSTANT, *OTHERS), RouteDecision(attempts=[INSTANT], exclude=exclude))
+    assert merged.providers == ("exa:exa-instant",)  # type: ignore[attr-defined]
+    assert merged.notes.excluded == {"search:tavily": "slow", "search:brave": "down"}  # type: ignore[attr-defined]
+
+
 @pytest.mark.parametrize(
     ("candidates", "exclude"),
     [
@@ -65,8 +72,9 @@ def test_an_excluded_sole_mode_of_the_only_backend_still_runs_in_that_mode() -> 
         ((EXA, EXA_INSTANT, *OTHERS), {"search:exa": "no", "search:tavily": "no", "search:brave": "no"}),
         ((EXA, EXA_INSTANT), {INSTANT: "too thin"}),
         ((EXA, EXA_INSTANT, *OTHERS), {INSTANT: "too thin"}),
+        ((EXA, EXA_INSTANT, *OTHERS), {INSTANT: "too thin", "search:tavily": "no", "search:brave": "no"}),
     ],
-    ids=["blank-reason", "would-empty", "sole-mode-of-only-backend", "excluded-mode"],
+    ids=["blank-reason", "would-empty", "sole-mode-of-only-backend", "excluded-mode", "sole-mode-and-others"],
 )
 def test_the_cost_order_ranks_a_method_exactly_when_the_merge_keeps_an_attempt(
     candidates: tuple[Candidate, ...], exclude: dict[str, str]
