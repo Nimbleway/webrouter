@@ -1,0 +1,169 @@
+{
+  "vendor": "apis-guru",
+  "name": "APIs.guru",
+  "category": "developer",
+  "summary": "An open directory of public web API definitions in OpenAPI format: providers, APIs, versions and links to each machine-readable definition.",
+  "docs_url": "https://apis.guru/api-doc/",
+  "base_url": "https://api.apis.guru/v2",
+  "notes": [
+    "Keyless and read-only; every path ends in .json."
+  ],
+  "sources": [
+    "https://apis.guru/api-doc/",
+    "https://api.apis.guru/v2/openapi.yaml"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "apis-guru.providers.list",
+      "name": "List providers",
+      "summary": "Every provider name in the directory.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/providers.json",
+      "job": "apis.providers",
+      "docs_url": "https://apis.guru/api-doc/",
+      "verified": {
+        "docs": "https://apis.guru/api-doc/"
+      }
+    },
+    {
+      "id": "apis-guru.provider.apis",
+      "name": "List a provider's APIs",
+      "summary": "Every API (and version) of one provider, with links to each OpenAPI definition.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{provider}.json",
+      "params": {
+        "provider": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Provider name (usually the API's host).",
+          "example": "googleapis.com"
+        }
+      },
+      "job": "apis.list",
+      "docs_url": "https://apis.guru/api-doc/",
+      "verified": {
+        "docs": "https://apis.guru/api-doc/"
+      }
+    },
+    {
+      "id": "apis-guru.provider.services",
+      "name": "List a provider's service names",
+      "summary": "The serviceNames under a provider (e.g. each Google API).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{provider}/services.json",
+      "params": {
+        "provider": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Provider name (usually the API's host).",
+          "example": "googleapis.com"
+        }
+      },
+      "job": "apis.list",
+      "docs_url": "https://apis.guru/api-doc/",
+      "verified": {
+        "docs": "https://apis.guru/api-doc/"
+      }
+    },
+    {
+      "id": "apis-guru.api.get",
+      "name": "Get an API entry",
+      "summary": "One API version's entry, with links to its OpenAPI definition, for APIs without a serviceName.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/specs/{provider}/{api}.json",
+      "params": {
+        "provider": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Provider name.",
+          "example": "apis.guru"
+        },
+        "api": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "API version.",
+          "example": "2.1.0"
+        }
+      },
+      "job": "apis.get",
+      "docs_url": "https://apis.guru/api-doc/",
+      "verified": {
+        "docs": "https://apis.guru/api-doc/"
+      }
+    },
+    {
+      "id": "apis-guru.service_api.get",
+      "name": "Get an API entry with a service name",
+      "summary": "One API version's entry for a provider that splits APIs by serviceName.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/specs/{provider}/{service}/{api}.json",
+      "params": {
+        "provider": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Provider name (usually the API's host).",
+          "example": "googleapis.com"
+        },
+        "service": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Service name, from provider.services.",
+          "example": "youtube"
+        },
+        "api": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "API version.",
+          "example": "v3"
+        }
+      },
+      "job": "apis.get",
+      "docs_url": "https://apis.guru/api-doc/",
+      "verified": {
+        "docs": "https://apis.guru/api-doc/"
+      }
+    },
+    {
+      "id": "apis-guru.apis.list",
+      "name": "List all APIs",
+      "summary": "Every API in the directory with its versions, the preferred one marked, cached basic info and links to each definition.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/list.json",
+      "notes": [
+        "One large file covering the whole directory; filter it locally."
+      ],
+      "job": "apis.list",
+      "docs_url": "https://apis.guru/api-doc/",
+      "verified": {
+        "docs": "https://apis.guru/api-doc/"
+      }
+    },
+    {
+      "id": "apis-guru.metrics",
+      "name": "Get directory metrics",
+      "summary": "Counts of definitions, APIs, endpoints and providers, plus maintenance figures.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/metrics.json",
+      "job": "apis.stats",
+      "docs_url": "https://apis.guru/api-doc/",
+      "verified": {
+        "docs": "https://apis.guru/api-doc/"
+      }
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "vendor": "enisa-euvd",
+  "name": "ENISA EU Vulnerability Database (EUVD)",
+  "category": "security",
+  "summary": "The EU's vulnerability database from ENISA: EUVD records linked to CVEs and vendor advisories, with CVSS, EPSS, exploitation status and a consolidated CISA and EU known-exploited list.",
+  "docs_url": "https://euvd.enisa.europa.eu/apidoc",
+  "base_url": "https://euvdservices.enisa.europa.eu",
+  "notes": [
+    "Keyless: every endpoint is a GET with no headers or body.",
+    "An unknown query parameter is a 400; an ID that matches nothing is a 404.",
+    "EPSS here is on a 0 to 100 scale, unlike FIRST's 0 to 1."
+  ],
+  "sources": [
+    "https://euvd.enisa.europa.eu/apidoc"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "enisa-euvd.vulns.search",
+      "name": "Search vulnerabilities",
+      "summary": "EUVD records filtered by score, EPSS, dates, product, vendor, advisory, assigner, exploitation or free text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/search",
+      "params": {
+        "text": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords across description, EUVD ID, aliases, product and vendor names.",
+          "example": "remote code execution"
+        },
+        "product": {
+          "in": "query",
+          "type": "string",
+          "description": "One product name; every word must appear, and the last word also matches longer words (Win finds Windows).",
+          "example": "Windows"
+        },
+        "vendor": {
+          "in": "query",
+          "type": "string",
+          "description": "One vendor name, matched like product. Not a list.",
+          "example": "Microsoft"
+        },
+        "advisory": {
+          "in": "query",
+          "type": "string",
+          "description": "An advisory ID, matched like product."
+        },
+        "assigner": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated assigners.",
+          "example": "mitre,redhat"
+        },
+        "exploited": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only exploited (true) or non-exploited (false) vulnerabilities."
+        },
+        "fromScore": {
+          "in": "query",
+          "type": "number",
+          "description": "Lowest base score, 0 to 10."
+        },
+        "toScore": {
+          "in": "query",
+          "type": "number",
+          "description": "Highest base score, 0 to 10."
+        },
+        "fromEpss": {
+          "in": "query",
+          "type": "number",
+          "description": "Lowest EPSS, 0 to 100."
+        },
+        "toEpss": {
+          "in": "query",
+          "type": "number",
+          "description": "Highest EPSS, 0 to 100."
+        },
+        "fromDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Published from, YYYY-MM-DD."
+        },
+        "toDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Published until, YYYY-MM-DD."
+        },
+        "fromUpdatedDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated from, YYYY-MM-DD."
+        },
+        "toUpdatedDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Updated until, YYYY-MM-DD."
+        },
+        "fromKEVDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Added to a known-exploited catalogue from, YYYY-MM-DD."
+        },
+        "toKEVDate": {
+          "in": "query",
+          "type": "string",
+          "description": "Added to a known-exploited catalogue until, YYYY-MM-DD."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 0."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, default 10, max 100."
+        }
+      },
+      "job": "security.vulns.search",
+      "docs_url": "https://euvd.enisa.europa.eu/apidoc",
+      "verified": {
+        "docs": "https://euvd.enisa.europa.eu/apidoc"
+      }
+    },
+    {
+      "id": "enisa-euvd.vulns.get",
+      "name": "Get a vulnerability by EUVD or CVE ID",
+      "summary": "One EUVD record, looked up by its EUVD ID or an alias such as a CVE ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/enisaid",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "EUVD ID or CVE ID.",
+          "example": "CVE-2024-3400"
+        }
+      },
+      "job": "security.vulns.get",
+      "docs_url": "https://euvd.enisa.europa.eu/apidoc",
+      "verified": {
+        "docs": "https://euvd.enisa.europa.eu/apidoc"
+      }
+    },
+    {
+      "id": "enisa-euvd.advisories.get",
+      "name": "Get an advisory by ID",
+      "summary": "One vendor or CSIRT advisory and the vulnerabilities it covers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/advisory",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Advisory ID.",
+          "example": "cisco-sa-ata19x-multi-RDTEqRsy"
+        }
+      },
+      "job": "security.advisories.get",
+      "docs_url": "https://euvd.enisa.europa.eu/apidoc",
+      "verified": {
+        "docs": "https://euvd.enisa.europa.eu/apidoc"
+      }
+    },
+    {
+      "id": "enisa-euvd.vulns.latest",
+      "name": "List the latest vulnerabilities",
+      "summary": "The newest EUVD records, at most 8.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/lastvulnerabilities",
+      "job": "security.vulns.list",
+      "docs_url": "https://euvd.enisa.europa.eu/apidoc",
+      "verified": {
+        "docs": "https://euvd.enisa.europa.eu/apidoc"
+      }
+    },
+    {
+      "id": "enisa-euvd.vulns.exploited.latest",
+      "name": "List the latest exploited vulnerabilities",
+      "summary": "The newest exploited records, at most 8.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/exploitedvulnerabilities",
+      "job": "security.vulns.list",
+      "docs_url": "https://euvd.enisa.europa.eu/apidoc",
+      "verified": {
+        "docs": "https://euvd.enisa.europa.eu/apidoc"
+      }
+    },
+    {
+      "id": "enisa-euvd.vulns.critical.latest",
+      "name": "List the latest critical vulnerabilities",
+      "summary": "The newest critical records, at most 8.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/criticalvulnerabilities",
+      "job": "security.vulns.list",
+      "docs_url": "https://euvd.enisa.europa.eu/apidoc",
+      "verified": {
+        "docs": "https://euvd.enisa.europa.eu/apidoc"
+      }
+    },
+    {
+      "id": "enisa-euvd.kev.dump",
+      "name": "Get the known-exploited list",
+      "summary": "Every known-exploited CVE consolidated from CISA KEV and the EU KEV, with EUVD ID, earliest date added and sources.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/kev/dump",
+      "notes": [
+        "The full dataset in one response, refreshed daily at 07:00 UTC."
+      ],
+      "job": "security.vulns.list",
+      "docs_url": "https://euvd.enisa.europa.eu/apidoc",
+      "verified": {
+        "docs": "https://euvd.enisa.europa.eu/apidoc"
+      }
+    }
+  ]
+}
