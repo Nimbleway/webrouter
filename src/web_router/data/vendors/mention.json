@@ -1,0 +1,454 @@
+{
+  "vendor": "mention",
+  "name": "Mention",
+  "category": "social",
+  "summary": "Social listening: the alerts on your Mention account, the web and social mentions each alert collected, and their statistics.",
+  "docs_url": "https://dev.mention.com/current/",
+  "pricing_url": "https://mention.com/en/pricing/",
+  "base_url": "https://api.mention.net/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MENTION_API_KEY"
+        ],
+        "description": "A Mention access token. For your own account, the token shown at the bottom of your API app's settings page works without the OAuth flow. Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "Accept-Version": "1.19"
+  },
+  "notes": [
+    "Every call is scoped to an account id: call mention.account.me first to read yours, then mention.alerts.list for the alert ids.",
+    "Dates are ISO 8601 with an offset, e.g. 2024-11-16T19:20:30+01:00.",
+    "Some resources are rate limited, with limits that vary by resource and method; a 429 carries X-Rate-Limit-Reset, a Unix time.",
+    "Alert, tag, share and task changes, and marking mentions read or favorite, are writes and are not in this entry."
+  ],
+  "sources": [
+    "https://dev.mention.com/current/",
+    "https://dev.mention.com/current/src/appendix/OAuth2.html",
+    "https://dev.mention.com/current/src/appendix/Ratelimits.html",
+    "https://dev.mention.com/current/src/account/GetAccountMe.html",
+    "https://dev.mention.com/current/src/account/alert/GetAlerts.html",
+    "https://dev.mention.com/current/src/account/alert/mention/GetMentions.html",
+    "https://dev.mention.com/current/src/account/alert/mention/GetMention.html",
+    "https://dev.mention.com/current/src/account/alert/mention/GetMentionChildren.html",
+    "https://dev.mention.com/current/src/account/alert/tag/GetTags.html",
+    "https://dev.mention.com/current/src/account/stats/GetStats.html"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "mention.account.me",
+      "name": "Get my account",
+      "summary": "The account the token belongs to: id, name, email, language and permissions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/me",
+      "notes": [
+        "account.id is the account_id every other call takes."
+      ],
+      "job": "account.validate",
+      "docs_url": "https://dev.mention.com/current/src/account/GetAccountMe.html",
+      "verified": {
+        "docs": "https://dev.mention.com/current/src/account/GetAccountMe.html"
+      }
+    },
+    {
+      "id": "mention.alerts.list",
+      "name": "List alerts",
+      "summary": "The alerts (monitored queries) of an account, with their ids and settings.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/alerts",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account id, from mention.account.me."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Alerts to return; all by default."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Paging cursor the previous answer gave."
+        }
+      },
+      "job": "news.monitors.list",
+      "docs_url": "https://dev.mention.com/current/src/account/alert/GetAlerts.html",
+      "verified": {
+        "docs": "https://dev.mention.com/current/src/account/alert/GetAlerts.html"
+      }
+    },
+    {
+      "id": "mention.mentions.list",
+      "name": "List an alert's mentions",
+      "summary": "Mentions an alert collected, filterable by folder, tone, language, country, source and keyword query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/alerts/{alert_id}/mentions",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account id, from mention.account.me."
+        },
+        "alert_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Alert id, from mention.alerts.list."
+        },
+        "since_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only mentions with a higher id (found later), ordered by id. Not with before_date, not_before_date or cursor."
+        },
+        "before_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Only mentions published before this datetime, ordered by publication date."
+        },
+        "not_before_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Skip mentions older than this datetime; only together with before_date."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Mentions per page, default 20, max 1000; smaller is faster."
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "One source, e.g. web. Plans with search access only.",
+          "example": "web"
+        },
+        "unread": {
+          "in": "query",
+          "type": "integer",
+          "description": "Set to 1 for unread mentions only. Not with favorite, q or tone."
+        },
+        "favorite": {
+          "in": "query",
+          "type": "integer",
+          "description": "Set to 1 for favorite mentions only. With folder only when folder is inbox or archive."
+        },
+        "folder": {
+          "in": "query",
+          "type": "string",
+          "description": "Folder to read; spam and trash include child mentions by default.",
+          "enum": [
+            "inbox",
+            "archive",
+            "spam",
+            "trash"
+          ]
+        },
+        "tone": {
+          "in": "query",
+          "type": "integer",
+          "description": "Tone to keep: -1 negative, 0 neutral, 1 positive.",
+          "enum": [
+            -1,
+            0,
+            1
+          ]
+        },
+        "countries": {
+          "in": "query",
+          "type": "string",
+          "description": "Country code, e.g. US."
+        },
+        "include_children": {
+          "in": "query",
+          "type": "integer",
+          "description": "Set to 1 to include child mentions (replies and the like)."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order. Plans with search access only.",
+          "enum": [
+            "published_at",
+            "author_influence.score",
+            "direct_reach",
+            "cumulative_reach",
+            "domain_reach"
+          ]
+        },
+        "languages": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code, e.g. en."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Time zone name used to read dates inside q, e.g. America/New_York."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Keyword query with filters such as source:, tone:, language:, is:favorite and published_at:[...]. Plans with search access only."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "Paging cursor; not with since_id."
+        }
+      },
+      "notes": [
+        "Paging: follow _links.more.href for older mentions and _links.pull.href for newer ones.",
+        "The q filter syntax can combine filters the plain parameters refuse to combine; is:unread in q needs an alert on index version 2 or later."
+      ],
+      "job": "news.monitors.feed",
+      "docs_url": "https://dev.mention.com/current/src/account/alert/mention/GetMentions.html",
+      "verified": {
+        "docs": "https://dev.mention.com/current/src/account/alert/mention/GetMentions.html"
+      }
+    },
+    {
+      "id": "mention.mentions.get",
+      "name": "Get a mention",
+      "summary": "One mention of an alert, with its source, author, tone and reach.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/alerts/{alert_id}/mentions/{mention_id}",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account id."
+        },
+        "alert_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Alert id."
+        },
+        "mention_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Mention id, from mention.mentions.list."
+        }
+      },
+      "job": "social.posts",
+      "docs_url": "https://dev.mention.com/current/src/account/alert/mention/GetMention.html",
+      "verified": {
+        "docs": "https://dev.mention.com/current/src/account/alert/mention/GetMention.html"
+      }
+    },
+    {
+      "id": "mention.mentions.children",
+      "name": "List a mention's children",
+      "summary": "The child mentions (replies, comments) under one mention.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/alerts/{alert_id}/mentions/{mention_id}/children",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account id."
+        },
+        "alert_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Alert id."
+        },
+        "mention_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Parent mention id."
+        },
+        "before_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Only children older than this datetime."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Children per page, default 20, max 100."
+        }
+      },
+      "job": "social.comments",
+      "docs_url": "https://dev.mention.com/current/src/account/alert/mention/GetMentionChildren.html",
+      "verified": {
+        "docs": "https://dev.mention.com/current/src/account/alert/mention/GetMentionChildren.html"
+      }
+    },
+    {
+      "id": "mention.tags.list",
+      "name": "List an alert's tags",
+      "summary": "The tags defined on an alert, for filtering statistics by tag.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/alerts/{alert_id}/tags",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account id."
+        },
+        "alert_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Alert id."
+        }
+      },
+      "job": "lists.list",
+      "docs_url": "https://dev.mention.com/current/src/account/alert/tag/GetTags.html",
+      "verified": {
+        "docs": "https://dev.mention.com/current/src/account/alert/tag/GetTags.html"
+      }
+    },
+    {
+      "id": "mention.stats.get",
+      "name": "Get mention statistics",
+      "summary": "Mention counts and reach per alert over time, with optional breakdowns by weekday, hour, country and top influencers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/accounts/{account_id}/stats",
+      "params": {
+        "account_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account id."
+        },
+        "alerts": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "wire_name": "alerts[]",
+          "description": "Alert ids to report on."
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start datetime, e.g. 2015-03-27T00:00:00.0."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End datetime."
+        },
+        "timezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Time zone for from and to, e.g. Europe/Berlin."
+        },
+        "interval": {
+          "in": "query",
+          "type": "string",
+          "description": "Bucket size: daily, weekly or monthly.",
+          "enum": [
+            "P1D",
+            "P1W",
+            "P1M"
+          ]
+        },
+        "favorite": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only favorite mentions; combinable with important."
+        },
+        "important": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only important mentions; combinable with favorite."
+        },
+        "tones": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "tones[]",
+          "description": "Tone values to keep."
+        },
+        "languages": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "languages[]",
+          "description": "Language codes to keep."
+        },
+        "sources": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "sources[]",
+          "description": "Source codes to keep."
+        },
+        "countries": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "countries[]",
+          "description": "Country codes to keep."
+        },
+        "tags": {
+          "in": "query",
+          "type": "array",
+          "wire_name": "tags[]",
+          "description": "Tag names to keep."
+        },
+        "week_day_stats": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add counts by weekday; not with week_day_by_hour_stats."
+        },
+        "week_day_by_hour_stats": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add counts by weekday and hour; not with week_day_stats."
+        },
+        "country_stats": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of top countries to add, default 0."
+        },
+        "influencers": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the top 10 web and Twitter influencers per alert."
+        },
+        "reach_per_interval_stats": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add reach per interval."
+        },
+        "author_influence_score": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "author_influence.score",
+          "description": "Author influence range min:max, both ends optional and inclusive, e.g. 50: or 0:100."
+        }
+      },
+      "job": "social.analytics",
+      "docs_url": "https://dev.mention.com/current/src/account/stats/GetStats.html",
+      "verified": {
+        "docs": "https://dev.mention.com/current/src/account/stats/GetStats.html"
+      }
+    }
+  ]
+}
