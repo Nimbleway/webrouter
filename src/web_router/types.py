@@ -157,11 +157,10 @@ class NormalizedRequest(BaseModel):
 class SearchRequest(NormalizedRequest):
     """A normalized search request.
 
-    Only :attr:`query` is required. Fields left as ``None`` are omitted from the
-    provider call so each backend applies its own default rather than ours.
+    Only :attr:`query` is required. A field left as ``None`` is not sent: each backend applies its own default.
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"query", "provider_options", "mode"})
 
     query: Annotated[NonBlankText, Field(description="The search query.")]
     max_results: Annotated[int | None, Field(default=None, ge=1, description=MAX_RESULTS_DESCRIPTION)] = None
@@ -172,10 +171,11 @@ class SearchRequest(NormalizedRequest):
     locale: str | None = Field(default=None, description="Language code, e.g. 'en'.")
     recency: Recency | None = Field(default=None, description=RECENCY_DESCRIPTION)
     effort: ResearchEffort | None = Field(default=None, description=SEARCH_EFFORT_DESCRIPTION)
+    mode: str | None = Field(default=None, description="The vendor mode a pinned id set, e.g. 'exa-instant+lite'.")
 
 
 ALWAYS_SENT = SearchRequest.always_sent
-"""Fields every search provider handles itself: the query, and the untranslated passthrough."""
+"""Fields every search provider handles itself: the query, the vendor mode a pin set, and the passthrough."""
 
 NORMALIZED_PARAMETERS: frozenset[str] = SearchRequest.normalized_parameters()
 """Every optional parameter a search provider may declare support for."""
@@ -184,15 +184,13 @@ NORMALIZED_PARAMETERS: frozenset[str] = SearchRequest.normalized_parameters()
 class ExtractRequest(NormalizedRequest):
     """A normalized extract request.
 
-    Only :attr:`urls` is required. :attr:`format` left as ``None`` means
-    ``EXTRACT_DEFAULT_FORMAT`` (markdown) from every backend that can return it,
-    and that backend's own default from one that cannot (Exa's text);
-    :attr:`ExtractedDocument.format` names which came back. :attr:`profile` is
-    the same saved identity a :class:`BrowserRequest` starts from, so a login
-    made in a browser session serves the fetches that follow it.
+    Only :attr:`urls` is required. :attr:`format` left as ``None`` means ``EXTRACT_DEFAULT_FORMAT`` (markdown)
+    from every backend that can return it, and that backend's own default from one that cannot (Exa's text);
+    :attr:`ExtractedDocument.format` names which came back. :attr:`profile` is the same saved identity a
+    :class:`BrowserRequest` starts from, so a login made in a browser session serves the fetches that follow it.
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"urls", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"urls", "provider_options", "mode"})
 
     urls: Annotated[
         list[Annotated[str, Field(min_length=1)]],
@@ -200,10 +198,11 @@ class ExtractRequest(NormalizedRequest):
     ]
     format: ExtractFormat | None = Field(default=None, description="Which representation of each page to return.")
     profile: str | None = Field(default=None, description=EXTRACT_PROFILE_DESCRIPTION)
+    mode: str | None = Field(default=None, description="The vendor mode a pinned id set, e.g. 'tavily-advanced'.")
 
 
 EXTRACT_ALWAYS_SENT = ExtractRequest.always_sent
-"""Fields every extract provider handles itself: the URLs, and the untranslated passthrough."""
+"""Fields every extract provider handles itself: the URLs, the vendor mode a pin set, and the passthrough."""
 
 EXTRACT_PARAMETERS: frozenset[str] = ExtractRequest.normalized_parameters()
 """Every optional parameter an extract provider may declare support for."""
@@ -637,15 +636,13 @@ from its clock, and Browser Use's ``isSuccess`` is its agent's opinion of its ow
 class BrowseRequest(NormalizedRequest):
     """A normalized browse task: instructions for an agent driving a hosted browser.
 
-    Only :attr:`task` is required. :attr:`start_url` is optional in the model
-    but not on every backend -- one that cannot find its own way to a first page
-    raises :class:`~web_router.MissingParameterError` before the task starts
-    rather than having the URL folded into the task text. There is no ``model``
-    field: the LLM behind one vendor's agent is not comparable to another's, so
-    it goes through ``provider_options``.
+    Only :attr:`task` is required. :attr:`start_url` is optional in the model but not on every backend -- one
+    that cannot find its own way to a first page raises :class:`~web_router.MissingParameterError` before the task
+    starts rather than having the URL folded into the task text. There is no ``model`` field: the LLM behind one
+    vendor's agent is not comparable to another's, so it is a vendor mode (``browser-use:browser-use-o3``).
     """
 
-    always_sent: ClassVar[frozenset[str]] = frozenset({"task", "provider_options"})
+    always_sent: ClassVar[frozenset[str]] = frozenset({"task", "provider_options", "mode"})
 
     task: Annotated[NonBlankText, Field(description="What the agent should do, in plain words.")]
     start_url: str | None = Field(default=None, description="The page the agent starts on.")
@@ -663,10 +660,11 @@ class BrowseRequest(NormalizedRequest):
         # "no restriction" to another, so it is refused rather than guessed at.
         Field(default=None, min_length=1, description="Keep the agent on these domains."),
     ] = None
+    mode: str | None = Field(default=None, description="The vendor mode a pinned id set, e.g. 'skyvern-2.0'.")
 
 
 BROWSE_ALWAYS_SENT = BrowseRequest.always_sent
-"""Fields every browse provider handles itself: the task, and the untranslated passthrough."""
+"""Fields every browse provider handles itself: the task, the vendor mode a pin set, and the passthrough."""
 
 BROWSE_PARAMETERS: frozenset[str] = BrowseRequest.normalized_parameters()
 """Every optional parameter a browse provider may declare support for."""

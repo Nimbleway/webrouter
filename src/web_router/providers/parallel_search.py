@@ -18,6 +18,7 @@ from web_router.constants import (
     PARALLEL_BASE_URL,
     PROVIDER_PARALLEL,
 )
+from web_router.constants_mode_parts import PARALLEL_TIERS
 from web_router.constants_parallel import (
     MSG_PARALLEL_COUNTRY,
     MSG_PARALLEL_DOMAINS,
@@ -40,6 +41,7 @@ from web_router.constants_parallel import (
 )
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpSearchProvider
+from web_router.providers._modes import merged
 from web_router.providers._search_text import as_snippet, lite_body, refused_domains
 from web_router.providers._utils import build_payload, compact, mapped
 from web_router.types import (
@@ -50,15 +52,6 @@ from web_router.types import (
 )
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "excerpts", "publish_date"})
-
-
-def _merged(ours: dict[str, Any], theirs: dict[str, Any]) -> dict[str, Any]:
-    """``theirs`` laid over ``ours`` at every depth: a nested object is merged, any other value replaced."""
-    merged = dict(ours)
-    for key, value in theirs.items():
-        nested = merged.get(key)
-        merged[key] = _merged(nested, value) if isinstance(nested, dict) and isinstance(value, dict) else value
-    return merged
 
 
 class ParallelProvider(HttpSearchProvider):
@@ -72,6 +65,7 @@ class ParallelProvider(HttpSearchProvider):
     """
 
     name: ClassVar[str] = PROVIDER_PARALLEL
+    tiers = PARALLEL_TIERS
     supported_parameters: ClassVar[frozenset[str]] = PARALLEL_SEARCH_PARAMETERS
     depth_levels = frozenset(PARALLEL_EXCERPT_CHARS)
     refusal_reasons: ClassVar[dict[str, str]] = {
@@ -92,6 +86,8 @@ class ParallelProvider(HttpSearchProvider):
         settings = self._advanced_settings(request)
         payload = build_payload(
             request,
+            None,
+            self,
             objective=request.query,
             search_queries=[request.query],
             mode=PARALLEL_MODE_BY_EFFORT[request.effort] if request.effort else PARALLEL_SEARCH_MODE,
@@ -102,7 +98,7 @@ class ParallelProvider(HttpSearchProvider):
         # caller's object is merged in instead, its fields still winning.
         theirs = request.provider_options.get(PARALLEL_ADVANCED_SETTINGS)
         if isinstance(theirs, dict):
-            payload[PARALLEL_ADVANCED_SETTINGS] = _merged(settings, theirs)
+            payload[PARALLEL_ADVANCED_SETTINGS] = merged(settings, theirs)
         return payload
 
     @staticmethod

@@ -101,10 +101,26 @@
           }
         ]
       }
+    },
+    "mode": {
+      "perplexity-low": {
+        "body.effort": "low"
+      },
+      "perplexity-medium": {
+        "body.effort": "medium"
+      },
+      "perplexity-high": {
+        "body.effort": "high"
+      }
     }
   },
   "not_mapped": [
     "locale"
+  ],
+  "offers": [
+    "perplexity-low",
+    "perplexity-medium",
+    "perplexity-high"
   ],
   "source": [
     "https://docs.perplexity.ai/docs/agent-api/quickstart",
@@ -115,7 +131,10 @@
     "include_domains": "live: tests/test_integration_answer.py::test_an_answers_sources_honor_the_domain_filter",
     "exclude_domains": "live: tests/test_integration_answer.py::test_an_answers_sources_leave_out_excluded_domains",
     "country": "live: tests/providers/test_perplexity_answer.py::test_live_answer_ties_its_markers_to_sources",
-    "recency": "live: tests/test_integration_answer.py::test_recency_keeps_dated_sources_in_the_window"
+    "recency": "live: tests/test_integration_answer.py::test_recency_keeps_dated_sources_in_the_window",
+    "mode.perplexity-low": "docs: https://docs.perplexity.ai/docs/agent-api/presets.md",
+    "mode.perplexity-medium": "docs: https://docs.perplexity.ai/docs/agent-api/presets.md",
+    "mode.perplexity-high": "docs: https://docs.perplexity.ai/docs/agent-api/presets.md"
   },
   "vendor_options": {
     "background": {

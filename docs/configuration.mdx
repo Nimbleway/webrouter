@@ -39,7 +39,7 @@ Keys are read from the environment, or passed explicitly through
 | Apify | `APIFY_TOKEN` | live data |
 | Jina Reader | `JINA_API_KEY` *(optional: raises the rate limit)* | extract |
 | Steel | `STEEL_API_KEY` | open_browser |
-| Browserbase | `BROWSERBASE_API_KEY` | open_browser, browse |
+| Browserbase | `BROWSERBASE_API_KEY` | extract, open_browser, browse |
 | Hyperbrowser | `HYPERBROWSER_API_KEY` | open_browser |
 | Anchor | `ANCHOR_API_KEY` | open_browser |
 | Kernel | `KERNEL_API_KEY` | open_browser |
@@ -65,9 +65,10 @@ MCP server is the one place a `.env` is read for you; see
 which of these the current environment actually satisfies: a backend needing two variables only when it has both.
 
 WebRouter does not log or store keys, and a provider's `__repr__` omits them so
-a stray log of a provider does not leak one. Provider clients also never follow redirects
-(`httpx` would replay the auth header to the redirect target, including one on
-another host), so a provider sending a credential rejects
+a stray log of a provider does not leak one. Provider clients also never follow redirects:
+`httpx` drops the standard `Authorization` header when a redirect leaves the
+host, but it keeps custom credential headers such as `X-API-Key`, which several
+providers use. So a provider sending a credential rejects
 `follow_redirects=True`. See [SECURITY.md](https://github.com/Nimbleway/webrouter/blob/main/SECURITY.md#credentials).
 
 ## Passing keys and settings in code

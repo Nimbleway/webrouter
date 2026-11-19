@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Any
+
 from web_router.client import AsyncWebRouter, WebRouter
-from web_router.constants import MSG_INTEGRATION_NO_EXTRACT_PROVIDER, PROVIDER_AUTO
+from web_router.client_requests import with_timeout
+from web_router.constants import MSG_INTEGRATION_NO_EXTRACT_PROVIDER, MSG_INTEGRATION_UNKNOWN_METHOD, PROVIDER_AUTO
 from web_router.exceptions import ConfigurationError
+from web_router.integrations._specs import KNOWN_METHODS
 from web_router.providers.auto_answer import AutoAnswerProvider
 from web_router.registry import available_extract_providers
 from web_router.registry_answer import available_answer_providers, default_answer_provider
@@ -65,3 +70,49 @@ def answer_provider_for(
         if isinstance(auto, AutoAnswerProvider):
             auto.require_members()
     return name
+
+
+def backends(
+    methods: Sequence[str],
+    provider: str | Provider | None,
+    extract_provider: str | Provider | None,
+    answer_provider: str | Provider | None,
+    router: WebRouter | AsyncWebRouter,
+) -> tuple[str | None, str | None]:
+    """The extract and answer tools' backends, resolved once; a tool not exposed keeps the name it was given."""
+    extract = (
+        extract_provider_for(provider, extract_provider, router)
+        if "extract" in methods
+        else tool_provider(extract_provider)
+    )
+    answer = (
+        answer_provider_for(provider, answer_provider, router)
+        if "answer" in methods
+        else tool_provider(answer_provider)
+    )
+    return extract, answer
+
+
+def exposed(methods: Sequence[str]) -> tuple[str, ...]:
+    """``methods`` in the guide's order, once each is one a tool can be built for; an unknown one raises."""
+    if unknown := [m for m in methods if m not in KNOWN_METHODS]:
+        raise ValueError(MSG_INTEGRATION_UNKNOWN_METHOD.format(known=KNOWN_METHODS, method=unknown[0]))
+    return tuple(m for m in KNOWN_METHODS if m in methods)
+
+
+def call_options(
+    search: dict[str, Any], *, answer: dict[str, Any], extract: dict[str, Any], timeout: float | None
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """The search options as the caller set them, and each method's router keywords with ``timeout`` added.
+
+    The search options stay without ``timeout``: they are what a ``SearchRequest`` takes.
+
+    Raises:
+        InvalidParameterError: for a ``timeout`` the router would refuse, here rather than on every call.
+    """
+    with_timeout(None, timeout)
+    return search, {
+        "search": {**search, "timeout": timeout},
+        "answer": {**answer, "timeout": timeout},
+        "extract": {**extract, "timeout": timeout},
+    }

@@ -96,16 +96,21 @@ def test_a_plan_carries_the_same_record_as_a_response() -> None:
 _CHAIN = [(0, "tavily"), (1, "exa"), (2, "tavily"), (3, "jina")]
 
 
+def _default(members: list[tuple[int, str]]) -> list[tuple[int, str, None]]:
+    """``members`` as the call order gives them, each in its backend's default mode."""
+    return [(position, name, None) for position, name in members]
+
+
 def test_with_no_route_the_order_is_the_chain_and_every_member_is_admitted() -> None:
-    assert in_call_order("search", list(_CHAIN)) == _CHAIN
+    assert in_call_order("search", list(_CHAIN)) == _default(_CHAIN)
     assert admitted("search", "exa", SearchRequest(query="q"))
 
 
 def test_a_call_order_reorders_drops_what_it_leaves_out_and_keeps_shared_names_in_chain_order() -> None:
     with call_route(CallRoute(order={"search": ["jina", "tavily"]})):
-        assert in_call_order("search", list(_CHAIN)) == [(3, "jina"), (0, "tavily"), (2, "tavily")]
-        assert in_call_order("extract", list(_CHAIN)) == _CHAIN
-    assert in_call_order("search", list(_CHAIN)) == _CHAIN
+        assert in_call_order("search", list(_CHAIN)) == _default([(3, "jina"), (0, "tavily"), (2, "tavily")])
+        assert in_call_order("extract", list(_CHAIN)) == _default(_CHAIN)
+    assert in_call_order("search", list(_CHAIN)) == _default(_CHAIN)
 
 
 def test_the_hook_sees_each_attempt_and_its_answer_admits_or_passes_over() -> None:
@@ -141,7 +146,7 @@ def test_a_provider_named_twice_in_the_order_keeps_its_first_place() -> None:
 
     eligible = [(0, "first"), (1, "second")]
     with call_route(CallRoute(order={"search": ["second", "first", "second"]})):
-        assert in_call_order("search", eligible) == [(1, "second"), (0, "first")]
+        assert in_call_order("search", eligible) == _default([(1, "second"), (0, "first")])
 
 
 @pytest.mark.parametrize("field", ["max_cost_usd", "time_limit_s"])

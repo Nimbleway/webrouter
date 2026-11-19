@@ -41,7 +41,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from typing import Generic, TypeVar
 
@@ -52,7 +51,8 @@ from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import _empty_response
 from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
-from web_router.routing.attempts import AnswerHook, Attempt, CallRoute, admitted, call_route, current_route
+from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
+from web_router.routing.budget_hooks import LEDGERS, answered, check_own, refunds
 from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
 from web_router.routing.pool import PoolChain, chain_in_force
@@ -62,9 +62,6 @@ from web_router.types_decision import DecisionRecord
 
 _BackendT = TypeVar("_BackendT")
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
-
-_LEDGERS: ContextVar[tuple[Ledger, ...]] = ContextVar("web_router_budget_ledgers", default=())
-"""The ledgers of the budgeted calls in flight here, outermost first: each one checks every attempt made inside it."""
 
 
 @dataclass(frozen=True)
@@ -107,19 +104,19 @@ def budget_scope(
     pool = None if router is None else chain_in_force(router)
     if pool is not None:
         budget = pool.limit(budget)
-    held = _LEDGERS.get()
+    held = LEDGERS.get()
     if budget is None and held:
         budget = Budget()  # a nested call: it caps nothing of its own, but the calls it is made in check it
     if budget is None:
         yield BudgetedCall(backend)
         return
     ledger = Ledger(budget, _with_enclosing(pool, held), stamp=stamp(prompt_of(tool, request)[0]))
-    token = _LEDGERS.set((*held, ledger))
+    token = LEDGERS.set((*held, ledger))
     try:
         with _held(ledger, held, tool, backend, request) as call:
             yield call
     finally:
-        _LEDGERS.reset(token)
+        LEDGERS.reset(token)
         reserved = ledger.close()
         if ledger.pool is not None:
             ledger.pool.settle(reserved)
@@ -201,10 +198,10 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...] = ()) -> CallRoute:
     route = current_route() or CallRoute()
     outer, outer_failed = route.before_attempt, route.on_failure
 
+    own = check_own(ledger)
+
     def check(attempt: Attempt) -> bool:
-        in_force = _LEDGERS.get()  # a ledger not in it is a recorded call's own, never an enclosing one
-        own = not any(held is ledger for held in in_force) or in_force[-1] is ledger
-        return ledger.admit(attempt, reserve=own)
+        return ledger.admit(attempt, reserve=own())
 
     def admit(attempt: Attempt) -> bool:
         if outer is None:
@@ -217,20 +214,10 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...] = ()) -> CallRoute:
             enclosing.undo(attempt)
         return False
 
-    def note(tool: ToolName, provider: str, exc: BaseException) -> None:
+    def note(tool: ToolName, provider: str, exc: BaseException | str) -> None:
         if outer_failed is not None:
             outer_failed(tool, provider, exc)
         ledger.failed(tool, provider, exc)
 
-    return replace(route, before_attempt=admit, on_failure=note, on_answer=_answered(route.on_answer, ledger))
-
-
-def _answered(outer: AnswerHook | None, ledger: Ledger) -> AnswerHook:
-    """The answer hook: ``outer``'s note, then ``ledger``'s."""
-
-    def answered(tool: ToolName, provider: str) -> None:
-        if outer is not None:
-            outer(tool, provider)
-        ledger.contributed(tool, provider)
-
-    return answered
+    on_answer, on_refund = answered(route.on_answer, ledger), refunds(route.on_refund, ledger, own)
+    return replace(route, before_attempt=admit, on_failure=note, on_answer=on_answer, on_refund=on_refund)

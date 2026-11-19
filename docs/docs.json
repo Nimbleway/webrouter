@@ -73,10 +73,12 @@
         "group": "Agents and routing",
         "pages": [
           "mcp-server",
+          "cli",
           "integrations",
           "agent-prompt",
           "budgets",
-          "smart-routing"
+          "smart-routing",
+          "vendor-modes"
         ]
       },
       {

@@ -12,6 +12,7 @@ One typed interface for search, extract, answer, research, live data and browser
   <a href="https://github.com/Nimbleway/webrouter/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-202c26" alt="License: Apache 2.0"></a>
   <a href="https://pypi.org/project/webrouter/"><img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-202c26" alt="Python 3.11 to 3.13"></a>
   <a href="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml"><img src="https://github.com/Nimbleway/webrouter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://glama.ai/mcp/servers/Nimbleway/webrouter"><img src="https://glama.ai/mcp/servers/Nimbleway/webrouter/badges/score.svg" alt="WebRouter MCP server on Glama"></a>
   <a href="https://discord.gg/MGztFWSjZh"><img src="https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white" alt="Join WebRouter on Discord"></a>
 </p>
 
@@ -51,7 +52,8 @@ print(results.provider, [doc.url for doc in pages.documents])
 - **Routing based on published benchmarks.** `auto` tries the providers you hold keys for in the
   order committed benchmark results rank them, and falls back on an error or an
   empty answer. `response.provider` always says who answered.
-- **Cost control.** Every response says what it cost and how long it took. Cap
+- **Cost control.** Search, extract, answer, research and browse responses say
+  how long they took and, where the backend's price is known, what they cost. Cap
   a call or a whole session in dollars and seconds, try the free backends
   first, and keep a log of what you spent ([budgets](#budgets-and-cost-control)).
 - **Keyless to start.** Search, extract and a local browser work with no API
@@ -67,6 +69,12 @@ print(results.provider, [doc.url for doc in pages.documents])
 
 ```bash
 pip install "webrouter[all]"     # or: uv add "webrouter[all]"
+```
+
+Or try the command line with no install and no key:
+
+```bash
+uvx --from "webrouter[search,extract]" webrouter search "rust async runtimes" -n 5
 ```
 
 Python 3.11 or later. Extras per method (`search`, `extract`, `research`,
@@ -191,6 +199,15 @@ claude mcp add web-router -- uvx --from "webrouter[mcp]" web-router-mcp
 The [MCP guide](https://docs.webrouter.net/mcp-server) covers Claude Desktop, Cursor and other clients,
 credentials, tool costs and browser guards.
 
+**Command line.** The same methods from a shell, printing JSON, for scripts and
+agents that run commands rather than speak MCP:
+
+```bash
+webrouter search "rust async runtimes" -n 5 | jq -r '.results[].url'
+```
+
+See [Command line](https://docs.webrouter.net/cli) for every command and its exit codes.
+
 **Agent frameworks.** Ready-made `web_search` and `web_extract` tools, with a
 compact rendering for the model and the full response kept for you:
 
@@ -204,6 +221,28 @@ tools = web_router_tools(WebRouter(), max_results=5)  # LangChain
 `web_router.integrations.anthropic` and `web_router.integrations.openai` give
 Claude and OpenAI agents the same tools as plain tool definitions. See
 [Agent integrations](https://docs.webrouter.net/integrations).
+
+## Data flow
+
+WebRouter runs inside your process, or as an MCP server you start yourself.
+There is no WebRouter service in between, and nothing to sign up for.
+
+- **Each call goes straight from your machine to the backend that serves it**,
+  carrying your query or URL and that backend's own key. A key is sent only to
+  its own provider.
+- **Which backends:** the ones you hold a key for, and, when `auto` has none
+  left for a method, the free tiers listed in
+  [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials).
+  Name a provider to keep a call on that backend alone.
+- **Beyond the backends:** `call_vendor` reaches the vendor API you name, with
+  that vendor's credentials; `WEB_ROUTER_MCP_ROUTER=remote` sends a prompt to
+  the router service at the URL you set; and `evaluate()` downloads the
+  question set you pick and calls the judge model you configure.
+- **No telemetry.** The package sends no usage data and does not call home.
+- **Keys stay in the process.** They are read from the environment (and, for
+  the MCP server, from a `.env` it is pointed at), held in memory, and kept out
+  of logs and tool results. The server writes no key to disk: `load_env`'s
+  `remember` records the file's path, never its contents.
 
 ## Compare providers on your own queries
 

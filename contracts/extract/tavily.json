@@ -26,10 +26,18 @@
       "text": {
         "body.format": "text"
       }
+    },
+    "mode": {
+      "tavily-advanced": {
+        "body.extract_depth": "advanced"
+      }
     }
   },
   "not_mapped": [
     "profile"
+  ],
+  "offers": [
+    "tavily-advanced"
   ],
   "default_format": "markdown",
   "batches_urls": true,
@@ -38,13 +46,10 @@
     "tavily-python TavilyClient.extract"
   ],
   "verified": {
-    "format": "live: tests/test_integration_surface.py::test_markdown_really_comes_back_without_markup"
+    "format": "live: tests/test_integration_surface.py::test_markdown_really_comes_back_without_markup",
+    "mode.tavily-advanced": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/extract"
   },
   "vendor_options": {
-    "extract_depth": {
-      "status": "passthrough",
-      "note": "basic | advanced."
-    },
     "query": {
       "status": "passthrough",
       "note": "Reranks the returned chunks against a query."

@@ -1,0 +1,109 @@
+{
+  "vendor": "tomorrow-io",
+  "name": "Tomorrow.io",
+  "category": "environment",
+  "summary": "Tomorrow.io's Weather API: current conditions, hourly and daily forecasts, the last 24 hours of history, and custom timelines of chosen weather fields for a location.",
+  "docs_url": "https://docs.tomorrow.io/reference/welcome",
+  "pricing_url": "https://www.tomorrow.io/weather-api/",
+  "base_url": "https://api.tomorrow.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": ["TOMORROW_IO_API_KEY", "TOMORROW_API_KEY"],
+        "description": "A Tomorrow.io API key (app.tomorrow.io > Development > API keys), sent as the apikey query parameter. Keys carry full account privileges."
+      }
+    },
+    "inject": [
+      {"in": "query", "name": "apikey", "value": "{api_key}"}
+    ]
+  },
+  "notes": [
+    "location takes 'latitude, longitude' (latitude first, e.g. 42.3478, -71.0466), a city name, a US zip with country (10001 US) or a UK postcode.",
+    "Requests per second, hour and day are capped by plan; over the cap answers 429. Remaining-quota headers are sent to Enterprise accounts only.",
+    "units is metric (default) or imperial; field meanings and units are in the Weather Data Layers reference."
+  ],
+  "sources": [
+    "https://docs.tomorrow.io/reference/api-authentication.md",
+    "https://docs.tomorrow.io/reference/rate-limiting.md",
+    "https://docs.tomorrow.io/reference/weather-forecast.md",
+    "https://docs.tomorrow.io/reference/realtime-weather.md",
+    "https://docs.tomorrow.io/reference/weather-recent-history.md",
+    "https://docs.tomorrow.io/reference/post-timelines.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "tomorrow-io.weather.forecast",
+      "name": "Get the weather forecast for a location",
+      "summary": "Hourly forecasts for the next 120 hours and daily forecasts for the next 5 days (minutely on premium plans).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/weather/forecast",
+      "params": {
+        "location": {"in": "query", "type": "string", "required": true, "description": "lat, lon (latitude first), a city name, a US zip with country, or a UK postcode.", "example": "42.3478, -71.0466"},
+        "timesteps": {"in": "query", "type": "string", "description": "1h for hourly, 1d for daily.", "example": "1d"},
+        "units": {"in": "query", "type": "string", "enum": ["metric", "imperial"], "description": "Default metric."}
+      },
+      "job": "weather.forecast",
+      "docs_url": "https://docs.tomorrow.io/reference/weather-forecast",
+      "verified": {"docs": "https://docs.tomorrow.io/reference/weather-forecast.md"}
+    },
+    {
+      "id": "tomorrow-io.weather.realtime",
+      "name": "Get current weather for a location",
+      "summary": "Current conditions (temperature, wind, precipitation, cloud cover, weather code...) at a location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/weather/realtime",
+      "params": {
+        "location": {"in": "query", "type": "string", "required": true, "description": "lat, lon (latitude first), a city name, a US zip with country, or a UK postcode.", "example": "toronto"},
+        "units": {"in": "query", "type": "string", "enum": ["metric", "imperial"], "description": "Default metric."}
+      },
+      "job": "weather.current",
+      "docs_url": "https://docs.tomorrow.io/reference/realtime-weather",
+      "verified": {"docs": "https://docs.tomorrow.io/reference/realtime-weather.md"}
+    },
+    {
+      "id": "tomorrow-io.weather.recent_history",
+      "name": "Get the last day of weather history",
+      "summary": "Hourly weather for the last 24 hours and daily weather for the last day at a location.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v4/weather/history/recent",
+      "params": {
+        "location": {"in": "query", "type": "string", "required": true, "description": "lat, lon (latitude first), a city name, a US zip with country, or a UK postcode.", "example": "austin"},
+        "timesteps": {"in": "query", "type": "string", "description": "1h for hourly, 1d for daily.", "example": "1h"},
+        "units": {"in": "query", "type": "string", "enum": ["metric", "imperial"], "description": "Default metric."}
+      },
+      "notes": ["Only the last 24 hours; older history is a separate, token-billed historical API not covered here."],
+      "job": "weather.history",
+      "docs_url": "https://docs.tomorrow.io/reference/weather-recent-history",
+      "verified": {"docs": "https://docs.tomorrow.io/reference/weather-recent-history.md"}
+    },
+    {
+      "id": "tomorrow-io.timelines",
+      "name": "Get a timeline of chosen weather fields",
+      "summary": "Values of the fields you pick (temperature, precipitationIntensity, windSpeed...) at the timesteps and time window you pick, for a point, a saved location or a GeoJSON geometry.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v4/timelines",
+      "params": {
+        "location": {"in": "body", "type": "string", "required": true, "description": "lat, lon (latitude first), a saved location id, or a GeoJSON geometry.", "example": "42.3478, -71.0466"},
+        "fields": {"in": "body", "type": "array", "required": true, "description": "Data-layer field names, e.g. [\"temperature\", \"windSpeed\"].", "example": ["temperature"]},
+        "timesteps": {"in": "body", "type": "array", "description": "Any of 1m, 5m, 15m, 30m, 1h, 1d, current; default [\"1h\"].", "example": ["1h"]},
+        "startTime": {"in": "body", "type": "string", "description": "now (default), nowPlusXh / nowMinusXh (m, h, d), or ISO 8601."},
+        "endTime": {"in": "body", "type": "string", "description": "Same forms as startTime, e.g. nowPlus6h.", "example": "nowPlus6h"},
+        "units": {"in": "body", "type": "string", "enum": ["metric", "imperial"], "description": "Default metric."},
+        "timezone": {"in": "body", "type": "string", "description": "Time zone the returned times are shown in; it does not shift startTime and endTime."},
+        "dailyStartHour": {"in": "body", "type": "integer", "description": "Hour 0-23 at which daily (1d) aggregation starts; default 6."}
+      },
+      "notes": [
+        "A read over POST: the body only carries the query (location, fields, window); nothing is saved.",
+        "For a polygon or line location, a field without a suffix is the maximum over the area."
+      ],
+      "job": "weather.forecast",
+      "docs_url": "https://docs.tomorrow.io/reference/post-timelines",
+      "verified": {"docs": "https://docs.tomorrow.io/reference/post-timelines.md"}
+    }
+  ]
+}

@@ -62,6 +62,7 @@ from web_router.constants import (
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
+from web_router.providers._pinning import backend_of
 from web_router.providers._runtime import Runtime
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -115,6 +116,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         router: RouterLike | str | None = RULES_ROUTER_NAME,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
+        route_modes: bool | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
         vendor_credentials: VendorCredentials = None,
@@ -131,6 +133,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental):
                 ``"rules"`` unless set (:mod:`web_router.routing.rules`), ``None`` for none. A name builds a registered
                 router from ``router_config``, closed with this one -- see :mod:`web_router.routing.registry`.
+                ``route_modes=True`` shows it a candidate per vendor mode too (the router's own, else no).
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
             vendor_credentials: for :meth:`call_vendor`, read before the environment -- see
                 :mod:`web_router.client_vendors`.
@@ -141,20 +144,17 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         self._runtime = Runtime.capped(max_concurrency)
         self._init_vendors(vendor_credentials)
         name = provider_name(provider)
-        # Either registry is enough to name a default: a router defaulted to a search-only backend still extracts
-        # through `provider=`, and the method that cannot serve the default says so when it is called.
+        # Either registry names a default (a pinned search id by its backend); a method that can't serve it says so.
         known = every_provider_name()
-        if name not in known:
+        if backend_of(name) not in known:
             raise ProviderNotFoundError(name, known)
-
         self.default_provider = name
         # Normalized on the way in so a config key matches get_provider's lookup, whatever form it was given in.
         self._config: dict[str, dict[str, Any]] = {
             provider_name(key): dict(config) for key, config in (provider_config or {}).items()
         }
         self._instances: dict[str, SearchProvider] = {}
-        # Keyed separately from the search instances: one name resolves to a different class per method, and a
-        # vendor serving all three is three objects here.
+        # Keyed apart from the search instances: one name resolves to a different class per method.
         self._extract_instances: dict[str, ExtractProvider] = {}
         self._live_data_instances: dict[str, LiveDataProvider] = {}
         self._research_instances: dict[str, ResearchProvider] = {}
@@ -167,13 +167,11 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         # A threading lock on both routers: the async one is as easily shared across threads, each with its own
         # loop, and nothing awaits while it is held, so it can never stall an event loop.
         self._handles_lock = threading.Lock()
-        # One lock for the instance caches: evaluate() calls benchmark() from worker threads, so two rows can race
-        # the same check-then-create and the loser's client would never be closed. Nothing awaits while it is held.
+        # One lock for the instance caches: benchmark() rows on worker threads never race one check-then-create.
         self._providers_lock = threading.Lock()
-        # Rows the sync benchmark() gave up on whose calls still run; close()
-        # waits for them so it never shuts a provider under a live search.
+        # Rows the sync benchmark() gave up on whose calls still run; close() waits for them, never shutting one.
         self._stragglers = Stragglers()
-        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config)
+        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config, route_modes)
 
     def _config_for(self, key: str) -> dict[str, Any]:
         """Constructor kwargs for one backend: see :func:`~web_router.client_config.config_for`."""
@@ -204,7 +202,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, ExtractProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)  # a pin: its backend
         with self._providers_lock:
             if key not in self._extract_instances:
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
@@ -219,7 +217,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, ResearchProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._research_instances:
                 self._research_instances[key] = create_research_provider(key, **self._config_for(key))
@@ -234,7 +232,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, BrowserProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._browser_instances:
                 self._browser_instances[key] = create_browser_provider(key, **self._config_for(key))
@@ -249,7 +247,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         if isinstance(name, BrowseProvider):
             return name
 
-        key = provider_name(name) if name is not None else self.default_provider
+        key = provider_name(name) if name is not None else backend_of(self.default_provider)
         with self._providers_lock:
             if key not in self._browse_instances:
                 self._browse_instances[key] = create_browse_provider(key, **self._config_for(key))
@@ -302,6 +300,7 @@ class WebRouter(
         router: RouterLike | str | None = RULES_ROUTER_NAME,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
+        route_modes: bool | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
         vendor_credentials: VendorCredentials = None,
@@ -319,6 +318,7 @@ class WebRouter(
             router=router,
             router_config=router_config,
             route_tools=route_tools,
+            route_modes=route_modes,
             fail_on_router_error=fail_on_router_error,
             url_policy=url_policy,
             vendor_credentials=vendor_credentials,

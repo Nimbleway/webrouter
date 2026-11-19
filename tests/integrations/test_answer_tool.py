@@ -71,7 +71,7 @@ def test_an_answer_call_sends_only_the_question_and_returns_the_answer_and_its_s
     assert (request.query, request.include_domains) == ("who won", None), "search options are not the answer's"
     assert json.loads(result.content) == {
         "answer": "the answer",
-        "citations": [{"title": "Example", "url": "https://example.com", "snippet": ""}],
+        "citations": [{"title": "Example", "url": "https://example.com"}],  # an empty snippet is left out
     }
     assert not result.is_error
     assert result.provider == "fake"
