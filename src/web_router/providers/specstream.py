@@ -1,41 +1,62 @@
-"""SpecStream search and extract provider.
+"""SpecStream search and extract providers.
 
-Talks to the REST endpoint directly: SpecStream publishes no Python SDK. Reads
-``SPECSTREAM_API_KEY`` unless a key is passed explicitly.
+Talk to the REST endpoints directly. Install with the ``search`` or ``extract``
+extra. Read ``SPECSTREAM_API_KEY`` unless a key is passed explicitly.
+
+Search maps ``max_results`` onto ``num``; ``passages``, ``speed`` and the other
+query fields are reachable through ``provider_options``. Both endpoints answer
+``{"data": {...}}``: search with ranked hits in ``data.sources``, extract with
+one item per URL in ``data.results``.
 """
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from web_router.constants import ENV_SPECSTREAM_API_KEY, PROVIDER_SPECSTREAM
 from web_router.constants_specstream import (
-    MSG_SPECSTREAM_NO_RESULTS,
+    MSG_SPECSTREAM_NO_LIST,
     SPECSTREAM_API_KEY_PREFIX,
     SPECSTREAM_BASE_URL,
     SPECSTREAM_EXTRACT_PATH,
-    SPECSTREAM_SEARCH_NAMES,
+    SPECSTREAM_MAX_RESULTS,
     SPECSTREAM_SEARCH_PARAMETERS,
     SPECSTREAM_SEARCH_PATH,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
-from web_router.providers._utils import build_payload
+from web_router.providers._utils import best_text, build_payload
 from web_router.types import (
+    ExtractedDocument,
     ExtractRequest,
     ExtractResponse,
-    ExtractedDocument,
     SearchRequest,
     SearchResponse,
     SearchResult,
 )
 
-_MAPPED_RESULT_FIELDS = frozenset({"url", "title", "snippet", "score"})
+_MAPPED_RESULT_FIELDS = frozenset({"url", "title", "snippet", "excerpt", "published"})
 _MAPPED_DOCUMENT_FIELDS = frozenset({"url", "content"})
 
 
+def _data_list(name: str, payload: dict[str, Any], field: str) -> list[dict[str, Any]]:
+    """``payload["data"][field]``, or a ``ProviderError``: a 200 with no list is a reply this mapping cannot read."""
+    data = payload.get("data")
+    items = data.get(field) if isinstance(data, dict) else None
+    if not isinstance(items, list):
+        fields = ", ".join(sorted(data if isinstance(data, dict) else payload)) or "none"
+        raise ProviderError(name, MSG_SPECSTREAM_NO_LIST.format(field=field, fields=fields))
+    return [item for item in items if isinstance(item, dict)]
+
+
 class SpecStreamProvider(HttpSearchProvider):
-    """Routes searches to the SpecStream Search API."""
+    """Routes searches to the SpecStream Search API.
+
+    A result's ``description`` is its ``snippet``. Its ``content`` is the
+    ``excerpt`` of its page when ``passages=true`` is sent through
+    ``provider_options``, else the snippet. ``answer``, ``rows`` and the rest of
+    the reply stay in ``raw``; ``site``, ``cited`` and the rest of a hit in ``extra``.
+    """
 
     name: ClassVar[str] = PROVIDER_SPECSTREAM
     supported_parameters: ClassVar[frozenset[str]] = SPECSTREAM_SEARCH_PARAMETERS
@@ -44,18 +65,14 @@ class SpecStreamProvider(HttpSearchProvider):
     search_path: ClassVar[str] = SPECSTREAM_SEARCH_PATH
     env_api_key: ClassVar[str] = ENV_SPECSTREAM_API_KEY
     api_key_prefix: ClassVar[str] = SPECSTREAM_API_KEY_PREFIX
-    http_method: ClassVar[str] = "GET"
+    http_method: ClassVar[Literal["GET", "POST"]] = "GET"
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        return build_payload(request, SPECSTREAM_SEARCH_NAMES, query=request.query)
+        num = min(request.max_results, SPECSTREAM_MAX_RESULTS) if request.max_results else None
+        return build_payload(request, q=request.query, num=num)
 
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
-        hits = payload.get("results")
-        if not isinstance(hits, list):
-            raise ProviderError(
-                self.name,
-                MSG_SPECSTREAM_NO_RESULTS.format(fields=", ".join(sorted(payload)) or "none"),
-            )
+        hits = _data_list(self.name, payload, "sources")
         return SearchResponse(
             provider=self.name,
             query=request.query,
@@ -70,8 +87,8 @@ class SpecStreamProvider(HttpSearchProvider):
             url=hit["url"],
             title=hit.get("title") or "",
             description=snippet,
-            content=snippet,
-            score=hit.get("score"),
+            content=best_text(hit.get("excerpt"), snippet),
+            published_date=hit.get("published") or None,
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
         )
 
