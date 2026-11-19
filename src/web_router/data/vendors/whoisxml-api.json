@@ -1,0 +1,489 @@
+{
+  "vendor": "whoisxml-api",
+  "name": "WhoisXML API",
+  "category": "security",
+  "summary": "Domain and IP registration intelligence: live WHOIS and RDAP records, WHOIS history, reverse WHOIS by registrant terms, DNS lookups and subdomain discovery.",
+  "docs_url": "https://whois.whoisxmlapi.com/documentation/making-requests",
+  "pricing_url": "https://whois.whoisxmlapi.com/pricing",
+  "base_url": "https://www.whoisxmlapi.com",
+  "hosts": {
+    "history": "https://whois-history.whoisxmlapi.com",
+    "reverse": "https://reverse-whois.whoisxmlapi.com",
+    "subdomains": "https://subdomains.whoisxmlapi.com",
+    "user": "https://user.whoisxmlapi.com"
+  },
+  "auth": {
+    "credentials": {
+      "bearer_key": {
+        "env": [
+          "WHOISXML_API_KEY"
+        ],
+        "description": "A WhoisXML API key (My products page). Sent as Authorization: Bearer, which the WHOIS API accepts."
+      },
+      "token_key": {
+        "env": [
+          "WHOISXML_API_KEY"
+        ],
+        "description": "The same key, sent in the X-Authentication-Token header that WHOIS history and reverse WHOIS accept."
+      },
+      "query_key": {
+        "env": [
+          "WHOISXML_API_KEY"
+        ],
+        "description": "The same key, sent as the apiKey query parameter: the only way the DNS, subdomains and balance docs give."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {bearer_key}"
+      },
+      {
+        "in": "header",
+        "name": "X-Authentication-Token",
+        "value": "{token_key}"
+      },
+      {
+        "in": "query",
+        "name": "apiKey",
+        "value": "{query_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Two credit pools: WHOIS credits (WHOIS API) and Domain Research Suite credits (history, reverse WHOIS, subdomains and more). A free account gets 500 of each kind; account.balance shows what is left.",
+    "Rate limits: the WHOIS API allows 200 requests per second; DNS, history, reverse WHOIS and subdomains 30. Over it is a 429 (Retry-After on the WHOIS API).",
+    "A new key takes up to a minute to activate."
+  ],
+  "sources": [
+    "https://whois.whoisxmlapi.com/documentation/making-requests",
+    "https://whois.whoisxmlapi.com/documentation/limits",
+    "https://whois.whoisxmlapi.com/documentation/balance-information",
+    "https://whois-history.whoisxmlapi.com/api/documentation/making-requests",
+    "https://reverse-whois.whoisxmlapi.com/api/documentation/making-requests",
+    "https://dns-lookup.whoisxmlapi.com/api/documentation/making-requests",
+    "https://subdomains.whoisxmlapi.com/api/documentation/making-requests"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "whoisxml-api.whois.get",
+      "name": "Get WHOIS or RDAP for a domain, IP or email",
+      "summary": "The parsed registration record (registrar, dates, contacts, name servers, status, availability) of a domain, IPv4, IPv6 or email address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/whoisserver/WhoisService",
+      "params": {
+        "domainName": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain, IPv4, IPv6 or email address.",
+          "example": "google.com"
+        },
+        "outputFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON or XML; default XML.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        },
+        "rdap": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 auto (default), 1 RDAP, 2 WHOIS.",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "maxCacheAgeHours": {
+          "in": "query",
+          "type": "integer",
+          "description": "Oldest acceptable cached record, in hours (default 168; -1 any age; 0 to 47 costs 5 credits)."
+        },
+        "preferFresh": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 limits the cache age to 48 hours at 1 credit; not with _hardRefresh.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "_hardRefresh": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 fetches a fresh record (cache age 24 hours) for 5 credits; not with preferFresh.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "_dbOnly": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 reads cache only, erroring with WHOIS_03 when nothing is cached.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "ignoreRawTexts": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 strips raw WHOIS text from the answer.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "exactMatch": {
+          "in": "query",
+          "type": "integer",
+          "description": "IP lookups only: 1 for an RPSL exact match.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "Costs 1 WHOIS credit (preferFresh=1 too); a fresh lookup, _hardRefresh=1 or maxCacheAgeHours 0 to 47, costs 5 credits.",
+        "The default output is XML: pass outputFormat=JSON.",
+        "WhoisXML recommends a 100-second request timeout, longer than call_vendor's 60 seconds, so a slow live lookup can time out here; _dbOnly=1 answers from the cache only."
+      ],
+      "job": "domain.whois",
+      "docs_url": "https://whois.whoisxmlapi.com/documentation/making-requests",
+      "verified": {
+        "docs": "https://whois.whoisxmlapi.com/documentation/making-requests"
+      },
+      "credentials": [
+        "bearer_key"
+      ]
+    },
+    {
+      "id": "whoisxml-api.whois.history",
+      "name": "Get a domain's WHOIS history",
+      "summary": "Every historical WHOIS record held for a domain, or only how many there are.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1",
+      "params": {
+        "domainName": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain.",
+          "example": "google.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "preview (default, 1 DRS credit) returns only the record count; purchase (50 DRS credits) returns the records.",
+          "enum": [
+            "preview",
+            "purchase"
+          ],
+          "example": "preview"
+        },
+        "outputFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON or XML; default JSON.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        },
+        "skipLiveWhois": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 skips the live lookup for the latest record (faster, may miss it).",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "sinceDate": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD: only changes detected since then."
+        },
+        "createdDateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD: created after."
+        },
+        "createdDateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD: created before."
+        },
+        "updatedDateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD: updated after."
+        },
+        "updatedDateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD: updated before."
+        },
+        "expiredDateFrom": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD: expired after."
+        },
+        "expiredDateTo": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD: expired before."
+        }
+      },
+      "notes": [
+        "Costs 1 DRS credit in mode=preview (the default: the record count only) and 50 DRS credits in mode=purchase (the records): call preview first. The live lookup for the latest record (skipLiveWhois=0, the default) has no separate documented price."
+      ],
+      "job": "domain.whois.history",
+      "host": "history",
+      "docs_url": "https://whois-history.whoisxmlapi.com/api/documentation/making-requests",
+      "verified": {
+        "docs": "https://whois-history.whoisxmlapi.com/api/documentation/making-requests"
+      },
+      "credentials": [
+        "token_key"
+      ]
+    },
+    {
+      "id": "whoisxml-api.whois.reverse",
+      "name": "Find domains by WHOIS terms",
+      "summary": "Domains whose current or historical WHOIS records contain all the include terms and none of the exclude terms.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v2",
+      "params": {
+        "basicSearchTerms": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{include: [up to 4 terms, all required], exclude: [up to 4 terms]}; case-insensitive, matched in any WHOIS field.",
+          "example": {
+            "include": [
+              "Airbnb, Inc."
+            ],
+            "exclude": [
+              "EU"
+            ]
+          }
+        },
+        "searchType": {
+          "in": "body",
+          "type": "string",
+          "description": "current (default) or historic records too.",
+          "enum": [
+            "current",
+            "historic"
+          ]
+        },
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "preview (default, free) returns only the count; purchase returns up to 10,000 domains for 1 DRS credit.",
+          "enum": [
+            "preview",
+            "purchase"
+          ],
+          "example": "preview"
+        },
+        "punycode": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Punycode-encode returned names; default true."
+        },
+        "includeAuditDates": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return objects with audit dates instead of bare names."
+        },
+        "responseFormat": {
+          "in": "body",
+          "type": "string",
+          "description": "json (default) or xml.",
+          "enum": [
+            "json",
+            "xml"
+          ]
+        },
+        "createdDateFrom": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD: created after."
+        },
+        "createdDateTo": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD: created before."
+        },
+        "updatedDateFrom": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD: updated after."
+        },
+        "updatedDateTo": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD: updated before."
+        },
+        "expiredDateFrom": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD: expired after."
+        },
+        "expiredDateTo": {
+          "in": "body",
+          "type": "string",
+          "description": "YYYY-MM-DD: expired before."
+        },
+        "searchAfter": {
+          "in": "body",
+          "type": "string",
+          "description": "nextPageSearchAfter from the previous answer, for the next 10,000."
+        }
+      },
+      "notes": [
+        "Free in mode=preview (the default: the count only); mode=purchase costs 1 DRS credit for up to 10,000 domains: size a search with preview first.",
+        "A read over POST: the search terms go in a JSON body."
+      ],
+      "job": "domain.whois.reverse",
+      "host": "reverse",
+      "docs_url": "https://reverse-whois.whoisxmlapi.com/api/documentation/making-requests",
+      "verified": {
+        "docs": "https://reverse-whois.whoisxmlapi.com/api/documentation/making-requests"
+      },
+      "credentials": [
+        "token_key"
+      ]
+    },
+    {
+      "id": "whoisxml-api.dns.lookup",
+      "name": "Look up DNS records",
+      "summary": "Current DNS records of one name, for one, several or all record types.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/whoisserver/DNSService",
+      "params": {
+        "domainName": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The exact name to query; subdomains such as _dmarc.example.com are queried on their own.",
+          "example": "bbc.com"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Record type name or code, comma-separated for several, or _all.",
+          "example": "_all"
+        },
+        "outputFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON or XML; default XML.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        }
+      },
+      "notes": [
+        "The default output is XML: pass outputFormat=JSON."
+      ],
+      "job": "domain.dns",
+      "docs_url": "https://dns-lookup.whoisxmlapi.com/api/documentation/making-requests",
+      "verified": {
+        "docs": "https://dns-lookup.whoisxmlapi.com/api/documentation/making-requests"
+      },
+      "credentials": [
+        "query_key"
+      ]
+    },
+    {
+      "id": "whoisxml-api.subdomains.list",
+      "name": "List a domain's subdomains",
+      "summary": "Known subdomains of a domain, up to 10,000 per page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v2",
+      "params": {
+        "domainName": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Domain.",
+          "example": "amazon.com"
+        },
+        "searchAfter": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageSearchAfter from the previous answer."
+        },
+        "outputFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON or XML; default JSON.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        }
+      },
+      "job": "domain.subdomains",
+      "host": "subdomains",
+      "docs_url": "https://subdomains.whoisxmlapi.com/api/documentation/making-requests",
+      "verified": {
+        "docs": "https://subdomains.whoisxmlapi.com/api/documentation/making-requests"
+      },
+      "credentials": [
+        "query_key"
+      ]
+    },
+    {
+      "id": "whoisxml-api.account.balance",
+      "name": "Get account balance",
+      "summary": "Remaining credits per WhoisXML product.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user-service/account-balance",
+      "params": {
+        "productId": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this product's balance (IDs are in the answer)."
+        },
+        "outputFormat": {
+          "in": "query",
+          "type": "string",
+          "description": "JSON or XML; default JSON.",
+          "enum": [
+            "JSON",
+            "XML"
+          ]
+        }
+      },
+      "job": "account.usage",
+      "host": "user",
+      "docs_url": "https://whois.whoisxmlapi.com/documentation/balance-information",
+      "verified": {
+        "docs": "https://whois.whoisxmlapi.com/documentation/balance-information"
+      },
+      "credentials": [
+        "query_key"
+      ]
+    }
+  ]
+}

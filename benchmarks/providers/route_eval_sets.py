@@ -17,6 +17,8 @@ from _frozen_checks import DEFAULT_MODE
 from frozen import FROZEN_DIR, SUFFIX, read_rows
 from route_eval_paths import MIXED, is_mixed, path_id
 
+from web_router.routing.entry_names import entry_name
+
 TWIN_SETS = ("sealqa-hard-254", "sealqa-hard-254-twin")
 """The same questions run twice: their spread is the noise floor."""
 RERUNS = {"search": TWIN_SETS}
@@ -36,7 +38,8 @@ MSG_NO_JOINED = "{path} not found: run frozen.py join first, or leave --joined o
 class Question:
     """One question of a set: its id, its text when joined, and each candidate's frozen row.
 
-    A candidate is a backend, or on a mixed set a path (:func:`route_eval_paths.path_id`).
+    A candidate is a backend, with ``modes`` a backend's vendor mode as its entry (``exa:exa-deep``), or on a
+    mixed set a path (:func:`route_eval_paths.path_id`).
     """
 
     question_id: str
@@ -48,11 +51,15 @@ class Question:
         return sorted(self.rows)
 
 
-def load_set(name: str, folder: Path = FROZEN_DIR, joined: Path | None = None) -> tuple[str, list[Question]]:
+def load_set(
+    name: str, folder: Path = FROZEN_DIR, joined: Path | None = None, modes: bool = False
+) -> tuple[str, list[Question]]:
     """A frozen set's method and questions; each question's text from ``joined`` when given, else ``None``.
 
     On a one-method set only rows in the backend's default mode take part: it
-    ranks backends, not modes. A set whose rows carry several path methods is
+    ranks backends, not modes. With ``modes`` a vendor mode's rows take part
+    too, each mode a candidate of its own named by its entry, ``exa:exa-deep``,
+    as a merged order names it. A set whose rows carry several path methods is
     ``mixed``: every row takes part, keyed by its path id. Any other mix of
     methods is refused.
     """
@@ -78,8 +85,9 @@ def load_set(name: str, folder: Path = FROZEN_DIR, joined: Path | None = None) -
     for row in rows:
         if mixed:
             by_question.setdefault(row["question_id"], {})[path_id(row)] = row
-        elif row["mode"] == DEFAULT_MODE:
-            by_question.setdefault(row["question_id"], {})[row["provider"]] = row
+        elif row["mode"] == DEFAULT_MODE or modes:
+            mode = None if row["mode"] == DEFAULT_MODE else row["mode"]
+            by_question.setdefault(row["question_id"], {})[entry_name(row["provider"], mode)] = row
     method = MIXED if mixed else next(iter(methods))
     questions = [Question(qid, prompts.get(qid), rows) for qid, rows in sorted(by_question.items())]
     return method, questions

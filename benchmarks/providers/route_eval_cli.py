@@ -6,6 +6,7 @@ this module never imports the replay. Imported as a sibling, by name, as
 
     uv run --all-extras python benchmarks/providers/route_eval.py
     uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254 --router always:nimble
+    uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254-modes --router fitted --modes
     uv run --all-extras python benchmarks/providers/route_eval.py --router mypkg.routers:pick \
         --joined benchmarks/providers/results/frozen-joined
     uv run --all-extras python benchmarks/providers/route_eval.py --set tools-effort-60 \
@@ -66,6 +67,9 @@ def parse_args(argv: list[str], description: str) -> argparse.Namespace:
     parser.add_argument("--test-fraction", type=float, default=DEFAULT_TEST_FRACTION, help="share held out")
     parser.add_argument("--joined", type=Path, default=None, help="frozen.py join's output, for the question text")
     parser.add_argument("--json", type=Path, default=None, help="also write the numbers here")
+    parser.add_argument(
+        "--modes", action="store_true", help="show routers each vendor mode a one-method set has rows for"
+    )
     args = parser.parse_args(argv)
     if ORACLE in args.against:
         parser.error(MSG_AGAINST_ORACLE)
@@ -87,6 +91,7 @@ def run(
             joined=args.joined,
             skip_absent=not args.sets,  # the default sets mix backends and paths; a named set is held to its own
             against=args.against,
+            modes=args.modes,
         )
         for name in args.sets or default_sets
     ]

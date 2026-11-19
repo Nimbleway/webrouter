@@ -7,8 +7,10 @@ and ``effort`` a router set, and every other option still applies. Its answer
 is priced at that mode. Its failure is read by
 :mod:`web_router.routing.failure_kind`: a refused mode is taken back, as never
 charged, and the backend's next attempt runs; ``local`` and ``target`` raise;
-anything else stops the backend for the call, so its later attempts are passed
-over, each recorded as ``backend_failed``. Cooldowns stay keyed by backend.
+a timeout runs the next attempt when its p90 fits the time left
+(:mod:`._mode_timeout`); anything else stops the backend for the call, so its
+later attempts are passed over, each recorded as ``backend_failed``. Cooldowns
+stay keyed by backend.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 from web_router.exceptions import WebRouterError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._chain import RECOVERABLE, nothing_started
+from web_router.providers._mode_timeout import next_mode_fits
 from web_router.providers._modes import PROBED
 from web_router.providers._pinning import costed, pinned_request
 from web_router.routing.attempts import Attempt, admits, current_route, failed, noted, refunded
@@ -97,13 +100,14 @@ def failure(
 ) -> None:
     """Record ``name``'s failure in ``mode`` and move on; raise it when moving on could bill twice or would not help.
 
-    A mode the backend refused, ``sent``, is taken back; any other failure stops the backend at ``position``.
+    A mode the backend refused, ``sent``, is taken back; a timeout whose next mode fits the time left stops
+    nothing; any other failure stops the backend at ``position``.
     """
     if not walk.hops and not nothing_started(exc):
         raise exc
     if sent is not None and sent.mode is not None and mode_refused(exc):
         refunded(sent)
-    else:
+    elif not next_mode_fits(walk, position, mode, exc):
         tried.stopped.add(position)
     failed(tried.failures, walk.tool, entry_name(name, mode), exc, walk.built.get(position))
 

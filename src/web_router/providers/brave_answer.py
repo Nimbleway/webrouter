@@ -15,11 +15,7 @@ from typing import Any, ClassVar
 
 import httpx
 
-from web_router.constants import (
-    ENV_BRAVE_ANSWER_API_KEY,
-    MCP_SSE_DATA_PREFIX,
-    PROVIDER_BRAVE,
-)
+from web_router.constants import ENV_BRAVE_ANSWER_API_KEY, PROVIDER_BRAVE
 from web_router.constants_brave import (
     BRAVE_ANSWER_CITATION_MAPPED,
     BRAVE_ANSWER_MODEL,
@@ -36,6 +32,7 @@ from web_router.constants_brave import (
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpAnswerProvider
 from web_router.providers._search_text import as_snippet
+from web_router.providers._sse import data_lines
 from web_router.providers._utils import build_payload
 from web_router.types import Citation
 from web_router.types_answer import AnswerRequest, AnswerResponse
@@ -95,10 +92,8 @@ class BraveAnswerProvider(HttpAnswerProvider):
         """
         self._raise_for_status(response)
         events: list[dict[str, Any]] = []
-        for line in response.text.splitlines():
-            if not line.startswith(MCP_SSE_DATA_PREFIX):
-                continue
-            data = line[len(MCP_SSE_DATA_PREFIX) :].strip()
+        for line in data_lines(response.text):
+            data = line.strip()
             if data == BRAVE_SSE_DONE:
                 return {"events": events}
             event = json.loads(data)

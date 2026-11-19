@@ -1,0 +1,482 @@
+{
+  "vendor": "societe-com",
+  "name": "Societe.com API Pro",
+  "category": "company-data",
+  "summary": "French company data from SIRENE, INPI and BODACC by SIREN, SIRET or VAT number: legal details, directors and their mandates, beneficial owners, financial statements, establishments, insolvency proceedings, legal events, scores, trademarks and search.",
+  "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+  "pricing_url": "https://www.societe.com/solutions/api",
+  "base_url": "https://api.societe.com/api/v1",
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "SOCIETE_COM_API_KEY"
+        ],
+        "description": "A Societe.com API Pro token (pro account, then ask api-pro-support@societe.com). Sent as X-Authorization: socapi <token>."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Authorization",
+        "value": "socapi {token}"
+      }
+    ]
+  },
+  "notes": [
+    "Calls are only accepted from IP addresses allowed in your Societe.com account; any other IP gets 401 or 403.",
+    "Each successful call spends credits (costs per route below; 402 when out). Failed calls cost nothing, except failures with valid parameters.",
+    "Rate limit: 60 requests a minute by default (Highrate option for more); 429 when exceeded.",
+    "JSON by default; contenttype=xml returns XML. Dates in answers are AAAAMMJJ. Field names are French."
+  ],
+  "sources": [
+    "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+    "https://www.societe.com/solutions/api",
+    "https://www.societe.com/api/versions.html"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "societe-com.companies.exists",
+      "name": "Check a company exists",
+      "summary": "Whether a SIREN, SIRET or VAT number exists, with name, head-office SIRET, VAT number, status and registry flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/exist",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "0.2 credit."
+      ],
+      "job": "company.verify",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.legal",
+      "name": "Get legal information",
+      "summary": "Legal identity: name, legal form, capital, address, NAF code, registration dates, VAT number, headcount and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/infoslegales",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "0.5 credit."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.directors",
+      "name": "Get directors",
+      "summary": "Current and past directors and officers with role and mandate dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/dirigeants",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "2 credits."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.beneficial_owners",
+      "name": "Get beneficial owners",
+      "summary": "The company's ultimate beneficial owners.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/beneficiaires-effectifs",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "2 credits.",
+        "Access is granted on request."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.financials",
+      "name": "Get financial statements",
+      "summary": "Filed accounts by year: revenue, results, average headcount and balance-sheet figures.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/bilans",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "2 credits."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.establishments",
+      "name": "Get establishments",
+      "summary": "All establishments (SIRETs) of the company, with head-office flag, address and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/etablissements",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "0.5 credit."
+      ],
+      "job": "company.offices",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.insolvency",
+      "name": "Get insolvency proceedings",
+      "summary": "Collective (insolvency) proceedings with dates and codes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/procedurescollectives",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "2 credits."
+      ],
+      "job": "company.insolvency",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.events",
+      "name": "Get legal events",
+      "summary": "The company's legal events (BODACC announcements and registry changes) with dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/evenements",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "2 credits."
+      ],
+      "job": "company.history",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.scoring",
+      "name": "Get scores",
+      "summary": "Financial and extra-financial scores by year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/scoring",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "0.5 credit."
+      ],
+      "job": "company.risk",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.trademarks",
+      "name": "Get trademarks",
+      "summary": "Trademarks the company filed with INPI, with filing and expiry dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/{numid}/marques",
+      "params": {
+        "numid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SIREN (9 digits), SIRET (14 digits) or EU VAT number (FR56428723266) of the company.",
+          "example": "493467849"
+        }
+      },
+      "notes": [
+        "0.5 credit."
+      ],
+      "job": "company.trademarks",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.search",
+      "name": "Search companies",
+      "summary": "Companies by name or director, optionally narrowed by NAF code and department.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/search",
+      "params": {
+        "nom": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name.",
+          "example": "societe"
+        },
+        "dirig": {
+          "in": "query",
+          "type": "string",
+          "description": "Director's last name."
+        },
+        "pre": {
+          "in": "query",
+          "type": "string",
+          "description": "Director's first name; needs another field too."
+        },
+        "ape": {
+          "in": "query",
+          "type": "string",
+          "description": "NAF/APE activity code, e.g. 3700Z; needs another field too."
+        },
+        "dep": {
+          "in": "query",
+          "type": "string",
+          "description": "Department number, e.g. 75; needs another field too."
+        },
+        "debut": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset for the next results, default 1."
+        },
+        "nbrep": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results, default 200, at most 1000."
+        },
+        "exa": {
+          "in": "query",
+          "type": "string",
+          "description": "on for an exact name match.",
+          "enum": [
+            "on"
+          ]
+        }
+      },
+      "notes": [
+        "0.1 credit.",
+        "exa=on makes the name match exact."
+      ],
+      "job": "company.search",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.companies.autocomplete",
+      "name": "Autocomplete companies",
+      "summary": "Companies whose name matches the text typed, with SIREN, postcode, city and open/closed status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/autocomplete/entreprise",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name search text.",
+          "required": true
+        },
+        "geo": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by department, postcode or city, e.g. 75 or paris."
+        },
+        "ape": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by NAF activity code, e.g. 7312Z."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, at most 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Paging offset."
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "company.suggest",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.directors.autocomplete",
+      "name": "Autocomplete directors",
+      "summary": "Directors whose name matches, with the director id used by societe-com.directors.mandates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/autocomplete/dirigeant",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Director name search text.",
+          "required": true
+        },
+        "geo": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by department, postcode or city, e.g. 75 or paris."
+        },
+        "ape": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by NAF activity code, e.g. 7312Z."
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, at most 100."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Paging offset."
+        }
+      },
+      "notes": [
+        "Free."
+      ],
+      "job": "people.search",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.directors.mandates",
+      "name": "Get a director's mandates",
+      "summary": "Every company a director holds or held a mandate in, with co-officers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/mandats/{dirid}",
+      "params": {
+        "dirid": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Director id, e.g. Jean.DUPONT.1TBfUsBRSE9, from societe-com.directors.autocomplete or a directors answer."
+        }
+      },
+      "notes": [
+        "2 credits (cartography)."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    },
+    {
+      "id": "societe-com.account.info",
+      "name": "Get account and credit balance",
+      "summary": "Your account details and remaining credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/infoclient",
+      "notes": [
+        "Shows the credit balance; the price list names no cost for it."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api.societe.com/apisite/documentations/v1/documentation-api.html",
+      "verified": {
+        "docs": "https://api.societe.com/apisite/documentations/v1/documentation-api.html"
+      }
+    }
+  ]
+}

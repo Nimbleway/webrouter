@@ -10,7 +10,8 @@ the router scores. Nothing is called; the numbers are the committed rows in
 
 A router is ``static`` (today's ``auto`` order; on a mixed set, search then
 read), ``oracle`` (the best backend or path for each question, known after the
-fact), ``always:<backend>`` (``always:<path>`` on a mixed set), a built-in
+fact), ``fitted`` (the recommended order, learned on the training split:
+:mod:`route_eval_fitted`), ``always:<backend>`` (``always:<path>`` on a mixed set), a built-in
 or registered router by name, ``router:<name>`` (such as ``router:gemini``,
 built with no ``router_config``, so it reads its preset's key and bills its
 vendor, which the cost does not count), or your own callable named ``module:attr`` or
@@ -20,7 +21,8 @@ router of the library's contract: it takes a ``RouteRequest`` and returns a
 for itself, and the replay merges it as a routed call would. The request's
 ``prompt`` is empty unless ``--joined`` names the folder ``frozen.py join``
 wrote, which a ``router:<name>`` needs. If it has a ``fit`` method, it is called with the training questions
-before scoring.
+before scoring. With ``--modes``, a one-method set's vendor mode rows (``sealqa-hard-254-modes``) take part,
+each mode a candidate of its own, ``search:exa:exa-deep``; the static order still names backends only.
 
 Experimental until 1.0: the router interface and the report may change.
 """
@@ -94,15 +96,35 @@ def _routers_to_score(
     return skipped, names, bases
 
 
-def _ranking(questions: Sequence[Question], ranked_with: Floor) -> dict[str, Any]:
-    """The set's backends, their recommended order and research by effort, ranked with ``ranked_with``."""
+def _scored(
+    name: str,
+    method: str,
+    specs: Sequence[str],
+    against: Sequence[str],
+    parts: tuple[list[Question], list[Question]],
+    skip_absent: bool,
+    floor: float,
+) -> tuple[list[str], dict[str, Any], list[str], list[str]]:
+    """The routers skipped here, every other one scored on the training and held-out ``parts`` with its regret
+    against ``floor``, the routers every other is compared with, and the set's candidates."""
+    candidates = sorted({p for q in (*parts[0], *parts[1]) for p in q.rows})
+    skipped, names, bases = _routers_to_score(name, specs, against, candidates, skip_absent)
+    routers = {spec: _score_router(spec, method, name, *parts, candidates) for spec in names}
+    _add_regret(routers, floor)
+    return skipped, routers, bases, candidates
+
+
+def _ranking(questions: Sequence[Question], ranked_with: Floor, method: str) -> dict[str, Any]:
+    """The set's backends, their recommended order and, on a mixed set, research by effort, ranked with
+    ``ranked_with``."""
     stats = backend_stats(questions)  # nothing is fit to the order, so it ranks on every question
+    efforts = research_by_effort(stats, STATIC_ORDER) if method == MIXED else []
     return {
         "backends": stats,
         "noise_floor": ranked_with.as_json(),
         "recommended_order": recommended(stats, ranked_with.value),
         "too_few_questions": too_few(stats),
-        "efforts": [{"backend": b, "effort": e, **row} for b, e, row in research_by_effort(stats, STATIC_ORDER)],
+        "efforts": [{"backend": b, "effort": e, **row} for b, e, row in efforts],
     }
 
 
@@ -117,6 +139,7 @@ def evaluate_set(
     joined: Path | None = None,
     skip_absent: bool = False,
     against: Sequence[str] = (),
+    modes: bool = False,
 ) -> dict[str, Any]:
     """Every router in ``specs``, with ``static`` and ``oracle``, scored in-sample and held out on one set.
 
@@ -129,32 +152,30 @@ def evaluate_set(
     with no ``fit`` -- ``static``, ``always:``, a file router that learns nothing -- is also scored and
     compared on every question, where the held-out split only costs it questions.
     """
-    method, questions = load_set(name, folder, joined)
+    method, questions = load_set(name, folder, joined, modes)
     ranked_with = floor_for(method) if floor is None else Floor(method, floor, None)
     if specs is None:
         specs = DEFAULT_PATH_ROUTERS if method == MIXED else DEFAULT_ROUTERS
     check_prompts((*specs, *against), questions)
     train, test = split(questions, seed, test_fraction)
     _check_split(name, test_fraction, len(questions), len(train), len(test))
-    candidates = sorted({p for q in questions for p in q.rows})
-    skipped, names, bases = _routers_to_score(name, specs, against, candidates, skip_absent)
-    routers = {spec: _score_router(spec, method, name, train, test, candidates) for spec in names}
-    _add_regret(routers, ranked_with.value)
+    skipped, routers, bases, ids = _scored(name, method, specs, against, (train, test), skip_absent, ranked_with.value)
     return {
         "set": name,
         "method": method,
+        "modes": modes,
         "skipped": skipped,
         "questions": len(questions),
         "train": len(train),
         "held_out": len(test),
         "seed": seed,
         "prompts": all(q.prompt is not None for q in questions),
-        "static_order": static_router(method)(Question("", None, {p: {} for p in candidates})),
+        "static_order": static_router(method)(Question("", None, {p: {} for p in ids})),
         "routers": routers,
         "confusion": matrices(routers, ORACLE),
         "comparisons": comparisons(routers, bases, ORACLE),
         "comparisons_every_question": comparisons(routers, bases, ORACLE, EVERY_CHOICES),
-        **_ranking(questions, ranked_with),
+        **_ranking(questions, ranked_with, method),
     }
 
 

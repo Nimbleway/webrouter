@@ -1,0 +1,932 @@
+{
+  "vendor": "glassnode",
+  "name": "Glassnode",
+  "category": "finance",
+  "summary": "On-chain and market metrics for crypto assets as time series: prices, market cap, MVRV, SOPR, active addresses, supply, exchange balances, futures open interest and funding.",
+  "docs_url": "https://docs.glassnode.com/basic-api/api",
+  "pricing_url": "https://glassnode.com/pricing",
+  "base_url": "https://api.glassnode.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GLASSNODE_API_KEY"
+        ],
+        "description": "A Glassnode API key (Studio > Settings > API). Sent in the X-Api-Key header; an api_key query parameter also works."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The full API needs a Professional subscription. Advanced subscribers get the Light API: 14 days of history, 24h resolution only, 50 calls a day.",
+    "Each data call costs data credits: 1 for BTC, 2 for any other asset. Metadata calls cost none.",
+    "Default limit is 600 requests/minute (x-rate-limit-* response headers); over it returns 429.",
+    "Series come back as [{t, v}] with t in Unix seconds; multi-value metrics put an object in o instead of a number in v.",
+    "Hundreds of metrics share one shape, GET /v1/metrics/<group>/<metric> with a, s, u, i; list them with metadata.metrics and check a metric's parameters with metadata.metric."
+  ],
+  "sources": [
+    "https://docs.glassnode.com/basic-api/api",
+    "https://docs.glassnode.com/basic-api/api-credits",
+    "https://docs.glassnode.com/basic-api/api-credits-1",
+    "https://docs.glassnode.com/basic-api/metadata",
+    "https://docs.glassnode.com/basic-api/endpoints/market",
+    "https://docs.glassnode.com/basic-api/endpoints/indicators",
+    "https://docs.glassnode.com/basic-api/endpoints/addresses",
+    "https://docs.glassnode.com/basic-api/endpoints/transactions",
+    "https://docs.glassnode.com/basic-api/endpoints/supply",
+    "https://docs.glassnode.com/basic-api/endpoints/distribution",
+    "https://docs.glassnode.com/basic-api/endpoints/derivatives"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "glassnode.market.price",
+      "name": "Get price history",
+      "summary": "USD close price series for an asset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/market/price_usd_close",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h, 1w, 1month.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h",
+            "1w",
+            "1month"
+          ]
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/market",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/market"
+      }
+    },
+    {
+      "id": "glassnode.market.price_ohlc",
+      "name": "Get OHLC price history",
+      "summary": "USD open, high, low and close candles for an asset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/market/price_usd_ohlc",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h"
+          ]
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "notes": [
+        "VWAP-like composite across centralised and decentralised exchanges; recent values can be revised as late exchange data arrives."
+      ],
+      "job": "market.history",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/market",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/market"
+      }
+    },
+    {
+      "id": "glassnode.market.marketcap",
+      "name": "Get market cap history",
+      "summary": "Market capitalization in USD over time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/market/marketcap_usd",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h, 1w, 1month.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h",
+            "1w",
+            "1month"
+          ]
+        },
+        "network": {
+          "in": "query",
+          "type": "string",
+          "description": "For tokens on several chains: aggregated, arb, base, eth, opt; default eth."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/market",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/market"
+      }
+    },
+    {
+      "id": "glassnode.market.mvrv",
+      "name": "Get the MVRV ratio",
+      "summary": "Market value to realized value ratio over time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/market/mvrv",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h, 1w, 1month.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h",
+            "1w",
+            "1month"
+          ]
+        },
+        "network": {
+          "in": "query",
+          "type": "string",
+          "description": "For tokens on several chains: aggregated, arb, base, eth, opt; default eth."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/market",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/market"
+      }
+    },
+    {
+      "id": "glassnode.indicators.sopr",
+      "name": "Get SOPR",
+      "summary": "Spent output profit ratio: realized profit or loss of coins moved on-chain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/indicators/sopr",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h, 1w, 1month.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h",
+            "1w",
+            "1month"
+          ]
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/indicators",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/indicators"
+      }
+    },
+    {
+      "id": "glassnode.addresses.active_count",
+      "name": "Get active address counts",
+      "summary": "Unique addresses active as sender or receiver per interval.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/addresses/active_count",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h, 1w, 1month.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h",
+            "1w",
+            "1month"
+          ]
+        },
+        "network": {
+          "in": "query",
+          "type": "string",
+          "description": "For tokens on several chains: aggregated, arb, base, bnb, eth, opt, sol, ton, trx, xrp; default eth."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/addresses",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/addresses"
+      }
+    },
+    {
+      "id": "glassnode.transactions.count",
+      "name": "Get transaction counts",
+      "summary": "Number of transactions per interval.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/transactions/count",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h, 1w, 1month.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h",
+            "1w",
+            "1month"
+          ]
+        },
+        "network": {
+          "in": "query",
+          "type": "string",
+          "description": "For tokens on several chains: aggregated, arb, base, eth, opt; default eth."
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/transactions",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/transactions"
+      }
+    },
+    {
+      "id": "glassnode.supply.current",
+      "name": "Get circulating supply",
+      "summary": "Circulating supply over time, in coins or USD.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/supply/current",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h, 1w, 1month.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h",
+            "1w",
+            "1month"
+          ]
+        },
+        "c": {
+          "in": "query",
+          "type": "string",
+          "description": "native (default) or usd.",
+          "enum": [
+            "native",
+            "usd"
+          ]
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/supply",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/supply"
+      }
+    },
+    {
+      "id": "glassnode.distribution.balance_exchanges",
+      "name": "Get exchange balances",
+      "summary": "Total amount of the asset held on exchange addresses, all or one exchange.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/distribution/balance_exchanges",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h"
+          ]
+        },
+        "network": {
+          "in": "query",
+          "type": "string",
+          "description": "For tokens on several chains: aggregated, arb, base, eth, opt; default eth."
+        },
+        "c": {
+          "in": "query",
+          "type": "string",
+          "description": "native (default) or usd.",
+          "enum": [
+            "native",
+            "usd"
+          ]
+        },
+        "e": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange: aggregated (default) or one of binance, bitfinex, coinbase, kraken, okex....",
+          "example": "binance"
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/distribution",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/distribution"
+      }
+    },
+    {
+      "id": "glassnode.derivatives.futures_open_interest",
+      "name": "Get futures open interest",
+      "summary": "Futures open interest, all exchanges or one.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/derivatives/futures_open_interest_sum",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h"
+          ]
+        },
+        "c": {
+          "in": "query",
+          "type": "string",
+          "description": "native (default) or usd.",
+          "enum": [
+            "native",
+            "usd"
+          ]
+        },
+        "e": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange: aggregated (default) or one of binance, bybit, deribit, okex, hyperliquid....",
+          "example": "binance"
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/derivatives",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/derivatives"
+      }
+    },
+    {
+      "id": "glassnode.derivatives.funding_rate",
+      "name": "Get perpetual funding rates",
+      "summary": "Perpetual futures funding rate, all exchanges or one.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metrics/derivatives/futures_funding_rate_perpetual",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Asset ID, e.g. BTC, ETH (see the assets metadata).",
+          "example": "BTC"
+        },
+        "s": {
+          "in": "query",
+          "type": "integer",
+          "description": "Since, Unix seconds.",
+          "example": 1704067200
+        },
+        "u": {
+          "in": "query",
+          "type": "integer",
+          "description": "Until, Unix seconds."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Resolution: 10m, 1h, 24h.",
+          "example": "24h",
+          "enum": [
+            "10m",
+            "1h",
+            "24h"
+          ]
+        },
+        "e": {
+          "in": "query",
+          "type": "string",
+          "description": "Exchange: aggregated (default) or one of binance, bybit, deribit, okex, hyperliquid....",
+          "example": "binance"
+        },
+        "f": {
+          "in": "query",
+          "type": "string",
+          "description": "json (default) or csv.",
+          "enum": [
+            "json",
+            "csv"
+          ]
+        },
+        "timestamp_format": {
+          "in": "query",
+          "type": "string",
+          "description": "unix (default) or humanized (RFC 3339).",
+          "enum": [
+            "unix",
+            "humanized"
+          ]
+        }
+      },
+      "job": "crypto.metrics",
+      "docs_url": "https://docs.glassnode.com/basic-api/endpoints/derivatives",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/endpoints/derivatives"
+      }
+    },
+    {
+      "id": "glassnode.metadata.assets",
+      "name": "List assets",
+      "summary": "Every asset with its IDs on other data providers, contract addresses, decimals and tags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metadata/assets",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "CEL filter, e.g. asset.id=='USDT' or asset.semantic_tags.exists(tag,tag=='stablecoin').",
+          "example": "asset.id=='USDT'"
+        }
+      },
+      "notes": [
+        "Metadata calls use no data credits; they have their own 1200 requests/minute limit."
+      ],
+      "job": "crypto.assets",
+      "docs_url": "https://docs.glassnode.com/basic-api/metadata",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/metadata"
+      }
+    },
+    {
+      "id": "glassnode.metadata.metrics",
+      "name": "List metric paths",
+      "summary": "Every metric path, optionally only those supporting an asset, exchange or resolution.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metadata/metrics",
+      "params": {
+        "a": {
+          "in": "query",
+          "type": "string",
+          "description": "Only metrics for this asset ID.",
+          "example": "BTC"
+        },
+        "e": {
+          "in": "query",
+          "type": "string",
+          "description": "Only metrics for this exchange.",
+          "example": "binance"
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Only metrics at this resolution.",
+          "example": "1h"
+        }
+      },
+      "notes": [
+        "Paths come without the /v1/metrics prefix; call GET /v1/metrics{path} for the data."
+      ],
+      "job": "datasets.list",
+      "docs_url": "https://docs.glassnode.com/basic-api/metadata",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/metadata"
+      }
+    },
+    {
+      "id": "glassnode.metadata.metric",
+      "name": "Describe a metric",
+      "summary": "A metric's allowed parameters and values, time range, description and Studio link.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metadata/metric",
+      "params": {
+        "path": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Metric path without /v1/metrics, e.g. /distribution/balance_exchanges.",
+          "example": "/distribution/balance_exchanges"
+        },
+        "a": {
+          "in": "query",
+          "type": "string",
+          "description": "Narrow the allowed values to this asset ID.",
+          "example": "BTC"
+        },
+        "e": {
+          "in": "query",
+          "type": "string",
+          "description": "Narrow to this exchange."
+        },
+        "i": {
+          "in": "query",
+          "type": "string",
+          "description": "Narrow to this resolution."
+        }
+      },
+      "notes": [
+        "Call this before an unfamiliar metric: each one accepts a different set of assets, resolutions and drill-downs."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://docs.glassnode.com/basic-api/metadata",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/metadata"
+      }
+    },
+    {
+      "id": "glassnode.user.api_usage",
+      "name": "Get this month's credit usage",
+      "summary": "Data credits used by the key this month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/user/api_usage",
+      "job": "account.usage",
+      "docs_url": "https://docs.glassnode.com/basic-api/api-credits",
+      "verified": {
+        "docs": "https://docs.glassnode.com/basic-api/api-credits"
+      }
+    }
+  ]
+}

@@ -1,0 +1,368 @@
+{
+  "vendor": "securitytrails",
+  "name": "SecurityTrails",
+  "category": "security",
+  "summary": "Current and historical DNS and WHOIS for domains, subdomains, associated domains, TLS certificates, IP WHOIS and neighbours, and domain search by record values.",
+  "docs_url": "https://docs.securitytrails.com/docs/overview",
+  "pricing_url": "https://securitytrails.com/corp/pricing",
+  "base_url": "https://api.securitytrails.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SECURITYTRAILS_API_KEY"
+        ],
+        "description": "A SecurityTrails API key (SecurityTrails control panel > API), sent in the APIKEY header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "APIKEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call counts against the plan's monthly query allowance: account.usage shows what is left.",
+    "The API is read-only, per SecurityTrails; search is a POST with a JSON body.",
+    "Feeds, the DSL search, scrolling and the Attack Surface Intelligence API are not in this entry."
+  ],
+  "sources": [
+    "https://docs.securitytrails.com/docs/overview",
+    "https://docs.securitytrails.com/docs/authentication",
+    "https://docs.securitytrails.com/llms.txt",
+    "https://docs.securitytrails.com/reference/dns-history-by-record-type-old-1",
+    "https://docs.securitytrails.com/reference/explore-ips-old-1",
+    "https://docs.securitytrails.com/reference/find-associated-domains-old-1",
+    "https://docs.securitytrails.com/reference/get-domain-old-1",
+    "https://docs.securitytrails.com/reference/get-domain-ssl-data-old-1",
+    "https://docs.securitytrails.com/reference/get-ip-whois-old-1",
+    "https://docs.securitytrails.com/reference/get-whois-old-1",
+    "https://docs.securitytrails.com/reference/list-subdomains-old-1",
+    "https://docs.securitytrails.com/reference/list-tags-old-1",
+    "https://docs.securitytrails.com/reference/search-old-1",
+    "https://docs.securitytrails.com/reference/usage-old-1",
+    "https://docs.securitytrails.com/reference/whois-history-by-domain-old-1"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "securitytrails.domain.get",
+      "name": "Get a domain's current DNS",
+      "summary": "Current A, AAAA, MX, NS, SOA and TXT records, each with first-seen date and how many other domains share the value.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain/{hostname}",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain or hostname.",
+          "example": "oracle.com"
+        }
+      },
+      "job": "domain.dns",
+      "docs_url": "https://docs.securitytrails.com/reference/get-domain-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/get-domain-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.domain.subdomains",
+      "name": "List a domain's subdomains",
+      "summary": "Every subdomain label SecurityTrails knows for a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain/{hostname}/subdomains",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain or hostname.",
+          "example": "oracle.com"
+        }
+      },
+      "notes": [
+        "Labels come back without the parent domain: append it yourself."
+      ],
+      "job": "domain.subdomains",
+      "docs_url": "https://docs.securitytrails.com/reference/list-subdomains-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/list-subdomains-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.domain.tags",
+      "name": "List a domain's tags",
+      "summary": "Category tags assigned to a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain/{hostname}/tags",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain or hostname.",
+          "example": "oracle.com"
+        }
+      },
+      "job": "domain.overview",
+      "docs_url": "https://docs.securitytrails.com/reference/list-tags-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/list-tags-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.domain.whois",
+      "name": "Get a domain's current WHOIS",
+      "summary": "Current WHOIS contacts, registrar and dates, with counts of other domains sharing each value.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain/{hostname}/whois",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain or hostname.",
+          "example": "securitytrails.com"
+        }
+      },
+      "job": "domain.whois",
+      "docs_url": "https://docs.securitytrails.com/reference/get-whois-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/get-whois-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.domain.associated",
+      "name": "Find associated domains",
+      "summary": "Domains related to the given one, each with registrar dates, hosting and mail providers and the computed company name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain/{hostname}/associated",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain or hostname.",
+          "example": "google.com"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, from 1."
+        }
+      },
+      "job": "domain.related",
+      "docs_url": "https://docs.securitytrails.com/reference/find-associated-domains-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/find-associated-domains-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.domain.ssl",
+      "name": "Get a domain's certificates",
+      "summary": "Current and historical TLS certificates seen for a domain or subdomain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain/{hostname}/ssl",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain or hostname.",
+          "example": "stackoverflow.com"
+        },
+        "include_subdomains": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return certificates of subdomains; default false."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Which certificates: valid (default), all or expired.",
+          "enum": [
+            "valid",
+            "all",
+            "expired"
+          ]
+        }
+      },
+      "job": "domain.certificates",
+      "docs_url": "https://docs.securitytrails.com/reference/get-domain-ssl-data-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/get-domain-ssl-data-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.history.dns",
+      "name": "Get DNS history by record type",
+      "summary": "Past values of one record type for a hostname, with first and last seen dates and the organizations behind them.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/history/{hostname}/dns/{type}",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain or hostname.",
+          "example": "oracle.com"
+        },
+        "type": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Record type.",
+          "enum": [
+            "a",
+            "aaaa",
+            "mx",
+            "ns",
+            "soa",
+            "txt"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, from 1."
+        }
+      },
+      "job": "domain.dns.history",
+      "docs_url": "https://docs.securitytrails.com/reference/dns-history-by-record-type-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/dns-history-by-record-type-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.history.whois",
+      "name": "Get WHOIS history",
+      "summary": "Historical WHOIS records for a domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/history/{hostname}/whois",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain or hostname.",
+          "example": "securitytrails.com"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, from 1."
+        }
+      },
+      "job": "domain.whois.history",
+      "docs_url": "https://docs.securitytrails.com/reference/whois-history-by-domain-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/whois-history-by-domain-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.domains.search",
+      "name": "Search domains by DNS or WHOIS filter",
+      "summary": "Domains whose current records match a filter: IP or CIDR, apex domain, keyword, MX, NS, CNAME, SOA email, TLD or WHOIS fields.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/domains/list",
+      "params": {
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filter fields: ipv4 (CIDR allowed), ipv6, apex_domain, keyword, mx, ns, cname, subdomain, soa_email, tld, whois_email, whois_organization, whois_name, whois_telephone, whois_city, whois_postalCode, whois_street1..4, whois_fax.",
+          "example": {
+            "ipv4": "8.8.8.0/24"
+          }
+        },
+        "include_ips": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also resolve A records and return their IPs."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, from 1."
+        }
+      },
+      "notes": [
+        "A read over POST: the filter goes in the JSON body. The API itself is read-only."
+      ],
+      "job": "domain.search",
+      "docs_url": "https://docs.securitytrails.com/reference/search-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/search-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.ips.whois",
+      "name": "Get IP WHOIS",
+      "summary": "Current WHOIS for one IPv4 address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ips/{ipaddress}/whois",
+      "params": {
+        "ipaddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 address.",
+          "example": "1.1.1.1"
+        }
+      },
+      "job": "ip.whois",
+      "docs_url": "https://docs.securitytrails.com/reference/get-ip-whois-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/get-ip-whois-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.ips.nearby",
+      "name": "Explore neighbouring IPs",
+      "summary": "Neighbouring IP blocks around an address (or CIDR block), each with an ip_count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/ips/nearby/{ipaddress}",
+      "params": {
+        "ipaddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Starting IP address, optionally with a CIDR mask.",
+          "example": "8.8.8.8"
+        }
+      },
+      "job": "ip.neighbors",
+      "docs_url": "https://docs.securitytrails.com/reference/explore-ips-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/explore-ips-old-1"
+      }
+    },
+    {
+      "id": "securitytrails.account.usage",
+      "name": "Get API usage",
+      "summary": "Queries used this month and the monthly allowance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/usage",
+      "job": "account.usage",
+      "docs_url": "https://docs.securitytrails.com/reference/usage-old-1",
+      "verified": {
+        "docs": "https://docs.securitytrails.com/reference/usage-old-1"
+      }
+    }
+  ]
+}

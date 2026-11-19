@@ -88,6 +88,7 @@ def test_a_public_url_a_router_supplies_is_planned_under_public_only() -> None:
 
 
 @pytest.mark.usefixtures("members")
-def test_public_only_refuses_a_bracketed_loopback_the_finder_now_reads_whole() -> None:
+@pytest.mark.parametrize("scheme", ["http", "HTTP", "hTtPs"])
+def test_public_only_refuses_a_bracketed_loopback_the_finder_now_reads_whole(scheme: str) -> None:
     with pytest.raises(MissingParameterError, match="the host is loopback"):
-        wr(url_policy="public_only").plan("open http://[::1]/admin", tool="extract")
+        wr(url_policy="public_only").plan(f"open {scheme}://[::1]/admin", tool="extract")

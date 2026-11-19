@@ -132,3 +132,14 @@ def test_plan_reads_a_url_with_it_and_searches_with_no_router() -> None:
     prompt = "read https://example.com/a"
     assert wr(router="rules").plan(prompt).tool == "extract"
     assert wr().plan(prompt).tool == "search"
+
+
+@pytest.mark.usefixtures("called")
+@pytest.mark.parametrize("scheme", ["HTTP", "HTTPS", "hTtPs"])
+def test_plan_extracts_a_url_with_a_mixed_case_scheme(scheme: str) -> None:
+    url = f"{scheme}://example.com/Report?Token=AbC"
+    with wr(router="rules") as router:
+        plan = router.plan(f"read {url}")
+        assert plan.tool == "extract"
+        assert plan.params["urls"] == [url]
+        assert router.plan(f"read {url}", tool="extract").params["urls"] == [url]

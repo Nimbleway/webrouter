@@ -33,6 +33,7 @@ from web_router.constants_merge import (
     ROUTER_PARAMS,
 )
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
+from web_router.providers._modes import PROBED
 from web_router.routing.attempts import Attempt
 from web_router.routing.candidates import REQUEST_OF
 from web_router.routing.contract import Budget, RouteDecision, ToolName, candidate_id
@@ -156,20 +157,23 @@ def checked_params(
     caller_set: Collection[str],
     url_check: UrlCheck | None,
     ignored: dict[str, str],
+    moded: Collection[str] = (),
 ) -> dict[str, Any]:
     """The router's options for ``tool`` that pass every check; each one dropped is noted in ``ignored``.
 
     ``request`` is the one the call runs with no option of the router's: each option is priced on it, with the
-    options kept before it applied. The merge redacts every note once, at its end.
+    options kept before it applied. A ``search_depth`` or ``effort`` is not checked on the backends ``moded``
+    names, which run only in vendor modes that replace it. The merge redacts every note once, at its end.
     """
     asked: Mapping[Any, Mapping[str, Any]] = decision.params or {}
     kept: dict[str, Any] = {}
     for key, value in asked.get(tool, {}).items():
         without = request.model_copy(update=kept)
         with_it = without.model_copy(update={key: value})
-        why = _refusal(tool, key, value, caller_set, url_check) or _untaken(tool, key, with_it, without, providers)
+        runs = [p for p in providers if p not in moded] if key in PROBED else providers
+        why = _refusal(tool, key, value, caller_set, url_check) or _untaken(tool, key, with_it, without, runs)
         if why is None and budget is not None:
-            why = _misfit(tool, key, value, without, providers, budget)
+            why = _misfit(tool, key, value, without, runs, budget)
         if why is None:
             kept[key] = list(value) if key == "urls" else value
         else:

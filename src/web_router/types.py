@@ -87,6 +87,7 @@ class Provider(str, Enum):
     KEENABLE = "keenable"
     DEEPSEEK = "deepseek"
     VALYU = "valyu"
+    SPECSTREAM = "specstream"
     AGENTCORE = "agentcore"
     YOU_MCP = "you-mcp"
     EXA_MCP = "exa-mcp"
@@ -123,11 +124,10 @@ def provider_name(provider: str | Provider) -> str:
 class NormalizedRequest(BaseModel):
     """What every normalized request has in common.
 
-    Each method has its own request model -- :class:`SearchRequest`,
-    :class:`ExtractRequest` -- and they share only this: a set of optional
-    parameters a provider may or may not map, and an untranslated passthrough.
-    :meth:`SearchProvider.validate <web_router.SearchProvider.validate>` reads
-    :meth:`specified_parameters` to reject a request carrying options the chosen backend does not map.
+    Each method has its own request model -- :class:`SearchRequest`, :class:`ExtractRequest` -- and they share only
+    this: a set of optional parameters a provider may or may not map, and an untranslated passthrough.
+    :meth:`SearchProvider.validate <web_router.SearchProvider.validate>` reads :meth:`specified_parameters` to
+    reject a request carrying options the chosen backend does not map.
     """
 
     model_config = ConfigDict(extra="forbid")

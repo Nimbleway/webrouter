@@ -1,0 +1,156 @@
+{
+  "vendor": "uspto",
+  "name": "USPTO Open Data Portal",
+  "category": "government",
+  "summary": "The US Patent and Trademark Office's Open Data Portal: search US patent applications and grants, and read one application's bibliographic data, continuity, assignments, transactions and file-wrapper document list.",
+  "docs_url": "https://data.uspto.gov/apis/getting-started",
+  "base_url": "https://api.uspto.gov",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": ["USPTO_API_KEY"],
+        "description": "An Open Data Portal API key (data.uspto.gov > Manage API Key; needs a USPTO.gov account with MFA and a completed ODP profile), sent in the X-API-KEY header."
+      }
+    },
+    "inject": [
+      {"in": "header", "name": "X-API-KEY", "value": "{api_key}"}
+    ]
+  },
+  "notes": [
+    "Free, but rate limited per key; the limits are on data.uspto.gov/apis/api-rate-limits, which needs a signed-in USPTO.gov account to read. Keys of accounts with an incomplete ODP profile were deactivated in October 2026 and must be reactivated on the Manage API Key page.",
+    "Filed under government rather than science: these are the USPTO's public records of applications, grants and their prosecution history, not research literature.",
+    "Application numbers are digits only (14412875), without slashes or commas. Field names in q, filters, sort and fields are dotted paths such as applicationMetaData.filingDate."
+  ],
+  "sources": [
+    "https://data.uspto.gov/apis/getting-started",
+    "https://data.uspto.gov/swagger/index.html",
+    "https://data.uspto.gov/swagger/swagger.yaml"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "uspto.applications.search",
+      "name": "Search patent applications",
+      "summary": "Patent applications and grants matching a query, filters and date ranges, with facets.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/patent/applications/search",
+      "params": {
+        "q": {"in": "query", "type": "string", "description": "Query with AND, OR, NOT, wildcards (*), quoted phrases, field:value, ranges [a TO b] and comparisons (>600). Empty returns the top 25.", "example": "applicationMetaData.firstApplicantName:Rockwel*"},
+        "filters": {"in": "query", "type": "string", "description": "Field name, a space, then one value or comma-separated values, e.g. applicationMetaData.applicationTypeCode UTL,DES."},
+        "rangeFilters": {"in": "query", "type": "string", "description": "Field name, a space, then from:to, for dates or numbers, e.g. applicationMetaData.grantDate 2010-01-01:2011-01-01."},
+        "sort": {"in": "query", "type": "string", "description": "Field then asc or desc, e.g. applicationMetaData.filingDate desc."},
+        "fields": {"in": "query", "type": "string", "description": "Comma-separated fields to return, e.g. applicationNumberText,applicationMetaData.patentNumber."},
+        "facets": {"in": "query", "type": "string", "description": "Comma-separated fields to count by, e.g. applicationMetaData.applicationStatusCode."},
+        "offset": {"in": "query", "type": "integer", "description": "Index of the first record, from 0."},
+        "limit": {"in": "query", "type": "integer", "description": "Records to return, default 25."}
+      },
+      "job": "patents.search",
+      "docs_url": "https://data.uspto.gov/swagger/index.html",
+      "verified": {"docs": "https://data.uspto.gov/swagger/swagger.yaml"}
+    },
+    {
+      "id": "uspto.applications.get",
+      "name": "Get a patent application's full data",
+      "summary": "The full record the portal holds for one application; the sub-resource calls return its parts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/patent/applications/{applicationNumberText}",
+      "params": {
+        "applicationNumberText": {"in": "path", "type": "string", "required": true, "description": "Application number, digits only.", "example": "14412875"}
+      },
+      "job": "patents.get",
+      "docs_url": "https://data.uspto.gov/swagger/index.html",
+      "verified": {"docs": "https://data.uspto.gov/swagger/swagger.yaml"}
+    },
+    {
+      "id": "uspto.applications.metadata",
+      "name": "Get a patent application's bibliographic data",
+      "summary": "Title, type, status, filing and grant dates, patent number, inventors, applicants, examiner and classification for one application.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/patent/applications/{applicationNumberText}/meta-data",
+      "params": {
+        "applicationNumberText": {"in": "path", "type": "string", "required": true, "description": "Application number, digits only.", "example": "14412875"}
+      },
+      "job": "patents.get",
+      "docs_url": "https://data.uspto.gov/swagger/index.html",
+      "verified": {"docs": "https://data.uspto.gov/swagger/swagger.yaml"}
+    },
+    {
+      "id": "uspto.applications.continuity",
+      "name": "Get a patent application's parent and child applications",
+      "summary": "The continuity chain (continuations, divisionals, provisionals) of one application.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/patent/applications/{applicationNumberText}/continuity",
+      "params": {
+        "applicationNumberText": {"in": "path", "type": "string", "required": true, "description": "Application number, digits only.", "example": "14412875"}
+      },
+      "job": "patents.family",
+      "docs_url": "https://data.uspto.gov/swagger/index.html",
+      "verified": {"docs": "https://data.uspto.gov/swagger/swagger.yaml"}
+    },
+    {
+      "id": "uspto.applications.assignment",
+      "name": "Get a patent application's assignments",
+      "summary": "Recorded ownership transfers (assignors, assignees, dates) for one application.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/patent/applications/{applicationNumberText}/assignment",
+      "params": {
+        "applicationNumberText": {"in": "path", "type": "string", "required": true, "description": "Application number, digits only.", "example": "14412875"}
+      },
+      "job": "patents.assignments",
+      "docs_url": "https://data.uspto.gov/swagger/index.html",
+      "verified": {"docs": "https://data.uspto.gov/swagger/swagger.yaml"}
+    },
+    {
+      "id": "uspto.applications.transactions",
+      "name": "Get a patent application's prosecution history",
+      "summary": "Dated transaction events in the life of one application.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/patent/applications/{applicationNumberText}/transactions",
+      "params": {
+        "applicationNumberText": {"in": "path", "type": "string", "required": true, "description": "Application number, digits only.", "example": "14412875"}
+      },
+      "job": "patents.history",
+      "docs_url": "https://data.uspto.gov/swagger/index.html",
+      "verified": {"docs": "https://data.uspto.gov/swagger/swagger.yaml"}
+    },
+    {
+      "id": "uspto.applications.documents",
+      "name": "List a patent application's file-wrapper documents",
+      "summary": "Documents in one application's file (office actions, responses, fee worksheets...) with document codes and official dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/patent/applications/{applicationNumberText}/documents",
+      "params": {
+        "applicationNumberText": {"in": "path", "type": "string", "required": true, "description": "Application number, digits only.", "example": "16330077"},
+        "documentCodes": {"in": "query", "type": "string", "description": "One or more comma-separated document codes, e.g. SRFW,SRNT."},
+        "officialDateFrom": {"in": "query", "type": "string", "description": "Documents with an official date on or after this date."},
+        "officialDateTo": {"in": "query", "type": "string", "description": "Documents with an official date on or before this date."}
+      },
+      "job": "patents.documents",
+      "docs_url": "https://data.uspto.gov/swagger/index.html",
+      "verified": {"docs": "https://data.uspto.gov/swagger/swagger.yaml"}
+    },
+    {
+      "id": "uspto.status_codes.search",
+      "name": "Look up application status codes",
+      "summary": "Patent application status codes and what each means.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/patent/status-codes",
+      "params": {
+        "q": {"in": "query", "type": "string", "description": "Search text or field:value; empty lists all."},
+        "offset": {"in": "query", "type": "integer", "description": "Index of the first record."},
+        "limit": {"in": "query", "type": "integer", "description": "Records to return."}
+      },
+      "job": "reference.codes",
+      "docs_url": "https://data.uspto.gov/swagger/index.html",
+      "verified": {"docs": "https://data.uspto.gov/swagger/swagger.yaml"}
+    }
+  ]
+}
