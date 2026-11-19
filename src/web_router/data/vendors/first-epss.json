@@ -1,0 +1,106 @@
+{
+  "vendor": "first-epss",
+  "name": "FIRST EPSS",
+  "category": "security",
+  "summary": "Exploit Prediction Scoring System: the daily probability (and percentile) that a CVE will be exploited in the next 30 days, current or historical, from FIRST.",
+  "docs_url": "https://api.first.org/epss/",
+  "base_url": "https://api.first.org/data/v1",
+  "notes": [
+    "Keyless. Public endpoints allow 1,000 requests per minute; a 429 means a temporary block.",
+    "Scores and percentiles come back as decimal strings ('0.972240000'), not numbers.",
+    "The endpoint is marked BETA by FIRST."
+  ],
+  "sources": [
+    "https://api.first.org/epss/",
+    "https://api.first.org/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "first-epss.scores",
+      "name": "Get EPSS scores",
+      "summary": "EPSS score and percentile per CVE, filtered by CVE IDs, score or percentile thresholds, date or recency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/epss",
+      "params": {
+        "cve": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated CVE IDs, at most 2,000 characters in all.",
+          "example": "CVE-2021-40438,CVE-2019-16759"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "YYYY-MM-DD, from 2021-04-14: scores as of that day.",
+          "example": "2022-02-28"
+        },
+        "days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only CVEs whose score was added within this many days (from 1)."
+        },
+        "epss-gt": {
+          "in": "query",
+          "type": "number",
+          "description": "Only CVEs with an EPSS score at or above this (0 to 1)."
+        },
+        "epss-lt": {
+          "in": "query",
+          "type": "number",
+          "description": "Only CVEs with an EPSS score at or below this."
+        },
+        "percentile-gt": {
+          "in": "query",
+          "type": "number",
+          "description": "Only CVEs at or above this percentile (0 to 1)."
+        },
+        "percentile-lt": {
+          "in": "query",
+          "type": "number",
+          "description": "Only CVEs at or below this percentile."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Partial match on the CVE ID.",
+          "example": "CVE-2024-"
+        },
+        "scope": {
+          "in": "query",
+          "type": "string",
+          "description": "public (default): current fields; time-series: the last 30 days of scores per CVE.",
+          "enum": [
+            "public",
+            "time-series"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to return, 0 to 10,000 (the answer shows 100 by default)."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, from 0."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to sort by; prefix with '-' for descending.",
+          "example": "-epss"
+        }
+      },
+      "notes": [
+        "Without a cve or threshold filter it pages through every scored CVE: use total, offset and limit in the envelope."
+      ],
+      "job": "security.vulns.scores",
+      "docs_url": "https://api.first.org/epss/",
+      "verified": {
+        "docs": "https://api.first.org/epss/"
+      }
+    }
+  ]
+}
