@@ -53,6 +53,11 @@ def test_a_backend_whose_only_named_mode_is_excluded_does_not_run_bare() -> None
     assert merged.providers == ("brave", "tavily")  # type: ignore[attr-defined]
 
 
+def test_an_excluded_sole_mode_of_the_only_backend_still_runs_in_that_mode() -> None:
+    merged = _merged((EXA, EXA_INSTANT), RouteDecision(attempts=[INSTANT], exclude={INSTANT: "too thin"}))
+    assert merged.providers == ("exa:exa-instant",), "rule 3 ignores the exclusion; a mode-only backend is not run bare"  # type: ignore[attr-defined]
+
+
 @pytest.mark.parametrize(
     ("candidates", "exclude"),
     [
