@@ -8,6 +8,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- `judge_from()` picks an `evaluate()` judge by name: `openai[:<model>]`, `anthropic[:<model>]`, `litellm:<model>`, or `package.module:Class` for a `Judge` subclass of your own. The provider and answer benchmarks take the same string as `--judge`; the default stays `openai:gpt-4o`, so new figures compare with published ones. See [Benchmarks](https://docs.webrouter.net/benchmarks).
+- `LiteLLMJudge`, a judge on any model LiteLLM reaches (DeepInfra, Gemini, Bedrock, Ollama, ...), with the new `evals-litellm` extra. LiteLLM is pinned to one release, and its import reads no `.env` and fetches nothing.
+- `Scorer` and `Scorecard`: the interface for rating an answer that has no gold one, from the question, the answer and its citations, on dimensions the scorer names, with its reasons per dimension and its own `details` (tokens, cost, searches); `output_schema=` passes the schema the answer was asked to follow. No scorer ships with the library.
 - SpecStream as a search and extract backend: `search(provider="specstream")` over `GET /v1/web-search` and `extract(provider="specstream")` over `POST /v1/extract`, reading `SPECSTREAM_API_KEY`. Search maps `max_results` onto `num` (at most 100); `passages`, `speed` and the other query fields go through `provider_options`. Extract returns `markdown` (the default) or `text`, and a page whose `status` is not `ok` comes back as a failed URL. `auto` tries it after the keyless tier, with a key.
 - Vendor catalog: OpenCage Geocoding, MaxMind, IP2Location.io, Ipregistry and Abstract API, with 14 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 470 vendors and 3,472 endpoints.
 - Vendor catalog: Mention, Moltbook, Sprout Social, Crossref and Wikidata, with 42 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 465 vendors and 3,458 endpoints.
@@ -33,6 +36,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
+- `OpenAIJudge` leaves the `gpt-6` family at its default temperature, as it does `gpt-5`: `gpt-6-luna` answers `temperature=0` with a 400.
+- A judge failure in an `evaluate()` row reads `the judge failed at synthesis: …` (or `grading`), and the benchmark scans grade one test answer before any search (retried once after 10 s, so a busy model host does not cancel the scan), so a judge that cannot run stops the scan before anything is billed. A subclass of a built-in judge that sets no `name` is labelled by its class, as in `GradingFails(openai):gpt-4o`.
+- A judge pointed at another endpoint (`base_url`) adds the host to its label, as in `openai:glm-5@models.example.com`, so its figures never combine with the vendor's own.
 - Default routing: `auto` now gives each backend at most half the time left (the last gets all of it) and skips a backend for 30 s after three timeouts in a row. Opt out with `hop_timeout=False` or `timeout_cooldown=False`; `hop_timeout=4` sets a fixed cap.
 - Data API discovery no longer takes "close", "contact", "here", "reverse" or "tomorrow" alone as naming a data API, so an everyday search such as "weather in paris tomorrow" lists none; `close crm`, `here maps`, `reverse contact` and `tomorrow io` still name theirs.
 

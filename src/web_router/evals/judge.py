@@ -44,6 +44,7 @@ from web_router.constants import (
     EXTRA_EVALS,
     MSG_EVALS_JUDGE_STOPPED,
 )
+from web_router.evals.labels import EndpointLabel
 from web_router.evals.types import Grade
 from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
 from web_router.integrations._render import cut_to_budget
@@ -98,6 +99,12 @@ class Judge(ABC):
         searches were paid for.
         """
 
+    def close(self) -> None:  # noqa: B027
+        """Release what the judge holds; one that holds nothing does nothing."""
+
+    async def aclose(self) -> None:  # noqa: B027
+        """The async twin of :meth:`close`."""
+
     @abstractmethod
     def _complete(self, system: str, user: str) -> str: ...
 
@@ -129,7 +136,7 @@ class Judge(ABC):
         )
 
 
-class OpenAIJudge(Judge):
+class OpenAIJudge(EndpointLabel, Judge):
     """The built-in judge, on OpenAI's chat completions -- ``gpt-4o`` by default.
 
     The ``openai`` SDK comes with the ``evals`` extra and is imported on first
@@ -165,10 +172,6 @@ class OpenAIJudge(Judge):
         self._client: Any = None
         self._async_client: Any = None
         self._client_lock = threading.Lock()
-
-    @property
-    def label(self) -> str:
-        return f"{self.name}:{self.model}"
 
     def check(self) -> None:
         """Raise now what the first call would raise: the SDK is missing, or there is no key."""
@@ -233,7 +236,7 @@ class OpenAIJudge(Judge):
         return f"<OpenAIJudge model={self.model!r}>"
 
 
-class AnthropicJudge(Judge):
+class AnthropicJudge(EndpointLabel, Judge):
     """A judge on Anthropic's Messages API -- ``claude-sonnet-5-5`` by default.
 
     For when the default judge would be grading its own model family: a
@@ -274,10 +277,6 @@ class AnthropicJudge(Judge):
         self._client: Any = None
         self._async_client: Any = None
         self._client_lock = threading.Lock()
-
-    @property
-    def label(self) -> str:
-        return f"{self.name}:{self.model}"
 
     def check(self) -> None:
         """Raise now what the first call would raise: the SDK is missing, or there is no key."""
