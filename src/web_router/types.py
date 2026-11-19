@@ -17,7 +17,7 @@ from enum import Enum
 from importlib import import_module
 from typing import Annotated, Any, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr
 
 from web_router.types_citation import Citation as Citation
 from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
@@ -211,6 +211,9 @@ EXTRACT_FORMAT_ONLY: frozenset[str] = frozenset({"format"})
 """The ``supported_parameters`` of an extract provider that maps ``format`` and no other option."""
 
 
+_SNIPPETS = "web_router.providers._search_text"  # imported on use: it imports this module
+
+
 class SearchResult(BaseModel):
     """A single result, normalized across providers."""
 
@@ -219,12 +222,9 @@ class SearchResult(BaseModel):
 
     url: str
     title: str = ""
-    description: str = Field(
+    description: Annotated[str, AfterValidator(lambda text: import_module(_SNIPPETS).as_snippet(text))] = Field(
         default="",
-        description=(
-            "A snippet-length summary: the provider's own when it gives one, otherwise "
-            "the head of the page body so the field means the same thing everywhere."
-        ),
+        description="The provider's summary, or the page's head, cut to a snippet of at most 500 characters.",
     )
     content: str = Field(
         default="",
