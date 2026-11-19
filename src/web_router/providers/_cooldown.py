@@ -72,14 +72,13 @@ class Cooldowns:
         A timeout of the backend's own making counts towards the cooldown after timeouts in a row; any other
         timeout, the caller's, neither counts nor breaks the streak.
         """
-        if getattr(exc, "kind", None) == ERROR_KIND_TIMEOUT:
-            if backends_own(exc):
-                self.note_timeout(provider)
-            return
-        self._reset(provider)
-        seconds, status = _cooldown_of(exc)
+        seconds, status = _cooldown_of(exc)  # first: a throttle among an extract's calls cools it whatever the rest
         if seconds is not None:
             self._start(provider, seconds, status)
+        if getattr(exc, "kind", None) != ERROR_KIND_TIMEOUT:
+            self._reset(provider)
+        elif backends_own(exc):
+            self.note_timeout(provider)
 
     def note_timeout(self, provider: str) -> None:
         """Count a timeout of ``provider``; the last of :data:`TIMEOUT_COOLDOWN_AFTER` in a row starts its cooldown."""

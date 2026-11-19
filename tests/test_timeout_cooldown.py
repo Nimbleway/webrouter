@@ -130,3 +130,30 @@ def test_a_pinned_mode_counts_towards_its_backend() -> None:
     _times_out(cooldowns, "exa:exa-deep", TIMEOUT_COOLDOWN_AFTER - 1)
     cooldowns.note("exa", _timeout())
     assert cooldowns.remaining("exa:exa-instant") is not None
+
+
+def _summed(*errors: BaseException) -> ProviderError:
+    summed = ProviderError("slow", "every URL failed", kind=ERROR_KIND_TIMEOUT)
+    summed.call_errors = errors
+    return summed
+
+
+def test_a_throttle_among_an_extracts_calls_cools_it_at_once() -> None:
+    cooldowns = Cooldowns(timeouts=True)
+    cooldowns.note("slow", _summed(ProviderError("slow", "HTTP 429", kind=ERROR_KIND_RATE_LIMIT), _timeout()))
+    left = cooldowns.remaining("slow")
+    assert left is not None and left[1] is None
+    refusal = cooldowns.refusal("slow")
+    assert refusal is not None and refusal.kind == ERROR_KIND_RATE_LIMIT
+
+
+@pytest.mark.parametrize(
+    ("errors", "counts"),
+    [((DeadlineExceededError("slow", 2.0), _timeout()), False), ((_timeout(), _timeout()), True)],
+    ids=["one call cut off by the caller's deadline", "every call's own timeout"],
+)
+def test_an_extracts_timeouts_count_only_when_every_call_was_its_own(errors: Any, counts: bool) -> None:
+    cooldowns = Cooldowns(timeouts=True)
+    for _ in range(TIMEOUT_COOLDOWN_AFTER):
+        cooldowns.note("slow", _summed(*errors))
+    assert (cooldowns.remaining("slow") is not None) is counts

@@ -28,6 +28,8 @@ def backends_own(exc: BaseException) -> bool:
     """Whether ``exc`` is a timeout of the backend's own making, which counts towards its cooldown."""
     if getattr(exc, "kind", None) != ERROR_KIND_TIMEOUT or not isinstance(exc, ProviderError):
         return False  # the call's deadline (DeadlineExceededError) is the caller's, not the backend's
+    if exc.call_errors:  # a sum of an extract's calls: the backend's only when every call's timeout was
+        return all(map(backends_own, exc.call_errors))
     return not isinstance(exc, HopTimeoutError) or exc.fixed
 
 
