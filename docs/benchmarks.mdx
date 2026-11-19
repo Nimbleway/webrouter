@@ -158,12 +158,12 @@ from web_router.evals import LiteLLMJudge
 report = router.evaluate(dataset, judge=LiteLLMJudge("openrouter/z-ai/glm-5"))  # reads OPENROUTER_API_KEY
 ```
 
-Every judge can also be named in one string, which is what a report records:
+Every judge can also be named in one string, the one its report records:
 `judge_from("openai:gpt-6-luna")`, `judge_from("anthropic")`,
 `judge_from("litellm:gemini/gemini-3-pro")`, or `judge_from("my_pkg.judges:MyJudge")`
 for a `Judge` subclass of your own, built with no arguments. The benchmark
 scripts take the same string as `--judge`. A judge pointed at another endpoint
-with `base_url` (or `api_base`) adds the host to its label —
+with `base_url` is built in code, not named, and adds the host to its label —
 `openai:glm-5@models.example.com` — so its figures never combine with the
 vendor's own.
 

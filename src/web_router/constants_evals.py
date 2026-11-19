@@ -16,6 +16,9 @@ EVALS_LITELLM_JUDGE_NAME = "litellm"
 
 EXTRA_EVALS_LITELLM = "evals-litellm"
 
+EVALS_LITELLM_STOPPED_SHORT: frozenset[str] = frozenset({"length", "content_filter"})
+"""The finish reasons, in LiteLLM's OpenAI-shaped reply, of a reply cut off before it held an answer to read."""
+
 EVALS_LITELLM_IMPORT_ENV = {"LITELLM_MODE": "PRODUCTION", "LITELLM_LOCAL_MODEL_COST_MAP": "True"}
 """Set before LiteLLM is imported, unless the caller set them: without them its import reads ``.env`` and fetches
 its price list over the network."""

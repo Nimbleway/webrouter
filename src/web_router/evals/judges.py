@@ -2,8 +2,9 @@
 
 What a benchmark's ``--judge`` flag takes, so the judge is chosen the same way
 everywhere, and a judge of your own runs from the command line as the built-in
-ones do. A built-in judge's name is the label its report records, so a run's
-``judge`` field names the judge to ask for again.
+ones do. On the vendor's own endpoint a built-in judge's name is the label its
+report records, so a run's ``judge`` field names the judge to ask for again; a
+judge on another endpoint is built in code, with ``base_url``.
 """
 
 from __future__ import annotations

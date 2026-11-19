@@ -11,7 +11,7 @@ import pytest
 
 from web_router.constants_evals import EVALS_LITELLM_IMPORT_ENV
 from web_router.evals import LiteLLMJudge
-from web_router.exceptions import ConfigurationError, ProviderNotInstalledError
+from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
 
 
 class FakeLiteLLM(types.ModuleType):
@@ -19,6 +19,7 @@ class FakeLiteLLM(types.ModuleType):
         super().__init__("litellm")
         self.requests: list[dict[str, Any]] = []
         self.missing: list[str] = []
+        self.finish = "stop"
 
     def validate_environment(self, model: str, api_base: str | None = None) -> dict[str, Any]:
         return {"keys_in_environment": not self.missing, "missing_keys": self.missing}
@@ -26,7 +27,7 @@ class FakeLiteLLM(types.ModuleType):
     def completion(self, **request: Any) -> Any:
         self.requests.append(request)
         message = types.SimpleNamespace(content="A")
-        return types.SimpleNamespace(choices=[types.SimpleNamespace(message=message)])
+        return types.SimpleNamespace(choices=[types.SimpleNamespace(message=message, finish_reason=self.finish)])
 
     async def acompletion(self, **request: Any) -> Any:
         return self.completion(**request)
@@ -52,7 +53,7 @@ def test_the_litellm_judge_grades_through_litellm(litellm: FakeLiteLLM) -> None:
 
 
 async def test_the_litellm_judge_synthesizes_async_with_the_system_prompt(litellm: FakeLiteLLM) -> None:
-    judge = LiteLLMJudge("gemini/gemini-3-pro", api_base="https://models.example.com", temperature=None)
+    judge = LiteLLMJudge("gemini/gemini-3-pro", base_url="https://models.example.com", temperature=None)
     assert await judge.asynthesize("Who?", []) == "A"
     (request,) = litellm.requests
     assert [m["role"] for m in request["messages"]] == ["system", "user"]
@@ -81,3 +82,10 @@ def test_the_litellm_judge_without_the_sdk_names_its_extra(monkeypatch: pytest.M
     monkeypatch.setitem(sys.modules, "litellm", None)
     with pytest.raises(ProviderNotInstalledError, match="evals-litellm"):
         LiteLLMJudge("openrouter/z-ai/glm-5").check()
+
+
+@pytest.mark.parametrize("finish", ["length", "content_filter"])
+def test_a_reply_cut_short_is_an_error_not_a_grade(litellm: FakeLiteLLM, finish: str) -> None:
+    litellm.finish = finish
+    with pytest.raises(ProviderError, match=finish):
+        LiteLLMJudge("openrouter/z-ai/glm-5").grade("Who?", "Alice", "Alice")

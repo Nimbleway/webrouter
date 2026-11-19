@@ -98,7 +98,7 @@ def test_what_is_not_a_judge_is_refused(plugin: str) -> None:
     [
         OpenAIJudge("glm-5", base_url="https://models.example.com/v1"),
         AnthropicJudge("glm-5", base_url="https://models.example.com"),
-        LiteLLMJudge("openai/glm-5", api_base="https://models.example.com/v1"),
+        LiteLLMJudge("openai/glm-5", base_url="https://models.example.com/v1"),
     ],
 )
 def test_a_judge_on_another_endpoint_names_its_host(judge: Judge) -> None:

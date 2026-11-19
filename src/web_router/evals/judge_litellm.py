@@ -11,20 +11,26 @@ from __future__ import annotations
 import os
 from typing import Any, ClassVar
 
-from web_router.constants import EVALS_JUDGE_TEMPERATURE, EVALS_JUDGE_TIMEOUT
-from web_router.constants_evals import EVALS_LITELLM_IMPORT_ENV, EVALS_LITELLM_JUDGE_NAME, EXTRA_EVALS_LITELLM
+from web_router.constants import EVALS_JUDGE_TEMPERATURE, EVALS_JUDGE_TIMEOUT, MSG_EVALS_JUDGE_STOPPED
+from web_router.constants_evals import (
+    EVALS_LITELLM_IMPORT_ENV,
+    EVALS_LITELLM_JUDGE_NAME,
+    EVALS_LITELLM_STOPPED_SHORT,
+    EXTRA_EVALS_LITELLM,
+)
 from web_router.evals.judge import Judge
-from web_router.evals.labels import judge_label
-from web_router.exceptions import ConfigurationError, ProviderNotInstalledError
+from web_router.evals.labels import EndpointLabel
+from web_router.exceptions import ConfigurationError, ProviderError, ProviderNotInstalledError
 
 
-class LiteLLMJudge(Judge):
+class LiteLLMJudge(EndpointLabel, Judge):
     """A judge on LiteLLM's ``completion()``, for a model neither built-in judge serves.
 
     It asks for ``temperature`` 0, as :class:`~web_router.evals.OpenAIJudge`
     does, and lets LiteLLM drop it for a model that takes none, so the model
-    named in :attr:`label` is what fixes how it samples. ``api_base`` points it
-    at another endpoint, and the label then names the host.
+    named in :attr:`label` is what fixes how it samples. ``base_url`` points it
+    at another endpoint (LiteLLM's ``api_base``), and the label then names the
+    host. A reply cut short or filtered raises rather than being graded.
     """
 
     name: ClassVar[str] = EVALS_LITELLM_JUDGE_NAME
@@ -33,22 +39,18 @@ class LiteLLMJudge(Judge):
         self,
         model: str,
         *,
-        api_base: str | None = None,
+        base_url: str | None = None,
         temperature: float | None = EVALS_JUDGE_TEMPERATURE,
         timeout: float = EVALS_JUDGE_TIMEOUT,
     ) -> None:
         self.model = model
-        self.api_base = api_base
+        self.base_url = base_url
         self.temperature = temperature
         self.timeout = timeout
 
-    @property
-    def label(self) -> str:
-        return judge_label(self.name, self.model, self.api_base)
-
     def check(self) -> None:
         """Raise now what the first call would raise: the SDK is missing, or the model's provider has no key."""
-        missing = self._sdk().validate_environment(self.model, api_base=self.api_base).get("missing_keys") or []
+        missing = self._sdk().validate_environment(self.model, api_base=self.base_url).get("missing_keys") or []
         if missing:
             raise ConfigurationError.missing_api_key(self.name, missing[0])
 
@@ -74,19 +76,21 @@ class LiteLLMJudge(Judge):
         }
         if self.temperature is not None:
             request["temperature"] = self.temperature
-        if self.api_base:
-            request["api_base"] = self.api_base
+        if self.base_url:
+            request["api_base"] = self.base_url
         return request
 
     def _complete(self, system: str, user: str) -> str:
-        return _text(self._sdk().completion(**self._request(system, user)))
+        return self._text(self._sdk().completion(**self._request(system, user)))
 
     async def _acomplete(self, system: str, user: str) -> str:
-        return _text(await self._sdk().acompletion(**self._request(system, user)))
+        return self._text(await self._sdk().acompletion(**self._request(system, user)))
 
     def __repr__(self) -> str:
         return f"LiteLLMJudge(model={self.model!r})"
 
-
-def _text(response: Any) -> str:
-    return response.choices[0].message.content or ""
+    def _text(self, response: Any) -> str:
+        choice = response.choices[0]
+        if getattr(choice, "finish_reason", None) in EVALS_LITELLM_STOPPED_SHORT:
+            raise ProviderError(self.name, MSG_EVALS_JUDGE_STOPPED.format(stop_reason=choice.finish_reason))
+        return choice.message.content or ""
