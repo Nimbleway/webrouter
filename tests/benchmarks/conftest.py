@@ -148,10 +148,7 @@ ROUTE_EVAL_SIBLINGS = (
     "_common",
     "_report_tables",
     "frozen",
-    "_frozen_checks",
-    "_frozen_mixed",
-    "_frozen_price",
-    "_tools_effort_plan",
+    *FROZEN_SIBLINGS,
     "route_eval_paths",
     "route_eval_sets",
     "route_eval_rank",
@@ -240,10 +237,7 @@ SCAN_SIBLINGS = (
     "route_eval_sets",
     "route_eval_rank",
     "frozen",
-    "_frozen_checks",
-    "_frozen_mixed",
-    "_frozen_price",
-    "_tools_effort_plan",
+    *FROZEN_SIBLINGS,
 )
 """What the search scan imports from its folder, under plain names, so they are forgotten once it is."""
 

@@ -1,0 +1,124 @@
+---
+title: "Command line"
+description: "The webrouter command: search, extract, answer, research, browse and live data from a shell, printing JSON, for scripts and for agents that run commands rather than speak MCP."
+icon: "terminal"
+---
+
+`webrouter` is every method as a shell command. It suits scripts, CI jobs and
+agents that run commands but do not speak MCP (Codex, OpenClaw, Pi, a plain
+shell loop). Each subcommand calls the public method a library caller would. It
+validates, routes and fails exactly as the library does.
+
+```bash
+pip install "webrouter[all]"
+
+webrouter search "rust async runtimes" -n 5
+webrouter extract https://example.com https://example.org --format markdown
+webrouter answer "When was the Eiffel Tower completed?"
+webrouter providers
+```
+
+To try it without installing anything, run it through `uvx` with the extras the
+command needs. With no key, `search` and `extract` work through the keyless
+backends:
+
+```bash
+uvx --from "webrouter[search,extract]" webrouter search "rust async runtimes" -n 5
+```
+
+A bare `uvx webrouter` installs the core package alone, which has no search or
+extract backend, so it exits 3 and names the extra to add. Keys come from the environment only, as everywhere else in the
+library, and the command never reads a `.env` by itself. Load one into the
+command's environment:
+
+```bash
+uv run --env-file .env webrouter research "state of solid-state batteries" --effort low
+```
+
+## Output
+
+stdout is one JSON object: the call's response, the same model the library
+returns, serialized. It goes on one line, so it pipes straight into `jq`.
+`--pretty` indents it.
+
+The backend's untouched payload (`raw`) is left out because it is often the bulk
+of the response and rarely what a reader wants, on the response and on each
+item in it, such as every source `live-data sources` lists. `--raw` puts it
+back. A `browse` response never carries it, so `--raw` adds nothing there.
+
+```bash
+webrouter search "nvidia q3 earnings" -n 3 | jq -r '.results[].url'
+```
+
+## Errors and exit status
+
+On failure stdout stays empty, and stderr holds one JSON object:
+
+```json
+{"error": {"type": "ConfigurationError", "message": "No research backend is configured. ..."}}
+```
+
+The exit status says what kind of failure it was, so a script or an agent can
+branch without reading the message:
+
+| Status | Meaning | Examples |
+|---|---|---|
+| `0` | Success | |
+| `1` | The call ran and failed | a backend error, a timeout, nothing could serve it |
+| `2` | Refused before anything was sent | a bad flag, an unknown backend, an option the backend does not map, bad JSON, nothing fits `--max-cost` |
+| `3` | This machine is not set up for it | a missing API key, an extra not installed |
+| `130` | Stopped with Ctrl-C | a call may already have started, and billed |
+
+`type` is the library's exception class name. `UsageError` marks a command
+line the parser refused.
+
+## Commands
+
+| Command | Library method | Cost |
+|---|---|---|
+| `search QUERY` | `search()` | Seconds. Free on the keyless tier. |
+| `extract URL...` | `extract()` | Seconds. Free on the keyless tier. |
+| `answer QUERY` | `answer()` | Seconds. Bills per call, and each backend `auto` tries bills. |
+| `research QUERY` | `research()` | Minutes. Bills per run. |
+| `browse TASK` | `browse()` | Minutes. Bills per run. |
+| `live-data sources` | `live_data_sources()` | Free. Lists or searches (`-q`) a vendor's catalogue. |
+| `live-data source NAME` | `live_data_source()` | Free. A source's inputs and output schema. |
+| `live-data run NAME` | `live_data()` | Seconds. One billed run on the vendor's account. |
+| `providers` | `configured_*_providers()` | Free. Reads the environment and calls nothing. |
+
+Every command but `providers` takes `-p/--provider`; omit it and the router picks a backend.
+`search`, `extract`, `answer`, `research` and `browse` also take:
+
+- `--timeout SECONDS`: the most the call may wait. Left out, `research` waits up
+  to 10 minutes and `browse` up to 15, the library's defaults.
+- `--max-cost USD`: refuse a backend whose estimated cost would pass this, before
+  it runs, as a `Budget(max_cost_usd=...)` does.
+- `--option KEY=VALUE`: a backend-specific option, repeatable. The value is read
+  as JSON when it parses, so `--option max_age=3600` sends a number.
+
+`live-data run` takes `--option` too, but no timeout or cost cap, since the
+library's `live_data()` takes neither. Its `--input KEY=VALUE` always sends
+text, so an id such as `12345` stays a string; give typed values with
+`--inputs`. `webrouter COMMAND --help` lists every flag, with the values each
+one accepts.
+
+A JSON argument (`--schema`, `--records`, `live-data run --inputs`) is given
+inline or read from a file with `@path`:
+
+```bash
+webrouter research "top 5 vector databases" --schema @schema.json
+webrouter live-data sources -q "amazon product"     # find a source, note its name and provider
+webrouter live-data source NAME -p PROVIDER          # its input_schema says what --input takes
+webrouter live-data run NAME -p PROVIDER --input url=https://www.amazon.com/dp/...
+```
+
+## The command line or the MCP server?
+
+Both expose the same methods. The [MCP server](/mcp-server) suits a client that
+speaks MCP. It narrows each tool's options to the backends configured on your
+machine, shortens results to fit a context window, and keeps browser sessions
+open between calls.
+
+The command line suits anything that runs a shell. Each call is self-contained,
+so there are no `browser_*` commands: a browser session outlives a single
+process. Drive one from the library or the MCP server.

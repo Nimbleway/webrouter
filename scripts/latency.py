@@ -56,34 +56,41 @@ def run_index(manifest: Mapping[str, Any], split_setup: Any) -> dict[tuple[str, 
     return index
 
 
-def pooled_sets(sets: Mapping[str, Mapping[str, Any]], *, mixed: str) -> dict[str, frozenset[str]]:
+Setup = tuple[str, str]
+"""A backend at one mode, as frozen rows name it: ``(provider, mode)``."""
+
+
+def pooled_sets(
+    sets: Mapping[str, Mapping[str, Any]], *, mixed: str, split_setup: Callable[[str], Setup]
+) -> dict[str, frozenset[Setup]]:
     """The backend setups ``make latency`` pools from each manifest set, in order.
 
     A setup asking the same questions (``answers_sha256``) by the same method
     as a set listed before it is a rerun, such as ``sealqa-hard-254-twin`` on
     two backends: pooling it would count those questions twice for that
-    backend. A setup the earlier set did not have is new data and is pooled. A
-    ``mixed`` set calls several methods and copies its answer rows from
-    another set, so it is left out.
+    setup. A setup the earlier set did not have, a backend or one of its modes,
+    is new data and is pooled. A ``mixed`` set calls several methods and copies
+    its answer rows from another set, so it is left out.
     """
-    seen: set[tuple[str, str, str]] = set()
-    pooled: dict[str, frozenset[str]] = {}
+    seen: set[tuple[str, str, str, str]] = set()
+    pooled: dict[str, frozenset[Setup]] = {}
     for name, entry in sets.items():
         if entry["method"] == mixed:
             continue
         questions = (entry["answers_sha256"], entry["method"])
-        new = frozenset(p for p in entry["providers"] if (*questions, p) not in seen)
-        seen.update((*questions, p) for p in new)
+        setups = {split_setup(label) for run in entry["runs"] for label in run["providers"]}
+        new = frozenset(s for s in setups if (*questions, *s) not in seen)
+        seen.update((*questions, *s) for s in new)
         if new:
             pooled[name] = new
     return pooled
 
 
 def pooled_rows(
-    rows: Mapping[str, Iterable[Mapping[str, Any]]], pooled: Mapping[str, frozenset[str]]
+    rows: Mapping[str, Iterable[Mapping[str, Any]]], pooled: Mapping[str, frozenset[Setup]]
 ) -> list[Mapping[str, Any]]:
-    """Each pooled set's rows from its pooled backends, in every mode: the manifest names backends, not modes."""
-    return [row for name, backends in pooled.items() for row in rows[name] if row["provider"] in backends]
+    """Each pooled set's rows of its pooled setups."""
+    return [row for name, setups in pooled.items() for row in rows[name] if (row["provider"], row["mode"]) in setups]
 
 
 def measure(
@@ -131,7 +138,7 @@ def frozen_latency() -> tuple[dict[Key, dict[str, Any]], set[tuple[str, str, str
     frozen, common = _benchmarks()
     frozen.verify(frozen.FROZEN_DIR)
     manifest = json.loads((frozen.FROZEN_DIR / frozen.MANIFEST_FILE).read_text(encoding="utf-8"))
-    pooled = pooled_sets(manifest["sets"], mixed=frozen.MIXED)
+    pooled = pooled_sets(manifest["sets"], mixed=frozen.MIXED, split_setup=frozen.split_setup)
     manifest = {"sets": {name: manifest["sets"][name] for name in pooled}}
     rows = pooled_rows({name: frozen.read_rows(frozen.FROZEN_DIR / (name + frozen.SUFFIX)) for name in pooled}, pooled)
     return measure(

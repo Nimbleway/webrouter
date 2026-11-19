@@ -12,7 +12,7 @@ import httpx
 import pytest
 
 from web_router.exceptions import ProviderError
-from web_router.providers._chain import _nothing_started
+from web_router.providers import _chain
 from web_router.providers.parallel import ParallelResearchProvider
 from web_router.types import ResearchRequest
 
@@ -115,7 +115,7 @@ def test_only_a_connection_never_made_lets_auto_try_another_backend(failure: Exc
     with pytest.raises(ProviderError) as raised:
         _nimble(handle, max_retries=2).submit(QUERY)
 
-    assert _nothing_started(raised.value) is nothing_started
+    assert _chain.nothing_started(raised.value) is nothing_started
 
 
 def test_nimble_never_retries_the_call_that_creates_a_run() -> None:

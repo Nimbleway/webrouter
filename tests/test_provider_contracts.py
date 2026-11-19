@@ -104,3 +104,13 @@ def _top_field(field: str) -> str:
     rest = field.split(".", 1)[-1]
     rest = rest.removeprefix(MCP_ARGUMENTS)
     return rest.split(".", 1)[0]
+
+
+@pytest.mark.parametrize("key", FILLED)
+def test_every_declared_mode_says_how_it_was_checked(key: str) -> None:
+    """Each tier, content and flag a backend declares needs its own ``verified["mode.<part>"]``."""
+    contract = CONTRACTS[key]
+    missing = [part for part in contract["options"].get("mode", {}) if f"mode.{part}" not in contract["verified"]]
+    assert not missing, (
+        f"{key}: add verified['mode.<part>'] for {', '.join(missing)}: 'docs: <page>' until checked live"
+    )

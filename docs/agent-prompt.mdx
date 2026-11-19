@@ -39,6 +39,9 @@ in trust: every one returns the backend's real data, refuses what it cannot
 serve, and never invents a field.
 
 Choosing a tool:
+- Read the web-router://capabilities resource once, before your first call:
+  it lists the backends this install holds per method, so you plan with what
+  is here rather than finding out by refusal.
 - search answers in a few seconds and is free without a key. extract reads a
   URL you already have, in a few seconds. Compose these two before reaching
   for anything below.
@@ -125,9 +128,9 @@ keys you do or do not configure. An agent that should never spend money simply g
 with no research or browse keys — the tools then say so themselves.
 
 **Tell the model what this install holds.** The tool enums already list only
-configured backends; if your framework lets you, put the
-`web-router://capabilities` resource in context at startup so the model plans
-with what it has rather than discovering it by refusal.
+configured backends, and the prompt asks the model to read the
+`web-router://capabilities` resource once; if your framework lets you, put the
+resource in context at startup instead, and drop that line.
 
 **Latency expectations prevent duplicate runs.** The single most expensive
 failure mode is a model impatient with a job-shaped call. Keep the "poll,

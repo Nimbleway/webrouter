@@ -17,7 +17,7 @@ from tests._live_data_any_fixtures import no_vendor_keys_fixture, two_backends_f
 from tests._live_data_fake import FakeLiveDataProvider
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
-from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.exceptions import ConfigurationError, LiveDataBackendChoiceError, ProviderError
 from web_router.live_data_backends import usable_backends
 
 # -- finding a source ---------------------------------------------------------
@@ -118,8 +118,10 @@ def test_a_bare_name_runs_when_one_backend_is_configured(fake_live_data_provider
 
 
 def test_a_bare_name_with_several_backends_asks_which(two_backends: None) -> None:
-    with pytest.raises(ConfigurationError, match="fake, paged"):
+    with pytest.raises(LiveDataBackendChoiceError, match="fake, paged") as caught:
         WebRouter().live_data("books_pdp", {"url": "https://example.com/p/1"})
+    assert isinstance(caught.value, ConfigurationError)  # an except for that still catches it
+    assert caught.value.providers == ["fake", "paged"]
 
 
 def test_a_bare_name_with_its_provider_works_as_before(two_backends: None) -> None:

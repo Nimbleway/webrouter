@@ -46,6 +46,7 @@ from web_router.constants_litellm import (
 )
 from web_router.constants_tavily import TAVILY_SEARCH_PARAMETERS
 from web_router.exceptions import ConfigurationError
+from web_router.modes import ModeDeclarations
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._search_text import as_snippet, lite_body
 from web_router.providers._utils import best_text
@@ -64,6 +65,7 @@ class LiteLLMSearchMixin:
     # with the proxy's key.
     base_url: ClassVar[str] = ""
     search_path: ClassVar[str]
+    tiers, contents, flags = ModeDeclarations.tiers, ModeDeclarations.contents, ModeDeclarations.flags  # not sent
     env_api_key: ClassVar[str | None] = ENV_LITELLM_PROXY_API_KEY
     api_key_header: ClassVar[str] = LITELLM_API_KEY_HEADER
     api_key_prefix: ClassVar[str] = LITELLM_API_KEY_PREFIX

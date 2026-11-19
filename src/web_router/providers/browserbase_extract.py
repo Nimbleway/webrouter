@@ -40,6 +40,7 @@ from web_router.constants_browserbase import (
     MSG_BROWSERBASE_FETCH_NO_TEXT,
     MSG_BROWSERBASE_FETCH_NOT_FORMAT,
 )
+from web_router.constants_mode_parts_extract import BROWSERBASE_EXTRACT_FLAGS
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload
 from web_router.types import ExtractedDocument, ExtractFailure, ExtractFormat, ExtractRequest, ExtractResponse
@@ -59,6 +60,7 @@ class BrowserbaseExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_BROWSERBASE
+    flags = BROWSERBASE_EXTRACT_FLAGS
     supported_parameters: ClassVar[frozenset[str]] = frozenset({"format", "profile"})
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(BROWSERBASE_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = BROWSERBASE_EXTRACT_DEFAULT_FORMAT
@@ -72,6 +74,7 @@ class BrowserbaseExtractProvider(HttpExtractProvider):
         return build_payload(
             request,
             {"profile": BROWSERBASE_PROFILE_FIELD},
+            self,
             url=urls[0],
             format=BROWSERBASE_EXTRACT_FORMATS[self.format_of(request)],
         )

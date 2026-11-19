@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from web_router.constants import DELEGATING_PROVIDERS, MAX_INHERITS_FROM_AUTO, PROVIDER_AUTO, PROVIDER_MAX
+from web_router.providers._pinning import config_of
 from web_router.types import provider_name
 
 
@@ -21,7 +22,7 @@ def config_for(configs: Mapping[str, dict[str, Any]], key: str) -> dict[str, Any
     races the members ``auto`` would try, so a ``chain`` or
     ``members_config`` set under ``auto`` is its own unless it sets one.
     """
-    config = dict(configs.get(key, {}))
+    config = dict(config_of(configs, key))
     if key == PROVIDER_MAX:
         shared = configs.get(PROVIDER_AUTO, {})
         for entry in MAX_INHERITS_FROM_AUTO:

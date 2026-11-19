@@ -41,9 +41,45 @@
           "example.com"
         ]
       }
+    },
+    "mode": {
+      "browser-use-gpt-5.6-luna": {
+        "body.llm": "gpt-5.6-luna"
+      },
+      "browser-use-gemini-flash-lite-latest": {
+        "body.llm": "gemini-flash-lite-latest"
+      },
+      "browser-use-gemini-flash-latest": {
+        "body.llm": "gemini-flash-latest"
+      },
+      "browser-use-gemini-3-flash-preview": {
+        "body.llm": "gemini-3-flash-preview"
+      },
+      "browser-use-o3": {
+        "body.llm": "o3"
+      },
+      "browser-use-claude-sonnet-5": {
+        "body.llm": "claude-sonnet-5"
+      },
+      "browser-use-claude-sonnet-4-5-20250929": {
+        "body.llm": "claude-sonnet-4-5-20250929"
+      },
+      "browser-use-claude-opus-4-8": {
+        "body.llm": "claude-opus-4-8"
+      }
     }
   },
   "not_mapped": [],
+  "offers": [
+    "browser-use-gpt-5.6-luna",
+    "browser-use-gemini-flash-lite-latest",
+    "browser-use-gemini-flash-latest",
+    "browser-use-gemini-3-flash-preview",
+    "browser-use-o3",
+    "browser-use-claude-sonnet-5",
+    "browser-use-claude-sonnet-4-5-20250929",
+    "browser-use-claude-opus-4-8"
+  ],
   "source": [
     "https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
     "https://docs.browser-use.com/cloud/api-v2/tasks/get-task-status",
@@ -54,13 +90,17 @@
     "start_url": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_a_simple_task",
     "output_schema": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_in_the_schema_within_the_step_limit",
     "max_steps": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_in_the_schema_within_the_step_limit",
-    "allowed_domains": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_in_the_schema_within_the_step_limit"
+    "allowed_domains": "live: tests/providers/test_browser_use_browse.py::test_live_browse_answers_in_the_schema_within_the_step_limit",
+    "mode.browser-use-gpt-5.6-luna": "docs: https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
+    "mode.browser-use-gemini-flash-lite-latest": "docs: https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
+    "mode.browser-use-gemini-flash-latest": "docs: https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
+    "mode.browser-use-gemini-3-flash-preview": "docs: https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
+    "mode.browser-use-o3": "docs: https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
+    "mode.browser-use-claude-sonnet-5": "docs: https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
+    "mode.browser-use-claude-sonnet-4-5-20250929": "docs: https://docs.browser-use.com/cloud/api-v2/tasks/create-task",
+    "mode.browser-use-claude-opus-4-8": "docs: https://docs.browser-use.com/cloud/api-v2/tasks/create-task"
   },
   "vendor_options": {
-    "llm": {
-      "status": "passthrough",
-      "note": "The model the agent runs on."
-    },
     "sessionId": {
       "status": "passthrough",
       "note": "Runs the task in a session the caller owns; cancelling then stops the task and leaves the session running."

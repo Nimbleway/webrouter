@@ -28,10 +28,34 @@
       "text": {
         "refused": "UnsupportedFormatError"
       }
+    },
+    "mode": {
+      "nimble-vx8": {
+        "body.driver": "vx8"
+      },
+      "nimble-vx8-pro": {
+        "body.driver": "vx8-pro"
+      },
+      "nimble-vx10": {
+        "body.driver": "vx10"
+      },
+      "nimble-vx10-pro": {
+        "body.driver": "vx10-pro"
+      },
+      "nimble-max": {
+        "body.driver": "max"
+      }
     }
   },
   "not_mapped": [
     "profile"
+  ],
+  "offers": [
+    "nimble-vx8",
+    "nimble-vx8-pro",
+    "nimble-vx10",
+    "nimble-vx10-pro",
+    "nimble-max"
   ],
   "default_format": "html",
   "batches_urls": false,
@@ -40,13 +64,14 @@
     "nimble-python Nimble.extract.run"
   ],
   "verified": {
-    "format": "live: tests/test_integration_surface.py::test_html_really_comes_back_as_markup"
+    "format": "live: tests/test_integration_surface.py::test_html_really_comes_back_as_markup",
+    "mode.nimble-vx8": "docs: https://docs.nimbleway.com/nimble-sdk/web-tools/extract",
+    "mode.nimble-vx8-pro": "docs: https://docs.nimbleway.com/nimble-sdk/web-tools/extract",
+    "mode.nimble-vx10": "docs: https://docs.nimbleway.com/nimble-sdk/web-tools/extract",
+    "mode.nimble-vx10-pro": "docs: https://docs.nimbleway.com/nimble-sdk/web-tools/extract",
+    "mode.nimble-max": "docs: https://docs.nimbleway.com/nimble-sdk/web-tools/extract"
   },
   "vendor_options": {
-    "driver": {
-      "status": "passthrough",
-      "note": "auto | vx6 | vx8 | vx10 | vx12 and their -pro variants."
-    },
     "auto_driver_configuration": {
       "status": "passthrough",
       "note": "Attempts per driver candidate; opts into auto driver selection."

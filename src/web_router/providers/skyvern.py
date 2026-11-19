@@ -6,9 +6,9 @@ dependency would not simplify. Install with the ``all`` extra.
 Reads ``SKYVERN_API_KEY`` unless a key is passed explicitly.
 
 Slim by design: only ``start_url`` is mapped, and it has not been confirmed
-against a live call. Skyvern's ``data_extraction_schema``, ``max_steps``,
-engine, proxy location and browser session are all reachable through
-``provider_options``; mapping one properly is a welcome PR -- see
+against a live call. The engine is a vendor mode (``skyvern:skyvern-2.0``);
+Skyvern's ``data_extraction_schema``, ``max_steps``, proxy location and
+browser session are all reachable through ``provider_options``; mapping one properly is a welcome PR -- see
 CONTRIBUTING.md.
 """
 
@@ -28,6 +28,7 @@ from web_router.constants import (
     SKYVERN_RUN_TASK_PATH,
     SKYVERN_TASK_STATES,
 )
+from web_router.constants_mode_parts_browse import SKYVERN_TIERS
 from web_router.providers._http import HttpBrowseProvider
 from web_router.providers._utils import build_payload
 from web_router.types import BrowseRequest, BrowseResponse
@@ -53,6 +54,7 @@ class SkyvernBrowseProvider(HttpBrowseProvider):
     """
 
     name: ClassVar[str] = PROVIDER_SKYVERN
+    tiers = SKYVERN_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset(SKYVERN_BROWSE_FIELDS)
 
     base_url: ClassVar[str] = SKYVERN_BASE_URL
@@ -87,7 +89,7 @@ class SkyvernBrowseProvider(HttpBrowseProvider):
         return True
 
     def _build_payload(self, request: BrowseRequest) -> dict[str, Any]:
-        return build_payload(request, SKYVERN_BROWSE_FIELDS, prompt=request.task)
+        return build_payload(request, SKYVERN_BROWSE_FIELDS, self, prompt=request.task)
 
     def _progress(self, request: BrowseRequest, run: dict[str, Any]) -> BrowseProgress:
         state = self.state_of(str(run.get("status")), SKYVERN_TASK_STATES)

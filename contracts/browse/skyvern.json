@@ -24,12 +24,36 @@
       "sample": {
         "body.url": "https://example.com"
       }
+    },
+    "mode": {
+      "skyvern-2.0": {
+        "body.engine": "skyvern-2.0"
+      },
+      "skyvern-3.0": {
+        "body.engine": "skyvern-3.0"
+      },
+      "skyvern-openai-cua": {
+        "body.engine": "openai-cua"
+      },
+      "skyvern-anthropic-cua": {
+        "body.engine": "anthropic-cua"
+      },
+      "skyvern-ui-tars": {
+        "body.engine": "ui-tars"
+      }
     }
   },
   "not_mapped": [
     "allowed_domains",
     "max_steps",
     "output_schema"
+  ],
+  "offers": [
+    "skyvern-2.0",
+    "skyvern-3.0",
+    "skyvern-openai-cua",
+    "skyvern-anthropic-cua",
+    "skyvern-ui-tars"
   ],
   "source": [
     "https://www.skyvern.com/docs/api-reference/openapi.json",
@@ -38,13 +62,14 @@
     "https://www.skyvern.com/docs/sdk-reference/runs"
   ],
   "verified": {
-    "start_url": "docs: https://www.skyvern.com/docs/api-reference/openapi.json"
+    "start_url": "docs: https://www.skyvern.com/docs/api-reference/openapi.json",
+    "mode.skyvern-2.0": "docs: https://www.skyvern.com/docs/api-reference/openapi.json",
+    "mode.skyvern-3.0": "docs: https://www.skyvern.com/docs/api-reference/openapi.json",
+    "mode.skyvern-openai-cua": "docs: https://www.skyvern.com/docs/api-reference/openapi.json",
+    "mode.skyvern-anthropic-cua": "docs: https://www.skyvern.com/docs/api-reference/openapi.json",
+    "mode.skyvern-ui-tars": "docs: https://www.skyvern.com/docs/api-reference/openapi.json"
   },
   "vendor_options": {
-    "engine": {
-      "status": "passthrough",
-      "note": "skyvern-1.0 | skyvern-2.0 | skyvern-3.0 | openai-cua | anthropic-cua | ui-tars | yutori-navigator."
-    },
     "title": {
       "status": "passthrough",
       "note": "A title for the run."

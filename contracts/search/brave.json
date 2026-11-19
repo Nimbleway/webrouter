@@ -68,10 +68,19 @@
       "year": {
         "query.freshness": "py"
       }
+    },
+    "mode": {
+      "brave-extra-snippets": {
+        "query.extra_snippets": true
+      }
     }
   },
   "not_mapped": [
     "effort"
+  ],
+  "offers": [
+    "lite",
+    "brave-extra-snippets"
   ],
   "source": [
     "https://api-dashboard.search.brave.com/api-reference/web/search/get",
@@ -84,7 +93,8 @@
     "exclude_domains": "live: 2026-11-09 search-options check: NOT site:, no wikipedia.org result",
     "country": "live: 2026-11-09 search-options check: BR with locale=pt-BR accepted",
     "locale": "live: 2026-11-09 search-options check: pt-BR with country=BR accepted",
-    "recency": "live: 2026-11-09 search-options check: week, 18 of 18 results dated inside the window (page_age)"
+    "recency": "live: 2026-11-09 search-options check: week, 18 of 18 results dated inside the window (page_age)",
+    "mode.brave-extra-snippets": "docs: https://api-dashboard.search.brave.com/api-reference/web/search/get"
   },
   "vendor_options": {
     "ui_lang": {
@@ -122,10 +132,6 @@
     "goggles": {
       "status": "passthrough",
       "note": "A Goggle URL or inline definition that re-ranks results."
-    },
-    "extra_snippets": {
-      "status": "passthrough",
-      "note": "Boolean; up to five extra excerpts fill SearchResult.content when returned. Not mapped to a depth: excerpts are not a truncated body (search_depth serves lite alone)."
     },
     "summary": {
       "status": "passthrough",

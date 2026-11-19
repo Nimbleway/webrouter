@@ -23,6 +23,7 @@ from typing import Any
 from web_router._urls import host_of
 from web_router.constants_decider import (
     DECIDER_MAX_RESPONSE_BYTES,
+    DECIDER_WHY_REPLY,
     KEY_HOMES,
     MSG_DECIDER_BOTH,
     MSG_DECIDER_ENV_NAME,
@@ -59,7 +60,8 @@ class Endpoint:
     """The host alone, which names the router in the record and its reasons: a reason's URLs are cut."""
     timeout_s: float
     headers: dict[str, str] = field(repr=False)
-    """The content type and, when there is a key, ``Authorization``: never shown."""
+    """The content type and, when there is a key, its auth header (``Authorization`` unless the API names
+    another): never shown."""
     httpx: Any = field(repr=False)
 
 
@@ -91,9 +93,17 @@ def _key(name: str, host: str, api_key: object, api_key_env: object) -> str | No
 
 
 def endpoint(
-    name: str, base_url: object, path: str, *, api_key: object, api_key_env: object, timeout_s: object
+    name: str,
+    base_url: object,
+    path: str,
+    *,
+    api_key: object,
+    api_key_env: object,
+    timeout_s: object,
+    auth: tuple[str, str] = (REMOTE_AUTH_HEADER, REMOTE_AUTH_VALUE),
 ) -> Endpoint:
-    """The checked endpoint ``base_url`` + ``path``, its key and its timeout.
+    """The checked endpoint ``base_url`` + ``path``, its key and its timeout. ``auth`` is the header the key
+    travels in and its value, ``{key}`` filled in: a bearer ``Authorization`` unless set.
 
     Raises:
         ConfigurationError: for httpx not installed, a base URL :func:`~.remote_url.checked_url` refuses, a
@@ -105,7 +115,7 @@ def endpoint(
     url = checked_url(base.rstrip("/") + path, httpx, field="path")
     domain = httpx.URL(url).host
     key = _key(name, domain, api_key, api_key_env)
-    headers = {**REMOTE_CONTENT_TYPE, **({REMOTE_AUTH_HEADER: REMOTE_AUTH_VALUE.format(key=key)} if key else {})}
+    headers = {**REMOTE_CONTENT_TYPE, **({auth[0]: auth[1].format(key=key)} if key else {})}
     return Endpoint(
         url=url, host=host_of(url), domain=domain, timeout_s=checked_timeout(timeout_s), headers=headers, httpx=httpx
     )
@@ -155,3 +165,17 @@ def preset_of(name: str, presets: dict[str, Any], preset: object, base_url: obje
     if base_url is not None:
         raise ConfigurationError(MSG_DECIDER_BOTH.format(name=name))
     return presets[preset]
+
+
+def choice_answer(data: object, key: str, host: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The answer to ``choice`` question ``key`` in a decisions reply, and its probabilities.
+
+    Raises:
+        RemoteRouterInvalid: for a reply without that answer or without its probabilities as a mapping.
+    """
+    answers = data.get("answers") if isinstance(data, dict) else None
+    answer = answers.get(key) if isinstance(answers, dict) else None
+    probabilities = answer.get("probabilities") if isinstance(answer, dict) else None
+    if not isinstance(answer, dict) or not isinstance(probabilities, dict):
+        raise RemoteRouterInvalid(host, DECIDER_WHY_REPLY)
+    return answer, probabilities
