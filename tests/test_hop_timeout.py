@@ -40,10 +40,24 @@ async def test_the_async_router_cuts_the_hop_off_and_moves_on() -> None:
     assert time.monotonic() - started < 2.0
 
 
-def test_without_hop_timeout_the_hung_member_takes_the_whole_deadline() -> None:
-    """Today's default stays: no cap per hop, so the call's deadline ends the walk."""
+def test_by_default_a_hop_gets_half_the_time_left() -> None:
+    started = time.monotonic()
+    assert hop_router().search("q", timeout=1).provider == "healthy"
+    assert 0.4 < time.monotonic() - started < 0.9
+
+
+def test_the_last_hop_left_gets_all_the_time_left() -> None:
+    """``slow`` answers in 0.35 s: past a quarter of the call, so only an uncapped last hop answers."""
+    assert hop_router(chain=("hangs", "slow")).search("q", timeout=1).provider == "slow"
+
+
+def test_with_no_call_deadline_the_default_caps_nothing() -> None:
+    assert hop_router(chain=("slow", "healthy")).search("q").provider == "slow"
+
+
+def test_hop_timeout_false_lets_the_hung_member_take_the_whole_deadline() -> None:
     with pytest.raises(DeadlineExceededError):
-        hop_router().search("q", timeout=0.3)
+        hop_router(hop_timeout=False).search("q", timeout=0.3)
 
 
 def test_the_call_deadline_still_wins_when_it_comes_first() -> None:
@@ -52,12 +66,11 @@ def test_the_call_deadline_still_wins_when_it_comes_first() -> None:
 
 
 def test_a_hop_cut_off_is_a_timeout_failure_naming_the_cap() -> None:
-    router = WebRouter(provider_config={"auto": {"chain": ["hangs"]}}, hop_timeout=0.2)
     with pytest.raises(AllProvidersFailedError) as caught:
-        router.search("q", timeout=5)
+        hop_router(chain=("hangs", "fails"), hop_timeout=0.2).search("q", timeout=5)
     failure = caught.value.failures["hangs"]
     assert failure.kind == ERROR_KIND_TIMEOUT
-    assert "hop_timeout of 0.2s" in str(failure)
+    assert "hop timeout of 0.2s" in str(failure)
 
 
 @pytest.mark.parametrize("value", [0, -1, float("inf"), float("nan"), True, "3"])

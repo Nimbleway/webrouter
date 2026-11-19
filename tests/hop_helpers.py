@@ -1,4 +1,5 @@
-"""Fake ``auto`` members for the hop-timeout tests: one that hangs, one that answers, and a router over both."""
+"""Fake ``auto`` members for the hop-timeout tests -- one hangs, one answers, one answers slowly, one fails -- and a
+router over a chain of them."""
 
 from __future__ import annotations
 
@@ -10,10 +11,11 @@ from typing import Any
 import pytest
 
 from tests.conftest import FakeProvider
-from web_router import WebRouter
+from web_router import ProviderError, WebRouter
 from web_router.providers._deadline import call_budget
 from web_router.registry import register_provider, unregister_provider
 from web_router.types import SearchRequest, SearchResponse
+from web_router.types_errors import ERROR_KIND_UPSTREAM
 
 HANG = 30.0
 """How long the hanging member's request would wait on its own: far past any cap under test."""
@@ -40,15 +42,47 @@ class _Healthy(FakeProvider):
     name = "healthy"
 
 
+SLOW = 0.35
+"""How long the slow member takes to answer: more than a quarter of a 1 s call, less than half."""
+
+
+class _Slow(FakeProvider):
+    name = "slow"
+
+    def _search(self, request: SearchRequest) -> SearchResponse:
+        budget = call_budget(SLOW)  # as a transport would: the request waits no longer than the time left
+        time.sleep(budget)
+        if budget < SLOW:
+            raise TimeoutError("read timed out")
+        return self._respond(request)
+
+    async def _asearch(self, request: SearchRequest) -> SearchResponse:
+        await asyncio.sleep(SLOW)
+        return self._respond(request)
+
+
+class _Fails(FakeProvider):
+    name = "fails"
+
+    def _search(self, request: SearchRequest) -> SearchResponse:
+        raise ProviderError(self.name, "HTTP 500", kind=ERROR_KIND_UPSTREAM)
+
+    async def _asearch(self, request: SearchRequest) -> SearchResponse:
+        return self._search(request)
+
+
+_MEMBERS = {"hangs": _Hangs, "healthy": _Healthy, "slow": _Slow, "fails": _Fails}
+
+
 @pytest.fixture
 def hop_members() -> Iterator[None]:
     _Hangs.calls = 0
-    register_provider("hangs", _Hangs)
-    register_provider("healthy", _Healthy)
+    for name, member in _MEMBERS.items():
+        register_provider(name, member)
     yield
-    unregister_provider("hangs")
-    unregister_provider("healthy")
+    for name in _MEMBERS:
+        unregister_provider(name)
 
 
-def hop_router(cls: type = WebRouter, **options: Any) -> Any:
-    return cls(provider_config={"auto": {"chain": ["hangs", "healthy"]}}, **options)
+def hop_router(cls: type = WebRouter, chain: tuple[str, ...] = ("hangs", "healthy"), **options: Any) -> Any:
+    return cls(provider_config={"auto": {"chain": list(chain)}}, **options)

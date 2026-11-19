@@ -33,7 +33,7 @@ import threading
 from collections.abc import Collection, Mapping
 from contextlib import AsyncExitStack, ExitStack
 from types import TracebackType
-from typing import Any
+from typing import Any, Literal
 
 from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
@@ -116,8 +116,8 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         url_policy: UrlPolicy | None = None,
         vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
-        hop_timeout: float | None = None,
-        timeout_cooldown: bool = False,
+        hop_timeout: float | Literal[False] | None = None,
+        timeout_cooldown: bool = True,
     ) -> None:
         """
         Args:
@@ -131,12 +131,12 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 router from ``router_config``, closed with this one -- see :mod:`web_router.routing.registry`.
                 ``route_modes=True`` shows it a candidate per vendor mode too (the router's own, else no).
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
-            vendor_credentials: for :meth:`call_vendor`, read before the environment -- see
-                :mod:`web_router.client_vendors`.
+            vendor_credentials: for :meth:`call_vendor`, read before the environment (:mod:`web_router.client_vendors`).
             max_concurrency: the most vendor calls this router has in flight at once, across every search,
                 extract and answer it serves (per event loop on the async router); ``None`` caps nothing. A call
                 waits for a slot within its own ``timeout`` -- see :mod:`web_router.providers._runtime`.
-            hop_timeout, timeout_cooldown: seconds each ``auto`` hop may take, and a cooldown after timeouts in a row.
+            hop_timeout, timeout_cooldown: an ``auto`` hop's cap (half the time left unless set; ``False`` for none),
+                and a cooldown after timeouts in a row -- see :mod:`web_router.providers._hop`.
         """
         self._runtime = Runtime.capped(max_concurrency, hop_timeout, timeout_cooldown)
         self._init_vendors(vendor_credentials)
@@ -302,8 +302,8 @@ class WebRouter(
         url_policy: UrlPolicy | None = None,
         vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
-        hop_timeout: float | None = None,
-        timeout_cooldown: bool = False,
+        hop_timeout: float | Literal[False] | None = None,
+        timeout_cooldown: bool = True,
     ) -> None:
         """
         Raises:

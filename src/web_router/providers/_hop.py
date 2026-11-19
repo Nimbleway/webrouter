@@ -12,11 +12,14 @@ timeout counts towards one), and the hop is logged on the
 took and, for an extract, the hosts it was asked for: never a key, a path or a
 query string. A success is DEBUG; a failure, a skip and a cooldown are INFO.
 
-A router's ``hop_timeout`` holds each hop to that many seconds, or to the
-call's deadline when that comes first: a hop still in flight then fails as a
-``timeout`` :class:`~web_router.exceptions.ProviderError`, which the chain moves
-past like any other failure, so one backend that hangs no longer takes the
-whole deadline. Past the call's own deadline, the deadline's error stands.
+Each hop but the last one left is capped: at the router's ``hop_timeout``
+seconds, or, with none set, at :data:`~web_router.constants_production.HOP_SHARE`
+of the call's time left when it has a deadline (``hop_timeout=False`` caps
+nothing). A hop still in flight at its cap fails as a ``timeout``
+:class:`~web_router.exceptions.ProviderError`, which the chain moves past like
+any other failure, so one backend that hangs no longer takes the whole
+deadline. The last hop gets all the time left; past the call's own deadline,
+the deadline's error stands.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ from typing import Any, TypeVar
 from web_router._urls import host_of
 from web_router.constants import DEADLINE_TOLERANCE
 from web_router.constants_production import (
+    HOP_SHARE,
     LOG_HOP_CANCELLED,
     LOG_HOP_COOLING,
     LOG_HOP_CUT_OFF,
@@ -41,7 +45,7 @@ from web_router.constants_production import (
     MSG_HOP_TIMED_OUT,
 )
 from web_router.exceptions import DeadlineExceededError, ProviderError
-from web_router.providers._deadline import call_deadline, current_deadline
+from web_router.providers._deadline import Deadline, call_deadline, current_deadline
 from web_router.providers._in_flight import in_flight
 from web_router.providers._runtime import current_runtime
 from web_router.types_errors import ERROR_KIND_TIMEOUT
@@ -52,12 +56,17 @@ _ResultT = TypeVar("_ResultT")
 _RequestT = TypeVar("_RequestT")
 
 
-def hop(tool: str, provider: str, call: Callable[[_RequestT], _ResultT], request: _RequestT) -> _ResultT:
-    """``call(request)``, one member of ``tool``'s chain, unless it is cooling down; log how it went."""
+def hop(
+    tool: str, provider: str, call: Callable[[_RequestT], _ResultT], request: _RequestT, last: bool = False
+) -> _ResultT:
+    """``call(request)``, one member of ``tool``'s chain, unless it is cooling down; log how it went.
+
+    ``last``: no member is left after it, so it is not capped.
+    """
     _refuse_cooling(tool, provider)
     started = time.monotonic()
     try:
-        with _capped(provider):
+        with _capped(provider, last):
             response = call(request)
     except Exception as exc:
         _failed(tool, provider, exc, started, request)
@@ -68,7 +77,11 @@ def hop(tool: str, provider: str, call: Callable[[_RequestT], _ResultT], request
 
 
 async def ahop(
-    tool: str, provider: str, call: Callable[[_RequestT], Awaitable[_ResultT]], request: _RequestT
+    tool: str,
+    provider: str,
+    call: Callable[[_RequestT], Awaitable[_ResultT]],
+    request: _RequestT,
+    last: bool = False,
 ) -> _ResultT:
     """Async counterpart of :func:`hop`."""
     _refuse_cooling(tool, provider)
@@ -77,7 +90,7 @@ async def ahop(
         flight.member = provider
     started = time.monotonic()
     try:
-        with _capped(provider):
+        with _capped(provider, last):
             response = await call(request)
     except Exception as exc:
         _failed(tool, provider, exc, started, request)
@@ -97,14 +110,13 @@ async def ahop(
 
 
 @contextmanager
-def _capped(provider: str) -> Iterator[None]:
-    """Hold the block to the router's ``hop_timeout``; a hop it cut off, with call time left, fails as ``timeout``."""
-    runtime = current_runtime()
-    seconds = None if runtime is None else runtime.hop_timeout
+def _capped(provider: str, last: bool) -> Iterator[None]:
+    """Hold the block to its hop's cap; a hop it cut off, with call time left, fails as ``timeout``."""
+    outer = current_deadline()
+    seconds = None if last else _cap(outer)
     if seconds is None:
         yield
         return
-    outer = current_deadline()
     try:
         with call_deadline(seconds):
             yield
@@ -113,6 +125,16 @@ def _capped(provider: str) -> Iterator[None]:
             raise  # the call's own deadline: no time left for another member
         message = MSG_HOP_TIMED_OUT.format(seconds=seconds)
         raise ProviderError(provider, message, original=exc, kind=ERROR_KIND_TIMEOUT) from exc
+
+
+def _cap(outer: Deadline | None) -> float | None:
+    """The router's ``hop_timeout``, else its share of the time ``outer`` leaves; ``None`` for no cap."""
+    runtime = current_runtime()
+    if runtime is None or runtime.hop_timeout is False:
+        return None
+    if runtime.hop_timeout is not None:
+        return runtime.hop_timeout
+    return None if outer is None else max(0.0, outer.left()) * HOP_SHARE
 
 
 def _answered(provider: str, response: object) -> None:

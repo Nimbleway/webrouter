@@ -124,7 +124,8 @@ def run(walk: Walk, request: Any) -> Ran[Any]:
             continue
         try:
             call = getattr(walk.member(position), walk.method)
-            response = hop(walk.tool, name, call, attempt.request) if walk.hops else call(attempt.request)
+            last = _last(walk, tried, index)
+            response = hop(walk.tool, name, call, attempt.request, last) if walk.hops else call(attempt.request)
         except _deadline(walk) as exc:
             return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, entry_name(name, mode), walk.tool))
         except walk.refusals as exc:
@@ -149,7 +150,10 @@ async def arun(walk: Walk, request: Any) -> Ran[Any]:
             continue
         try:
             call = getattr(walk.member(position), f"a{walk.method}")
-            response = await (ahop(walk.tool, name, call, attempt.request) if walk.hops else call(attempt.request))
+            last = _last(walk, tried, index)
+            response = await (
+                ahop(walk.tool, name, call, attempt.request, last) if walk.hops else call(attempt.request)
+            )
         except _deadline(walk) as exc:
             return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, entry_name(name, mode), walk.tool))
         except walk.refusals as exc:
@@ -162,6 +166,11 @@ async def arun(walk: Walk, request: Any) -> Ran[Any]:
             return Ran(response, name, walk.order[index + 1 :])
         tried.hold(response)
     return Ran(walk.exhausted(tried.held, tried.failures, tried.refused))
+
+
+def _last(walk: Walk, tried: Tried, index: int) -> bool:
+    """Whether the attempt at ``index`` is the last that could run: every later one's backend has stopped."""
+    return all(position in tried.stopped for position, _, _ in walk.order[index + 1 :])
 
 
 def _late(walk: Walk, tried: Tried) -> Any:

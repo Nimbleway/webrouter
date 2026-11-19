@@ -24,7 +24,7 @@ COOLDOWN_MAX_S: Final = 600.0
 """The longest a backend cools down, whatever its ``Retry-After`` says: a router outlives one burst."""
 
 TIMEOUT_COOLDOWN_AFTER: Final = 3
-"""With ``timeout_cooldown=True``, the timeouts in a row after which ``auto`` passes a backend over for a while."""
+"""With ``timeout_cooldown`` on (the default), the timeouts in a row after which ``auto`` passes a backend over."""
 
 TIMEOUT_COOLDOWN_S: Final = 30.0
 """How long a backend cools down after :data:`TIMEOUT_COOLDOWN_AFTER` timeouts in a row."""
@@ -39,8 +39,13 @@ HOP_CODE_COOLING_DOWN: Final = "cooling_down"
 """What a decision record's hop says for a backend ``auto`` passed over while it cooled down."""
 MSG_COOLING_DOWN: Final = "cooling down after {cause} for {seconds:.1f}s more; auto passed it over without calling it"
 MSG_INVALID_TIMEOUT: Final = "timeout takes a finite number of seconds, 0 or more, or None for no limit; got {value!r}"
-MSG_INVALID_HOP_TIMEOUT: Final = "hop_timeout takes a number of seconds above 0, or None for no cap; got {value!r}"
-MSG_HOP_TIMED_OUT: Final = "no answer within the router's hop_timeout of {seconds:g}s; auto moved on"
+HOP_SHARE: Final = 0.5
+"""With no ``hop_timeout`` set, the share of a call's time left that each ``auto`` hop but the last may take."""
+
+MSG_INVALID_HOP_TIMEOUT: Final = (
+    "hop_timeout takes seconds above 0, None for a share of the time left, or False for no cap; got {value!r}"
+)
+MSG_HOP_TIMED_OUT: Final = "no answer within its hop timeout of {seconds:.1f}s; auto moved on to the next backend"
 MSG_INVALID_MAX_CONCURRENCY: Final = "max_concurrency must be a whole number of 1 or more, or None; got {value!r}"
 
 LOG_HOP_OK: Final = "auto %s: %s answered in %.3fs%s"

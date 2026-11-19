@@ -13,7 +13,7 @@ from collections.abc import AsyncIterator, Iterator
 from contextlib import AbstractContextManager, asynccontextmanager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from web_router.constants import DELEGATING_PROVIDERS
 from web_router.constants_production import MSG_INVALID_HOP_TIMEOUT
@@ -31,12 +31,16 @@ class Runtime:
 
     cooldowns: Cooldowns = field(default_factory=Cooldowns)
     limiter: Limiter | None = None
-    hop_timeout: float | None = None
-    """The most one ``auto`` hop may take before the chain moves on (:mod:`._hop`); ``None`` caps nothing."""
+    hop_timeout: float | Literal[False] | None = None
+    """The most one ``auto`` hop may take before the chain moves on (:mod:`._hop`): ``None`` for a share of the
+    call's time left, ``False`` for no cap."""
 
     @classmethod
     def capped(
-        cls, max_concurrency: int | None, hop_timeout: float | None = None, timeout_cooldown: bool = False
+        cls,
+        max_concurrency: int | None,
+        hop_timeout: float | Literal[False] | None = None,
+        timeout_cooldown: bool = True,
     ) -> Runtime:
         """A router's runtime, its vendor calls held to ``max_concurrency`` (``None`` caps nothing), each ``auto``
         hop to ``hop_timeout``, and with ``timeout_cooldown`` a cooldown after timeouts in a row."""
@@ -47,14 +51,14 @@ class Runtime:
         )
 
 
-def checked_hop_timeout(value: float | None) -> float | None:
-    """``hop_timeout`` as given, once it is a finite number of seconds above 0; ``None`` caps nothing.
+def checked_hop_timeout(value: float | Literal[False] | None) -> float | Literal[False] | None:
+    """``hop_timeout`` as given: a finite number of seconds above 0, ``None`` (a share of the time left) or ``False``.
 
     Raises:
-        InvalidParameterError: for anything else, a bool included.
+        InvalidParameterError: for anything else, ``True`` included.
     """
-    if value is None:
-        return None
+    if value is None or value is False:
+        return value
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
         raise InvalidParameterError("hop_timeout", MSG_INVALID_HOP_TIMEOUT.format(value=value))
     return float(value)

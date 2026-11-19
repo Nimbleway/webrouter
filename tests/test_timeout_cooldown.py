@@ -1,4 +1,4 @@
-"""``timeout_cooldown=True``: a backend that timed out several calls in a row is passed over for a while."""
+"""``timeout_cooldown``, on by default: a backend that timed out several calls in a row is passed over for a while."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.hop_helpers import _Hangs, hop_members, hop_router
-from web_router import ProviderError
+from web_router import AsyncWebRouter, ProviderError
 from web_router.constants_production import TIMEOUT_COOLDOWN_AFTER, TIMEOUT_COOLDOWN_S
 from web_router.exceptions import DeadlineExceededError
 from web_router.providers._cooldown import Cooldowns
@@ -58,8 +58,8 @@ def test_anything_but_a_timeout_starts_the_count_again(between: Any) -> None:
     assert cooldowns.remaining("slow") is None
 
 
-def test_timeouts_start_no_cooldown_unless_the_router_asked() -> None:
-    cooldowns = Cooldowns()
+def test_timeouts_start_no_cooldown_when_switched_off() -> None:
+    cooldowns = Cooldowns(timeouts=False)
     _times_out(cooldowns, "slow", TIMEOUT_COOLDOWN_AFTER * 2)
     assert cooldowns.remaining("slow") is None
 
@@ -73,7 +73,7 @@ def test_a_pinned_mode_counts_towards_its_backend() -> None:
 
 @pytest.mark.usefixtures(hop_members.__name__)
 def test_auto_passes_a_backend_over_after_it_hung_calls_in_a_row() -> None:
-    router = hop_router(hop_timeout=0.1, timeout_cooldown=True)
+    router = hop_router(hop_timeout=0.1)  # the cooldown is on by default
     for _ in range(TIMEOUT_COOLDOWN_AFTER):
         assert router.search("q", timeout=5).provider == "healthy"
     assert _Hangs.calls == TIMEOUT_COOLDOWN_AFTER
@@ -82,3 +82,19 @@ def test_auto_passes_a_backend_over_after_it_hung_calls_in_a_row() -> None:
     assert response.provider == "healthy" and _Hangs.calls == TIMEOUT_COOLDOWN_AFTER, "not called while cooling"
     assert response.decision is not None
     assert [hop.error for hop in response.decision.hops] == ["cooling_down"]
+
+
+@pytest.mark.usefixtures(hop_members.__name__)
+def test_timeout_cooldown_false_keeps_calling_a_backend_that_hangs() -> None:
+    router = hop_router(hop_timeout=0.1, timeout_cooldown=False)
+    for _ in range(TIMEOUT_COOLDOWN_AFTER + 1):
+        router.search("q", timeout=5)
+    assert _Hangs.calls == TIMEOUT_COOLDOWN_AFTER + 1
+
+
+@pytest.mark.usefixtures(hop_members.__name__)
+async def test_the_async_router_cools_a_hanging_backend_down_by_default() -> None:
+    router = hop_router(AsyncWebRouter, hop_timeout=0.1)
+    for _ in range(TIMEOUT_COOLDOWN_AFTER + 1):
+        assert (await router.search("q", timeout=5)).provider == "healthy"
+    assert _Hangs.calls == TIMEOUT_COOLDOWN_AFTER

@@ -8,7 +8,7 @@ and a throttle it answers starts one, so ``auto`` passes it over afterwards.
 Two members of one chain that share a backend's name -- the same backend on
 different options -- share its cooldown: they are normally one account.
 
-With ``timeout_cooldown=True`` a backend that timed out
+With ``timeout_cooldown`` on, the default, a backend that timed out
 :data:`~web_router.constants_production.TIMEOUT_COOLDOWN_AFTER` calls in a row
 cools down for :data:`~web_router.constants_production.TIMEOUT_COOLDOWN_S`: a
 backend that hangs is passed over instead of eating each call's deadline. An
@@ -61,7 +61,7 @@ class CoolingDownError(ProviderError):
 class Cooldowns:
     """Per backend, the monotonic instant it may be tried again, the status that set it, and its timeouts in a row."""
 
-    def __init__(self, *, timeouts: bool = False) -> None:
+    def __init__(self, *, timeouts: bool = True) -> None:
         self._until: dict[str, tuple[float, int | None, str]] = {}
         self._lock = threading.RLock()  # reentrant: a streak that ends starts its cooldown under the same hold
         self._timeouts = timeouts
