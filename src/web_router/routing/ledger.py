@@ -3,16 +3,14 @@
 :func:`~web_router.routing.budget.budget_scope` keeps one per call and asks :meth:`Ledger.admit` before
 every attempt, ``auto``'s members and a named backend alike.
 
-Money is always an estimate: each attempt is charged its list price by
-:mod:`.pricing`'s rule when it starts, whether it then answers or fails,
-since a failed call may still bill. Under a cost cap a candidate whose price
-is unknown -- no row, ``unknown``, or billed by tokens -- never runs; with no
-cost cap it runs and the record names it unmeasured. Time is the call's
-deadline: a candidate whose measured p90 latency does not fit the time left
-is skipped, and one with no measured p90 runs under the deadline, which
-bounds it, unless the budget is strict. Inside a shared budget
-(:mod:`.pool`) an attempt that fits the call is then reserved in the pool,
-and skipped when the pool refuses it.
+Each attempt is charged its list price by :mod:`.pricing`'s rule when it
+starts; :mod:`.settlement` then charges a backend's reported cost instead,
+and nothing for an attempt that never started. Under a cost cap a candidate
+whose price is unknown -- no row, ``unknown``, or billed by tokens -- never
+runs; with no cost cap it runs and the record names it unmeasured. Time is
+the call's deadline: a candidate whose measured p90 latency does not fit the
+time left is skipped, and one with no measured p90 runs under the deadline,
+unless the budget is strict. Inside a shared budget (:mod:`.pool`) an attempt that fits is reserved there too.
 
 A routed call with no budget keeps a ledger too, on a :class:`~web_router.Budget` that caps nothing: it skips
 nothing, and records what the call tried and the failures it moved past.
@@ -57,6 +55,8 @@ class _Tried:
     est_cost_usd: float | None
     started: float
     attempt: Attempt
+    charged: float = 0.0  # what counts toward the caps: the estimate, until :mod:`.settlement` settles it
+    own: bool = True  # the call's own attempt, reserved in a shared budget; else a nested call's, only counted
 
 
 @dataclass
@@ -109,7 +109,7 @@ class Ledger:
             if reserve:
                 self.trail.start(len(self.tried), name)
             self.spent += cost or 0.0
-            self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt))
+            self.tried.append(_Tried(name, attempt.provider, cost, time.monotonic(), attempt, cost or 0.0, reserve))
             return True
 
     def undo(self, attempt: Attempt, *, release: bool = False, sent: bool = False) -> None:
@@ -117,7 +117,7 @@ class Ledger:
         with self._lock:
             self.sent = self.sent or sent
             at = next((i for i in reversed(range(len(self.tried))) if self.tried[i].attempt is attempt), None)
-            cost = 0.0 if at is None else self.tried.pop(at).est_cost_usd or 0.0
+            cost = 0.0 if at is None else self.tried.pop(at).charged
             self.spent -= cost
             if at is not None:
                 self.trail.undo(at)
