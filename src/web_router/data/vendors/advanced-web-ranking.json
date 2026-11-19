@@ -1,0 +1,340 @@
+{
+  "vendor": "advanced-web-ranking",
+  "name": "Advanced Web Ranking",
+  "category": "seo",
+  "summary": "Your Advanced Web Ranking rank-tracking account: projects, tracked keywords and ranking dates, ranking exports, and market share of the domains in your tracked results.",
+  "docs_url": "https://app.advancedwebranking.com/docs/developer-api-v2.html",
+  "pricing_url": "https://www.advancedwebranking.com/pricing",
+  "base_url": "https://api.awrcloud.com/v2",
+  "hosts": {
+    "marketshare": "https://api.awrcloud.com/api/marketshare/v1"
+  },
+  "auth": {
+    "credentials": {
+      "token": {
+        "env": [
+          "AWR_API_TOKEN"
+        ],
+        "description": "the Developer API token (Settings > Integrations & Exports > Developer API); yearly plans, or monthly from Agency up"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "token",
+        "value": "{token}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is one GET to a single script, with the operation named by action; each endpoint here fixes its action.",
+    "Own-account API: it reads projects you already track; it does not look up arbitrary keywords.",
+    "Default limit: 2,000 calls per hour for most operations; exports 150 per hour.",
+    "Project-management answers are JSON with response_code (0 is OK) and message; keyword and market share calls answer CSV."
+  ],
+  "sources": [
+    "https://app.advancedwebranking.com/docs/developer-api-v2.html"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "advanced-web-ranking.projects.list",
+      "name": "List projects",
+      "summary": "Every project with its id, update frequency, depth, last update date, keyword count and main website.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get.php",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The operation; this endpoint's only value.",
+          "enum": [
+            "projects"
+          ],
+          "example": "projects"
+        }
+      },
+      "job": "rank_tracking.projects",
+      "docs_url": "https://app.advancedwebranking.com/docs/developer-api-v2.html#get-projects-v2",
+      "verified": {
+        "docs": "https://app.advancedwebranking.com/docs/developer-api-v2.html#get-projects-v2"
+      }
+    },
+    {
+      "id": "advanced-web-ranking.projects.details",
+      "name": "Get a project's setup",
+      "summary": "A project's websites and competitors, keywords with their groups, search engines and locations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get.php",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The operation; this endpoint's only value.",
+          "enum": [
+            "details"
+          ],
+          "example": "details"
+        },
+        "project": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The project name as AWR shows it, usually the site's domain.",
+          "example": "www.example.com"
+        }
+      },
+      "job": "rank_tracking.projects",
+      "docs_url": "https://app.advancedwebranking.com/docs/developer-api-v2.html#get-details-v2",
+      "verified": {
+        "docs": "https://app.advancedwebranking.com/docs/developer-api-v2.html#get-details-v2"
+      }
+    },
+    {
+      "id": "advanced-web-ranking.projects.keywords",
+      "name": "List tracked keywords",
+      "summary": "Keywords and keyword groups of one project or all, as CSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get.php",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The operation; this endpoint's only value.",
+          "enum": [
+            "get_keywords"
+          ],
+          "example": "get_keywords"
+        },
+        "projectId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A project id, or -1 for every project.",
+          "example": "-1"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "plain for a text answer, download for a file.",
+          "enum": [
+            "plain",
+            "download"
+          ]
+        }
+      },
+      "job": "rank_tracking.keywords",
+      "docs_url": "https://app.advancedwebranking.com/docs/developer-api-v2.html#get-keywords-v2",
+      "verified": {
+        "docs": "https://app.advancedwebranking.com/docs/developer-api-v2.html#get-keywords-v2"
+      }
+    },
+    {
+      "id": "advanced-web-ranking.projects.dates",
+      "name": "List ranking dates",
+      "summary": "Every date a project has ranking data for, with the depth crawled.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get.php",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The operation; this endpoint's only value.",
+          "enum": [
+            "get_dates"
+          ],
+          "example": "get_dates"
+        },
+        "project": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The project name as AWR shows it, usually the site's domain.",
+          "example": "www.example.com"
+        }
+      },
+      "notes": [
+        "Only dates of updates AWR ran itself; imported history is not listed."
+      ],
+      "job": "rank_tracking.dates",
+      "docs_url": "https://app.advancedwebranking.com/docs/developer-api-v2.html#get-dates-v2",
+      "verified": {
+        "docs": "https://app.advancedwebranking.com/docs/developer-api-v2.html#get-dates-v2"
+      }
+    },
+    {
+      "id": "advanced-web-ranking.marketshare.projects",
+      "name": "List market share projects",
+      "summary": "Projects with their numeric ids, for the market share calls.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/endpoint.php",
+      "host": "marketshare",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The operation; this endpoint's only value.",
+          "enum": [
+            "getProjects"
+          ],
+          "example": "getProjects"
+        }
+      },
+      "job": "rank_tracking.projects",
+      "docs_url": "https://app.advancedwebranking.com/docs/developer-api-v2.html#marketshare-getProjects",
+      "verified": {
+        "docs": "https://app.advancedwebranking.com/docs/developer-api-v2.html#marketshare-getProjects"
+      }
+    },
+    {
+      "id": "advanced-web-ranking.marketshare.metadata",
+      "name": "Get market share by domain",
+      "summary": "Per date and domain: market share, ranking URLs and keywords, estimated visits, click share and visibility for the site and its competitors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/endpoint.php",
+      "host": "marketshare",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The operation; this endpoint's only value.",
+          "enum": [
+            "getMetadata"
+          ],
+          "example": "getMetadata"
+        },
+        "projectId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A project id from marketshare.projects."
+        },
+        "searchEngineId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A search engine id, or -1 for all.",
+          "example": "-1"
+        },
+        "keywordGroupId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A keyword group id, or -1 for all.",
+          "example": "-1"
+        },
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Oldest date, yyyy-mm-dd, inclusive; data starts 2019-06-01."
+        },
+        "stopDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Newest date, yyyy-mm-dd, inclusive."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "plain for a text answer, download for a file.",
+          "enum": [
+            "plain",
+            "download"
+          ]
+        }
+      },
+      "notes": [
+        "Answers CSV; errors come as JSON with errorCode."
+      ],
+      "job": "domain.competitors",
+      "docs_url": "https://app.advancedwebranking.com/docs/developer-api-v2.html#marketshare-getMetadata",
+      "verified": {
+        "docs": "https://app.advancedwebranking.com/docs/developer-api-v2.html#marketshare-getMetadata"
+      }
+    },
+    {
+      "id": "advanced-web-ranking.marketshare.domain_keywords",
+      "name": "List a domain's ranking keywords",
+      "summary": "The keywords on which a domain appeared in the project's results on one date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/endpoint.php",
+      "host": "marketshare",
+      "params": {
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The operation; this endpoint's only value.",
+          "enum": [
+            "getDomainKeywords"
+          ],
+          "example": "getDomainKeywords"
+        },
+        "projectId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A project id from marketshare.projects."
+        },
+        "searchEngineId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A search engine id, or -1 for all.",
+          "example": "-1"
+        },
+        "keywordGroupId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A keyword group id, or -1 for all.",
+          "example": "-1"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A date from marketshare.metadata."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A domain from marketshare.metadata."
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "plain for a text answer, download for a file.",
+          "enum": [
+            "plain",
+            "download"
+          ]
+        }
+      },
+      "notes": [
+        "Answers CSV; errors come as JSON with errorCode."
+      ],
+      "job": "domain.keywords",
+      "docs_url": "https://app.advancedwebranking.com/docs/developer-api-v2.html#marketshare-getDomainKeywords",
+      "verified": {
+        "docs": "https://app.advancedwebranking.com/docs/developer-api-v2.html#marketshare-getDomainKeywords"
+      }
+    }
+  ]
+}

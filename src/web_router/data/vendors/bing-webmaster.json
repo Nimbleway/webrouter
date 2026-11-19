@@ -1,0 +1,350 @@
+{
+  "vendor": "bing-webmaster",
+  "name": "Bing Webmaster Tools",
+  "category": "seo",
+  "summary": "Your sites in Bing Webmaster Tools: search clicks, impressions and positions by query and page, crawl stats and issues, inbound links, URL index info and Bing keyword volume.",
+  "docs_url": "https://learn.microsoft.com/en-us/bingwebmaster/getting-started",
+  "base_url": "https://ssl.bing.com/webmaster/api.svc/json",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BING_WEBMASTER_API_KEY"
+        ],
+        "description": "a Bing Webmaster Tools API key (Settings > API Access > Generate API Key); one key per user, valid for all of that user's verified sites"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Own-account API: only sites added and verified in the key owner's Bing Webmaster Tools.",
+    "Answers wrap the result in a 'd' field; dates come as '/Date(1316156400000-0700)/' (milliseconds since 1970 plus a UTC offset).",
+    "Errors answer HTTP 400 with {ErrorCode, Message}, e.g. ErrorCode 3 InvalidApiKey.",
+    "Search performance data is updated weekly."
+  ],
+  "sources": [
+    "https://learn.microsoft.com/en-us/bingwebmaster/getting-access",
+    "https://learn.microsoft.com/en-us/bingwebmaster/getting-started",
+    "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "bing-webmaster.sites.list",
+      "name": "List your sites",
+      "summary": "Every site in the account, with whether it is verified.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetUserSites",
+      "params": {},
+      "job": "search_console.sites",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getusersites",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getusersites"
+      }
+    },
+    {
+      "id": "bing-webmaster.traffic.daily",
+      "name": "Get daily clicks and impressions",
+      "summary": "Bing search clicks and impressions for a site, per day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetRankAndTrafficStats",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        }
+      },
+      "job": "search_console.query",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getrankandtrafficstats",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getrankandtrafficstats"
+      }
+    },
+    {
+      "id": "bing-webmaster.queries.stats",
+      "name": "Get top search queries",
+      "summary": "Clicks, impressions and average click and impression position for the site's top queries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetQueryStats",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        }
+      },
+      "notes": [
+        "Updated weekly."
+      ],
+      "job": "search_console.query",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getquerystats",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getquerystats"
+      }
+    },
+    {
+      "id": "bing-webmaster.pages.stats",
+      "name": "Get top pages",
+      "summary": "Clicks, impressions and average positions for the site's top pages (the page URL is in Query).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetPageStats",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        }
+      },
+      "job": "search_console.query",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getpagestats",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getpagestats"
+      }
+    },
+    {
+      "id": "bing-webmaster.pages.queries",
+      "name": "Get the queries for one page",
+      "summary": "Queries that brought traffic to one page, with clicks, impressions and positions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetPageQueryStats",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        },
+        "page": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The page URL.",
+          "example": "https://www.example.com/pricing"
+        }
+      },
+      "job": "search_console.query",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getpagequerystats",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getpagequerystats"
+      }
+    },
+    {
+      "id": "bing-webmaster.queries.pages",
+      "name": "Get the pages for one query",
+      "summary": "Pages that ranked for one query, with clicks, impressions and positions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetQueryPageStats",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search query."
+        }
+      },
+      "job": "search_console.query",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getquerypagestats",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getquerypagestats"
+      }
+    },
+    {
+      "id": "bing-webmaster.keywords.stats",
+      "name": "Get Bing keyword volume",
+      "summary": "Bing keyword statistics (search impressions) for a keyword, by country and language.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetKeywordStats",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The keyword.",
+          "example": "running shoes"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Country to report for."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Language to report for."
+        }
+      },
+      "notes": [
+        "The reference documents the inputs but gives no request sample or value formats for country and language."
+      ],
+      "job": "keywords.volume",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getkeywordstats",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getkeywordstats"
+      }
+    },
+    {
+      "id": "bing-webmaster.crawl.stats",
+      "name": "Get crawl statistics",
+      "summary": "Daily Bingbot crawl counts by status (2xx, 3xx, 4xx, 5xx, blocked by robots.txt, malware) for the last six months.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetCrawlStats",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        }
+      },
+      "job": "search_console.crawl",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getcrawlstats",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getcrawlstats"
+      }
+    },
+    {
+      "id": "bing-webmaster.crawl.issues",
+      "name": "List crawl issues",
+      "summary": "URLs with crawl problems, the issue found, their HTTP code and inbound links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetCrawlIssues",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        }
+      },
+      "job": "search_console.crawl",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getcrawlissues",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getcrawlissues"
+      }
+    },
+    {
+      "id": "bing-webmaster.links.counts",
+      "name": "Get inbound link counts",
+      "summary": "The site's pages that have inbound links, with the link count per page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetLinkCounts",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Result page, from 0; the answer gives TotalPages.",
+          "example": 0
+        }
+      },
+      "job": "backlinks.list",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getlinkcounts",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.getlinkcounts"
+      }
+    },
+    {
+      "id": "bing-webmaster.links.details",
+      "name": "List inbound links to a page",
+      "summary": "The linking URLs and anchor texts for one page of the site.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetUrlLinks",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        },
+        "link": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The page whose inbound links to list."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Result page, from 0; the answer gives TotalPages.",
+          "example": 0
+        }
+      },
+      "job": "backlinks.list",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.geturllinks",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.geturllinks"
+      }
+    },
+    {
+      "id": "bing-webmaster.urls.info",
+      "name": "Get what Bing knows about a URL",
+      "summary": "Discovery and last-crawl dates, HTTP status, size, anchor count and child URL count of a URL in Bing's index.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/GetUrlInfo",
+      "params": {
+        "siteUrl": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A site verified in your Bing Webmaster Tools account, as listed by get user sites.",
+          "example": "https://www.example.com/"
+        },
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The URL to look up, on that site."
+        }
+      },
+      "job": "index.metadata",
+      "docs_url": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.geturlinfo",
+      "verified": {
+        "docs": "https://learn.microsoft.com/en-us/dotnet/api/microsoft.bing.webmaster.api.interfaces.iwebmasterapi.geturlinfo"
+      }
+    }
+  ]
+}

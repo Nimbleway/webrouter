@@ -8,6 +8,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- Vendor catalog: OpenCage Geocoding, MaxMind, IP2Location.io, Ipregistry and Abstract API, with 14 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 470 vendors and 3,477 endpoints.
+- Vendor catalog: Mention, Moltbook, Sprout Social, Crossref and Wikidata, with 42 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 465 vendors and 3,463 endpoints.
+- Vendor catalog: Libraries.io, crates.io, RubyGems.org, APIs.guru and Affinity, with 54 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 460 vendors and 3,421 endpoints.
+- Vendor catalog: Advanced Web Ranking, Mangools, Bing Webmaster Tools, Chrome UX Report (CrUX), Google PageSpeed Insights, ClinicalTrials.gov and USPTO Open Data Portal, with 46 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 455 vendors and 3,367 endpoints.
 - Vendor catalog: Neutrino API, EmailListVerify, IPQualityScore, Bouncer, Mailgun, DeBounce, Kickbox and Reoon Email Verifier, with 39 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 448 vendors and 3,321 endpoints.
 - Vendor catalog: SalesIntel, Skrapp, UpLead and Seamless.AI, with 28 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 440 vendors and 3,282 endpoints.
 - Vendor catalog: Forager, Reverse Contact and GetProspect, with 40 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 436 vendors and 3,254 endpoints.

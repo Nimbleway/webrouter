@@ -1,0 +1,144 @@
+{
+  "vendor": "ipregistry",
+  "name": "Ipregistry",
+  "category": "maps",
+  "summary": "IP geolocation with connection, company, carrier, time zone, currency and security data (proxy, Tor, VPN, threat), Autonomous System lookups and User-Agent parsing.",
+  "docs_url": "https://ipregistry.co/docs",
+  "pricing_url": "https://ipregistry.co/pricing",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "IPREGISTRY_API_HOST"
+      ],
+      "default": "api.ipregistry.co",
+      "choices": [
+        "api.ipregistry.co",
+        "eu.api.ipregistry.co",
+        "gb.api.ipregistry.co"
+      ],
+      "description": "API host: the default, eu.api.ipregistry.co to keep requests on EU nodes, or gb.api.ipregistry.co for UK nodes only."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "IPREGISTRY_API_KEY"
+        ],
+        "description": "An Ipregistry API key (Ipregistry dashboard). Sent in the Authorization header as 'ApiKey <key>'."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "ApiKey {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billing is in credits: 1 per single lookup; a batch costs one per value plus one per request (3 addresses cost 4).",
+    "Every endpoint takes fields to trim the response: comma-separated, dot syntax for nested fields (security.is_tor), a leading minus to exclude.",
+    "Batch lookups by POSTing a JSON array are not in this entry; comma-separated values in the path do the same over GET."
+  ],
+  "sources": [
+    "https://ipregistry.co/docs",
+    "https://ipregistry.co/docs/authentication",
+    "https://ipregistry.co/docs/endpoints",
+    "https://ipregistry.co/docs/filtering",
+    "https://ipregistry.co/docs/hostname",
+    "https://ipregistry.co/docs/eu-base-url"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "ipregistry.ip.lookup",
+      "name": "Look up one or more IP addresses",
+      "summary": "Location, connection (ASN, ISP, type), company, carrier, time zone, currency and security flags for an IPv4 or IPv6 address, or up to 1,024 comma-separated addresses.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ip}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "An IPv4 or IPv6 address, or up to 1,024 comma-separated addresses.",
+          "example": "66.165.2.7"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return, e.g. location.country.name,security.",
+          "example": "connection,security"
+        },
+        "hostname": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also resolve the address's hostname; slows the response."
+        }
+      },
+      "notes": [
+        "1 credit for one address; n + 1 for a batch, whose answers come wrapped in a results array."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://ipregistry.co/docs/endpoints",
+      "verified": {
+        "docs": "https://ipregistry.co/docs/endpoints"
+      }
+    },
+    {
+      "id": "ipregistry.asn.lookup",
+      "name": "Look up one or more Autonomous Systems",
+      "summary": "Details of an Autonomous System by number, or of up to 16 comma-separated AS numbers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{asn}",
+      "params": {
+        "asn": {
+          "in": "path",
+          "required": true,
+          "description": "An AS number prefixed with AS, or up to 16 comma-separated ones.",
+          "example": "AS42"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to return."
+        }
+      },
+      "notes": [
+        "1 credit for one AS; n + 1 for a batch."
+      ],
+      "job": "ip.asn",
+      "docs_url": "https://ipregistry.co/docs/endpoints",
+      "verified": {
+        "docs": "https://ipregistry.co/docs/endpoints"
+      }
+    },
+    {
+      "id": "ipregistry.user_agent.parse",
+      "name": "Parse a User-Agent string",
+      "summary": "Browser, device and operating system behind a User-Agent string.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/user_agent",
+      "params": {
+        "ua": {
+          "in": "query",
+          "type": "string",
+          "description": "The User-Agent to parse; without it the caller's own HTTP client is parsed.",
+          "example": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:88.0) Gecko/20100101 Firefox/88.0"
+        }
+      },
+      "notes": [
+        "1 credit."
+      ],
+      "job": "useragent.parse",
+      "docs_url": "https://ipregistry.co/docs/endpoints",
+      "verified": {
+        "docs": "https://ipregistry.co/docs/endpoints"
+      }
+    }
+  ]
+}
