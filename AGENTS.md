@@ -9,11 +9,11 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search and Keirolabs, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search, Keirolabs and SpecStream, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
-Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, Browserbase,
+Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream,
 the keyless Jina Reader, `auto` again, and `max`, which sends the request to
 every member `auto` would try at once and returns the first document back -- the
 fastest answer any backend can give, at one fetch per member, so never the
@@ -449,6 +449,7 @@ src/web_router/
     ├── you_research.py research, a polled background task
     ├── you_answer.py   answer, in one call
     ├── _mcp.py         the keyless MCP search transport: one JSON-RPC tools/call
+    ├── _sse.py         an event stream's data: lines, cut only where the stream ends one (CR, LF)
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
     ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel_search.py

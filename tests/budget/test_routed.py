@@ -8,7 +8,7 @@ import pytest
 
 from tests.budget.conftest import ARGS, Chain, Table
 from tests.routing_helpers import Ranker
-from web_router import AsyncWebRouter, Budget, WebRouter
+from web_router import AsyncWebRouter, Budget, RouteDecision, RouteRequest, WebRouter
 
 CAP = Budget(max_cost_usd=0.01)
 
@@ -67,7 +67,14 @@ def test_a_router_in_a_shared_budget_is_shown_the_budget_the_call_is_held_to(
     priced.update(first=(0.01, None))
     shown: list[Budget | None] = []
     ranker = Ranker("first")
-    router = WebRouter(router=lambda req: shown.append(req.budget) or ranker.route(req))
+
+    def route(req: RouteRequest) -> RouteDecision:
+        shown.append(req.budget)
+        return ranker.route(req)
+
+    # Longer than the 50 ms default: a full GC pause on a CI runner can outlast that, and the router is then dropped.
+    route.timeout_s = 5.0  # type: ignore[attr-defined]
+    router = WebRouter(router=route)
     with router.budget(Budget(max_cost_usd=0.10)) as shared:
         shared.search("q", provider=chain.auto(), budget=own)
     assert [budget.max_cost_usd if budget else None for budget in shown] == [0.10]
