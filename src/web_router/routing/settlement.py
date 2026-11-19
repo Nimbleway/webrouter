@@ -46,7 +46,7 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
         tried = ledger.tried[opened.attempt]
         _charge(ledger, tried, 0.0)
         tried.est_cost_usd = 0.0
-    _match_enclosing(ledger, tried, 0.0)
+    _match_enclosing(ledger, tried, 0.0, refunded=True)
 
 
 def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
@@ -63,8 +63,9 @@ def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
     _match_enclosing(ledger, tried, cost)
 
 
-def _match_enclosing(ledger: Ledger, settled: _Tried, cost: float) -> None:
-    """Charge ``cost`` for ``settled``'s attempt in every enclosing call's ledger that counted it too."""
+def _match_enclosing(ledger: Ledger, settled: _Tried, cost: float, *, refunded: bool = False) -> None:
+    """Charge ``cost`` for ``settled``'s attempt in every enclosing call's ledger that counted it too; ``refunded``
+    lists it at $0 in their records as well, as nothing ran."""
     for enclosing in LEDGERS.get():
         if enclosing is ledger:
             continue
@@ -72,6 +73,7 @@ def _match_enclosing(ledger: Ledger, settled: _Tried, cost: float) -> None:
             counted = next((tried for tried in enclosing.tried if tried.attempt is settled.attempt), None)
             if counted is not None:
                 _charge(enclosing, counted, cost)
+                counted.est_cost_usd = 0.0 if refunded else counted.est_cost_usd
 
 
 def _charge(ledger: Ledger, tried: _Tried, cost: float) -> None:
