@@ -1,0 +1,97 @@
+{
+  "provider": "specstream",
+  "method": "search",
+  "class": "web_router.providers.specstream.SpecStreamProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.specstream.ai",
+    "paths": {
+      "search_path": "/v1/web-search"
+    },
+    "method": "GET",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "SPECSTREAM_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "query.q": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "query.num": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency",
+    "search_depth"
+  ],
+  "source": [
+    "https://specstream.ai/agents.md"
+  ],
+  "verified": {
+    "max_results": "docs: https://specstream.ai/agents.md"
+  },
+  "vendor_options": {
+    "passages": {
+      "status": "passthrough",
+      "note": "true adds the text read from each source page; each source then carries an excerpt, mapped to content."
+    },
+    "compact": {
+      "status": "passthrough",
+      "note": "true returns compact sources only, each snippet built from the page's best-matching lines."
+    },
+    "speed": {
+      "status": "passthrough",
+      "note": "fast runs the fast tier, at $1 per 1k searches of up to 10 results."
+    },
+    "page": {
+      "status": "passthrough",
+      "note": "1 to 10; continues the same ranked list, num results a page."
+    },
+    "news": {
+      "status": "passthrough",
+      "note": "true searches news."
+    },
+    "images": {
+      "status": "passthrough",
+      "note": "true returns image results in place of web results."
+    },
+    "language": {
+      "status": "passthrough",
+      "note": "Two letters, sent to every engine that takes it."
+    },
+    "country": {
+      "status": "passthrough",
+      "note": "Two letters, sent to every engine that takes it."
+    },
+    "safe": {
+      "status": "passthrough",
+      "note": "off, moderate or strict."
+    },
+    "like": {
+      "status": "passthrough",
+      "note": "Up to 20 addresses of pages to find more of."
+    },
+    "unlike": {
+      "status": "passthrough",
+      "note": "Up to 20 addresses of pages to keep out."
+    },
+    "pages_wait_ms": {
+      "status": "passthrough",
+      "note": "0 to 3500; how long passages or compact waits for page text."
+    },
+    "source_max_chars": {
+      "status": "passthrough",
+      "note": "1 to 10,000; caps each compact snippet."
+    }
+  }
+}

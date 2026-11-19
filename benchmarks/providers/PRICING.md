@@ -267,6 +267,18 @@ Startup.
 | `keirolabs` | default (lite search) | Titles, URLs and a snippet per result; no page body or date | $0.10 per 1k; Essential plan ($29.99 a month, 300k searches included); $0.06 per 1k on Pro, $0.03 per 1k on Startup | [keirolabs.cloud](https://keirolabs.cloud/pricing) | 2026-11-12 |
 <!-- /prices -->
 
+### SpecStream
+
+Per call ([agents.md](https://specstream.ai/agents.md)): $5 per 1k searches of up to 10 results, and each started
+block of 10 more results adds $6 per 1k, so 100 results are $59 per 1k. With `speed=fast` through
+`provider_options`, $1 per 1k searches of up to 10 results. A search that returns no result is not charged.
+
+<!-- prices: method=search provider=specstream -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `specstream` | default | Titles, URLs, a snippet and a date per result; an answer and rows in `raw` | $5 per 1k; searches of up to 10 results; each started block of 10 more adds $6 per 1k; $1 per 1k with `speed=fast` through provider_options | [specstream.ai](https://specstream.ai/agents.md) | 2026-11-19 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the
@@ -335,6 +347,7 @@ key at the proxy's own cost map. These are LiteLLM's published defaults; an oper
 | linkup | `linkup-render-js` | `linkup:linkup-render-js` (unverified) | `renderJs=true` | JavaScript rendered first | $0.005 per request; $5 per 1k at `mode=standard`; with `mode=pro` $0.01, so it adds $0.005 to `linkup-pro` | [docs.linkup.so](https://docs.linkup.so/pages/documentation/development/pricing) | 2026-11-17 |
 | browserbase | default | — | markdown | — | $1 per 1k; Fetch API calls past the included 1,000 (Free and Developer $20/mo); $0.50 per 1k past 10,000 on Startup ($99/mo); $4 per 1k with proxies, which web-router never turns on itself | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-08 |
 | browserbase | `browserbase-proxies` | `browserbase:browserbase-proxies` (unverified) | `proxies=true` | Fetched through Browserbase's proxies | $4 per 1k; $4 per 1k with proxies against $1 without | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-17 |
+| specstream | default | — | markdown (default) or text | — | $0.80 per 1k; per page read; a page that gives no text is not charged | [specstream.ai](https://specstream.ai/agents.md) | 2026-11-19 |
 <!-- /prices -->
 
 ## Templates (Extract Templates)

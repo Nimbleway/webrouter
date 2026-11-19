@@ -55,9 +55,36 @@ tighter time cap holds, and the response's `decision` records each attempt.
 
 ### One backend's share of the time
 
-`timeout=` bounds the whole call, not each backend `auto` tries. A first
-backend that hangs uses all of it, and the next is never started. To move on
-sooner, set a backend's own HTTP timeout with `timeout` in `provider_config`:
+`timeout=` bounds the whole call. So that one backend that hangs cannot use all
+of it, `auto` gives each backend it tries at most half the time left, and the
+last backend left all of it: with `timeout=20`, a first backend that hangs is
+cut off at 10 s and the next one gets the other 10. A call without `timeout=`
+is not capped.
+
+<Note>
+This is the default from the next release on, and it changes routing: a backend
+that used to answer late within the whole `timeout=` now fails as a timeout
+when it takes more than its share, and `auto` moves on to the next one. Pass
+`hop_timeout=False` to keep the old behaviour.
+</Note>
+
+Set `hop_timeout=` on the router for a fixed cap in seconds instead:
+
+```python
+router = WebRouter(hop_timeout=4)
+router.extract(url, timeout=20)  # a backend still in flight after 4 s fails as a timeout; the next gets the rest
+```
+
+A backend cut off this way fails with `kind` `timeout`, as any other timeout,
+and `auto` moves on to the next one. The last backend left is never capped, and
+the call's own `timeout=` still bounds the whole call: when it runs out, the
+call raises `DeadlineExceededError`. The cap applies only to the backends
+`auto` tries for `search`, `extract` and `answer`, not to a call with
+`provider=`, and not to `research` or `browse`, whose runs are billed once
+started.
+
+To cap one backend instead, set its own HTTP timeout with `timeout` in
+`provider_config`:
 
 ```python
 router = WebRouter(provider_config={"nimble": {"timeout": 4}})
@@ -160,7 +187,7 @@ They never carry a key, a path or a query string. `httpx`'s own INFO records
 print each request URL with its query string, which for some backends holds the
 key: keep the `httpx` logger at `WARNING` in production.
 
-## Cooldowns after a 429 or 402
+## Cooldowns after a 429, a 402 or timeouts
 
 When a backend answers 429 (throttled) or 402 (out of quota), `auto` leaves it
 alone for a while instead of paying the same failed round trip on every call.
@@ -181,6 +208,31 @@ minutes.
   cools down for 10 seconds.
 - When every backend `auto` would try is cooling down, the call fails at once
   with `AllProvidersFailedError`, each failure carrying its `retry_after`.
+
+### A cooldown after timeouts
+
+A backend that hangs costs every call its share of the time. So a backend that
+timed out three calls in a row cools down for 30 seconds, the same way it would
+after a 429, and `auto` passes it over meanwhile. This is on by default from
+the next release on, and it changes routing; turn it off with
+`timeout_cooldown=False`:
+
+```python
+router = WebRouter(timeout_cooldown=False)
+```
+
+Only the backend's own slowness counts: its request timing out on its own
+HTTP timeout, or a fixed `hop_timeout` cutting it off. A hop cut off at its
+half share of your `timeout=`, or your `timeout=` running out, does not count:
+a caller with a short timeout does not make a healthy backend cool down for
+everyone else. The count starts again after an answer, after a failure of
+another kind, or when 30 seconds pass without a timeout.
+
+A backend cooling down after timeouts is still called when it is the last one
+a call has left, and an answer from it ends the cooldown: a router with one
+backend never refuses a call for this reason. A backend passed over shows as a
+`timeout` failure whose message names the timeouts, and as `cooling_down` in
+`decision.hops`.
 
 ## Capping concurrent calls
 

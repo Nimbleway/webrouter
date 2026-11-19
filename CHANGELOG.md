@@ -9,6 +9,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 ### Added
 
 - `merchant`, a `live_data` backend for a store's own agent interface (UCP over MCP), routed by a hosted registry instead of discovery at request time: a source is a store's domain, `live_data_sources(provider="merchant")` lists the stores the registry has tests for, and a described source advertises `min_price`, `max_price`, `country` and `currency` only where the registry has a passing test for them. Unproven options are refused (`MerchantNotValidatedError`), an unlisted domain is a `LiveDataSourceNotFoundError`, and a route whose host is not the store's domain, a subdomain or a platform host is refused (`MerchantRouteError`). It goes through the router's HTTP clients and timeout, caches the registry pointer for 60 seconds and records per snapshot, and takes the caller's agent profile from `provider_config["merchant"]["agent_profile_url"]` or `WEB_ROUTER_MERCHANT_AGENT_PROFILE_URL`. No cost: `$0`. The registry is hosted at `https://shopping.nimbleway.com/agent-access/v1/`, and its URL is configurable (`registry_url`).
+- SpecStream as a search and extract backend: `search(provider="specstream")` over `GET /v1/web-search` and `extract(provider="specstream")` over `POST /v1/extract`, reading `SPECSTREAM_API_KEY`. Search maps `max_results` onto `num` (at most 100); `passages`, `speed` and the other query fields go through `provider_options`. Extract returns `markdown` (the default) or `text`, and a page whose `status` is not `ok` comes back as a failed URL. `auto` tries it after the keyless tier, with a key.
 - Vendor catalog: OpenCage Geocoding, MaxMind, IP2Location.io, Ipregistry and Abstract API, with 14 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 470 vendors and 3,472 endpoints.
 - Vendor catalog: Mention, Moltbook, Sprout Social, Crossref and Wikidata, with 42 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 465 vendors and 3,458 endpoints.
 - Vendor catalog: Libraries.io, crates.io, RubyGems.org, APIs.guru and Affinity, with 54 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 460 vendors and 3,416 endpoints.
@@ -33,7 +34,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
+- Default routing: `auto` now gives each backend at most half the time left (the last gets all of it) and skips a backend for 30 s after three timeouts in a row. Opt out with `hop_timeout=False` or `timeout_cooldown=False`; `hop_timeout=4` sets a fixed cap.
 - Data API discovery no longer takes "close", "contact", "here", "reverse" or "tomorrow" alone as naming a data API, so an everyday search such as "weather in paris tomorrow" lists none; `close crm`, `here maps`, `reverse contact` and `tomorrow io` still name theirs.
+
+### Fixed
+
+- A search no longer fails when a result carries U+2028, U+2029 or U+0085. An event stream's lines were split with `str.splitlines`, which also breaks at those three characters; JSON leaves them unescaped, so a reply holding one in a title or a page's text was cut mid-object. `you-mcp` and `exa-mcp` raised `ProviderError` ("MCP response carried no result payload") for a query that had results, and `auto` moved on to its next backend. Brave's answer stream and an `agentcore` gateway that streams were read the same way. A stream's lines now end only at CR, LF or CRLF.
+- `plan()` and `run()` recognize HTTP(S) URLs with uppercase or mixed-case schemes, preserving the path and query and applying the URL policy as usual.
+- Under `auto`, an extract that retried a failed URL on a later backend could return its documents out of the order asked for. A page the first backend echoed under the URL it resolved to was sorted after the retried pages: Nimble and Keenable echo a slash added to a bare host, a redirect followed and a fragment dropped, and Jina the added slash. Each page now sorts by the URL it answers, so the documents come back in the order asked, as the Extract guide says.
 
 ## [0.14.0] - 2026-11-19
 

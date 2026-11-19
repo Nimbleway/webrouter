@@ -25,6 +25,12 @@ def test_a_url_named_twice_is_found_twice_and_plan_takes_it_once() -> None:
     assert urls_in("https://a.test/x and https://a.test/x") == ["https://a.test/x", "https://a.test/x"]
 
 
+@pytest.mark.parametrize("scheme", ["HTTP", "HTTPS", "Http", "hTtPs"])
+def test_a_urls_scheme_is_case_insensitive_and_its_path_is_preserved(scheme: str) -> None:
+    url = f"{scheme}://example.com/Report?Token=AbC"
+    assert urls_in(f"Read ({url}).") == [url]
+
+
 @pytest.mark.parametrize(
     ("url", "shown"),
     [
