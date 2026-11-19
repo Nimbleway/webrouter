@@ -99,7 +99,7 @@ from web_router.exceptions import (
     UnsupportedParameterError,
     WebRouterError,
 )
-from web_router.providers._attempt_loop import Walk, answered_unless, arun, held_or_raise, raising, run
+from web_router.providers._attempt_loop import MODE_CLASHES, Walk, answered_unless, arun, held_or_raise, raising, run
 from web_router.providers._auto_extract import extract_eligible
 from web_router.providers._auto_extract_chain import aextract_down_chain, extract_down_chain
 from web_router.providers._chain import (
@@ -140,10 +140,9 @@ from web_router.types_browse import BrowseProgress
 class AutoProvider(BuiltMembers, SearchProvider):
     """Searches through the first backend that answers, credentialed ones first.
 
-    Declares every option some member maps, and sends each request only to the
-    members that map every option it sets -- read from their classes, so one
-    passed over is never built or called. With none left it raises before
-    searching anything, naming what each member lacked.
+    Declares every option some member maps, and sends each request only to the members that map every option it
+    sets -- read from their classes, so one passed over is never built or called. With none left it raises before
+    searching anything, naming what each member lacked. A pinned member its mode refuses is passed over when tried.
     """
 
     name: ClassVar[str] = PROVIDER_AUTO
@@ -212,6 +211,7 @@ class AutoProvider(BuiltMembers, SearchProvider):
             method="search",
             exhausted=held_or_raise(self.name),
             final=answered_unless(_empty_search, self.fallback_on_empty),
+            refusals=MODE_CLASHES,
             built=self._members,
         )
 

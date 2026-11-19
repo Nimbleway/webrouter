@@ -32,7 +32,7 @@ from web_router.types import NormalizedRequest
 
 def _unpinned_with_no_url(tool: str, request: RouteRequest) -> bool:
     """An unpinned extract with no prompt URL, and a search candidate to move to: one with none stays extract."""
-    can_search = any(c.tool == LAST_RESORT_TOOL for c in request.candidates)
+    can_search = any(c.tool == LAST_RESORT_TOOL and c.is_backend for c in request.candidates)  # a backend to run
     return tool == EXTRACT_TOOL and request.pinned_tool is None and not request.urls and can_search
 
 

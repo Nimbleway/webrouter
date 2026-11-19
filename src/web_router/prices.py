@@ -17,20 +17,16 @@ bills by tokens is ``token_billed``; neither has a pre-call estimate, and
 A row is keyed by ``provider``, ``method`` and ``mode``. ``method`` is the
 router method's name (``search``, ``extract``, ``live_data``, ``answer``,
 ``research``, ``open_browser``, ``browse``). ``mode`` is ``None`` for the call
-that sets nothing, else web-router's own setting -- the ``search_depth``
-(``lite``, ``fast``, ``deep``) or research ``effort`` (``low`` ... ``max``) --
-or, prefixed ``:``, a vendor mode sent through ``provider_options`` as named in
-``benchmarks/providers/modes.json`` (``:ultra-fast``). Where the call that sets
-nothing lands on one of those, that row carries ``default`` and answers
-``mode=None``.
+that sets nothing (or the row marked ``default``), else a mode in :mod:`web_router.modes`'
+grammar: a ``search_depth`` or ``effort`` level, or a vendor part spelled with the provider's
+name (``tavily-ultra-fast``); ``kind`` says which. The old ``":ultra-fast"`` still answers,
+with a ``DeprecationWarning``, for one release.
 
 A row also carries measured latency where a benchmark has it: the median and
 90th-percentile seconds of the calls that succeeded (``latency_p50_s``,
-``latency_p90_s``), how many there were (``latency_n``), the benchmark runs they
-pooled (``latency_runs``) and the date of the newest one (``latency_measured``).
-They come from the frozen results in ``benchmarks/providers/frozen/``, written
-by ``make latency``, and cover search and answer only; elsewhere they are
-``None``, unknown, never guessed. :func:`estimate_latency` reads them.
+``latency_p90_s``), their count, runs and newest date (``latency_n``,
+``latency_runs``, ``latency_measured``), written from the frozen results by
+``make latency`` for search and answer only; elsewhere ``None``, never guessed.
 
     >>> prices.estimate_latency("exa", "answer")      # (p50, p90) seconds
     (1.317, 1.618)
@@ -47,6 +43,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from web_router._modes_checks import check_row_mode
 from web_router.constants_prices import (
     MSG_PRICE_DEFAULTS,
     MSG_PRICE_DUPLICATE,
@@ -58,6 +55,7 @@ from web_router.constants_prices import (
     PRICES_DATA_FILE,
     UNPRICED_UNITS,
 )
+from web_router.modes import ModeKind, legacy_price_mode
 from web_router.prices_latency import check_latency
 from web_router.types import Provider, provider_name
 
@@ -93,6 +91,14 @@ class Price(BaseModel):
     """What web-router sends the vendor for it; for PRICING.md only."""
     does: str | None = None
     """What the mode returns or does; for PRICING.md only."""
+    kind: ModeKind | None = None
+    """What ``mode`` is: a declared ``tier``, ``content`` or ``flag``, or a ``depth`` or ``effort`` level."""
+    depth_assumed: str | None = None
+    """The ``search_depth`` a tier's price assumes (``None``: none sent); the level a content stands for."""
+    adds_usd: float | None = None
+    """On a flag row: what the flag adds to the price of the mode it rides on, in ``price_usd``'s unit."""
+    writes: str | None = None
+    """On a flag row: the request field the flag sets, so two flags setting one field never combine."""
     latency_p50_s: float | None = None
     """Median seconds of one successful call in the benchmark runs below; ``None`` when unmeasured."""
     latency_p90_s: float | None = None
@@ -129,6 +135,7 @@ class Price(BaseModel):
         check_latency(
             self.latency_p50_s, self.latency_p90_s, self.latency_n, self.latency_runs, self.latency_measured, self.key
         )
+        check_row_mode(self.key, self.kind, self.depth_assumed, self.adds_usd, self.writes)
         return self
 
 
@@ -166,11 +173,11 @@ def _index() -> dict[tuple[str, str, str | None], Price]:
 def price(provider: str | Provider, method: str, mode: str | None = None) -> Price | None:
     """The row for ``(provider, method, mode)``, or ``None`` when the list has none.
 
-    ``mode=None`` is the call that sets no mode: the row whose ``mode`` is
-    ``None``, else the one marked ``default``. A mode with no row of its own
-    is ``None`` too -- never another mode's price.
+    ``mode=None`` is the call that sets no mode: the row whose ``mode`` is ``None``, else the one marked
+    ``default``. A mode with no row of its own is ``None`` too -- never another mode's price.
     """
-    return _index().get((provider_name(provider), method, mode))
+    name = provider_name(provider)
+    return _index().get((name, method, legacy_price_mode(name, mode)))
 
 
 def estimate(provider: str | Provider, method: str, mode: str | None = None) -> float | None:
@@ -185,8 +192,7 @@ def estimate(provider: str | Provider, method: str, mode: str | None = None) -> 
 def estimate_latency(provider: str | Provider, method: str, mode: str | None = None) -> tuple[float, float] | None:
     """Measured ``(p50, p90)`` seconds of one successful call, or ``None`` when unmeasured or not in the list.
 
-    The figures are benchmark medians and 90th percentiles, not a
-    promise: a backend's latency drifts from run to run and with the query.
+    The figures are benchmark medians and 90th percentiles, not a promise: latency drifts by run and query.
     """
     row = price(provider, method, mode)
     if row is None or row.latency_p50_s is None or row.latency_p90_s is None:

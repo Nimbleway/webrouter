@@ -7,7 +7,7 @@ echoes the request URL, query credential and all.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Any
 from urllib.parse import quote, quote_plus
 
@@ -42,6 +42,26 @@ def mask_answer(value: Any, secrets: Sequence[str]) -> Any:
     whole word (``Bearer abc123``), so that a login like ``user`` does not
     turn every ``username`` into ``***name``. Keys are left alone.
     """
+    return map_strings(value, answer_masker(secrets))
+
+
+def map_strings(value: Any, apply: Callable[[str], str], *, keys: bool = False) -> Any:
+    """A copy of ``value`` with ``apply`` run on every string in it, and on every dict key too when ``keys``."""
+
+    def walk(item: Any) -> Any:
+        if isinstance(item, str):
+            return apply(item)
+        if isinstance(item, dict):
+            return {apply(key) if keys and isinstance(key, str) else key: walk(inner) for key, inner in item.items()}
+        if isinstance(item, list):
+            return [walk(inner) for inner in item]
+        return item
+
+    return walk(value)
+
+
+def answer_masker(secrets: Sequence[str]) -> Callable[[str], str]:
+    """The function :func:`mask_answer` applies to each string, built once for a whole payload."""
     exact = {form for secret in secrets if secret for form in _spellings(secret)}
     inside = [secret for secret in secrets if secret and len(secret) >= VENDOR_MASK_INSIDE_MIN]
     # A short secret's URL-encoded spellings too, so a key like `a+b` is not left in a URL as `a%2Bb`.
@@ -52,18 +72,11 @@ def mask_answer(value: Any, secrets: Sequence[str]) -> Any:
     words = [re.compile(rf"(?<![A-Za-z0-9]){re.escape(secret)}(?![A-Za-z0-9])") for secret in reversed(short)]
 
     def masked(text: str) -> str:
+        if text in exact:
+            return VENDOR_MASK
         text = mask(text, inside)
         for word in words:
             text = word.sub(VENDOR_MASK, text)
         return text
 
-    def walk(item: Any) -> Any:
-        if isinstance(item, str):
-            return VENDOR_MASK if item in exact else masked(item)
-        if isinstance(item, dict):
-            return {key: walk(inner) for key, inner in item.items()}
-        if isinstance(item, list):
-            return [walk(inner) for inner in item]
-        return item
-
-    return walk(value)
+    return masked

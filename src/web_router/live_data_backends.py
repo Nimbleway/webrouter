@@ -16,9 +16,9 @@ from web_router.constants_live_data_any import (
     MSG_LIVE_DATA_EVERY_BACKEND_FAILED,
     MSG_LIVE_DATA_NO_BACKEND,
     MSG_LIVE_DATA_OTHER_BACKEND,
-    MSG_LIVE_DATA_WHICH_BACKEND,
 )
 from web_router.exceptions import ConfigurationError, ProviderNotInstalledError
+from web_router.exceptions_provider import LiveDataBackendChoiceError
 from web_router.providers.base import LiveDataProvider
 from web_router.registry import (
     available_live_data_providers,
@@ -100,9 +100,7 @@ def backend_for(
     backends = usable_backends_or_raise(router, {})
     if len(backends) == 1:
         return backends[0], source
-    raise ConfigurationError(
-        MSG_LIVE_DATA_WHICH_BACKEND.format(source=source, providers=", ".join(backend.name for backend in backends))
-    )
+    raise LiveDataBackendChoiceError(source, [backend.name for backend in backends])
 
 
 def _keyed_in_code(router: _LiveDataLookup, name: str) -> bool:

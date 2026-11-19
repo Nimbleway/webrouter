@@ -165,7 +165,7 @@ def test_main_compares_against_a_named_router_and_writes_the_matrix(
 ) -> None:
     write_mixed_set(tmp_path / "frozen")
     load_set = route_eval.load_set
-    monkeypatch.setattr(route_eval, "load_set", lambda name, _, joined: load_set(name, tmp_path / "frozen", joined))
+    monkeypatch.setattr(route_eval, "load_set", lambda n, _, j, m: load_set(n, tmp_path / "frozen", j, m))
     out = tmp_path / "numbers.json"
     route_eval.main(
         ["--set", "mixed-tiny", "--router", "static", "--against", "always:answer:perplexity", "--json", str(out)]

@@ -72,10 +72,25 @@
         "body.filter_by_published_date": true,
         "body.time_range": "year"
       }
+    },
+    "mode": {
+      "tavily-fast": {
+        "body.search_depth": "fast"
+      },
+      "tavily-ultra-fast": {
+        "body.search_depth": "ultra-fast"
+      }
     }
   },
   "not_mapped": [
     "effort"
+  ],
+  "offers": [
+    "tavily-fast",
+    "tavily-ultra-fast",
+    "lite",
+    "fast",
+    "deep"
   ],
   "source": [
     "https://docs.tavily.com/documentation/api-reference/endpoint/search",
@@ -88,7 +103,9 @@
     "exclude_domains": "live: 2026-11-09 search-options check: no wikipedia.org result",
     "country": "live: 2026-11-09 search-options check: US with locale=en and recency=week, no 400",
     "locale": "live: 2026-11-09 search-options check: en with country=US and recency=week, no 400",
-    "recency": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (time_range by publish or last updated date; filter_by_published_date drops undated pages). Tavily applies the filter, and its results often carry no date: live on 2026-11-09 week left 7 dated results, all inside, and year none, so web-router's results cannot always show the window"
+    "recency": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search (time_range by publish or last updated date; filter_by_published_date drops undated pages). Tavily applies the filter, and its results often carry no date: live on 2026-11-09 week left 7 dated results, all inside, and year none, so web-router's results cannot always show the window",
+    "mode.tavily-fast": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search",
+    "mode.tavily-ultra-fast": "docs: https://docs.tavily.com/documentation/api-reference/endpoint/search"
   },
   "vendor_options": {
     "include_domains_mode": {

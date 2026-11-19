@@ -84,10 +84,42 @@
       "max": {
         "body.type": "deep"
       }
+    },
+    "mode": {
+      "exa-instant": {
+        "body.type": "instant"
+      },
+      "exa-fast": {
+        "body.type": "fast"
+      },
+      "exa-deep-lite": {
+        "body.type": "deep-lite"
+      },
+      "exa-deep": {
+        "body.type": "deep"
+      },
+      "exa-deep-reasoning": {
+        "body.type": "deep-reasoning"
+      },
+      "exa-highlights": {
+        "body.contents.highlights": true,
+        "body.contents.text": "<removed>"
+      }
     }
   },
   "not_mapped": [
     "locale"
+  ],
+  "offers": [
+    "exa-instant",
+    "exa-fast",
+    "exa-deep-lite",
+    "exa-deep",
+    "exa-deep-reasoning",
+    "lite",
+    "fast",
+    "deep",
+    "exa-highlights"
   ],
   "source": [
     "https://exa.ai/docs/reference/search"
@@ -99,7 +131,13 @@
     "country": "docs: https://exa.ai/docs/reference/search (accepted live on 2026-11-09; GB and US shared 67% of their results for 'best football club', so it moves results rather than filtering them)",
     "recency": "live: 2026-11-09 search-options check: month, 10 of 10 results dated inside the window",
     "search_depth": "live: 2026-11-09 search-options check: fast at most 3,000 characters and deep past 3,000; one lite highlight ran to 995 against the 500 cap, so lite is cut to a snippet in the provider (re-checked keyless on exa-mcp: at most 500)",
-    "effort": "live: 2026-11-09 search-options check: low with every filter, high (deep-lite) and max (deep) answered"
+    "effort": "live: 2026-11-09 search-options check: low with every filter, high (deep-lite) and max (deep) answered",
+    "mode.exa-instant": "docs: https://exa.ai/docs/reference/search",
+    "mode.exa-fast": "docs: https://exa.ai/docs/reference/search",
+    "mode.exa-deep-lite": "docs: https://exa.ai/docs/reference/search",
+    "mode.exa-deep": "docs: https://exa.ai/docs/reference/search",
+    "mode.exa-deep-reasoning": "docs: https://exa.ai/docs/reference/search",
+    "mode.exa-highlights": "docs: https://exa.ai/docs/reference/search"
   },
   "vendor_options": {
     "additionalQueries": {

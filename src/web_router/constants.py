@@ -35,6 +35,7 @@ from web_router.constants_mcp import (
     MCP_TOOL_WEB_RUN,
     MCP_WEB_RUN_PROPERTIES,
 )
+from web_router.constants_mcp_env import MCP_DESC_LOAD_ENV, MCP_LOAD_ENV_PROPERTIES
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
 from web_router.constants_vendors_mcp import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
@@ -73,6 +74,7 @@ PROVIDER_LINKUP = Provider.LINKUP.value
 PROVIDER_SELTZ = Provider.SELTZ.value
 PROVIDER_WEBIQ = Provider.WEBIQ.value
 PROVIDER_OCTEN = Provider.OCTEN.value
+PROVIDER_KEIROLABS = Provider.KEIROLABS.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
 PROVIDER_VALYU = Provider.VALYU.value
@@ -161,6 +163,7 @@ ENV_LINKUP_API_KEY = "LINKUP_API_KEY"
 ENV_SELTZ_API_KEY = "SELTZ_API_KEY"
 ENV_WEBIQ_API_KEY = "WEBIQ_API_KEY"
 ENV_OCTEN_API_KEY = "OCTEN_API_KEY"
+ENV_KEIROLABS_API_KEY = "KEIROLABS_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
 ENV_VALYU_API_KEY = "VALYU_API_KEY"
@@ -191,6 +194,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_SELTZ: ENV_SELTZ_API_KEY,
     PROVIDER_WEBIQ: ENV_WEBIQ_API_KEY,
     PROVIDER_OCTEN: ENV_OCTEN_API_KEY,
+    PROVIDER_KEIROLABS: ENV_KEIROLABS_API_KEY,
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
@@ -311,11 +315,10 @@ same request behaving differently for reasons the caller never chose.
 FOLLOW_REDIRECTS = False
 """Provider clients never follow redirects, and this is pinned rather than inherited.
 
-httpx replays request headers -- the auth header included -- to the redirect
-target, and does not strip them when that target is a different host. A search
-endpoint has no legitimate reason to redirect, so following one is either a
-misconfiguration or an attempt to collect the credential. Surfacing it as an
-error is the safe reading of both. See :data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
+On a redirect to a different host, httpx drops the standard ``Authorization`` header but keeps custom credential
+headers such as ``X-API-Key``, which several providers send their key in. A search endpoint has no legitimate
+reason to redirect, so following one is either a misconfiguration or an attempt to collect the credential.
+Surfacing it as an error is the safe reading of both. See :data:`MSG_REDIRECTS_WITH_CREDENTIAL`.
 """
 
 MSG_HTTP_ERROR = "HTTP {status}: {body}"
@@ -430,16 +433,14 @@ TAVILY_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
     # much text each result carries, include_raw_content adds the page body.
     #
     # Two traps here, both of which have already caught this table once:
-    # `chunks_per_source` rode **kwargs here once and did nothing, which made
-    # `fast` an exact duplicate of `lite` (verified live: byte-identical
-    # snippets across every query tried). And Tavily has since grown its own
-    # `fast`/`ultra-fast` depths, which are latency tiers rather than content
-    # tiers; our `fast` must not be mapped onto them just because it matches.
+    # `chunks_per_source` rode **kwargs here once and did nothing, which made `fast` an exact duplicate of `lite`
+    # (verified live: byte-identical snippets across every query tried). And Tavily has since grown its own
+    # `fast`/`ultra-fast` depths, which are latency tiers rather than content tiers; our `fast` must not be mapped onto
+    # them just because it matches.
     #
-    # `advanced` buys a modest content bump over `basic` -- roughly +17% of
-    # snippet, and steadier across queries -- and costs two API credits rather
-    # than one. That is the honest middle rung: Tavily's own step change in
-    # volume is raw content, which is what `deep` asks for.
+    # `advanced` buys a modest content bump over `basic` -- roughly +17% of snippet, and steadier across queries -- and
+    # costs two API credits rather than one. That is the honest middle rung: Tavily's own step change in volume is raw
+    # content, which is what `deep` asks for.
     #
     # `lite` runs long of the shared definition (a snippet of about 500
     # characters): `basic` returns up to three chunks of about 500 each, so the
@@ -561,10 +562,10 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz`` and
-``octen`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
-later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves
-it ahead of the keyless tier only once frozen results rank it.
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen`` and
+``keirolabs`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
+later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it
+ahead of the keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
@@ -990,11 +991,6 @@ INTEGRATION_DOCUMENT_CHARS = 8000
 
 INTEGRATION_TRUNCATION_MARKER = " ... [truncated]"
 
-INTEGRATION_JSON_INDENT = 1
-
-INTEGRATION_MSG_TOOL_ERROR = "{tool} failed: {error}"
-"""What the model reads when a call fails: enough to retry differently or give up, and nothing it has to parse."""
-
 MSG_INTEGRATION_NO_EXTRACT_PROVIDER = (
     "The extract tool has no backend: {default!r}, the router's default, does not extract, and no "
     "extract_provider was given. Pass extract_provider=, one of: {available}."
@@ -1028,19 +1024,6 @@ INTEGRATION_METHODS: tuple[str, ...] = ("search", "extract")
 
 Research and browse are billed runs that take minutes; they join once the
 routing guide can say when one is worth it.
-"""
-
-MSG_INTEGRATION_UNKNOWN_TOOL = "web-router has no tool named {name!r}; it serves {names}."
-
-MSG_INTEGRATION_BAD_INPUT: dict[str, str] = {
-    "search": "{tool} did not run: it needs a non-empty string `query`.",
-    "extract": "{tool} did not run: it needs `urls`, a list of 1 to {max_urls} URL strings.",
-    "answer": "{tool} did not run: it needs a non-empty string `query`.",
-}
-"""What the model reads when its own tool input is malformed -- its mistake to fix, so an error result, not a raise.
-
-It says the call did not run in words, because an OpenAI tool output has no
-error flag: the text is all the model has to tell a refusal from an answer.
 """
 
 MSG_INTEGRATION_UNKNOWN_METHOD = "web-router's tools serve {known}, not {method!r}."
@@ -2803,9 +2786,9 @@ NIMBLE_LIVE_DATA_FAILED_STATUS_FLOOR = 400
 
 MSG_REDIRECTS_WITH_CREDENTIAL = (
     "Provider {provider!r} refuses follow_redirects=True while it is sending a credential. "
-    "httpx replays request headers to the redirect target without stripping them, so a redirect "
-    "to another host would hand that host your API key. Point base_url at the host you mean to "
-    "call instead."
+    "On a redirect to another host, httpx drops a standard Authorization header but keeps a custom "
+    "one such as X-API-Key, so a redirect could hand that host your API key. Point base_url at the "
+    "host you mean to call instead."
 )
 
 MSG_DEADLINE_EXCEEDED = "Provider {provider!r} had not answered within the call's {seconds:g}s deadline."
@@ -3709,20 +3692,6 @@ MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_HANDLE: {"type": "string", "description": "The handle an earlier result carried."},
 }
 
-MCP_ARG_PATH = "path"
-MCP_ARG_REMEMBER = "remember"
-
-MCP_LOAD_ENV_PROPERTIES: dict[str, dict[str, Any]] = {
-    MCP_ARG_PATH: {
-        "type": "string",
-        "description": "The .env file's path on this machine, as the user gave it, e.g. '~/work/.env'; '~' expands.",
-    },
-    MCP_ARG_REMEMBER: {
-        "type": "boolean",
-        "description": "Read this file on every start too. Only when the user asks for that.",
-    },
-}
-
 MCP_ARG_SESSION_ID = "session_id"
 MCP_ARG_FORMAT = "format"
 MCP_ARG_REF = "ref"
@@ -3897,7 +3866,7 @@ MCP_TOOL_REQUIRED: dict[str, tuple[str, ...]] = {
     MCP_TOOL_BROWSE: ("task",),
     MCP_TOOL_BROWSE_STATUS: (MCP_ARG_HANDLE,),
     MCP_TOOL_FETCH_RAW: (MCP_ARG_HANDLE,),
-    MCP_TOOL_LOAD_ENV: (MCP_ARG_PATH,),
+    MCP_TOOL_LOAD_ENV: (),
     MCP_TOOL_BROWSER_OPEN: (),
     MCP_TOOL_BROWSER_GOTO: (MCP_ARG_SESSION_ID, "url"),
     MCP_TOOL_BROWSER_SNAPSHOT: (MCP_ARG_SESSION_ID,),
@@ -3942,12 +3911,6 @@ MCP_DESC_BROWSE_STATUS = (
 MCP_DESC_FETCH_RAW = (
     "The backend's full, unshaped payload for a handle: instant, but can be very large. Use it when a "
     "result was cut and you need the rest. Session URLs and credentials in browser payloads are redacted."
-)
-
-MCP_DESC_LOAD_ENV = (
-    "Load API keys from a .env file the user names, so their backends work at once. Ask where it is; "
-    "never ask for a key. Only provider credentials are read, an already-set variable wins, and only "
-    "names are returned. Set `remember` (read it on every start) only when the user asks."
 )
 
 MCP_DESC_BROWSER_OPEN = (
@@ -4044,8 +4007,6 @@ MCP_MSG_ENV_REMEMBER_FAILED = (
     "The path could not be recorded in {pointer} ({reason}), so nothing was loaded. Call load_env again "
     "without `remember` to load it for this session only."
 )
-
-MCP_MSG_ENV_BAD_ARGUMENTS = "load_env takes `path` as a string and `remember` as a boolean."
 
 MCP_MSG_ENV_NOTHING_NEW = (
     "Every credential in the file was already set, and a value already set is kept, so nothing changed."

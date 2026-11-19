@@ -43,7 +43,8 @@ class DecisionAttempt(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    id: str = Field(description="The candidate, as ``tool:provider``.")
+    id: str = Field(description="The candidate, as ``tool:provider``, or ``tool:provider:mode`` in a vendor mode.")
+    mode: str | None = Field(default=None, description="The vendor mode it ran in; None for its backend's default.")
     est_cost_usd: float | None = Field(default=None, description="Its estimated cost; None when unknown.")
     seconds: float | None = Field(default=None, description="Wall-clock seconds the attempt took.")
 

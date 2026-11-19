@@ -75,6 +75,7 @@ NAMED = {
     "arxiv papers search": "arxiv",
     "data.gov.au datasets search": "data-gov-au",
     "data.gov.ua datasets search": "data-gov-ua",
+    "tomorrow io forecast": "tomorrow-io",
     "close crm leads": "close-crm",
     "here maps geocode": "here-maps",
     "reverse contact enrich": "reverse-contact",

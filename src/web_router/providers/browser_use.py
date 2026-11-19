@@ -7,8 +7,8 @@ Reads ``BROWSER_USE_API_KEY`` unless a key is passed explicitly.
 
 v2 rather than v4, because v2 takes a start URL, a schema, a step limit and a
 domain list as fields of its own; each is mapped, and each was checked against
-a live task on 2026-10-21. The model and the session settings are reachable
-through ``provider_options``.
+a live task on 2026-10-21. The model is a vendor mode (``browser-use:browser-use-o3``);
+the session settings are reachable through ``provider_options``.
 """
 
 from __future__ import annotations
@@ -32,6 +32,8 @@ from web_router.constants import (
     ENV_BROWSER_USE_API_KEY,
     PROVIDER_BROWSER_USE,
 )
+from web_router.constants_mode_parts_browse import BROWSER_USE_TIERS
+from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpBrowseProvider
 from web_router.providers._utils import build_payload
 from web_router.types import BrowseRequest, BrowseResponse, BrowseStep, JobState
@@ -47,6 +49,7 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
     """
 
     name: ClassVar[str] = PROVIDER_BROWSER_USE
+    tiers = BROWSER_USE_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
         {"start_url", "output_schema", "max_steps", "allowed_domains"}
     )
@@ -104,6 +107,7 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
         return build_payload(
             request,
             BROWSER_USE_FIELDS,
+            self,
             task=request.task,
             **({BROWSER_USE_SCHEMA_FIELD: json.dumps(schema)} if schema is not None else {}),
         )
@@ -145,6 +149,7 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
             steps=[self._step(step) for step in task.get("steps") or []],
             request_id=str(status.get("id") or task.get("id") or "") or None,
             raw=[status, task],
+            **_reported_cost(task, status),
         )
 
     @staticmethod
@@ -160,6 +165,20 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
             screenshot_url=step.get("screenshotUrl") or None,
             extra={key: value for key, value in step.items() if key not in BROWSER_USE_STEP_FIELDS},
         )
+
+
+def _reported_cost(*payloads: dict[str, Any]) -> dict[str, Any]:
+    # Browser Use states a task's cost as a decimal string, "0.006", in both
+    # payloads; the full read, the later of the two, is taken first.
+    for payload in payloads:
+        value = payload.get("cost")
+        try:
+            number = float(value) if isinstance(value, str) else value
+        except ValueError:
+            continue
+        if found := stated_cost({"cost": number}, "cost"):
+            return found
+    return {}
 
 
 def _structured(output: str | None) -> dict[str, Any] | list[Any] | None:

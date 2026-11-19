@@ -121,3 +121,20 @@ def systemone(prefer: str, confidence: float = 0.6) -> Callable[[httpx.Request],
         return respond({"answers": {"route": answer}})
 
     return handler
+
+
+def gemini(*prefer: str, scale: float = 1.0) -> Callable[[httpx.Request], httpx.Response]:
+    """A Gemini Decisions server: in each question, the first of ``prefer`` it asks about gets 0.7 and the other
+    criteria share the rest; every probability times ``scale``, 1 for a normalized answer as the API sends."""
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        answers = {}
+        for key, question in json.loads(req.content)["questions"].items():
+            asked = list(question["criteria"])
+            top = next((cid for cid in prefer if cid in asked), asked[0])
+            rest = 0.3 / (len(asked) - 1)
+            probabilities = {cid: scale * (0.7 if cid == top else rest) for cid in asked}
+            answers[key] = {"type": "choice", "choice": top, "probabilities": probabilities, "confidence": 0.7}
+        return respond({"answers": answers, "usage": {"total_tokens": 1}})
+
+    return handler

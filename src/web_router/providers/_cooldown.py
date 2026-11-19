@@ -24,10 +24,12 @@ from web_router.constants_production import (
     COOLDOWN_FALLBACK_S,
     COOLDOWN_MAX_S,
     COOLDOWN_STATUSES,
+    HOP_CODE_COOLING_DOWN,
     LOG_COOLDOWN_SET,
     MSG_COOLING_DOWN,
 )
 from web_router.exceptions import ProviderError
+from web_router.providers._pinning import backend_of
 from web_router.types_errors import ERROR_KIND_RATE_LIMIT as _RATE_LIMIT
 
 if TYPE_CHECKING:
@@ -36,6 +38,13 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 logger = logging.getLogger(__name__)
+
+
+class CoolingDownError(ProviderError):
+    """``auto`` passed a backend over while it cools down: no request was sent, so nothing was billed."""
+
+    hop_code = HOP_CODE_COOLING_DOWN
+    """What a decision record's hop says for it, in place of the status that started the cooldown."""
 
 
 class Cooldowns:
@@ -67,7 +76,7 @@ class Cooldowns:
             self._start(provider, COOLDOWN_DEFAULT_S[status], status)
 
     def _start(self, provider: str, seconds: float, status: int | None) -> None:
-        now = time.monotonic()
+        now, provider = time.monotonic(), backend_of(provider)  # a pinned mode cools its whole backend
         with self._lock:
             current = self._until.get(provider)
             if current is None or current[0] < now + seconds:
@@ -77,6 +86,7 @@ class Cooldowns:
 
     def remaining(self, provider: str) -> tuple[float, int | None] | None:
         """Seconds left on ``provider``'s cooldown and the status that set it; ``None`` once it has run out."""
+        provider = backend_of(provider)
         with self._lock:
             entry = self._until.get(provider)
             if entry is None:
@@ -87,13 +97,13 @@ class Cooldowns:
                 return None
             return left, entry[1]
 
-    def refusal(self, provider: str) -> ProviderError | None:
+    def refusal(self, provider: str) -> CoolingDownError | None:
         """The error ``auto`` records for passing ``provider`` over while it cools down; ``None`` when it may run."""
         left = self.remaining(provider)
         if left is None:
             return None
         seconds, status = left
-        error = ProviderError(
+        error = CoolingDownError(
             provider, MSG_COOLING_DOWN.format(status=status or _RATE_LIMIT, seconds=seconds), kind=_RATE_LIMIT
         )
         error.status_code = status

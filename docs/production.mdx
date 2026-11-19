@@ -35,10 +35,12 @@ router.extract(urls, timeout=10)
 router.answer("who won the 2022 world cup final", timeout=15)
 ```
 
-- The call waits at most that many seconds. The built-in backends clamp each
-  HTTP request to the time left, so they do not return late; a custom backend
-  that blocks past it returns late on the sync router, and is cancelled at the
-  deadline on the async one.
+- The call waits at most that many seconds. The async router cancels whatever
+  is in flight at the deadline. The sync router clamps each HTTP request to the
+  time left, and a backend that calls its API over plain HTTP reads the
+  response only until the deadline, so a body that keeps trickling in stops
+  there too. A backend that calls through its vendor's SDK, or a custom one
+  that blocks, can still return late on the sync router.
 - `auto` starts a backend only while time is left, and passes over one whose
   measured p90 latency would not fit before calling it.
 - An extract keeps every page that came back in time. A page still loading at
@@ -50,6 +52,29 @@ router.answer("who won the 2022 world cup final", timeout=15)
 `timeout=5` is the shortcut for `budget=Budget(time_limit_s=5)`. Given both, the
 tighter time cap holds, and the response's `decision` records each attempt.
 `research` and `browse` take their own `timeout`.
+
+### One backend's share of the time
+
+`timeout=` bounds the whole call, not each backend `auto` tries. A first
+backend that hangs uses all of it, and the next is never started. To move on
+sooner, set a backend's own HTTP timeout with `timeout` in `provider_config`:
+
+```python
+router = WebRouter(provider_config={"nimble": {"timeout": 4}})
+router.extract(url, timeout=20)  # a nimble request that stalls 4 s fails; the next backend gets the rest
+```
+
+That timeout limits each wait on the network (connecting, each read), not the
+whole request: a backend that keeps sending a little at a time stays in flight
+until the call's own `timeout=`.
+
+The router never retries a backend that failed: `auto` moves on to the next
+one, and a call with `provider=` reports the failure (an extract lists the URLs
+it could not read in `failures`; the other methods raise).
+
+A sync batch extract sends its requests one after another: on a backend that
+takes one URL per request, twenty URLs take about twenty times as long as one.
+`AsyncWebRouter.extract` sends them concurrently; use it for batches.
 
 Prefer `timeout=` to wrapping a call in `asyncio.wait_for`. Cancelling from
 outside can leave the socket it was using open, and it discards the pages an

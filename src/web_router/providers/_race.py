@@ -18,7 +18,7 @@ from concurrent.futures import Future
 
 from web_router.constants import MAX_AGGREGATE_FAILURE
 from web_router.exceptions import DeadlineExceededError, WebRouterError
-from web_router.providers._chain import _RECOVERABLE, _exhausted
+from web_router.providers._chain import RECOVERABLE, _exhausted
 from web_router.providers._chain_deadline import _deadline_error
 from web_router.providers.base import ExtractProvider
 from web_router.types import ExtractRequest, ExtractResponse
@@ -121,7 +121,7 @@ class _Losses:
         """
         try:
             response = result()
-        except (*_RECOVERABLE, DeadlineExceededError) as exc:
+        except (*RECOVERABLE, DeadlineExceededError) as exc:
             self.failures[provider_name] = exc
             return None
         if not response.failures:

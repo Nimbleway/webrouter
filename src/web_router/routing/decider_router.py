@@ -9,7 +9,8 @@ For each routed call it asks the decider one question -- the prompt, the
 instructions, and each candidate id with its method, backend, estimated cost
 and p90 latency (extract only when the prompt names a URL) -- checks the reply
 (:mod:`.decider_reply`) and answers a :class:`~web_router.RouteDecision` whose
-``tools`` and ``providers`` follow the ranking. It never sets options,
+``tools`` and ``providers`` follow the ranking, or its ``attempts`` when it
+ranks a vendor mode (:mod:`.decider_modes`). It never sets options,
 exclusions or URLs, and its reason holds the decider's name, the first id and
 that id's score when the decider gives one, never the decider's own words.
 The decider's ``timeout_s``, ``name`` and ``route_tools`` are the router's. A
@@ -117,6 +118,7 @@ class DeciderRouter:
         self.timeout_s = _declared_timeout(decider)
         self.router_name = _decider_name(decider)
         self.route_tools = getattr(decider, "route_tools", None)
+        self.route_modes = getattr(decider, "route_modes", None)
         if callable(self._decide) and not inspect.iscoroutinefunction(self._decide):
             self.route = self._route
 
