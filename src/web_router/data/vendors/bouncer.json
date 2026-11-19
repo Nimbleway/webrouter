@@ -1,0 +1,183 @@
+{
+  "vendor": "bouncer",
+  "name": "Bouncer",
+  "category": "verification",
+  "summary": "Real-time email verification with deliverability status, reason, score and domain/account flags, plus domain catch-all checks and batch result downloads.",
+  "docs_url": "https://docs.usebouncer.com/introduction",
+  "pricing_url": "https://www.usebouncer.com/pricing",
+  "base_url": "https://api.usebouncer.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BOUNCER_API_KEY"
+        ],
+        "description": "A Bouncer API key (Bouncer app > API > Generate API Key). Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "status is deliverable, risky (accept-all, full mailbox or disposable), undeliverable or unknown; reason narrows it (accepted_email, low_deliverability, low_quality, invalid_email, invalid_domain, rejected_email, dns_error, unavailable_smtp, unsupported, timeout, unknown).",
+    "Flag fields (acceptAll, disposable, free, role, disabled, fullMailbox) are the strings 'yes', 'no' or 'unknown', not booleans.",
+    "A 402 means the account has run out of credits; a 503 can be retried.",
+    "Addresses at sandbox.usebouncer.com (deliverable@, undeliverable@, accept-all@, disposable@, unknown@ ...) are free to verify while testing.",
+    "Creating a batch, the synchronous batch queue and toxicity list jobs take a raw JSON array body and are not in this entry; the status and download calls read a batch created elsewhere."
+  ],
+  "sources": [
+    "https://docs.usebouncer.com/quick-start",
+    "https://docs.usebouncer.com/terminology",
+    "https://docs.usebouncer.com/integration-guidelines",
+    "https://docs.usebouncer.com/sandbox",
+    "https://docs.usebouncer.com/api-reference/real-time/verify-email",
+    "https://docs.usebouncer.com/api-reference/domain/verify-domain",
+    "https://docs.usebouncer.com/api-reference/credits/credits",
+    "https://docs.usebouncer.com/api-reference/batch/batch-status",
+    "https://docs.usebouncer.com/api-reference/batch/batch-results"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "bouncer.email.verify",
+      "name": "Verify one email in real time",
+      "summary": "Status, reason, deliverability score, provider, MX record and accept-all, disposable, free, role, disabled and full-mailbox flags for one address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1.1/email/verify",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to verify.",
+          "example": "hello@usebouncer.com"
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Seconds to spend on verification, default 10, maximum 30."
+        }
+      },
+      "notes": [
+        "Uses one credit. Limited to 1000 requests per minute by default.",
+        "Returns more unknown results than the batch API; a greylisted address comes back with a retryAfter field saying when to try again."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://docs.usebouncer.com/api-reference/real-time/verify-email",
+      "verified": {
+        "docs": "https://docs.usebouncer.com/api-reference/real-time/verify-email"
+      }
+    },
+    {
+      "id": "bouncer.domain.verify",
+      "name": "Verify a domain",
+      "summary": "Whether a domain has valid MX records and whether it accepts all addresses (catch-all), with its mail provider.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1.1/domain",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The domain to check.",
+          "example": "usebouncer.com"
+        }
+      },
+      "notes": [
+        "Uses one credit. Limited to 1000 requests per minute by default."
+      ],
+      "job": "domain.verify",
+      "docs_url": "https://docs.usebouncer.com/api-reference/domain/verify-domain",
+      "verified": {
+        "docs": "https://docs.usebouncer.com/api-reference/domain/verify-domain"
+      }
+    },
+    {
+      "id": "bouncer.account.credits",
+      "name": "Get credit balance",
+      "summary": "The verification credits left on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1.1/credits",
+      "notes": [
+        "Limited to 10 requests per minute."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.usebouncer.com/api-reference/credits/credits",
+      "verified": {
+        "docs": "https://docs.usebouncer.com/api-reference/credits/credits"
+      }
+    },
+    {
+      "id": "bouncer.batch.status",
+      "name": "Get a batch's status",
+      "summary": "Status, timestamps, quantity, duplicates, processed count and credits used for a verification batch, with per-status counts on request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1.1/email/verify/batch/{batchId}",
+      "params": {
+        "batchId": {
+          "in": "path",
+          "required": true,
+          "description": "The batchId returned when the batch was created.",
+          "example": "642152127eec9c46c00fb8d7"
+        },
+        "with_stats": {
+          "in": "query",
+          "type": "boolean",
+          "wire_name": "with-stats",
+          "description": "Add processing progress and counts per status."
+        }
+      },
+      "notes": [
+        "Poll every 10 to 30 seconds until status is 'completed'; credits is filled in only once the batch is complete."
+      ],
+      "job": "email.verify.batch.status",
+      "docs_url": "https://docs.usebouncer.com/api-reference/batch/batch-status",
+      "verified": {
+        "docs": "https://docs.usebouncer.com/api-reference/batch/batch-status"
+      }
+    },
+    {
+      "id": "bouncer.batch.results",
+      "name": "Download a batch's results",
+      "summary": "The verification records of a completed batch as JSON, optionally only those with one status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1.1/email/verify/batch/{batchId}/download",
+      "params": {
+        "batchId": {
+          "in": "path",
+          "required": true,
+          "description": "The batchId returned when the batch was created.",
+          "example": "642152127eec9c46c00fb8d7"
+        },
+        "download": {
+          "in": "query",
+          "type": "string",
+          "description": "Which results to return.",
+          "enum": [
+            "all",
+            "deliverable",
+            "risky",
+            "undeliverable",
+            "unknown"
+          ],
+          "example": "all"
+        }
+      },
+      "job": "email.verify.batch.results",
+      "docs_url": "https://docs.usebouncer.com/api-reference/batch/batch-results",
+      "verified": {
+        "docs": "https://docs.usebouncer.com/api-reference/batch/batch-results"
+      }
+    }
+  ]
+}
