@@ -148,19 +148,19 @@ built on GPT and `gpt-4o` would be grading its own family:
 `anthropic:claude-sonnet-5-5`, and its figures compare only with that judge's.
 
 `LiteLLMJudge` puts the judge on any model [LiteLLM](https://docs.litellm.ai/)
-reaches — OpenRouter, Gemini, Bedrock, a local Ollama — named as LiteLLM names
+reaches — DeepInfra, Gemini, Bedrock, a local Ollama — named as LiteLLM names
 it, with that provider's own key. It comes with the `evals-litellm` extra, which
 pins one LiteLLM release, and its import reads no `.env` and fetches nothing:
 
 ```python
 from web_router.evals import LiteLLMJudge
 
-report = router.evaluate(dataset, judge=LiteLLMJudge("openrouter/z-ai/glm-5"))  # reads OPENROUTER_API_KEY
+report = router.evaluate(dataset, judge=LiteLLMJudge("deepinfra/zai-org/GLM-5.1"))  # reads DEEPINFRA_API_KEY
 ```
 
 Every judge can also be named in one string, the one its report records:
 `judge_from("openai:gpt-6-luna")`, `judge_from("anthropic")`,
-`judge_from("litellm:gemini/gemini-3-pro")`, or `judge_from("my_pkg.judges:MyJudge")`
+`judge_from("litellm:gemini/gemini-2.5-pro")`, or `judge_from("my_pkg.judges:MyJudge")`
 for a `Judge` subclass of your own, built with no arguments. The benchmark
 scripts take the same string as `--judge`. A judge pointed at another endpoint
 with `base_url` is built in code, not named, and adds the host to its label —
@@ -168,8 +168,8 @@ with `base_url` is built in code, not named, and adds the host to its label —
 vendor's own.
 
 The default stays `gpt-4o` so new figures compare with published ones. OpenAI
-lists `gpt-4o` for shutdown on 2027-01-14 and names `gpt-6-luna` as its
-replacement; pass `judge_from("openai:gpt-6-luna")` to grade on it, knowing its
+lists the `gpt-4o` snapshots for shutdown on 2027-01-14 and names `gpt-6-luna`
+as their replacement; pass `judge_from("openai:gpt-6-luna")` to grade on it, knowing its
 figures compare only with its own.
 
 `Dataset.simpleqa()` downloads the test set from `openai/simple-evals` (pass

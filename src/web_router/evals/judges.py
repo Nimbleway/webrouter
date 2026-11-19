@@ -36,7 +36,7 @@ def judge_from(spec: str) -> Judge:
     ``openai`` and ``anthropic`` are the built-in judges on their default
     models; ``openai:<model>`` and ``anthropic:<model>`` on another.
     ``litellm:<model>`` is :class:`LiteLLMJudge` on any model LiteLLM reaches,
-    named as LiteLLM names it (``litellm:openrouter/z-ai/glm-5``). Anything
+    named as LiteLLM names it (``litellm:deepinfra/zai-org/GLM-5.1``). Anything
     else is ``package.module:Class``: a :class:`Judge` subclass, imported and
     built with no arguments, so it reads its own settings (a key, a model) from
     the environment.

@@ -1,7 +1,7 @@
 """A judge on any model LiteLLM reaches: ``--judge litellm:<model>``, so evaluation is not tied to one vendor.
 
-``<model>`` is LiteLLM's own name for it -- ``openrouter/z-ai/glm-5``,
-``gemini/gemini-3-pro``, ``bedrock/<id>``, ``ollama/<name>`` -- and LiteLLM
+``<model>`` is LiteLLM's own name for it -- ``deepinfra/zai-org/GLM-5.1``,
+``gemini/gemini-2.5-pro``, ``bedrock/<id>``, ``ollama/<name>`` -- and LiteLLM
 reads that provider's key from the environment under the provider's usual
 name. The SDK comes with the ``evals-litellm`` extra.
 """
