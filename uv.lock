@@ -2537,7 +2537,10 @@ wheels = [
 name = "webrouter"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
+    { name = "nimble-python" },
     { name = "pydantic" },
+    { name = "tavily-python" },
     { name = "typing-extensions" },
 ]
 
@@ -2546,20 +2549,12 @@ all = [
     { name = "botocore" },
     { name = "httpx" },
     { name = "mcp" },
-    { name = "nimble-python" },
     { name = "pillow" },
     { name = "playwright" },
     { name = "python-dotenv" },
-    { name = "tavily-python" },
-]
-answer = [
-    { name = "httpx" },
 ]
 aws = [
     { name = "botocore" },
-    { name = "httpx" },
-    { name = "nimble-python" },
-    { name = "tavily-python" },
 ]
 browser = [
     { name = "pillow" },
@@ -2567,43 +2562,21 @@ browser = [
 ]
 evals = [
     { name = "anthropic" },
-    { name = "httpx" },
-    { name = "nimble-python" },
     { name = "openai" },
     { name = "pyarrow" },
-    { name = "tavily-python" },
-]
-extract = [
-    { name = "httpx" },
-    { name = "nimble-python" },
-    { name = "tavily-python" },
 ]
 langchain = [
-    { name = "httpx" },
     { name = "langchain-core" },
-    { name = "nimble-python" },
-    { name = "tavily-python" },
 ]
 mcp = [
     { name = "httpx" },
     { name = "mcp" },
-    { name = "nimble-python" },
     { name = "pillow" },
     { name = "playwright" },
     { name = "python-dotenv" },
-    { name = "tavily-python" },
 ]
 remote = [
     { name = "httpx" },
-]
-research = [
-    { name = "httpx" },
-    { name = "nimble-python" },
-]
-search = [
-    { name = "httpx" },
-    { name = "nimble-python" },
-    { name = "tavily-python" },
 ]
 vendors = [
     { name = "httpx" },
@@ -2629,28 +2602,15 @@ requires-dist = [
     { name = "anthropic", marker = "extra == 'evals'", specifier = ">=1.8,<3" },
     { name = "botocore", marker = "extra == 'all'", specifier = ">=1.35" },
     { name = "botocore", marker = "extra == 'aws'", specifier = ">=1.35" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'all'", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'answer'", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'aws'", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'evals'", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'extract'", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'langchain'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'mcp'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'remote'", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'research'", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'search'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'vendors'", specifier = ">=0.27" },
     { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=1.0,<2" },
     { name = "mcp", marker = "extra == 'all'", specifier = ">=2.2,<3" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2,<3" },
-    { name = "nimble-python", marker = "extra == 'all'", specifier = ">=1.5.0,<2" },
-    { name = "nimble-python", marker = "extra == 'aws'", specifier = ">=1.5.0,<2" },
-    { name = "nimble-python", marker = "extra == 'evals'", specifier = ">=1.5.0,<2" },
-    { name = "nimble-python", marker = "extra == 'extract'", specifier = ">=1.5.0,<2" },
-    { name = "nimble-python", marker = "extra == 'langchain'", specifier = ">=1.5.0,<2" },
-    { name = "nimble-python", marker = "extra == 'mcp'", specifier = ">=1.5.0,<2" },
-    { name = "nimble-python", marker = "extra == 'research'", specifier = ">=1.5.0,<2" },
-    { name = "nimble-python", marker = "extra == 'search'", specifier = ">=1.5.0,<2" },
+    { name = "nimble-python", specifier = ">=1.5.0,<2" },
     { name = "openai", marker = "extra == 'evals'", specifier = ">=1.0,<4" },
     { name = "pillow", marker = "extra == 'all'", specifier = ">=10" },
     { name = "pillow", marker = "extra == 'browser'", specifier = ">=10" },
@@ -2662,13 +2622,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0.0,<3" },
     { name = "python-dotenv", marker = "extra == 'all'", specifier = ">=1.0" },
     { name = "python-dotenv", marker = "extra == 'mcp'", specifier = ">=1.0" },
-    { name = "tavily-python", marker = "extra == 'all'", specifier = ">=0.5.0" },
-    { name = "tavily-python", marker = "extra == 'aws'", specifier = ">=0.5.0" },
-    { name = "tavily-python", marker = "extra == 'evals'", specifier = ">=0.5.0" },
-    { name = "tavily-python", marker = "extra == 'extract'", specifier = ">=0.5.0" },
-    { name = "tavily-python", marker = "extra == 'langchain'", specifier = ">=0.5.0" },
-    { name = "tavily-python", marker = "extra == 'mcp'", specifier = ">=0.5.0" },
-    { name = "tavily-python", marker = "extra == 'search'", specifier = ">=0.5.0" },
+    { name = "tavily-python", specifier = ">=0.5.0" },
     { name = "typing-extensions", specifier = ">=4.10" },
 ]
 provides-extras = ["all", "answer", "aws", "browser", "evals", "extract", "langchain", "mcp", "remote", "research", "search", "vendors"]
