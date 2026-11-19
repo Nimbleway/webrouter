@@ -1,4 +1,4 @@
-"""A router's cooldowns: the backends a 429 or a 402 told ``auto`` to leave alone for a while.
+"""A router's cooldowns: the backends a 429, a 402 or, when asked, timeouts in a row told ``auto`` to leave alone.
 
 One map per router, keyed by backend name and shared by every method and
 thread the router serves, so a burst of calls pays one throttled round trip
@@ -7,6 +7,10 @@ backend the caller names with ``provider=`` is called whatever its cooldown,
 and a throttle it answers starts one, so ``auto`` passes it over afterwards.
 Two members of one chain that share a backend's name -- the same backend on
 different options -- share its cooldown: they are normally one account.
+
+With ``timeout_cooldown`` on, the default, a backend that timed out on its own
+(:mod:`._cooldown_timeouts`) three calls in a row cools down for 30 s. That
+cooldown never passes over the last backend a call has left, and an answer ends it.
 """
 
 from __future__ import annotations
@@ -23,14 +27,19 @@ from web_router.constants_production import (
     COOLDOWN_DEFAULT_S,
     COOLDOWN_FALLBACK_S,
     COOLDOWN_MAX_S,
+    COOLDOWN_STATUS,
     COOLDOWN_STATUSES,
+    COOLDOWN_TIMEOUTS,
     HOP_CODE_COOLING_DOWN,
     LOG_COOLDOWN_SET,
     MSG_COOLING_DOWN,
+    TIMEOUT_COOLDOWN_S,
 )
 from web_router.exceptions import ProviderError
+from web_router.providers._cooldown_timeouts import Streaks, backends_own
 from web_router.providers._pinning import backend_of
 from web_router.types_errors import ERROR_KIND_RATE_LIMIT as _RATE_LIMIT
+from web_router.types_errors import ERROR_KIND_TIMEOUT
 
 if TYPE_CHECKING:
     from web_router.providers._runtime import Runtime
@@ -48,17 +57,38 @@ class CoolingDownError(ProviderError):
 
 
 class Cooldowns:
-    """Per backend, the monotonic instant it may be tried again and the status that set it."""
+    """Per backend, the monotonic instant it may be tried again, the status that set it, and its timeouts in a row."""
 
-    def __init__(self) -> None:
-        self._until: dict[str, tuple[float, int | None]] = {}
-        self._lock = threading.Lock()
+    def __init__(self, *, timeouts: bool = True) -> None:
+        self._until: dict[str, tuple[float, int | None, str, str]] = {}
+        """Per backend: until when, the status that set it, its cause, and the kind a refusal carries."""
+        self._lock = threading.RLock()  # reentrant: a streak that ends starts its cooldown under the same hold
+        self._timeouts = timeouts
+        self._streaks = Streaks()
 
     def note(self, provider: str, exc: BaseException) -> None:
-        """Start ``provider``'s cooldown when ``exc`` is a throttle: its ``Retry-After``, else the status's default."""
-        seconds, status = _cooldown_of(exc)
+        """Start ``provider``'s cooldown when ``exc`` is a throttle: its ``Retry-After``, else the status's default.
+
+        A timeout of the backend's own making counts towards the cooldown after timeouts in a row; any other
+        timeout, the caller's, neither counts nor breaks the streak.
+        """
+        seconds, status = _cooldown_of(exc)  # first: a throttle among an extract's calls cools it whatever the rest
         if seconds is not None:
             self._start(provider, seconds, status)
+        if getattr(exc, "kind", None) != ERROR_KIND_TIMEOUT:
+            self._reset(provider)
+        elif backends_own(exc):
+            self.note_timeout(provider)
+
+    def note_timeout(self, provider: str) -> None:
+        """Count a timeout of ``provider``; the last of :data:`TIMEOUT_COOLDOWN_AFTER` in a row starts its cooldown."""
+        if not self._timeouts:
+            return
+        with self._lock:  # held until the cooldown is set, so an answer arriving meanwhile cannot be overtaken by it
+            count = self._streaks.timed_out(backend_of(provider), time.monotonic())
+            if count is not None:
+                cause = COOLDOWN_TIMEOUTS.format(count=count)
+                self._start(provider, TIMEOUT_COOLDOWN_S, None, cause, ERROR_KIND_TIMEOUT)
 
     def note_answer(self, provider: str, response: object) -> None:
         """Start ``provider``'s cooldown when an answer it gave reports a URL it was throttled on.
@@ -67,6 +97,7 @@ class Cooldowns:
         the others; the backend is throttled all the same. No ``Retry-After``
         survives into a failure, so the status's default applies.
         """
+        self._reset(provider, answered=True)  # it answered: no longer timing out in a row
         failures = getattr(response, "failures", None) or ()
         # Only the backend's own throttle (kind rate_limit): a page the target site answered 429 is kind upstream.
         statuses = [getattr(f, "status_code", None) for f in failures if getattr(f, "kind", None) == _RATE_LIMIT]
@@ -75,14 +106,28 @@ class Cooldowns:
             status = max(throttled, key=lambda code: COOLDOWN_DEFAULT_S[code])
             self._start(provider, COOLDOWN_DEFAULT_S[status], status)
 
-    def _start(self, provider: str, seconds: float, status: int | None) -> None:
+    def _reset(self, provider: str, answered: bool = False) -> None:
+        backend = backend_of(provider)
+        with self._lock:
+            self._streaks.clear(backend)
+            if answered and self._until.get(backend, (0.0, None, "", ""))[3] == ERROR_KIND_TIMEOUT:
+                del self._until[backend]  # a backend the call had left to try answered: it is not hanging
+
+    def _start(
+        self, provider: str, seconds: float, status: int | None, cause: str | None = None, kind: str = _RATE_LIMIT
+    ) -> None:
         now, provider = time.monotonic(), backend_of(provider)  # a pinned mode cools its whole backend
         with self._lock:
             current = self._until.get(provider)
             if current is None or current[0] < now + seconds:
-                self._until[provider] = (now + seconds, status)
-            until, status = self._until[provider]  # a longer cooldown already running is kept, and logged as such
-        logger.info(LOG_COOLDOWN_SET, provider, until - now, status or _RATE_LIMIT)
+                self._until[provider] = (
+                    now + seconds,
+                    status,
+                    cause or COOLDOWN_STATUS.format(status=status or _RATE_LIMIT),
+                    kind,
+                )
+            until, _, cause, _ = self._until[provider]  # a longer cooldown already running is kept, and logged as such
+        logger.info(LOG_COOLDOWN_SET, provider, until - now, cause)
 
     def remaining(self, provider: str) -> tuple[float, int | None] | None:
         """Seconds left on ``provider``'s cooldown and the status that set it; ``None`` once it has run out."""
@@ -97,15 +142,18 @@ class Cooldowns:
                 return None
             return left, entry[1]
 
-    def refusal(self, provider: str) -> CoolingDownError | None:
-        """The error ``auto`` records for passing ``provider`` over while it cools down; ``None`` when it may run."""
-        left = self.remaining(provider)
-        if left is None:
+    def refusal(self, provider: str, last: bool = False) -> CoolingDownError | None:
+        """The error ``auto`` records for passing ``provider`` over while it cools down; ``None`` when it may run.
+
+        ``last``: no other backend is left for the call, so a cooldown after timeouts lets it run.
+        """
+        with self._lock:  # reentrant: the time left and its cause read from one entry
+            left = self.remaining(provider)
+            entry = self._until.get(backend_of(provider))
+        if left is None or entry is None or (last and entry[3] == ERROR_KIND_TIMEOUT):
             return None
         seconds, status = left
-        error = CoolingDownError(
-            provider, MSG_COOLING_DOWN.format(status=status or _RATE_LIMIT, seconds=seconds), kind=_RATE_LIMIT
-        )
+        error = CoolingDownError(provider, MSG_COOLING_DOWN.format(cause=entry[2], seconds=seconds), kind=entry[3])
         error.status_code = status
         error.retry_after = seconds
         return error

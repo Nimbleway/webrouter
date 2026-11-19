@@ -1,4 +1,4 @@
-"""What a router lends the calls it makes: its cooldowns, and its cap on vendor calls in flight.
+"""What a router lends the calls it makes: its cooldowns, its cap on vendor calls in flight, and its hop timeout.
 
 Held in a context variable for the length of each routed call, as the deadline
 is, so the providers underneath read it without it appearing in their
@@ -8,13 +8,16 @@ behaves as it always has. The cap itself is :class:`~web_router.providers._limit
 
 from __future__ import annotations
 
+import math
 from collections.abc import AsyncIterator, Iterator
 from contextlib import AbstractContextManager, asynccontextmanager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from web_router.constants import DELEGATING_PROVIDERS
+from web_router.constants_production import MSG_INVALID_HOP_TIMEOUT
+from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._cooldown import Cooldowns
 from web_router.providers._limiter import Limiter, checked_limit
 
@@ -24,15 +27,41 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class Runtime:
-    """One router's cooldowns and cap, lent to the calls it makes."""
+    """One router's cooldowns, cap and hop timeout, lent to the calls it makes."""
 
     cooldowns: Cooldowns = field(default_factory=Cooldowns)
     limiter: Limiter | None = None
+    hop_timeout: float | Literal[False] | None = None
+    """The most one ``auto`` hop may take before the chain moves on (:mod:`._hop`): ``None`` for a share of the
+    call's time left, ``False`` for no cap."""
 
     @classmethod
-    def capped(cls, max_concurrency: int | None) -> Runtime:
-        """A router's runtime, its vendor calls held to ``max_concurrency``; ``None`` caps nothing."""
-        return cls(limiter=checked_limit(max_concurrency))
+    def capped(
+        cls,
+        max_concurrency: int | None,
+        hop_timeout: float | Literal[False] | None = None,
+        timeout_cooldown: bool = True,
+    ) -> Runtime:
+        """A router's runtime, its vendor calls held to ``max_concurrency`` (``None`` caps nothing), each ``auto``
+        hop to ``hop_timeout``, and with ``timeout_cooldown`` a cooldown after timeouts in a row."""
+        return cls(
+            cooldowns=Cooldowns(timeouts=timeout_cooldown),
+            limiter=checked_limit(max_concurrency),
+            hop_timeout=checked_hop_timeout(hop_timeout),
+        )
+
+
+def checked_hop_timeout(value: float | Literal[False] | None) -> float | Literal[False] | None:
+    """``hop_timeout`` as given: a finite number of seconds above 0, ``None`` (a share of the time left) or ``False``.
+
+    Raises:
+        InvalidParameterError: for anything else, ``True`` included.
+    """
+    if value is None or value is False:
+        return value
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+        raise InvalidParameterError("hop_timeout", MSG_INVALID_HOP_TIMEOUT.format(value=value))
+    return float(value)
 
 
 _RUNTIME: ContextVar[Runtime | None] = ContextVar("web_router_runtime", default=None)

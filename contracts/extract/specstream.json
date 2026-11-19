@@ -1,0 +1,58 @@
+{
+  "provider": "specstream",
+  "method": "extract",
+  "class": "web_router.providers.specstream.SpecStreamExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.specstream.ai",
+    "paths": {
+      "extract_path": "/v1/extract"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "SPECSTREAM_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.format": "markdown",
+    "body.urls": [
+      "https://example.com"
+    ]
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "refused": "UnsupportedFormatError"
+      },
+      "text": {
+        "body.format": "text"
+      }
+    }
+  },
+  "not_mapped": [
+    "profile"
+  ],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": [
+    "https://specstream.ai/agents.md"
+  ],
+  "verified": {
+    "format": "docs: https://specstream.ai/agents.md"
+  },
+  "vendor_options": {
+    "include": {
+      "status": "passthrough",
+      "note": "A list of full_text, html, links and response, each adding that field to every result at the same price."
+    },
+    "pages": {
+      "status": "passthrough",
+      "note": "HTML you already hold, read without a fetch, in place of or beside urls."
+    }
+  }
+}

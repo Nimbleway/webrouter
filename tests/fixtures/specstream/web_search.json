@@ -1,0 +1,148 @@
+{
+  "data": {
+    "id": "ad6d519f1cef47f68514190126284a7f",
+    "request_id": "ad6d519f1cef47f68514190126284a7f",
+    "query": "What is the tallest building in the world?",
+    "kind": "fact",
+    "columns": [],
+    "answer": {
+      "value": "Burj Khalifa",
+      "page": "https://www.businessinsider.com/the-tallest-buildings-in-the-world-2015-12",
+      "sources": [
+        "https://www.businessinsider.com/the-tallest-buildings-in-the-world-2015-12",
+        "https://www.archdaily.com/779178/these-are-the-worlds-25-tallest-buildings",
+        "https://en.wikipedia.org/wiki/History_of_the_world%27s_tallest_buildings"
+      ],
+      "seen_at": "2026-11-12T11:33:42+00:00"
+    },
+    "rows": [
+      {
+        "name": "Burj Khalifa",
+        "page": "https://www.businessinsider.com/the-tallest-buildings-in-the-world-2015-12",
+        "snippet": "Sep 21, 2020 - In September 2020, an architecture firm and luxury condo building company began constructi​...Burj Khalifa The Burj Khalifa in Dubai is the tallest building in the world....​ … Phil Dolby/Flickr New York City's One World Trade Center is the sixth-tallest building in the world. … Have an account? Log in For nearly half a century, from 1931 through 1972, the 1,454-foot Empire State Building held the title of the tallest building in the world. … an architecture firm and luxury condo building company began constructing what will be the largest residential tower in Canada",
+        "sources": [
+          1,
+          2,
+          3
+        ],
+        "probability": 0.8698,
+        "fields": {}
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.burjkhalifa.ae/en/the-tower/facts-figures/",
+        "title": "what building is the tallest in the world",
+        "site": "burjkhalifa.ae",
+        "snippet": "",
+        "cited": false
+      },
+      {
+        "url": "https://www.businessinsider.com/the-tallest-buildings-in-the-world-2015-12",
+        "title": "The 17 Tallest Buildings in the World Right Now, Ranked",
+        "site": "businessinsider.com",
+        "snippet": "Sep 21, 2020 - In September 2020, an architecture firm and luxury condo building company began constructi​...Burj Khalifa The Burj Khalifa in Dubai is the tallest building in the world....​ … Phil Dolby/Flickr New York City's One World Trade Center is the sixth-tallest building in the world. … Have an account? Log in For nearly half a century, from 1931 through 1972, the 1,454-foot Empire State Building held the title of the tallest building in the world. … an architecture firm and luxury condo building company began constructing what will be the largest residential tower in Canada",
+        "cited": true,
+        "published": "2020-09-21",
+        "meta": {
+          "version": "261110.3101",
+          "viewport": "width=device-width, initial-scale=1",
+          "title": "The 17 tallest buildings in the world right now, ranked",
+          "datePublished": "2020-09-21T19:59:00.000Z",
+          "dateModified": "2020-09-21T19:59:53.553Z",
+          "news_keywords": "Lifestyle, Travel, Real Estate, China, New York City, Arts & Culture",
+          "description": "We've come a long way since the Empire State Building was the tallest man-made structure in the world. Now, it doesn't even make the top 40.",
+          "author": "Katie Warren, Joey Hadden",
+          "article:publisher": "businessinsider",
+          "tbi-vertical": "Lifestyle",
+          "og:title": "The 17 tallest buildings in the world right now, ranked",
+          "og:description": "We've come a long way since the Empire State Building was the tallest man-made structure in the world. Now, it doesn't even make the top 40.",
+          "og:type": "article",
+          "og:url": "https://www.businessinsider.com/the-tallest-buildings-in-the-world-2015-12",
+          "og:image": "https://i.insider.com/5cbf5ab67456531d39524465?width=1200&format=jpeg",
+          "og:image:type": "image/jpeg",
+          "og:image:width": "1200",
+          "og:image:height": "600",
+          "twitter:card": "summary_large_image",
+          "robots": "max-image-preview:large",
+          "og:site_name": "Business Insider",
+          "fb:pages": "20446254070",
+          "apple-itunes-app": "app-id=554260576",
+          "linkedin:owner": "mid:1d5f7b",
+          "mrf:sections": "Lifestyle",
+          "mrf:tags": "Page Type:slideshow",
+          "msapplication-config": "/public/assets/BI/US/favicons/browserconfig.xml?v=2025-05",
+          "theme-color": "#fff",
+          "apple-mobile-web-app-title": "Business Insider"
+        }
+      },
+      {
+        "url": "https://www.archdaily.com/779178/these-are-the-worlds-25-tallest-buildings",
+        "title": "The 25 Tallest Buildings in the World | ArchDaily",
+        "site": "archdaily.com",
+        "snippet": "Nov 1, 2023 - (828 m.) is the world’s tallest building right now.​...Emirates Burj Khalifa, the tallest building in the world.​...You'll now receive updates based on what you follow!...​ … The Council on Tall Buildings and Urban Habitat ( CTBUH ) has developed its own system for classifying tall buildings, stating that the Burj Khalifa (828 m.) is the world’s tallest building right now. Read on for the 25 tallest buildings in the world today. … Valencia, Nicolás. \"The 25 Tallest Buildings in the World\" [Estos son los 25 edificios más altos del mundo ahora] 02 Dec 2024. ArchDaily . (Trans.",
+        "cited": false,
+        "published": "2024-12-02",
+        "meta": {
+          "viewport": "width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no",
+          "msapplication-TileColor": "#ffffff",
+          "msapplication-TileImage": "https://assets.adsttc.com/doodles/flat/favicons/square/Favicon144x144.png",
+          "msapplication-config": "https://assets.adsttc.com/doodles/flat/favicons/browserconfig.xml",
+          "theme-color": "#00308E",
+          "apple-mobile-web-app-title": "ArchDaily",
+          "csrf-param": "authenticity_token",
+          "csrf-token": "MLEcWYUul09u7fyFoQaTtEPJfwx45wKftMd1PC1BiyQhiKkgfOQNaK5r4mkJh7FDxamrOBM3p9hORdJBqRe_Ag",
+          "twitter:card": "photo",
+          "twitter:site": "archdaily",
+          "twitter:url": "https://www.archdaily.com/779178/these-are-the-worlds-25-tallest-buildings",
+          "twitter:title": "The 25 Tallest Buildings in the World",
+          "twitter:description": "These are the 25 tallest buildings in the world, according to CTBUH.",
+          "twitter:image": "https://images.adsttc.com/media/images/674c/70e2/2986/4b01/7f32/dc8f/medium_jpg/estos-son-los-25-edificios-mas-altos-del-mundo-ahora_26.jpg?1733062904",
+          "og:site_name": "ArchDaily",
+          "og:title": "The 25 Tallest Buildings in the World",
+          "og:description": "These are the 25 tallest buildings in the world, according to CTBUH.",
+          "og:url": "https://www.archdaily.com/779178/these-are-the-worlds-25-tallest-buildings",
+          "og:image": "https://images.adsttc.com/media/images/674c/70e2/2986/4b01/7f32/dc8f/large_jpg/estos-son-los-25-edificios-mas-altos-del-mundo-ahora_26.jpg?1733062904",
+          "robots": "max-image-preview:large",
+          "og:image:type": "image/jpeg",
+          "og:image:width": "2000",
+          "og:image:height": "1125",
+          "thumbnail": "https://images.adsttc.com/media/images/674c/70e2/2986/4b01/7f32/dc8f/medium_jpg/estos-son-los-25-edificios-mas-altos-del-mundo-ahora_26.jpg?1733062904",
+          "og:type": "article",
+          "archdaily:type": "Articles",
+          "article:published_time": "2024-12-02T06:30:00+00:00",
+          "ssa-scroll-depth-enabled": "true",
+          "ssa-scroll-depth-target-id": "single-content",
+          "ssa-scroll-depth-content-id": "779178",
+          "ssa-scroll-depth-content-type": "article",
+          "ssa-scroll-depth-language": "en",
+          "trueAnthemFB": "These are the 25 tallest buildings in the world, according to CTBUH.",
+          "keywords": "Architecture, Shanghai, Dubai, Changsha, Chicago, TFP Farrells, CTBUH, Kuala Lumpur, Vietnam, Nanjing, United Arab Emirates, Burj Khalifa, Saudi Arabia, Wuhan, Gensler, Skidmore Owings & Merrill, Malaysia, South Korea, Fender Katsilidis Architects, Mecca, Ranking, Kohn Pederson Fox Associates, Cesar Pelli and Associates, Tianjin, Hong Kong, beijing, Highrise, taipei, taiwan, Shenzhen, Guangzhou Shi, Mori Building, Skysraper, C.Y. Lee, East China Architectural Design & Research Institute, Tallest Buildings, Contemporary Architecture, China, Future Cities, Suzhou, Adrian Smith + Gordon Gill Architecture, Wong Tung & Partners, Atkins, Cities, EUA, som, High-rise buildings, Dar Al Handassah, Ho Chi Minh City, New York, Modern Architecture, Architecture",
+          "description": "These are the 25 tallest buildings in the world, according to CTBUH.",
+          "cXenseParse:taxonomy": "articles",
+          "cXenseParse:pageclass": "article",
+          "cXenseParse:articleid": "779178",
+          "cXenseParse:publishtime": "2024-12-02T06:30:00+00:00",
+          "cXenseParse:pn-section-tier1": "Articles",
+          "cXenseParse:pn-section-tier2": "Articles",
+          "cXenseParse:author": "Nicolás Valencia",
+          "cXenseParse:article-media": "MediaPicture",
+          "cXenseParse:sponsored": "false",
+          "cXenseParse:article-photographer": "Paul Clemence",
+          "cXenseParse:article-tags": "Shanghai,Dubai,Changsha,Chicago,TFP Farrells,CTBUH,Kuala Lumpur,Vietnam,Nanjing,United Arab Emirates,Burj Khalifa,Saudi Arabia,Wuhan,Gensler,Skidmore Owings & Merrill,Malaysia,South Korea,Fender Katsilidis Architects,Mecca,Ranking,Kohn Pederson Fox Associates,Cesar Pelli and Associates,Tianjin,Hong Kong,beijing,Highrise,taipei,taiwan,Shenzhen,Guangzhou Shi,Mori Building,Skysraper,C.Y. Lee,East China Architectural Design & Research Institute,Tallest Buildings,Contemporary Architecture,China,Future Cities,Suzhou,Adrian Smith + Gordon Gill Architecture,Wong Tung & Partners,Atkins,Cities,EUA,som,High-rise buildings,Dar Al Handassah,Ho Chi Minh City,New York,Modern Architecture,Architecture",
+          "og:locale": "en_US"
+        }
+      },
+      {
+        "url": "https://en.wikipedia.org/wiki/History_of_the_world%27s_tallest_buildings",
+        "title": "what is the single tallest building in the world",
+        "site": "en.wikipedia.org",
+        "snippet": "The tallest building in the world, as of 2026, is the Burj Khalifa in Dubai, United Arab Emirates. · For thousands of years, the Great Pyramid in Egypt was the tallest structure in the world until Lincoln Cathedral of 1311, but the Great Pyramid is not considered a building since it is not habitable. · It is in this sense of being regularly inhabited or occupied that the term \"building\" is generally applied when determining the world's tallest building.",
+        "cited": false
+      }
+    ],
+    "handoff": null,
+    "took_ms": 1406,
+    "price_usd": 0.005
+  }
+}

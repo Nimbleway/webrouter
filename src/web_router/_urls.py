@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 from web_router.constants_merge import HOST_CHARS, URL_HIDDEN
 from web_router.constants_urls import URL_BRACKETS, URL_TRAILING_PUNCTUATION
 
-_URL = re.compile(r"https?://[^\s<>\"'`]+")
+_URL = re.compile(r"https?://[^\s<>\"'`]+", re.IGNORECASE)
 
 
 def _url_end(text: str) -> int:
