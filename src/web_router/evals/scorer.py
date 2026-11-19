@@ -21,16 +21,21 @@ import asyncio
 import math
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from web_router.constants_evals import MSG_SCORE_BAD_SCALE, MSG_SCORE_OUT_OF_SCALE
+from web_router.constants_evals import MSG_SCORE_BAD_SCALE, MSG_SCORE_OUT_OF_SCALE, MSG_SCORE_UNKNOWN_REASON
 from web_router.types_citation import Citation
 
 
 class Scorecard(BaseModel):
-    """One answer's scores, and the scorer that gave them."""
+    """One answer's scores, the scorer that gave them, and its reasons and record of the run.
+
+    ``dimensions`` and ``overall`` are what compare across answers; ``reasons``
+    say why, for a reader; ``details`` hold whatever else the scorer reports
+    (tokens, cost, searches, version flags) without web-router naming it.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -40,6 +45,24 @@ class Scorecard(BaseModel):
         description="Each dimension's score; None where it did not apply or the scorer failed on it."
     )
     overall: float | None = Field(description="The scorer's one number for the answer; None when it gave none.")
+    reasons: dict[str, str] = Field(
+        default_factory=dict,
+        description="Why each dimension got its score, or why it got none, in the scorer's words; keyed as dimensions.",
+    )
+    details: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "The scorer's own record of the run, as JSON-ready values: what it spent, what it searched, whether "
+            "the card compares with its published scores. Keys are the scorer's to define."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _reasons_name_dimensions(self) -> Scorecard:
+        unknown = sorted(set(self.reasons) - set(self.dimensions))
+        if unknown:
+            raise ValueError(MSG_SCORE_UNKNOWN_REASON.format(names=", ".join(unknown)))
+        return self
 
     @model_validator(mode="after")
     def _within_scale(self) -> Scorecard:

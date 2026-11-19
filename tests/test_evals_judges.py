@@ -149,3 +149,25 @@ def test_a_scorecard_refuses_a_scale_that_is_not_one(scale: tuple[float, float])
 def test_a_scorecard_refuses_a_score_off_its_scale(dimension: float, overall: float) -> None:
     with pytest.raises(ValidationError, match="outside the scorecard's scale"):
         Scorecard(scorer="s", scale=(1, 10), dimensions={"coverage": dimension}, overall=overall)
+
+
+def test_a_scorecard_carries_reasons_and_the_scorers_own_details() -> None:
+    card = Scorecard(
+        scorer="s-v2",
+        scale=(1, 10),
+        dimensions={"factual_accuracy": 9.0, "coverage": None},
+        overall=9.0,
+        reasons={"factual_accuracy": "Every claim checked out.", "coverage": "Not applicable: one fact asked."},
+        details={"usage": [{"role": "judge", "input_tokens": 900}], "comparable": True},
+    )
+    assert Scorecard.model_validate(card.model_dump(mode="json")) == card
+
+
+def test_a_reason_for_a_dimension_not_scored_is_refused() -> None:
+    with pytest.raises(ValidationError, match="reason is given for tone"):
+        Scorecard(scorer="s", scale=(1, 10), dimensions={"coverage": 5.0}, overall=5.0, reasons={"tone": "warm"})
+
+
+def test_reasons_and_details_default_to_empty() -> None:
+    card = Scorecard(scorer="s", scale=(1, 10), dimensions={}, overall=None)
+    assert card.reasons == {} and card.details == {}

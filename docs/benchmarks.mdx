@@ -219,7 +219,8 @@ missing SDK or key.
 A judge grades against a known answer. For questions that have none — a
 research report, a comparison, this week's news — a `Scorer` rates the answer
 from the question, the answer and its citations, on dimensions it names
-(factual accuracy, coverage, ...), into a `Scorecard` that names the scorer.
+(factual accuracy, coverage, ...), into a `Scorecard` that names the scorer
+and carries its reasons per dimension and its own record of the run.
 web-router ships the interface, not a scorer: subclass it to plug yours in.
 A scorer that fact-checks on the web should bring its own search, so it never
 checks a backend against itself.
@@ -233,7 +234,14 @@ class MyScorer(Scorer):
 
     def score(self, question, answer, citations=()):
         checked = my_fact_checker(question, answer, [c.url for c in citations])
-        return Scorecard(scorer=self.label, scale=(1, 10), dimensions=checked.scores, overall=checked.overall)
+        return Scorecard(
+            scorer=self.label,
+            scale=(1, 10),
+            dimensions=checked.scores,       # {"factual_accuracy": 8.0, "coverage": None, ...}
+            overall=checked.overall,
+            reasons=checked.reasons,         # why each dimension got its score, keyed as dimensions
+            details={"usage": checked.usage},  # anything else the scorer reports: tokens, cost, searches
+        )
 
 
 response = router.answer("Which EU countries changed their VAT rate this year?")
