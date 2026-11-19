@@ -162,3 +162,23 @@ def test_two_urls_redirected_to_two_walls_fail_under_the_urls_asked_for() -> Non
 
     assert [page.url for page in kept] == [C]
     assert sorted(failure.url for failure in failures) == [A, B], "auto retries A and B, not the walls"
+
+
+@pytest.mark.parametrize(
+    ("asked", "echoed"),
+    [
+        (
+            ["https://münchen.test/a", "https://köln.test/b"],
+            ["https://xn--mnchen-3ya.test/a", "https://xn--kln-sna.test/b"],
+        ),
+        (
+            ["https://a.test/café", "https://a.test/naïve?q=é"],
+            ["https://a.test/caf%C3%A9", "https://a.test/na%c3%afve?q=%C3%A9"],
+        ),
+    ],
+    ids=["idna-host", "percent-encoded-path"],
+)
+def test_a_url_echoed_in_the_encoded_form_it_was_fetched_in_is_still_the_one_asked_for(
+    asked: list[str], echoed: list[str]
+) -> None:
+    assert owners(echoed, asked) == asked
