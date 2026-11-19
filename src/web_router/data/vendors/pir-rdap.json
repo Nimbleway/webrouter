@@ -1,0 +1,128 @@
+{
+  "vendor": "pir-rdap",
+  "name": "Public Interest Registry RDAP (.org)",
+  "category": "security",
+  "summary": "The .org registry's RDAP service run by Public Interest Registry: domain registration status, dates, registrar and name servers, and name server and entity lookups.",
+  "docs_url": "https://rdap.publicinterestregistry.org/rdap/help",
+  "base_url": "https://rdap.publicinterestregistry.org/rdap",
+  "notes": [
+    "Keyless. Queries are throttled per IP: too many and the service refuses further queries for a while. Its terms forbid high-volume automated querying.",
+    "Fields tagged [Non-Public Data] are withheld under privacy law; the terms in each answer say how to request them.",
+    "The service's own help answer (/help) is its only published query list: domain, nameserver, entity, nameservers?ip= and entities?fn=."
+  ],
+  "sources": [
+    "https://rdap.publicinterestregistry.org/rdap/help"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "pir-rdap.domain.get",
+      "name": "Get a .org domain's registry record",
+      "summary": "The .org registry's RDAP record for a domain: registrar, status codes, registration dates and name servers, with non-public data redacted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": ".org domain name.",
+          "example": "wikipedia.org"
+        }
+      },
+      "notes": [
+        "A 404 means the domain is not registered."
+      ],
+      "job": "domain.whois",
+      "docs_url": "https://rdap.publicinterestregistry.org/rdap/help",
+      "verified": {
+        "docs": "https://rdap.publicinterestregistry.org/rdap/help"
+      }
+    },
+    {
+      "id": "pir-rdap.nameserver.get",
+      "name": "Get a name server",
+      "summary": "The registry's record of a name server host.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nameserver/{nameserver}",
+      "params": {
+        "nameserver": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Name server host name."
+        }
+      },
+      "job": "domain.dns",
+      "docs_url": "https://rdap.publicinterestregistry.org/rdap/help",
+      "verified": {
+        "docs": "https://rdap.publicinterestregistry.org/rdap/help"
+      }
+    },
+    {
+      "id": "pir-rdap.nameservers.by_ip",
+      "name": "Find name servers by IP",
+      "summary": "Name server hosts registered with a given IP address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nameservers",
+      "params": {
+        "ip": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Name server IP address."
+        }
+      },
+      "job": "domain.dns",
+      "docs_url": "https://rdap.publicinterestregistry.org/rdap/help",
+      "verified": {
+        "docs": "https://rdap.publicinterestregistry.org/rdap/help"
+      }
+    },
+    {
+      "id": "pir-rdap.entity.get",
+      "name": "Get an entity",
+      "summary": "A registrar or contact record by its handle.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entity/{handle}",
+      "params": {
+        "handle": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Entity handle."
+        }
+      },
+      "job": "domain.registrar",
+      "docs_url": "https://rdap.publicinterestregistry.org/rdap/help",
+      "verified": {
+        "docs": "https://rdap.publicinterestregistry.org/rdap/help"
+      }
+    },
+    {
+      "id": "pir-rdap.entities.search",
+      "name": "Search entities by name",
+      "summary": "Entities whose full name matches.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entities",
+      "params": {
+        "fn": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Full name to search for."
+        }
+      },
+      "job": "domain.registrar",
+      "docs_url": "https://rdap.publicinterestregistry.org/rdap/help",
+      "verified": {
+        "docs": "https://rdap.publicinterestregistry.org/rdap/help"
+      }
+    }
+  ]
+}

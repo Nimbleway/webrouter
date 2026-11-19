@@ -1,0 +1,269 @@
+{
+  "vendor": "fixer",
+  "name": "Fixer",
+  "category": "finance",
+  "summary": "Foreign exchange rates for 170+ currencies: latest, historical, conversion, time series and fluctuation.",
+  "docs_url": "https://docs.apilayer.com/fixer/docs/api-documentation",
+  "pricing_url": "https://fixer.io/pricing",
+  "base_url": "https://data.fixer.io/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FIXER_API_KEY"
+        ],
+        "description": "A Fixer API access key (fixer.io dashboard). Sent as the access_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The default base currency is EUR.",
+    "Errors come back as JSON with success false and an error object (code, type, info); check success, not only the HTTP status.",
+    "spread (bid and ask) needs the Professional plan or higher; a lower plan gets an upgrade message instead."
+  ],
+  "sources": [
+    "https://docs.apilayer.com/fixer/docs/api-documentation",
+    "https://api.swaggerhub.com/apis/apilayer-863/FixerAPI/1.0.0/swagger.json"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "fixer.latest",
+      "name": "Get the latest exchange rates",
+      "summary": "Latest rates for every currency (or the ones asked for) against the base.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/latest",
+      "params": {
+        "base": {
+          "in": "query",
+          "type": "string",
+          "description": "Base currency, 3-letter code; default EUR.",
+          "example": "USD"
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the rates returned.",
+          "example": "USD,GBP,JPY"
+        },
+        "spread": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds bid and ask to each rate. Professional plan or higher.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/fixer/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/FixerAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "fixer.historical",
+      "name": "Get exchange rates for a past date",
+      "summary": "Rates for one past day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{date}",
+      "params": {
+        "date": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Date, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        },
+        "base": {
+          "in": "query",
+          "type": "string",
+          "description": "Base currency, 3-letter code; default EUR.",
+          "example": "USD"
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the rates returned.",
+          "example": "USD,GBP,JPY"
+        },
+        "spread": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds bid and ask to each rate. Professional plan or higher.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "A date before a currency was added fails the whole call with currency_not_available_on_date."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/fixer/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/FixerAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "fixer.convert",
+      "name": "Convert an amount between currencies",
+      "summary": "Converts an amount at the latest rate, or at a past day's rate.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/convert",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Currency to convert from.",
+          "example": "GBP"
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Currency to convert to.",
+          "example": "JPY"
+        },
+        "amount": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Amount to convert.",
+          "example": 25
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Use this day's rates, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        }
+      },
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/fixer/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/FixerAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "fixer.timeseries",
+      "name": "Get daily rates over a date range",
+      "summary": "Daily rates between two dates, at most 365 days apart.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/timeseries",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First date, YYYY-MM-DD.",
+          "example": "2024-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last date, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        },
+        "base": {
+          "in": "query",
+          "type": "string",
+          "description": "Base currency, 3-letter code; default EUR.",
+          "example": "USD"
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the rates returned.",
+          "example": "USD,GBP,JPY"
+        },
+        "spread": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds bid and ask to each rate. Professional plan or higher.",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "A range starting before a currency was added is served from its first available date; the response's start_date says which."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/fixer/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/FixerAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "fixer.fluctuation",
+      "name": "Get rate fluctuation between two dates",
+      "summary": "Start rate, end rate, change and percent change per currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fluctuation",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First date, YYYY-MM-DD.",
+          "example": "2024-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last date, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        },
+        "base": {
+          "in": "query",
+          "type": "string",
+          "description": "Base currency, 3-letter code; default EUR.",
+          "example": "USD"
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the rates returned.",
+          "example": "USD,GBP,JPY"
+        }
+      },
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/fixer/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/FixerAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "fixer.symbols",
+      "name": "List supported currencies",
+      "summary": "Every currency code Fixer supports with its full name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/symbols",
+      "job": "market.symbols",
+      "docs_url": "https://docs.apilayer.com/fixer/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/FixerAPI/1.0.0/swagger.json"
+      }
+    }
+  ]
+}
