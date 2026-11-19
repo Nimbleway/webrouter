@@ -78,6 +78,7 @@ PROVIDER_KEIROLABS = Provider.KEIROLABS.value
 PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
 PROVIDER_VALYU = Provider.VALYU.value
+PROVIDER_SPECSTREAM = Provider.SPECSTREAM.value
 PROVIDER_AGENTCORE = Provider.AGENTCORE.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
@@ -167,6 +168,7 @@ ENV_KEIROLABS_API_KEY = "KEIROLABS_API_KEY"
 ENV_KEENABLE_API_KEY = "KEENABLE_API_KEY"
 ENV_DEEPSEEK_API_KEY = "DEEPSEEK_API_KEY"
 ENV_VALYU_API_KEY = "VALYU_API_KEY"
+ENV_SPECSTREAM_API_KEY = "SPECSTREAM_API_KEY"
 ENV_AGENTCORE_GATEWAY_URL = "AGENTCORE_GATEWAY_URL"
 ENV_OXYLABS_USERNAME = "OXYLABS_USERNAME"
 ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
@@ -198,6 +200,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_KEENABLE: ENV_KEENABLE_API_KEY,
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
+    PROVIDER_SPECSTREAM: ENV_SPECSTREAM_API_KEY,
     # Not a credential: the AWS one comes from botocore's chain. The gateway is
     # what has to exist before a call can be worth trying.
     PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
@@ -228,6 +231,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_WEBIQ: (ENV_WEBIQ_API_KEY,),
     PROVIDER_KEENABLE: (ENV_KEENABLE_API_KEY,),
     PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
+    PROVIDER_SPECSTREAM: (ENV_SPECSTREAM_API_KEY,),
     PROVIDER_JINA: (),
     PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
     PROVIDER_AUTO: (),
@@ -562,10 +566,10 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen`` and
-``keirolabs`` joined after the scan that set the order, and the ranking set has no rows for them. A backend that joins
-later goes at the end of the file's ``appended``, so joining changes no environment's routing; ``make chains`` moves it
-ahead of the keyless tier only once frozen results rank it.
+From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen``,
+``keirolabs`` and ``specstream`` joined after the scan that set the order, and the ranking set has no rows for them. A
+backend that joins later goes at the end of the file's ``appended``, so joining changes no environment's routing;
+``make chains`` moves it ahead of the keyless tier only once frozen results rank it.
 """
 
 AUTO_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
@@ -599,9 +603,8 @@ itself: ``effort`` in particular reaches a member only as the caller set it.
 AUTO_EXTRA = EXTRA_ALL
 """The extra that installs every member of the chain.
 
-``all`` rather than ``search`` because the chain is the fallback of last
-resort: when none of its members import, the useful advice is to install
-everything, not to guess which method the caller will reach for next.
+``all`` rather than ``search`` because the chain is the fallback of last resort: when none of its members import, the
+useful advice is to install everything, not to guess which method the caller will reach for next.
 """
 
 AUTO_EXTRACT_PREFERRED: tuple[str, ...] = (
@@ -613,11 +616,10 @@ AUTO_EXTRACT_PREFERRED: tuple[str, ...] = (
 )
 """Tried first, and only those the caller actually has credentials for. Measured on pages returned, not graded.
 
-A member that cannot return the format a request asks for is passed over for
-that request.
+A member that cannot return the format a request asks for is passed over for that request.
 
-Reordering the defaults is a change backed by a provider scan; a caller who
-wants another order passes their own ``chain``.
+Reordering the defaults is a change backed by a provider scan; a caller who wants another order passes their own
+``chain``.
 """
 
 AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
@@ -629,11 +631,10 @@ AUTO_EXTRACT_KEYLESS: tuple[tuple[str, dict[str, Any]], ...] = (
 )
 """Tried when no credentials are available, in order. Each verified live keyless.
 
-Firecrawl joined last (2026-10-01, documented at docs.firecrawl.dev/rate-limits),
-so it is reached only when the two before it fail and no call already served
-moves. Keenable's ``/public`` fetch joined after it (2026-10-13) on the same terms.
-Nimble's keyless tier joined first (2026-11-15), so a keyless extract goes to
-Nimble and falls back to the others when its daily cap is spent.
+Firecrawl joined last (2026-10-01, documented at docs.firecrawl.dev/rate-limits), so it is reached only when the two
+before it fail and no call already served moves. Keenable's ``/public`` fetch joined after it (2026-10-13) on the same
+terms. Nimble's keyless tier joined first (2026-11-15), so a keyless extract goes to Nimble and falls back to the
+others when its daily cap is spent.
 """
 
 AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
@@ -643,15 +644,14 @@ AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
     PROVIDER_KEENABLE,
     PROVIDER_DEEPSEEK,
     PROVIDER_BROWSERBASE,
+    PROVIDER_SPECSTREAM,
 )
 """Members added after the chain existed, tried after the keyless tier, as :data:`AUTO_APPENDED` is for search.
 
-``exa`` returns plain text alone, so it serves only ``format="text"``.
-``webiq`` reads only pages in WebIQ's own index; one it lacks fails, and the
-chain moves on. ``keenable`` and ``deepseek`` return markdown alone. ``browserbase``
-joined last (2026-10-29): its Fetch API never renders a page, so it is the
-member of last resort for an ordinary fetch, and the only one that maps
-``profile`` -- a request setting it passes over every other member.
+``exa`` returns plain text alone, so it serves only ``format="text"``. ``webiq`` reads only pages in WebIQ's own
+index; one it lacks fails, and the chain moves on. ``keenable`` and ``deepseek`` return markdown alone. ``browserbase``
+(2026-10-29): its Fetch API never renders a page, so it is the member of last resort for an ordinary fetch, and the
+only one that maps ``profile`` -- a request setting it passes over every other member. ``specstream`` joined last.
 """
 
 AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"})
