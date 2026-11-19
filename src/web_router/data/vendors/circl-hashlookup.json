@@ -1,0 +1,232 @@
+{
+  "vendor": "circl-hashlookup",
+  "name": "CIRCL hashlookup",
+  "category": "security",
+  "summary": "Known-file hash lookups (MD5, SHA-1, SHA-256) against NIST NSRL, OS distribution packages and other sources, with a trust score and parent and child files, from CIRCL Luxembourg.",
+  "docs_url": "https://www.circl.lu/services/hashlookup/",
+  "base_url": "https://hashlookup.circl.lu",
+  "notes": [
+    "Keyless, free and best-effort. Data is CC-BY: cite the CIRCL hashlookup page.",
+    "A match means the file is known (e.g. shipped by an OS or package), not that it is safe or malicious. hashlookup:trust runs 0 to 100: 50 is no opinion, higher means seen in more sources.",
+    "Hashes are hex; the documented examples use upper case."
+  ],
+  "sources": [
+    "https://www.circl.lu/services/hashlookup/",
+    "https://hashlookup.circl.lu/swagger.json"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "circl-hashlookup.lookup.md5",
+      "name": "Look up an MD5",
+      "summary": "The known-file record for an MD5: file name, size, other hashes, product, source database and trust score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lookup/md5/{md5}",
+      "params": {
+        "md5": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "MD5 in hex.",
+          "example": "8ED4B4ED952526D89899E723F3488DE4"
+        }
+      },
+      "notes": [
+        "A 404 means the hash is in none of the known-file sources."
+      ],
+      "job": "security.file.known",
+      "docs_url": "https://www.circl.lu/services/hashlookup/",
+      "verified": {
+        "docs": "https://www.circl.lu/services/hashlookup/"
+      }
+    },
+    {
+      "id": "circl-hashlookup.lookup.sha1",
+      "name": "Look up a SHA-1",
+      "summary": "The known-file record for a SHA-1.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lookup/sha1/{sha1}",
+      "params": {
+        "sha1": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SHA-1 in hex.",
+          "example": "FFFFFDAC1B1B4C513896C805C2C698D9688BE69F"
+        }
+      },
+      "job": "security.file.known",
+      "docs_url": "https://www.circl.lu/services/hashlookup/",
+      "verified": {
+        "docs": "https://www.circl.lu/services/hashlookup/"
+      }
+    },
+    {
+      "id": "circl-hashlookup.lookup.sha256",
+      "name": "Look up a SHA-256",
+      "summary": "The known-file record for a SHA-256.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lookup/sha256/{sha256}",
+      "params": {
+        "sha256": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SHA-256 in hex.",
+          "example": "301c9ec7a9aadee4d745e8fd4fa659dafbbcc6b75b9ff491d14cbbdd840814e9"
+        }
+      },
+      "job": "security.file.known",
+      "docs_url": "https://www.circl.lu/services/hashlookup/",
+      "verified": {
+        "docs": "https://www.circl.lu/services/hashlookup/"
+      }
+    },
+    {
+      "id": "circl-hashlookup.bulk.md5",
+      "name": "Look up many MD5s",
+      "summary": "Known-file records for a list of MD5 hashes.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/bulk/md5",
+      "params": {
+        "hashes": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "MD5 hashes.",
+          "example": [
+            "6E2F8616A01725DCB37BED0A2495AEB2",
+            "8ED4B4ED952526D89899E723F3488DE4"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST: the hashes go in a JSON body."
+      ],
+      "job": "security.file.known",
+      "docs_url": "https://www.circl.lu/services/hashlookup/",
+      "verified": {
+        "docs": "https://www.circl.lu/services/hashlookup/"
+      }
+    },
+    {
+      "id": "circl-hashlookup.bulk.sha1",
+      "name": "Look up many SHA-1s",
+      "summary": "Known-file records for a list of SHA-1 hashes.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/bulk/sha1",
+      "params": {
+        "hashes": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "SHA-1 hashes."
+        }
+      },
+      "notes": [
+        "A read over POST: the hashes go in a JSON body."
+      ],
+      "job": "security.file.known",
+      "docs_url": "https://www.circl.lu/services/hashlookup/",
+      "verified": {
+        "docs": "https://www.circl.lu/services/hashlookup/"
+      }
+    },
+    {
+      "id": "circl-hashlookup.parents",
+      "name": "List a file's parents",
+      "summary": "Packages or archives that contain the file with this SHA-1.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/parents/{sha1}/{count}/{cursor}",
+      "params": {
+        "sha1": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SHA-1 in hex.",
+          "example": "00000079FD7AAC9B2F9C988C50750E1F50B27EB5"
+        },
+        "count": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "How many to return (100 is the documented default).",
+          "example": 100
+        },
+        "cursor": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Paging cursor; the first page is 0.",
+          "example": "0"
+        }
+      },
+      "notes": [
+        "A 404 means no known parent."
+      ],
+      "job": "security.file.known",
+      "docs_url": "https://hashlookup.circl.lu/swagger.json",
+      "verified": {
+        "docs": "https://hashlookup.circl.lu/swagger.json"
+      }
+    },
+    {
+      "id": "circl-hashlookup.children",
+      "name": "List a file's children",
+      "summary": "Files contained in the package or archive with this SHA-1.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/children/{sha1}/{count}/{cursor}",
+      "params": {
+        "sha1": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "SHA-1 in hex.",
+          "example": "00000079FD7AAC9B2F9C988C50750E1F50B27EB5"
+        },
+        "count": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "How many to return (100 is the documented default).",
+          "example": 100
+        },
+        "cursor": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Paging cursor; the first page is 0.",
+          "example": "0"
+        }
+      },
+      "notes": [
+        "A 404 means no known child."
+      ],
+      "job": "security.file.known",
+      "docs_url": "https://hashlookup.circl.lu/swagger.json",
+      "verified": {
+        "docs": "https://hashlookup.circl.lu/swagger.json"
+      }
+    },
+    {
+      "id": "circl-hashlookup.info",
+      "name": "Get database info",
+      "summary": "Source versions and key counts of the hashlookup database.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/info",
+      "job": "reference.codes",
+      "docs_url": "https://www.circl.lu/services/hashlookup/",
+      "verified": {
+        "docs": "https://www.circl.lu/services/hashlookup/"
+      }
+    }
+  ]
+}

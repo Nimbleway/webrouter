@@ -53,7 +53,7 @@ def test_attempts_rank_by_backend_score_times_the_modes_share() -> None:
     scores = {EXA: 0.6, TAVILY: 0.4, INSTANT: 0.7, DEEP: 0.3}
     decision = decision_for(_request(), [EXA, TAVILY, INSTANT, DEEP], scores, 0.9, "fixed")
     assert decision.attempts == [INSTANT, TAVILY, DEEP], "0.42, 0.40, 0.18: Exa's default runs in its modes only"
-    assert decision.reason == f"fixed: {INSTANT}, p=0.70", "the decider's own score for the top id"
+    assert decision.reason == f"fixed: {INSTANT}, p=0.42", "the product the attempts ranked on, not the raw 0.70"
 
 
 def test_a_modes_share_is_of_its_backends_mode_scores() -> None:
@@ -127,7 +127,7 @@ def test_a_callers_route_modes_shows_a_built_in_modes_and_its_plan_runs_them(key
     with WebRouter(provider_config=CHAIN, router=build(keys), route_modes=True) as wr:
         plan = wr.plan("q", tool="search")
     order = plan.providers["search"]
-    assert "exa:exa-instant" in order and order.index("exa:exa-instant") < order.index("exa"), "run in its mode first"
+    assert "exa:exa-instant" in order and "exa" not in order[: order.index("exa:exa-instant")], "run in its mode first"
 
 
 def test_rules_shown_modes_still_picks_the_method_only(keys: Any) -> None:

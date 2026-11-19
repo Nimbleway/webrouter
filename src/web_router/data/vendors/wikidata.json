@@ -1,0 +1,361 @@
+{
+  "vendor": "wikidata",
+  "name": "Wikidata",
+  "category": "science",
+  "summary": "Wikimedia's open knowledge base of structured facts: look up items and properties by label, read an item's labels, statements and sitelinks, and run SPARQL queries over the whole graph.",
+  "docs_url": "https://www.wikidata.org/wiki/Wikidata:REST_API",
+  "base_url": "https://www.wikidata.org/w/rest.php",
+  "hosts": {
+    "sparql": "https://query.wikidata.org"
+  },
+  "settings": {
+    "user_agent": {
+      "env": [
+        "WIKIDATA_USER_AGENT"
+      ],
+      "default": "WebRouter (+https://github.com/Nimbleway/webrouter)",
+      "description": "A descriptive User-Agent with contact details, e.g. 'MyAgent/1.0 (you@example.com)'; Wikimedia blocks clients without one, so set your own for regular use."
+    }
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Keyless for reads. Wikimedia's User-Agent policy applies to both hosts: a generic or missing User-Agent can be blocked; set WIKIDATA_USER_AGENT with your contact details.",
+    "Ids: items are Q-numbers (Q42), properties P-numbers (P31 instance of, P569 date of birth). Find ids with the search calls, then read the item.",
+    "The REST API is versioned in the path (wikibase/v1); its rate limits follow MediaWiki's and are not published as numbers.",
+    "SPARQL: 60 seconds of query time per 60 seconds per client (User-Agent plus IP), 5 parallel queries per IP, 30 failing queries per minute, and each query is cut off at 60 seconds. 429 carries Retry-After; ignoring it can get a temporary ban."
+  ],
+  "sources": [
+    "https://www.wikidata.org/wiki/Wikidata:REST_API",
+    "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+    "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json",
+    "https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual",
+    "https://foundation.wikimedia.org/wiki/Policy:Wikimedia_Foundation_User-Agent_Policy"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "wikidata.items.search",
+      "name": "Search items by label",
+      "summary": "Items whose label or alias matches a term in one language, with their ids and descriptions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wikibase/v1/search/items",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Term to match against labels and aliases.",
+          "example": "Douglas Adams"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Language code to search in.",
+          "example": "en"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first result."
+        }
+      },
+      "job": "knowledge.entities.search",
+      "docs_url": "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+      "verified": {
+        "docs": "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json"
+      }
+    },
+    {
+      "id": "wikidata.items.suggest",
+      "name": "Suggest items by label prefix",
+      "summary": "Items whose label or alias starts with the typed prefix, for autocomplete.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wikibase/v1/suggest/items",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Prefix to match.",
+          "example": "Douglas Ad"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Language code to search in.",
+          "example": "en"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results, max 50."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first result."
+        }
+      },
+      "job": "knowledge.entities.autocomplete",
+      "docs_url": "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+      "verified": {
+        "docs": "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json"
+      }
+    },
+    {
+      "id": "wikidata.properties.search",
+      "name": "Search properties by label",
+      "summary": "Properties (P-ids) whose label or alias matches a term, to find the property a statement or SPARQL query needs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wikibase/v1/search/properties",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Term to match against labels and aliases.",
+          "example": "date of birth"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Language code to search in.",
+          "example": "en"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Index of the first result."
+        }
+      },
+      "job": "knowledge.properties.search",
+      "docs_url": "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+      "verified": {
+        "docs": "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json"
+      }
+    },
+    {
+      "id": "wikidata.items.get",
+      "name": "Get an item",
+      "summary": "One item's labels, descriptions and aliases in every language, its statements and its sitelinks.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wikibase/v1/entities/items/{item_id}",
+      "params": {
+        "item_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Item id.",
+          "example": "Q42"
+        },
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated parts to return: type, labels, descriptions, aliases, statements, sitelinks."
+        }
+      },
+      "notes": [
+        "A whole item is large (every language); pass _fields or use the labels and statements calls to keep it small."
+      ],
+      "job": "knowledge.entity",
+      "docs_url": "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+      "verified": {
+        "docs": "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json"
+      }
+    },
+    {
+      "id": "wikidata.items.statements",
+      "name": "Get an item's statements",
+      "summary": "The item's statements (property, value, qualifiers, references), optionally for one property only.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wikibase/v1/entities/items/{item_id}/statements",
+      "params": {
+        "item_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Item id.",
+          "example": "Q42"
+        },
+        "property": {
+          "in": "query",
+          "type": "string",
+          "description": "One property id to keep, e.g. P569.",
+          "example": "P569"
+        }
+      },
+      "notes": [
+        "Values that are items come back as ids only; read their labels with items.label."
+      ],
+      "job": "knowledge.entity.facts",
+      "docs_url": "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+      "verified": {
+        "docs": "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json"
+      }
+    },
+    {
+      "id": "wikidata.items.label",
+      "name": "Get an item's label in one language, with fallback",
+      "summary": "The item's label in a language, falling back to a related language when it has none.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wikibase/v1/entities/items/{item_id}/labels_with_language_fallback/{language_code}",
+      "params": {
+        "item_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Item id.",
+          "example": "Q42"
+        },
+        "language_code": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Language code.",
+          "example": "en"
+        }
+      },
+      "job": "knowledge.entity.label",
+      "docs_url": "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+      "verified": {
+        "docs": "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json"
+      }
+    },
+    {
+      "id": "wikidata.items.sitelinks",
+      "name": "Get an item's sitelinks",
+      "summary": "The Wikipedia and other Wikimedia pages about the item, by site id (enwiki, dewiki...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wikibase/v1/entities/items/{item_id}/sitelinks",
+      "params": {
+        "item_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Item id.",
+          "example": "Q42"
+        }
+      },
+      "job": "knowledge.entity.links",
+      "docs_url": "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+      "verified": {
+        "docs": "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json"
+      }
+    },
+    {
+      "id": "wikidata.properties.get",
+      "name": "Get a property",
+      "summary": "One property's data type, labels, descriptions, aliases and statements.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wikibase/v1/entities/properties/{property_id}",
+      "params": {
+        "property_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Property id.",
+          "example": "P31"
+        },
+        "_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated parts to return: type, data_type, labels, descriptions, aliases, statements."
+        }
+      },
+      "job": "knowledge.property",
+      "docs_url": "https://doc.wikimedia.org/Wikibase/master/js/rest-api/",
+      "verified": {
+        "docs": "https://www.wikidata.org/w/rest.php/wikibase/v1/openapi.json"
+      }
+    },
+    {
+      "id": "wikidata.sparql.query",
+      "name": "Run a SPARQL query",
+      "summary": "Results of a SPARQL query over the whole Wikidata graph (lists, joins, counts across items).",
+      "kind": "read",
+      "method": "GET",
+      "host": "sparql",
+      "path": "/sparql",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The SPARQL query.",
+          "example": "SELECT ?item ?itemLabel WHERE { ?item wdt:P31 wd:Q146. SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\". } } LIMIT 5"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json for SPARQL JSON results; the default is XML.",
+          "example": "json"
+        }
+      },
+      "notes": [
+        "Pass format=json, or results come back as XML.",
+        "GET answers are cached; use sparql.query_post only for queries too long for a URL."
+      ],
+      "job": "knowledge.query",
+      "docs_url": "https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual"
+      }
+    },
+    {
+      "id": "wikidata.sparql.query_post",
+      "name": "Run a long SPARQL query over POST",
+      "summary": "The same query service as sparql.query, for queries too long for a URL.",
+      "kind": "read",
+      "method": "POST",
+      "host": "sparql",
+      "path": "/sparql",
+      "body_type": "form",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The SPARQL query, sent as the form field query."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "json for SPARQL JSON results; the default is XML.",
+          "example": "json"
+        }
+      },
+      "notes": [
+        "A read: POST only carries a long query past URL limits, and the query service is read-only (SPARQL SELECT/ASK/CONSTRUCT/DESCRIBE; it changes nothing).",
+        "POST answers are not cached, so prefer GET when the query fits in a URL."
+      ],
+      "job": "knowledge.query",
+      "docs_url": "https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual",
+      "verified": {
+        "docs": "https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual"
+      }
+    }
+  ]
+}

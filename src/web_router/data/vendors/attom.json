@@ -1,0 +1,393 @@
+{
+  "vendor": "attom",
+  "name": "ATTOM Property API",
+  "category": "commerce",
+  "summary": "US property data from public records for over 160 million properties: characteristics, owners, assessments and taxes, sales history, building permits, automated valuations, rent and equity estimates.",
+  "docs_url": "https://api.developer.attomdata.com/docs",
+  "pricing_url": "https://www.attomdata.com/solutions/property-data-api/",
+  "base_url": "https://api.gateway.attomdata.com/propertyapi/v1.0.0",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ATTOM_API_KEY"
+        ],
+        "description": "An ATTOM API key (api.developer.attomdata.com, free trial available), sent in the apikey header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "Accept": "application/json"
+  },
+  "notes": [
+    "Only answers with HTTP 200 count against the plan's monthly allowance. Beyond the HTTP code, the body's status element carries ATTOM's own status code (for example when no property matched).",
+    "Address calls take the street in address1 and 'City, ST' (or the ZIP) in address2. Calls keyed by attomid take the id returned by an address call.",
+    "Many more filters (beds, size, dates, value ranges, geoIdV4 areas) are listed in ATTOM's Search Filters section; only the parameters in its interactive reference are listed here."
+  ],
+  "sources": [
+    "https://api.developer.attomdata.com/docs",
+    "https://api.developer.attomdata.com/swagger/spec/propertyapi_propertv1.json",
+    "https://api.developer.attomdata.com/swagger/spec/propertyapi-valuationv1.json",
+    "https://api.developer.attomdata.com/swagger/spec/propertyapi_transactionv1.json"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "attom.property.basicprofile",
+      "name": "Get a property's basic profile by address",
+      "summary": "Basic property information for one US address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/property/basicprofile",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "4529 Winona Court"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "Denver, CO"
+        }
+      },
+      "job": "property.records.get",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi_propertv1.json"
+      }
+    },
+    {
+      "id": "attom.property.expandedprofile",
+      "name": "Get a property's expanded profile by address",
+      "summary": "Detailed property information for one address, including recent transactions and taxes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/property/expandedprofile",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "4529 Winona Court"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "Denver, CO"
+        }
+      },
+      "job": "property.records.get",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi_propertv1.json"
+      }
+    },
+    {
+      "id": "attom.property.detail",
+      "name": "Get a property's details by ATTOM id",
+      "summary": "Property characteristics for one property by its ATTOM id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/property/detail",
+      "params": {
+        "attomid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ATTOM property id, from another property call.",
+          "example": "184713191"
+        }
+      },
+      "job": "property.records.get",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi_propertv1.json"
+      }
+    },
+    {
+      "id": "attom.property.detailowner",
+      "name": "Get a property's details and owner",
+      "summary": "Property details and the current owner for one property.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/property/detailowner",
+      "params": {
+        "attomid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ATTOM property id, from another property call.",
+          "example": "184713191"
+        }
+      },
+      "job": "property.records.get",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi_propertv1.json"
+      }
+    },
+    {
+      "id": "attom.property.by_zip",
+      "name": "List properties in a ZIP code",
+      "summary": "Properties in one ZIP code, optionally of one property type.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/property/address",
+      "params": {
+        "postalcode": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ZIP code.",
+          "example": "82009"
+        },
+        "propertytype": {
+          "in": "query",
+          "type": "string",
+          "description": "Property classification, e.g. SFR, CONDOMINIUM, TOWNHOUSE/ROWHOUSE, APARTMENT."
+        },
+        "orderby": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, e.g. saleamt, avmvalue, beds, universalsize."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, default 1."
+        },
+        "pagesize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, default 100."
+        }
+      },
+      "job": "property.records.search",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi_propertv1.json"
+      }
+    },
+    {
+      "id": "attom.property.buildingpermits",
+      "name": "Get a property's building permits",
+      "summary": "Basic property information with building permit details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/property/buildingpermits",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "4529 Winona Court"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "Denver, CO"
+        }
+      },
+      "job": "property.permits",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi_propertv1.json"
+      }
+    },
+    {
+      "id": "attom.assessment.detail",
+      "name": "Get a property's tax assessment",
+      "summary": "Property and assessment details (assessed values and taxes) for one address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/assessment/detail",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "468 SEQUOIA DR"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "SMYRNA, DE"
+        }
+      },
+      "job": "property.tax",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi-valuationv1.json"
+      }
+    },
+    {
+      "id": "attom.avm.detail",
+      "name": "Get a property's automated valuation",
+      "summary": "Property details with ATTOM's cascaded automated valuation (AVM) and its confidence score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/attomavm/detail",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "4529 Winona Court"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "Denver, CO"
+        }
+      },
+      "notes": [
+        "The scr field is the confidence score of the valuation; it drops when the property's own characteristics are missing."
+      ],
+      "job": "property.valuation",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi-valuationv1.json"
+      }
+    },
+    {
+      "id": "attom.valuation.rentalavm",
+      "name": "Get a property's estimated rent",
+      "summary": "Property details with a rental AVM (estimated rent) for one address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/valuation/rentalavm",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "4529 Winona Court"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "Denver, CO"
+        }
+      },
+      "job": "property.rent",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi-valuationv1.json"
+      }
+    },
+    {
+      "id": "attom.valuation.homeequity",
+      "name": "Get a property's estimated home equity",
+      "summary": "Estimated home equity for one address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/valuation/homeequity",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "4529 Winona Court"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "Denver, CO"
+        }
+      },
+      "job": "property.valuation",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi-valuationv1.json"
+      }
+    },
+    {
+      "id": "attom.sale.detail",
+      "name": "Get a property's latest sale",
+      "summary": "The most recent sale transaction of one property.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/sale/detail",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "468 SEQUOIA DR"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "SMYRNA, DE"
+        }
+      },
+      "job": "property.sales",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi_transactionv1.json"
+      }
+    },
+    {
+      "id": "attom.saleshistory.detail",
+      "name": "Get a property's sales history",
+      "summary": "Sale history detail for one property.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/saleshistory/detail",
+      "params": {
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Street line of the address.",
+          "example": "4529 Winona Court"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City and state (or ZIP) line.",
+          "example": "Denver, CO"
+        }
+      },
+      "job": "property.sales",
+      "docs_url": "https://api.developer.attomdata.com/docs",
+      "verified": {
+        "docs": "https://api.developer.attomdata.com/swagger/spec/propertyapi_transactionv1.json"
+      }
+    }
+  ]
+}

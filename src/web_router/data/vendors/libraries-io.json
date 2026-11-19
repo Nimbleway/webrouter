@@ -1,0 +1,431 @@
+{
+  "vendor": "libraries-io",
+  "name": "Libraries.io",
+  "category": "developer",
+  "summary": "Open source package metadata across 30+ package managers: cross-registry search, versions, dependencies, dependents, dependent repositories and SourceRank scores.",
+  "docs_url": "https://libraries.io/api",
+  "base_url": "https://libraries.io/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "LIBRARIES_IO_API_KEY"
+        ],
+        "description": "A free Libraries.io API key (account page after signing up), sent as the api_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "60 requests per minute per key; more is a 429.",
+    "Lists page with page (default 1) and per_page (default 30, max 100).",
+    "Release subscriptions (subscribe, update, unsubscribe) are not in this entry."
+  ],
+  "sources": [
+    "https://libraries.io/api"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "libraries-io.platforms.list",
+      "name": "List package managers",
+      "summary": "Supported package managers with project counts, homepage and default language.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/platforms",
+      "job": "packages.platforms",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.projects.search",
+      "name": "Search packages across registries",
+      "summary": "Packages from every supported registry matching a query, filterable by language, license, keyword and platform.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search text.",
+          "example": "grunt"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field.",
+          "enum": [
+            "rank",
+            "stars",
+            "dependents_count",
+            "dependent_repos_count",
+            "latest_release_published_at",
+            "contributions_count",
+            "created_at"
+          ]
+        },
+        "languages": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by language."
+        },
+        "licenses": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by license."
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by keyword."
+        },
+        "platforms": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter by package manager."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "packages.search",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.projects.get",
+      "name": "Get a package",
+      "summary": "A package with its versions, licenses, repository, stars, dependents counts and SourceRank.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{platform}/{name}",
+      "params": {
+        "platform": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package manager name as in platforms.list (NPM, Pypi, Maven, Cargo, Rubygems...).",
+          "example": "NPM"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name.",
+          "example": "base62"
+        }
+      },
+      "job": "packages.get",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.projects.dependencies",
+      "name": "List a version's dependencies",
+      "summary": "Dependencies of one version of a package; pass latest as the version for the newest.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{platform}/{name}/{version}/dependencies",
+      "params": {
+        "platform": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package manager name as in platforms.list (NPM, Pypi, Maven, Cargo, Rubygems...).",
+          "example": "NPM"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name.",
+          "example": "base62"
+        },
+        "version": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Version number, or latest.",
+          "example": "latest"
+        }
+      },
+      "job": "packages.dependencies",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.projects.dependents",
+      "name": "List dependent packages",
+      "summary": "Packages with at least one version that depends on this one.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{platform}/{name}/dependents",
+      "params": {
+        "platform": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package manager name as in platforms.list (NPM, Pypi, Maven, Cargo, Rubygems...).",
+          "example": "NPM"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name.",
+          "example": "base62"
+        },
+        "subset": {
+          "in": "query",
+          "type": "string",
+          "description": "name_only for names alone.",
+          "enum": [
+            "name_only"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "packages.dependents",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.projects.dependent_repositories",
+      "name": "List dependent repositories",
+      "summary": "Repositories that depend on a package.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{platform}/{name}/dependent_repositories",
+      "params": {
+        "platform": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package manager name as in platforms.list (NPM, Pypi, Maven, Cargo, Rubygems...).",
+          "example": "NPM"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name.",
+          "example": "base62"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "packages.dependents",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.projects.contributors",
+      "name": "List a package's contributors",
+      "summary": "Users who contributed to a package's repository.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{platform}/{name}/contributors",
+      "params": {
+        "platform": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package manager name as in platforms.list (NPM, Pypi, Maven, Cargo, Rubygems...).",
+          "example": "NPM"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name.",
+          "example": "base62"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "packages.get",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.projects.sourcerank",
+      "name": "Get a package's SourceRank breakdown",
+      "summary": "The components of a package's SourceRank quality score.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{platform}/{name}/sourcerank",
+      "params": {
+        "platform": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package manager name as in platforms.list (NPM, Pypi, Maven, Cargo, Rubygems...).",
+          "example": "NPM"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Package name.",
+          "example": "base62"
+        }
+      },
+      "job": "packages.stats",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.repositories.get",
+      "name": "Get a GitHub repository",
+      "summary": "Libraries.io's record of an open source GitHub repository.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/github/{owner}/{name}",
+      "params": {
+        "owner": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GitHub owner.",
+          "example": "gruntjs"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Repository name.",
+          "example": "grunt"
+        }
+      },
+      "job": "code.repos.get",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.repositories.dependencies",
+      "name": "List a repository's dependencies",
+      "summary": "Dependencies declared by every package manifest in an open source GitHub repository.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/github/{owner}/{name}/dependencies",
+      "params": {
+        "owner": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GitHub owner.",
+          "example": "gruntjs"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Repository name.",
+          "example": "grunt"
+        }
+      },
+      "job": "packages.dependencies",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    },
+    {
+      "id": "libraries-io.repositories.projects",
+      "name": "List packages from a repository",
+      "summary": "Packages that reference a GitHub repository.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/github/{owner}/{name}/projects",
+      "params": {
+        "owner": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "GitHub owner.",
+          "example": "gruntjs"
+        },
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Repository name.",
+          "example": "grunt"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 30, max 100."
+        }
+      },
+      "job": "packages.list",
+      "docs_url": "https://libraries.io/api",
+      "verified": {
+        "docs": "https://libraries.io/api"
+      }
+    }
+  ]
+}
