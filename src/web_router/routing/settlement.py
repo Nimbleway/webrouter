@@ -1,6 +1,6 @@
 """What a budgeted call's attempts end up charged: the estimate, a backend's reported cost, or nothing.
 
-Apart from :mod:`.ledger` so each stays small. The ledger charges each
+The policy; the ledger's own steps are in :mod:`.ledger_settle`. The ledger charges each
 attempt its list-price estimate when it starts. Two things then change that
 charge, in the call's own cap and in every shared budget it reserves in:
 
@@ -24,8 +24,9 @@ from __future__ import annotations
 from web_router.constants_cost import COST_STATED
 from web_router.exceptions import WebRouterError
 from web_router.providers._chain import nothing_started
+from web_router.routing.attempts import Attempt
 from web_router.routing.budget_hooks import LEDGERS, check_own
-from web_router.routing.ledger import Ledger, _Tried
+from web_router.routing.ledger import Ledger
 from web_router.types_errors import TARGET_GONE_STATUSES
 
 
@@ -40,55 +41,24 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
         return
     if getattr(exc, "status_code", None) in TARGET_GONE_STATUSES:
         return  # the page is gone, which a fetch backend may have billed finding out
-    with ledger._lock:
-        opened = ledger.trail.open
-        if opened is None or opened.id != call_id or opened.attempt is None:
-            return
-        tried = ledger.tried[opened.attempt]
-        _charge(ledger, tried, 0.0)
-        tried.est_cost_usd = 0.0
-    _match_enclosing(ledger, tried, 0.0, refunded=True)
+    attempt = ledger.refund_open(call_id)
+    if attempt is not None:
+        _match_enclosing(ledger, attempt, 0.0, refunded=True)
 
 
 def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
     """Charge the attempt whose answer ``response`` is (``empty``: an empty one) the cost it states: reported, or a
-    keyless call's $0."""
+    keyless call's $0. The attempts that read part of the same answer (an extract's retry) settle to none."""
     cost = getattr(response, "cost_usd", None)
     if cost is None or getattr(response, "cost_source", None) not in COST_STATED:
         return
-    with ledger._lock:
-        answering = ledger._answered(getattr(response, "provider", None), empty)
-        if answering is None:
-            return
-        tried = ledger.tried[answering]
-        # The attempts that read part of the same answer (an extract's retry) are in its cost: they settle to none.
-        parts = [part for part in ledger.parts if part is not tried and any(part is t for t in ledger.tried)]
-        for each, charge in [(tried, cost), *((part, 0.0) for part in parts)]:
-            _charge(ledger, each, charge)
-    for each, charge in [(tried, cost), *((part, 0.0) for part in parts)]:
-        _match_enclosing(ledger, each, charge)
+    for attempt, charge in ledger.settle_answer(getattr(response, "provider", None), empty, cost):
+        _match_enclosing(ledger, attempt, charge)
 
 
-def _match_enclosing(ledger: Ledger, settled: _Tried, cost: float, *, refunded: bool = False) -> None:
-    """Charge ``cost`` for ``settled``'s attempt in every enclosing call's ledger that counted it too; ``refunded``
-    lists it at $0 in their records as well, as nothing ran."""
+def _match_enclosing(ledger: Ledger, attempt: Attempt, cost: float, *, refunded: bool = False) -> None:
+    """Charge ``cost`` for ``attempt`` in every enclosing call's ledger that counted it too; ``refunded`` lists it at
+    $0 in their records as well, as nothing ran."""
     for enclosing in LEDGERS.get():
-        if enclosing is ledger:
-            continue
-        with enclosing._lock:
-            counted = next((tried for tried in enclosing.tried if tried.attempt is settled.attempt), None)
-            if counted is not None:
-                _charge(enclosing, counted, cost)
-                counted.est_cost_usd = 0.0 if refunded else counted.est_cost_usd
-
-
-def _charge(ledger: Ledger, tried: _Tried, cost: float) -> None:
-    """Charge ``tried`` ``cost`` in place of what it was charged, in the call's cap and, if its own, the pool's.
-
-    Called under the ledger's lock. A cost past the estimate is reserved without a check: it was billed.
-    """
-    delta, tried.charged = cost - tried.charged, cost
-    ledger.spent += delta
-    if ledger.pool is not None and tried.own:
-        ledger.pool.release(-delta)
-        ledger.reserved += delta
+        if enclosing is not ledger:
+            enclosing.settle_counted(attempt, cost, refunded=refunded)

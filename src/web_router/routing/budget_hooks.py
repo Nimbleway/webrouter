@@ -12,7 +12,7 @@ from collections.abc import Callable
 from contextvars import ContextVar
 
 from web_router.routing.attempts import AnswerHook, Attempt, RefundHook
-from web_router.routing.contract import ToolName, candidate_id
+from web_router.routing.contract import ToolName
 from web_router.routing.ledger import Ledger
 
 LEDGERS: ContextVar[tuple[Ledger, ...]] = ContextVar("web_router_budget_ledgers", default=())
@@ -30,17 +30,12 @@ def check_own(ledger: Ledger) -> Callable[[], bool]:
 
 
 def answered(outer: AnswerHook | None, ledger: Ledger) -> AnswerHook:
-    """The answer hook: ``outer``'s note, then ``ledger``'s: the open attempt read part of the answer another's
-    response carries, so it is no hop, and a stated cost for the whole answer settles it too."""
+    """The answer hook: ``outer``'s note, then ``ledger``'s."""
 
     def note(tool: ToolName, provider: str) -> None:
         if outer is not None:
             outer(tool, provider)
-        with ledger._lock:
-            opened, call_id = ledger.trail.open, candidate_id(tool, provider)
-            if opened is not None and opened.id == call_id and opened.attempt is not None:
-                ledger.parts.append(ledger.tried[opened.attempt])
-            ledger.trail.answered(call_id)
+        ledger.contributed(tool, provider)
 
     return note
 

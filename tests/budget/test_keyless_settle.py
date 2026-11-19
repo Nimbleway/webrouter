@@ -22,6 +22,8 @@ from web_router.providers.nimble import NimbleExtractProvider, NimbleProvider
 from web_router.providers.tavily import TavilyProvider
 from web_router.providers.tavily_extract import TavilyExtractProvider
 from web_router.registry import register_extract_provider, unregister_extract_provider
+from web_router.routing.attempts import Attempt
+from web_router.routing.ledger import Ledger
 from web_router.routing.metered import collected_cost
 from web_router.types import ExtractFailure, ExtractRequest, ExtractResponse, SearchRequest, SearchResponse
 
@@ -36,11 +38,12 @@ READS = [
     (TavilyExtractProvider, (EXTRACT, ["https://a.test"], EMPTY)),
     (FirecrawlExtractProvider, (EXTRACT, ["https://a.test"], {"success": False})),
     (KeenableExtractProvider, (EXTRACT, ["https://a.test"], {"content": "page"})),
+    (KeenableExtractProvider, (EXTRACT, ["https://a.test"], {"message": "not fetched"})),
 ]
 """Each keyless-capable provider, and what its ``_to_response`` is read with."""
 
 
-@pytest.mark.parametrize(("cls", "args"), READS, ids=[cls.__name__ for cls, _ in READS])
+@pytest.mark.parametrize(("cls", "args"), READS, ids=[f"{cls.__name__}-{i}" for i, (cls, _) in enumerate(READS)])
 def test_a_keyless_call_reports_zero_and_a_keyed_one_leaves_the_cost_to_the_router(
     monkeypatch: pytest.MonkeyPatch, cls: type, args: tuple[Any, ...]
 ) -> None:
@@ -130,3 +133,16 @@ def test_a_keyless_answer_another_backend_finished_settles_both_to_zero(priced: 
     assert [document.url for document in response.documents] == [A, B], "rest read B"
     assert (response.cost_usd, response.cost_source) == (0.0, COST_KEYLESS)
     assert shared.status().spent_usd == 0.0, "rest's attempt is part of the answer, settled with it"
+
+
+def test_an_answer_part_taken_back_is_not_settled_with_the_answer(priced: Table) -> None:
+    """``partial`` read part of the answer, then was taken back (a refused mode): only ``rest`` is charged."""
+    priced.update(partial=(0.01, None), rest=(0.01, None))
+    ledger = Ledger(Budget())
+    partial, rest = (Attempt(tool="extract", provider=name, request=EXTRACT) for name in ("partial", "rest"))
+    ledger.admit(partial)
+    ledger.contributed("extract", "partial")
+    ledger.admit(rest)
+    ledger.undo(partial)
+    assert ledger.settle_answer("rest", False, 0.0) == [(rest, 0.0)]
+    assert ledger.spent == 0.0
