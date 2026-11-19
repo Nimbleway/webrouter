@@ -1,0 +1,297 @@
+{
+  "vendor": "harmonic",
+  "name": "Harmonic",
+  "category": "company-data",
+  "summary": "Startup and private-company data: company profiles with headcount, funding stage, traction and team, people profiles, similar companies and natural-language company search.",
+  "docs_url": "https://console.harmonic.ai/docs/api-reference/introduction",
+  "base_url": "https://api.harmonic.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HARMONIC_API_KEY"
+        ],
+        "description": "Your team's Harmonic API key (console.harmonic.ai). Sent in the apikey header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Only 200 responses count toward the plan's usage quota; 402 means over quota on that endpoint.",
+    "Rate limit: 10 requests a second for most endpoints; natural-language search 5 a minute. 429 when exceeded.",
+    "Lists page by cursor: size (default 50) and the next value from page_info.",
+    "Detailed funding rounds and investor data are a paid add-on. Scout research, saved-search writes, the Workspace API and bulk email jobs are not in this entry, nor is company enrich (POST /companies): for a company Harmonic does not hold yet it starts a billed enrichment job. Look a company up by Harmonic id with harmonic.companies.get, or find it with the search calls."
+  ],
+  "sources": [
+    "https://console.harmonic.ai/docs/api-reference/introduction",
+    "https://console.harmonic.ai/docs/llms.txt",
+    "https://console.harmonic.ai/docs/llms-full.txt"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "harmonic.companies.get",
+      "name": "Get a company",
+      "summary": "One company by Harmonic id or URN.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{id_or_urn}",
+      "params": {
+        "id_or_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Harmonic company id (integer) or URN (urn:harmonic:company:123456).",
+          "example": "123456"
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these output fields get values (repeat the key per field, e.g. id, name, website); faster."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://console.harmonic.ai/docs/api-reference/fetch/company-by-id",
+      "verified": {
+        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
+      }
+    },
+    {
+      "id": "harmonic.companies.list",
+      "name": "Get companies by ids",
+      "summary": "Up to 50 companies by Harmonic ids or URNs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies",
+      "params": {
+        "ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Company ids; repeat the key per id."
+        },
+        "urns": {
+          "in": "query",
+          "type": "array",
+          "description": "Company URNs; repeat the key per URN."
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these output fields get values (repeat the key per field, e.g. id, name, website); faster."
+        }
+      },
+      "notes": [
+        "At most 50 companies per call."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://console.harmonic.ai/docs/api-reference/fetch/companies-by-id",
+      "verified": {
+        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
+      }
+    },
+    {
+      "id": "harmonic.companies.employees",
+      "name": "List a company's people",
+      "summary": "URNs of a company's employees, founders, executives, leadership or advisors.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies/{id_or_urn}/employees",
+      "params": {
+        "id_or_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Harmonic company id (integer) or URN (urn:harmonic:company:123456).",
+          "example": "123456"
+        },
+        "employee_group_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Group to list, default ALL.",
+          "enum": [
+            "ALL",
+            "FOUNDERS_AND_CEO",
+            "EXECUTIVES",
+            "FOUNDERS",
+            "LEADERSHIP",
+            "NON_LEADERSHIP",
+            "ADVISORS",
+            "NON_PARTNERS"
+          ]
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "People per page, default 10."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "page_info.end_cursor from the previous answer."
+        }
+      },
+      "notes": [
+        "Returns person URNs; fetch profiles with harmonic.persons.get."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://console.harmonic.ai/docs/api-reference/fetch/employees",
+      "verified": {
+        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
+      }
+    },
+    {
+      "id": "harmonic.persons.get",
+      "name": "Get a person",
+      "summary": "One person's profile: current and past roles, education, socials.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/persons/{id_or_urn}",
+      "params": {
+        "id_or_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Harmonic person id (integer) or URN (urn:harmonic:person:123456).",
+          "example": "123456"
+        }
+      },
+      "job": "people.enrich",
+      "docs_url": "https://console.harmonic.ai/docs/api-reference/fetch/person-by-id",
+      "verified": {
+        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
+      }
+    },
+    {
+      "id": "harmonic.companies.similar",
+      "name": "Find similar companies",
+      "summary": "URNs of companies similar to one company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/similar_companies/{id_or_urn}",
+      "params": {
+        "id_or_urn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Harmonic company id (integer) or URN (urn:harmonic:company:123456).",
+          "example": "123456"
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Companies to return, at most 1000."
+        }
+      },
+      "job": "company.competitors",
+      "docs_url": "https://console.harmonic.ai/docs/api-reference/search/similar-companies",
+      "verified": {
+        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
+      }
+    },
+    {
+      "id": "harmonic.search.typeahead",
+      "name": "Look up by name or domain",
+      "summary": "Companies, people or investors matching a name, partial name or domain, best match first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/typeahead",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Name, partial name, or domain/URL.",
+          "required": true,
+          "example": "langchain"
+        },
+        "search_type": {
+          "in": "query",
+          "type": "string",
+          "description": "What to search.",
+          "enum": [
+            "COMPANY",
+            "PERSON",
+            "INVESTOR"
+          ]
+        }
+      },
+      "notes": [
+        "Only entities Harmonic has already seen."
+      ],
+      "job": "company.suggest",
+      "docs_url": "https://console.harmonic.ai/docs/api-reference/search/typeahead",
+      "verified": {
+        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
+      }
+    },
+    {
+      "id": "harmonic.search.companies",
+      "name": "Search companies in plain language",
+      "summary": "Companies from Harmonic's database matching a plain-language description (stage, sector, funding, similar to a named company).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/search_agent",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "What companies to find, e.g. Series B fintech software companies with over $10M raised.",
+          "required": true
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-1000, default 25."
+        },
+        "similarity_threshold": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum similarity, 0.0-1.0; setting it turns off automatic tuning."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "page_info.next from the previous answer."
+        }
+      },
+      "notes": [
+        "Rate limit 5 requests a minute. Returns companies only."
+      ],
+      "job": "company.search",
+      "docs_url": "https://console.harmonic.ai/docs/api-reference/search/natural-language",
+      "verified": {
+        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
+      }
+    },
+    {
+      "id": "harmonic.enrichment.status",
+      "name": "Get enrichment status",
+      "summary": "Status of enrichments started outside this entry (an enrich call): QUEUED, IN_PROGRESS, COMPLETE or FAILED.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enrichment_status",
+      "params": {
+        "ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Enrichment ids; repeat the key per id."
+        },
+        "urns": {
+          "in": "query",
+          "type": "array",
+          "description": "Enrichment URNs (urn:harmonic:enrichment:...); repeat the key per URN."
+        }
+      },
+      "job": "jobs.status",
+      "docs_url": "https://console.harmonic.ai/docs/api-reference/enrich/status",
+      "verified": {
+        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
+      }
+    }
+  ]
+}

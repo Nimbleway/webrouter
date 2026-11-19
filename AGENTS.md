@@ -464,6 +464,8 @@ src/web_router/
     │                   before each member, hop or job submit, failures, empty answers held
     ├── _attempt_step.py one attempt of that walk: its request in its vendor mode, its
     │                   price, and a failure's outcome (refund, stop the backend, raise)
+    ├── _mode_timeout.py whether a mode's timeout leaves the backend's next mode to
+    │                   run: its p90 fits the time left (one-call walks only)
     ├── _auto_extract.py which members of extract `auto` can serve a request: the
     │                   format and every option it sets; apart so auto.py stops growing
     ├── auto.py         the default for search, extract, research, browser and

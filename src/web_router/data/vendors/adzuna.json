@@ -1,0 +1,712 @@
+{
+  "vendor": "adzuna",
+  "name": "Adzuna",
+  "category": "company-data",
+  "summary": "Job ads aggregated across 19 countries, with salary statistics: search listings, salary histograms and history, vacancies by region and the top hiring companies.",
+  "docs_url": "https://developer.adzuna.com/overview",
+  "base_url": "https://api.adzuna.com/v1/api",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "auth": {
+    "credentials": {
+      "app_id": {
+        "env": [
+          "ADZUNA_APP_ID"
+        ],
+        "description": "Your Adzuna application ID (developer.adzuna.com > Dashboard). Sent as the app_id query parameter."
+      },
+      "app_key": {
+        "env": [
+          "ADZUNA_APP_KEY"
+        ],
+        "description": "Your Adzuna application key, from the same page. Sent as the app_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "app_id",
+        "value": "{app_id}"
+      },
+      {
+        "in": "query",
+        "name": "app_key",
+        "value": "{app_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Without an Accept header the API answers JSONP; this entry sends Accept: application/json.",
+    "The free key is for evaluation. Commercial use is a 14-day trial, then needs a licence from Adzuna; limits per plan show in your account.",
+    "Search returns only a snippet of each job description, and redirect_url points to the ad on Adzuna.",
+    "Salaries are in the country site's own currency; a job with salary_is_predicted set carries an Adzuna estimate, not an advertised figure."
+  ],
+  "sources": [
+    "https://developer.adzuna.com/overview",
+    "https://developer.adzuna.com/docs/search",
+    "https://developer.adzuna.com/docs/companies",
+    "https://developer.adzuna.com/docs/histogram",
+    "https://developer.adzuna.com/docs/historical",
+    "https://developer.adzuna.com/docs/regional",
+    "https://developer.adzuna.com/docs/categories",
+    "https://developer.adzuna.com/docs/terms_of_service",
+    "https://developer.adzuna.com/activedocs",
+    "https://developer.adzuna.com/swagger/spec/test2.json"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "adzuna.jobs.search",
+      "name": "Search job ads",
+      "summary": "Job ads in one country by keywords, place, category, salary, contract type and company, with title, company, location, salary and a description snippet.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs/{country}/search/{page}",
+      "params": {
+        "country": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Adzuna country site, lowercase ISO code.",
+          "enum": [
+            "gb",
+            "us",
+            "at",
+            "au",
+            "be",
+            "br",
+            "ca",
+            "ch",
+            "de",
+            "es",
+            "fr",
+            "in",
+            "it",
+            "mx",
+            "nl",
+            "nz",
+            "pl",
+            "sg",
+            "za"
+          ],
+          "example": "gb"
+        },
+        "page": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Results page, from 1.",
+          "example": 1
+        },
+        "results_per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Ads per page.",
+          "example": 20
+        },
+        "what": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords, space-separated.",
+          "example": "data engineer"
+        },
+        "what_and": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords that must all appear."
+        },
+        "what_phrase": {
+          "in": "query",
+          "type": "string",
+          "description": "An exact phrase in the title or description."
+        },
+        "what_or": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords of which any may appear, space-separated."
+        },
+        "what_exclude": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords to exclude, space-separated."
+        },
+        "title_only": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords matched in the title only."
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Centre of the search: a place name or postcode.",
+          "example": "london"
+        },
+        "distance": {
+          "in": "query",
+          "type": "integer",
+          "description": "Radius around where, in kilometres; default 5."
+        },
+        "location0": {
+          "in": "query",
+          "type": "string",
+          "description": "Top level of an Adzuna location path, e.g. UK; add location1..location7 to narrow (location0=UK, location1=South East England, location2=Surrey).",
+          "example": "UK"
+        },
+        "location1": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 1 of the location path; see location0."
+        },
+        "location2": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 2 of the location path; see location0."
+        },
+        "location3": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 3 of the location path; see location0."
+        },
+        "location4": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 4 of the location path; see location0."
+        },
+        "location5": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 5 of the location path; see location0."
+        },
+        "location6": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 6 of the location path; see location0."
+        },
+        "location7": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 7 of the location path; see location0."
+        },
+        "max_days_old": {
+          "in": "query",
+          "type": "integer",
+          "description": "Oldest ad age to return, in days."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category tag from adzuna.categories.list, e.g. it-jobs.",
+          "example": "it-jobs"
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Ordering.",
+          "enum": [
+            "default",
+            "hybrid",
+            "date",
+            "salary",
+            "relevance"
+          ]
+        },
+        "sort_dir": {
+          "in": "query",
+          "type": "string",
+          "description": "Order direction.",
+          "enum": [
+            "up",
+            "down"
+          ]
+        },
+        "salary_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum salary, in the country's currency."
+        },
+        "salary_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum salary, in the country's currency."
+        },
+        "salary_include_unknown": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to 1 to keep ads without a known salary when filtering on salary.",
+          "enum": [
+            "1"
+          ]
+        },
+        "full_time": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to 1 for full-time ads only.",
+          "enum": [
+            "1"
+          ]
+        },
+        "part_time": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to 1 for part-time ads only.",
+          "enum": [
+            "1"
+          ]
+        },
+        "contract": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to 1 for contract ads only.",
+          "enum": [
+            "1"
+          ]
+        },
+        "permanent": {
+          "in": "query",
+          "type": "string",
+          "description": "Set to 1 for permanent ads only.",
+          "enum": [
+            "1"
+          ]
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Canonical company name, as returned in a job's company object."
+        }
+      },
+      "notes": [
+        "page is in the path and starts at 1; results_per_page sets the page size."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://developer.adzuna.com/docs/search",
+      "verified": {
+        "docs": "https://developer.adzuna.com/activedocs"
+      }
+    },
+    {
+      "id": "adzuna.jobs.categories",
+      "name": "List job categories",
+      "summary": "The category tags and labels Adzuna uses in one country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs/{country}/categories",
+      "params": {
+        "country": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Adzuna country site, lowercase ISO code.",
+          "enum": [
+            "gb",
+            "us",
+            "at",
+            "au",
+            "be",
+            "br",
+            "ca",
+            "ch",
+            "de",
+            "es",
+            "fr",
+            "in",
+            "it",
+            "mx",
+            "nl",
+            "nz",
+            "pl",
+            "sg",
+            "za"
+          ],
+          "example": "gb"
+        }
+      },
+      "job": "reference.categories",
+      "docs_url": "https://developer.adzuna.com/docs/categories",
+      "verified": {
+        "docs": "https://developer.adzuna.com/activedocs"
+      }
+    },
+    {
+      "id": "adzuna.salary.histogram",
+      "name": "Get a salary histogram",
+      "summary": "The distribution of current advertised salaries for a search, in salary bands.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs/{country}/histogram",
+      "params": {
+        "country": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Adzuna country site, lowercase ISO code.",
+          "enum": [
+            "gb",
+            "us",
+            "at",
+            "au",
+            "be",
+            "br",
+            "ca",
+            "ch",
+            "de",
+            "es",
+            "fr",
+            "in",
+            "it",
+            "mx",
+            "nl",
+            "nz",
+            "pl",
+            "sg",
+            "za"
+          ],
+          "example": "gb"
+        },
+        "what": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords, space-separated.",
+          "example": "data engineer"
+        },
+        "location0": {
+          "in": "query",
+          "type": "string",
+          "description": "Top level of an Adzuna location path, e.g. UK; add location1..location7 to narrow (location0=UK, location1=South East England, location2=Surrey).",
+          "example": "UK"
+        },
+        "location1": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 1 of the location path; see location0."
+        },
+        "location2": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 2 of the location path; see location0."
+        },
+        "location3": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 3 of the location path; see location0."
+        },
+        "location4": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 4 of the location path; see location0."
+        },
+        "location5": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 5 of the location path; see location0."
+        },
+        "location6": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 6 of the location path; see location0."
+        },
+        "location7": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 7 of the location path; see location0."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category tag from adzuna.categories.list, e.g. it-jobs.",
+          "example": "it-jobs"
+        }
+      },
+      "job": "jobs.salaries",
+      "docs_url": "https://developer.adzuna.com/docs/histogram",
+      "verified": {
+        "docs": "https://developer.adzuna.com/activedocs"
+      }
+    },
+    {
+      "id": "adzuna.salary.history",
+      "name": "Get salary history",
+      "summary": "Average advertised salary by month for a location and category.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs/{country}/history",
+      "params": {
+        "country": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Adzuna country site, lowercase ISO code.",
+          "enum": [
+            "gb",
+            "us",
+            "at",
+            "au",
+            "be",
+            "br",
+            "ca",
+            "ch",
+            "de",
+            "es",
+            "fr",
+            "in",
+            "it",
+            "mx",
+            "nl",
+            "nz",
+            "pl",
+            "sg",
+            "za"
+          ],
+          "example": "gb"
+        },
+        "location0": {
+          "in": "query",
+          "type": "string",
+          "description": "Top level of an Adzuna location path, e.g. UK; add location1..location7 to narrow (location0=UK, location1=South East England, location2=Surrey).",
+          "example": "UK"
+        },
+        "location1": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 1 of the location path; see location0."
+        },
+        "location2": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 2 of the location path; see location0."
+        },
+        "location3": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 3 of the location path; see location0."
+        },
+        "location4": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 4 of the location path; see location0."
+        },
+        "location5": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 5 of the location path; see location0."
+        },
+        "location6": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 6 of the location path; see location0."
+        },
+        "location7": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 7 of the location path; see location0."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category tag from adzuna.categories.list, e.g. it-jobs.",
+          "example": "it-jobs"
+        },
+        "months": {
+          "in": "query",
+          "type": "integer",
+          "description": "Months back, 1 to 12."
+        }
+      },
+      "job": "jobs.salaries",
+      "docs_url": "https://developer.adzuna.com/docs/historical",
+      "verified": {
+        "docs": "https://developer.adzuna.com/activedocs"
+      }
+    },
+    {
+      "id": "adzuna.vacancies.by_region",
+      "name": "Get vacancies and salaries by region",
+      "summary": "Vacancy counts and average salaries for the locations inside an area.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs/{country}/geodata",
+      "params": {
+        "country": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Adzuna country site, lowercase ISO code.",
+          "enum": [
+            "gb",
+            "us",
+            "at",
+            "au",
+            "be",
+            "br",
+            "ca",
+            "ch",
+            "de",
+            "es",
+            "fr",
+            "in",
+            "it",
+            "mx",
+            "nl",
+            "nz",
+            "pl",
+            "sg",
+            "za"
+          ],
+          "example": "gb"
+        },
+        "location0": {
+          "in": "query",
+          "type": "string",
+          "description": "Top level of an Adzuna location path, e.g. UK; add location1..location7 to narrow (location0=UK, location1=South East England, location2=Surrey).",
+          "example": "UK"
+        },
+        "location1": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 1 of the location path; see location0."
+        },
+        "location2": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 2 of the location path; see location0."
+        },
+        "location3": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 3 of the location path; see location0."
+        },
+        "location4": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 4 of the location path; see location0."
+        },
+        "location5": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 5 of the location path; see location0."
+        },
+        "location6": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 6 of the location path; see location0."
+        },
+        "location7": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 7 of the location path; see location0."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category tag from adzuna.categories.list, e.g. it-jobs.",
+          "example": "it-jobs"
+        }
+      },
+      "job": "jobs.salaries",
+      "docs_url": "https://developer.adzuna.com/docs/regional",
+      "verified": {
+        "docs": "https://developer.adzuna.com/activedocs"
+      }
+    },
+    {
+      "id": "adzuna.companies.top",
+      "name": "Get top hiring companies",
+      "summary": "The five employers with the most vacancies for a search, with vacancy count and average salary.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/jobs/{country}/top_companies",
+      "params": {
+        "country": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Adzuna country site, lowercase ISO code.",
+          "enum": [
+            "gb",
+            "us",
+            "at",
+            "au",
+            "be",
+            "br",
+            "ca",
+            "ch",
+            "de",
+            "es",
+            "fr",
+            "in",
+            "it",
+            "mx",
+            "nl",
+            "nz",
+            "pl",
+            "sg",
+            "za"
+          ],
+          "example": "gb"
+        },
+        "what": {
+          "in": "query",
+          "type": "string",
+          "description": "Keywords, space-separated.",
+          "example": "data engineer"
+        },
+        "location0": {
+          "in": "query",
+          "type": "string",
+          "description": "Top level of an Adzuna location path, e.g. UK; add location1..location7 to narrow (location0=UK, location1=South East England, location2=Surrey).",
+          "example": "UK"
+        },
+        "location1": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 1 of the location path; see location0."
+        },
+        "location2": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 2 of the location path; see location0."
+        },
+        "location3": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 3 of the location path; see location0."
+        },
+        "location4": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 4 of the location path; see location0."
+        },
+        "location5": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 5 of the location path; see location0."
+        },
+        "location6": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 6 of the location path; see location0."
+        },
+        "location7": {
+          "in": "query",
+          "type": "string",
+          "description": "Level 7 of the location path; see location0."
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Category tag from adzuna.categories.list, e.g. it-jobs.",
+          "example": "it-jobs"
+        }
+      },
+      "notes": [
+        "Returns a leaderboard of five companies only."
+      ],
+      "job": "company.search",
+      "docs_url": "https://developer.adzuna.com/docs/companies",
+      "verified": {
+        "docs": "https://developer.adzuna.com/activedocs"
+      }
+    }
+  ]
+}

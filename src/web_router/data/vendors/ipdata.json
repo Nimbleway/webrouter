@@ -1,0 +1,167 @@
+{
+  "vendor": "ipdata",
+  "name": "ipdata",
+  "category": "maps",
+  "summary": "IP geolocation with ASN, company, mobile carrier, time zone, currency and threat data (Tor, proxy, VPN, datacenter, known attacker or abuser, blocklists), plus detailed ASN records.",
+  "docs_url": "https://docs.ipdata.co/docs/getting-started",
+  "pricing_url": "https://ipdata.co/pricing.html",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "IPDATA_API_HOST"
+      ],
+      "default": "api.ipdata.co",
+      "choices": [
+        "api.ipdata.co",
+        "eu-api.ipdata.co"
+      ],
+      "description": "API host: the default, or eu-api.ipdata.co to keep requests on EU servers only."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "IPDATA_API_KEY"
+        ],
+        "description": "An ipdata API key (ipdata.co dashboard). Sent as the api-key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "A free key allows 1,500 requests a day, with commercial use restricted; quotas reset at 00:00 UTC. Past the free quota requests are blocked.",
+    "Private and reserved addresses return 400 with a message, not a result.",
+    "Bulk lookup (POST /bulk with a JSON array of up to 100 IPs, paid plans only, one credit per IP) is not in this entry."
+  ],
+  "sources": [
+    "https://docs.ipdata.co/docs/getting-started",
+    "https://docs.ipdata.co/docs/filtering-response-fields",
+    "https://docs.ipdata.co/docs/proxy-tor-and-threat-detection",
+    "https://docs.ipdata.co/docs/asn-api",
+    "https://docs.ipdata.co/docs/company",
+    "https://docs.ipdata.co/docs/bulk-lookup",
+    "https://docs.ipdata.co/docs/api-status-codes",
+    "https://docs.ipdata.co/docs/frequently-asked-questions"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "ipdata.ip.lookup",
+      "name": "Look up an IP's location, network and threat profile",
+      "summary": "City, region, country, coordinates, postal code, ASN, company, carrier, languages, currency, time zone, threat flags and anycast/satellite/leased flags for an IP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ip}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address.",
+          "example": "8.8.8.8"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated top-level fields to return, e.g. ip,city,country_name,threat.",
+          "example": "ip,city,region,country_name,carrier"
+        }
+      },
+      "notes": [
+        "One request from the daily quota. threat.is_vpn is filled only on Business and Enterprise plans."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://docs.ipdata.co/docs/getting-started",
+      "verified": {
+        "docs": "https://docs.ipdata.co/docs/getting-started"
+      }
+    },
+    {
+      "id": "ipdata.ip.field",
+      "name": "Get one section of an IP's record",
+      "summary": "A single field of an IP's record, such as threat, company, carrier, asn, time_zone or country_name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ip}/{field}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address.",
+          "example": "45.148.10.240"
+        },
+        "field": {
+          "in": "path",
+          "required": true,
+          "description": "The field to return.",
+          "enum": [
+            "ip",
+            "is_eu",
+            "city",
+            "region",
+            "region_code",
+            "country_name",
+            "country_code",
+            "continent_name",
+            "continent_code",
+            "latitude",
+            "longitude",
+            "asn",
+            "company",
+            "postal",
+            "calling_code",
+            "flag",
+            "emoji_flag",
+            "emoji_unicode",
+            "carrier",
+            "languages",
+            "currency",
+            "time_zone",
+            "threat",
+            "count",
+            "is_anycast",
+            "is_satellite",
+            "is_leased"
+          ],
+          "example": "threat"
+        }
+      },
+      "notes": [
+        "A plain field such as country_name comes back as bare text, not JSON. threat holds is_tor, is_vpn, is_icloud_relay, is_proxy, is_datacenter, is_anonymous, is_known_attacker, is_known_abuser, is_threat, is_bogon, blocklists and scores."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://docs.ipdata.co/docs/filtering-response-fields",
+      "verified": {
+        "docs": "https://docs.ipdata.co/docs/proxy-tor-and-threat-detection"
+      }
+    },
+    {
+      "id": "ipdata.asn.get",
+      "name": "Get an ASN's details",
+      "summary": "Owner name, domain, usage type, IPv4 and IPv6 prefixes, IP count, registry, country, assignment date, status and upstream, downstream and peer ASNs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{asn}/",
+      "params": {
+        "asn": {
+          "in": "path",
+          "required": true,
+          "description": "The AS number with its AS prefix.",
+          "example": "AS2"
+        }
+      },
+      "job": "ip.asn",
+      "docs_url": "https://docs.ipdata.co/docs/asn-api",
+      "verified": {
+        "docs": "https://docs.ipdata.co/docs/asn-api"
+      }
+    }
+  ]
+}

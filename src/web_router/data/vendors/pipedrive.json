@@ -1,0 +1,732 @@
+{
+  "vendor": "pipedrive",
+  "name": "Pipedrive",
+  "category": "analytics",
+  "summary": "A Pipedrive CRM company account: deals, persons, organizations, activities, pipelines and stages, with search across them.",
+  "docs_url": "https://developers.pipedrive.com/docs/api/v1",
+  "pricing_url": "https://www.pipedrive.com/en/pricing",
+  "base_url": "https://api.pipedrive.com/api/v2",
+  "auth": {
+    "credentials": {
+      "api_token": {
+        "env": [
+          "PIPEDRIVE_API_TOKEN"
+        ],
+        "description": "a Pipedrive personal API token; it acts as that user and sees what they can see"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-token",
+        "value": "{api_token}"
+      }
+    ]
+  },
+  "notes": [
+    "Every read here is a GET on API v2; no record query needs a POST.",
+    "Paging is a cursor: pass additional_data.next_cursor from the answer as cursor; none means the last page.",
+    "Calls spend API tokens from a company-wide daily budget (30,000 x plan multiplier x seats): about 10 per list, 1 per single item and 20 per search on v2. 429 when the budget is spent, until the daily reset. Burst limits apply per 2 seconds, and search is held to 10 requests per 2 seconds.",
+    "Custom fields come back under 40-character hash keys; map them with pipedrive.deal_fields.list. Stage and pipeline are ids; name them with stages.list and pipelines.list.",
+    "List filters that take several values (ids, status, include_fields, custom_fields) take one comma-separated string."
+  ],
+  "sources": [
+    "https://developers.pipedrive.com/docs/api/v1",
+    "https://developers.pipedrive.com/docs/api/v2/openapi.yaml",
+    "https://pipedrive.readme.io/docs/core-api-concepts-rate-limiting"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "pipedrive.deals.list",
+      "name": "List deals",
+      "summary": "Open, won and lost deals, filterable by owner, person, organization, pipeline, stage, status or update time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/deals",
+      "params": {
+        "filter_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "A saved filter's id; when set, the other filters below are ignored."
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 100 ids, comma separated."
+        },
+        "owner_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only deals owned by this user."
+        },
+        "person_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only deals linked to this person."
+        },
+        "org_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only deals linked to this organization."
+        },
+        "pipeline_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only deals in this pipeline."
+        },
+        "stage_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only deals in this stage."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Statuses, comma separated: open, won, lost, deleted (deleted covers the last 30 days). All but deleted when omitted."
+        },
+        "updated_since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items updated at or after this RFC 3339 time, e.g. 2026-11-01T00:00:00Z."
+        },
+        "updated_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items updated before this RFC 3339 time."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; id when omitted.",
+          "enum": [
+            "id",
+            "update_time",
+            "add_time"
+          ]
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (default) or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra fields to include, comma separated."
+        },
+        "custom_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Custom field keys to include, comma separated, at most 15; faster and smaller answers."
+        },
+        "include_option_labels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true returns option custom fields as {id, label} instead of bare ids."
+        },
+        "include_labels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds the item's label objects."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 500; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "crm.deals.list",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/Deals#getDeals",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/Deals#getDeals"
+      }
+    },
+    {
+      "id": "pipedrive.deals.get",
+      "name": "Get a deal",
+      "summary": "One deal with its value, stage, owner, people and custom fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/deals/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The deal id."
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra fields to include, comma separated."
+        },
+        "custom_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Custom field keys to include, comma separated, at most 15; faster and smaller answers."
+        },
+        "include_option_labels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true returns option custom fields as {id, label} instead of bare ids."
+        },
+        "include_labels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds the item's label objects."
+        }
+      },
+      "job": "crm.deals.get",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/Deals#getDeal",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/Deals#getDeal"
+      }
+    },
+    {
+      "id": "pipedrive.deals.search",
+      "name": "Search deals",
+      "summary": "Deals whose title, notes or searchable custom fields match a term.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/deals/search",
+      "params": {
+        "term": {
+          "in": "query",
+          "type": "string",
+          "description": "At least 2 characters (1 with exact_match).",
+          "required": true,
+          "example": "renewal"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to search, comma separated: title, notes, custom_fields. All when omitted."
+        },
+        "exact_match": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only whole, case-insensitive matches."
+        },
+        "person_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only deals of this person."
+        },
+        "organization_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only deals of this organization."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "open, won or lost.",
+          "enum": [
+            "open",
+            "won",
+            "lost"
+          ]
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional extra fields, comma separated."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "crm.deals.search",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/Deals#searchDeals",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/Deals#searchDeals"
+      }
+    },
+    {
+      "id": "pipedrive.search",
+      "name": "Search across items",
+      "summary": "Deals, persons, organizations, products, leads, files and projects matching a term.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/itemSearch",
+      "params": {
+        "term": {
+          "in": "query",
+          "type": "string",
+          "description": "At least 2 characters (1 with exact_match).",
+          "required": true,
+          "example": "acme"
+        },
+        "item_types": {
+          "in": "query",
+          "type": "string",
+          "description": "Item types, comma separated: deal, person, organization, product, lead, file, mail_attachment, project. All when omitted."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Fields to search, comma separated (e.g. name, email, phone, title, notes, custom_fields). All when omitted."
+        },
+        "search_for_related_items": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return up to 100 newest related leads, deals and persons for each person and organization found."
+        },
+        "exact_match": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only whole, case-insensitive matches."
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Optional extra fields, comma separated."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "crm.search",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/ItemSearch#searchItem",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/ItemSearch#searchItem"
+      }
+    },
+    {
+      "id": "pipedrive.persons.list",
+      "name": "List persons",
+      "summary": "Contacts, filterable by owner, organization, deal or update time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/persons",
+      "params": {
+        "filter_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "A saved filter's id; when set, the other filters below are ignored."
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 100 ids, comma separated."
+        },
+        "owner_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only persons owned by this user."
+        },
+        "org_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only persons of this organization."
+        },
+        "deal_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only persons linked to this deal."
+        },
+        "updated_since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items updated at or after this RFC 3339 time, e.g. 2026-11-01T00:00:00Z."
+        },
+        "updated_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items updated before this RFC 3339 time."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; id when omitted.",
+          "enum": [
+            "id",
+            "update_time",
+            "add_time"
+          ]
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (default) or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra fields to include, comma separated."
+        },
+        "custom_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Custom field keys to include, comma separated, at most 15; faster and smaller answers."
+        },
+        "include_option_labels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true returns option custom fields as {id, label} instead of bare ids."
+        },
+        "include_labels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds the item's label objects."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 500; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "crm.contacts.list",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/Persons#getPersons",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/Persons#getPersons"
+      }
+    },
+    {
+      "id": "pipedrive.organizations.list",
+      "name": "List organizations",
+      "summary": "Organizations, filterable by owner or update time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations",
+      "params": {
+        "filter_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "A saved filter's id; when set, the other filters below are ignored."
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 100 ids, comma separated."
+        },
+        "owner_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only organizations owned by this user."
+        },
+        "updated_since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items updated at or after this RFC 3339 time, e.g. 2026-11-01T00:00:00Z."
+        },
+        "updated_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items updated before this RFC 3339 time."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; id when omitted.",
+          "enum": [
+            "id",
+            "update_time",
+            "add_time"
+          ]
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (default) or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra fields to include, comma separated."
+        },
+        "custom_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Custom field keys to include, comma separated, at most 15; faster and smaller answers."
+        },
+        "include_option_labels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true returns option custom fields as {id, label} instead of bare ids."
+        },
+        "include_labels": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true adds the item's label objects."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 500; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "crm.companies.list",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/Organizations#getOrganizations",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/Organizations#getOrganizations"
+      }
+    },
+    {
+      "id": "pipedrive.activities.list",
+      "name": "List activities",
+      "summary": "Calls, meetings, tasks and other activities, filterable by owner, deal, lead, person, organization, done flag or update time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/activities",
+      "params": {
+        "filter_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "A saved filter's id; when set, the other filters below are ignored."
+        },
+        "ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 100 ids, comma separated."
+        },
+        "owner_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only activities owned by this user."
+        },
+        "deal_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only activities of this deal."
+        },
+        "lead_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only activities of this lead."
+        },
+        "person_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only activities whose main participant is this person."
+        },
+        "org_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only activities of this organization."
+        },
+        "done": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only done (true) or open (false) activities."
+        },
+        "updated_since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items updated at or after this RFC 3339 time, e.g. 2026-11-01T00:00:00Z."
+        },
+        "updated_until": {
+          "in": "query",
+          "type": "string",
+          "description": "Only items updated before this RFC 3339 time."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; id when omitted.",
+          "enum": [
+            "id",
+            "update_time",
+            "add_time",
+            "due_date"
+          ]
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (default) or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "include_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra fields to include, comma separated."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 500; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "crm.activities.list",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/Activities#getActivities",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/Activities#getActivities"
+      }
+    },
+    {
+      "id": "pipedrive.pipelines.list",
+      "name": "List pipelines",
+      "summary": "Every sales pipeline.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pipelines",
+      "params": {
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; id when omitted.",
+          "enum": [
+            "id",
+            "update_time",
+            "add_time"
+          ]
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (default) or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 500; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "crm.pipelines",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/Pipelines#getPipelines",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/Pipelines#getPipelines"
+      }
+    },
+    {
+      "id": "pipedrive.stages.list",
+      "name": "List stages",
+      "summary": "Pipeline stages, for one pipeline or all, to name the stage_id on deals.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stages",
+      "params": {
+        "pipeline_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only this pipeline's stages."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field; id when omitted.",
+          "enum": [
+            "id",
+            "update_time",
+            "add_time",
+            "order_nr"
+          ]
+        },
+        "sort_direction": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (default) or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 500; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "crm.pipelines",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/Stages#getStages",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/Stages#getStages"
+      }
+    },
+    {
+      "id": "pipedrive.deal_fields.list",
+      "name": "List deal fields",
+      "summary": "Every deal field, standard and custom, with its key, type and options.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dealFields",
+      "params": {
+        "include_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra data namespaces to include, comma separated."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 500; 100 when omitted."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "additional_data.next_cursor from the previous page."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://developers.pipedrive.com/docs/api/v1/DealFields#getDealFields",
+      "verified": {
+        "docs": "https://developers.pipedrive.com/docs/api/v1/DealFields#getDealFields"
+      }
+    }
+  ]
+}

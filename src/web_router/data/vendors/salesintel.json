@@ -1,0 +1,614 @@
+{
+  "vendor": "salesintel",
+  "name": "SalesIntel",
+  "category": "enrichment",
+  "summary": "Human-verified B2B contacts and companies: contact and company search and append, technographics and company news.",
+  "docs_url": "https://developer.salesintel.io/salesintel-api-documentation/getting-started-with-salesintel-apis",
+  "base_url": "https://api.salesintel.io",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SALESINTEL_API_KEY"
+        ],
+        "description": "A SalesIntel API key, issued by your SalesIntel success team. Sent in the X-CB-ApiKey header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-CB-ApiKey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits follow the records returned, not the requests; 402 when the account lacks credits, 403 when it lacks permission for a service.",
+    "1,800 requests a minute per user; 429 beyond.",
+    "Export apps, webhooks and the Snowflake share are not in this entry."
+  ],
+  "sources": [
+    "https://developer.salesintel.io/salesintel-api-documentation/getting-started-with-salesintel-apis.md",
+    "https://developer.salesintel.io/salesintel-api-documentation/getting-started-with-salesintel-apis/rate-limits.md",
+    "https://developer.salesintel.io/salesintel-api-documentation/company-apis.md",
+    "https://developer.salesintel.io/salesintel-api-documentation/people-contact-apis.md",
+    "https://developer.salesintel.io/salesintel-api-documentation/technographic-apis.md",
+    "https://developer.salesintel.io/salesintel-api-documentation/news-apis.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "salesintel.company.search",
+      "name": "Search or look up companies",
+      "summary": "Companies matching firmographic filters, or the records of named companies by domain or name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/service/company",
+      "params": {
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains; the preferred way to name companies.",
+          "example": "salesforce.com"
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated names, matched by 'contains'."
+        },
+        "location_country_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO alpha-2 country codes."
+        },
+        "company_location_states": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated state or region codes."
+        },
+        "company_min_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employees."
+        },
+        "company_max_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employees."
+        },
+        "company_min_revenue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum annual revenue, in millions."
+        },
+        "company_max_revenue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum annual revenue, in millions."
+        },
+        "company_naics_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated NAICS codes."
+        },
+        "company_sic_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated SIC codes."
+        },
+        "specialties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated keywords describing the company."
+        },
+        "is_international": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false: US-based, true: outside the US. Unset can return one organization several times."
+        },
+        "verified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: human-verified records only."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, at most 50 (the default)."
+        }
+      },
+      "notes": [
+        "Charged per record on each page you fetch (up to 50 a page), not per request; only 10,000 records deep.",
+        "Set is_international and verified to avoid duplicates of one organization."
+      ],
+      "job": "company.search",
+      "docs_url": "https://developer.salesintel.io/salesintel-api-documentation/company-apis",
+      "verified": {
+        "docs": "https://developer.salesintel.io/salesintel-api-documentation/company-apis"
+      }
+    },
+    {
+      "id": "salesintel.people.preview",
+      "name": "Preview matching contacts",
+      "summary": "Names, companies and titles of matching contacts with contact details masked, to pick before paying.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/service/people/preview",
+      "params": {
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains; the preferred way to name companies.",
+          "example": "salesforce.com"
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated names, matched by 'contains'."
+        },
+        "location_country_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO alpha-2 country codes."
+        },
+        "company_location_states": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated state or region codes."
+        },
+        "company_min_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employees."
+        },
+        "company_max_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employees."
+        },
+        "company_min_revenue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum annual revenue, in millions."
+        },
+        "company_max_revenue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum annual revenue, in millions."
+        },
+        "company_naics_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated NAICS codes."
+        },
+        "company_sic_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated SIC codes."
+        },
+        "specialties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated keywords describing the company."
+        },
+        "is_international": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false: US-based, true: outside the US. Unset can return one organization several times."
+        },
+        "verified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: human-verified records only."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, at most 50 (the default)."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated emails (work or personal); use alone to append data to known contacts."
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "job_title": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated titles or keywords, matched by 'contains'."
+        },
+        "job_levels": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: brd, chf (C-level), vp, dir, mgr, stf."
+        },
+        "job_departments": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: fnad, hr, it_is, lgl, mrkt, ops, prc, enrd, sale, other."
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Full LinkedIn profile URL."
+        },
+        "required_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields a contact must have: address, phone, direct_phone, any_mobile, personal_email, linkedin_url, job_title."
+        },
+        "is_ev_contact": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Contacts whose email is verified even if the rest is machine-verified."
+        }
+      },
+      "notes": [
+        "Free: no credits. Pass the match_id of the contacts you want to salesintel.people.search."
+      ],
+      "job": "people.search",
+      "docs_url": "https://developer.salesintel.io/salesintel-api-documentation/people-contact-apis",
+      "verified": {
+        "docs": "https://developer.salesintel.io/salesintel-api-documentation/people-contact-apis"
+      }
+    },
+    {
+      "id": "salesintel.people.search",
+      "name": "Search or look up contacts",
+      "summary": "Contacts with emails, phones and job details matching filters, or the records behind known emails.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/service/people",
+      "params": {
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains; the preferred way to name companies.",
+          "example": "salesforce.com"
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated names, matched by 'contains'."
+        },
+        "location_country_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO alpha-2 country codes."
+        },
+        "company_location_states": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated state or region codes."
+        },
+        "company_min_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum employees."
+        },
+        "company_max_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum employees."
+        },
+        "company_min_revenue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum annual revenue, in millions."
+        },
+        "company_max_revenue": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum annual revenue, in millions."
+        },
+        "company_naics_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated NAICS codes."
+        },
+        "company_sic_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated SIC codes."
+        },
+        "specialties": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated keywords describing the company."
+        },
+        "is_international": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false: US-based, true: outside the US. Unset can return one organization several times."
+        },
+        "verified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true: human-verified records only."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, at most 50 (the default)."
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated emails (work or personal); use alone to append data to known contacts."
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "job_title": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated titles or keywords, matched by 'contains'."
+        },
+        "job_levels": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: brd, chf (C-level), vp, dir, mgr, stf."
+        },
+        "job_departments": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: fnad, hr, it_is, lgl, mrkt, ops, prc, enrd, sale, other."
+        },
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "Full LinkedIn profile URL."
+        },
+        "required_fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields a contact must have: address, phone, direct_phone, any_mobile, personal_email, linkedin_url, job_title."
+        },
+        "is_ev_contact": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Contacts whose email is verified even if the rest is machine-verified."
+        },
+        "match_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated match ids from salesintel.people.preview, to buy just those contacts."
+        },
+        "matchOnJobHistory": {
+          "in": "query",
+          "type": "boolean",
+          "description": "With email: match past as well as current positions (default true)."
+        },
+        "mobile_phone": {
+          "in": "query",
+          "type": "string",
+          "description": "Mobile number, digits only."
+        }
+      },
+      "notes": [
+        "Charged per record on each page you fetch (up to 50 a page), not per request; only 10,000 records deep.",
+        "If your plan prices appends and net-new contacts differently, include email, first_name or last_name, or every record is charged as net-new."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://developer.salesintel.io/salesintel-api-documentation/people-contact-apis",
+      "verified": {
+        "docs": "https://developer.salesintel.io/salesintel-api-documentation/people-contact-apis"
+      }
+    },
+    {
+      "id": "salesintel.company.technologies",
+      "name": "Append technologies to companies",
+      "summary": "Whether named companies use the given technologies, by domain or name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/service/technologies/append",
+      "params": {
+        "company_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated domains (recommended)."
+        },
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated names, matched by 'contains'."
+        },
+        "tech_category": {
+          "in": "query",
+          "type": "string",
+          "description": "Tilde-separated (~) categories from the taxonomy."
+        },
+        "tech_subcategory": {
+          "in": "query",
+          "type": "string",
+          "description": "Tilde-separated sub-categories."
+        },
+        "tech_product": {
+          "in": "query",
+          "type": "string",
+          "description": "Tilde-separated products from the taxonomy."
+        },
+        "tech_vendor": {
+          "in": "query",
+          "type": "string",
+          "description": "Tilde-separated vendors."
+        },
+        "is_international": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false: US-based, true: outside the US."
+        },
+        "verified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Human-verified records only."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, default 50."
+        }
+      },
+      "notes": [
+        "Charged per company returned, whether or not it uses the technologies. Needs the technographics add-on."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://developer.salesintel.io/salesintel-api-documentation/technographic-apis",
+      "verified": {
+        "docs": "https://developer.salesintel.io/salesintel-api-documentation/technographic-apis"
+      }
+    },
+    {
+      "id": "salesintel.reference.tech_categories",
+      "name": "List technology categories",
+      "summary": "The category and sub-category taxonomy for the technology filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/service/technologies/taxonomy/categories",
+      "notes": [
+        "Free, but needs account access."
+      ],
+      "job": "reference.keywords",
+      "docs_url": "https://developer.salesintel.io/salesintel-api-documentation/technographic-apis",
+      "verified": {
+        "docs": "https://developer.salesintel.io/salesintel-api-documentation/technographic-apis"
+      }
+    },
+    {
+      "id": "salesintel.reference.tech_products",
+      "name": "Search technology products",
+      "summary": "Products and vendors in the technology taxonomy matching a name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/service/technologies/taxonomy/products",
+      "params": {
+        "product": {
+          "in": "query",
+          "type": "string",
+          "description": "Tilde-separated product names, matched by 'contains'; this or vendor is required."
+        },
+        "vendor": {
+          "in": "query",
+          "type": "string",
+          "description": "Tilde-separated vendor names; this or product is required."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, default 50."
+        }
+      },
+      "notes": [
+        "Free, but needs account access."
+      ],
+      "job": "reference.keywords",
+      "docs_url": "https://developer.salesintel.io/salesintel-api-documentation/technographic-apis",
+      "verified": {
+        "docs": "https://developer.salesintel.io/salesintel-api-documentation/technographic-apis"
+      }
+    },
+    {
+      "id": "salesintel.company.news",
+      "name": "Get company news",
+      "summary": "News articles about companies, by domain, filtered by category, event type and date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/service/news",
+      "params": {
+        "company_domains": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated domains."
+        },
+        "published_begin_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Published on or after, yyyyMMdd."
+        },
+        "extracted_begin_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Found by SalesIntel on or after, yyyyMMdd; best for keeping a list current."
+        },
+        "location_country_codes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO-2 codes; one article can repeat per country."
+        },
+        "news_categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated news categories."
+        },
+        "news_event_types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated news types."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page, default 50."
+        }
+      },
+      "notes": [
+        "Charged per article on the pages fetched. About 6 months of news, extracted since 2023-02-20."
+      ],
+      "job": "news.search",
+      "docs_url": "https://developer.salesintel.io/salesintel-api-documentation/news-apis",
+      "verified": {
+        "docs": "https://developer.salesintel.io/salesintel-api-documentation/news-apis"
+      }
+    }
+  ]
+}

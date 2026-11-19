@@ -1,0 +1,435 @@
+{
+  "vendor": "attio",
+  "name": "Attio",
+  "category": "analytics",
+  "summary": "An Attio CRM workspace: people, companies, deals and custom objects, list entries (pipelines), notes, tasks and the workspace's schema.",
+  "docs_url": "https://docs.attio.com/rest-api/overview",
+  "pricing_url": "https://attio.com/pricing",
+  "base_url": "https://api.attio.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ATTIO_API_KEY"
+        ],
+        "description": "an Attio access token generated in Workspace settings > Developers, with the read scopes needed (record_permission:read, object_configuration:read, list_entry:read, list_configuration:read, note:read, task:read, user_management:read)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Records hold attribute values as arrays of value objects with history fields (active_from, active_until); read the current value from the active entry.",
+    "Filters and sorts name attributes by slug; get them from attio.attributes.list.",
+    "Rate limit: 100 read requests per second across the API, lower on some endpoints; 429 answers carry a Retry-After date.",
+    "Paging is limit and offset."
+  ],
+  "sources": [
+    "https://docs.attio.com/rest-api/overview",
+    "https://docs.attio.com/rest-api/guides/authentication",
+    "https://docs.attio.com/rest-api/guides/rate-limiting",
+    "https://docs.attio.com/rest-api/guides/filtering-and-sorting",
+    "https://docs.attio.com/rest-api/guides/pagination",
+    "https://api.attio.com/openapi/api"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "attio.self",
+      "name": "Identify the token",
+      "summary": "The token's workspace, scopes and whether it is active.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/self",
+      "params": {},
+      "job": "account.validate",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/meta/identify",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/meta/identify"
+      }
+    },
+    {
+      "id": "attio.objects.list",
+      "name": "List objects",
+      "summary": "Every standard and custom object in the workspace (people, companies, deals...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/objects",
+      "params": {},
+      "job": "datasets.list",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/objects/list-objects",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/objects/list-objects"
+      }
+    },
+    {
+      "id": "attio.attributes.list",
+      "name": "List attributes",
+      "summary": "The attributes of an object, list or activity, with their slugs and types.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/{target}/{identifier}/attributes",
+      "params": {
+        "target": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "objects",
+            "lists",
+            "activities"
+          ],
+          "description": "objects, lists or activities."
+        },
+        "identifier": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The object's, list's or activity's slug or id.",
+          "example": "companies"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most attributes to return."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Attributes to skip."
+        },
+        "show_archived": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include archived attributes."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/attributes/list-attributes",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/attributes/list-attributes"
+      }
+    },
+    {
+      "id": "attio.records.query",
+      "name": "List and filter records",
+      "summary": "Records of one object, filtered and sorted.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/objects/{object}/records/query",
+      "params": {
+        "object": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The object's slug or id: people, companies, deals, users, workspaces, or a custom object's slug.",
+          "example": "companies"
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Filter: shorthand {attribute: value} or verbose with $and/$or and operators ($eq, $contains, $gt...). Not with filter_view_id.",
+          "example": {
+            "name": "Acme"
+          }
+        },
+        "filter_view_id": {
+          "in": "body",
+          "type": "string",
+          "description": "A saved view's UUID whose filter to apply. Not with filter."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort order: [{direction: asc|desc, attribute, field?}].",
+          "example": [
+            {
+              "direction": "desc",
+              "attribute": "created_at"
+            }
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most results to return; 500 when omitted."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip; 0 when omitted."
+        }
+      },
+      "notes": [
+        "A POST that only reads records; it changes nothing.",
+        "Page with limit and offset; filter on attribute slugs from attio.attributes.list."
+      ],
+      "job": "records.list",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/records/list-records",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/records/list-records"
+      }
+    },
+    {
+      "id": "attio.records.get",
+      "name": "Get a record",
+      "summary": "One record with all its attribute values.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/objects/{object}/records/{record_id}",
+      "params": {
+        "object": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The object's slug or id: people, companies, deals, users, workspaces, or a custom object's slug.",
+          "example": "companies"
+        },
+        "record_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The record's id."
+        }
+      },
+      "job": "records.get",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/records/get-a-record",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/records/get-a-record"
+      }
+    },
+    {
+      "id": "attio.records.search",
+      "name": "Search records",
+      "summary": "Fuzzy search across objects by name, domain, email, phone or social handle, as the app's search does.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/objects/records/search",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Text to search for; an empty string returns a default set.",
+          "example": "acme"
+        },
+        "objects": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Object slugs or ids to search, at least one.",
+          "example": [
+            "companies",
+            "people"
+          ]
+        },
+        "request_as": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Whose view to search as: {\"type\": \"workspace\"} for everything, or {\"type\": \"workspace-member\", \"email_address\": ...} for what one member can see.",
+          "example": {
+            "type": "workspace"
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most results, 1 to 25 (the default)."
+        }
+      },
+      "notes": [
+        "A POST that only reads records.",
+        "Results are eventually consistent; use records.query for guaranteed up-to-date data. Beta endpoint."
+      ],
+      "job": "records.search",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/records/search-records",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/records/search-records"
+      }
+    },
+    {
+      "id": "attio.lists.list",
+      "name": "List lists",
+      "summary": "Every list the token can see, in sidebar order.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/lists",
+      "params": {},
+      "job": "lists.list",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/lists/list-all-lists",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/lists/list-all-lists"
+      }
+    },
+    {
+      "id": "attio.entries.query",
+      "name": "List and filter list entries",
+      "summary": "Entries of one list (a pipeline or collection), filtered and sorted, with the list's own attribute values.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/lists/{list}/entries/query",
+      "params": {
+        "list": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The list's slug or id."
+        },
+        "filter": {
+          "in": "body",
+          "type": "object",
+          "description": "Filter: shorthand {attribute: value} or verbose with $and/$or and operators ($eq, $contains, $gt...). Not with filter_view_id.",
+          "example": {
+            "name": "Acme"
+          }
+        },
+        "filter_view_id": {
+          "in": "body",
+          "type": "string",
+          "description": "A saved view's UUID whose filter to apply. Not with filter."
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Sort order: [{direction: asc|desc, attribute, field?}].",
+          "example": [
+            {
+              "direction": "desc",
+              "attribute": "created_at"
+            }
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Most results to return; 500 when omitted."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results to skip; 0 when omitted."
+        }
+      },
+      "notes": [
+        "A POST that only reads entries; it changes nothing."
+      ],
+      "job": "lists.items",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/entries/list-entries",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/entries/list-entries"
+      }
+    },
+    {
+      "id": "attio.notes.list",
+      "name": "List notes",
+      "summary": "Notes on all records or on one record.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/notes",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most notes to return."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Notes to skip."
+        },
+        "parent_object": {
+          "in": "query",
+          "type": "string",
+          "description": "Object slug of the record whose notes to list; with parent_record_id."
+        },
+        "parent_record_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Record id whose notes to list."
+        }
+      },
+      "notes": [
+        "Rate limited to 10 requests per second."
+      ],
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/notes/list-notes",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/notes/list-notes"
+      }
+    },
+    {
+      "id": "attio.tasks.list",
+      "name": "List tasks",
+      "summary": "Tasks, oldest first by default, optionally for one record, assignee or completion state.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/tasks",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most tasks to return."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Tasks to skip."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort order.",
+          "enum": [
+            "created_at:asc",
+            "created_at:desc",
+            "completed_at:asc",
+            "completed_at:desc"
+          ]
+        },
+        "linked_object": {
+          "in": "query",
+          "type": "string",
+          "description": "Object slug of a linked record; with linked_record_id."
+        },
+        "linked_record_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Only tasks linked to this record."
+        },
+        "assignee": {
+          "in": "query",
+          "type": "string",
+          "description": "Only tasks assigned to this workspace member."
+        },
+        "is_completed": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only completed (true) or open (false) tasks."
+        }
+      },
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/tasks/list-tasks",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/tasks/list-tasks"
+      }
+    },
+    {
+      "id": "attio.members.list",
+      "name": "List workspace members",
+      "summary": "Everyone in the workspace.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/workspace_members",
+      "params": {},
+      "job": "account.teams",
+      "docs_url": "https://docs.attio.com/rest-api/endpoint-reference/workspace-members/list-workspace-members",
+      "verified": {
+        "docs": "https://docs.attio.com/rest-api/endpoint-reference/workspace-members/list-workspace-members"
+      }
+    }
+  ]
+}

@@ -1,0 +1,304 @@
+{
+  "vendor": "haveibeenpwned",
+  "name": "Have I Been Pwned",
+  "category": "security",
+  "summary": "Data breaches and pastes an email address appears in, breached addresses on your verified domains, and the breach catalogue.",
+  "docs_url": "https://haveibeenpwned.com/API/v3",
+  "pricing_url": "https://haveibeenpwned.com/API/Key",
+  "base_url": "https://haveibeenpwned.com/api/v3",
+  "settings": {
+    "user_agent": {
+      "env": [
+        "HIBP_USER_AGENT"
+      ],
+      "default": "web-router",
+      "description": "The User-Agent HIBP requires on authenticated calls, naming the consuming application; a missing one can be a 403."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HIBP_API_KEY"
+        ],
+        "description": "An HIBP API key (haveibeenpwned.com/API/Key), sent in the hibp-api-key header. The breach catalogue calls need none.",
+        "required": false
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "hibp-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Breach, paste and stealer-log searches are rate limited per key at the plan's requests per minute (subscription.status returns it as Rpm); over it is a 429 with a retry-after header in seconds. Add a short delay on top of the limit.",
+    "Which calls a key may use depends on its plan: the range search needs Pro or High RPM; domain search only works for domains verified on the dashboard.",
+    "A 404 on a search means nothing was found.",
+    "Stealer-log, domain-verification and Pwned Passwords endpoints are not in this entry."
+  ],
+  "sources": [
+    "https://haveibeenpwned.com/API/v3"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "haveibeenpwned.breaches.account",
+      "name": "Get breaches for an email address",
+      "summary": "Names (or full models) of every breach an email address appears in.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/breachedAccount/{email}",
+      "params": {
+        "email": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The email address as is, since the call encodes it; not case-sensitive.",
+          "example": "test@example.com"
+        },
+        "truncateResponse": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false returns the full breach model instead of only names."
+        },
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Only breaches of this domain.",
+          "example": "adobe.com",
+          "wire_name": "Domain"
+        },
+        "IncludeUnverified": {
+          "in": "query",
+          "type": "boolean",
+          "description": "false leaves out breaches flagged unverified (included by default)."
+        }
+      },
+      "notes": [
+        "A 404 means the address is in no breach, not an error.",
+        "Needs a Core, Pro or High RPM key; counts against the key's per-minute limit."
+      ],
+      "job": "security.breaches.account",
+      "docs_url": "https://haveibeenpwned.com/API/v3#BreachesForAccount",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#BreachesForAccount"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    },
+    {
+      "id": "haveibeenpwned.breaches.account_range",
+      "name": "Get breached accounts by hash prefix (k-anonymity)",
+      "summary": "Hash suffixes of breached email addresses whose SHA-1 starts with a 6-character prefix, each with its breach names.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/breachedAccount/range/{hash_prefix}",
+      "params": {
+        "hash_prefix": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "First 6 hex characters of the SHA-1 of the lower-cased email address.",
+          "example": "6B5917"
+        }
+      },
+      "notes": [
+        "Needs a Pro or High RPM key."
+      ],
+      "job": "security.breaches.account",
+      "docs_url": "https://haveibeenpwned.com/API/v3#BreachesForHashRange",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#BreachesForHashRange"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    },
+    {
+      "id": "haveibeenpwned.pastes.account",
+      "name": "Get pastes for an email address",
+      "summary": "Pastes (source, ID, title, date, email count) that contained an email address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pasteAccount/{email}",
+      "params": {
+        "email": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The email address as is, since the call encodes it; not case-sensitive.",
+          "example": "test@example.com"
+        }
+      },
+      "notes": [
+        "A 404 means no paste holds the address."
+      ],
+      "job": "security.breaches.pastes",
+      "docs_url": "https://haveibeenpwned.com/API/v3#PastesForAccount",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#PastesForAccount"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    },
+    {
+      "id": "haveibeenpwned.breaches.domain",
+      "name": "Get breached addresses on a verified domain",
+      "summary": "Each breached alias on a domain the key's owner has verified, with the breaches it appeared in.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/breachedDomain/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "A domain already verified on the key owner's HIBP dashboard.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Only for verified domains (a 403 otherwise). No formal rate limit, but repeated querying can be throttled: check latestBreach first."
+      ],
+      "job": "security.breaches.domain",
+      "docs_url": "https://haveibeenpwned.com/API/v3#BreachesForDomain",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#BreachesForDomain"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    },
+    {
+      "id": "haveibeenpwned.domains.subscribed",
+      "name": "List the key's verified domains",
+      "summary": "Domains verified on the key owner's account, with breached-address counts and the next renewal.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/subscribedDomains",
+      "job": "security.breaches.domain",
+      "docs_url": "https://haveibeenpwned.com/API/v3#SubscribedDomains",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#SubscribedDomains"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    },
+    {
+      "id": "haveibeenpwned.breaches.list",
+      "name": "List all breaches",
+      "summary": "Every breach in the system with its domain, dates, size, data classes and flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/breaches",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Only breaches of this domain.",
+          "example": "adobe.com",
+          "wire_name": "Domain"
+        },
+        "IsSpamList": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for spam lists only, false to leave them out."
+        }
+      },
+      "notes": [
+        "Keyless."
+      ],
+      "credentials": [],
+      "job": "security.breaches.list",
+      "docs_url": "https://haveibeenpwned.com/API/v3#AllBreaches",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#AllBreaches"
+      }
+    },
+    {
+      "id": "haveibeenpwned.breaches.get",
+      "name": "Get a breach by name",
+      "summary": "One breach's full model.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/breach/{name}",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The breach's Name, as returned elsewhere (not its Title).",
+          "example": "Adobe"
+        }
+      },
+      "notes": [
+        "Keyless."
+      ],
+      "credentials": [],
+      "job": "security.breaches.get",
+      "docs_url": "https://haveibeenpwned.com/API/v3#SingleBreach",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#SingleBreach"
+      }
+    },
+    {
+      "id": "haveibeenpwned.breaches.latest",
+      "name": "Get the most recently added breach",
+      "summary": "The breach most recently added to the system.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/latestBreach",
+      "notes": [
+        "Keyless. Poll this before re-querying domains."
+      ],
+      "credentials": [],
+      "job": "security.breaches.get",
+      "docs_url": "https://haveibeenpwned.com/API/v3#MostRecentBreach",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#MostRecentBreach"
+      }
+    },
+    {
+      "id": "haveibeenpwned.data_classes.list",
+      "name": "List data classes",
+      "summary": "Every kind of compromised attribute (Email addresses, Passwords...), alphabetically.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/dataClasses",
+      "notes": [
+        "Keyless."
+      ],
+      "credentials": [],
+      "job": "reference.codes",
+      "docs_url": "https://haveibeenpwned.com/API/v3#AllDataClasses",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#AllDataClasses"
+      }
+    },
+    {
+      "id": "haveibeenpwned.subscription.status",
+      "name": "Get the key's subscription",
+      "summary": "Plan name, end date, requests-per-minute limit and domain-search limits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/subscription/status",
+      "job": "account.usage",
+      "docs_url": "https://haveibeenpwned.com/API/v3#SubscriptionStatus",
+      "verified": {
+        "docs": "https://haveibeenpwned.com/API/v3#SubscriptionStatus"
+      },
+      "credentials": [
+        "api_key"
+      ]
+    }
+  ]
+}
