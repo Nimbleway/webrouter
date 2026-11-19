@@ -139,8 +139,9 @@ class Cooldowns:
 
     def refusal(self, provider: str) -> CoolingDownError | None:
         """The error ``auto`` records for passing ``provider`` over while it cools down; ``None`` when it may run."""
-        left = self.remaining(provider)
-        entry = self._until.get(backend_of(provider))
+        with self._lock:  # reentrant: the time left and its cause read from one entry
+            left = self.remaining(provider)
+            entry = self._until.get(backend_of(provider))
         if left is None or entry is None:
             return None
         seconds, status = left
