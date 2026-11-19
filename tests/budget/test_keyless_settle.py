@@ -87,9 +87,16 @@ def test_a_sum_of_parts_keeps_their_source_when_they_share_one(sources: tuple[st
     assert collected_cost(parts) == {"cost_usd": 0.0, "cost_source": summed}
 
 
-def test_a_keyless_firecrawl_given_its_auth_header_by_the_caller_is_not_free(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    "client",
+    [{"headers": {"authorization": "Bearer caller-key"}}, {"auth": ("user", "secret")}],
+    ids=["header", "auth"],
+)
+def test_a_keyless_firecrawl_the_caller_authenticates_is_not_free(
+    monkeypatch: pytest.MonkeyPatch, client: dict[str, Any]
+) -> None:
     clear_keys(monkeypatch)
-    provider = FirecrawlExtractProvider(allow_keyless=True, headers={"authorization": "Bearer caller-key"})
+    provider = FirecrawlExtractProvider(allow_keyless=True, **client)
     try:
         assert provider._to_response(EXTRACT, ["https://a.test"], {"success": False}).cost_source is None
     finally:

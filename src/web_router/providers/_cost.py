@@ -51,7 +51,9 @@ def keyless_cost(provider: object) -> dict[str, Any]:
 
 
 def _sends_auth_header(provider: object) -> bool:
-    """Whether an HTTP provider's client sends its credential header anyway, set by the caller's ``headers=``."""
-    header = getattr(provider, "api_key_header", None)
-    headers = (getattr(provider, "_client_kwargs", None) or {}).get("headers") or {}
-    return isinstance(header, str) and header.lower() in {str(name).lower() for name in headers}
+    """Whether an HTTP provider's client authenticates anyway: the caller's ``headers=`` carry its credential
+    header, or its ``auth=`` is set."""
+    client = getattr(provider, "_client_kwargs", None) or {}
+    header, headers = getattr(provider, "api_key_header", None), client.get("headers") or {}
+    named = isinstance(header, str) and header.lower() in {str(name).lower() for name in headers}
+    return named or client.get("auth") is not None
