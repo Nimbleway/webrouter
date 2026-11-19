@@ -1,0 +1,251 @@
+{
+  "vendor": "emaillistverify",
+  "name": "EmailListVerify",
+  "category": "verification",
+  "summary": "Email deliverability checks (plain or detailed with MX, ESP, role and free flags), asynchronous high-quality jobs, disposable-domain and DNS blacklist checks, business email finding and credit balance.",
+  "docs_url": "https://api.emaillistverify.com/api-doc",
+  "pricing_url": "https://www.emaillistverify.com/pricing",
+  "base_url": "https://api.emaillistverify.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EMAILLISTVERIFY_API_KEY"
+        ],
+        "description": "An EmailListVerify API key (account dashboard > API). Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Results: ok (deliverable), ok_for_all (catch-all domain), unknown, antispam_system (blocked by anti-spam), email_disabled, dead_server, invalid_mx, invalid_syntax, smtp_protocol, disposable, spamtrap.",
+    "Credits come in two pools: on-demand credits never expire, daily subscription credits reset each day while the plan is active.",
+    "Rate limits are per endpoint and per second (10/s for the single checks, 5/s for contact finding); a 403 means the account is disabled.",
+    "Email list upload, download, Deep Scan re-verification, deletion and inbox placement tests are not in this entry."
+  ],
+  "sources": [
+    "https://api.emaillistverify.com/api-doc"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "emaillistverify.email.verify",
+      "name": "Verify one email (status only)",
+      "summary": "The deliverability status of one address as plain text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/verifyEmail",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to verify.",
+          "example": "jane.doe@example.com"
+        }
+      },
+      "notes": [
+        "1 credit. Answers plain text, not JSON; the text error_credit means the balance is too low.",
+        "10 requests per second."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://api.emaillistverify.com/api-doc",
+      "verified": {
+        "docs": "https://api.emaillistverify.com/api-doc"
+      }
+    },
+    {
+      "id": "emaillistverify.email.verify_detailed",
+      "name": "Verify one email with details",
+      "summary": "Deliverability result plus internal result, MX server and IP, email provider (ESP), role, free and no-reply flags, and first name, last name and gender when found.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/verifyEmailDetailed",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to verify.",
+          "example": "jane.doe@example.com"
+        }
+      },
+      "notes": [
+        "1 credit. 10 requests per second."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://api.emaillistverify.com/api-doc",
+      "verified": {
+        "docs": "https://api.emaillistverify.com/api-doc"
+      }
+    },
+    {
+      "id": "emaillistverify.email.job_create",
+      "name": "Start an asynchronous email verification",
+      "summary": "Queues one address for verification at standard or high quality and returns a job id to poll.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/emailJobs",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The email address to verify.",
+          "example": "jane.doe@example.com"
+        },
+        "quality": {
+          "in": "body",
+          "type": "string",
+          "description": "Verification quality, default standard.",
+          "enum": [
+            "standard",
+            "high"
+          ],
+          "example": "high"
+        }
+      },
+      "notes": [
+        "Starts a billed job: 1 credit at standard quality, 2 at high. It reads: the POST only queues a check of the address and changes nothing else.",
+        "Standard jobs take up to 1 minute, high-quality jobs up to 30 minutes (greylisting); fetch the result with emaillistverify.email.job_get."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://api.emaillistverify.com/api-doc",
+      "verified": {
+        "docs": "https://api.emaillistverify.com/api-doc"
+      }
+    },
+    {
+      "id": "emaillistverify.email.job_get",
+      "name": "Get an asynchronous verification's result",
+      "summary": "Status of an email job and, once finished, its result and evaluated metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/emailJobs/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "required": true,
+          "description": "The job id returned when the job was created."
+        }
+      },
+      "notes": [
+        "Free to poll; 100 requests per second."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://api.emaillistverify.com/api-doc",
+      "verified": {
+        "docs": "https://api.emaillistverify.com/api-doc"
+      }
+    },
+    {
+      "id": "emaillistverify.domain.disposable",
+      "name": "Check if an email domain is disposable",
+      "summary": "Whether a domain issues temporary addresses, plus a check of its MX/DNS setup: disposable, ok, dead_server, invalid_mx or unknown.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/checkDisposable",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email domain to check.",
+          "example": "temporarydomain.net"
+        }
+      },
+      "notes": [
+        "1 credit, none for an unknown result. A POST that only reads: it looks the domain up and stores nothing. 50 requests per second."
+      ],
+      "job": "email.disposable",
+      "docs_url": "https://api.emaillistverify.com/api-doc",
+      "verified": {
+        "docs": "https://api.emaillistverify.com/api-doc"
+      }
+    },
+    {
+      "id": "emaillistverify.blacklists.check",
+      "name": "Check an IP or domain against DNS blacklists",
+      "summary": "Which DNS-based blacklists list an IPv4, IPv6 address or domain, with listing details.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/checkBlacklists",
+      "params": {
+        "value": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or a domain; the type is detected.",
+          "example": "172.75.233.15"
+        }
+      },
+      "notes": [
+        "10 credits (8 on Pro, 5 on Business). A POST that only reads: it queries public blacklists and changes nothing. 10 requests per second."
+      ],
+      "job": "domain.blacklists",
+      "docs_url": "https://api.emaillistverify.com/api-doc",
+      "verified": {
+        "docs": "https://api.emaillistverify.com/api-doc"
+      }
+    },
+    {
+      "id": "emaillistverify.contact.find",
+      "name": "Find a contact's business email",
+      "summary": "Candidate addresses at a company domain for a person (or common role addresses when no name is given), each verified and rated high, medium, low or unknown confidence.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/findContact",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "The company's email domain.",
+          "example": "connelycorp.com"
+        },
+        "firstName": {
+          "in": "body",
+          "type": "string",
+          "description": "The contact's first name.",
+          "example": "Adela"
+        },
+        "lastName": {
+          "in": "body",
+          "type": "string",
+          "description": "The contact's last name.",
+          "example": "Franey"
+        }
+      },
+      "notes": [
+        "5 credits when a first or last name is given, 10 for a domain alone (about twenty role addresses checked). A POST that only reads. 5 requests per second."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://api.emaillistverify.com/api-doc",
+      "verified": {
+        "docs": "https://api.emaillistverify.com/api-doc"
+      }
+    },
+    {
+      "id": "emaillistverify.account.credits",
+      "name": "Get credit balance",
+      "summary": "On-demand credits left, and the subscription's daily credits left with their expiry.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/credits",
+      "notes": [
+        "Free; 10 requests per second."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://api.emaillistverify.com/api-doc",
+      "verified": {
+        "docs": "https://api.emaillistverify.com/api-doc"
+      }
+    }
+  ]
+}
