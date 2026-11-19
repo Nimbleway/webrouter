@@ -1,0 +1,175 @@
+{
+  "vendor": "wappalyzer",
+  "name": "Wappalyzer",
+  "category": "company-data",
+  "summary": "Technographics: the technologies behind any website (CMS, analytics, ecommerce, frameworks), with optional company, contact and social details, plus subdomain discovery.",
+  "docs_url": "https://www.wappalyzer.com/docs/api/v2/basics/",
+  "base_url": "https://api.wappalyzer.com/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "WAPPALYZER_API_KEY"
+        ],
+        "description": "A Wappalyzer API key (wappalyzer.com > account > API). Sent in the x-api-key header; the API needs a Business plan."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call spends credits; each response's wappalyzer-credits-spent and wappalyzer-credits-remaining headers give the charge and the balance. 403 also means out of credits.",
+    "Rate limit: 10 requests per second; 429 when exceeded.",
+    "Lead lists and suppression lists are not in this entry: they create and spend on account records."
+  ],
+  "sources": [
+    "https://www.wappalyzer.com/docs/api/v2/basics/",
+    "https://www.wappalyzer.com/docs/api/v2/lookup/",
+    "https://www.wappalyzer.com/docs/api/v2/subdomains/",
+    "https://www.wappalyzer.com/docs/api/v2/verify/",
+    "https://www.wappalyzer.com/openapi/v2-public.yaml"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "wappalyzer.lookup",
+      "name": "Look up a website's technologies",
+      "summary": "Technologies detected on up to ten websites, with versions, categories and confidence; sets adds company, contact, social, locale and meta fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lookup/",
+      "params": {
+        "urls": {
+          "in": "query",
+          "type": "string",
+          "description": "One to ten website URLs, comma-separated, with scheme.",
+          "required": true,
+          "example": "https://example.com"
+        },
+        "recursive": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Follow internal links for more coverage; default true. Set false for a shallow scan answered in the same call; recursive=false takes one URL only."
+        },
+        "live": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Scan in real time instead of the cached dataset; default false. Only with recursive=false here: a live recursive scan needs a callback, which this entry does not take."
+        },
+        "sets": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extra field sets (e.g. meta,social), or all; see the Fields page.",
+          "example": "all"
+        },
+        "denoise": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop low-confidence detections; default true."
+        },
+        "min_age": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only results verified at least this many calendar months ago (UTC); default 0."
+        },
+        "max_age": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only results verified within this many calendar months; default 2, max 12. 0 is the current month only."
+        },
+        "squash": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Merge months into one result set; default true. false groups results by month (history)."
+        }
+      },
+      "notes": [
+        "1 credit per URL. Cached results come back at once; when a site is not in the dataset, a recursive lookup starts a crawl (up to 15 minutes) and the first answer holds no technologies yet: repeat the same request later, free for up to an hour, or use recursive=false.",
+        "Synchronous otherwise, with a 30-second timeout."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://www.wappalyzer.com/docs/api/v2/lookup/",
+      "verified": {
+        "docs": "https://www.wappalyzer.com/docs/api/v2/lookup/"
+      }
+    },
+    {
+      "id": "wappalyzer.subdomains",
+      "name": "Find a domain's subdomains",
+      "summary": "Website-serving subdomains seen for up to ten domains, with first and last seen times.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/subdomains/",
+      "params": {
+        "domains": {
+          "in": "query",
+          "type": "string",
+          "description": "One to ten domains, comma-separated.",
+          "required": true,
+          "example": "example.com"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results, a multiple of 10.",
+          "example": 100
+        },
+        "after": {
+          "in": "query",
+          "type": "string",
+          "description": "Next page: the moreAfter value of the previous answer."
+        }
+      },
+      "notes": [
+        "1 credit per 10 subdomains returned. Coverage is website-serving hosts from Wappalyzer's crawl, not a full DNS inventory."
+      ],
+      "job": "domain.subdomains",
+      "docs_url": "https://www.wappalyzer.com/docs/api/v2/subdomains/",
+      "verified": {
+        "docs": "https://www.wappalyzer.com/docs/api/v2/subdomains/"
+      }
+    },
+    {
+      "id": "wappalyzer.verify",
+      "name": "Verify an email address",
+      "summary": "Whether an email address is deliverable.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/verify/",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "The email address.",
+          "required": true
+        }
+      },
+      "notes": [
+        "1 credit per address."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://www.wappalyzer.com/docs/api/v2/verify/",
+      "verified": {
+        "docs": "https://www.wappalyzer.com/docs/api/v2/verify/"
+      }
+    },
+    {
+      "id": "wappalyzer.credits.balance",
+      "name": "Get credit balance",
+      "summary": "The account's remaining credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credits/balance/",
+      "job": "account.usage",
+      "docs_url": "https://www.wappalyzer.com/docs/api/v2/basics/",
+      "verified": {
+        "docs": "https://www.wappalyzer.com/docs/api/v2/basics/"
+      }
+    }
+  ]
+}

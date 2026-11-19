@@ -1,0 +1,257 @@
+{
+  "vendor": "open-exchange-rates",
+  "name": "Open Exchange Rates",
+  "category": "finance",
+  "summary": "Foreign exchange rates for 170+ currencies: latest, historical end-of-day back to 1999, time series and conversion.",
+  "docs_url": "https://docs.openexchangerates.org/reference/api-introduction",
+  "pricing_url": "https://openexchangerates.org/signup",
+  "base_url": "https://openexchangerates.org/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPEN_EXCHANGE_RATES_APP_ID",
+          "OPEN_EXCHANGE_RATES_API_KEY"
+        ],
+        "description": "An Open Exchange Rates App ID (openexchangerates.org/account/app-ids). Sent as the app_id query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "app_id",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "The default base is USD; other bases need a paid plan.",
+    "Every call counts against a monthly request quota (usage.json and currencies.json do not); update frequency depends on the plan.",
+    "All dates and timestamps are UTC."
+  ],
+  "sources": [
+    "https://docs.openexchangerates.org/reference/api-introduction",
+    "https://docs.openexchangerates.org/reference/authentication.md",
+    "https://docs.openexchangerates.org/reference/latest-json.md",
+    "https://docs.openexchangerates.org/reference/historical-json.md",
+    "https://docs.openexchangerates.org/reference/time-series-json.md",
+    "https://docs.openexchangerates.org/reference/convert.md",
+    "https://docs.openexchangerates.org/reference/currencies-json.md",
+    "https://docs.openexchangerates.org/reference/usage-json.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "open-exchange-rates.latest",
+      "name": "Get the latest exchange rates",
+      "summary": "Rates for every currency against one base, as of the latest update on your plan.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/latest.json",
+      "params": {
+        "base": {
+          "in": "query",
+          "type": "string",
+          "description": "Base currency, 3-letter code; default USD. Paid plans only.",
+          "example": "EUR"
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the rates returned.",
+          "example": "EUR,GBP,JPY"
+        },
+        "show_alternative": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add alternative, black-market and digital currency rates."
+        }
+      },
+      "notes": [
+        "Changing base needs a paid plan; symbols and show_alternative work on every plan.",
+        "timestamp is Unix seconds; rates are units of each currency per 1 base."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.openexchangerates.org/reference/latest-json",
+      "verified": {
+        "docs": "https://docs.openexchangerates.org/reference/latest-json"
+      }
+    },
+    {
+      "id": "open-exchange-rates.historical",
+      "name": "Get exchange rates for a past date",
+      "summary": "End-of-day rates (last published values of that UTC day) for any date since 1999-01-01.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/historical/{date}.json",
+      "params": {
+        "date": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "UTC date, YYYY-MM-DD.",
+          "example": "2010-10-10"
+        },
+        "base": {
+          "in": "query",
+          "type": "string",
+          "description": "Base currency, 3-letter code; default USD. Developer, Enterprise and Unlimited plans.",
+          "example": "EUR"
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes. Developer, Enterprise and Unlimited plans.",
+          "example": "EUR,GBP"
+        },
+        "show_alternative": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add alternative, black-market and digital currency rates."
+        }
+      },
+      "notes": [
+        "Asking for today's UTC date returns the latest rates, not an end-of-day value."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.openexchangerates.org/reference/historical-json",
+      "verified": {
+        "docs": "https://docs.openexchangerates.org/reference/historical-json"
+      }
+    },
+    {
+      "id": "open-exchange-rates.time_series",
+      "name": "Get daily rates over a period",
+      "summary": "Daily rates for every day between two dates (both inclusive), at most one month per call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/time-series.json",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First day, YYYY-MM-DD.",
+          "example": "2013-01-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last day, YYYY-MM-DD; an invalid calendar day is moved back to the nearest valid one.",
+          "example": "2013-01-31"
+        },
+        "symbols": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes; recommended, responses are large.",
+          "example": "EUR,GBP"
+        },
+        "base": {
+          "in": "query",
+          "type": "string",
+          "description": "Base currency, 3-letter code; default USD.",
+          "example": "USD"
+        },
+        "show_alternative": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add alternative, black-market and digital currency rates."
+        }
+      },
+      "notes": [
+        "Enterprise and Unlimited plans only.",
+        "Each day in the range counts as one request against the monthly quota; request longer spans month by month."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.openexchangerates.org/reference/time-series-json",
+      "verified": {
+        "docs": "https://docs.openexchangerates.org/reference/time-series-json"
+      }
+    },
+    {
+      "id": "open-exchange-rates.convert",
+      "name": "Convert an amount between currencies",
+      "summary": "Converts a value at the latest rate, returning the rate and timestamp used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/convert/{value}/{from}/{to}",
+      "params": {
+        "value": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Amount to convert.",
+          "example": 19999
+        },
+        "from": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Source currency, 3-letter code.",
+          "example": "GBP"
+        },
+        "to": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Target currency, 3-letter code.",
+          "example": "EUR"
+        }
+      },
+      "notes": [
+        "Unlimited plan only."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.openexchangerates.org/reference/convert",
+      "verified": {
+        "docs": "https://docs.openexchangerates.org/reference/convert"
+      }
+    },
+    {
+      "id": "open-exchange-rates.currencies",
+      "name": "List currency codes and names",
+      "summary": "Every 3-letter currency code the API offers with its full name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/currencies.json",
+      "params": {
+        "show_alternative": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include alternative currencies."
+        },
+        "show_inactive": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include historical, inactive currencies."
+        }
+      },
+      "notes": [
+        "Keyless; does not count towards usage."
+      ],
+      "job": "market.symbols",
+      "docs_url": "https://docs.openexchangerates.org/reference/currencies-json",
+      "verified": {
+        "docs": "https://docs.openexchangerates.org/reference/currencies-json"
+      },
+      "credentials": []
+    },
+    {
+      "id": "open-exchange-rates.usage",
+      "name": "Get the App ID's plan and usage",
+      "summary": "Plan name, monthly quota, features and requests used and remaining this month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/usage.json",
+      "notes": [
+        "Does not count towards usage. Unlimited accounts report quota and remaining as -1."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.openexchangerates.org/reference/usage-json",
+      "verified": {
+        "docs": "https://docs.openexchangerates.org/reference/usage-json"
+      }
+    }
+  ]
+}

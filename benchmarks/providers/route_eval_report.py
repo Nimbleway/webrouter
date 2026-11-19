@@ -101,7 +101,7 @@ def _effort_table(s: Mapping[str, Any]) -> list[str]:
 def _set_section(s: Mapping[str, Any]) -> list[str]:
     out = [
         f"## `{s['set']}` ({s['method']}): {s['questions']} questions, {s['train']} in-sample and "
-        f"{s['held_out']} held out (seed {s['seed']})\n"
+        f"{s['held_out']} held out (seed {s['seed']}){', vendor modes as candidates' if s.get('modes') else ''}\n"
     ]
     if s["method"] == MIXED:
         out.append(MIXED_INTRO.format(held_out=s["held_out"], step=100 / max(s["held_out"], 1)))

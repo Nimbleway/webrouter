@@ -1,0 +1,259 @@
+{
+  "vendor": "ibge",
+  "name": "IBGE",
+  "category": "finance",
+  "summary": "Brazil's statistics office (IBGE) aggregate data, the API behind SIDRA: survey and census tables by period and place, with their metadata.",
+  "docs_url": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3",
+  "base_url": "https://servicodados.ibge.gov.br/api",
+  "notes": [
+    "Keyless and free.",
+    "Documentation and labels are in Portuguese; agregado = SIDRA table, variavel = measure, classificacao = dimension, categoria = member, localidade = place.",
+    "Geographic levels include N2 region, N3 state (UF), N6 municipality and N7 metropolitan region; BR is Brazil. An aggregate's metadata lists the levels it covers.",
+    "Several IDs in one path or query value are joined with |."
+  ],
+  "sources": [
+    "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "ibge.aggregates.list",
+      "name": "List aggregates by survey",
+      "summary": "Every aggregate (SIDRA table), grouped by survey, optionally filtered by period, subject, classification, frequency or geographic level.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/agregados",
+      "params": {
+        "periodo": {
+          "in": "query",
+          "type": "string",
+          "description": "Only aggregates with results for this period, frequency-prefixed, e.g. P5[202001] (January 2020).",
+          "example": "P5[202001]"
+        },
+        "assunto": {
+          "in": "query",
+          "type": "integer",
+          "description": "Subject ID, e.g. 70.",
+          "example": 70
+        },
+        "classificacao": {
+          "in": "query",
+          "type": "integer",
+          "description": "Classification ID, e.g. 12896."
+        },
+        "periodicidade": {
+          "in": "query",
+          "type": "string",
+          "description": "Release frequency ID, e.g. P5 (monthly).",
+          "example": "P5"
+        },
+        "nivel": {
+          "in": "query",
+          "type": "string",
+          "description": "Geographic level with results, e.g. N6 (municipalities).",
+          "example": "N6"
+        }
+      },
+      "notes": [
+        "Identifiers for subjects, frequencies, periods and levels are listed in the docs' identifier base."
+      ],
+      "job": "economy.datasets.list",
+      "docs_url": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3",
+      "verified": {
+        "docs": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3"
+      }
+    },
+    {
+      "id": "ibge.aggregates.metadata",
+      "name": "Get an aggregate's metadata",
+      "summary": "Name, survey, subject, frequency and range, geographic levels, variables and classifications with their categories.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/agregados/{agregado}/metadados",
+      "params": {
+        "agregado": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Aggregate (SIDRA table) ID, e.g. 1705 or 1712; each SIDRA table is one aggregate.",
+          "example": 1712
+        }
+      },
+      "notes": [
+        "Read this first: it gives the variable, classification and level IDs the data calls take."
+      ],
+      "job": "economy.series.metadata",
+      "docs_url": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3",
+      "verified": {
+        "docs": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3"
+      }
+    },
+    {
+      "id": "ibge.aggregates.periods",
+      "name": "List an aggregate's periods",
+      "summary": "Every period an aggregate has results for, with labels and last modification.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/agregados/{agregado}/periodos",
+      "params": {
+        "agregado": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Aggregate (SIDRA table) ID, e.g. 1705 or 1712; each SIDRA table is one aggregate.",
+          "example": 1712
+        }
+      },
+      "job": "economy.series.metadata",
+      "docs_url": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3",
+      "verified": {
+        "docs": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3"
+      }
+    },
+    {
+      "id": "ibge.aggregates.places",
+      "name": "List an aggregate's places",
+      "summary": "Places an aggregate has results for at one or more geographic levels.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/agregados/{agregado}/localidades/{nivel}",
+      "params": {
+        "agregado": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Aggregate (SIDRA table) ID, e.g. 1705 or 1712; each SIDRA table is one aggregate.",
+          "example": 1712
+        },
+        "nivel": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Levels joined by |, e.g. N7|N6 (metropolitan regions and municipalities); the aggregate's metadata lists its levels.",
+          "example": "N3"
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3",
+      "verified": {
+        "docs": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3"
+      }
+    },
+    {
+      "id": "ibge.aggregates.values",
+      "name": "Get variable values for chosen periods",
+      "summary": "Values of an aggregate's variables for given periods and places, per category combination.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/agregados/{agregado}/periodos/{periodos}/variaveis/{variavel}",
+      "params": {
+        "agregado": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Aggregate (SIDRA table) ID, e.g. 1705 or 1712; each SIDRA table is one aggregate.",
+          "example": 1712
+        },
+        "periodos": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Periods joined by |, ranges as START-END (201701-201706), or a negative number for the latest n (-6); a negative value cannot be mixed with others.",
+          "example": "-6"
+        },
+        "variavel": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Variable IDs joined by |, e.g. 214|1982; allxp for every variable of the aggregate, all to add the API's computed percentage variables.",
+          "example": "214|1982"
+        },
+        "localidades": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Places, separated by |: BR for Brazil, or N<level>[ids], e.g. N3[33,35] (states RJ and SP), N6[5208707] (a municipality), N7 (every metropolitan region). Levels nest: N6[N3[33,35]] is every municipality in RJ and SP.",
+          "example": "BR"
+        },
+        "classificacao": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict categories as <classification>[<categories>], several joined by |, e.g. 226[4844]|218[4780]; [all] for every category. Unset: only the Total category (0).",
+          "example": "226[4844]"
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "description": "OLAP for OLAP notation, or flat: first array item is metadata, rows follow.",
+          "enum": [
+            "OLAP",
+            "flat"
+          ]
+        }
+      },
+      "notes": [
+        "At most 100,000 values per call (categories x periods x places); over it answers 500.",
+        "Special values: '-' zero not from rounding, '..' not applicable, '...' not available, 'X' withheld for confidentiality."
+      ],
+      "job": "economy.series.get",
+      "docs_url": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3",
+      "verified": {
+        "docs": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3"
+      }
+    },
+    {
+      "id": "ibge.aggregates.latest_values",
+      "name": "Get variable values for the last six periods",
+      "summary": "Same as aggregates.values over the six latest periods.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/agregados/{agregado}/variaveis/{variavel}",
+      "params": {
+        "agregado": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Aggregate (SIDRA table) ID, e.g. 1705 or 1712; each SIDRA table is one aggregate.",
+          "example": 1712
+        },
+        "variavel": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Variable IDs joined by |, e.g. 214|1982; allxp for every variable of the aggregate, all to add the API's computed percentage variables.",
+          "example": "214|1982"
+        },
+        "localidades": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Places, separated by |: BR for Brazil, or N<level>[ids], e.g. N3[33,35] (states RJ and SP), N6[5208707] (a municipality), N7 (every metropolitan region). Levels nest: N6[N3[33,35]] is every municipality in RJ and SP.",
+          "example": "BR"
+        },
+        "classificacao": {
+          "in": "query",
+          "type": "string",
+          "description": "Restrict categories as <classification>[<categories>], several joined by |, e.g. 226[4844]|218[4780]; [all] for every category. Unset: only the Total category (0).",
+          "example": "226[4844]"
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "description": "OLAP for OLAP notation, or flat: first array item is metadata, rows follow.",
+          "enum": [
+            "OLAP",
+            "flat"
+          ]
+        }
+      },
+      "notes": [
+        "At most 100,000 values per call (categories x 6 periods x places); over it answers 500."
+      ],
+      "job": "economy.series.get",
+      "docs_url": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3",
+      "verified": {
+        "docs": "https://servicodados.ibge.gov.br/api/docs/agregados?versao=3"
+      }
+    }
+  ]
+}

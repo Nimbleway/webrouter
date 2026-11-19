@@ -1,0 +1,317 @@
+{
+  "vendor": "sprout-social",
+  "name": "Sprout Social",
+  "category": "social",
+  "summary": "Your Sprout Social account's connected social profiles, their daily metrics, post performance, and inbox messages.",
+  "docs_url": "https://api.sproutsocial.com/docs/",
+  "pricing_url": "https://sproutsocial.com/pricing/",
+  "base_url": "https://api.sproutsocial.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SPROUT_SOCIAL_API_KEY"
+        ],
+        "description": "A Sprout Social API token (Generate API Token in the API Token Management section of Sprout; the plan must include API access and the user needs the API Permissions permission). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "headers": {
+    "Accept": "application/json"
+  },
+  "notes": [
+    "Every call but sprout-social.metadata.client takes a customer_id in the path: read it from sprout-social.metadata.client first.",
+    "Profile ids (customer_profile_id) come from sprout-social.metadata.profiles; analytics and messages filters need them.",
+    "Rate limits: 60 requests a minute, refilled at one a second, and 250,000 a month; X-RateLimit-Limit and X-RateLimit-Remaining report where you stand; over the limit a call gets a 429.",
+    "Filters are strings in Sprout's own syntax: field.op(values), e.g. customer_profile_id.eq(1234, 5678) or created_time.in(2024-04-01T00:00:00..2024-04-30T23:59:59); '..' includes the end, '...' excludes it.",
+    "Publishing, media upload and case changes are writes and are not in this entry; listening topics and cases are not listed either."
+  ],
+  "sources": [
+    "https://api.sproutsocial.com/docs/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "sprout-social.metadata.client",
+      "name": "List my customers",
+      "summary": "The customer ids and names the token can reach.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/metadata/client",
+      "job": "analytics.accounts.list",
+      "docs_url": "https://api.sproutsocial.com/docs/#client-customer-id-endpoint",
+      "verified": {
+        "docs": "https://api.sproutsocial.com/docs/#client-customer-id-endpoint"
+      }
+    },
+    {
+      "id": "sprout-social.metadata.profiles",
+      "name": "List connected profiles",
+      "summary": "The social profiles connected to a customer: customer_profile_id, network, name, native id and groups.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{customer_id}/metadata/customer",
+      "params": {
+        "customer_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Customer id, from sprout-social.metadata.client."
+        }
+      },
+      "job": "social.accounts.list",
+      "docs_url": "https://api.sproutsocial.com/docs/#customer-profiles-endpoint",
+      "verified": {
+        "docs": "https://api.sproutsocial.com/docs/#customer-profiles-endpoint"
+      }
+    },
+    {
+      "id": "sprout-social.metadata.groups",
+      "name": "List groups",
+      "summary": "The profile groups set up in Sprout; a group id is needed to filter messages.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{customer_id}/metadata/customer/groups",
+      "params": {
+        "customer_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Customer id."
+        }
+      },
+      "job": "lists.list",
+      "docs_url": "https://api.sproutsocial.com/docs/#customer-groups-endpoint",
+      "verified": {
+        "docs": "https://api.sproutsocial.com/docs/#customer-groups-endpoint"
+      }
+    },
+    {
+      "id": "sprout-social.metadata.tags",
+      "name": "List message tags",
+      "summary": "The message tags of a customer, active and archived.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{customer_id}/metadata/customer/tags",
+      "params": {
+        "customer_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Customer id."
+        }
+      },
+      "job": "lists.list",
+      "docs_url": "https://api.sproutsocial.com/docs/#customer-tags-endpoint",
+      "verified": {
+        "docs": "https://api.sproutsocial.com/docs/#customer-tags-endpoint"
+      }
+    },
+    {
+      "id": "sprout-social.analytics.profiles",
+      "name": "Get profile analytics",
+      "summary": "Daily metrics (impressions, reactions, followers...) for owned social profiles over a reporting period.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/{customer_id}/analytics/profiles",
+      "params": {
+        "customer_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Customer id."
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Both customer_profile_id.eq(...) (at most 100 ids) and reporting_period.in(YYYY-MM-DD...YYYY-MM-DD) (at most one year).",
+          "example": [
+            "customer_profile_id.eq(1234, 5678)",
+            "reporting_period.in(2024-08-01...2024-10-01)"
+          ]
+        },
+        "metrics": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Profile metric names; which apply depends on the network.",
+          "example": [
+            "impressions",
+            "reactions"
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Rows per page, default 1000."
+        }
+      },
+      "notes": [
+        "A POST that only reads: the query goes in the JSON body.",
+        "Days follow each network's own clock: UTC for X, LinkedIn, Pinterest and TikTok; Pacific time for Facebook, Instagram and YouTube.",
+        "Rows come back by day and profile; paging.total_pages says how many pages there are."
+      ],
+      "job": "social.analytics",
+      "docs_url": "https://api.sproutsocial.com/docs/#owned-profile-analytics-endpoint",
+      "verified": {
+        "docs": "https://api.sproutsocial.com/docs/#owned-profile-analytics-endpoint"
+      }
+    },
+    {
+      "id": "sprout-social.analytics.posts",
+      "name": "Get post analytics",
+      "summary": "Posts published by owned profiles, with their text, link and lifetime metrics.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/{customer_id}/analytics/posts",
+      "params": {
+        "customer_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Customer id."
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Both customer_profile_id.eq(...) (at most 100 ids) and created_time.in(start..end).",
+          "example": [
+            "customer_profile_id.eq(1234)",
+            "created_time.in(2024-04-06T00:00:00..2024-04-19T23:59:59)"
+          ]
+        },
+        "metrics": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Post metric names.",
+          "example": [
+            "lifetime.impressions",
+            "lifetime.reactions"
+          ]
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Post fields to return, e.g. text, perma_link, created_time; only guid when left out.",
+          "example": [
+            "created_time",
+            "perma_link",
+            "text"
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Posts per page, default 50."
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "field:direction pairs, e.g. created_time:asc.",
+          "example": [
+            "created_time:asc"
+          ]
+        },
+        "timezone": {
+          "in": "body",
+          "type": "string",
+          "description": "Time zone name for the date filters, e.g. America/Chicago; answers are in UTC."
+        }
+      },
+      "notes": [
+        "A POST that only reads: the query goes in the JSON body.",
+        "Page paging stops at 10,000 posts. Past that, sort by guid:asc, include guid in fields, filter guid.gt(<last guid>) instead of sending page, and repeat until data is empty.",
+        "Google Business Profile posts reach back 30 days only; review sites (Yelp, Trustpilot, TripAdvisor, Glassdoor) are not available."
+      ],
+      "job": "social.analytics",
+      "docs_url": "https://api.sproutsocial.com/docs/#post-analytics-endpoint",
+      "verified": {
+        "docs": "https://api.sproutsocial.com/docs/#post-analytics-endpoint"
+      }
+    },
+    {
+      "id": "sprout-social.messages.list",
+      "name": "List inbox messages",
+      "summary": "Inbound and outbound messages of a profile group (comments, mentions, DMs, replies) with the fields you ask for.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/{customer_id}/messages",
+      "params": {
+        "customer_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Customer id."
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "group_id.eq(one id) and created_time.in(start..end), plus optional customer_profile_id.eq, action_last_update_time.in, post_type.eq, tag_id.eq, language_code.eq, from.guid.eq; or message_id.eq(guids) alone (at most 100).",
+          "example": [
+            "group_id.eq(123)",
+            "created_time.in(2024-04-01..2024-04-07)"
+          ]
+        },
+        "fields": {
+          "in": "body",
+          "type": "array",
+          "description": "Message fields to return; only guid when left out."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Messages per page, default 50, max 100."
+        },
+        "timezone": {
+          "in": "body",
+          "type": "string",
+          "description": "Time zone name for the date filters."
+        },
+        "page_cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "paging.next_cursor from the previous answer."
+        },
+        "sort": {
+          "in": "body",
+          "type": "array",
+          "description": "created_time:asc or created_time:desc (default).",
+          "example": [
+            "created_time:desc"
+          ]
+        }
+      },
+      "notes": [
+        "A POST that only reads: the query goes in the JSON body; it neither replies nor marks anything.",
+        "Cursor paging only: send page_cursor until an answer comes back with no paging object. There is no page number.",
+        "Direct messages come with text and metadata, but their media links do not work."
+      ],
+      "job": "messaging.messages.list",
+      "docs_url": "https://api.sproutsocial.com/docs/#messages-endpoint",
+      "verified": {
+        "docs": "https://api.sproutsocial.com/docs/#messages-endpoint"
+      }
+    }
+  ]
+}

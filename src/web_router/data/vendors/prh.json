@@ -1,0 +1,294 @@
+{
+  "vendor": "prh",
+  "name": "Finnish Patent and Registration Office (PRH) open data",
+  "category": "company-data",
+  "summary": "Finland's Trade Register through the YTJ open data API: search companies by name, Business ID, town, form or industry, plus the digital financial statements companies have filed.",
+  "docs_url": "https://avoindata.prh.fi/en/ytj/swagger-ui",
+  "base_url": "https://avoindata.prh.fi",
+  "notes": [
+    "Keyless and free, licensed CC BY 4.0: credit PRH as the source.",
+    "Only companies registered or pending in the Trade Register are covered.",
+    "A Business ID (Y-tunnus) is 7 digits, a hyphen and a check digit, e.g. 0112038-9.",
+    "Results come 100 per page. A page past the last returns the first page on company search but an empty answer on the financial statement calls. Too many requests answer 429."
+  ],
+  "sources": [
+    "https://avoindata.prh.fi/en/ytj/swagger-ui",
+    "https://avoindata.prh.fi/opendata-ytj-api/v3/schema?lang=en",
+    "https://avoindata.prh.fi/en/xbrl/swagger-ui",
+    "https://avoindata.prh.fi/opendata-xbrl-api/v3/schema?lang=en"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "prh.companies.search",
+      "name": "Search companies",
+      "summary": "Companies by current or previous name, Business ID, town, company form, industry, postcode or registration dates, with names, addresses, forms, business lines and registry entries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendata-ytj-api/v3/companies",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name; matches current, previous, parallel and auxiliary names.",
+          "example": "Nokia"
+        },
+        "businessId": {
+          "in": "query",
+          "type": "string",
+          "description": "Business ID, e.g. 0112038-9: a direct lookup.",
+          "example": "0112038-9"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Town or city of the registered office."
+        },
+        "companyForm": {
+          "in": "query",
+          "type": "string",
+          "description": "Company form code (code list YRMU), e.g. OY limited company, OYJ public limited company, KY limited partnership, AY general partnership.",
+          "enum": [
+            "AOY",
+            "ASH",
+            "ASY",
+            "AY",
+            "AYH",
+            "ETS",
+            "ETY",
+            "SCE",
+            "SCP",
+            "HY",
+            "KOY",
+            "KVJ",
+            "KVY",
+            "KY",
+            "OK",
+            "OP",
+            "OY",
+            "OYJ",
+            "SE",
+            "SL",
+            "SP",
+            "SÄÄ",
+            "TYH",
+            "VOJ",
+            "VOY",
+            "VY",
+            "VALTLL"
+          ]
+        },
+        "mainBusinessLine": {
+          "in": "query",
+          "type": "string",
+          "description": "Main line of business: a Statistics Finland TOL 2008 code or text."
+        },
+        "postCode": {
+          "in": "query",
+          "type": "string",
+          "description": "Postcode of the street or postal address."
+        },
+        "registrationDateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "Registered on or after, yyyy-mm-dd."
+        },
+        "registrationDateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Registered on or before, yyyy-mm-dd."
+        },
+        "businessIdRegistrationStart": {
+          "in": "query",
+          "type": "string",
+          "description": "Business ID granted on or after, yyyy-mm-dd."
+        },
+        "businessIdRegistrationEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Business ID granted on or before, yyyy-mm-dd."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results page; each holds 100 companies."
+        }
+      },
+      "notes": [
+        "Code fields in the answer (forms, statuses, registers) are codes; resolve them with prh.codes.describe."
+      ],
+      "job": "company.search",
+      "docs_url": "https://avoindata.prh.fi/en/ytj/swagger-ui",
+      "verified": {
+        "docs": "https://avoindata.prh.fi/opendata-ytj-api/v3/schema?lang=en"
+      }
+    },
+    {
+      "id": "prh.codes.describe",
+      "name": "Get a code list",
+      "summary": "The labels of one YTJ code list (company forms, registers, statuses, business lines, bankruptcy and more) in English, Finnish or Swedish.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendata-ytj-api/v3/description",
+      "params": {
+        "code": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The code list, e.g. YRMU company forms, REK registers, TOIMI business lines, KONK bankruptcy.",
+          "enum": [
+            "YRMU",
+            "REK_KDI",
+            "TLAJI",
+            "SELTILA",
+            "REK",
+            "VIRANOM",
+            "TLAHDE",
+            "KIELI",
+            "TOIMI",
+            "TOIMI2",
+            "TOIMI3",
+            "TOIMI4",
+            "KONK",
+            "SANE",
+            "STATUS3",
+            "SELTILA,SANE,KONK"
+          ],
+          "example": "YRMU"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Language of the labels.",
+          "enum": [
+            "en",
+            "fi",
+            "sv"
+          ],
+          "example": "en"
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://avoindata.prh.fi/en/ytj/swagger-ui",
+      "verified": {
+        "docs": "https://avoindata.prh.fi/opendata-ytj-api/v3/schema?lang=en"
+      }
+    },
+    {
+      "id": "prh.financials.periods",
+      "name": "List a company's financial periods",
+      "summary": "The financial periods for which a company has filed digital financial statements.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendata-xbrl-api/v3/financials",
+      "params": {
+        "businessId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Business ID.",
+          "example": "0112038-9"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results page; each holds 100."
+        }
+      },
+      "notes": [
+        "Only digitally filed (XBRL) statements are covered; take a period's end date to prh.financials.get."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://avoindata.prh.fi/en/xbrl/swagger-ui",
+      "verified": {
+        "docs": "https://avoindata.prh.fi/opendata-xbrl-api/v3/schema?lang=en"
+      }
+    },
+    {
+      "id": "prh.financials.get",
+      "name": "Get a financial statement",
+      "summary": "A company's digital financial statement data for the period ending on a given date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendata-xbrl-api/v3/financial",
+      "params": {
+        "businessId": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Business ID.",
+          "example": "0112038-9"
+        },
+        "financialDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date of the financial period, yyyy-mm-dd.",
+          "example": "2024-12-31"
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://avoindata.prh.fi/en/xbrl/swagger-ui",
+      "verified": {
+        "docs": "https://avoindata.prh.fi/opendata-xbrl-api/v3/schema?lang=en"
+      }
+    },
+    {
+      "id": "prh.financials.by_period_end",
+      "name": "List companies by financial period end",
+      "summary": "Companies that filed digital financial statements for a period ending on a given date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendata-xbrl-api/v3/all_financials",
+      "params": {
+        "financialDate": {
+          "in": "query",
+          "type": "string",
+          "description": "End date of the financial period, yyyy-mm-dd.",
+          "example": "2024-12-31"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results page; each holds 100."
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://avoindata.prh.fi/en/xbrl/swagger-ui",
+      "verified": {
+        "docs": "https://avoindata.prh.fi/opendata-xbrl-api/v3/schema?lang=en"
+      }
+    },
+    {
+      "id": "prh.financials.by_filing_date",
+      "name": "List statements filed in a date range",
+      "summary": "Companies whose digital financial statements were registered between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/opendata-xbrl-api/v3/all_financial_statements",
+      "params": {
+        "registeredDateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "Registered on or after, yyyy-mm-dd; data starts 1 July 2023."
+        },
+        "registeredDateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Registered on or before, yyyy-mm-dd."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results page; each holds 100."
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://avoindata.prh.fi/en/xbrl/swagger-ui",
+      "verified": {
+        "docs": "https://avoindata.prh.fi/opendata-xbrl-api/v3/schema?lang=en"
+      }
+    }
+  ]
+}

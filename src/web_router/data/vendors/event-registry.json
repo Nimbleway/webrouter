@@ -1,0 +1,898 @@
+{
+  "vendor": "event-registry",
+  "name": "Event Registry (NewsAPI.ai)",
+  "category": "search",
+  "summary": "Global news articles and the events they report, annotated with concepts, categories, places and sentiment, with aggregates and URI lookups.",
+  "docs_url": "https://eventregistry.org/documentation",
+  "pricing_url": "https://newsapi.ai/plans",
+  "base_url": "https://eventregistry.org",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EVENT_REGISTRY_API_KEY"
+        ],
+        "description": "An Event Registry / NewsAPI.ai key (eventregistry.org settings page). Sent as the apiKey query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apiKey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call spends tokens from the plan: a search of the last 30 days is cheap, and each older year searched costs more. Suggest lookups are the cheapest way to resolve a name into the URI the filters need.",
+    "Filters take URIs, not names: resolve a concept, category, source, author or place with the event-registry.suggest.* calls first.",
+    "Languages are ISO 639-3 codes (eng, deu, spa...), not two-letter codes. Dates are YYYY-MM-DD.",
+    "The text-analytics calls (annotation, categorisation, sentiment) and the minute streams are not in this entry."
+  ],
+  "sources": [
+    "https://eventregistry.org/documentation",
+    "https://eventregistry.org/static/api.yaml"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "event-registry.articles.search",
+      "name": "Search news articles",
+      "summary": "Articles matching keywords, concepts, categories, sources, places, languages, dates and sentiment; or aggregates of them over time, source, concept or sentiment.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/article/getArticles",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "array",
+          "description": "Keyword or phrase the articles mention; repeat for several (at most 60), all required unless keywordOper is or.",
+          "example": "Tesla"
+        },
+        "keywordLoc": {
+          "in": "query",
+          "type": "string",
+          "description": "Where keyword must appear: body (default), title, or both.",
+          "enum": [
+            "body",
+            "title",
+            "title,body"
+          ]
+        },
+        "keywordOper": {
+          "in": "query",
+          "type": "string",
+          "description": "and (default): every keyword must appear; or: any one.",
+          "enum": [
+            "and",
+            "or"
+          ]
+        },
+        "keywordSearchMode": {
+          "in": "query",
+          "type": "string",
+          "description": "phrase (default): each keyword as a phrase; simple: words in any order; exact: a Boolean/proximity expression.",
+          "enum": [
+            "simple",
+            "exact",
+            "phrase"
+          ]
+        },
+        "conceptUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Concept URI (from event-registry.suggest.concepts) the articles mention; at most 50, all required unless conceptOper is or."
+        },
+        "conceptOper": {
+          "in": "query",
+          "type": "string",
+          "description": "and (default) or or, across conceptUri values.",
+          "enum": [
+            "and",
+            "or"
+          ]
+        },
+        "categoryUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Category URI (from event-registry.suggest.categories); at most 20, any matches unless categoryOper is and."
+        },
+        "categoryOper": {
+          "in": "query",
+          "type": "string",
+          "description": "or (default) or and, across categoryUri values.",
+          "enum": [
+            "and",
+            "or"
+          ]
+        },
+        "sourceUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Source URI (from event-registry.suggest.sources), e.g. bbc.com; any of several matches."
+        },
+        "sourceLocationUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Only sources located at this place (location URI)."
+        },
+        "sourceGroupUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Only sources in this predefined source group."
+        },
+        "authorUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Author URI (from event-registry.suggest.authors)."
+        },
+        "locationUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Location URI (from event-registry.suggest.locations) of the dateline."
+        },
+        "lang": {
+          "in": "query",
+          "type": "array",
+          "description": "ISO 639-3 language code(s), at most 5; all languages when left out.",
+          "enum": [
+            "eng",
+            "spa",
+            "deu",
+            "zho",
+            "slv",
+            "cat",
+            "por",
+            "ita",
+            "fra",
+            "rus",
+            "ara",
+            "tur",
+            "hrv",
+            "srp",
+            "ind",
+            "ces",
+            "slk",
+            "pol",
+            "eus",
+            "hun",
+            "nld",
+            "swe",
+            "fin",
+            "dan",
+            "ell",
+            "ron",
+            "bul",
+            "ukr",
+            "fas",
+            "hin",
+            "urd",
+            "vie"
+          ]
+        },
+        "dateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "First publication date, YYYY-MM-DD.",
+          "example": "2024-01-03"
+        },
+        "dateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Last publication date, YYYY-MM-DD."
+        },
+        "ignoreKeyword": {
+          "in": "query",
+          "type": "array",
+          "description": "Drop events whose articles mention any of these keywords."
+        },
+        "ignoreConceptUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Drop events where any of these concepts is important."
+        },
+        "ignoreSourceUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Drop articles from any of these sources."
+        },
+        "ignoreLang": {
+          "in": "query",
+          "type": "array",
+          "description": "Drop articles in these languages.",
+          "enum": [
+            "eng",
+            "spa",
+            "deu",
+            "zho",
+            "slv",
+            "cat",
+            "por",
+            "ita",
+            "fra",
+            "rus",
+            "ara",
+            "tur",
+            "hrv",
+            "srp",
+            "ind",
+            "ces",
+            "slk",
+            "pol",
+            "eus",
+            "hun",
+            "nld",
+            "swe",
+            "fin",
+            "dan",
+            "ell",
+            "ron",
+            "bul",
+            "ukr",
+            "fas",
+            "hin",
+            "urd",
+            "vie"
+          ]
+        },
+        "minSentiment": {
+          "in": "query",
+          "type": "number",
+          "description": "Lowest sentiment, -1 to 1; setting it keeps English articles only."
+        },
+        "maxSentiment": {
+          "in": "query",
+          "type": "number",
+          "description": "Highest sentiment, -1 to 1; setting it keeps English articles only."
+        },
+        "startSourceRankPercentile": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lowest source-rank percentile to keep, 0-90 in steps of 10 (default 0, the top sources)."
+        },
+        "endSourceRankPercentile": {
+          "in": "query",
+          "type": "integer",
+          "description": "Highest source-rank percentile to keep, 10-100 in steps of 10 (default 100)."
+        },
+        "isDuplicateFilter": {
+          "in": "query",
+          "type": "string",
+          "description": "keepAll (default), skipDuplicates (drop copies of other articles) or keepOnlyDuplicates.",
+          "enum": [
+            "skipDuplicates",
+            "keepOnlyDuplicates",
+            "keepAll"
+          ]
+        },
+        "eventFilter": {
+          "in": "query",
+          "type": "string",
+          "description": "keepAll (default), skipArticlesWithoutEvent or keepOnlyArticlesWithoutEvent.",
+          "enum": [
+            "skipArticlesWithoutEvent",
+            "keepOnlyArticlesWithoutEvent",
+            "keepAll"
+          ]
+        },
+        "dataType": {
+          "in": "query",
+          "type": "array",
+          "description": "Content types to search: news (default), pr (press releases), blog.",
+          "enum": [
+            "news",
+            "pr",
+            "blog"
+          ]
+        },
+        "query": {
+          "in": "query",
+          "type": "object",
+          "description": "A complex query as one JSON object in the Advanced Query Language ($query, $and, $or, $not...). When given, the separate filter parameters are ignored.",
+          "style": "json"
+        },
+        "resultType": {
+          "in": "query",
+          "type": "string",
+          "description": "articles (default) for the list, or one aggregate: timeAggr, sourceAggr, conceptAggr, sentimentAggr...",
+          "enum": [
+            "articles",
+            "uriWgtList",
+            "langAggr",
+            "timeAggr",
+            "sourceAggr",
+            "sourceExAggr",
+            "authorAggr",
+            "keywordAggr",
+            "locAggr",
+            "conceptAggr",
+            "conceptGraph",
+            "conceptTrends",
+            "categoryAggr",
+            "dateMentionAggr",
+            "sentimentAggr",
+            "recentActivityArticles"
+          ]
+        },
+        "articlesPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "articlesCount": {
+          "in": "query",
+          "type": "integer",
+          "description": "Articles per page, up to 100 (the default)."
+        },
+        "articlesSortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "date (default), rel (relevance), sourceImportance, sourceImportanceRank, sourceAlexaGlobalRank, sourceAlexaCountryRank, cosSim or none.",
+          "enum": [
+            "date",
+            "rel",
+            "sourceImportance",
+            "sourceImportanceRank",
+            "sourceAlexaGlobalRank",
+            "sourceAlexaCountryRank",
+            "cosSim",
+            "none"
+          ]
+        },
+        "articlesSortByAsc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for ascending order; descending by default."
+        },
+        "articleBodyLen": {
+          "in": "query",
+          "type": "integer",
+          "description": "Body characters to return; -1 (default) for the whole body."
+        },
+        "includeArticleConcepts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to add the concepts each article mentions."
+        },
+        "includeArticleCategories": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to add each article's categories."
+        },
+        "includeArticleSentiment": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to add each article's sentiment."
+        }
+      },
+      "notes": [
+        "Costs 1 token a call for the last 30 days, 5 per searched year for older articles; aggregates cost 5 (archive 10), concept trends 10 (archive 50).",
+        "Repeat a list parameter to give several values (keyword=a&keyword=b); arrays are sent that way."
+      ],
+      "job": "news.search",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.articles.get",
+      "name": "Get articles by URI",
+      "summary": "Full details of one or more articles: body, source, concepts, categories, duplicates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/article/getArticle",
+      "params": {
+        "articleUri": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Article URI(s) from a search; repeat for several."
+        },
+        "resultType": {
+          "in": "query",
+          "type": "array",
+          "description": "info (default), duplicatedArticles or originalArticle.",
+          "enum": [
+            "info",
+            "duplicatedArticles",
+            "originalArticle"
+          ]
+        },
+        "infoArticleBodyLen": {
+          "in": "query",
+          "type": "integer",
+          "description": "Body characters to return, default 300; -1 for the whole body."
+        }
+      },
+      "job": "news.search",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.events.search",
+      "name": "Search news events",
+      "summary": "Events (clusters of articles about one happening) by keyword, concept, category, place, date, size and sentiment, or aggregates of them.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/event/getEvents",
+      "params": {
+        "keyword": {
+          "in": "query",
+          "type": "array",
+          "description": "Keyword or phrase the event's articles mention; repeat for several, all required unless keywordOper is or.",
+          "example": "earthquake"
+        },
+        "keywordLoc": {
+          "in": "query",
+          "type": "string",
+          "description": "Where keyword must appear: body (default), title, or both.",
+          "enum": [
+            "body",
+            "title",
+            "title,body"
+          ]
+        },
+        "keywordOper": {
+          "in": "query",
+          "type": "string",
+          "description": "and (default): every keyword must appear; or: any one.",
+          "enum": [
+            "and",
+            "or"
+          ]
+        },
+        "conceptUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Concept URI important to the event; at most 50, all required unless conceptOper is or."
+        },
+        "conceptOper": {
+          "in": "query",
+          "type": "string",
+          "description": "and (default) or or, across conceptUri values.",
+          "enum": [
+            "and",
+            "or"
+          ]
+        },
+        "categoryUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Category URI; at most 20."
+        },
+        "sourceUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Events with at least one article from this source."
+        },
+        "locationUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Location URI where the event happened."
+        },
+        "lang": {
+          "in": "query",
+          "type": "array",
+          "description": "Events with articles in these languages (ISO 639-3).",
+          "enum": [
+            "eng",
+            "spa",
+            "deu",
+            "zho",
+            "slv",
+            "cat",
+            "por",
+            "ita",
+            "fra",
+            "rus",
+            "ara",
+            "tur",
+            "hrv",
+            "srp",
+            "ind",
+            "ces",
+            "slk",
+            "pol",
+            "eus",
+            "hun",
+            "nld",
+            "swe",
+            "fin",
+            "dan",
+            "ell",
+            "ron",
+            "bul",
+            "ukr",
+            "fas",
+            "hin",
+            "urd",
+            "vie"
+          ]
+        },
+        "dateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "First event date, YYYY-MM-DD; the event date comes from the articles and can differ from publication dates."
+        },
+        "dateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Last event date, YYYY-MM-DD."
+        },
+        "reportingDateStart": {
+          "in": "query",
+          "type": "string",
+          "description": "First average reporting date of the event's articles, YYYY-MM-DD."
+        },
+        "reportingDateEnd": {
+          "in": "query",
+          "type": "string",
+          "description": "Last average reporting date of the event's articles, YYYY-MM-DD."
+        },
+        "minArticlesInEvent": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only events covered by at least this many articles."
+        },
+        "maxArticlesInEvent": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only events covered by at most this many articles."
+        },
+        "minSentiment": {
+          "in": "query",
+          "type": "number",
+          "description": "Lowest event sentiment, -1 to 1; keeps events covered in English only."
+        },
+        "maxSentiment": {
+          "in": "query",
+          "type": "number",
+          "description": "Highest event sentiment, -1 to 1; keeps events covered in English only."
+        },
+        "ignoreKeyword": {
+          "in": "query",
+          "type": "array",
+          "description": "Drop events whose articles mention any of these keywords."
+        },
+        "ignoreConceptUri": {
+          "in": "query",
+          "type": "array",
+          "description": "Drop events where any of these concepts is important."
+        },
+        "query": {
+          "in": "query",
+          "type": "object",
+          "description": "A complex query as one JSON object in the Advanced Query Language. When given, the separate filter parameters are ignored.",
+          "style": "json"
+        },
+        "resultType": {
+          "in": "query",
+          "type": "array",
+          "description": "events (default) for the list, or one aggregate: timeAggr, locAggr, conceptAggr, sentimentAggr, breakingEvents...",
+          "enum": [
+            "events",
+            "uriWgtList",
+            "timeAggr",
+            "locAggr",
+            "locTimeAggr",
+            "sourceAggr",
+            "authorAggr",
+            "keywordAggr",
+            "conceptAggr",
+            "conceptGraph",
+            "conceptTrends",
+            "categoryAggr",
+            "breakingEvents",
+            "sentimentAggr",
+            "dateMentionAggr",
+            "recentActivityEvents"
+          ]
+        },
+        "eventsPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "eventsCount": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events per page, up to 50 (the default)."
+        },
+        "eventsSortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "date (default), rel (relevance), size (article count) or none.",
+          "enum": [
+            "date",
+            "rel",
+            "size",
+            "none"
+          ]
+        },
+        "eventsSortByAsc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for ascending order; descending by default."
+        },
+        "eventImageCount": {
+          "in": "query",
+          "type": "integer",
+          "description": "Images to include per event, default 0."
+        }
+      },
+      "notes": [
+        "Costs 5 tokens a call for the last 30 days, 20 per searched year for older events; aggregates cost 5 (archive 10) or 10 (archive 50) for the complex ones."
+      ],
+      "job": "news.events.search",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.events.get",
+      "name": "Get an event",
+      "summary": "One event's summary, its articles, or an aggregate of them (keywords, sources, article trend, similar events).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/event/getEvent",
+      "params": {
+        "eventUri": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Event URI, e.g. from event-registry.events.search.",
+          "example": "eng-2940883"
+        },
+        "resultType": {
+          "in": "query",
+          "type": "string",
+          "description": "info (default) for the summary, articles for its articles, or keywordAggr, sourceExAggr, articleTrend, similarEvents...",
+          "enum": [
+            "info",
+            "articles",
+            "articleUris",
+            "keywordAggr",
+            "sourceExAggr",
+            "dateMentionAggr",
+            "articleTrend",
+            "similarEvents"
+          ]
+        },
+        "articlesLang": {
+          "in": "query",
+          "type": "array",
+          "description": "With resultType articles: only articles in these languages."
+        },
+        "articlesIncludeDuplicates": {
+          "in": "query",
+          "type": "boolean",
+          "description": "With resultType articles: true to include copies of other articles."
+        },
+        "lang": {
+          "in": "query",
+          "type": "array",
+          "description": "With resultType articles: only articles in these languages.",
+          "enum": [
+            "eng",
+            "spa",
+            "deu",
+            "zho",
+            "slv",
+            "cat",
+            "por",
+            "ita",
+            "fra",
+            "rus",
+            "ara",
+            "tur",
+            "hrv",
+            "srp",
+            "ind",
+            "ces",
+            "slk",
+            "pol",
+            "eus",
+            "hun",
+            "nld",
+            "swe",
+            "fin",
+            "dan",
+            "ell",
+            "ron",
+            "bul",
+            "ukr",
+            "fas",
+            "hin",
+            "urd",
+            "vie"
+          ]
+        },
+        "articleBodyLen": {
+          "in": "query",
+          "type": "integer",
+          "description": "Body characters to return; -1 (default) for the whole body."
+        },
+        "eventImageCount": {
+          "in": "query",
+          "type": "integer",
+          "description": "Images to include per event, default 0."
+        }
+      },
+      "job": "news.events.get",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.events.breaking",
+      "name": "List breaking events",
+      "summary": "Events whose coverage is growing fastest right now.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/event/getBreakingEvents",
+      "params": {
+        "breakingEventsCount": {
+          "in": "query",
+          "type": "integer",
+          "description": "Events to return, at most 100 (the default)."
+        },
+        "breakingEventsPage": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, from 1."
+        },
+        "breakingEventsMinBreakingScore": {
+          "in": "query",
+          "type": "number",
+          "description": "Lowest breaking score to keep, from 0 (default 0.2)."
+        },
+        "eventImageCount": {
+          "in": "query",
+          "type": "integer",
+          "description": "Images to include per event, default 0."
+        }
+      },
+      "job": "news.events.search",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.suggest.concepts",
+      "name": "Find concept URIs",
+      "summary": "Concept URIs (people, organizations, places, things) whose label starts with or matches the text, most frequent first; also by ticker, ISIN, CIK or domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/suggestConceptsFast",
+      "params": {
+        "prefix": {
+          "in": "query",
+          "type": "string",
+          "description": "Name or start of a name to look up.",
+          "required": true
+        },
+        "lang": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "What prefix is matched against: an ISO 639-3 language for labels, or ticker, isin, cik or domain.",
+          "enum": [
+            "eng",
+            "spa",
+            "deu",
+            "zho",
+            "slv",
+            "cat",
+            "por",
+            "ita",
+            "fra",
+            "rus",
+            "ara",
+            "hrv",
+            "srp",
+            "ticker",
+            "isin",
+            "cik",
+            "domain"
+          ],
+          "example": "eng"
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.suggest.categories",
+      "name": "Find category URIs",
+      "summary": "Category URIs whose label matches the text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/suggestCategoriesFast",
+      "params": {
+        "prefix": {
+          "in": "query",
+          "type": "string",
+          "description": "Name or start of a name to look up.",
+          "required": true
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.suggest.sources",
+      "name": "Find source URIs",
+      "summary": "News source URIs matching a source name or URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/suggestSourcesFast",
+      "params": {
+        "prefix": {
+          "in": "query",
+          "type": "string",
+          "description": "Name or start of a name to look up.",
+          "required": true
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.suggest.authors",
+      "name": "Find author URIs",
+      "summary": "Author URIs matching an author's name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/suggestAuthorsFast",
+      "params": {
+        "prefix": {
+          "in": "query",
+          "type": "string",
+          "description": "Name or start of a name to look up.",
+          "required": true
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    },
+    {
+      "id": "event-registry.suggest.locations",
+      "name": "Find location URIs",
+      "summary": "Location URIs matching a place name.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/suggestLocationsFast",
+      "params": {
+        "prefix": {
+          "in": "query",
+          "type": "string",
+          "description": "Name or start of a name to look up.",
+          "required": true
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://eventregistry.org/documentation",
+      "verified": {
+        "docs": "https://eventregistry.org/static/api.yaml"
+      }
+    }
+  ]
+}

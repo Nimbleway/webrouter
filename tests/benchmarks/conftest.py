@@ -154,6 +154,7 @@ ROUTE_EVAL_SIBLINGS = (
     "route_eval_rank",
     "route_eval_floor",
     "route_eval_merge",
+    "route_eval_fitted",
     "route_eval_replay",
     "route_eval_routers",
     "route_eval_matrix",

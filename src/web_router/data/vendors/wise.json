@@ -1,0 +1,279 @@
+{
+  "vendor": "wise",
+  "name": "Wise",
+  "category": "finance",
+  "summary": "Wise exchange rates (latest and history) and read-only views of your own Wise account: profiles, currency balances, total funds and activity.",
+  "docs_url": "https://docs.wise.com/api-reference",
+  "base_url": "https://{host}/2026Q4",
+  "settings": {
+    "host": {
+      "env": [
+        "WISE_HOST"
+      ],
+      "default": "api.wise.com",
+      "choices": [
+        "api.wise.com",
+        "api.wise-sandbox.com"
+      ],
+      "description": "api.wise.com for live accounts, api.wise-sandbox.com for the sandbox. Use the host the token was issued for."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "WISE_API_KEY",
+          "WISE_API_TOKEN"
+        ],
+        "description": "A Wise API token: a personal API token (business account settings > Developer tools > API tokens) or a user access token. Sent as an Authorization Bearer header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Reads only. Quotes, transfers, conversions, balance movements and every other call that moves money are left out on purpose.",
+    "Every endpoint here is documented as accepting both user tokens and personal API tokens, though Wise describes personal tokens mainly for the payouts workflow.",
+    "Balance statements are left out: outside the US, CA, AU, NZ, SG and MY they need strong customer authentication, and personal tokens cannot read them.",
+    "The API is versioned by quarter in the base path (2026Q4)."
+  ],
+  "sources": [
+    "https://docs.wise.com/api-reference.md",
+    "https://docs.wise.com/guides/developer/auth-and-security/personal-api-token.md",
+    "https://docs.wise.com/api-reference/rate/rateget.md",
+    "https://docs.wise.com/api-reference/currencies/currenciesget.md",
+    "https://docs.wise.com/api-reference/profile/profilelist.md",
+    "https://docs.wise.com/api-reference/profile/profileget.md",
+    "https://docs.wise.com/api-reference/balance/balancelist.md",
+    "https://docs.wise.com/api-reference/balance/totalfunds.md",
+    "https://docs.wise.com/api-reference/activity/activitylist.md",
+    "https://docs.wise.com/api-reference/balance-statement/balancestatementget.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "wise.rates.get",
+      "name": "Get exchange rates",
+      "summary": "Latest rates for every currency, one pair, a past moment, or a pair's history by minute, hour or day.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/rates",
+      "params": {
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Source currency, e.g. EUR.",
+          "example": "EUR"
+        },
+        "target": {
+          "in": "query",
+          "type": "string",
+          "description": "Target currency, e.g. USD.",
+          "example": "USD"
+        },
+        "time": {
+          "in": "query",
+          "type": "string",
+          "description": "A past moment, e.g. 2019-03-13T14:53:01 (offset optional)."
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "History start, timestamp or date, e.g. 2019-03-13.",
+          "example": "2024-01-01"
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "History end, timestamp or date."
+        },
+        "group": {
+          "in": "query",
+          "type": "string",
+          "description": "History interval: day, hour or minute.",
+          "enum": [
+            "day",
+            "hour",
+            "minute"
+          ]
+        }
+      },
+      "notes": [
+        "No parameters: latest rates of all currencies. from, to and group cannot be tested in the sandbox."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.wise.com/api-reference/rate/rateget",
+      "verified": {
+        "docs": "https://docs.wise.com/api-reference/rate/rateget"
+      }
+    },
+    {
+      "id": "wise.currencies.list",
+      "name": "List currencies",
+      "summary": "Currencies available for transfers, with names.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/currencies",
+      "notes": [
+        "Names are in English; an Accept-Language header localizes them."
+      ],
+      "job": "market.symbols",
+      "docs_url": "https://docs.wise.com/api-reference/currencies/currenciesget",
+      "verified": {
+        "docs": "https://docs.wise.com/api-reference/currencies/currenciesget"
+      }
+    },
+    {
+      "id": "wise.profiles.list",
+      "name": "List your profiles",
+      "summary": "The personal and business profiles of the token's user.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profiles",
+      "notes": [
+        "Most other calls need a profile ID from here."
+      ],
+      "job": "account.validate",
+      "docs_url": "https://docs.wise.com/api-reference/profile/profilelist",
+      "verified": {
+        "docs": "https://docs.wise.com/api-reference/profile/profilelist"
+      }
+    },
+    {
+      "id": "wise.profiles.get",
+      "name": "Get a profile",
+      "summary": "Details of one of your profiles.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profiles/{profileId}",
+      "params": {
+        "profileId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Profile ID (list them with wise.profiles.list)."
+        }
+      },
+      "job": "account.validate",
+      "docs_url": "https://docs.wise.com/api-reference/profile/profileget",
+      "verified": {
+        "docs": "https://docs.wise.com/api-reference/profile/profileget"
+      }
+    },
+    {
+      "id": "wise.balances.list",
+      "name": "List your balances",
+      "summary": "Amounts held in each currency balance of a profile's multi-currency account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profiles/{profileId}/balances",
+      "params": {
+        "profileId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Profile ID (list them with wise.profiles.list)."
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "STANDARD, SAVINGS or both comma-separated.",
+          "example": "STANDARD"
+        }
+      },
+      "job": "account.balance",
+      "docs_url": "https://docs.wise.com/api-reference/balance/balancelist",
+      "verified": {
+        "docs": "https://docs.wise.com/api-reference/balance/balancelist"
+      }
+    },
+    {
+      "id": "wise.balances.total_funds",
+      "name": "Get your total funds",
+      "summary": "Total worth, total available (with overdraft), cash and overdraft use of a profile, converted to one currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profiles/{profileId}/total-funds/{currency}",
+      "params": {
+        "profileId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Profile ID (list them with wise.profiles.list)."
+        },
+        "currency": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Currency to value everything in, ISO 4217.",
+          "example": "GBP"
+        }
+      },
+      "job": "account.balance",
+      "docs_url": "https://docs.wise.com/api-reference/balance/totalfunds",
+      "verified": {
+        "docs": "https://docs.wise.com/api-reference/balance/totalfunds"
+      }
+    },
+    {
+      "id": "wise.activities.list",
+      "name": "List your account activity",
+      "summary": "Activities on a profile, filterable by type, status and time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/profiles/{profileId}/activities",
+      "params": {
+        "profileId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Profile ID (list them with wise.profiles.list)."
+        },
+        "monetaryResourceType": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this resource type."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this activity status."
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "After this time, ISO 8601."
+        },
+        "until": {
+          "in": "query",
+          "type": "string",
+          "description": "Until this time, ISO 8601."
+        },
+        "size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1-100; default 10."
+        },
+        "nextCursor": {
+          "in": "query",
+          "type": "string",
+          "description": "cursor from the previous response."
+        }
+      },
+      "notes": [
+        "Page by passing the response's cursor as nextCursor until it is null."
+      ],
+      "job": "account.activity",
+      "docs_url": "https://docs.wise.com/api-reference/activity/activitylist",
+      "verified": {
+        "docs": "https://docs.wise.com/api-reference/activity/activitylist"
+      }
+    }
+  ]
+}

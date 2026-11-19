@@ -1,0 +1,364 @@
+{
+  "vendor": "signalhire",
+  "name": "SignalHire",
+  "category": "enrichment",
+  "summary": "Professional profiles with emails and phones by LinkedIn URL, email or phone, people search by title, company and location, and company profiles.",
+  "docs_url": "https://docs.signalhire.com/overview",
+  "pricing_url": "https://www.signalhire.com/pricing",
+  "base_url": "https://www.signalhire.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SIGNALHIRE_API_KEY"
+        ],
+        "description": "A SignalHire API key (Other tools > Integrations & API). Sent in the apikey header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billing is split: person lookups spend standard credits, without-contacts lookups and company profiles each spend their own credit type, and people search draws on a daily quota shared with the web app.",
+    "The default person lookup and the company employee-profile export deliver only to a callback URL, so they are not in this entry; person lookup is listed in its synchronous mode.",
+    "The Company API is off by default; SignalHire support enables it."
+  ],
+  "sources": [
+    "https://docs.signalhire.com/llms.txt",
+    "https://docs.signalhire.com/person-api/retrieve-person",
+    "https://docs.signalhire.com/person-api/without-waterfall",
+    "https://docs.signalhire.com/person-api/without-contacts",
+    "https://docs.signalhire.com/person-api/credits",
+    "https://docs.signalhire.com/person-api/rate-limits",
+    "https://docs.signalhire.com/search-api/search-by-query",
+    "https://docs.signalhire.com/search-api/scroll-search",
+    "https://docs.signalhire.com/company-api/overview",
+    "https://docs.signalhire.com/company-api/find-company",
+    "https://docs.signalhire.com/company-api/company-info",
+    "https://docs.signalhire.com/company-api/company-profiles",
+    "https://docs.signalhire.com/api-pricing",
+    "https://docs.signalhire.com/authentication"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "signalhire.account.credits",
+      "name": "Get remaining credits",
+      "summary": "Standard contact credits left, or without-contacts credits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/credits",
+      "params": {
+        "withoutContacts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for the without-contacts credit balance instead of standard credits."
+        }
+      },
+      "notes": [
+        "Free. Every response also carries the balance in the X-Credits-Left header."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.signalhire.com/person-api/credits",
+      "verified": {
+        "docs": "https://docs.signalhire.com/person-api/credits"
+      }
+    },
+    {
+      "id": "signalhire.person.lookup",
+      "name": "Look up people and their contacts",
+      "summary": "Profiles with emails and phones for up to 100 LinkedIn URLs, emails, phones or SignalHire profile uids, answered in the same call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/candidate/search",
+      "params": {
+        "items": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "Up to 100 identifiers, types may be mixed: LinkedIn profile URLs, emails, phone numbers, SignalHire uids.",
+          "example": [
+            "https://www.linkedin.com/in/example"
+          ]
+        },
+        "withoutWaterfall": {
+          "in": "body",
+          "type": "boolean",
+          "required": true,
+          "description": "Must be true: answer synchronously from SignalHire's own data.",
+          "enum": [
+            true
+          ]
+        },
+        "withoutContacts": {
+          "in": "body",
+          "type": "boolean",
+          "description": "true: profile data only, no emails or phones, charged to the separate without-contacts credits."
+        }
+      },
+      "notes": [
+        "A read over POST. One standard credit per profile found (shared with the web app and extension); withoutContacts uses its own credit type.",
+        "Only the synchronous mode is listed: it searches SignalHire's own data, so coverage is lower and contacts can be older than the callback-based waterfall, which is not in this entry.",
+        "Each result has item, status (success, failed, credits_are_over, duplicate_query) and candidate. Limits: 100 items per call, 600 items a minute on paid plans, 5 on trial."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.signalhire.com/person-api/without-waterfall",
+      "verified": {
+        "docs": "https://docs.signalhire.com/person-api/without-waterfall"
+      }
+    },
+    {
+      "id": "signalhire.people.search",
+      "name": "Search people",
+      "summary": "Brief profiles (no contacts) matching title, company, location, industry, seniority and other filters; returns the first batch and a scrollId.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/candidate/searchByQuery",
+      "params": {
+        "currentTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Boolean query on the current job title.",
+          "example": "(Software AND Engineer) OR Developer"
+        },
+        "currentPastTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Boolean query on current or past titles; wins over currentTitle."
+        },
+        "currentCompany": {
+          "in": "body",
+          "type": "string",
+          "description": "Boolean query on the current company name."
+        },
+        "currentPastCompany": {
+          "in": "body",
+          "type": "string",
+          "description": "Boolean query on current or past company names."
+        },
+        "fullName": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name."
+        },
+        "keywords": {
+          "in": "body",
+          "type": "string",
+          "description": "Boolean query over skills, description, education and other profile text."
+        },
+        "location": {
+          "in": "body",
+          "type": "string",
+          "description": "A country, a US/Canadian state, or a city with context ('Berlin, Germany'); a JSON array for several. 422 if not recognized.",
+          "example": "New York, New York, United States"
+        },
+        "latitude": {
+          "in": "body",
+          "type": "number",
+          "description": "Geo search centre latitude, with longitude; overrides location."
+        },
+        "longitude": {
+          "in": "body",
+          "type": "number",
+          "description": "Geo search centre longitude."
+        },
+        "radius": {
+          "in": "body",
+          "type": "integer",
+          "description": "Radius in km around a city or point, 10 to 160, default 10."
+        },
+        "industry": {
+          "in": "body",
+          "type": "string",
+          "description": "One industry from SignalHire's allowed list."
+        },
+        "industries": {
+          "in": "body",
+          "type": "array",
+          "description": "Several industries from the allowed list."
+        },
+        "department": {
+          "in": "body",
+          "type": "array",
+          "description": "Departments, e.g. Sales, Marketing, Engineering / Development, Data & Analytics."
+        },
+        "level": {
+          "in": "body",
+          "type": "array",
+          "description": "Seniority: Intern / Entry Level, Junior, Mid-Level, Senior, Lead, Head, VP, C-Level, Founder / Owner, Board / Advisory, Directors."
+        },
+        "education": {
+          "in": "body",
+          "type": "string",
+          "description": "Boolean query over university, faculty and degree."
+        },
+        "yearsOfCurrentExperienceFrom": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum years in the current role."
+        },
+        "yearsOfCurrentExperienceTo": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum years in the current role."
+        },
+        "yearsOfCurrentPastExperienceFrom": {
+          "in": "body",
+          "type": "integer",
+          "description": "Minimum years of total experience."
+        },
+        "yearsOfCurrentPastExperienceTo": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum years of total experience."
+        },
+        "openToWork": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only open-to-work profiles."
+        },
+        "excludeRevealed": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Leave out profiles whose contacts you already fetched."
+        },
+        "size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Profiles per batch, 1 to 100, default 10."
+        }
+      },
+      "notes": [
+        "A read over POST. Not billed in credits: each query and each profile returned counts against a daily search quota shared with the web app; 402 when it runs out.",
+        "At least one filter other than the exclude* flags is required. At most 3 search calls at once.",
+        "Page on with signalhire.people.search_scroll within 15 seconds; pass profile uids to signalhire.person.lookup for contacts."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.signalhire.com/search-api/search-by-query",
+      "verified": {
+        "docs": "https://docs.signalhire.com/search-api/search-by-query"
+      }
+    },
+    {
+      "id": "signalhire.people.search_scroll",
+      "name": "Get the next batch of a people search",
+      "summary": "The next batch of a people search, with a new scrollId.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/api/v1/candidate/scrollSearch/{requestId}",
+      "params": {
+        "requestId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "requestId from signalhire.people.search."
+        },
+        "scrollId": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "scrollId from the previous search or scroll response."
+        }
+      },
+      "notes": [
+        "A read over POST. The scrollId expires 15 seconds after it is issued: call immediately, and stop when a response has no scrollId.",
+        "Not a new query against the daily quota, but every profile returned counts against the daily profile quota."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.signalhire.com/search-api/scroll-search",
+      "verified": {
+        "docs": "https://docs.signalhire.com/search-api/scroll-search"
+      }
+    },
+    {
+      "id": "signalhire.company.find",
+      "name": "Resolve a company id",
+      "summary": "SignalHire company id, slug and name for an id or slug.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/findById",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Numeric company id or slug.",
+          "example": "accenture"
+        }
+      },
+      "notes": [
+        "Free. The Company API must be enabled for the account by SignalHire support, else 403."
+      ],
+      "job": "company.suggest",
+      "docs_url": "https://docs.signalhire.com/company-api/find-company",
+      "verified": {
+        "docs": "https://docs.signalhire.com/company-api/find-company"
+      }
+    },
+    {
+      "id": "signalhire.company.get",
+      "name": "Get a company profile",
+      "summary": "Industry, description, founding year, website, headcount, specialities and office locations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/info",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Numeric company id or slug.",
+          "example": "1033"
+        }
+      },
+      "notes": [
+        "One company data credit per success, a credit type bought separately from support; 402 when none are left. Needs Company API access."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.signalhire.com/company-api/company-info",
+      "verified": {
+        "docs": "https://docs.signalhire.com/company-api/company-info"
+      }
+    },
+    {
+      "id": "signalhire.company.employee_count",
+      "name": "Count a company's profiles",
+      "summary": "How many current, past or all employee profiles SignalHire holds for a company.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/company/getCount",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Numeric company id or slug."
+        },
+        "status": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Employment status.",
+          "enum": [
+            "current",
+            "past",
+            "both"
+          ]
+        }
+      },
+      "notes": [
+        "Free. Needs Company API access."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.signalhire.com/company-api/company-profiles",
+      "verified": {
+        "docs": "https://docs.signalhire.com/company-api/company-profiles"
+      }
+    }
+  ]
+}

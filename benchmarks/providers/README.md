@@ -477,7 +477,8 @@ By default it scores `sealqa-hard-254` and `simpleqa-300-v2`, SimpleQA being
 the control set where routing should gain nothing, and `tools-effort-60`
 ([below](#tool-choice-and-effort)). A router is `static`
 (`auto`'s order today), `oracle` (the backend that got each question right,
-cheapest first: the ceiling), `always:<backend>`, a built-in or registered
+cheapest first: the ceiling), `fitted` (the recommended order, described
+below, learned on the training split), `always:<backend>`, a built-in or registered
 router by name as `router:<name>` (`router:gemini`, built with no
 `router_config`: it reads its preset's key and each question bills its vendor,
 which the cost columns do not count; it routes on each question's text, so it
@@ -556,6 +557,39 @@ ranked ones as *too few questions*. `run.py`'s recommended order applies the
 same minimum, so a scan of fewer than 20 questions suggests no order. AIQ and the
 cost and latency curves wait for the first real router. `--json PATH` writes
 the numbers as well.
+
+### Vendor modes: `--modes`
+
+A one-method set ranks backends at their default mode. With `--modes`, each
+vendor mode the set has rows for is a candidate of its own, named by its
+entry (`exa:exa-deep`) and shown to a router as `search:exa:exa-deep` with its
+own list price and p90. A router runs one by naming it in
+`RouteDecision.attempts`; the static order still names backends only, as
+`auto`'s does, so `static` scores the same with or without `--modes`. Only
+[`sealqa-hard-254-modes`](#vendor-modes-on-sealqa-hard) has mode rows today.
+
+```bash
+uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254-modes --router fitted
+uv run --all-extras python benchmarks/providers/route_eval.py --set sealqa-hard-254-modes --router fitted --modes
+```
+
+`fitted` answers every question with the recommended order of its training
+questions, so the same router, with and without `--modes`, shows what routing
+on modes adds over routing on backends. On seed 0, held out:
+
+| Router | Accuracy held out | Mean cost | Mean latency |
+| --- | --- | --- | --- |
+| `static` | 31% (39/127) | $0.0050 | 0.4s |
+| `fitted`, backends | 31% (39/127) | $0.0050 | 0.4s |
+| `fitted`, `--modes` | 26% (33/127) | $0.0050 | 3.1s |
+| `oracle`, backends | 59% (75/127) | $0.0045 | 0.6s |
+| `oracle`, `--modes` | 72% (91/127) | $0.0042 | 0.7s |
+
+With modes, `parallel:parallel-advanced` is the most accurate on the training
+half (41%, beyond the floor) and leads the order, but scores 26% held out: one
+order learned from 127 questions does not beat Perplexity's default on the
+other 127. The oracle's ceiling rises 13 points with modes: the gain is there
+per question, for a router that tells the questions apart.
 
 ### The default `auto` orders: `make chains`
 
