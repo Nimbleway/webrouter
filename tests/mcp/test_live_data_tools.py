@@ -154,6 +154,7 @@ def test_the_capabilities_key_the_live_data_tools_method_once(
         "brightdata": ["BRIGHTDATA_API_TOKEN"],
         "nimble": [ENV_NIMBLE_API_KEY],
         "oxylabs": ["OXYLABS_WEB_API_KEY"],
+        "merchant": ["WEB_ROUTER_MERCHANT_AGENT_PROFILE_URL"],
     }
 
     monkeypatch.setenv(ENV_NIMBLE_API_KEY, "x")

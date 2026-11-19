@@ -433,6 +433,10 @@ src/web_router/
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
     ├── brightdata_snapshots.py  waiting on the snapshot of a scrape that outlasted the synchronous window
+    ├── merchant_live_data.py    live data: a store's own agent interface, one source per store domain
+    ├── merchant_registry.py     the registry reads it routes by, cached (pointer for 60 s, records per snapshot)
+    ├── merchant_record.py       what a registry record decides, no network: the route, its host, the option gates
+    ├── merchant_mcp.py          the MCP envelopes to a store and the product list back
     ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
     ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
     ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
