@@ -142,7 +142,7 @@ async def test_run_stops_on_a_dead_judge_before_any_answer(
     def opened(*args: Any, **kwargs: Any) -> Any:
         raise AssertionError("a router was opened, so a backend could be asked")
 
-    monkeypatch.setattr(answer_scan, "judge_from", lambda spec: _BrokenJudge())
+    monkeypatch.setitem(answer_scan.checked_judge.__globals__, "judge_from", lambda spec: _BrokenJudge())
     monkeypatch.setattr(answer_scan, "AsyncWebRouter", opened)
     path = tmp_path / "q.csv"
     path.write_text("problem,answer\nWho?,Alice\n", encoding="utf-8")

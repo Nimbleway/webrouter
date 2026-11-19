@@ -2837,7 +2837,7 @@ MSG_EVALS_NEEDS_PYARROW = (
     "uv sync --extra {extra} in your web-router clone, or make setup for every extra"
 )
 
-MSG_EVALS_JUDGE_FAILED = "the judge could not {step} the answer: {error}"
+MSG_EVALS_JUDGE_FAILED = "the judge failed at {step}: {error}"
 
 MSG_EVALS_JUDGE_STOPPED = "the reply stopped on {stop_reason!r} before it was finished, so it holds no answer to read"
 
