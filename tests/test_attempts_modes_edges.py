@@ -65,6 +65,12 @@ def test_lifting_an_excluded_sole_mode_keeps_every_other_exclusion() -> None:
     assert merged.notes.excluded == {"search:tavily": "slow", "search:brave": "down"}  # type: ignore[attr-defined]
 
 
+def test_an_excluded_sole_mode_runs_when_only_a_sibling_mode_is_left() -> None:
+    fast = Candidate(tool="search", provider="exa", mode="exa-fast")
+    merged = _merged((EXA_INSTANT, fast), RouteDecision(attempts=[INSTANT], exclude={INSTANT: "too thin"}))
+    assert merged.providers == ("exa:exa-instant",)  # type: ignore[attr-defined]
+
+
 @pytest.mark.parametrize(
     ("candidates", "exclude"),
     [
