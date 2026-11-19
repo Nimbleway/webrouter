@@ -1,0 +1,179 @@
+{
+  "vendor": "salesql",
+  "name": "SalesQL",
+  "category": "enrichment",
+  "summary": "Verified work and direct emails and phone numbers for a person by LinkedIn URL, email or name, organization profiles, and email verification.",
+  "docs_url": "https://salesql.com/docs/api",
+  "pricing_url": "https://salesql.com/pricing",
+  "base_url": "https://api-public.salesql.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SALESQL_API_KEY"
+        ],
+        "description": "A SalesQL API key (Settings > API Access; Professional and Premium plans). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Person enrichment spends credits; organization enrichment and the allowance call are free. salesql.account.allowance gives the rate limits.",
+    "Bulk person and organization enrichment and bulk verification jobs are not in this entry."
+  ],
+  "sources": [
+    "https://salesql.com/docs/api",
+    "https://salesql.com/docs/api.md",
+    "https://api-public.salesql.com/openapi"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "salesql.account.allowance",
+      "name": "Get credits and rate limits",
+      "summary": "Remaining credits, plan and rate limits for the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/allowance",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://salesql.com/docs/api",
+      "verified": {
+        "docs": "https://salesql.com/docs/api"
+      }
+    },
+    {
+      "id": "salesql.person.enrich",
+      "name": "Enrich a person",
+      "summary": "Work and direct emails, phones, title and company for a person, by LinkedIn URL, email, or name with organization.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/persons/enrich",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn profile URL; most accurate.",
+          "example": "https://www.linkedin.com/in/example"
+        },
+        "email": {
+          "in": "query",
+          "type": "string",
+          "description": "Email address (reverse lookup)."
+        },
+        "first_name": {
+          "in": "query",
+          "type": "string",
+          "description": "First name, with last_name and organization."
+        },
+        "last_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name."
+        },
+        "full_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Full name, instead of first and last."
+        },
+        "organization_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Organization domain; identifies the organization.",
+          "example": "acme.com"
+        },
+        "organization_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Organization name; must be exact when sent without organization_domain."
+        },
+        "match_if_direct_email": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only match a person with a direct (non-work) email."
+        },
+        "match_if_direct_phone": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only match a person with a direct phone; ignored on the Free plan."
+        }
+      },
+      "notes": [
+        "Consumes enrichment credits. Send one complete group: linkedin_url; email; or a name (first_name + last_name, or full_name) with organization_domain or organization_name.",
+        "An ambiguous name match answers 404 asking for the linkedin_url rather than guessing. The Free plan gets no phone numbers."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://salesql.com/docs/api",
+      "verified": {
+        "docs": "https://salesql.com/docs/api"
+      }
+    },
+    {
+      "id": "salesql.company.enrich",
+      "name": "Enrich an organization",
+      "summary": "Industry, size, headquarters, logo and LinkedIn of an organization.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/organizations/enrich",
+      "params": {
+        "linkedin_url": {
+          "in": "query",
+          "type": "string",
+          "description": "LinkedIn company URL; wins over the others."
+        },
+        "organization_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Website domain, reduced to its root.",
+          "example": "ibm.com"
+        },
+        "organization_name": {
+          "in": "query",
+          "type": "string",
+          "description": "Exact organization name."
+        }
+      },
+      "notes": [
+        "Free. A domain or name several organizations share answers 404; retry with linkedin_url."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://salesql.com/docs/api",
+      "verified": {
+        "docs": "https://salesql.com/docs/api"
+      }
+    },
+    {
+      "id": "salesql.email.verify",
+      "name": "Verify an email",
+      "summary": "Whether a mailbox accepts mail.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/emails/verify",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Address to check."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 verification credit (a balance separate from enrichment credits), also when served from the 120-day cache. Needs a key with the verify:verify scope.",
+        "unknown is not an error: the domain's mail servers could not be checked."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://salesql.com/docs/api",
+      "verified": {
+        "docs": "https://salesql.com/docs/api"
+      }
+    }
+  ]
+}
