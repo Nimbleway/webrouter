@@ -29,6 +29,9 @@ TIMEOUT_COOLDOWN_AFTER: Final = 3
 TIMEOUT_COOLDOWN_S: Final = 30.0
 """How long a backend cools down after :data:`TIMEOUT_COOLDOWN_AFTER` timeouts in a row."""
 
+COOLDOWN_STATUS: Final = "a {status}"
+"""What a cooldown after a throttle names as its cause: the status, or ``rate_limit`` with none."""
+
 COOLDOWN_TIMEOUTS: Final = "{count} timeouts in a row"
 """What a cooldown after timeouts names as its cause, where a throttle's names its status."""
 

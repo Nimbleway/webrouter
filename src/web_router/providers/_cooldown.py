@@ -29,6 +29,7 @@ from web_router.constants_production import (
     COOLDOWN_DEFAULT_S,
     COOLDOWN_FALLBACK_S,
     COOLDOWN_MAX_S,
+    COOLDOWN_STATUS,
     COOLDOWN_STATUSES,
     COOLDOWN_TIMEOUTS,
     HOP_CODE_COOLING_DOWN,
@@ -62,7 +63,7 @@ class Cooldowns:
 
     def __init__(self, *, timeouts: bool = False) -> None:
         self._until: dict[str, tuple[float, int | None, str]] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()  # reentrant: a streak that ends starts its cooldown under the same hold
         self._timeouts = timeouts
         self._streak: dict[str, int] = {}
 
@@ -74,7 +75,7 @@ class Cooldowns:
         if getattr(exc, "kind", None) == ERROR_KIND_TIMEOUT:
             self.note_timeout(provider)
             return
-        self._streak.pop(backend_of(provider), None)
+        self._reset(provider)
         seconds, status = _cooldown_of(exc)
         if seconds is not None:
             self._start(provider, seconds, status)
@@ -84,11 +85,11 @@ class Cooldowns:
         if not self._timeouts:
             return
         backend = backend_of(provider)
-        with self._lock:
+        with self._lock:  # held until the cooldown is set, so an answer arriving meanwhile cannot be overtaken by it
             count = self._streak.get(backend, 0) + 1
             self._streak[backend] = 0 if count >= TIMEOUT_COOLDOWN_AFTER else count
-        if count >= TIMEOUT_COOLDOWN_AFTER:
-            self._start(provider, TIMEOUT_COOLDOWN_S, None, COOLDOWN_TIMEOUTS.format(count=count))
+            if count >= TIMEOUT_COOLDOWN_AFTER:
+                self._start(provider, TIMEOUT_COOLDOWN_S, None, COOLDOWN_TIMEOUTS.format(count=count))
 
     def note_answer(self, provider: str, response: object) -> None:
         """Start ``provider``'s cooldown when an answer it gave reports a URL it was throttled on.
@@ -97,7 +98,7 @@ class Cooldowns:
         the others; the backend is throttled all the same. No ``Retry-After``
         survives into a failure, so the status's default applies.
         """
-        self._streak.pop(backend_of(provider), None)  # it answered: no longer timing out in a row
+        self._reset(provider)  # it answered: no longer timing out in a row
         failures = getattr(response, "failures", None) or ()
         # Only the backend's own throttle (kind rate_limit): a page the target site answered 429 is kind upstream.
         statuses = [getattr(f, "status_code", None) for f in failures if getattr(f, "kind", None) == _RATE_LIMIT]
@@ -106,12 +107,20 @@ class Cooldowns:
             status = max(throttled, key=lambda code: COOLDOWN_DEFAULT_S[code])
             self._start(provider, COOLDOWN_DEFAULT_S[status], status)
 
+    def _reset(self, provider: str) -> None:
+        with self._lock:
+            self._streak.pop(backend_of(provider), None)
+
     def _start(self, provider: str, seconds: float, status: int | None, cause: str | None = None) -> None:
         now, provider = time.monotonic(), backend_of(provider)  # a pinned mode cools its whole backend
         with self._lock:
             current = self._until.get(provider)
             if current is None or current[0] < now + seconds:
-                self._until[provider] = (now + seconds, status, cause or f"a {status or _RATE_LIMIT}")
+                self._until[provider] = (
+                    now + seconds,
+                    status,
+                    cause or COOLDOWN_STATUS.format(status=status or _RATE_LIMIT),
+                )
             until, _, cause = self._until[provider]  # a longer cooldown already running is kept, and logged as such
         logger.info(LOG_COOLDOWN_SET, provider, until - now, cause)
 
