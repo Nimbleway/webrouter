@@ -127,8 +127,10 @@ async def test_a_judge_of_your_own_closes_without_holding_anything() -> None:
 class FixedScorer(Scorer):
     name = "fixed-v1"
 
-    def score(self, question: str, answer: str, citations: Sequence[Citation] = ()) -> Scorecard:
-        dimensions = {"factual_accuracy": 8.0, "coverage": 6.0, "sources_cited": None if not citations else 9.0}
+    def score(
+        self, question: str, answer: str, citations: Sequence[Citation] = (), *, output_schema: object = None
+    ) -> Scorecard:
+        dimensions = {"sources_cited": None if not citations else 9.0, "schema": 8.0 if output_schema else None}
         return Scorecard(scorer=self.label, scale=(1, 10), dimensions=dimensions, overall=7.0)
 
 
@@ -136,7 +138,9 @@ async def test_a_scorer_of_your_own_scores_sync_and_async() -> None:
     scorer = FixedScorer()
     card = scorer.score("Who?", "Alice", [Citation(url="https://example.com")])
     assert card.scorer == "fixed-v1" and card.dimensions["sources_cited"] == 9.0
-    assert (await scorer.ascore("Who?", "Alice")).dimensions["sources_cited"] is None
+    assert (await scorer.ascore("Who?", "Alice")).dimensions == {"sources_cited": None, "schema": None}
+    schema = {"type": "object", "properties": {"author": {"type": "string"}}}
+    assert (await scorer.ascore("Who?", '{"author": "Alice"}', output_schema=schema)).dimensions["schema"] == 8.0
 
 
 @pytest.mark.parametrize("scale", [(10, 1), (5, 5), (1, math.inf), (-math.inf, 10)])

@@ -94,7 +94,23 @@ class Scorer(ABC):
         """Raise now what the first call would raise; a scorer with nothing to check does nothing."""
 
     @abstractmethod
-    def score(self, question: str, answer: str, citations: Sequence[Citation] = ()) -> Scorecard: ...
+    def score(
+        self,
+        question: str,
+        answer: str,
+        citations: Sequence[Citation] = (),
+        *,
+        output_schema: dict[str, Any] | None = None,
+    ) -> Scorecard:
+        """Rate ``answer``. ``output_schema`` is the JSON Schema the answer was asked to follow (``research()``'s
+        ``output_schema``), so a scorer can judge whether it did; ``None`` for a prose answer."""
 
-    async def ascore(self, question: str, answer: str, citations: Sequence[Citation] = ()) -> Scorecard:
-        return await asyncio.to_thread(self.score, question, answer, citations)
+    async def ascore(
+        self,
+        question: str,
+        answer: str,
+        citations: Sequence[Citation] = (),
+        *,
+        output_schema: dict[str, Any] | None = None,
+    ) -> Scorecard:
+        return await asyncio.to_thread(self.score, question, answer, citations, output_schema=output_schema)
