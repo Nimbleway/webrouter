@@ -14,6 +14,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 - Data API discovery no longer takes "close", "contact", "here", "reverse" or "tomorrow" alone as naming a data API, so an everyday search such as "weather in paris tomorrow" lists none; `close crm`, `here maps`, `reverse contact` and `tomorrow io` still name theirs.
 
+### Fixed
+
+- Data API catalog entries that failed when called with their own examples: `austender` (a contract notice that exists), `eurostat` and `osv` (an example on only one of two alternative inputs), `unesco-uis` (an indicator and a country, which the API requires), `cpsc-recalls` (a date range that returns recalls), `ibm-global-catalog` (paths that no longer redirect, since redirects are never followed), `legislation-gov-uk` (its own `Accept` for XML and Atom, where the default JSON one got 406, and search on `/all`, since `/search` only redirects) and `ccmixter` (a `limit`, without which the answer's headers are too large to read). `bankofengland` notes that it answers 403 to many automated clients.
+
 ## [0.14.0] - 2026-11-19
 
 ### Added
