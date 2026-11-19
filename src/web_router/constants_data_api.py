@@ -20,7 +20,9 @@ DATA_API_NAME_MIN_LENGTH: Final = 4
 DATA_API_COMMON_NAME_SHARE: Final = 4
 """A name word this many data APIs share ("google", "bank", "open") does not name any one of them on its own."""
 
-DATA_API_GENERIC_NAME_WORDS: Final = frozenset({"api", "data", "open", "search", "the", "web"})
+DATA_API_GENERIC_NAME_WORDS: Final = frozenset(
+    {"api", "close", "contact", "data", "here", "open", "reverse", "search", "the", "tomorrow", "web"}
+)
 """Name words that never name a data API on their own, however few share them."""
 
 DATA_APIS_ONLY_PROVIDER: Final = "data-apis"

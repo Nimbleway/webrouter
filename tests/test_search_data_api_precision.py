@@ -71,6 +71,7 @@ NAMED = {
     "arxiv papers search": "arxiv",
     "data.gov.au datasets search": "data-gov-au",
     "data.gov.ua datasets search": "data-gov-ua",
+    "tomorrow io forecast": "tomorrow-io",
 }
 
 
