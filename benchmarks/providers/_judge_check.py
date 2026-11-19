@@ -38,6 +38,9 @@ async def check_judge(judge: Any) -> None:
     except Exception as exc:  # whatever the judge's SDK raises, the scan must stop on it
         await judge.aclose()
         raise SystemExit(MSG_JUDGE_FAILED.format(error=exc)) from exc
+    except BaseException:  # cancelled or interrupted mid-check: close the client, then let it through
+        await judge.aclose()
+        raise
 
 
 def judge_arg(parser: argparse.ArgumentParser) -> None:

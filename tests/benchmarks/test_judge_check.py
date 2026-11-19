@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -77,3 +78,18 @@ async def test_a_setup_failure_stops_at_once_with_no_test_grade(
     with pytest.raises(SystemExit, match="No API key"):
         await scan.checked_judge("openai")
     assert judge.grades == 0 and judge.closed
+
+
+async def test_a_cancelled_check_closes_the_judge_and_stays_cancelled(
+    scan: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    judge = FlakyJudge(fails=0)
+
+    async def cancelled(*args: Any) -> str:
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(judge, "agrade", cancelled)
+    _wire(scan, monkeypatch, judge)
+    with pytest.raises(asyncio.CancelledError):
+        await scan.checked_judge("openai")
+    assert judge.closed
