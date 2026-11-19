@@ -459,6 +459,9 @@ _STUB_PAYLOADS: dict[str, Any] = {
     "keenable": lambda urls: {"url": urls[0], "title": "", "content": _body(urls[0]), "description": ""},
     "deepseek": lambda urls: {"title": "", "content": _body(urls[0])},
     "browserbase": lambda urls: {"statusCode": 200, "content": _body(urls[0]), "contentType": "text/html"},
+    "specstream": lambda urls: {
+        "data": {"results": [{"url": url, "status": "ok", "title": "", "text": _body(url)} for url in urls]},
+    },
 }
 """The shape each backend really answers with, trimmed to what is mapped.
 

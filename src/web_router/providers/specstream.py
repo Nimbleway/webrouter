@@ -18,6 +18,8 @@ from web_router.constants_specstream import (
     MSG_SPECSTREAM_NO_LIST,
     SPECSTREAM_API_KEY_PREFIX,
     SPECSTREAM_BASE_URL,
+    SPECSTREAM_EXTRACT_DEFAULT_FORMAT,
+    SPECSTREAM_EXTRACT_FORMATS,
     SPECSTREAM_EXTRACT_PATH,
     SPECSTREAM_MAX_RESULTS,
     SPECSTREAM_SEARCH_PARAMETERS,
@@ -27,7 +29,9 @@ from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._utils import best_text, build_payload
 from web_router.types import (
+    EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
+    ExtractFormat,
     ExtractRequest,
     ExtractResponse,
     SearchRequest,
@@ -36,7 +40,7 @@ from web_router.types import (
 )
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "snippet", "excerpt", "published"})
-_MAPPED_DOCUMENT_FIELDS = frozenset({"url", "content"})
+_MAPPED_DOCUMENT_FIELDS = frozenset({"url", "title", "text", "status_code", "published"})
 
 
 def _data_list(name: str, payload: dict[str, Any], field: str) -> list[dict[str, Any]]:
@@ -94,29 +98,37 @@ class SpecStreamProvider(HttpSearchProvider):
 
 
 class SpecStreamExtractProvider(HttpExtractProvider):
-    """Routes extracts to the SpecStream Extract API."""
+    """Routes extracts to the SpecStream Extract API, one call per URL.
+
+    A page's body is its ``text``, in the format asked for. ``read_from``,
+    ``emails`` and the rest of an item stay in ``extra``.
+    """
 
     name: ClassVar[str] = PROVIDER_SPECSTREAM
+    supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
+    supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(SPECSTREAM_EXTRACT_FORMATS)
+    default_format: ClassVar[ExtractFormat] = SPECSTREAM_EXTRACT_DEFAULT_FORMAT
+
     base_url: ClassVar[str] = SPECSTREAM_BASE_URL
     extract_path: ClassVar[str] = SPECSTREAM_EXTRACT_PATH
     env_api_key: ClassVar[str] = ENV_SPECSTREAM_API_KEY
     api_key_prefix: ClassVar[str] = SPECSTREAM_API_KEY_PREFIX
-    http_method: ClassVar[str] = "POST"
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
-        return {"urls": urls}
+        return build_payload(request, urls=urls, format=SPECSTREAM_EXTRACT_FORMATS[self.format_of(request)])
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
-        results = payload.get("results", [])
-        
+        body_format = self.format_of(request)
         documents = [
             ExtractedDocument(
-                url=item.get("url", ""),
-                content=item.get("content", ""),
-                format=request.format or "markdown",
+                url=item.get("url") or "",
+                title=item.get("title") or "",
+                content=item.get("text") or "",
+                format=body_format,
+                status_code=item.get("status_code"),
+                published_date=item.get("published") or None,
                 extra={k: v for k, v in item.items() if k not in _MAPPED_DOCUMENT_FIELDS},
             )
-            for item in results
+            for item in _data_list(self.name, payload, "results")
         ]
-        
         return ExtractResponse(provider=self.name, documents=documents, raw=[payload])

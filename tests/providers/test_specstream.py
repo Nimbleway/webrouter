@@ -3,6 +3,9 @@
 ``tests/fixtures/specstream/web_search.json`` is a reply recorded from the live
 ``GET /v1/web-search`` on 2026-11-12, with the key removed and trimmed to four
 of its 18 sources (the row's source positions renumbered to match).
+
+The extract replies follow the documented ``data.results`` shape
+(specstream.ai/agents.md, "Extract API"); none is recorded from the live API yet.
 """
 
 from __future__ import annotations
@@ -16,8 +19,8 @@ import httpx
 import pytest
 
 from web_router.exceptions import ProviderError, UnsupportedParameterError
-from web_router.providers.specstream import SpecStreamProvider
-from web_router.types import SearchRequest
+from web_router.providers.specstream import SpecStreamExtractProvider, SpecStreamProvider
+from web_router.types import ExtractRequest, SearchRequest
 
 RECORDED_SEARCH: dict[str, Any] = json.loads(
     (Path(__file__).parents[1] / "fixtures" / "specstream" / "web_search.json").read_text(encoding="utf-8")
@@ -112,6 +115,74 @@ def test_an_empty_sources_list_is_a_search_that_found_nothing(monkeypatch: pytes
     body = {"data": {"sources": [], "rows": []}}
     provider = SpecStreamProvider(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=body)))
     assert provider.search(SearchRequest(query="q")).results == []
+
+
+EXTRACT_REPLY: dict[str, Any] = {
+    "data": {
+        "results": [
+            {
+                "url": "https://a.com",
+                "status": "ok",
+                "title": "A",
+                "text": "# A\n\nBody.",
+                "text_truncated": False,
+                "published": "2026-11-01",
+                "read_from": "live",
+                "emails": [],
+            },
+        ],
+        "request_id": "r1",
+        "took_ms": 812,
+        "price_usd": 0.0008,
+    }
+}
+
+
+@pytest.fixture
+def extractor(monkeypatch: pytest.MonkeyPatch) -> SpecStreamExtractProvider:
+    monkeypatch.setenv("SPECSTREAM_API_KEY", "test-key")
+    return SpecStreamExtractProvider()
+
+
+@pytest.mark.parametrize(("asked", "sent"), [(None, "markdown"), ("markdown", "markdown"), ("text", "text")])
+def test_extract_posts_the_urls_and_the_format(monkeypatch: pytest.MonkeyPatch, asked: Any, sent: str) -> None:
+    monkeypatch.setenv("SPECSTREAM_API_KEY", "test-key")
+    calls: list[httpx.Request] = []
+    extractor = SpecStreamExtractProvider(
+        transport=httpx.MockTransport(lambda r: calls.append(r) or httpx.Response(200, json=EXTRACT_REPLY))
+    )
+
+    (document,) = extractor.extract(ExtractRequest(urls=["https://a.com"], format=asked)).documents
+
+    assert calls[0].method == "POST" and calls[0].url.path == "/v1/extract"
+    assert calls[0].headers["authorization"] == "Bearer test-key"
+    assert json.loads(calls[0].content) == {"urls": ["https://a.com"], "format": sent}
+    assert document.format == sent
+
+
+def test_provider_options_reach_the_extract_body(extractor: SpecStreamExtractProvider) -> None:
+    request = ExtractRequest(urls=["https://a.com"], provider_options={"include": ["links"]})
+    assert extractor._build_payload(request, ["https://a.com"])["include"] == ["links"]
+
+
+def test_html_is_not_offered(extractor: SpecStreamExtractProvider) -> None:
+    assert extractor.supported_formats == {"markdown", "text"} and extractor.default_format == "markdown"
+
+
+def test_the_extract_reply_maps_from_data_results(extractor: SpecStreamExtractProvider) -> None:
+    response = extractor._to_response(ExtractRequest(urls=["https://a.com"]), ["https://a.com"], EXTRACT_REPLY)
+    (document,) = response.documents
+
+    assert response.provider == "specstream" and response.raw == [EXTRACT_REPLY]
+    assert (document.url, document.title, document.content) == ("https://a.com", "A", "# A\n\nBody.")
+    assert document.published_date == "2026-11-01"
+    assert document.extra == {"status": "ok", "text_truncated": False, "read_from": "live", "emails": []}
+
+
+@pytest.mark.parametrize("body", [{}, {"results": []}, {"data": {}}, {"data": {"results": None}}])
+def test_an_extract_reply_without_a_results_list_raises(extractor: SpecStreamExtractProvider, body: dict) -> None:
+    with pytest.raises(ProviderError, match="data.results"):
+        extractor._to_response(ExtractRequest(urls=["https://a.com"]), ["https://a.com"], body)
 
 
 @pytest.mark.integration
