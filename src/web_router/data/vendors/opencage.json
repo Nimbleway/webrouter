@@ -1,0 +1,205 @@
+{
+  "vendor": "opencage",
+  "name": "OpenCage Geocoding",
+  "category": "maps",
+  "summary": "Forward and reverse geocoding worldwide, built on open data (OpenStreetMap and others), with annotations such as timezone, currency, calling code, geohash and road info.",
+  "docs_url": "https://opencagedata.com/api",
+  "pricing_url": "https://opencagedata.com/pricing",
+  "base_url": "https://api.opencagedata.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENCAGE_API_KEY"
+        ],
+        "description": "An OpenCage API key (opencagedata.com > Dashboard), sent as the key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "One path does both directions: q is an address or place for forward geocoding, or 'latitude,longitude' (latitude first, decimal point) for reverse.",
+    "Free trial: 2,500 requests per day (reset at 00:00 UTC; 402 when spent) and 1 request per second (429 when exceeded). The free trial is for testing, not production.",
+    "no_annotations=1 makes answers smaller and faster when timezone, currency and the other annotations are not needed."
+  ],
+  "sources": [
+    "https://opencagedata.com/api"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "opencage.geocode.forward",
+      "name": "Geocode an address or place name",
+      "summary": "Coordinates, a formatted address, its components and a confidence score for free text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geocode/v1/json",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Address or place name.",
+          "example": "Brandenburg Gate, Berlin"
+        },
+        "countrycode": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO 3166-1 alpha-2 codes to restrict results to.",
+          "example": "de"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language code (de, pt-BR) or native; default en."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results, default 10, max 100."
+        },
+        "bounds": {
+          "in": "query",
+          "type": "string",
+          "description": "Bounding box hint as minLng,minLat,maxLng,maxLat (longitude first)."
+        },
+        "proximity": {
+          "in": "query",
+          "type": "string",
+          "description": "latitude,longitude to favour nearer results."
+        },
+        "no_annotations": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 leaves annotations out."
+        },
+        "abbrv": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 abbreviates the formatted string."
+        },
+        "address_only": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 leaves POI names out of the formatted string."
+        },
+        "no_dedupe": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 keeps duplicate results."
+        },
+        "no_record": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 asks OpenCage not to log the query."
+        }
+      },
+      "notes": [
+        "Check each result's confidence: it measures how small the result's bounding box is (10 means its corners are under 0.25 km apart, 0 means no box), not how likely the match is right."
+      ],
+      "job": "geo.geocode",
+      "docs_url": "https://opencagedata.com/api#forward",
+      "verified": {
+        "docs": "https://opencagedata.com/api"
+      }
+    },
+    {
+      "id": "opencage.geocode.reverse",
+      "name": "Reverse geocode a coordinate",
+      "summary": "The address, place and annotations for one latitude,longitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/geocode/v1/json",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "latitude,longitude in decimal degrees, latitude first.",
+          "example": "52.5163,13.3777"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language code or native; default en."
+        },
+        "roadinfo": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 matches the nearest road rather than an address and adds road details (speed unit, drive side, road type)."
+        },
+        "no_annotations": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 leaves annotations out."
+        },
+        "abbrv": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 abbreviates the formatted string."
+        },
+        "address_only": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 leaves POI names out of the formatted string."
+        },
+        "no_record": {
+          "in": "query",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "description": "1 asks OpenCage not to log the query."
+        }
+      },
+      "job": "geo.reverse",
+      "docs_url": "https://opencagedata.com/api#reverse",
+      "verified": {
+        "docs": "https://opencagedata.com/api"
+      }
+    }
+  ]
+}
