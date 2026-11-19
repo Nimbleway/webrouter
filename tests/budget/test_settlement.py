@@ -49,8 +49,9 @@ def test_a_refusal_or_a_connection_never_made_frees_its_reservation(
 
 
 @pytest.mark.parametrize("tool", ["search"], indirect=True)
-def test_a_server_error_stays_charged(chain: Chain, priced: Table) -> None:
-    chain.raises["first"] = _refused(502)  # a gateway in front of the backend: it may have run
+@pytest.mark.parametrize("status", [502, 404, 410], ids=["gateway", "page-not-found", "page-gone"])
+def test_a_server_error_or_a_page_gone_stays_charged(chain: Chain, priced: Table, status: int) -> None:
+    chain.raises["first"] = _refused(status)  # the backend may have run, or billed finding the page gone
     priced.update(first=(0.02, None), second=(0.03, None))
     with WebRouter().budget(SHARED) as shared:
         scoped(chain, shared)

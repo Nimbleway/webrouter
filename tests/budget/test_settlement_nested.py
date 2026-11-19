@@ -70,8 +70,10 @@ def test_a_nested_attempt_settled_below_its_estimate_leaves_room_in_the_enclosin
 ) -> None:
     router, behaviour, ran = nested
     behaviour["a"] = answers
-    router.search("q", provider="wrapper", budget=OUTER_CAP)
+    response = router.search("q", provider="wrapper", budget=OUTER_CAP)
     assert ran == ["a", "b"], "a's settled charge, not its $0.01 estimate, counts toward the outer cap"
+    # A refused a never ran, so the outer record lists it at $0; an answered one keeps its estimate there.
+    assert response.decision.estimated_cost_usd == pytest.approx(0.03 if answers is _refuses else 0.04)
 
 
 def test_a_nested_refusal_never_frees_the_enclosing_calls_own_attempt_of_the_same_name(priced: Table) -> None:
