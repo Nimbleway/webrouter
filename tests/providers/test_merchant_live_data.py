@@ -116,6 +116,8 @@ def _route(endpoint: str) -> dict:  # type: ignore[type-arg]
         record(routes=[]),
         _route("http://store.myshopify.com/mcp"),
         _route("https://user:pw@store.myshopify.com/mcp"),
+        _route("https://:secret@store.myshopify.com/mcp"),
+        _route("https://[store.myshopify.com/mcp"),
         _route("https://203.0.113.9/mcp"),
         _route("https://127.0.0.1/mcp"),
         _route("https://localhost/mcp"),

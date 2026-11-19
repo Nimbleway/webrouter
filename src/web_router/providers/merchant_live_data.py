@@ -168,7 +168,12 @@ class MerchantLiveDataProvider(HttpLiveDataProvider, RegistryReader):
     def _page(self, sites: list[Any], *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         """The stores the registry holds profile-backed tests for; a store's record says whether it can be run."""
         tested = [
-            s for s in sites if isinstance(s, dict) and s.get("commerce_tests") and DOMAIN.match(s.get("domain", ""))
+            s
+            for s in sites
+            if isinstance(s, dict)
+            and s.get("commerce_tests")
+            and isinstance(s.get("domain"), str)
+            and DOMAIN.match(s["domain"])
         ]
         return self._paged(tested, lambda site: self._listed(site), limit=limit, offset=offset)
 

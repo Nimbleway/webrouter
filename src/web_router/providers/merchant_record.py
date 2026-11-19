@@ -94,8 +94,13 @@ def _runnable(route: Any) -> bool:
     # A plain-http endpoint is an insecure declaration, never a default to run; a credential in the URL is refused too.
     if not isinstance(endpoint, str):
         return False
-    parts = urlsplit(endpoint)
-    return parts.scheme == ROUTE_SCHEME and bool(parts.hostname) and not parts.username and not parts.query
+    try:
+        parts = urlsplit(endpoint)
+        host = parts.hostname
+    except ValueError:  # e.g. an unclosed bracket in the host
+        return False
+    # "@" in the authority means user info; ``username`` alone misses ``https://:secret@host``.
+    return parts.scheme == ROUTE_SCHEME and bool(host) and "@" not in parts.netloc and not parts.query
 
 
 def plan_for(record: Any, domain: str, snapshot_id: str) -> Plan:
@@ -126,7 +131,8 @@ def plan_for(record: Any, domain: str, snapshot_id: str) -> Plan:
         raise refuse(MSG_HOST_REFUSED.format(host=host, domain=domain))
     if route["endpoint"] != commerce.get("endpoint"):
         raise refuse("the tested endpoint is not the registry route")
-    tests = {str(name): str(status) for name, status in (commerce.get("tests") or {}).items()}
+    raw_tests = commerce.get("tests")
+    tests = {str(name): str(status) for name, status in raw_tests.items()} if isinstance(raw_tests, dict) else {}
     if tests.get(TEST_SEARCH) != EVIDENCE_PASS:
         raise refuse(f"keyword search is recorded as {tests.get(TEST_SEARCH)!r}, not a pass")
     capability = _first(record.get("capabilities"))

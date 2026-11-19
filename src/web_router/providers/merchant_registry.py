@@ -8,6 +8,7 @@ deadline clamp it. A missing record is a :class:`~web_router.LiveDataSourceNotFo
 
 from __future__ import annotations
 
+import threading
 import time
 from typing import Any
 
@@ -36,6 +37,7 @@ class RegistryReader:
         self._pointer: tuple[str, float] | None = None
         self._records: dict[tuple[str, str], Any] = {}
         self._indexes: dict[str, list[Any]] = {}
+        self._cache_lock = threading.Lock()  # threads sharing a router write the caches and rebuild them
 
     # -- decoding ------------------------------------------------------------
 
@@ -68,9 +70,10 @@ class RegistryReader:
 
     def _remember(self, document: Any) -> str:
         snapshot_id = read_pointer(document)
-        self._pointer = (snapshot_id, time.monotonic())
-        self._records = {key: value for key, value in self._records.items() if key[0] == snapshot_id}
-        self._indexes = {key: value for key, value in self._indexes.items() if key == snapshot_id}
+        with self._cache_lock:
+            self._pointer = (snapshot_id, time.monotonic())
+            self._records = {key: value for key, value in self._records.items() if key[0] == snapshot_id}
+            self._indexes = {key: value for key, value in self._indexes.items() if key == snapshot_id}
         return snapshot_id
 
     # -- sync ----------------------------------------------------------------
@@ -86,7 +89,7 @@ class RegistryReader:
         if (snapshot_id, domain) not in self._records:
             path = REGISTRY_DOMAIN_PATH.format(snapshot_id=snapshot_id, domain=domain)
             try:
-                self._records[(snapshot_id, domain)] = self._fetch(path)
+                self._store_record(snapshot_id, domain, self._fetch(path))
             except ProviderError as exc:
                 raise self._not_found(exc, domain, snapshot_id) from exc
         return self._records[(snapshot_id, domain)]
@@ -94,7 +97,7 @@ class RegistryReader:
     def _index(self, snapshot_id: str) -> list[Any]:
         if snapshot_id not in self._indexes:
             document = self._fetch(REGISTRY_INDEX_PATH.format(snapshot_id=snapshot_id))
-            self._indexes[snapshot_id] = self._sites(document)
+            self._store_index(snapshot_id, self._sites(document))
         return self._indexes[snapshot_id]
 
     # -- async ---------------------------------------------------------------
@@ -110,7 +113,7 @@ class RegistryReader:
         if (snapshot_id, domain) not in self._records:
             path = REGISTRY_DOMAIN_PATH.format(snapshot_id=snapshot_id, domain=domain)
             try:
-                self._records[(snapshot_id, domain)] = await self._afetch(path)
+                self._store_record(snapshot_id, domain, await self._afetch(path))
             except ProviderError as exc:
                 raise self._not_found(exc, domain, snapshot_id) from exc
         return self._records[(snapshot_id, domain)]
@@ -118,10 +121,18 @@ class RegistryReader:
     async def _aindex(self, snapshot_id: str) -> list[Any]:
         if snapshot_id not in self._indexes:
             document = await self._afetch(REGISTRY_INDEX_PATH.format(snapshot_id=snapshot_id))
-            self._indexes[snapshot_id] = self._sites(document)
+            self._store_index(snapshot_id, self._sites(document))
         return self._indexes[snapshot_id]
 
     # -- shared --------------------------------------------------------------
+
+    def _store_record(self, snapshot_id: str, domain: str, record: Any) -> None:
+        with self._cache_lock:
+            self._records[(snapshot_id, domain)] = record
+
+    def _store_index(self, snapshot_id: str, sites: list[Any]) -> None:
+        with self._cache_lock:
+            self._indexes[snapshot_id] = sites
 
     @staticmethod
     def _sites(document: Any) -> list[Any]:

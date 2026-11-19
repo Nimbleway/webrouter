@@ -47,7 +47,7 @@ def ensure_ok(response: httpx.Response) -> None:
 def _last_event_data(stream: str) -> str:
     """The data of the last server-sent event that has any: its ``data:`` lines, joined."""
     last = ""
-    for event in stream.replace("\r\n", "\n").split("\n\n"):
+    for event in stream.replace("\r\n", "\n").replace("\r", "\n").split("\n\n"):
         data = [line[5:].removeprefix(" ") for line in event.split("\n") if line.startswith("data:")]
         if data:
             last = "\n".join(data)
@@ -75,7 +75,7 @@ def negotiated_version(result: dict[str, Any], asked: str) -> str:
 
 def session(response: httpx.Response) -> dict[str, str]:
     value = response.headers.get(MCP_SESSION_HEADER)
-    return {"Mcp-Session-Id": value} if value else {}
+    return {MCP_SESSION_HEADER: value} if value else {}
 
 
 def catalog(inputs: MerchantInputs) -> dict[str, Any]:
@@ -108,5 +108,11 @@ def products(domain: str, result: dict[str, Any]) -> list[dict[str, Any]]:
             PROVIDER_MERCHANT, MSG_STORE_ERROR.format(domain=domain, detail=detail), kind=ERROR_KIND_UPSTREAM
         )
     if isinstance(structured, dict) and isinstance(structured.get("products"), list):
-        return [p for p in structured["products"] if isinstance(p, dict)]
+        listed = structured["products"]
+        kept = [p for p in listed if isinstance(p, dict)]
+        if listed and not kept:  # a list of nothing readable is an unreadable reply, not "no matches"
+            raise ProviderError(
+                PROVIDER_MERCHANT, MSG_NO_PRODUCTS_FIELD.format(domain=domain), kind=ERROR_KIND_UPSTREAM
+            )
+        return kept
     raise ProviderError(PROVIDER_MERCHANT, MSG_NO_PRODUCTS_FIELD.format(domain=domain), kind=ERROR_KIND_UPSTREAM)

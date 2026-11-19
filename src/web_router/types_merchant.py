@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from web_router.types_options import NonBlankText
 
@@ -26,6 +26,14 @@ class MerchantInputs(BaseModel):
     )
     country: str | None = Field(default=None, description="Buyer country code, e.g. 'DE'.")
     currency: str | None = Field(default=None, description="Currency code, e.g. 'EUR'.")
+
+    @field_validator("limit", "min_price", "max_price", mode="before")
+    @classmethod
+    def _not_a_boolean(cls, value: Any) -> Any:
+        """``True`` is an ``int`` to Python and would be sent as 1; a number is a number."""
+        if isinstance(value, bool):
+            raise ValueError("must be a whole number, not a boolean")
+        return value
 
     def specified(self) -> set[str]:
         """The options the caller set."""

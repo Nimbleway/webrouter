@@ -73,6 +73,7 @@ from web_router.exceptions import (
 )
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotFoundError
+from web_router.exceptions_merchant import MerchantNotValidatedError, MerchantRouteError
 from web_router.exceptions_typed import AllProvidersFailedError, ExtractFailedError, InvalidParameterError
 from web_router.exceptions_vendors import VendorNotFoundError, VendorWriteRefusedError
 from web_router.live_data_search import NativeSourceSearch
@@ -228,6 +229,8 @@ __all__ = [
     "LiveDataSource",
     "LiveDataSourceNotFoundError",
     "LiveDataSourcePage",
+    "MerchantNotValidatedError",
+    "MerchantRouteError",
     "MissingParameterError",
     "NativeSourceSearch",
     "NavigationError",
