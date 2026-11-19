@@ -38,10 +38,10 @@ method, `functools.partial` or coroutine function, or an object with
 A string names a registered router, such as the built-in `remote`: see
 [A router service](/smart-routing#a-router-service).
 A router is shown a `RouteRequest` and nothing else: the `prompt`, the `urls`
-found in it, the `budget`, the method you pinned (`pinned_tool`), its own
-time to answer (`deadline_s`) and the `candidates`, each a `Candidate` named
-`tool:provider` (`search:exa`) with `est_cost_usd` and `est_latency_s` (p90),
-`None` when unknown. It holds no key values. The router runs in your process;
+found in it, the `budget`, the method you pinned (`pinned_tool`), what you
+prefer (`prefer`), its own time to answer (`deadline_s`) and the `candidates`,
+each a `Candidate` named `tool:provider` (`search:exa`) with `est_cost_usd` and
+`est_latency_s` (p90), `None` when unknown. It holds no key values. The router runs in your process;
 what it sends elsewhere is up to your code. With no router attached, nothing
 extra leaves the process. Every
 `RouteDecision` field is optional: `tools` and `providers`, best first,
@@ -137,13 +137,38 @@ A URL with no host is refused even with no policy.
 It is off by default, and leaves the URLs you pass to `extract` yourself
 alone; on the MCP server it holds for `web_run`'s plans only.
 
+## Preferring cheap or fast
+
+`WebRouter(prefer="cheap")` or `prefer="fast"` tells the router what you
+prefer among the candidates your budget allows: `cheap`, the lowest estimated
+cost first, or `fast`, the lowest p90 latency first. Every call and plan the
+router is asked about shows it in `RouteRequest.prefer`, a remote router reads
+it in the wire format, and the decision record names it. It is a preference,
+not a cap: a `Budget` caps. `None`, the default, prefers nothing; any other
+value raises `ConfigurationError`.
+
+```python
+def route(req: RouteRequest) -> RouteDecision:
+    if req.prefer == "fast" and req.pinned_tool:
+        timed = [c for c in req.candidates if c.tool == req.pinned_tool and c.est_latency_s is not None]
+        return RouteDecision(providers={req.pinned_tool: [c.provider for c in sorted(timed, key=lambda c: c.est_latency_s)]})
+    return RouteDecision()
+
+
+wr = WebRouter(router=route, prefer="fast")
+```
+
+Your own router reads it today. The built-in routers do not act on it yet,
+and with no router asked it changes nothing.
+
 ## The decision record
 
 `response.decision` and `plan.decision` hold a `DecisionRecord` (`from
 web_router import DecisionRecord`) on every routed or budgeted call, and
 `None` on any other. Every field may be `None`:
 
-- `decision_id`, `router`, `router_ms`, `router_timeout`, `reason`;
+- `decision_id`, `router`, `prefer` (when a router was shown it), `router_ms`,
+  `router_timeout`, `reason`;
 - `offered`, the candidates the router saw; `dropped`, those left out before
   it, with why; `ranked`, its picks that survived the budget; `excluded` and
   `ignored`, what it excluded and what of its answer was set aside, including
@@ -252,7 +277,8 @@ field may be left out or `null`):
     "time_limit_s": 30.0,
     "strict": false
   },
-  "pinned_tool": null
+  "pinned_tool": null,
+  "prefer": null
 }
 ```
 

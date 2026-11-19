@@ -181,6 +181,23 @@
       "default": null,
       "description": "The method the caller called. Set, the router orders backends only and does not change the tool.",
       "title": "Pinned Tool"
+    },
+    "prefer": {
+      "anyOf": [
+        {
+          "enum": [
+            "cheap",
+            "fast"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "What the caller prefers among the candidates: ``cheap``, the lowest estimated cost first, or ``fast``, the lowest\np90 latency first; ``None`` for no preference. A router may ignore it: it orders, and ``budget`` caps.",
+      "title": "Prefer"
     }
   },
   "required": [
@@ -220,7 +237,8 @@
         "time_limit_s": 30.0,
         "strict": false
       },
-      "pinned_tool": null
+      "pinned_tool": null,
+      "prefer": null
     }
   ]
 }
