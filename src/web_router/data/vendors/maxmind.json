@@ -1,0 +1,154 @@
+{
+  "vendor": "maxmind",
+  "name": "MaxMind",
+  "category": "maps",
+  "summary": "GeoIP2 and free GeoLite web services: country, city-level geolocation and, with Insights, ISP, connection type, user type and anonymizer (VPN, proxy, Tor, hosting) data for an IP.",
+  "docs_url": "https://dev.maxmind.com/geoip/docs/web-services/",
+  "pricing_url": "https://www.maxmind.com/en/geoip-api-web-services",
+  "base_url": "https://geoip.maxmind.com/geoip/v2.1",
+  "hosts": {
+    "geolite": "https://geolite.info/geoip/v2.1"
+  },
+  "auth": {
+    "credentials": {
+      "account_id": {
+        "env": [
+          "MAXMIND_ACCOUNT_ID"
+        ],
+        "description": "Your MaxMind account ID (maxmind.com account portal); the HTTP Basic username."
+      },
+      "license_key": {
+        "env": [
+          "MAXMIND_LICENSE_KEY"
+        ],
+        "description": "A MaxMind license key (account portal > Manage License Keys); the HTTP Basic password. A GeoLite account's key works on the geolite endpoints only."
+      }
+    },
+    "basic": {
+      "username": "{account_id}",
+      "password": "{license_key}"
+    }
+  },
+  "notes": [
+    "GeoIP2 calls spend prepaid service credits (402 INSUFFICIENT_FUNDS when they run out); the response's maxmind.queries_remaining shows the approximate balance. GeoLite calls are free with a daily query limit, and the same 402 means that limit is reached.",
+    "Use 'me' as the IP to look up the caller's own address. Reserved or private addresses return 400 IP_ADDRESS_RESERVED; an address not in the data returns 404.",
+    "Many error responses in a row can get the account rate-limited (429)."
+  ],
+  "sources": [
+    "https://dev.maxmind.com/geoip/docs/web-services/requests/",
+    "https://dev.maxmind.com/geoip/docs/web-services/responses/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "maxmind.geoip.country",
+      "name": "Get an IP's country (GeoIP2 Country)",
+      "summary": "Country, registered and represented country, continent and traits for an IP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/country/{ip_address}",
+      "params": {
+        "ip_address": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or 'me'.",
+          "example": "1.2.3.4"
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://dev.maxmind.com/geoip/docs/web-services/requests/",
+      "verified": {
+        "docs": "https://dev.maxmind.com/geoip/docs/web-services/requests/"
+      }
+    },
+    {
+      "id": "maxmind.geoip.city",
+      "name": "Geolocate an IP to city level (GeoIP2 City Plus)",
+      "summary": "City, postal code, subdivisions, coordinates, time zone, country, continent and traits for an IP.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/city/{ip_address}",
+      "params": {
+        "ip_address": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or 'me'.",
+          "example": "1.2.3.4"
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://dev.maxmind.com/geoip/docs/web-services/requests/",
+      "verified": {
+        "docs": "https://dev.maxmind.com/geoip/docs/web-services/requests/"
+      }
+    },
+    {
+      "id": "maxmind.geoip.insights",
+      "name": "Get an IP's full profile (GeoIP2 Insights)",
+      "summary": "Everything in City Plus plus connection type, user type, ISP, mobile codes, confidence scores and the anonymizer object (VPN, public and residential proxy, Tor exit, hosting provider, provider name).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/insights/{ip_address}",
+      "params": {
+        "ip_address": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or 'me'.",
+          "example": "1.2.3.4"
+        }
+      },
+      "notes": [
+        "Anonymizer flags appear only when true; a missing key means false."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://dev.maxmind.com/geoip/docs/web-services/requests/",
+      "verified": {
+        "docs": "https://dev.maxmind.com/geoip/docs/web-services/responses/"
+      }
+    },
+    {
+      "id": "maxmind.geolite.country",
+      "name": "Get an IP's country (free GeoLite)",
+      "summary": "Free country-level lookup on the GeoLite web service.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/country/{ip_address}",
+      "host": "geolite",
+      "params": {
+        "ip_address": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or 'me'.",
+          "example": "1.2.3.4"
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://dev.maxmind.com/geoip/docs/web-services/requests/",
+      "verified": {
+        "docs": "https://dev.maxmind.com/geoip/docs/web-services/requests/"
+      }
+    },
+    {
+      "id": "maxmind.geolite.city",
+      "name": "Geolocate an IP to city level (free GeoLite)",
+      "summary": "Free city-level lookup on the GeoLite web service; no queries_remaining field.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/city/{ip_address}",
+      "host": "geolite",
+      "params": {
+        "ip_address": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address, or 'me'.",
+          "example": "1.2.3.4"
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://dev.maxmind.com/geoip/docs/web-services/requests/",
+      "verified": {
+        "docs": "https://dev.maxmind.com/geoip/docs/web-services/requests/"
+      }
+    }
+  ]
+}
