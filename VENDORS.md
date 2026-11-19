@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-470 vendors, 3477 endpoints.
+470 vendors, 3472 endpoints.
 
 ### advertising
 
@@ -222,7 +222,7 @@ Companies, funding, jobs, technographics and business registries.
 | [GLEIF](https://documenter.getpostman.com/view/7679680/SVYrrxuU) `gleif` | The Global LEI Index: legal entity records by LEI, name, BIC or ISIN, with direct and ultimate parents and children, keyless. | 9 read | none | none | docs 2026-11-09 |
 | [Greenhouse Job Board](https://docs.greenhouse.io/job-board.html) `greenhouse` | A company's public Greenhouse job board: open roles with descriptions, departments, offices and pay ranges, keyless. | 5 read | none | none | docs 2026-11-09 |
 | [handelsregister.ai](https://handelsregister.ai/en/documentation) `handelsregister-ai` | German company data from the Handelsregister, Bundesanzeiger and insolvency notices as JSON: company search, full profiles with directors, shareholders, UBOs and financials, person profiles, and a feed of register changes. | 8 read | key in header | `HANDELSREGISTER_AI_API_KEY` | docs 2026-11-16 |
-| [Harmonic](https://console.harmonic.ai/docs/api-reference/introduction) `harmonic` | Startup and private-company data: company profiles with headcount, funding stage, traction and team, people profiles, similar companies and natural-language company search. | 9 read | key in header | `HARMONIC_API_KEY` | docs 2026-11-16 |
+| [Harmonic](https://console.harmonic.ai/docs/api-reference/introduction) `harmonic` | Startup and private-company data: company profiles with headcount, funding stage, traction and team, people profiles, similar companies and natural-language company search. | 8 read | key in header | `HARMONIC_API_KEY` | docs 2026-11-16 |
 | [HG Insights](https://data-docs.hginsights.com/v2/guides/overview) `hg-insights` | Technographics and IT spend intelligence: which products and vendors a company has installed, its IT spend by category, firmographics, corporate hierarchy, intent signals and contracts. | 10 read | key in header | `HG_API_KEY` | docs 2026-11-16 |
 | [Lever Postings](https://github.com/lever/postings-api) `lever` | A company's published Lever job postings, filterable by location, team, department and commitment, keyless. | 2 read | none | none | docs 2026-11-09 |
 | [Limadata](https://limadata.com/api) `limadata` | Real-time B2B people and company enrichment, database search, contact finding and company job postings. | 4 read | key in header | `LIMADATA_API_KEY` | docs 2026-11-08 |
@@ -255,7 +255,7 @@ Markets, crypto, filings and economic statistics.
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
-| [Alchemy](https://www.alchemy.com/docs/data) `alchemy` | Blockchain data APIs across EVM networks: ERC-20 balances and metadata, asset transfer history, NFT ownership and metadata, and current and historical token prices. | 11 read | key in header | `ALCHEMY_API_KEY` | docs 2026-11-16 |
+| [Alchemy](https://www.alchemy.com/docs/data) `alchemy` | Blockchain data APIs across EVM networks: ERC-20 balances and metadata, asset transfer history, and NFT ownership and metadata. | 8 read | key in header | `ALCHEMY_API_KEY` | docs 2026-11-16 |
 | [Alpha Vantage](https://www.alphavantage.co/documentation/) `alphavantage` | Stock, forex and crypto prices, company fundamentals, earnings, market news sentiment and technical indicators. | 10 read | key in query | `ALPHAVANTAGE_API_KEY` | docs 2026-11-09 |
 | [Bank of Canada](https://www.bankofcanada.ca/valet/docs) `bankofcanada` | Bank of Canada Valet API: exchange rates, interest rates and other Bank of Canada statistical series, keyless. | 7 read | none | none | docs 2026-11-09 |
 | [Bank of England](https://www.bankofengland.co.uk/boeapps/database/help.asp) `bankofengland` | Bank of England Statistical Interactive Database: Bank Rate, SONIA, yields, exchange rates and other series by code, as CSV or XML, keyless. | 2 read | none | none | docs 2026-11-09 |
@@ -272,7 +272,7 @@ Markets, crypto, filings and economic statistics.
 | [CryptoCompare](https://developers.coindesk.com/documentation/data-api/introduction) `cryptocompare` | Crypto market data from CryptoCompare, now CoinDesk Data: reference index and exchange prices, OHLCV history, asset profiles and rankings, and crypto news. | 10 read | key in query | `CRYPTOCOMPARE_API_KEY` | docs 2026-11-16 |
 | [currencylayer](https://docs.apilayer.com/currencylayer/docs/api-documentation) `currencylayer` | Live and historical foreign exchange rates for 170+ currencies and precious metals, with conversion, time frames and rate changes. | 5 read | key in query | `CURRENCYLAYER_API_KEY` | docs 2026-11-16 |
 | [DefiLlama](https://api-docs.defillama.com/) `defillama` | DeFi protocol and chain TVL, token prices by contract, stablecoin supply, yield pools, DEX volumes and protocol fees, keyless. | 10 read | none | none | docs 2026-11-09 |
-| [Dune](https://docs.dune.com/api-reference/apis/quickstart-dashboards) `dune` | Onchain analytics from Dune: results of saved SQL queries over blockchain data, fetched as the latest run or by running the query. | 5 read | key in header | `DUNE_API_KEY` | docs 2026-11-16 |
+| [Dune](https://docs.dune.com/api-reference/apis/quickstart-dashboards) `dune` | Onchain analytics from Dune: results of saved SQL queries over blockchain data, fetched from the query's latest run. | 4 read | key in header | `DUNE_API_KEY` | docs 2026-11-16 |
 | [European Central Bank](https://data.ecb.europa.eu/help/api/overview) `ecb` | ECB Data Portal SDMX API: euro reference exchange rates, ECB interest rates, inflation, money and banking statistics, keyless. | 4 read | none | none | docs 2026-11-09 |
 | [EDINET](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf) `edinet` | Japan FSA's EDINET disclosure system: daily lists of securities filings (annual and quarterly reports, large shareholding reports) and the filings themselves as XBRL, PDF or CSV. | 2 read | key in query | `EDINET_API_KEY` | docs 2026-11-09 |
 | [US Energy Information Administration](https://www.eia.gov/opendata/documentation.php) `eia` | US energy statistics (electricity, petroleum, natural gas, coal, prices, production, consumption) from the EIA Open Data API v2. | 8 read | key in query | `EIA_API_KEY` | docs 2026-11-09 |

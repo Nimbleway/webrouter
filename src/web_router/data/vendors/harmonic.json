@@ -26,7 +26,7 @@
     "Only 200 responses count toward the plan's usage quota; 402 means over quota on that endpoint.",
     "Rate limit: 10 requests a second for most endpoints; natural-language search 5 a minute. 429 when exceeded.",
     "Lists page by cursor: size (default 50) and the next value from page_info.",
-    "Detailed funding rounds and investor data are a paid add-on. Scout research, saved-search writes, the Workspace API and bulk email jobs are not in this entry."
+    "Detailed funding rounds and investor data are a paid add-on. Scout research, saved-search writes, the Workspace API and bulk email jobs are not in this entry, nor is company enrich (POST /companies): for a company Harmonic does not hold yet it starts a billed enrichment job. Look a company up by Harmonic id with harmonic.companies.get, or find it with the search calls."
   ],
   "sources": [
     "https://console.harmonic.ai/docs/api-reference/introduction",
@@ -35,61 +35,6 @@
   ],
   "curated": "2026-11-16",
   "endpoints": [
-    {
-      "id": "harmonic.companies.enrich",
-      "name": "Enrich a company by identifier",
-      "summary": "The full profile of one company found by domain, website, LinkedIn or another profile URL: description, stage, headcount, funding, location, socials, traction.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/companies",
-      "params": {
-        "website_domain": {
-          "in": "query",
-          "type": "string",
-          "description": "Company domain, e.g. harmonic.ai.",
-          "example": "harmonic.ai"
-        },
-        "website_url": {
-          "in": "query",
-          "type": "string",
-          "description": "Company website URL."
-        },
-        "linkedin_url": {
-          "in": "query",
-          "type": "string",
-          "description": "LinkedIn company URL."
-        },
-        "crunchbase_url": {
-          "in": "query",
-          "type": "string",
-          "description": "Crunchbase URL."
-        },
-        "pitchbook_url": {
-          "in": "query",
-          "type": "string",
-          "description": "PitchBook URL."
-        },
-        "twitter_url": {
-          "in": "query",
-          "type": "string",
-          "description": "X/Twitter URL."
-        },
-        "angellist_url": {
-          "in": "query",
-          "type": "string",
-          "description": "AngelList URL."
-        }
-      },
-      "notes": [
-        "A read sent as POST with the identifiers in the query. For a company Harmonic does not hold yet it starts a billed job (an enrichment) and answers 404 with an enrichment_urn; check it with harmonic.enrichment.status and retry in a few hours.",
-        "Give identifiers of one company only, at most one of each kind; one company per call."
-      ],
-      "job": "company.enrich",
-      "docs_url": "https://console.harmonic.ai/docs/api-reference/enrich/company",
-      "verified": {
-        "docs": "https://console.harmonic.ai/docs/llms-full.txt"
-      }
-    },
     {
       "id": "harmonic.companies.get",
       "name": "Get a company",
@@ -326,7 +271,7 @@
     {
       "id": "harmonic.enrichment.status",
       "name": "Get enrichment status",
-      "summary": "Status of enrichments started by an enrich call: QUEUED, IN_PROGRESS, COMPLETE or FAILED.",
+      "summary": "Status of enrichments started outside this entry (an enrich call): QUEUED, IN_PROGRESS, COMPLETE or FAILED.",
       "kind": "read",
       "method": "GET",
       "path": "/enrichment_status",

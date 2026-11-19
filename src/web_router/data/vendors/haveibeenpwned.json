@@ -99,7 +99,7 @@
       "summary": "Hash suffixes of breached email addresses whose SHA-1 starts with a 6-character prefix, each with its breach names.",
       "kind": "read",
       "method": "GET",
-      "path": "/breachedaccount/range/{hash_prefix}",
+      "path": "/breachedAccount/range/{hash_prefix}",
       "params": {
         "hash_prefix": {
           "in": "path",

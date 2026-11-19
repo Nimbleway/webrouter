@@ -111,6 +111,7 @@
         }
       },
       "notes": [
+        "asin or gtin is required (one of them), or the call is a 400.",
         "1 credit per call; variant_prices, include_safety_product_resources and similar options cost more, as listed per option. A gtin lookup is cached for 2 months."
       ],
       "job": "products.get",
@@ -305,6 +306,7 @@
         }
       },
       "notes": [
+        "asin or gtin is required (one of them), or the call is a 400.",
         "1 credit per page fetched."
       ],
       "job": "products.offers",

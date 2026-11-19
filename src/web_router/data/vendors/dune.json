@@ -2,7 +2,7 @@
   "vendor": "dune",
   "name": "Dune",
   "category": "finance",
-  "summary": "Onchain analytics from Dune: results of saved SQL queries over blockchain data, fetched as the latest run or by running the query.",
+  "summary": "Onchain analytics from Dune: results of saved SQL queries over blockchain data, fetched from the query's latest run.",
   "docs_url": "https://docs.dune.com/api-reference/apis/quickstart-dashboards",
   "pricing_url": "https://dune.com/pricing",
   "base_url": "https://api.dune.com/api",
@@ -27,7 +27,8 @@
     "API access needs a trial or paid plan; free accounts are view-only.",
     "Credits: runs are charged for compute used (by engine tier); fetching results is charged per MB exported (2 credits/MB on Plus, 10 on Analyst).",
     "Rate limits on Plus: 70 requests/minute for runs, 200/minute for reads; Enterprise from 350 and 1000.",
-    "Results stored over 32 GB are truncated; ask with allow_partial_results to read them."
+    "Results stored over 32 GB are truncated; ask with allow_partial_results to read them.",
+    "Running a query (POST /v1/query/{query_id}/execute) is not in this entry: it starts a billed run. The execution calls read runs started elsewhere, such as in the Dune app."
   ],
   "sources": [
     "https://docs.dune.com/api-reference/apis/quickstart-dashboards",
@@ -96,58 +97,13 @@
       },
       "notes": [
         "Does not run the query, but costs credits per MB of result returned.",
-        "404 when the query's SQL changed since its last run: run it with dune.query.execute first.",
+        "404 when the query's SQL changed since its last run: run it again in Dune first.",
         "Page with limit and offset; the response carries next_offset while rows remain."
       ],
       "job": "datasets.query",
       "docs_url": "https://docs.dune.com/api-reference/executions/endpoint/get-query-result",
       "verified": {
         "docs": "https://docs.dune.com/api-reference/executions/endpoint/get-query-result"
-      }
-    },
-    {
-      "id": "dune.query.execute",
-      "name": "Run a saved query",
-      "summary": "Starts a run of a saved query, optionally with parameter values, and returns an execution ID.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/v1/query/{query_id}/execute",
-      "params": {
-        "query_id": {
-          "in": "path",
-          "type": "integer",
-          "required": true,
-          "description": "Saved query ID.",
-          "example": 1215383
-        },
-        "query_parameters": {
-          "in": "body",
-          "type": "object",
-          "description": "Parameter values by name, e.g. {\"days\": 7}; unset ones use their defaults.",
-          "example": {
-            "param1": 24
-          }
-        },
-        "performance": {
-          "in": "body",
-          "type": "string",
-          "description": "Engine tier: small, medium or large; default the query's tier.",
-          "enum": [
-            "small",
-            "medium",
-            "large"
-          ]
-        }
-      },
-      "notes": [
-        "Starts a billed job: credits are charged for the compute the run uses, even if the results are never fetched.",
-        "A read sent as POST: it runs the saved SQL and changes nothing in it.",
-        "Poll dune.execution.status, then read dune.execution.results. Prefer dune.query.latest_result when a recent run is good enough."
-      ],
-      "job": "jobs.start",
-      "docs_url": "https://docs.dune.com/api-reference/executions/endpoint/execute-query",
-      "verified": {
-        "docs": "https://docs.dune.com/api-reference/executions/endpoint/execute-query"
       }
     },
     {
@@ -162,7 +118,7 @@
           "in": "path",
           "type": "string",
           "required": true,
-          "description": "Execution ID from dune.query.execute."
+          "description": "Execution ID of a run started in Dune or through its API."
         }
       },
       "notes": [
@@ -186,7 +142,7 @@
           "in": "path",
           "type": "string",
           "required": true,
-          "description": "Execution ID from dune.query.execute."
+          "description": "Execution ID of a run started in Dune or through its API."
         },
         "limit": {
           "in": "query",

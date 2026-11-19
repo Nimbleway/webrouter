@@ -2,13 +2,10 @@
   "vendor": "alchemy",
   "name": "Alchemy",
   "category": "finance",
-  "summary": "Blockchain data APIs across EVM networks: ERC-20 balances and metadata, asset transfer history, NFT ownership and metadata, and current and historical token prices.",
+  "summary": "Blockchain data APIs across EVM networks: ERC-20 balances and metadata, asset transfer history, and NFT ownership and metadata.",
   "docs_url": "https://www.alchemy.com/docs/data",
   "pricing_url": "https://www.alchemy.com/pricing",
   "base_url": "https://{network}.g.alchemy.com",
-  "hosts": {
-    "prices": "https://api.g.alchemy.com/prices/v1"
-  },
   "settings": {
     "network": {
       "env": [
@@ -34,7 +31,7 @@
         "abstract-mainnet",
         "ink-mainnet"
       ],
-      "description": "Network the token, transfer and NFT calls read, e.g. eth-mainnet, base-mainnet, polygon-mainnet. Prices calls ignore it."
+      "description": "Network the token, transfer and NFT calls read, e.g. eth-mainnet, base-mainnet, polygon-mainnet."
     }
   },
   "auth": {
@@ -57,7 +54,8 @@
   "notes": [
     "Usage is billed in compute units per call (listed per endpoint); throughput is capped per plan.",
     "Token, transfer and NFT calls go to the network set in ALCHEMY_NETWORK; not every API runs on every network.",
-    "JSON-RPC calls (token and transfer) answer with result or error inside a 200; check error."
+    "JSON-RPC calls (token and transfer) answer with result or error inside a 200; check error.",
+    "The Prices API is not in this entry: it takes the key in the URL path (/prices/v1/{apiKey}/...), and this entry sends the key only in the Authorization header."
   ],
   "sources": [
     "https://www.alchemy.com/docs/data",
@@ -478,129 +476,6 @@
       "docs_url": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-owners-for-contract-v-3",
       "verified": {
         "docs": "https://www.alchemy.com/docs/reference/nft-api-endpoints/nft-api-endpoints/nft-ownership-endpoints/get-owners-for-contract-v-3"
-      }
-    },
-    {
-      "id": "alchemy.prices.by_symbol",
-      "name": "Get current token prices by symbol",
-      "summary": "Latest USD prices for up to 25 token symbols.",
-      "kind": "read",
-      "method": "GET",
-      "path": "/tokens/by-symbol",
-      "params": {
-        "symbols": {
-          "in": "query",
-          "type": "string",
-          "required": true,
-          "description": "Comma-separated symbols, at most 25.",
-          "example": "ETH,BTC,USDT"
-        }
-      },
-      "notes": [
-        "40 compute units. A symbol that fails carries its own error field."
-      ],
-      "job": "crypto.price",
-      "host": "prices",
-      "docs_url": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-symbol",
-      "verified": {
-        "docs": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-symbol"
-      }
-    },
-    {
-      "id": "alchemy.prices.by_address",
-      "name": "Get current token prices by contract",
-      "summary": "Latest prices for tokens named by network and contract address.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/tokens/by-address",
-      "params": {
-        "addresses": {
-          "in": "body",
-          "type": "array",
-          "required": true,
-          "description": "List of {network, address}, e.g. network eth-mainnet.",
-          "example": [
-            {
-              "network": "eth-mainnet",
-              "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
-            }
-          ]
-        }
-      },
-      "notes": [
-        "A read sent as POST.",
-        "40 compute units."
-      ],
-      "job": "crypto.price",
-      "host": "prices",
-      "docs_url": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-address",
-      "verified": {
-        "docs": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-token-prices-by-address"
-      }
-    },
-    {
-      "id": "alchemy.prices.historical",
-      "name": "Get historical token prices",
-      "summary": "Price series for one token over a time range, by symbol or by network and contract.",
-      "kind": "read",
-      "method": "POST",
-      "path": "/tokens/historical",
-      "params": {
-        "symbol": {
-          "in": "body",
-          "type": "string",
-          "description": "Token symbol, e.g. ETH. Or give network and address instead.",
-          "example": "ETH"
-        },
-        "network": {
-          "in": "body",
-          "type": "string",
-          "description": "Network ID with address, e.g. eth-mainnet."
-        },
-        "address": {
-          "in": "body",
-          "type": "string",
-          "description": "Token contract, with network."
-        },
-        "startTime": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "Start, ISO 8601 or Unix seconds.",
-          "example": "2024-01-01T00:00:00Z"
-        },
-        "endTime": {
-          "in": "body",
-          "type": "string",
-          "required": true,
-          "description": "End, ISO 8601 or Unix seconds.",
-          "example": "2024-01-31T23:59:59Z"
-        },
-        "interval": {
-          "in": "body",
-          "type": "string",
-          "description": "5m (range up to 7 days), 1h (30 days) or 1d (1 year, default).",
-          "enum": [
-            "5m",
-            "1h",
-            "1d"
-          ]
-        },
-        "withMarketData": {
-          "in": "body",
-          "type": "boolean",
-          "description": "Add market cap and volume; default false."
-        }
-      },
-      "notes": [
-        "A read sent as POST.",
-        "40 compute units."
-      ],
-      "job": "market.history",
-      "host": "prices",
-      "docs_url": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-historical-token-prices",
-      "verified": {
-        "docs": "https://www.alchemy.com/docs/data/prices-api/prices-api-endpoints/prices-api-endpoints/get-historical-token-prices"
       }
     }
   ]
