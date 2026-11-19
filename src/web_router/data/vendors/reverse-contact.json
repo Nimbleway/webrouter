@@ -1,0 +1,657 @@
+{
+  "vendor": "reverse-contact",
+  "name": "Reverse Contact",
+  "category": "enrichment",
+  "summary": "Reverse email lookup to a full professional profile, person and company profiles, people and company search, and email and phone finding.",
+  "docs_url": "https://docs.reversecontact.com/",
+  "pricing_url": "https://docs.reversecontact.com/pricing",
+  "base_url": "https://api.reversecontact.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "REVERSECONTACT_API_KEY"
+        ],
+        "description": "A Reverse Contact API key (rc_..., developer dashboard). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Most calls are POST with a JSON body but only read. 100 requests a minute per workspace on Go, Plus and Max, which also cap profiles per day; a 429 is free and says when to retry.",
+    "Email, phone and verification calls are asynchronous; poll reverse-contact.task.get instead of passing a callback URL.",
+    "Live profile fetches, prompt and lookalike search, bulk tasks and Lists are not in this entry."
+  ],
+  "sources": [
+    "https://docs.reversecontact.com/llms.txt",
+    "https://docs.reversecontact.com/openapi.json",
+    "https://docs.reversecontact.com/authentication.md",
+    "https://docs.reversecontact.com/guides/rate-limits.md",
+    "https://docs.reversecontact.com/guides/polling.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "reverse-contact.account.usage",
+      "name": "Get credit balance and rate limits",
+      "summary": "The workspace's credit balance and rate-limit state, in the quotas block.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/usage",
+      "notes": [
+        "Free. data is always null; read quotas."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.reversecontact.com/endpoints/usage",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/usage"
+      }
+    },
+    {
+      "id": "reverse-contact.person.enrich",
+      "name": "Enrich a person",
+      "summary": "The full professional profile of the person behind an email, or a name with a company, plus alternative matches.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrich/persons",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address (reverse email lookup).",
+          "example": "jane@acme.com"
+        },
+        "firstName": {
+          "in": "body",
+          "type": "string",
+          "description": "First name."
+        },
+        "lastName": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "companyName": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name, instead of the domain."
+        }
+      },
+      "notes": [
+        "A read over POST. 2 credits when a person is found; a 404 is free.",
+        "Synchronous; isFullProfile says whether the whole profile could be assembled."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.reversecontact.com/endpoints/enrich-person",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/enrich-person"
+      }
+    },
+    {
+      "id": "reverse-contact.person.get",
+      "name": "Get a person profile",
+      "summary": "A cached full profile by LinkedIn URL or Reverse Contact id: experience, education, skills, certifications.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/fetch/persons",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public LinkedIn profile URL."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Reverse Contact person id."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit on a cache hit; a miss (404) is free."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.reversecontact.com/endpoints/fetch-profile",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/fetch-profile"
+      }
+    },
+    {
+      "id": "reverse-contact.person.check",
+      "name": "Check a person profile",
+      "summary": "Whether a person profile exists and when it was last refreshed, without the profile.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/fetch/persons/check",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public LinkedIn profile URL."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Reverse Contact person id."
+        }
+      },
+      "notes": [
+        "A read over POST. Free, but answers 402 when the workspace holds fewer than 2 credits."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.reversecontact.com/endpoints/check-person",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/check-person"
+      }
+    },
+    {
+      "id": "reverse-contact.company.enrich",
+      "name": "Enrich a company",
+      "summary": "The full company profile for a domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/enrich/companies",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "acme.com"
+        }
+      },
+      "notes": [
+        "A read over POST. 2 credits when a company is found; a 404 is free."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.reversecontact.com/endpoints/enrich-company",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/enrich-company"
+      }
+    },
+    {
+      "id": "reverse-contact.company.get",
+      "name": "Get a company profile",
+      "summary": "A cached company profile by LinkedIn company URL or Reverse Contact id: industry, headcount, headquarters, offices, specialties.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/fetch/companies",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public LinkedIn company URL."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Reverse Contact company id."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit on a cache hit; a miss (404) is free."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.reversecontact.com/endpoints/fetch-company",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/fetch-company"
+      }
+    },
+    {
+      "id": "reverse-contact.email.find",
+      "name": "Find a person's email",
+      "summary": "Starts a search for a person's professional or personal email from a LinkedIn URL, person id, or name and company domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/contact/email",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public LinkedIn profile URL."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Reverse Contact person id (prs_...), instead of url."
+        },
+        "fullName": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name, with companyDomain."
+        },
+        "firstName": {
+          "in": "body",
+          "type": "string",
+          "description": "First name, with lastName and companyDomain."
+        },
+        "lastName": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain.",
+          "example": "acme.com"
+        },
+        "emailType": {
+          "in": "body",
+          "type": "string",
+          "description": "professional (default), personal, or any.",
+          "enum": [
+            "professional",
+            "personal",
+            "any"
+          ]
+        }
+      },
+      "notes": [
+        "Starts a billed job: 3 credits debited up front (5 for personal or any), settled on what is found: 3 per professional email, 5 per personal, 0 when none.",
+        "Give exactly one of: url; id; fullName + companyDomain; firstName + lastName + companyDomain.",
+        "Asynchronous: answers with data.webhookId; poll reverse-contact.task.get with it (polls are free)."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://docs.reversecontact.com/endpoints/contact-email",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/contact-email"
+      }
+    },
+    {
+      "id": "reverse-contact.phone.find",
+      "name": "Find a person's phone",
+      "summary": "Starts a search for a person's phone numbers from a LinkedIn URL, person id, or name and company domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/contact/phone",
+      "params": {
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public LinkedIn profile URL."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "Reverse Contact person id (prs_...), instead of url."
+        },
+        "fullName": {
+          "in": "body",
+          "type": "string",
+          "description": "Full name, with companyDomain."
+        },
+        "firstName": {
+          "in": "body",
+          "type": "string",
+          "description": "First name, with lastName and companyDomain."
+        },
+        "lastName": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain.",
+          "example": "acme.com"
+        }
+      },
+      "notes": [
+        "Starts a billed job: 20 credits when a number is found, 0 when none.",
+        "Give exactly one of: url; id; fullName + companyDomain; firstName + lastName + companyDomain. 410 when the workspace has no phone access.",
+        "Asynchronous: answers with data.webhookId; poll reverse-contact.task.get with it (polls are free)."
+      ],
+      "job": "people.phone.find",
+      "docs_url": "https://docs.reversecontact.com/endpoints/contact-phone",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/contact-phone"
+      }
+    },
+    {
+      "id": "reverse-contact.email.verify",
+      "name": "Verify an email",
+      "summary": "Starts a deliverability check of an address: valid, risky, invalid or unknown.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/contact/email/verify",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Address to check."
+        }
+      },
+      "notes": [
+        "Starts a billed job: 1 credit per verdict, refunded if the check fails.",
+        "Asynchronous: answers with data.webhookId; poll reverse-contact.task.get with it (polls are free)."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://docs.reversecontact.com/endpoints/contact-email-verify",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/contact-email-verify"
+      }
+    },
+    {
+      "id": "reverse-contact.task.get",
+      "name": "Get an async result",
+      "summary": "Status and, once succeeded, the result of an email, phone or verification task.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/webhooks/{webhookId}",
+      "params": {
+        "task_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The task id: data.webhookId from the call that started the task.",
+          "wire_name": "webhookId"
+        },
+        "wait": {
+          "in": "query",
+          "type": "integer",
+          "description": "Hold the request up to this many seconds (0-20) while the task runs.",
+          "example": 20
+        }
+      },
+      "notes": [
+        "Free and outside the rate limit. Poll until status is succeeded or errored; with wait, use an HTTP timeout above 20 s, and respect Retry-After."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://docs.reversecontact.com/guides/polling",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/guides/polling"
+      }
+    },
+    {
+      "id": "reverse-contact.people.search",
+      "name": "Search people",
+      "summary": "Full profiles of people matching title, company, seniority, skills, location and other filters, with cursor paging.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/search/people",
+      "params": {
+        "positionTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Current or past title (a string or a list)."
+        },
+        "currentPositionTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Current title only (a string or a list)."
+        },
+        "currentCompanyName": {
+          "in": "body",
+          "type": "string",
+          "description": "Current employer name."
+        },
+        "companyName": {
+          "in": "body",
+          "type": "string",
+          "description": "Current or past company name."
+        },
+        "currentCompanyIndustry": {
+          "in": "body",
+          "type": "string",
+          "description": "Current employer industry from Reverse Contact's taxonomy."
+        },
+        "currentSeniority": {
+          "in": "body",
+          "type": "string",
+          "description": "Seniority from the position taxonomy (a string or a list)."
+        },
+        "currentFunction": {
+          "in": "body",
+          "type": "string",
+          "description": "Function from the position taxonomy."
+        },
+        "skills": {
+          "in": "body",
+          "type": "string",
+          "description": "Skill name or list of names; whole-value match."
+        },
+        "keywords": {
+          "in": "body",
+          "type": "string",
+          "description": "Words that must all appear somewhere in the profile."
+        },
+        "firstName": {
+          "in": "body",
+          "type": "string",
+          "description": "First name."
+        },
+        "lastName": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "headline": {
+          "in": "body",
+          "type": "string",
+          "description": "Text in the headline."
+        },
+        "isOpenToWork": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only profiles open to work."
+        },
+        "changedJobsWithinDays": {
+          "in": "body",
+          "type": "integer",
+          "description": "Current position started in the last N days.",
+          "enum": [
+            30,
+            60,
+            90,
+            120
+          ]
+        },
+        "location": {
+          "in": "body",
+          "type": "object",
+          "description": "Location: {country, countryCode, area, region, city}, each one value or a list.",
+          "example": {
+            "countryCode": "FR"
+          }
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "metadata.nextCursor from the previous page."
+        },
+        "perPage": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1-100, default 25."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per profile delivered; an empty page is free. Size a query first with reverse-contact.people.count.",
+        "Filters are validated strictly: an unknown field or a value outside a closed list returns 422 with suggestions, at no cost."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.reversecontact.com/endpoints/search-people",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/search-people"
+      }
+    },
+    {
+      "id": "reverse-contact.people.count",
+      "name": "Count people matching filters",
+      "summary": "How many profiles match people-search filters, without returning them.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/search/people/count",
+      "params": {
+        "positionTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Current or past title (a string or a list)."
+        },
+        "currentPositionTitle": {
+          "in": "body",
+          "type": "string",
+          "description": "Current title only (a string or a list)."
+        },
+        "currentCompanyName": {
+          "in": "body",
+          "type": "string",
+          "description": "Current employer name."
+        },
+        "companyName": {
+          "in": "body",
+          "type": "string",
+          "description": "Current or past company name."
+        },
+        "currentCompanyIndustry": {
+          "in": "body",
+          "type": "string",
+          "description": "Current employer industry from Reverse Contact's taxonomy."
+        },
+        "currentSeniority": {
+          "in": "body",
+          "type": "string",
+          "description": "Seniority from the position taxonomy (a string or a list)."
+        },
+        "currentFunction": {
+          "in": "body",
+          "type": "string",
+          "description": "Function from the position taxonomy."
+        },
+        "skills": {
+          "in": "body",
+          "type": "string",
+          "description": "Skill name or list of names; whole-value match."
+        },
+        "keywords": {
+          "in": "body",
+          "type": "string",
+          "description": "Words that must all appear somewhere in the profile."
+        },
+        "firstName": {
+          "in": "body",
+          "type": "string",
+          "description": "First name."
+        },
+        "lastName": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "headline": {
+          "in": "body",
+          "type": "string",
+          "description": "Text in the headline."
+        },
+        "isOpenToWork": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Only profiles open to work."
+        },
+        "changedJobsWithinDays": {
+          "in": "body",
+          "type": "integer",
+          "description": "Current position started in the last N days.",
+          "enum": [
+            30,
+            60,
+            90,
+            120
+          ]
+        },
+        "location": {
+          "in": "body",
+          "type": "object",
+          "description": "Location: {country, countryCode, area, region, city}, each one value or a list.",
+          "example": {
+            "countryCode": "FR"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Free."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.reversecontact.com/endpoints/search-people-count",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/search-people-count"
+      }
+    },
+    {
+      "id": "reverse-contact.company.search",
+      "name": "Search companies",
+      "summary": "Full company profiles matching name, domain, industry, size, founding year and headquarters filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/search/organizations",
+      "params": {
+        "companyName": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "string",
+          "description": "Website domain."
+        },
+        "industry": {
+          "in": "body",
+          "type": "string",
+          "description": "Industry from the taxonomy, or a list."
+        },
+        "specialities": {
+          "in": "body",
+          "type": "string",
+          "description": "Speciality, or a list."
+        },
+        "employeeCountRange": {
+          "in": "body",
+          "type": "object",
+          "description": "Headcount range {min, max}."
+        },
+        "foundedYear": {
+          "in": "body",
+          "type": "object",
+          "description": "Founding year range {min, max}."
+        },
+        "location": {
+          "in": "body",
+          "type": "object",
+          "description": "Headquarters: {country, countryCode, area, region, city}."
+        },
+        "cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "metadata.nextCursor from the previous page."
+        },
+        "perPage": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, 1-100, default 25."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per company delivered; an empty page is free."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.reversecontact.com/endpoints/search-companies",
+      "verified": {
+        "docs": "https://docs.reversecontact.com/endpoints/search-companies"
+      }
+    }
+  ]
+}

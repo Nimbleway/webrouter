@@ -1,0 +1,373 @@
+{
+  "vendor": "seamless-ai",
+  "name": "Seamless.AI",
+  "category": "enrichment",
+  "summary": "B2B contact and company search, and the contacts and companies your organization has already researched.",
+  "docs_url": "https://docs.seamless.ai/introduction",
+  "pricing_url": "https://seamless.ai/pricing",
+  "base_url": "https://api.seamless.ai/api/client/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SEAMLESS_API_KEY"
+        ],
+        "description": "A Seamless.AI API key (Settings > Public API > API Key; needs Public API access). Sent in the Token header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Search spends one shared credit balance; every response carries what is left in X-PublicAPI-Credits. HTTP 422 means a missing licence or no credits (see code).",
+    "Rate limits are per organization and per endpoint; read X-RateLimit-Limit and X-RateLimit-Reset rather than assuming a number.",
+    "Research (which saves records into your organization), its webhooks, the engagement API and list management are not in this entry."
+  ],
+  "sources": [
+    "https://docs.seamless.ai/llms.txt",
+    "https://docs.seamless.ai/openapi.json",
+    "https://docs.seamless.ai/core-concepts/rate-limits-and-credits.md",
+    "https://docs.seamless.ai/authentication/api-keys.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "seamless-ai.reference.locations",
+      "name": "Look up location filter values",
+      "summary": "The exact place strings the search location filters match, by partial name, ordered by contact volume.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/locations",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Partial place name, matched at the start of any word.",
+          "example": "york"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100."
+        },
+        "types": {
+          "in": "query",
+          "type": "array",
+          "description": "Vocabulary tiers to search, e.g. country or state-country."
+        }
+      },
+      "notes": [
+        "Free. A misspelt location silently matches nothing in search, so look places up first."
+      ],
+      "job": "reference.geo",
+      "docs_url": "https://docs.seamless.ai/api-reference/v1/contact-search/look-up-location-filter-values",
+      "verified": {
+        "docs": "https://docs.seamless.ai/api-reference/v1/contact-search/look-up-location-filter-values"
+      }
+    },
+    {
+      "id": "seamless-ai.people.search",
+      "name": "Search contacts",
+      "summary": "Contacts by title, seniority, department, company, location, industry, technology, funding and news; each with a searchResultId.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/contacts",
+      "params": {
+        "jobTitle": {
+          "in": "body",
+          "type": "array",
+          "description": "Job titles, matched by relevance.",
+          "example": [
+            "VP of Sales"
+          ]
+        },
+        "titlesExactMatch": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Exact title matches only."
+        },
+        "seniority": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 5: C-Level, VP, Director, Manager, Senior, Entry Level, Mid-Level, Other."
+        },
+        "department": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 5: Sales, Marketing, Engineering, Human Resources, Finance, IT, Operations, Support, Legal, Project Management, Other."
+        },
+        "companyName": {
+          "in": "body",
+          "type": "array",
+          "description": "Company names."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "array",
+          "description": "Company domains."
+        },
+        "fullName": {
+          "in": "body",
+          "type": "array",
+          "description": "Full names of specific people."
+        },
+        "contactKeyword": {
+          "in": "body",
+          "type": "array",
+          "description": "Keywords in the profile (skills, bio)."
+        },
+        "locations": {
+          "in": "body",
+          "type": "array",
+          "description": "Cities, states or countries, as returned by seamless-ai.reference.locations."
+        },
+        "contactCountry": {
+          "in": "body",
+          "type": "array",
+          "description": "Countries; prefix - to exclude."
+        },
+        "contactState": {
+          "in": "body",
+          "type": "array",
+          "description": "States or regions."
+        },
+        "locationType": {
+          "in": "body",
+          "type": "string",
+          "description": "Apply location filters to the contact, the company, either (bothOR) or both (bothAND).",
+          "enum": [
+            "bothOR",
+            "bothAND",
+            "company",
+            "contact"
+          ]
+        },
+        "industry": {
+          "in": "body",
+          "type": "array",
+          "description": "Industry categories or sub-industries."
+        },
+        "companySize": {
+          "in": "body",
+          "type": "array",
+          "description": "Headcount bands, e.g. 51 - 200, 201 - 500, 10,001+."
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies used at the company, e.g. Salesforce."
+        },
+        "companyType": {
+          "in": "body",
+          "type": "string",
+          "description": "Public or Private.",
+          "enum": [
+            "Public",
+            "Private"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, up to 500."
+        },
+        "nextToken": {
+          "in": "body",
+          "type": "string",
+          "description": "supplementalData.nextToken from the previous page."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per 50 results returned, rounded up; an empty page is free. Rows are summaries without emails or phones; the research calls that reveal them save the records into your organization, so they are not in this entry."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.seamless.ai/api-reference/v1/contact-search/search-contacts",
+      "verified": {
+        "docs": "https://docs.seamless.ai/api-reference/v1/contact-search/search-contacts"
+      }
+    },
+    {
+      "id": "seamless-ai.company.search",
+      "name": "Search companies",
+      "summary": "Companies by name, domain, industry, codes, size, revenue, location, keywords, technologies, funding and news.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/search/companies",
+      "params": {
+        "companyName": {
+          "in": "body",
+          "type": "array",
+          "description": "Company names or fragments."
+        },
+        "companyDomain": {
+          "in": "body",
+          "type": "array",
+          "description": "Root domains."
+        },
+        "companyNameSearchType": {
+          "in": "body",
+          "type": "string",
+          "description": "default, related (aliases and related names) or exact.",
+          "enum": [
+            "default",
+            "related",
+            "exact"
+          ]
+        },
+        "industry": {
+          "in": "body",
+          "type": "array",
+          "description": "Industry categories."
+        },
+        "companyKeyword": {
+          "in": "body",
+          "type": "array",
+          "description": "Keywords in the company profile; prefix - to exclude."
+        },
+        "companySize": {
+          "in": "body",
+          "type": "array",
+          "description": "Headcount bands."
+        },
+        "companyRevenue": {
+          "in": "body",
+          "type": "array",
+          "description": "Revenue bands."
+        },
+        "locations": {
+          "in": "body",
+          "type": "array",
+          "description": "Cities, states or countries."
+        },
+        "companyCountry": {
+          "in": "body",
+          "type": "array",
+          "description": "Countries."
+        },
+        "companyState": {
+          "in": "body",
+          "type": "array",
+          "description": "States or regions."
+        },
+        "technologies": {
+          "in": "body",
+          "type": "array",
+          "description": "Technologies used."
+        },
+        "companyType": {
+          "in": "body",
+          "type": "string",
+          "description": "Public or Private.",
+          "enum": [
+            "Public",
+            "Private"
+          ]
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, up to 500."
+        },
+        "nextToken": {
+          "in": "body",
+          "type": "string",
+          "description": "supplementalData.nextToken from the previous page."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 credit per 50 results returned, rounded up; an empty page is free. Rows are summaries; the research call that returns a full profile saves it into your organization, so it is not in this entry."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.seamless.ai/api-reference/v1/company-search/search-companies",
+      "verified": {
+        "docs": "https://docs.seamless.ai/api-reference/v1/company-search/search-companies"
+      }
+    },
+    {
+      "id": "seamless-ai.org.contacts",
+      "name": "List researched contacts",
+      "summary": "Contacts your organization has researched within a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/contacts",
+      "params": {
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start of the lookback, ISO 8601."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End of the lookback, ISO 8601."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "notes": [
+        "Free: reads records already in your org."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.seamless.ai/api-reference/v1/org-contacts/get-org-contacts",
+      "verified": {
+        "docs": "https://docs.seamless.ai/api-reference/v1/org-contacts/get-org-contacts"
+      }
+    },
+    {
+      "id": "seamless-ai.org.companies",
+      "name": "List researched companies",
+      "summary": "Companies your organization has researched within a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/companies",
+      "params": {
+        "startDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start of the lookback, ISO 8601."
+        },
+        "endDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End of the lookback, ISO 8601."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        }
+      },
+      "notes": [
+        "Free: reads records already in your org."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.seamless.ai/api-reference/v1/org-companies/get-org-companies",
+      "verified": {
+        "docs": "https://docs.seamless.ai/api-reference/v1/org-companies/get-org-companies"
+      }
+    }
+  ]
+}

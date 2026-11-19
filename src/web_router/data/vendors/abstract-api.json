@@ -1,0 +1,64 @@
+{
+  "vendor": "abstract-api",
+  "name": "Abstract API",
+  "category": "maps",
+  "summary": "Abstract's IP Intelligence API: location, time zone, currency, ASN and company for an IP, with VPN, proxy, Tor, hosting, relay, mobile and abuse flags.",
+  "docs_url": "https://docs.abstractapi.com/api/ip-intelligence",
+  "pricing_url": "https://www.abstractapi.com/api/ip-intelligence",
+  "base_url": "https://ip-intelligence.abstractapi.com/v1",
+  "auth": {
+    "credentials": {
+      "ip_intelligence_key": {
+        "env": [
+          "ABSTRACT_IP_INTELLIGENCE_API_KEY"
+        ],
+        "description": "The API key of Abstract's IP Intelligence API (Abstract dashboard). Each Abstract API has its own key; an email or phone key will not work here. Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {ip_intelligence_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Only the IP Intelligence API is in this entry; Abstract's other APIs each need their own key.",
+    "Free plans allow 1 request per second (429 past it) and answer 422 when the credits run out. A 204 means there is no location data for the IP."
+  ],
+  "sources": [
+    "https://docs.abstractapi.com/api/ip-intelligence",
+    "https://docs.abstractapi.com/integrations/vercel"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "abstract-api.ip.lookup",
+      "name": "Look up an IP's location and security flags",
+      "summary": "City, region, postal code, country, continent, coordinates, time zone, currency, flag, ASN, company, hosted domains and is_vpn, is_proxy, is_tor, is_hosting, is_relay, is_mobile, is_abuse.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "params": {
+        "ip_address": {
+          "in": "query",
+          "type": "string",
+          "description": "IPv4 or IPv6 address; when left out, the caller's own IP is used.",
+          "example": "166.171.248.255"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated top-level keys to return, e.g. location,security.",
+          "example": "location,security"
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://docs.abstractapi.com/api/ip-intelligence",
+      "verified": {
+        "docs": "https://docs.abstractapi.com/api/ip-intelligence"
+      }
+    }
+  ]
+}
