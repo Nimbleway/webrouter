@@ -53,6 +53,25 @@ def test_a_backend_whose_only_named_mode_is_excluded_does_not_run_bare() -> None
     assert merged.providers == ("brave", "tavily")  # type: ignore[attr-defined]
 
 
+@pytest.mark.parametrize(
+    ("candidates", "exclude"),
+    [
+        ((EXA, EXA_INSTANT, *OTHERS), {INSTANT: " "}),
+        ((EXA, EXA_INSTANT, *OTHERS), {"search:exa": "no", "search:tavily": "no", "search:brave": "no"}),
+        ((EXA, EXA_INSTANT), {INSTANT: "too thin"}),
+        ((EXA, EXA_INSTANT, *OTHERS), {INSTANT: "too thin"}),
+    ],
+    ids=["blank-reason", "would-empty", "sole-mode-of-only-backend", "excluded-mode"],
+)
+def test_the_cost_order_ranks_a_method_exactly_when_the_merge_keeps_an_attempt(
+    candidates: tuple[Candidate, ...], exclude: dict[str, str]
+) -> None:
+    decision = RouteDecision(attempts=[INSTANT], exclude=exclude)
+    found = CandidateSet(candidates=candidates, cost_order={"search": ["by-cost"]})  # marks where it applies
+    kept = "exa:exa-instant" in _merged(candidates, decision).providers  # type: ignore[attr-defined]
+    assert (_base_order(found, decision)["search"] != ["by-cost"]) is kept
+
+
 def test_an_empty_answer_in_a_mode_moves_on_without_calling_the_backend_again(monkeypatch: pytest.MonkeyPatch) -> None:
     calls = fake_backends(monkeypatch, {"results": []})
     with routed(INSTANT) as wr:
