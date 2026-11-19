@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-465 vendors, 3463 endpoints.
+470 vendors, 3477 endpoints.
 
 ### advertising
 
@@ -459,6 +459,7 @@ Maps, places, routing and geolocation.
 
 | Vendor | What it holds | Endpoints | Auth | Variables | Checked |
 |---|---|---|---|---|---|
+| [Abstract API](https://docs.abstractapi.com/api/ip-intelligence) `abstract-api` | Abstract's IP Intelligence API: location, time zone, currency, ASN and company for an IP, with VPN, proxy, Tor, hosting, relay, mobile and abuse flags. | 1 read | key in header | `ABSTRACT_IP_INTELLIGENCE_API_KEY` | docs 2026-11-16 |
 | [Amap (Gaode) Web Service](https://lbs.amap.com/api/webservice/summary) `amap` | China maps from Amap/Gaode: geocoding and reverse geocoding, POI search by keyword, area or id, driving and transit routes, and city weather. | 8 read | key in query | `AMAP_API_KEY` | docs 2026-11-09 |
 | [API Ninjas](https://api-ninjas.com/api) `apininjas` | One key for many small reference-data APIs: WHOIS and DNS, IP geolocation, sanctions screening, earnings call transcripts, geocoding and more. | 8 read | key in header | `APININJAS_API_KEY` | docs 2026-11-09 |
 | [ArcGIS Online](https://developers.arcgis.com/rest/users-groups-and-items/search/) `arcgis` | Search ArcGIS Online's public content (feature layers, map services, web maps, datasets) and read an item's metadata and data. | 4 read | key in query | `ARCGIS_API_KEY` | docs 2026-11-09 |
@@ -468,11 +469,15 @@ Maps, places, routing and geolocation.
 | [Google Maps Platform](https://developers.google.com/maps/documentation) `google-maps` | Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups. | 6 read | key in query | `GOOGLE_MAPS_API_KEY` | docs 2026-11-09 |
 | [GraphHopper Directions API](https://docs.graphhopper.com/) `graphhopper` | Routing, distance matrices, isochrones and geocoding on OpenStreetMap data. | 5 read | key in query | `GRAPHHOPPER_API_KEY` | docs 2026-11-09 |
 | [HERE](https://docs.here.com/geocoding-and-search/docs/introduction-to-here-geocoding-search-api-v7) `here-maps` | HERE Geocoding & Search v7 (geocode, reverse geocode, place search by text or category, lookup by id) and Routing v8 (traffic-aware routes for cars, trucks, walking and more). | 6 read | key in query | `HERE_API_KEY` | docs 2026-11-16 |
+| [IP2Location.io](https://www.ip2location.io/ip2location-documentation) `ip2location-io` | IP geolocation with ISP, ASN, usage type, mobile carrier and proxy/fraud data (by plan), plus domain WHOIS records and the domains hosted on an IP. | 3 read | key in header | `IP2LOCATIONIO_API_KEY` | docs 2026-11-16 |
 | [ipapi.is](https://ipapi.is/developers.html) `ipapiis` | IP address intelligence: geolocation, ASN, owning company and abuse contact, and VPN, proxy, Tor, datacenter and crawler detection. | 3 read | key in query | `IPAPI_IS_API_KEY` | docs 2026-11-09 |
 | [ipdata](https://docs.ipdata.co/docs/getting-started) `ipdata` | IP geolocation with ASN, company, mobile carrier, time zone, currency and threat data (Tor, proxy, VPN, datacenter, known attacker or abuser, blocklists), plus detailed ASN records. | 3 read | key in query | `IPDATA_API_KEY` | docs 2026-11-16 |
 | [IPinfo](https://ipinfo.io/developers/ipinfo-api) `ipinfo` | IP geolocation and ASN data: free country-level Lite lookups, and city-level geolocation with hosting, VPN/anonymous, mobile and anycast flags on paid plans. | 3 read | key in header | `IPINFO_TOKEN` | docs 2026-11-09 |
+| [Ipregistry](https://ipregistry.co/docs) `ipregistry` | IP geolocation with connection, company, carrier, time zone, currency and security data (proxy, Tor, VPN, threat), Autonomous System lookups and User-Agent parsing. | 3 read | key in header | `IPREGISTRY_API_KEY` | docs 2026-11-16 |
 | [Mapbox](https://docs.mapbox.com/api/overview/) `mapbox` | Geocoding, place and POI search, driving/walking/cycling directions, travel-time matrices and isochrones. | 8 read | key in query | `MAPBOX_ACCESS_TOKEN` | docs 2026-11-09 |
 | [Mapillary](https://www.mapillary.com/developer/api-documentation) `mapillary` | Street-level imagery from Meta's Mapillary: find geotagged photos by area, point, sequence or creator, and map features (signs, objects) detected in them. | 6 read | key in header | `MAPILLARY_ACCESS_TOKEN` | docs 2026-11-09 |
+| [MaxMind](https://dev.maxmind.com/geoip/docs/web-services/) `maxmind` | GeoIP2 and free GeoLite web services: country, city-level geolocation and, with Insights, ISP, connection type, user type and anonymizer (VPN, proxy, Tor, hosting) data for an IP. | 5 read | HTTP Basic | `MAXMIND_ACCOUNT_ID`, `MAXMIND_LICENSE_KEY` | docs 2026-11-16 |
+| [OpenCage Geocoding](https://opencagedata.com/api) `opencage` | Forward and reverse geocoding worldwide, built on open data (OpenStreetMap and others), with annotations such as timezone, currency, calling code, geohash and road info. | 2 read | key in query | `OPENCAGE_API_KEY` | docs 2026-11-16 |
 | [TomTom](https://docs.tomtom.com/search-api/documentation/product-information/introduction) `tomtom` | TomTom's Search API (free-text and POI search, nearby places, geocoding, reverse geocoding) and Routing API (traffic-aware routes for cars, trucks, bikes and walking). | 5 read | key in query | `TOMTOM_API_KEY` | docs 2026-11-16 |
 | [Yelp Fusion](https://docs.developer.yelp.com/docs/places-authentication) `yelp` | Yelp's Places API (Fusion): search local businesses by term, location, category and price, match a known business, and read its details, hours and review excerpts. | 7 read | key in header | `YELP_API_KEY` | docs 2026-11-16 |
 
