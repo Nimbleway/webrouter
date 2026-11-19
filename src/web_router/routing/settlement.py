@@ -6,7 +6,8 @@ charge, in the call's own cap and in every shared budget it reserves in:
 
 - :func:`refund_unstarted`: an attempt that failed before the backend did any
   work -- the failures :func:`~web_router.providers._chain.nothing_started`
-  names, a 4xx refusal or a connection never made -- is charged nothing;
+  names, a 4xx refusal or a connection never made -- is charged nothing. A 404
+  or 410 stays charged: a fetch backend may bill a page it found gone;
 - :func:`settle_reported`: the attempt whose answer the call returns, when
   the response carries the backend's own reported cost, is charged that
   instead of its estimate.
@@ -24,6 +25,7 @@ from web_router.exceptions import WebRouterError
 from web_router.providers._chain import nothing_started
 from web_router.routing.budget_hooks import LEDGERS, check_own
 from web_router.routing.ledger import Ledger, _Tried
+from web_router.types_errors import TARGET_GONE_STATUSES
 
 
 def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> None:
@@ -35,6 +37,8 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
     """
     if not isinstance(exc, WebRouterError) or not nothing_started(exc) or not check_own(ledger)():
         return
+    if getattr(exc, "status_code", None) in TARGET_GONE_STATUSES:
+        return  # the page is gone, which a fetch backend may have billed finding out
     with ledger._lock:
         opened = ledger.trail.open
         if opened is None or opened.id != call_id or opened.attempt is None:
