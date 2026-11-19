@@ -99,6 +99,12 @@ class Judge(ABC):
         searches were paid for.
         """
 
+    def close(self) -> None:  # noqa: B027
+        """Release what the judge holds; one that holds nothing does nothing."""
+
+    async def aclose(self) -> None:  # noqa: B027
+        """The async twin of :meth:`close`."""
+
     @abstractmethod
     def _complete(self, system: str, user: str) -> str: ...
 

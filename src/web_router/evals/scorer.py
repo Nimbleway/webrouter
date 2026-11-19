@@ -18,13 +18,14 @@ one in.
 from __future__ import annotations
 
 import asyncio
+import math
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from web_router.constants_evals import MSG_SCORE_OUT_OF_SCALE
+from web_router.constants_evals import MSG_SCORE_BAD_SCALE, MSG_SCORE_OUT_OF_SCALE
 from web_router.types_citation import Citation
 
 
@@ -43,6 +44,8 @@ class Scorecard(BaseModel):
     @model_validator(mode="after")
     def _within_scale(self) -> Scorecard:
         low, high = self.scale
+        if not (math.isfinite(low) and math.isfinite(high) and low < high):
+            raise ValueError(MSG_SCORE_BAD_SCALE.format(scale=self.scale))
         for name, value in [*self.dimensions.items(), ("overall", self.overall)]:
             if value is not None and not low <= value <= high:
                 raise ValueError(MSG_SCORE_OUT_OF_SCALE.format(name=name, value=value, low=low, high=high))
