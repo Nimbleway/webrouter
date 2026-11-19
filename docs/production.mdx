@@ -221,10 +221,17 @@ the next release on, and it changes routing; turn it off with
 router = WebRouter(timeout_cooldown=False)
 ```
 
-Any timeout counts: the backend's own, `hop_timeout`, or the call's `timeout=`
-running out while the backend was still in flight. An answer, or a failure of
-another kind, starts the count again. A backend passed over shows as a
-`rate_limit` failure whose message names the timeouts, and as `cooling_down` in
+Only the backend's own slowness counts: its request timing out on its own
+HTTP timeout, or a fixed `hop_timeout` cutting it off. A hop cut off at its
+half share of your `timeout=`, or your `timeout=` running out, does not count:
+a caller with a short timeout does not make a healthy backend cool down for
+everyone else. The count starts again after an answer, after a failure of
+another kind, or when 30 seconds pass without a timeout.
+
+A backend cooling down after timeouts is still called when it is the last one
+a call has left, and an answer from it ends the cooldown: a router with one
+backend never refuses a call for this reason. A backend passed over shows as a
+`timeout` failure whose message names the timeouts, and as `cooling_down` in
 `decision.hops`.
 
 ## Capping concurrent calls

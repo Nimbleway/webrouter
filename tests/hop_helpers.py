@@ -1,5 +1,5 @@
-"""Fake ``auto`` members for the hop-timeout tests -- one hangs, one answers, one answers slowly, one fails -- and a
-router over a chain of them."""
+"""Fake ``auto`` members for the hop-timeout tests -- one hangs, one answers, one answers slowly, one fails, one times
+out on its own -- and a router over a chain of them."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from web_router import ProviderError, WebRouter
 from web_router.providers._deadline import call_budget
 from web_router.registry import register_provider, unregister_provider
 from web_router.types import SearchRequest, SearchResponse
-from web_router.types_errors import ERROR_KIND_UPSTREAM
+from web_router.types_errors import ERROR_KIND_TIMEOUT, ERROR_KIND_UPSTREAM
 
 HANG = 30.0
 """How long the hanging member's request would wait on its own: far past any cap under test."""
@@ -71,12 +71,26 @@ class _Fails(FakeProvider):
         return self._search(request)
 
 
-_MEMBERS = {"hangs": _Hangs, "healthy": _Healthy, "slow": _Slow, "fails": _Fails}
+class _TimesOut(FakeProvider):
+    """A member whose own transport timeout fires at once: the backend's own slowness, which counts."""
+
+    name = "timesout"
+    calls = 0
+
+    def _search(self, request: SearchRequest) -> SearchResponse:
+        type(self).calls += 1
+        raise ProviderError(self.name, "read timed out", kind=ERROR_KIND_TIMEOUT)
+
+    async def _asearch(self, request: SearchRequest) -> SearchResponse:
+        return self._search(request)
+
+
+_MEMBERS = {"hangs": _Hangs, "healthy": _Healthy, "slow": _Slow, "fails": _Fails, "timesout": _TimesOut}
 
 
 @pytest.fixture
 def hop_members() -> Iterator[None]:
-    _Hangs.calls = 0
+    _Hangs.calls = _TimesOut.calls = 0
     for name, member in _MEMBERS.items():
         register_provider(name, member)
     yield

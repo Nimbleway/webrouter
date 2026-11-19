@@ -38,6 +38,7 @@ from web_router.providers._attempt_step import Failures, Tried, failure, prepare
 from web_router.providers._chain import RECOVERABLE, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
+from web_router.providers._runtime import current_runtime
 from web_router.routing.attempts import in_call_order
 from web_router.routing.contract import ToolName
 from web_router.routing.entry_names import entry_name
@@ -169,8 +170,12 @@ async def arun(walk: Walk, request: Any) -> Ran[Any]:
 
 
 def _last(walk: Walk, tried: Tried, index: int) -> bool:
-    """Whether the attempt at ``index`` is the last that could run: every later one's backend has stopped."""
-    return all(position in tried.stopped for position, _, _ in walk.order[index + 1 :])
+    """Whether the attempt at ``index`` is the last that could run: every later one's backend stopped or cools down."""
+    runtime = current_runtime()
+    return all(
+        position in tried.stopped or (runtime is not None and runtime.cooldowns.refusal(name) is not None)
+        for position, name, _ in walk.order[index + 1 :]
+    )
 
 
 def _late(walk: Walk, tried: Tried) -> Any:

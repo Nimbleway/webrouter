@@ -6,13 +6,14 @@ from typing import Any
 
 import pytest
 
-from tests.hop_helpers import _Hangs, hop_members, hop_router
-from web_router import AsyncWebRouter, ProviderError
+from web_router import ProviderError
 from web_router.constants_production import TIMEOUT_COOLDOWN_AFTER, TIMEOUT_COOLDOWN_S
 from web_router.exceptions import DeadlineExceededError
+from web_router.providers import _cooldown
 from web_router.providers._cooldown import Cooldowns
+from web_router.providers._cooldown_timeouts import HopTimeoutError
 from web_router.types import SearchResponse
-from web_router.types_errors import ERROR_KIND_TIMEOUT, ERROR_KIND_UPSTREAM
+from web_router.types_errors import ERROR_KIND_RATE_LIMIT, ERROR_KIND_TIMEOUT, ERROR_KIND_UPSTREAM
 
 
 def _timeout() -> ProviderError:
@@ -35,11 +36,71 @@ def test_the_last_timeout_in_a_row_starts_the_cooldown() -> None:
     assert refusal is not None and f"after {TIMEOUT_COOLDOWN_AFTER} timeouts in a row" in str(refusal)
 
 
-def test_the_deadline_cutting_a_backend_off_counts_as_a_timeout() -> None:
+def _cut(fixed: bool) -> HopTimeoutError:
+    return HopTimeoutError("slow", "cut off", original=TimeoutError(), fixed=fixed)
+
+
+@pytest.mark.parametrize(
+    ("timeout", "counts"),
+    [
+        (lambda: DeadlineExceededError("slow", 2.0), False),
+        (lambda: _cut(fixed=False), False),
+        (lambda: _cut(fixed=True), True),
+        (_timeout, True),
+    ],
+    ids=["the call's deadline", "a share of the caller's time", "the router's hop_timeout", "the backend's own"],
+)
+def test_only_the_backends_own_slowness_counts(timeout: Any, counts: bool) -> None:
     cooldowns = Cooldowns(timeouts=True)
     for _ in range(TIMEOUT_COOLDOWN_AFTER):
-        cooldowns.note("slow", DeadlineExceededError("slow", 2.0))
-    assert cooldowns.remaining("slow") is not None
+        cooldowns.note("slow", timeout())
+    assert (cooldowns.remaining("slow") is not None) is counts
+
+
+def test_a_timeout_long_after_the_last_starts_a_new_streak(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = [100.0]
+    monkeypatch.setattr(_cooldown.time, "monotonic", lambda: now[0])
+    cooldowns = Cooldowns(timeouts=True)
+    _times_out(cooldowns, "slow", TIMEOUT_COOLDOWN_AFTER - 1)
+    now[0] += TIMEOUT_COOLDOWN_S + 1
+    cooldowns.note("slow", _timeout())
+    assert cooldowns.remaining("slow") is None
+
+
+def test_a_streak_that_started_a_cooldown_counts_from_zero_after_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A last backend left is called while it cools down; one more timeout then starts a new count."""
+    now = [100.0]
+    monkeypatch.setattr(_cooldown.time, "monotonic", lambda: now[0])
+    cooldowns = Cooldowns(timeouts=True)
+    _times_out(cooldowns, "slow", TIMEOUT_COOLDOWN_AFTER)
+    now[0] += 10
+    cooldowns.note("slow", _timeout())
+    left = cooldowns.remaining("slow")
+    assert left is not None and left[0] == pytest.approx(TIMEOUT_COOLDOWN_S - 10), "not restarted"
+
+
+def test_an_answer_ends_a_timeout_cooldown_but_not_a_throttle() -> None:
+    cooldowns = Cooldowns(timeouts=True)
+    _times_out(cooldowns, "slow", TIMEOUT_COOLDOWN_AFTER)
+    cooldowns.note("throttled", ProviderError("throttled", "HTTP 429", kind=ERROR_KIND_RATE_LIMIT))
+    for name in ("slow", "throttled"):
+        cooldowns.note_answer(name, SearchResponse(provider=name, query="q", results=[]))
+    assert cooldowns.remaining("slow") is None and cooldowns.remaining("throttled") is not None
+
+
+def test_a_timeout_cooldown_lets_the_last_backend_run_and_says_timeout() -> None:
+    cooldowns = Cooldowns(timeouts=True)
+    _times_out(cooldowns, "slow", TIMEOUT_COOLDOWN_AFTER)
+    refusal = cooldowns.refusal("slow")
+    assert refusal is not None and refusal.kind == ERROR_KIND_TIMEOUT
+    assert cooldowns.refusal("slow", last=True) is None
+
+
+def test_a_throttle_still_holds_the_last_backend() -> None:
+    cooldowns = Cooldowns()
+    cooldowns.note("slow", ProviderError("slow", "HTTP 429", kind=ERROR_KIND_RATE_LIMIT))
+    refusal = cooldowns.refusal("slow", last=True)
+    assert refusal is not None and refusal.kind == ERROR_KIND_RATE_LIMIT
 
 
 @pytest.mark.parametrize(
@@ -69,32 +130,3 @@ def test_a_pinned_mode_counts_towards_its_backend() -> None:
     _times_out(cooldowns, "exa:exa-deep", TIMEOUT_COOLDOWN_AFTER - 1)
     cooldowns.note("exa", _timeout())
     assert cooldowns.remaining("exa:exa-instant") is not None
-
-
-@pytest.mark.usefixtures(hop_members.__name__)
-def test_auto_passes_a_backend_over_after_it_hung_calls_in_a_row() -> None:
-    router = hop_router(hop_timeout=0.1)  # the cooldown is on by default
-    for _ in range(TIMEOUT_COOLDOWN_AFTER):
-        assert router.search("q", timeout=5).provider == "healthy"
-    assert _Hangs.calls == TIMEOUT_COOLDOWN_AFTER
-
-    response = router.search("q", timeout=5)
-    assert response.provider == "healthy" and _Hangs.calls == TIMEOUT_COOLDOWN_AFTER, "not called while cooling"
-    assert response.decision is not None
-    assert [hop.error for hop in response.decision.hops] == ["cooling_down"]
-
-
-@pytest.mark.usefixtures(hop_members.__name__)
-def test_timeout_cooldown_false_keeps_calling_a_backend_that_hangs() -> None:
-    router = hop_router(hop_timeout=0.1, timeout_cooldown=False)
-    for _ in range(TIMEOUT_COOLDOWN_AFTER + 1):
-        router.search("q", timeout=5)
-    assert _Hangs.calls == TIMEOUT_COOLDOWN_AFTER + 1
-
-
-@pytest.mark.usefixtures(hop_members.__name__)
-async def test_the_async_router_cools_a_hanging_backend_down_by_default() -> None:
-    router = hop_router(AsyncWebRouter, hop_timeout=0.1)
-    for _ in range(TIMEOUT_COOLDOWN_AFTER + 1):
-        assert (await router.search("q", timeout=5)).provider == "healthy"
-    assert _Hangs.calls == TIMEOUT_COOLDOWN_AFTER

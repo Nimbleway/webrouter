@@ -61,8 +61,9 @@ def test_hop_timeout_false_lets_the_hung_member_take_the_whole_deadline() -> Non
 
 
 def test_the_call_deadline_still_wins_when_it_comes_first() -> None:
-    with pytest.raises(DeadlineExceededError):
+    with pytest.raises(DeadlineExceededError) as caught:
         hop_router(hop_timeout=5).search("q", timeout=0.3)
+    assert "hop timeout" not in str(caught.value), "the call's deadline, not a hop cut off with time to move on"
 
 
 def test_a_hop_cut_off_is_a_timeout_failure_naming_the_cap() -> None:
