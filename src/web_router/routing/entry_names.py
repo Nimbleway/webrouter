@@ -2,7 +2,7 @@
 
 Experimental. A merged order names each candidate by its entry, which ``auto``
 runs as that backend in that mode; failures and hooks name an attempt the same
-way. :func:`~web_router.routing.contract.candidate_id` is the method and the entry.
+way. :func:`candidate_id` is the method and the entry.
 """
 
 from __future__ import annotations
@@ -23,3 +23,9 @@ def split_entry(entry: str, names: Collection[str]) -> tuple[str, str | None]:
         return entry, None
     name, _, mode = entry.partition(CANDIDATE_ID_SEPARATOR)
     return name, mode or None
+
+
+def candidate_id(tool: str, provider: str, mode: str | None = None) -> str:
+    """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``, or with its vendor
+    mode, ``tool:provider:mode``, as ``search:exa:exa-instant``."""
+    return f"{tool}{CANDIDATE_ID_SEPARATOR}{entry_name(provider, mode)}"

@@ -274,8 +274,11 @@ src/web_router/
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
 │   ├── route_tools.py  the tools that ask the router: the caller's route_tools, else
-│   │                   the router's own, else all five; read once; route_modes likewise
+│   │                   the router's own, else all five; read once; route_modes likewise;
+│   │                   prefer checked
 │   ├── router_owner.py a router built by name: kept to close with the routers, or closed if refused
+│   ├── router_setup.py RouterSetup: the attached router, the tools it is asked about, its
+│   │                   modes, the caller's prefer, and the RouteRequest a routed call shows it
 │   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
 │   │                   held to the shared budget in force, at the effort it maps
 │   ├── decide.py       decided(): candidates and a router's outcome merged into the

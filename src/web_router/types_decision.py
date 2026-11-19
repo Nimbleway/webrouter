@@ -49,6 +49,11 @@ class DecisionAttempt(BaseModel):
     seconds: float | None = Field(default=None, description="Wall-clock seconds the attempt took.")
 
 
+Prefer = Literal["cheap", "fast"]
+"""What a caller may prefer among the candidates its budget allows: ``cheap``, the lowest estimated cost first, or
+``fast``, the lowest p90 latency first. A preference orders and never caps: a :class:`~web_router.Budget` caps."""
+
+
 MemberOutcome = Literal["ok", "router_timeout", "router_error", "router_invalid", "router_empty"]
 """What a composite router's member came to: ``ok`` when it decided something, else why it was passed over."""
 
@@ -85,6 +90,9 @@ class DecisionRecord(BaseModel):
 
     decision_id: str | None = Field(default=None, description="A unique id for this decision.")
     router: str | None = Field(default=None, description="The router that ranked the candidates.")
+    prefer: Prefer | None = Field(
+        default=None, description="What the caller preferred, as the router was shown it: cheap or fast."
+    )
     offered: list[str] | None = Field(default=None, description="Every candidate the router saw, in that order.")
     ranked: list[str] | None = Field(default=None, description="The router's own ranking.")
     merged: list[str] | None = Field(default=None, description="The order tried, after the merge rule.")
