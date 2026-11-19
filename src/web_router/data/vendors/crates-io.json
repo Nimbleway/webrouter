@@ -1,0 +1,390 @@
+{
+  "vendor": "crates-io",
+  "name": "crates.io",
+  "category": "developer",
+  "summary": "The Rust package registry: crate search, metadata, versions, dependencies, reverse dependencies, owners and download counts.",
+  "docs_url": "https://crates.io/data-access",
+  "base_url": "https://crates.io",
+  "settings": {
+    "user_agent": {
+      "env": [
+        "CRATES_IO_USER_AGENT"
+      ],
+      "default": "web-router",
+      "description": "The User-Agent crates.io requires, identifying your application; it asks for a way to contact you, e.g. 'my-tool (https://github.com/me/my-tool)'."
+    }
+  },
+  "headers": {
+    "User-Agent": "{user_agent}"
+  },
+  "notes": [
+    "Keyless. The data-access policy allows at most 1 request per second and a User-Agent naming your application; for bulk work it points to the sparse index, the database dump or the RSS feeds instead.",
+    "The OpenAPI description is marked experimental and the API may change.",
+    "Paging uses page or seek (from meta.next_page), never both."
+  ],
+  "sites": [
+    "crates.io"
+  ],
+  "sources": [
+    "https://crates.io/data-access",
+    "https://crates.io/api/openapi.json"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "crates-io.crates.search",
+      "name": "Search crates",
+      "summary": "Crates matching a text query or filtered by category, keyword, letter or owner, with download counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/crates",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text.",
+          "example": "http client"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order; default relevance with q, else alphabetical.",
+          "enum": [
+            "alphabetical",
+            "relevance",
+            "downloads",
+            "recent-downloads",
+            "recent-updates",
+            "new"
+          ]
+        },
+        "category": {
+          "in": "query",
+          "type": "string",
+          "description": "Only this category slug or its subcategories.",
+          "example": "web-programming"
+        },
+        "keyword": {
+          "in": "query",
+          "type": "string",
+          "description": "Only crates with this keyword."
+        },
+        "all_keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Space-separated keywords that must all match (overrides keyword)."
+        },
+        "letter": {
+          "in": "query",
+          "type": "string",
+          "description": "Only names starting with this letter."
+        },
+        "user_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only crates owned by this crates.io user ID."
+        },
+        "team_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Only crates owned by this crates.io team ID."
+        },
+        "include_yanked": {
+          "in": "query",
+          "type": "string",
+          "description": "yes to include yanked crates.",
+          "enum": [
+            "yes"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1; not combinable with seek."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "seek": {
+          "in": "query",
+          "type": "string",
+          "description": "Seek key from meta.next_page; not combinable with page."
+        }
+      },
+      "notes": [
+        "Sorted by relevance, only the first 1,000 results are reachable even when meta.total is higher."
+      ],
+      "job": "packages.search",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.crates.get",
+      "name": "Get a crate",
+      "summary": "Crate metadata: description, links, downloads, max versions, keywords, categories and versions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/crates/{name}",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crate name.",
+          "example": "serde"
+        },
+        "include": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extras: versions, keywords, categories, badges, downloads, default_version, or full (the default)."
+        }
+      },
+      "job": "packages.get",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.crates.versions",
+      "name": "List a crate's versions",
+      "summary": "Every published version with dates, downloads, license, yank status and size.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/crates/{name}/versions",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crate name.",
+          "example": "serde"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "semver (default) or date.",
+          "enum": [
+            "semver",
+            "date"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1; not combinable with seek."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "seek": {
+          "in": "query",
+          "type": "string",
+          "description": "Seek key from meta.next_page; not combinable with page."
+        }
+      },
+      "job": "packages.versions",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.versions.get",
+      "name": "Get one version",
+      "summary": "Metadata of one crate version.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/crates/{name}/{version}",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crate name.",
+          "example": "serde"
+        },
+        "version": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Version number.",
+          "example": "1.0.200"
+        }
+      },
+      "job": "packages.versions",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.versions.dependencies",
+      "name": "List a version's dependencies",
+      "summary": "Dependencies of one crate version with their requirements and kinds.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/crates/{name}/{version}/dependencies",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crate name.",
+          "example": "serde"
+        },
+        "version": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Version number.",
+          "example": "1.0.200"
+        }
+      },
+      "job": "packages.dependencies",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.crates.reverse_dependencies",
+      "name": "List reverse dependencies",
+      "summary": "Crates that depend on this one.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/crates/{name}/reverse_dependencies",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crate name.",
+          "example": "serde"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1; not combinable with seek."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "seek": {
+          "in": "query",
+          "type": "string",
+          "description": "Seek key from meta.next_page; not combinable with page."
+        }
+      },
+      "job": "packages.dependents",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.crates.downloads",
+      "name": "Get download counts",
+      "summary": "Daily downloads for the last 90 days for the latest 5 versions, plus the rest summed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/crates/{name}/downloads",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crate name.",
+          "example": "serde"
+        }
+      },
+      "job": "packages.downloads",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.crates.owners",
+      "name": "List a crate's owners",
+      "summary": "The users and teams that own a crate.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/crates/{name}/owners",
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Crate name.",
+          "example": "serde"
+        }
+      },
+      "job": "packages.get",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.summary",
+      "name": "Get registry summary",
+      "summary": "Front-page data: totals, new, most downloaded, recently updated crates, popular keywords and categories.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/summary",
+      "job": "packages.stats",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    },
+    {
+      "id": "crates-io.categories.list",
+      "name": "List categories",
+      "summary": "Crate categories with crate counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/categories",
+      "params": {
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "alpha (default) or crates.",
+          "enum": [
+            "alpha",
+            "crates"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1; not combinable with seek."
+        },
+        "per_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page."
+        },
+        "seek": {
+          "in": "query",
+          "type": "string",
+          "description": "Seek key from meta.next_page; not combinable with page."
+        }
+      },
+      "job": "reference.codes",
+      "docs_url": "https://crates.io/api/openapi.json",
+      "verified": {
+        "docs": "https://crates.io/api/openapi.json"
+      }
+    }
+  ]
+}

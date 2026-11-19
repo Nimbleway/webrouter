@@ -1,0 +1,682 @@
+{
+  "vendor": "goldrush",
+  "name": "GoldRush (formerly Covalent)",
+  "category": "finance",
+  "summary": "Multichain wallet and token data from GoldRush, formerly Covalent: balances with prices, portfolio history, transactions, transfers, token holders, approvals, NFTs and historical token prices.",
+  "docs_url": "https://goldrush.dev/docs/",
+  "pricing_url": "https://goldrush.dev/pricing",
+  "base_url": "https://api.covalenthq.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GOLDRUSH_API_KEY"
+        ],
+        "description": "A GoldRush API key (goldrush.dev platform). Sent as an Authorization Bearer header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Calls cost API credits, per call or per item returned (listed per endpoint); an item costs only when it is returned, a call only on a 200.",
+    "Plans: 14-day free trial with 25,000 credits a month at 4 requests/second; paid plans raise both.",
+    "Responses wrap the payload: check error before reading data; data.items holds the rows.",
+    "Pages are counted from 0, up to 100 items each by default.",
+    "Balances are raw integer strings; divide by 10^contract_decimals."
+  ],
+  "sources": [
+    "https://goldrush.dev/docs/llms.txt",
+    "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-token-balances-for-address",
+    "https://goldrush.dev/docs/api-reference/foundational-api/cross-chain/get-allchains-balances",
+    "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-historical-portfolio-value-over-time",
+    "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-erc20-token-transfers-for-address",
+    "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-recent-transactions-for-address-v3",
+    "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-transaction-summary-for-address",
+    "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-a-transaction",
+    "https://goldrush.dev/docs/api-reference/foundational-api/nft/get-nfts-for-address",
+    "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-token-holders-as-of-any-block-height-v2",
+    "https://goldrush.dev/docs/api-reference/foundational-api/security/get-token-approvals-for-address",
+    "https://goldrush.dev/docs/api-reference/foundational-api/cross-chain/get-address-activity",
+    "https://goldrush.dev/docs/api-reference/foundational-api/utility/get-historical-token-prices",
+    "https://goldrush.dev/docs/api-reference/foundational-api/utility/get-all-chains"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "goldrush.balances.tokens",
+      "name": "Get a wallet's token balances",
+      "summary": "Native and ERC-20 balances of a wallet with spot prices and USD values.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/address/{walletAddress}/balances_v2/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; ENS, RNS, Lens handles and Unstoppable Domains resolve.",
+          "example": "demo.eth"
+        },
+        "quote_currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency for values: USD (default), EUR, GBP, CAD, JPY, CHF, AUD, INR and more.",
+          "example": "USD",
+          "wire_name": "quote-currency"
+        },
+        "no_spam": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop suspected spam tokens.",
+          "wire_name": "no-spam"
+        }
+      },
+      "notes": [
+        "1 credit per call.",
+        "balance is a raw integer string; divide by 10^contract_decimals."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-token-balances-for-address",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-token-balances-for-address"
+      }
+    },
+    {
+      "id": "goldrush.balances.all_chains",
+      "name": "Get a wallet's balances across chains",
+      "summary": "Native and token balances of one address on up to 10 EVM chains in one call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/allchains/address/{walletAddress}/balances/",
+      "params": {
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; domain names are not supported here.",
+          "example": "0xfc43f5f9dd45258b3aff31bdbe6561d97e8b71de"
+        },
+        "chains": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated chain names or IDs; default all foundational chains.",
+          "example": "eth-mainnet,base-mainnet"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Balances per page, at most 100."
+        },
+        "before": {
+          "in": "query",
+          "type": "string",
+          "description": "Pagination cursor from the previous response."
+        },
+        "cutoff_timestamp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Balances as of the nearest block before this Unix time.",
+          "wire_name": "cutoff-timestamp"
+        },
+        "quote_currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency for values: USD (default), EUR, GBP, CAD, JPY, CHF, AUD, INR and more.",
+          "example": "USD",
+          "wire_name": "quote-currency"
+        }
+      },
+      "notes": [
+        "2.5 credits per call."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/cross-chain/get-allchains-balances",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/cross-chain/get-allchains-balances"
+      }
+    },
+    {
+      "id": "goldrush.balances.portfolio",
+      "name": "Get a wallet's daily portfolio value",
+      "summary": "Daily holdings and value of a wallet, by token, over recent days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/address/{walletAddress}/portfolio_v2/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; ENS, RNS, Lens handles and Unstoppable Domains resolve.",
+          "example": "demo.eth"
+        },
+        "quote_currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency for values: USD (default), EUR, GBP, CAD, JPY, CHF, AUD, INR and more.",
+          "example": "USD",
+          "wire_name": "quote-currency"
+        },
+        "days": {
+          "in": "query",
+          "type": "integer",
+          "description": "Days of history; default 30.",
+          "example": 30
+        }
+      },
+      "notes": [
+        "2 credits per 30 days requested."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-historical-portfolio-value-over-time",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-historical-portfolio-value-over-time"
+      }
+    },
+    {
+      "id": "goldrush.transfers.erc20",
+      "name": "List a wallet's transfers of one token",
+      "summary": "Transfers in and out of a wallet for one ERC-20 token, with historical prices.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/address/{walletAddress}/transfers_v2/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; ENS, RNS, Lens handles and Unstoppable Domains resolve.",
+          "example": "demo.eth"
+        },
+        "contract_address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Token contract.",
+          "example": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "wire_name": "contract-address"
+        },
+        "quote_currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency for values: USD (default), EUR, GBP, CAD, JPY, CHF, AUD, INR and more.",
+          "example": "USD",
+          "wire_name": "quote-currency"
+        },
+        "starting_block": {
+          "in": "query",
+          "type": "integer",
+          "description": "First block; default 0.",
+          "wire_name": "starting-block"
+        },
+        "ending_block": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last block; default latest.",
+          "wire_name": "ending-block"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page; default 100.",
+          "wire_name": "page-size"
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, counted from 0.",
+          "wire_name": "page-number"
+        }
+      },
+      "notes": [
+        "0.05 credits per item returned."
+      ],
+      "job": "crypto.transfers",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-erc20-token-transfers-for-address",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-erc20-token-transfers-for-address"
+      }
+    },
+    {
+      "id": "goldrush.transactions.recent",
+      "name": "List a wallet's recent transactions",
+      "summary": "Most recent transactions of a wallet with decoded event logs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/address/{walletAddress}/transactions_v3/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; ENS, RNS, Lens handles and Unstoppable Domains resolve.",
+          "example": "demo.eth"
+        },
+        "quote_currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency for values: USD (default), EUR, GBP, CAD, JPY, CHF, AUD, INR and more.",
+          "example": "USD",
+          "wire_name": "quote-currency"
+        },
+        "no_logs": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out event logs.",
+          "wire_name": "no-logs"
+        },
+        "block_signed_at_asc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Oldest first; default newest first.",
+          "wire_name": "block-signed-at-asc"
+        },
+        "with_internal": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include internal transactions.",
+          "wire_name": "with-internal"
+        },
+        "with_classification": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add a readable classification (swap, transfer...); 0.05 extra credits per item.",
+          "wire_name": "with-classification"
+        }
+      },
+      "notes": [
+        "0.1 credits per item returned."
+      ],
+      "job": "crypto.transactions",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-recent-transactions-for-address-v3",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-recent-transactions-for-address-v3"
+      }
+    },
+    {
+      "id": "goldrush.transactions.summary",
+      "name": "Get a wallet's transaction summary",
+      "summary": "First and latest transaction, transaction count and optionally gas spent and token transfer count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/address/{walletAddress}/transactions_summary/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; ENS, RNS, Lens handles and Unstoppable Domains resolve.",
+          "example": "demo.eth"
+        },
+        "quote_currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency for values: USD (default), EUR, GBP, CAD, JPY, CHF, AUD, INR and more.",
+          "example": "USD",
+          "wire_name": "quote-currency"
+        },
+        "with_gas": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add gas spend totals (slower for busy wallets).",
+          "wire_name": "with-gas"
+        },
+        "with_transfer_count": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the ERC-20 transfer event count (slower for busy wallets).",
+          "wire_name": "with-transfer-count"
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "crypto.transactions",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-transaction-summary-for-address",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-transaction-summary-for-address"
+      }
+    },
+    {
+      "id": "goldrush.transactions.get",
+      "name": "Get one transaction",
+      "summary": "A transaction with decoded logs, and internal transfers where supported.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/transaction_v2/{txHash}/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "txHash": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Transaction hash."
+        },
+        "quote_currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency for values: USD (default), EUR, GBP, CAD, JPY, CHF, AUD, INR and more.",
+          "example": "USD",
+          "wire_name": "quote-currency"
+        },
+        "no_logs": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out event logs.",
+          "wire_name": "no-logs"
+        },
+        "with_internal": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include internal transactions.",
+          "wire_name": "with-internal"
+        },
+        "with_classification": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add a readable classification; 0.05 extra credits.",
+          "wire_name": "with-classification"
+        }
+      },
+      "notes": [
+        "0.1 credits per call."
+      ],
+      "job": "crypto.transactions",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-a-transaction",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/transactions/get-a-transaction"
+      }
+    },
+    {
+      "id": "goldrush.nft.balances",
+      "name": "List NFTs held by a wallet",
+      "summary": "ERC-721 and ERC-1155 tokens a wallet holds, with metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/address/{walletAddress}/balances_nft/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; ENS, RNS, Lens handles and Unstoppable Domains resolve.",
+          "example": "demo.eth"
+        },
+        "no_spam": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Drop suspected spam.",
+          "wire_name": "no-spam"
+        },
+        "no_nft_asset_metadata": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only collections and token IDs, no metadata: faster for large wallets.",
+          "wire_name": "no-nft-asset-metadata"
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "nft.holdings",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/nft/get-nfts-for-address",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/nft/get-nfts-for-address"
+      }
+    },
+    {
+      "id": "goldrush.tokens.holders",
+      "name": "List a token's holders",
+      "summary": "Current or historical holders of an ERC-20 or ERC-721 token, with balances.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/tokens/{tokenAddress}/token_holders_v2/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "tokenAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Token contract.",
+          "example": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        },
+        "block_height": {
+          "in": "query",
+          "type": "integer",
+          "description": "Holders as of this block; default latest.",
+          "wire_name": "block-height"
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Holders as of this day, YYYY-MM-DD."
+        },
+        "no_snapshot": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Skip the last snapshot and compute the latest list.",
+          "wire_name": "no-snapshot"
+        },
+        "page_size": {
+          "in": "query",
+          "type": "integer",
+          "description": "100 (default) or 1000.",
+          "enum": [
+            100,
+            1000
+          ],
+          "wire_name": "page-size"
+        },
+        "page_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, counted from 0.",
+          "wire_name": "page-number"
+        }
+      },
+      "notes": [
+        "0.02 credits per item returned."
+      ],
+      "job": "crypto.holders",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-token-holders-as-of-any-block-height-v2",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/balances/get-token-holders-as-of-any-block-height-v2"
+      }
+    },
+    {
+      "id": "goldrush.approvals",
+      "name": "List a wallet's token approvals",
+      "summary": "Token allowances a wallet has granted, grouped by spender, with value at risk.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/{chainName}/approvals/{walletAddress}/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; ENS, RNS, Lens handles and Unstoppable Domains resolve.",
+          "example": "demo.eth"
+        }
+      },
+      "notes": [
+        "2 credits per call."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/security/get-token-approvals-for-address",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/security/get-token-approvals-for-address"
+      }
+    },
+    {
+      "id": "goldrush.address.activity",
+      "name": "Find the chains an address is active on",
+      "summary": "Every chain where an address has activity, with first and last seen.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/address/{walletAddress}/activity/",
+      "params": {
+        "walletAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address; ENS, RNS, Lens handles and Unstoppable Domains resolve.",
+          "example": "demo.eth"
+        },
+        "testnets": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include testnets; default mainnets only."
+        }
+      },
+      "notes": [
+        "0.5 credits per call."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/cross-chain/get-address-activity",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/cross-chain/get-address-activity"
+      }
+    },
+    {
+      "id": "goldrush.pricing.historical",
+      "name": "Get historical token prices",
+      "summary": "Daily prices of one or more tokens between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/pricing/historical_by_addresses_v2/{chainName}/{quoteCurrency}/{contractAddress}/",
+      "params": {
+        "chainName": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Chain name, e.g. eth-mainnet, base-mainnet, matic-mainnet, bsc-mainnet (list with goldrush.chains.list).",
+          "example": "eth-mainnet"
+        },
+        "quoteCurrency": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Currency, e.g. USD.",
+          "example": "USD"
+        },
+        "contractAddress": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Token contract, or several separated by commas.",
+          "example": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "First day, YYYY-MM-DD.",
+          "example": "2024-01-01"
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "Last day, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        },
+        "prices_at_asc": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Oldest first; default newest first.",
+          "wire_name": "prices-at-asc"
+        }
+      },
+      "notes": [
+        "1 credit per call. Covers large-cap tokens and native tokens."
+      ],
+      "job": "market.history",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/utility/get-historical-token-prices",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/utility/get-historical-token-prices"
+      }
+    },
+    {
+      "id": "goldrush.chains.list",
+      "name": "List supported chains",
+      "summary": "Every chain GoldRush serves, with names and chain IDs.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/chains/",
+      "notes": [
+        "0.01 credits per call."
+      ],
+      "job": "reference.chains",
+      "docs_url": "https://goldrush.dev/docs/api-reference/foundational-api/utility/get-all-chains",
+      "verified": {
+        "docs": "https://goldrush.dev/docs/api-reference/foundational-api/utility/get-all-chains"
+      }
+    }
+  ]
+}

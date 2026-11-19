@@ -1,0 +1,443 @@
+{
+  "vendor": "etsy",
+  "name": "Etsy Open API v3",
+  "category": "commerce",
+  "summary": "Public reads of Etsy's marketplace: search active listings, read a listing with its images and reviews, and look up shops and their listings and reviews.",
+  "docs_url": "https://developer.etsy.com/documentation/",
+  "base_url": "https://api.etsy.com",
+  "auth": {
+    "credentials": {
+      "keystring": {
+        "env": [
+          "ETSY_API_KEY"
+        ],
+        "description": "Your Etsy app's keystring (etsy.com/developers/your-apps)."
+      },
+      "shared_secret": {
+        "env": [
+          "ETSY_SHARED_SECRET"
+        ],
+        "description": "Your Etsy app's shared secret, from the same page."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{keystring}:{shared_secret}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call sends x-api-key as keystring:shared_secret. These public reads need no OAuth token; an app's own shop data, orders and every write are left out.",
+    "Rate limits are per app, shown on the Your Apps page and in x-limit-per-second, x-remaining-this-second, x-limit-per-day and x-remaining-today headers; over the limit answers 429 with retry-after.",
+    "Prices come as {amount, divisor, currency_code}: the price is amount / divisor.",
+    "Paging is limit (max 100) and offset."
+  ],
+  "sites": [
+    "etsy.com"
+  ],
+  "sources": [
+    "https://developer.etsy.com/documentation/",
+    "https://developer.etsy.com/documentation/essentials/rate-limits",
+    "https://developer.etsy.com/documentation/reference",
+    "https://www.etsy.com/openapi/generated/oas/3.0.0.json",
+    "https://developers.etsy.com/documentation/essentials/urlsyntax/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "etsy.listings.search",
+      "name": "Search active listings",
+      "summary": "Active Etsy listings matching keywords, price range, category, shop location or ship-to country.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/listings/active",
+      "params": {
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Words that must all appear.",
+          "example": "ceramic mug"
+        },
+        "min_price": {
+          "in": "query",
+          "type": "number",
+          "description": "Minimum price."
+        },
+        "max_price": {
+          "in": "query",
+          "type": "number",
+          "description": "Maximum price."
+        },
+        "taxonomy_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Category id from taxonomy.seller."
+        },
+        "shop_location": {
+          "in": "query",
+          "type": "string",
+          "description": "Shop location text; an unparseable place is an error."
+        },
+        "buyer_country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-2 country; keep listings that ship there."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 4217 code to convert prices into."
+        },
+        "is_safe": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true filters out mature content."
+        },
+        "sort_on": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "created",
+            "price",
+            "updated",
+            "score"
+          ],
+          "description": "Sort key, default created; only applies together with a search option such as keywords."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Default desc; only applies together with a search option."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 25."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, default 0."
+        }
+      },
+      "notes": [
+        "Without a search option the list is every active listing, newest first."
+      ],
+      "job": "products.search",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/findAllListingsActive",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.listings.get",
+      "name": "Get a listing",
+      "summary": "One active listing: title, description, price, quantity, tags, materials and favourite count, with optional images and shop.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/listings/{listing_id}",
+      "params": {
+        "listing_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Numeric listing id (the number in an etsy.com/listing/ URL).",
+          "example": 1234567890
+        },
+        "includes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated associations to attach, any of Shop, Images, User, Translations, Videos, Personalization, BuyerPrice.",
+          "example": "Images,Shop"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF tag for a translation, e.g. de, fr."
+        }
+      },
+      "notes": [
+        "Inactive, draft and expired listings are visible only to their owner (an OAuth token), so they answer as not found here."
+      ],
+      "job": "products.get",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/getListing",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.listings.batch",
+      "name": "Get up to 100 listings at once",
+      "summary": "Several active listings by id in one call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/listings/batch",
+      "params": {
+        "listing_ids": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated numeric listing ids, at most 100.",
+          "example": "1234567890,1234567891"
+        },
+        "includes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated associations to attach, any of Shop, Images, User, Translations, Videos, Personalization, BuyerPrice.",
+          "example": "Images,Shop"
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 4217 code to convert prices into."
+        },
+        "buyer_country": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-2 country for buyer-facing prices (VAT, shipping); does not filter."
+        }
+      },
+      "job": "products.get",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/getListingsByListingIds",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.listings.images",
+      "name": "Get a listing's images",
+      "summary": "Image URLs in several sizes for one listing.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/listings/{listing_id}/images",
+      "params": {
+        "listing_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Numeric listing id (the number in an etsy.com/listing/ URL).",
+          "example": 1234567890
+        }
+      },
+      "job": "products.images",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/getListingImages",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.listings.reviews",
+      "name": "Get a listing's reviews",
+      "summary": "Buyer reviews of one listing: rating, text, date.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/listings/{listing_id}/reviews",
+      "params": {
+        "listing_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Numeric listing id (the number in an etsy.com/listing/ URL).",
+          "example": 1234567890
+        },
+        "min_created": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation time, Unix seconds."
+        },
+        "max_created": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation time, Unix seconds."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 25."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, default 0."
+        }
+      },
+      "job": "products.reviews",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/getReviewsByListing",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.shops.search",
+      "name": "Find shops by name",
+      "summary": "Shops whose name matches, with their shop ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/shops",
+      "params": {
+        "shop_name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Shop name.",
+          "example": "HandmadeCeramics"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 25."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, default 0."
+        }
+      },
+      "job": "shops.search",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/findShops",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.shops.get",
+      "name": "Get a shop",
+      "summary": "A shop's name, title, announcement, country, sales count, review count and average, and policies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/shops/{shop_id}",
+      "params": {
+        "shop_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Numeric shop id (find it with shops.search).",
+          "example": 12345678
+        }
+      },
+      "job": "shops.get",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/getShop",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.shops.listings",
+      "name": "List a shop's active listings",
+      "summary": "Active listings of one shop, optionally matching keywords.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/shops/{shop_id}/listings/active",
+      "params": {
+        "shop_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Numeric shop id (find it with shops.search).",
+          "example": 12345678
+        },
+        "keywords": {
+          "in": "query",
+          "type": "string",
+          "description": "Words that must all appear."
+        },
+        "sort_on": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "created",
+            "price",
+            "updated",
+            "score"
+          ],
+          "description": "Sort key, default created; only applies together with a search option such as keywords."
+        },
+        "sort_order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Default desc; only applies together with a search option."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 25."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, default 0."
+        }
+      },
+      "job": "products.search",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/findAllActiveListingsByShop",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.shops.reviews",
+      "name": "Get a shop's reviews",
+      "summary": "Buyer reviews across a shop's listings.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/shops/{shop_id}/reviews",
+      "params": {
+        "shop_id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Numeric shop id (find it with shops.search).",
+          "example": 12345678
+        },
+        "min_created": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest creation time, Unix seconds."
+        },
+        "max_created": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest creation time, Unix seconds."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 25."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records to skip, default 0."
+        }
+      },
+      "job": "products.reviews",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/getReviewsByShop",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    },
+    {
+      "id": "etsy.taxonomy.seller",
+      "name": "List the listing category tree",
+      "summary": "Etsy's seller taxonomy: category ids and names, nested, for taxonomy_id filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/application/seller-taxonomy/nodes",
+      "job": "products.categories",
+      "docs_url": "https://developer.etsy.com/documentation/reference#operation/getSellerTaxonomyNodes",
+      "verified": {
+        "docs": "https://www.etsy.com/openapi/generated/oas/3.0.0.json"
+      }
+    }
+  ]
+}

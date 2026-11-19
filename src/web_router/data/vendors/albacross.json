@@ -1,0 +1,88 @@
+{
+  "vendor": "albacross",
+  "name": "Albacross",
+  "category": "company-data",
+  "summary": "IP-to-company and domain enrichment: the company behind an IPv4 address, or firmographics (industry, employees, revenue, location) for a website domain.",
+  "docs_url": "https://docs.albacross.com/",
+  "base_url": "https://api.albacross.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ALBACROSS_API_KEY"
+        ],
+        "description": "An Albacross secret API key (dashboard > Settings > API Keys). Sent as Authorization: Api-Key <key>."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Api-Key {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "No match is a 204 with no body, not a 404; a malformed IP or domain is a 400.",
+    "Usage is rate-limited per key (429 when exceeded); limits are not published in the docs.",
+    "Use the secret key server-side; the public key is for the browser Reveal script with domain whitelisting."
+  ],
+  "sources": [
+    "https://docs.albacross.com/",
+    "https://docs.albacross.com/reveal",
+    "https://docs.albacross.com/enrich",
+    "https://docs.albacross.com/authentication",
+    "https://docs.albacross.com/guides/reveal-server",
+    "https://docs.albacross.com/guides/enrich-server"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "albacross.reveal.company",
+      "name": "Identify the company behind an IP",
+      "summary": "Firmographics of the company an IPv4 address belongs to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/reveal/company/{ip_address}",
+      "params": {
+        "ip_address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Decimal IPv4 address; IPv6 is not supported.",
+          "example": "62.63.238.18"
+        }
+      },
+      "notes": [
+        "Residential, VPN and internal IPs usually return 204 (no match)."
+      ],
+      "job": "ip.company",
+      "docs_url": "https://docs.albacross.com/reveal",
+      "verified": {
+        "docs": "https://docs.albacross.com/reveal"
+      }
+    },
+    {
+      "id": "albacross.enrich.company",
+      "name": "Enrich a company by domain",
+      "summary": "Firmographics for a website domain: name, industry, employee count, revenue, country and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/enrich/companies/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Company website domain, without scheme.",
+          "example": "example.com"
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://docs.albacross.com/enrich",
+      "verified": {
+        "docs": "https://docs.albacross.com/enrich"
+      }
+    }
+  ]
+}

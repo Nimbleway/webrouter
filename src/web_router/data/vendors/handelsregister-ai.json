@@ -1,0 +1,361 @@
+{
+  "vendor": "handelsregister-ai",
+  "name": "handelsregister.ai",
+  "category": "company-data",
+  "summary": "German company data from the Handelsregister, Bundesanzeiger and insolvency notices as JSON: company search, full profiles with directors, shareholders, UBOs and financials, person profiles, and a feed of register changes.",
+  "docs_url": "https://handelsregister.ai/en/documentation",
+  "base_url": "https://handelsregister.ai/api/v1",
+  "headers": {
+    "Accept": "application/json"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HANDELSREGISTER_AI_API_KEY"
+        ],
+        "description": "A handelsregister.ai API key (dashboard after sign-up). Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billed in credits (1 credit = EUR 0.01 list price). Failed calls cost nothing, except the +20 AI surcharge once an AI lookup ran; meta.request_credit_cost in each answer gives the real charge and meta.credits_remaining the balance. 402 means the balance is below the call's maximum cost.",
+    "Rate limits per account per minute, all keys together, rejected calls included: fetch-organization 60, fetch-person 60, search and Signals share 60. 429 carries Retry-After.",
+    "Profile and person calls can take up to 120 seconds (then a free 408), longer than call_vendor's fixed 60-second timeout; retry a timed-out call.",
+    "Until the account's email is verified, every call answers 403. Monitoring, webhooks, token and key management are writes and are not in this entry."
+  ],
+  "sources": [
+    "https://handelsregister.ai/en/documentation",
+    "https://handelsregister.ai/llms.txt"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "handelsregister-ai.organizations.search",
+      "name": "Search German companies",
+      "summary": "Companies by name and/or filters (location, legal form, WZ industry code, status, register, size, financial ranges), with entity_id, register, address and status.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search-organizations",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name words, 2-500 characters; omit rather than send empty.",
+          "example": "Hetzner Online"
+        },
+        "filters": {
+          "in": "query",
+          "type": "object",
+          "description": "A JSON object of filters, e.g. {\"city\": \"Ansbach\", \"legal_form_code\": \"GmbH\", \"active\": true} or {\"financial_filters\": {\"pl_revenue\": {\"gte\": 1000000}}}; field names and values are case-sensitive (schema OrganizationSearchFilters).",
+          "style": "json"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 1-30, default 10."
+        },
+        "skip": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip, 0-9999."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "relevance, distance (needs the geo filters), registration_date, revenue, profit, employees, total_assets, equity, liabilities, cash, equity_ratio, financial_year, share_capital, last_activity, largest_share_ratio, management_size, md_oldest_birth_date or md_youngest_birth_date."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort direction.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "match_context": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 to explain per hit why it matched.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "Idempotency_Key": {
+          "in": "header",
+          "type": "string",
+          "wire_name": "Idempotency-Key",
+          "description": "Optional key (1-128 chars of A-Za-z0-9._:-, starting alphanumeric): a repeat with the same key and parameters within 24 h is returned again for 0 credits."
+        }
+      },
+      "notes": [
+        "1 credit per page, an empty page included. Give q or filters; neither is a 400 (free).",
+        "Only the first 10,000 hits are reachable and there is no cursor: split large queries by state, postal code or date. total is an estimate; read it with total_relation.",
+        "The owner, ownership, executive and lifecycle filter groups need the Pro or Max plan (403 otherwise, free). An unknown filter key is a 422 (free); an unknown value returns no hits and is charged."
+      ],
+      "job": "company.search",
+      "docs_url": "https://handelsregister.ai/llms.txt",
+      "verified": {
+        "docs": "https://handelsregister.ai/llms.txt"
+      }
+    },
+    {
+      "id": "handelsregister-ai.organizations.get",
+      "name": "Get a company profile",
+      "summary": "One company's profile (register, address, purpose, capital, status), plus the paid features asked for: directors, shareholders, UBOs, holdings, financial KPIs and statements, publications, insolvencies, news, M&A.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fetch-organization",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "The entity_id from search (most reliable), court plus register type and number (Ansbach HRB 6089), or a name with legal form and city.",
+          "required": true,
+          "example": "Ansbach HRB 6089"
+        },
+        "features": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated paid features, each charged only when it returns data: financial_kpi (1 credit), publications (1), related_persons (2), balance_sheet_accounts (3), profit_and_loss_account (3), insolvency_publications (5), annual_financial_statements (5, Markdown), annual_financial_statements__html (5), shareholders (5), shareholdings (5), news (10), ubos (10), mergers_and_acquisitions (20), network (25, Pro and Max), shareholders_deep (80, Max).",
+          "example": "financial_kpi,related_persons"
+        },
+        "financial_statement_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Which statements the financial features use: auto (each picks), annual (single entity) or consolidated (group); a forced type never falls back.",
+          "enum": [
+            "auto",
+            "annual",
+            "consolidated"
+          ]
+        },
+        "financial_years": {
+          "in": "query",
+          "type": "integer",
+          "description": "The N newest fiscal years for the financial features, 1-30."
+        },
+        "realtime_mode": {
+          "in": "query",
+          "type": "string",
+          "description": "Re-fetch live register data: +10 credits, charged only on success; much slower.",
+          "enum": [
+            "handelsregister-default"
+          ]
+        },
+        "ai_search": {
+          "in": "query",
+          "type": "string",
+          "description": "AI enrichment and fuzzy name resolution: +20 credits, charged once the lookup runs; purpose becomes an AI summary and a web-only profile may come back (entity_id AI_TMP_...).",
+          "enum": [
+            "on-default"
+          ]
+        },
+        "Idempotency_Key": {
+          "in": "header",
+          "type": "string",
+          "wire_name": "Idempotency-Key",
+          "description": "Optional key (1-128 chars of A-Za-z0-9._:-, starting alphanumeric): a repeat with the same key and parameters within 24 h is returned again for 0 credits."
+        }
+      },
+      "notes": [
+        "5 credits base on success, plus each feature that returns data. A bare name can resolve to any of several matching companies; prefer the entity_id.",
+        "Financial expenses carry the sign printed in the filing; compare years only within one _provenance.statement_type."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://handelsregister.ai/llms.txt",
+      "verified": {
+        "docs": "https://handelsregister.ai/llms.txt"
+      }
+    },
+    {
+      "id": "handelsregister-ai.persons.get",
+      "name": "Get a person profile",
+      "summary": "A person's register roles and shareholdings across companies, merged with AI web evidence, found from one company they are linked to.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/fetch-person",
+      "params": {
+        "person_q": {
+          "in": "query",
+          "type": "string",
+          "description": "The person's name, at least 2 characters.",
+          "required": true
+        },
+        "organization_q": {
+          "in": "query",
+          "type": "string",
+          "description": "A company where the person holds or held a register role, at least 2 characters.",
+          "required": true
+        },
+        "features": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: shareholdings (+5 credits when returned), network.",
+          "example": "shareholdings"
+        },
+        "Idempotency_Key": {
+          "in": "header",
+          "type": "string",
+          "wire_name": "Idempotency-Key",
+          "description": "Optional key (1-128 chars of A-Za-z0-9._:-, starting alphanumeric): a repeat with the same key and parameters within 24 h is returned again for 0 credits."
+        }
+      },
+      "notes": [
+        "15 credits on success; needs an active Plus, Pro or Max subscription (403 otherwise). 404, free, when no person links confidently to that company. Often takes 10-30 seconds."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://handelsregister.ai/llms.txt",
+      "verified": {
+        "docs": "https://handelsregister.ai/llms.txt"
+      }
+    },
+    {
+      "id": "handelsregister-ai.signals.list",
+      "name": "List register change signals",
+      "summary": "Normalized commercial-register changes across companies, newest announcement first: new registrations, master data changes, closures, management changes, capital changes, insolvencies, transformations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/signals",
+      "params": {
+        "topics": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated topic codes: NEW_REGISTRATIONS, MASTER_DATA_CHANGES, CLOSURES, ROLE_HOLDER_CHANGES, CAPITAL_CHANGES (any plan), INSOLVENCIES (Pro, Max), TRANSFORMATIONS (Max). Omitted, only the topics your plan allows.",
+          "example": "CAPITAL_CHANGES"
+        },
+        "organization_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to 5 company entity_ids, comma-separated."
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest announcement date, YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS without a time zone."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest announcement date, same format; a bare date covers the whole day."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "next_cursor from the previous page, sent back with exactly the same filters."
+        }
+      },
+      "notes": [
+        "20 credits per page, empty pages included. Up to 20 per page; short or empty pages with has_more true are normal, so page until next_cursor is absent.",
+        "Any other parameter is a 422. Delivery is at least once: de-duplicate by event.id. Changing a filter mid-pagination can silently return a wrong page."
+      ],
+      "job": "company.history",
+      "docs_url": "https://handelsregister.ai/llms.txt",
+      "verified": {
+        "docs": "https://handelsregister.ai/llms.txt"
+      }
+    },
+    {
+      "id": "handelsregister-ai.signals.get",
+      "name": "Get one signal",
+      "summary": "One register change event by its id, with the organization, parties and source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/signals/{signalId}",
+      "params": {
+        "signalId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Signal id from signals.list."
+        }
+      },
+      "notes": [
+        "20 credits on success; takes no query parameters."
+      ],
+      "job": "company.history",
+      "docs_url": "https://handelsregister.ai/llms.txt",
+      "verified": {
+        "docs": "https://handelsregister.ai/llms.txt"
+      }
+    },
+    {
+      "id": "handelsregister-ai.signals.catalog",
+      "name": "List signal topics",
+      "summary": "The Signals topics with the plan tier each needs, and the paging options.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/signals/catalog",
+      "notes": [
+        "Free. Any query parameter is a 422."
+      ],
+      "job": "reference.categories",
+      "docs_url": "https://handelsregister.ai/llms.txt",
+      "verified": {
+        "docs": "https://handelsregister.ai/llms.txt"
+      }
+    },
+    {
+      "id": "handelsregister-ai.account.credits",
+      "name": "Get credit balance",
+      "summary": "Credit balance split into subscription and purchased credits, with the next expiring grant.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/credits",
+      "notes": [
+        "Free; 30 calls a minute."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://handelsregister.ai/llms.txt",
+      "verified": {
+        "docs": "https://handelsregister.ai/llms.txt"
+      }
+    },
+    {
+      "id": "handelsregister-ai.account.usage",
+      "name": "Get usage",
+      "summary": "Credits used over a date range, by endpoint and by day or month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account/usage",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Start date; default the start of the current month."
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "End date; at most 366 days after from."
+        },
+        "group_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Time series bucket.",
+          "enum": [
+            "day",
+            "month"
+          ]
+        }
+      },
+      "notes": [
+        "Free; 30 calls a minute."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://handelsregister.ai/llms.txt",
+      "verified": {
+        "docs": "https://handelsregister.ai/llms.txt"
+      }
+    }
+  ]
+}

@@ -1,0 +1,671 @@
+{
+  "vendor": "mixpanel",
+  "name": "Mixpanel",
+  "category": "analytics",
+  "summary": "Product analytics from a Mixpanel project: saved Insights reports, retention, event and property counts, user profiles and cohorts, and raw event export.",
+  "docs_url": "https://docs.mixpanel.com/reference/query-api",
+  "pricing_url": "https://mixpanel.com/pricing/",
+  "base_url": "https://{region}.com/api/query",
+  "hosts": {
+    "export": "https://{export_server}.mixpanel.com/api/2.0"
+  },
+  "settings": {
+    "region": {
+      "env": [
+        "MIXPANEL_REGION"
+      ],
+      "default": "mixpanel",
+      "choices": [
+        "mixpanel",
+        "eu.mixpanel",
+        "in.mixpanel"
+      ],
+      "description": "Query API server for the project's data residency: mixpanel (US), eu.mixpanel (EU) or in.mixpanel (India)."
+    },
+    "export_server": {
+      "env": [
+        "MIXPANEL_EXPORT_SERVER"
+      ],
+      "default": "data",
+      "choices": [
+        "data",
+        "data-eu",
+        "data-in"
+      ],
+      "description": "Raw export server for the same residency: data (US), data-eu (EU) or data-in (India)."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "username": {
+        "env": [
+          "MIXPANEL_SERVICE_ACCOUNT_USERNAME"
+        ],
+        "description": "a Mixpanel service account's username (Organization settings > Service Accounts), granted the project to read"
+      },
+      "secret": {
+        "env": [
+          "MIXPANEL_SERVICE_ACCOUNT_SECRET"
+        ],
+        "description": "that service account's secret, the Basic auth password"
+      }
+    },
+    "basic": {
+      "username": "{username}",
+      "password": "{secret}"
+    }
+  },
+  "notes": [
+    "Every call needs project_id (the number in the project's settings and URL); a project with data views also needs the global view's workspace_id.",
+    "Rate limits are tight: the Query API allows 60 queries per hour and 5 concurrent per project; raw export allows 60 per hour, 3 per second and 100 concurrent. 429 when exceeded.",
+    "Dates are yyyy-mm-dd and inclusive at both ends. Query results use the project's timezone; raw export reads dates as UTC for projects created from 2023.",
+    "Several inputs are JSON encoded into one string: event lists ('[\"signup\",\"purchase\"]'), distinct_ids, values and filter_by_cohort. Filters (where, born_where, on) use Mixpanel's segmentation expression syntax, e.g. properties[\"$os\"]==\"Linux\".",
+    "The region and export_server settings must name the same residency as the project; a project only answers on its own servers."
+  ],
+  "sources": [
+    "https://docs.mixpanel.com/reference/overview",
+    "https://docs.mixpanel.com/reference/query-api",
+    "https://docs.mixpanel.com/reference/query-api-authentication",
+    "https://docs.mixpanel.com/reference/service-accounts",
+    "https://docs.mixpanel.com/reference/rate-limits",
+    "https://docs.mixpanel.com/reference/insights-query",
+    "https://docs.mixpanel.com/reference/retention-query",
+    "https://docs.mixpanel.com/reference/list-recent-events",
+    "https://docs.mixpanel.com/reference/query-top-events",
+    "https://docs.mixpanel.com/reference/query-event-properties",
+    "https://docs.mixpanel.com/reference/engage-query",
+    "https://docs.mixpanel.com/reference/cohorts-list",
+    "https://docs.mixpanel.com/reference/activity-stream-query",
+    "https://docs.mixpanel.com/reference/raw-event-export"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "mixpanel.insights.saved",
+      "name": "Get a saved Insights report",
+      "summary": "The computed series of a saved Insights report, as the web app shows it.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/insights",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "workspace_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "The data view's workspace id, for projects with data views."
+        },
+        "bookmark_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The report's id: the number after 'report-' in the report's URL."
+        }
+      },
+      "notes": [
+        "series maps each metric to {date: value}; headers says what the nested keys mean."
+      ],
+      "job": "analytics.report",
+      "docs_url": "https://docs.mixpanel.com/reference/insights-query",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/insights-query"
+      }
+    },
+    {
+      "id": "mixpanel.retention.query",
+      "name": "Query retention",
+      "summary": "First-time (birth) or recurring (compounded) retention cohorts over a date range, by day, week or month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/retention",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "workspace_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "The data view's workspace id, for projects with data views."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "yyyy-mm-dd, inclusive.",
+          "example": "2026-10-01"
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "yyyy-mm-dd, inclusive.",
+          "example": "2026-10-31"
+        },
+        "retention_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "birth",
+            "compounded"
+          ],
+          "description": "birth (first-time, the default) or compounded (recurring)."
+        },
+        "born_event": {
+          "in": "query",
+          "type": "string",
+          "description": "The event that puts a user in a cohort. Required for birth retention.",
+          "example": "Signed up"
+        },
+        "event": {
+          "in": "query",
+          "type": "string",
+          "description": "The returning event; any event when omitted."
+        },
+        "born_where": {
+          "in": "query",
+          "type": "string",
+          "description": "Segmentation expression filtering the born events."
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Segmentation expression filtering the events."
+        },
+        "interval": {
+          "in": "query",
+          "type": "integer",
+          "description": "Units per bucket (default 1; at most 90 when unit is day)."
+        },
+        "interval_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of buckets returned (default 1), plus a 0th bucket."
+        },
+        "unit": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "description": "Bucket unit; day when omitted."
+        },
+        "unbounded_retention": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true counts a user retained on day N if they returned on day N or any later day."
+        },
+        "on": {
+          "in": "query",
+          "type": "string",
+          "description": "Property expression to segment the returning event by."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Top segment values to return; only with on."
+        }
+      },
+      "job": "analytics.retention",
+      "docs_url": "https://docs.mixpanel.com/reference/retention-query",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/retention-query"
+      }
+    },
+    {
+      "id": "mixpanel.events.counts",
+      "name": "Count events over time",
+      "summary": "Total, unique or average counts of one or more events per minute, hour, day, week or month.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "workspace_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "The data view's workspace id, for projects with data views."
+        },
+        "event": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A JSON array of event names, as one string.",
+          "example": "[\"Signed up\", \"Purchased\"]"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "general",
+            "unique",
+            "average"
+          ],
+          "description": "general (totals), unique (unique users) or average."
+        },
+        "unit": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "minute",
+            "hour",
+            "day",
+            "week",
+            "month"
+          ],
+          "description": "Granularity. Hourly uniques are not available."
+        },
+        "interval": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of units back from now (1 is the current unit). Give interval or from_date and to_date."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyy-mm-dd, inclusive. The reference marks it required; interval can stand in for the date pair."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyy-mm-dd, inclusive."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "description": "json (default) or csv."
+        }
+      },
+      "job": "analytics.events",
+      "docs_url": "https://docs.mixpanel.com/reference/list-recent-events",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/list-recent-events"
+      }
+    },
+    {
+      "id": "mixpanel.events.top",
+      "name": "List today's top events",
+      "summary": "Today's most frequent events with counts and the change from yesterday.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events/top",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "workspace_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "The data view's workspace id, for projects with data views."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "general",
+            "unique",
+            "average"
+          ],
+          "description": "general (totals), unique (unique users) or average."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most events to return; 100 when omitted."
+        }
+      },
+      "job": "analytics.events",
+      "docs_url": "https://docs.mixpanel.com/reference/query-top-events",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/query-top-events"
+      }
+    },
+    {
+      "id": "mixpanel.events.property_values",
+      "name": "Break an event down by a property",
+      "summary": "Counts of one event per value of one property, over time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/events/properties",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "workspace_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "The data view's workspace id, for projects with data views."
+        },
+        "event": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "One event name (not an array).",
+          "example": "Purchased"
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The property to break down by.",
+          "example": "plan"
+        },
+        "values": {
+          "in": "query",
+          "type": "string",
+          "description": "A JSON array of the property values wanted, as one string; all values when omitted."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "general",
+            "unique",
+            "average"
+          ],
+          "description": "general (totals), unique (unique users) or average."
+        },
+        "unit": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "minute",
+            "hour",
+            "day",
+            "week",
+            "month"
+          ],
+          "description": "Granularity."
+        },
+        "interval": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of units back from now. Give interval or from_date and to_date."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyy-mm-dd, inclusive."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "yyyy-mm-dd, inclusive."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "description": "json (default) or csv."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most property values to return; 255 when omitted."
+        }
+      },
+      "job": "analytics.events",
+      "docs_url": "https://docs.mixpanel.com/reference/query-event-properties",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/query-event-properties"
+      }
+    },
+    {
+      "id": "mixpanel.profiles.query",
+      "name": "Query user or group profiles",
+      "summary": "Profiles matching a filter, a cohort or a list of distinct ids, with chosen properties.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/engage",
+      "body_type": "form",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "workspace_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "The data view's workspace id, for projects with data views."
+        },
+        "distinct_id": {
+          "in": "body",
+          "type": "string",
+          "description": "One profile's distinct id."
+        },
+        "distinct_ids": {
+          "in": "body",
+          "type": "string",
+          "description": "A JSON array of distinct ids, as one string."
+        },
+        "data_group_id": {
+          "in": "body",
+          "type": "string",
+          "description": "A group key's id, to read group profiles instead of users."
+        },
+        "where": {
+          "in": "body",
+          "type": "string",
+          "description": "Segmentation expression filtering profiles."
+        },
+        "output_properties": {
+          "in": "body",
+          "type": "string",
+          "description": "A JSON array of the property names to return, as one string. Much faster than returning every property.",
+          "example": "[\"$email\", \"$last_seen\"]"
+        },
+        "filter_by_cohort": {
+          "in": "body",
+          "type": "string",
+          "description": "A JSON object {\"id\": <cohort id>}, as one string. Not with behaviors.",
+          "example": "{\"id\": 12345}"
+        },
+        "include_all_users": {
+          "in": "body",
+          "type": "boolean",
+          "description": "With filter_by_cohort: true (default) includes ids without a profile, false only those with one."
+        },
+        "behaviors": {
+          "in": "body",
+          "type": "integer",
+          "description": "Event selector for exporting profiles by behaviour; not with filter_by_cohort."
+        },
+        "as_of_timestamp": {
+          "in": "body",
+          "type": "integer",
+          "description": "Unix time pinning a behaviors query; needed to page past 1,000 profiles with behaviors."
+        },
+        "session_id": {
+          "in": "body",
+          "type": "string",
+          "description": "The session_id from the previous page's answer; required for any page above 0."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number, from 0."
+        }
+      },
+      "notes": [
+        "A POST that only reads profiles; the body is form encoded.",
+        "Pages hold up to page_size (1,000) profiles: send the first answer's session_id with page 1, 2, ... until a page comes back short."
+      ],
+      "job": "analytics.users",
+      "docs_url": "https://docs.mixpanel.com/reference/engage-query",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/engage-query"
+      }
+    },
+    {
+      "id": "mixpanel.cohorts.list",
+      "name": "List saved cohorts",
+      "summary": "Every cohort in the project with its id, name, size, description and creation date.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/cohorts/list",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "workspace_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "The data view's workspace id, for projects with data views."
+        }
+      },
+      "notes": [
+        "A POST that only lists cohorts. To get a cohort's members, query profiles with filter_by_cohort."
+      ],
+      "job": "analytics.cohorts.list",
+      "docs_url": "https://docs.mixpanel.com/reference/cohorts-list",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/cohorts-list"
+      }
+    },
+    {
+      "id": "mixpanel.profiles.activity",
+      "name": "Get users' event activity",
+      "summary": "The event stream of one or more users over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stream/query",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "workspace_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "The data view's workspace id, for projects with data views."
+        },
+        "distinct_ids": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A JSON array of distinct ids, as one string."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "yyyy-mm-dd, inclusive."
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "yyyy-mm-dd, inclusive."
+        }
+      },
+      "notes": [
+        "Mixpanel has put this endpoint in maintenance mode."
+      ],
+      "job": "analytics.users.activity",
+      "docs_url": "https://docs.mixpanel.com/reference/activity-stream-query",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/activity-stream-query"
+      }
+    },
+    {
+      "id": "mixpanel.events.export",
+      "name": "Export raw events",
+      "summary": "Raw events with every property and timestamp over a date range, optionally filtered by event name or expression.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/export",
+      "host": "export",
+      "params": {
+        "project_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "The project id."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "yyyy-mm-dd, inclusive (UTC for projects created from 2023, else the project timezone).",
+          "example": "2026-11-01"
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "yyyy-mm-dd, inclusive.",
+          "example": "2026-11-01"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Most events to return, up to 100,000.",
+          "required": true
+        },
+        "event": {
+          "in": "query",
+          "type": "string",
+          "description": "A JSON array of event names, as one string.",
+          "example": "[\"Signed up\"]"
+        },
+        "where": {
+          "in": "query",
+          "type": "string",
+          "description": "Segmentation expression filtering events."
+        },
+        "time_in_ms": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for millisecond timestamps; seconds by default."
+        }
+      },
+      "notes": [
+        "The answer is newline-delimited JSON, one event per line, not a JSON array. Keep the date range and limit small: a busy project's day can be gigabytes.",
+        "Goes to the export server (export_server setting), not the Query API host."
+      ],
+      "job": "analytics.events.export",
+      "docs_url": "https://docs.mixpanel.com/reference/raw-event-export",
+      "verified": {
+        "docs": "https://docs.mixpanel.com/reference/raw-event-export"
+      }
+    }
+  ]
+}

@@ -1,0 +1,1085 @@
+{
+  "vendor": "etherscan",
+  "name": "Etherscan",
+  "category": "finance",
+  "summary": "EVM blockchain explorer data across 50+ chains with one key: balances, transactions, token and NFT transfers, token holders, contract source and ABI, event logs and gas prices.",
+  "docs_url": "https://docs.etherscan.io/",
+  "pricing_url": "https://etherscan.io/apis",
+  "base_url": "https://api.etherscan.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ETHERSCAN_API_KEY"
+        ],
+        "description": "An Etherscan API key (etherscan.io > API Keys). Sent as the apikey query parameter; one key covers every supported chain."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is GET /v2/api with chainid, module and action; each endpoint here fixes module and action, and chainid picks the chain.",
+    "Free plan: 3 calls/second and 100,000 calls/day on the free-tier chains only (Base, BNB Chain, OP, Avalanche and others need a paid plan). Calls past the daily cap are blocked until it resets.",
+    "Endpoints marked PRO need the Standard plan or above.",
+    "status '0' means an error or simply no records; read message and result.",
+    "Amounts are integer strings in the smallest unit: wei for native balances, 10^decimals for tokens."
+  ],
+  "sources": [
+    "https://docs.etherscan.io/endpoint-overview.md",
+    "https://docs.etherscan.io/rate-limits.md",
+    "https://docs.etherscan.io/supported-chains.md",
+    "https://docs.etherscan.io/api-reference/endpoint/balance.md",
+    "https://docs.etherscan.io/api-reference/endpoint/balancemulti.md",
+    "https://docs.etherscan.io/api-reference/endpoint/txlist.md",
+    "https://docs.etherscan.io/api-reference/endpoint/txlistinternal.md",
+    "https://docs.etherscan.io/api-reference/endpoint/tokentx.md",
+    "https://docs.etherscan.io/api-reference/endpoint/tokennfttx.md",
+    "https://docs.etherscan.io/api-reference/endpoint/addresstokenbalance.md",
+    "https://docs.etherscan.io/api-reference/endpoint/tokeninfo.md",
+    "https://docs.etherscan.io/api-reference/endpoint/tokenholderlist.md",
+    "https://docs.etherscan.io/api-reference/endpoint/tokensupply.md",
+    "https://docs.etherscan.io/api-reference/endpoint/getsourcecode.md",
+    "https://docs.etherscan.io/api-reference/endpoint/getabi.md",
+    "https://docs.etherscan.io/api-reference/endpoint/getlogs.md",
+    "https://docs.etherscan.io/api-reference/endpoint/getblocknobytime.md",
+    "https://docs.etherscan.io/api-reference/endpoint/gasoracle.md",
+    "https://docs.etherscan.io/api-reference/endpoint/ethprice.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "etherscan.account.balance",
+      "name": "Get an address's native balance",
+      "summary": "Native token (ETH, POL...) balance of one address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always account.",
+          "example": "account",
+          "enum": [
+            "account"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always balance.",
+          "example": "balance",
+          "enum": [
+            "balance"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Address.",
+          "example": "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae"
+        },
+        "tag": {
+          "in": "query",
+          "type": "string",
+          "description": "latest, or a hex block number within the last 128 blocks.",
+          "example": "latest"
+        }
+      },
+      "notes": [
+        "Result is a string in wei; divide by 10^18."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/balance.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/balance.md"
+      }
+    },
+    {
+      "id": "etherscan.account.balancemulti",
+      "name": "Get native balances of several addresses",
+      "summary": "Native token balances of up to 20 addresses in one call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always account.",
+          "example": "account",
+          "enum": [
+            "account"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always balancemulti.",
+          "example": "balancemulti",
+          "enum": [
+            "balancemulti"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated addresses, at most 20.",
+          "example": "0xddbd2b932c763ba5b1b7ae3b362eac3e8d40121a,0x63a9975ba31b0b9626b34300f7f627147df1f526"
+        },
+        "tag": {
+          "in": "query",
+          "type": "string",
+          "description": "latest, or a hex block number within the last 128 blocks.",
+          "example": "latest"
+        }
+      },
+      "notes": [
+        "Balances are strings in wei."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/balancemulti.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/balancemulti.md"
+      }
+    },
+    {
+      "id": "etherscan.account.txlist",
+      "name": "List an address's transactions",
+      "summary": "Normal (external) transactions sent from or to an address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always account.",
+          "example": "account",
+          "enum": [
+            "account"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always txlist.",
+          "example": "txlist",
+          "enum": [
+            "txlist"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Address.",
+          "example": "0xc5102fE9359FD9a28f877a67E36B0F050d81a3CC"
+        },
+        "startblock": {
+          "in": "query",
+          "type": "integer",
+          "description": "First block to search from.",
+          "example": 0
+        },
+        "endblock": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last block to search to.",
+          "example": 99999999
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "example": 1
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page.",
+          "example": 100
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (oldest first) or desc (latest first).",
+          "example": "desc",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "notes": [
+        "value and gasPrice are wei strings; timeStamp is Unix seconds.",
+        "Page with page and offset; narrow with startblock/endblock for long histories."
+      ],
+      "job": "crypto.transactions",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/txlist.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/txlist.md"
+      }
+    },
+    {
+      "id": "etherscan.account.txlistinternal",
+      "name": "List an address's internal transactions",
+      "summary": "Internal (contract-initiated) transfers involving an address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always account.",
+          "example": "account",
+          "enum": [
+            "account"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always txlistinternal.",
+          "example": "txlistinternal",
+          "enum": [
+            "txlistinternal"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Address.",
+          "example": "0x2c1ba59d6f58433fb1eaee7d20b26ed83bda51a3"
+        },
+        "startblock": {
+          "in": "query",
+          "type": "integer",
+          "description": "First block to search from.",
+          "example": 0
+        },
+        "endblock": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last block to search to.",
+          "example": 99999999
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "example": 1
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page.",
+          "example": 100
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (oldest first) or desc (latest first).",
+          "example": "desc",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "notes": [
+        "value is a wei string."
+      ],
+      "job": "crypto.transactions",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/txlistinternal.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/txlistinternal.md"
+      }
+    },
+    {
+      "id": "etherscan.account.tokentx",
+      "name": "List ERC-20 token transfers",
+      "summary": "ERC-20 transfers filtered by address, token contract or both.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always account.",
+          "example": "account",
+          "enum": [
+            "account"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always tokentx.",
+          "example": "tokentx",
+          "enum": [
+            "tokentx"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Account to filter by. Give address, contractaddress or both.",
+          "example": "0x4e83362442b8d1bec281594cea3050c8eb01311c"
+        },
+        "contractaddress": {
+          "in": "query",
+          "type": "string",
+          "description": "Token contract to filter by.",
+          "example": "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2"
+        },
+        "startblock": {
+          "in": "query",
+          "type": "integer",
+          "description": "First block to search from.",
+          "example": 0
+        },
+        "endblock": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last block to search to.",
+          "example": 99999999
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "example": 1
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page.",
+          "example": 100
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (oldest first) or desc (latest first).",
+          "example": "desc",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "notes": [
+        "value is in the token's smallest unit; divide by 10^tokenDecimal (returned on each row)."
+      ],
+      "job": "crypto.transfers",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/tokentx.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/tokentx.md"
+      }
+    },
+    {
+      "id": "etherscan.account.tokennfttx",
+      "name": "List ERC-721 (NFT) transfers",
+      "summary": "ERC-721 transfers filtered by address, NFT contract or both.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always account.",
+          "example": "account",
+          "enum": [
+            "account"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always tokennfttx.",
+          "example": "tokennfttx",
+          "enum": [
+            "tokennfttx"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "description": "Account to filter by. Give address, contractaddress or both.",
+          "example": "0x6975be450864c02b4613023c2152ee0743572325"
+        },
+        "contractaddress": {
+          "in": "query",
+          "type": "string",
+          "description": "NFT contract to filter by.",
+          "example": "0x06012c8cf97bead5deae237070f9587f8e7a266d"
+        },
+        "startblock": {
+          "in": "query",
+          "type": "integer",
+          "description": "First block to search from.",
+          "example": 0
+        },
+        "endblock": {
+          "in": "query",
+          "type": "integer",
+          "description": "Last block to search to.",
+          "example": 99999999
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "example": 1
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page.",
+          "example": 100
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "asc (oldest first) or desc (latest first).",
+          "example": "desc",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      "job": "crypto.transfers",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/tokennfttx.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/tokennfttx.md"
+      }
+    },
+    {
+      "id": "etherscan.account.addresstokenbalance",
+      "name": "List an address's ERC-20 holdings",
+      "summary": "Every ERC-20 token an address holds, with balances.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always account.",
+          "example": "account",
+          "enum": [
+            "account"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always addresstokenbalance.",
+          "example": "addresstokenbalance",
+          "enum": [
+            "addresstokenbalance"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Address.",
+          "example": "0x983e3660c0bE01991785F80f266A84B911ab59b0"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "example": 1
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page.",
+          "example": 100
+        }
+      },
+      "notes": [
+        "PRO endpoint: Standard plan or above.",
+        "Balances are in each token's smallest unit; divide by 10^TokenDivisor."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/addresstokenbalance.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/addresstokenbalance.md"
+      }
+    },
+    {
+      "id": "etherscan.token.tokeninfo",
+      "name": "Get token project info",
+      "summary": "Name, symbol, decimals, supply, website and social links of a token contract.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always token.",
+          "example": "token",
+          "enum": [
+            "token"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always tokeninfo.",
+          "example": "tokeninfo",
+          "enum": [
+            "tokeninfo"
+          ]
+        },
+        "contractaddress": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Token contract address.",
+          "example": "0x0e3a2a1f2146d86a604adc220b4967a898d7fe07"
+        }
+      },
+      "notes": [
+        "PRO endpoint: Standard plan or above."
+      ],
+      "job": "crypto.assets",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/tokeninfo.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/tokeninfo.md"
+      }
+    },
+    {
+      "id": "etherscan.token.tokenholderlist",
+      "name": "List a token's holders",
+      "summary": "Current ERC-20 holders of a token with their balances.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always token.",
+          "example": "token",
+          "enum": [
+            "token"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always tokenholderlist.",
+          "example": "tokenholderlist",
+          "enum": [
+            "tokenholderlist"
+          ]
+        },
+        "contractaddress": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ERC-20 contract address.",
+          "example": "0xaaaebe6fe48e54f431b0c390cfaf0b017d09d42d"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "example": 1
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page.",
+          "example": 100
+        }
+      },
+      "notes": [
+        "PRO endpoint: Standard plan or above.",
+        "Quantities are in the token's smallest unit."
+      ],
+      "job": "crypto.holders",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/tokenholderlist.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/tokenholderlist.md"
+      }
+    },
+    {
+      "id": "etherscan.stats.tokensupply",
+      "name": "Get an ERC-20 token's total supply",
+      "summary": "Amount of an ERC-20 token in circulation.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always stats.",
+          "example": "stats",
+          "enum": [
+            "stats"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always tokensupply.",
+          "example": "tokensupply",
+          "enum": [
+            "tokensupply"
+          ]
+        },
+        "contractaddress": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ERC-20 contract address.",
+          "example": "0x57d90b64a1a57749b0f932f1a3395792e12e7055"
+        }
+      },
+      "notes": [
+        "Result is in the token's smallest unit; divide by 10^decimals."
+      ],
+      "job": "crypto.assets",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/tokensupply.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/tokensupply.md"
+      }
+    },
+    {
+      "id": "etherscan.contract.getsourcecode",
+      "name": "Get a verified contract's source code",
+      "summary": "Source, compiler settings, ABI and proxy info of a verified contract.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always contract.",
+          "example": "contract",
+          "enum": [
+            "contract"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always getsourcecode.",
+          "example": "getsourcecode",
+          "enum": [
+            "getsourcecode"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Contract address.",
+          "example": "0xBB9bc244D798123fDe783fCc1C72d3Bb8C189413"
+        }
+      },
+      "notes": [
+        "Available on every chain and every plan, the free tier included."
+      ],
+      "job": "crypto.contracts",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/getsourcecode.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/getsourcecode.md"
+      }
+    },
+    {
+      "id": "etherscan.contract.getabi",
+      "name": "Get a verified contract's ABI",
+      "summary": "The ABI of a verified contract, as a JSON string.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always contract.",
+          "example": "contract",
+          "enum": [
+            "contract"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always getabi.",
+          "example": "getabi",
+          "enum": [
+            "getabi"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Contract address.",
+          "example": "0xBB9bc244D798123fDe783fCc1C72d3Bb8C189413"
+        }
+      },
+      "notes": [
+        "result is the ABI as a JSON-encoded string: parse it again."
+      ],
+      "job": "crypto.contracts",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/getabi.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/getabi.md"
+      }
+    },
+    {
+      "id": "etherscan.logs.getlogs",
+      "name": "Get event logs of an address",
+      "summary": "Event logs emitted by a contract within a block range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always logs.",
+          "example": "logs",
+          "enum": [
+            "logs"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always getLogs.",
+          "example": "getLogs",
+          "enum": [
+            "getLogs"
+          ]
+        },
+        "address": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Contract address.",
+          "example": "0xbd3531da5cf5857e7cfaa92426877b022e612cf8"
+        },
+        "fromBlock": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "First block.",
+          "example": 12878196
+        },
+        "toBlock": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Last block.",
+          "example": 12878196
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number.",
+          "example": 1
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Records per page.",
+          "example": 100
+        }
+      },
+      "job": "crypto.logs",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/getlogs.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/getlogs.md"
+      }
+    },
+    {
+      "id": "etherscan.block.getblocknobytime",
+      "name": "Find the block at a timestamp",
+      "summary": "Block number mined closest before or after a Unix time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always block.",
+          "example": "block",
+          "enum": [
+            "block"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always getblocknobytime.",
+          "example": "getblocknobytime",
+          "enum": [
+            "getblocknobytime"
+          ]
+        },
+        "timestamp": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Unix time, seconds.",
+          "example": 1578638524
+        },
+        "closest": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "before or after.",
+          "example": "before",
+          "enum": [
+            "before",
+            "after"
+          ]
+        }
+      },
+      "job": "crypto.blocks",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/getblocknobytime.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/getblocknobytime.md"
+      }
+    },
+    {
+      "id": "etherscan.gastracker.gasoracle",
+      "name": "Get gas price recommendations",
+      "summary": "Safe, proposed and fast gas prices plus the base fee.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always gastracker.",
+          "example": "gastracker",
+          "enum": [
+            "gastracker"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always gasoracle.",
+          "example": "gasoracle",
+          "enum": [
+            "gasoracle"
+          ]
+        }
+      },
+      "notes": [
+        "Prices are in gwei."
+      ],
+      "job": "crypto.fees",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/gasoracle.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/gasoracle.md"
+      }
+    },
+    {
+      "id": "etherscan.stats.ethprice",
+      "name": "Get the native token's last price",
+      "summary": "Latest USD and BTC price of the chain's native token.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/api",
+      "params": {
+        "chainid": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Chain ID: 1 Ethereum, 137 Polygon, 42161 Arbitrum, 8453 Base, 56 BNB Chain... (supported-chains page; some chains need a paid plan).",
+          "example": "1"
+        },
+        "module": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always stats.",
+          "example": "stats",
+          "enum": [
+            "stats"
+          ]
+        },
+        "action": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Always ethprice.",
+          "example": "ethprice",
+          "enum": [
+            "ethprice"
+          ]
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://docs.etherscan.io/api-reference/endpoint/ethprice.md",
+      "verified": {
+        "docs": "https://docs.etherscan.io/api-reference/endpoint/ethprice.md"
+      }
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "vendor": "reoon",
+  "name": "Reoon Email Verifier",
+  "category": "verification",
+  "summary": "Email verification in a fast quick mode (syntax, disposable, MX, role) or a deep power mode (inbox exists, full, disabled, catch-all, score), bulk task results and credit balance.",
+  "docs_url": "https://www.reoon.com/articles/api-documentation-of-reoon-email-verifier/",
+  "pricing_url": "https://www.reoon.com/email-verifier/pricing/",
+  "base_url": "https://emailverifier.reoon.com/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "REOON_API_KEY"
+        ],
+        "description": "A Reoon Email Verifier API key (created on the API page of the Reoon dashboard). Sent as the key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits come in two pools, daily and instant; the balance call shows both.",
+    "Creating a bulk task takes the key and up to 50,000 emails in a JSON body and is not in this entry; the result call reads a task created elsewhere (dashboard or API)."
+  ],
+  "sources": [
+    "https://www.reoon.com/articles/api-documentation-of-reoon-email-verifier/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "reoon.email.verify",
+      "name": "Verify one email",
+      "summary": "Status, syntax, disposable, role, free-provider, spamtrap and MX checks; power mode adds inbox existence, full inbox, disabled, catch-all, safe-to-send and an overall score out of 100.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/verify",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to verify.",
+          "example": "jane.doe@example.com"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "description": "quick (default, under 0.5 s) or power (deep check, a few seconds to over a minute; a power check can outlast call_vendor's fixed 60-second timeout, so retry a timed-out one).",
+          "enum": [
+            "quick",
+            "power"
+          ],
+          "example": "power"
+        }
+      },
+      "notes": [
+        "Quick mode does not check the mailbox: any address at a domain that accepts mail comes back valid. Its statuses are valid, invalid, disposable, spamtrap.",
+        "Power mode statuses: safe, invalid, disabled, disposable, inbox_full, catch_all, role_account, spamtrap, unknown.",
+        "Not for bulk work: keep to 5 concurrent calls at most."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://www.reoon.com/articles/api-documentation-of-reoon-email-verifier/",
+      "verified": {
+        "docs": "https://www.reoon.com/articles/api-documentation-of-reoon-email-verifier/"
+      }
+    },
+    {
+      "id": "reoon.bulk.result",
+      "name": "Get a bulk verification task's results",
+      "summary": "Status and progress of a bulk task and, once completed, the power-mode result of each email.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/get-result-bulk-verification-task/",
+      "params": {
+        "task_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The task_id returned when the bulk task was created.",
+          "example": "123456"
+        }
+      },
+      "notes": [
+        "Task status is waiting, running, completed, file_not_found or file_loading_error; results are present only when completed. Tasks run one after another."
+      ],
+      "job": "email.verify.batch.results",
+      "docs_url": "https://www.reoon.com/articles/api-documentation-of-reoon-email-verifier/",
+      "verified": {
+        "docs": "https://www.reoon.com/articles/api-documentation-of-reoon-email-verifier/"
+      }
+    },
+    {
+      "id": "reoon.account.balance",
+      "name": "Get credit balance",
+      "summary": "API status and the daily and instant credits left.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/check-account-balance/",
+      "job": "account.usage",
+      "docs_url": "https://www.reoon.com/articles/api-documentation-of-reoon-email-verifier/",
+      "verified": {
+        "docs": "https://www.reoon.com/articles/api-documentation-of-reoon-email-verifier/"
+      }
+    }
+  ]
+}
