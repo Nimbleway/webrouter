@@ -171,3 +171,10 @@ def test_a_reason_for_a_dimension_not_scored_is_refused() -> None:
 def test_reasons_and_details_default_to_empty() -> None:
     card = Scorecard(scorer="s", scale=(1, 10), dimensions={}, overall=None)
     assert card.reasons == {} and card.details == {}
+
+
+@pytest.mark.parametrize("model", ["gpt-6-luna", "gpt-6.1-sol", "gpt-5-mini"])
+def test_a_model_that_refuses_a_fixed_temperature_gets_none(model: str) -> None:
+    """gpt-6-luna answers temperature=0 with a 400 ("only the default (1) value is supported")."""
+    assert OpenAIJudge(model, api_key="k").temperature is None
+    assert OpenAIJudge("gpt-4o", api_key="k").temperature == 0.0

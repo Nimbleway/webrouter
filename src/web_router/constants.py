@@ -806,7 +806,7 @@ EVALS_JUDGE_MODEL = "gpt-4o"
 
 EVALS_JUDGE_TEMPERATURE = 0.0
 
-EVALS_FIXED_TEMPERATURE_MODELS: tuple[str, ...] = ("gpt-5",)
+EVALS_FIXED_TEMPERATURE_MODELS: tuple[str, ...] = ("gpt-5", "gpt-6")
 """Model id prefixes that reject any temperature but their default -- it is left out of the request for them."""
 
 EVALS_JUDGE_TIMEOUT = 120.0

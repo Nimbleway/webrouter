@@ -155,12 +155,12 @@ pins one LiteLLM release, and its import reads no `.env` and fetches nothing:
 ```python
 from web_router.evals import LiteLLMJudge
 
-report = router.evaluate(dataset, judge=LiteLLMJudge("deepinfra/zai-org/GLM-5.1"))  # reads DEEPINFRA_API_KEY
+report = router.evaluate(dataset, judge=LiteLLMJudge("gemini/gemini-3.1-flash-lite"))  # reads GEMINI_API_KEY
 ```
 
 Every judge can also be named in one string, the one its report records:
 `judge_from("openai:gpt-6-luna")`, `judge_from("anthropic")`,
-`judge_from("litellm:gemini/gemini-2.5-pro")`, or `judge_from("my_pkg.judges:MyJudge")`
+`judge_from("litellm:deepinfra/<org>/<model>")`, or `judge_from("my_pkg.judges:MyJudge")`
 for a `Judge` subclass of your own, built with no arguments. The benchmark
 scripts take the same string as `--judge`. A judge pointed at another endpoint
 with `base_url` is built in code, not named, and adds the host to its label —
@@ -170,7 +170,8 @@ vendor's own.
 The default stays `gpt-4o` so new figures compare with published ones. OpenAI
 lists the `gpt-4o` snapshots for shutdown on 2027-01-14 and names `gpt-6-luna`
 as their replacement; pass `judge_from("openai:gpt-6-luna")` to grade on it, knowing its
-figures compare only with its own.
+figures compare only with its own. It refuses a fixed temperature, so the judge
+leaves it at the model's default, as it does for the `gpt-5` family.
 
 `Dataset.simpleqa()` downloads the test set from `openai/simple-evals` (pass
 `path=` for a local copy); `limit` samples with `random.Random(seed)` exactly as
