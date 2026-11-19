@@ -33,6 +33,7 @@ from web_router.constants import (
     PROVIDER_BROWSER_USE,
 )
 from web_router.constants_mode_parts_browse import BROWSER_USE_TIERS
+from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpBrowseProvider
 from web_router.providers._utils import build_payload
 from web_router.types import BrowseRequest, BrowseResponse, BrowseStep, JobState
@@ -148,6 +149,7 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
             steps=[self._step(step) for step in task.get("steps") or []],
             request_id=str(status.get("id") or task.get("id") or "") or None,
             raw=[status, task],
+            **_reported_cost(task, status),
         )
 
     @staticmethod
@@ -163,6 +165,20 @@ class BrowserUseBrowseProvider(HttpBrowseProvider):
             screenshot_url=step.get("screenshotUrl") or None,
             extra={key: value for key, value in step.items() if key not in BROWSER_USE_STEP_FIELDS},
         )
+
+
+def _reported_cost(*payloads: dict[str, Any]) -> dict[str, Any]:
+    # Browser Use states a task's cost as a decimal string, "0.006", in both
+    # payloads; the full read, the later of the two, is taken first.
+    for payload in payloads:
+        value = payload.get("cost")
+        try:
+            number = float(value) if isinstance(value, str) else value
+        except ValueError:
+            continue
+        if found := stated_cost({"cost": number}, "cost"):
+            return found
+    return {}
 
 
 def _structured(output: str | None) -> dict[str, Any] | list[Any] | None:

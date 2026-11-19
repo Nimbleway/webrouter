@@ -16,7 +16,12 @@ unset. So a project's own ``.env``, in whatever directory a client started the
 server in, and a remembered file -- a path a conversation recorded -- can only
 add keys, never replace the user's. At runtime :meth:`EnvSources.load` reads
 one more, from a path the user gives the model, so only a path ever passes
-through a conversation.
+through a conversation -- and only a path named as a ``.env`` is.
+
+The operator can narrow this (:mod:`web_router.mcp.env_policy`): skip the
+working directory's file, read a remembered one only inside its own project
+or not at all, and stop ``load_env`` remembering or loading. Each defaults to
+the behaviour above, and a skipped place is reported as ``skipped``.
 
 The rules are the same wherever a file comes from. Only provider credentials
 are read -- :func:`credential_variables` -- because a
@@ -29,67 +34,31 @@ names and paths are.
 
 from __future__ import annotations
 
-import io
 import os
-import stat
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from web_router.constants import (
-    ENV_MCP_ENV_FILE,
-    MCP_ENV_FILE,
-    MCP_ENV_FILE_MAX_BYTES,
-    MCP_ENV_POINTER_FILE,
-    MCP_ENV_REASON_NO_DOTENV,
-    MCP_ENV_REASON_NOT_A_FILE,
-    MCP_ENV_REASON_NOT_TEXT,
-    MCP_ENV_REASON_TOO_LARGE,
-    MCP_ENV_SOURCE_CWD,
     MCP_ENV_SOURCE_EXPLICIT,
-    MCP_ENV_SOURCE_REMEMBERED,
-    MCP_ENV_SOURCE_USER,
-    MCP_ENV_STATUS_MISSING,
     MCP_ENV_STATUS_NO_CREDENTIALS,
     MCP_ENV_STATUS_NOTHING_NEW,
-    MCP_ENV_STATUS_UNREADABLE,
     MCP_ENV_STATUS_USED,
-    MCP_MSG_ENV_NO_CREDENTIALS,
-    MCP_MSG_ENV_REMEMBER_FAILED,
-    MCP_USER_CONFIG_DIR,
-    MCP_USER_CONFIG_ROOT_BY_PLATFORM,
-    MCP_USER_CONFIG_ROOT_DEFAULT,
 )
-from web_router.constants_mcp import MCP_MSG_ENV_MISSING, MCP_MSG_ENV_UNREADABLE
+from web_router.constants_mcp_env import MCP_ENV_STATUS_SKIPPED
+from web_router.mcp import env_pointer
 from web_router.mcp.env_credentials import EnvLoad, apply_credentials, credential_variables
 from web_router.mcp.env_foreign import foreign_files, foreign_warning, noted_instructions
+from web_router.mcp.env_places import places
+from web_router.mcp.env_pointer import user_config_dir
+from web_router.mcp.env_read import EnvFileError, absolute, read_credentials, require_dotenv_name
+from web_router.mcp.env_warnings import log_startup
+
+__all__ = ["EnvFileError", "EnvLoad", "EnvLookup", "EnvSources", "read_credentials", "user_config_dir"]
 
 
 def _set_in_environment() -> tuple[str, ...]:
     return tuple(sorted(name for name in credential_variables() if os.environ.get(name)))
-
-
-def user_config_dir() -> Path:
-    """This user's web-router configuration directory, where the platform keeps such things.
-
-    ``~/.config/web-router`` on Linux (or under ``XDG_CONFIG_HOME``),
-    ``~/Library/Application Support/web-router`` on macOS, and
-    ``%APPDATA%\\web-router`` on Windows. It need not exist.
-    """
-    env_var, default = MCP_USER_CONFIG_ROOT_BY_PLATFORM.get(sys.platform, MCP_USER_CONFIG_ROOT_DEFAULT)
-    configured = os.environ.get(env_var, "") if env_var else ""
-    root = configured if os.path.isabs(configured) else os.path.expanduser(default)
-    return Path(root) / MCP_USER_CONFIG_DIR
-
-
-class EnvFileError(ValueError):
-    """A file the server was pointed at and could not use. Its message names the path and why, never a value."""
-
-    def __init__(self, message: str, *, status: str, reason: str | None = None) -> None:
-        super().__init__(message)
-        self.status = status
-        self.reason = reason
 
 
 @dataclass(frozen=True)
@@ -120,7 +89,10 @@ class EnvSources:
     def at_startup(cls) -> EnvSources:
         """Read every place, in order, each file filling only the credentials still unset."""
         sources = cls()
-        for source, path in _candidates():
+        for source, path, skipped in places():
+            if skipped is not None:
+                sources.searched.append(EnvLookup(source, path, MCP_ENV_STATUS_SKIPPED, skipped))
+                continue
             try:
                 values = read_credentials(path)
             except EnvFileError as exc:
@@ -132,6 +104,7 @@ class EnvSources:
             sources.startup.append(applied)
             status = MCP_ENV_STATUS_USED if applied.loaded else MCP_ENV_STATUS_NOTHING_NEW
             sources.searched.append(EnvLookup(source, path, status))
+        log_startup(sources)
         return sources
 
     def load(self, path: str, *, remember: bool = False) -> EnvLoad:
@@ -141,16 +114,26 @@ class EnvSources:
         it leaves the environment as it was.
 
         Raises:
-            EnvFileError: for a path with no file, one that cannot be read as
-                text, or one that sets no credential.
+            EnvFileError: for a file not named as a ``.env`` is (opened or not,
+                one refusal for all), a path with no file, one that cannot be
+                read as text, or one that sets no credential.
             ValueError: when ``remember`` is set and the path cannot be recorded.
         """
-        target = _absolute(path)
+        target = absolute(path)
+        require_dotenv_name(path, target)
         values = read_credentials(target)
-        pointer = _remember(target) if remember else None
+        pointer = env_pointer.remember(target) if remember else None
         applied = apply_credentials(target, values, remembered=pointer)
         self.runtime.append(applied)
         return applied
+
+    @staticmethod
+    def forget() -> Path | None:
+        """Drop the remembered file's record: the path it named, or ``None`` when there was none.
+
+        Keys it loaded stay set until the server restarts: a running router keeps them.
+        """
+        return env_pointer.forget()
 
     def foreign(self) -> list[Path]:
         """The remembered files from outside the working directory that loaded a billed key."""
@@ -166,7 +149,7 @@ class EnvSources:
         A remembered file from another directory leads it as a ``warning``, so a
         model reading the resource sees it before anything else.
         """
-        warning = foreign_warning(self.foreign(), user_config_dir() / MCP_ENV_POINTER_FILE)
+        warning = foreign_warning(self.foreign(), env_pointer.pointer_file())
         return {
             **warning,
             "searched": [_lookup_report(lookup) for lookup in self.searched],
@@ -176,98 +159,6 @@ class EnvSources:
             "from_environment": list(self.from_environment),
             "loaded_at_runtime": [{"file": str(load.path), "loaded": list(load.loaded)} for load in self.runtime],
         }
-
-
-def read_credentials(path: Path) -> dict[str, str]:
-    """The provider credentials ``path`` sets, and nothing else it holds.
-
-    Refuses anything that is not a small text file before reading it, since a
-    model can name any path on the machine.
-
-    Raises:
-        EnvFileError: for a path with no file, one that cannot be read as
-            text, or one that sets no credential.
-    """
-    try:
-        info = path.stat()
-    except (FileNotFoundError, NotADirectoryError):
-        raise EnvFileError(MCP_MSG_ENV_MISSING.format(path=path), status=MCP_ENV_STATUS_MISSING) from None
-    except OSError as exc:
-        raise _unreadable(path, exc.strerror or type(exc).__name__) from exc
-    if not stat.S_ISREG(info.st_mode):
-        raise _unreadable(path, MCP_ENV_REASON_NOT_A_FILE)
-    if info.st_size > MCP_ENV_FILE_MAX_BYTES:
-        raise _unreadable(path, MCP_ENV_REASON_TOO_LARGE.format(limit=MCP_ENV_FILE_MAX_BYTES))
-    try:
-        text = path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        # Not chained: the decode error quotes a byte of the file.
-        raise _unreadable(path, MCP_ENV_REASON_NOT_TEXT) from None
-    except OSError as exc:
-        raise _unreadable(path, exc.strerror or type(exc).__name__) from exc
-    try:
-        from dotenv import dotenv_values
-    except ImportError:
-        # The mcp extra installs it; without it only exported variables reach the server.
-        raise _unreadable(path, MCP_ENV_REASON_NO_DOTENV) from None
-    # Not interpolated: `${OTHER}` would copy a secret the file never held into
-    # a provider's key, and send it to that provider with every call.
-    values = dotenv_values(stream=io.StringIO(text), interpolate=False)
-    wanted = sorted(credential_variables())
-    # An empty assignment -- a copied .env.example -- carries no credential.
-    found = {name: value for name in wanted if (value := values.get(name))}
-    if not found:
-        raise EnvFileError(
-            MCP_MSG_ENV_NO_CREDENTIALS.format(path=path, names=", ".join(wanted)),
-            status=MCP_ENV_STATUS_NO_CREDENTIALS,
-        )
-    return found
-
-
-def _candidates() -> list[tuple[str, Path]]:
-    """Every place the startup lookup reads, in order."""
-    places: list[tuple[str, Path]] = []
-    explicit = os.environ.get(ENV_MCP_ENV_FILE)
-    if explicit:
-        places.append((MCP_ENV_SOURCE_EXPLICIT, _absolute(explicit)))
-    config = user_config_dir()
-    places.append((MCP_ENV_SOURCE_USER, config / MCP_ENV_FILE))
-    remembered = _remembered(config / MCP_ENV_POINTER_FILE)
-    if remembered is not None:
-        # After the user .env: a conversation recorded it, and may have been steered to.
-        places.append((MCP_ENV_SOURCE_REMEMBERED, remembered))
-    places.append((MCP_ENV_SOURCE_CWD, Path.cwd() / MCP_ENV_FILE))
-    return places
-
-
-def _remembered(pointer: Path) -> Path | None:
-    try:
-        recorded = pointer.read_text(encoding="utf-8").strip()
-    except (OSError, UnicodeDecodeError):
-        return None
-    return _absolute(recorded) if recorded else None
-
-
-def _remember(target: Path) -> Path:
-    """Record ``target`` for the next start, as a path rather than a copy, so no second copy of a key is written."""
-    pointer = user_config_dir() / MCP_ENV_POINTER_FILE
-    try:
-        pointer.parent.mkdir(parents=True, exist_ok=True)
-        pointer.write_text(f"{target}\n", encoding="utf-8")
-    except OSError as exc:
-        reason = exc.strerror or type(exc).__name__
-        raise ValueError(MCP_MSG_ENV_REMEMBER_FAILED.format(pointer=pointer, reason=reason)) from exc
-    return pointer
-
-
-def _absolute(raw: str) -> Path:
-    return Path(os.path.abspath(os.path.expanduser(raw)))
-
-
-def _unreadable(path: Path, reason: str) -> EnvFileError:
-    return EnvFileError(
-        MCP_MSG_ENV_UNREADABLE.format(path=path, reason=reason), status=MCP_ENV_STATUS_UNREADABLE, reason=reason
-    )
 
 
 def _lookup_report(lookup: EnvLookup) -> dict[str, Any]:

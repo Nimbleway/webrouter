@@ -51,6 +51,7 @@ def well_formed(decision: object) -> TypeGuard[RouteDecision]:
     return (
         (decision.tools is None or _names(decision.tools))
         and _keyed_by_tool(decision.providers, _names)
+        and (decision.attempts is None or _names(decision.attempts))
         and _keyed_by_tool(decision.params, _keyed_by_name)
         and isinstance(exclude, Mapping)
         and all(isinstance(k, str) and isinstance(v, str) for k, v in exclude.items())

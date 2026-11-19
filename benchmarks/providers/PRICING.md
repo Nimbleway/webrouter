@@ -186,15 +186,16 @@ apply here.
 
 Metered in credits, one per search or fetch; the first 100,000 requests a
 month are free to every organization ([credits](https://docs.keenable.ai/credits.md)).
-Past that, credit packages are priced per organization in its console, and no
-list price is published. With no key, the `/public` endpoints are free and
+Past that, pay as you go is $4 per 1,000 requests, and dedicated capacity at
+100+ requests a second is $1 per 1,000 ([pricing](https://keenable.ai/pricing));
+web-router estimates at $4. With no key, the `/public` endpoints are free and
 capped at 1,000 requests an hour per IP ([rate limits](https://docs.keenable.ai/rate-limits.md)).
 
 <!-- prices: method=search provider=keenable -->
 | Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
 |---|---|---|---|---|---|---|
-| default | `keenable` | `mode=pro` (Keenable's default; web-router sends none) | Titles, URLs, a snippet per result | one credit per search; 100k requests a month free, then not published; $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
-| `keenable-realtime` | `keenable:keenable-realtime` | `mode=realtime` | The same, faster; billed as its own SKU | one credit per search; 100k requests a month free, then not published; $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
+| default | `keenable` | `mode=pro` (Keenable's default; web-router sends none) | Titles, URLs, a snippet per result | $4 per 1k; one credit per search; 100k requests a month free, then $4 per 1k pay as you go ($1 per 1k on dedicated capacity at 100+ RPS); $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [keenable.ai](https://keenable.ai/pricing) | 2026-11-18 |
+| `keenable-realtime` | `keenable:keenable-realtime` | `mode=realtime` | The same, faster; its own SKU, at one credit like the default | $4 per 1k; one credit per search; 100k requests a month free, then $4 per 1k pay as you go ($1 per 1k on dedicated capacity at 100+ RPS); $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [keenable.ai](https://keenable.ai/pricing) | 2026-11-18 |
 <!-- /prices -->
 
 ### DeepSeek
@@ -327,7 +328,7 @@ key at the proxy's own cost map. These are LiteLLM's published defaults; an oper
 | jina | default | — | markdown, keyless | — | billed by tokens; free at 20 requests a minute keyless; with a key, billed by output tokens: 10M free (non-commercial), then $50 per 1B tokens (Standard) or $500 per 11B (Premium), varies by location | [jina.ai](https://jina.ai/reader) | 2026-10-07 |
 | parallel | default | — | not used for extract in web-router | — | $1 per 1k; per result | [parallel.ai](https://parallel.ai/pricing) | 2026-10-07 |
 | webiq | default | — | markdown or text, `maxLength` 500,000 | — | Browse; not published: limited access for select enterprise customers, by request | [webiq.microsoft.ai](https://webiq.microsoft.ai) | 2026-11-01 |
-| keenable | default | — | markdown, `max_chars` 500,000 | — | one credit per fetch, 100k requests a month free, then not published; keyless free at 1,000 an hour per IP | [docs.keenable.ai](https://docs.keenable.ai/credits.md) | 2026-10-14 |
+| keenable | default | — | markdown, `max_chars` 500,000 | — | $4 per 1k; one credit per fetch; 100k requests a month free, then $4 per 1k pay as you go ($1 per 1k on dedicated capacity at 100+ RPS); $10 per 1k paid per request over x402; keyless free at 1,000 an hour per IP | [keenable.ai](https://keenable.ai/pricing) | 2026-11-18 |
 | deepseek | default | — | markdown | — | $0.75 per 1k; successful fetches only | [api-docs.deepseek.com](https://api-docs.deepseek.com/guides/search) | 2026-10-19 |
 | linkup | default | — | markdown (default) or html (`includeRawContent`), `mode=standard`, no rendering | — | $0.001 per request; $1 per 1k; `renderJs` or `mode=pro` $0.005, both $0.01; a `schema` adds $0.001 | [docs.linkup.so](https://docs.linkup.so/pages/documentation/endpoints/fetch/overview.md) | 2026-10-07 |
 | linkup | `linkup-pro` | `linkup:linkup-pro` (unverified) | `mode=pro` | Higher success on hard pages | $0.005 per request; $5 per 1k; with `renderJs` $0.01 | [docs.linkup.so](https://docs.linkup.so/pages/documentation/development/pricing) | 2026-11-17 |

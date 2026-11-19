@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import os
 import socket
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -62,17 +61,12 @@ from web_router.constants import (
     MCP_MSG_BROWSER_REFUSED_SCHEME,
     MCP_MSG_BROWSER_REFUSED_UNPARSEABLE,
     MCP_MSG_BROWSER_REFUSED_UNVERIFIED,
-    MCP_TRUE_VALUES,
     MS_PER_SECOND,
 )
+from web_router.mcp.navigation_rules import files_allowed, private_allowed, private_refusal
 
 if TYPE_CHECKING:
     from playwright.async_api import Frame, Page, Request, Route, WebSocketRoute
-
-
-def files_allowed() -> bool:
-    """Whether the operator has opted in to ``file:`` URLs through the environment."""
-    return os.environ.get(ENV_MCP_BROWSER_ALLOW_FILE_URLS, "").strip().lower() in MCP_TRUE_VALUES
 
 
 @dataclass(frozen=True)
@@ -82,12 +76,13 @@ class NavigationPolicy:
     cdp_host: str | None = None
     cdp_port: int | None = None
     allow_files: bool = False
+    allow_private: bool = True
 
     @classmethod
     def for_session(cls, cdp_url: str, *, allow_files: bool | None = None) -> NavigationPolicy:
         """The policy for a session whose CDP endpoint is ``cdp_url``; ``file:`` per the environment unless given."""
         host, port = _host_port(cdp_url)
-        return cls(host, port, files_allowed() if allow_files is None else allow_files)
+        return cls(host, port, files_allowed() if allow_files is None else allow_files, private_allowed())
 
     def refusal(self, url: str, *, websocket: bool = False, current: bool = False, frame: bool = False) -> str | None:
         """Why ``url`` may not be opened, or ``None`` if it may.
@@ -140,6 +135,8 @@ class NavigationPolicy:
     def _host_refusal(self, host: str, port: int | None) -> str | None:
         if is_metadata(host):
             return MCP_MSG_BROWSER_REFUSED_METADATA
+        if not self.allow_private and (reason := private_refusal(host)):
+            return reason
         if self.cdp_port is not None and port == self.cdp_port and _same_host(host, self.cdp_host):
             return MCP_MSG_BROWSER_REFUSED_CDP
         return None
@@ -190,6 +187,9 @@ class NavigationGuard:
                     if reason is not None:
                         current = reason
                         break
+        if blocked is None and current is None:
+            blocked, self._blocked = self._blocked, None  # a hop flagged, or a page moved, while names resolved
+            current = self._where_refused(self._page)
         if blocked is None and current is None:
             return None
         with contextlib.suppress(Exception):

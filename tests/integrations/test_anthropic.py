@@ -78,8 +78,9 @@ def test_a_backend_failure_is_an_error_result_the_model_reads() -> None:
     result = WebRouterTools(WebRouter(), provider="down").call("web_router_search", {"query": "q"})
 
     assert result.is_error
-    assert result.content.startswith("web_router_search failed:") and "HTTP 503" in result.content
+    assert result.content == "web_router_search failed: down: the backend failed (kind=upstream, retryable=true)."
     assert result.response is None
+    assert "HTTP 503" in str(result.error), "the backend's own text stays with the caller"
 
 
 def test_a_setup_mistake_raises_to_the_caller() -> None:
@@ -109,9 +110,13 @@ def test_malformed_input_from_the_model_is_an_error_result_and_bills_nothing(nam
     assert router.get_provider("fake").requests == []
 
 
-def test_a_tool_name_this_instance_does_not_serve_raises() -> None:
-    with pytest.raises(ValueError, match="web_router_extract"):
-        WebRouterTools(WebRouter(), methods=["search"]).call("web_router_extract", {"urls": ["https://a.example"]})
+def test_a_tool_name_this_instance_does_not_serve_is_an_error_result_naming_the_ones_it_does() -> None:
+    result = WebRouterTools(WebRouter(), methods=["search"]).call("web_router_extract", {"urls": ["https://a.example"]})
+
+    assert result.is_error
+    assert (
+        result.content == "web_router_extract did not run: there is no such tool here; call one of web_router_search."
+    )
 
 
 def test_extract_goes_to_the_search_provider_when_it_also_extracts() -> None:

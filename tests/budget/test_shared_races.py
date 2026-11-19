@@ -109,3 +109,25 @@ def test_a_nested_reservation_the_outer_pool_refuses_never_blocks_another_call_i
     worker.join(WAIT_S)
     assert refused == [pytest.approx(0.10)]
     assert (inner_pool.status().reserved_usd, outer.status().reserved_usd) == (0.05, 0.05)
+
+
+class _Interrupted:
+    """A lock whose taking is interrupted, as a Ctrl-C landing while a chain takes its pools' locks."""
+
+    def __enter__(self) -> None:
+        raise KeyboardInterrupt
+
+    def __exit__(self, *exc: object) -> None:
+        pass
+
+
+@pytest.mark.parametrize("interrupted", [True, False], ids=["interrupted", "control"])
+def test_a_lock_taken_before_an_interrupted_one_is_given_back(interrupted: bool) -> None:
+    first, second = BudgetPool(SHARED), BudgetPool(SHARED)
+    if interrupted:
+        second._lock = _Interrupted()  # type: ignore[assignment]
+        with pytest.raises(KeyboardInterrupt):
+            PoolChain((first, second)).reserve(COST)
+    else:
+        PoolChain((first, second)).reserve(COST)
+    assert first._lock.acquire(blocking=False), "the first pool's lock is free again"

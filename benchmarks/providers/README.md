@@ -109,8 +109,8 @@ runs too). A failed search counts as a miss.
 | Nimble | default (`fast`) | 53 | | 5 | 1.3s |
 | | `deep` | 40 | -13 | 10 (15) | 7.5s |
 | | `lite` | 21 | -32 | 1.1 | 10.4s |
-| Keenable | default | 53 | | unknown | 0.6s |
-| | `keenable-realtime` | 58 | +5 | unknown | 0.5s |
+| Keenable | default | 53 | | 4 | 0.6s |
+| | `keenable-realtime` | 58 | +5 | 4 | 0.5s |
 | Brave | default | 48 | | 5 | 0.9s |
 | | `brave-extra-snippets` | 48 | 0 | 5 | 1.2s |
 | DeepSeek | default | 42 | | 0.75 | 0.6s |
@@ -151,7 +151,7 @@ slower):
 | Tavily | `fast`, `tavily-fast` |
 | You.com | `fast` |
 | Perplexity, Nimble, Brave, DeepSeek | none: the default only |
-| Keenable | none until it has a published price |
+| Keenable | `keenable-realtime` |
 
 ## Adding backends to a finished scan
 
@@ -477,8 +477,12 @@ By default it scores `sealqa-hard-254` and `simpleqa-300-v2`, SimpleQA being
 the control set where routing should gain nothing, and `tools-effort-60`
 ([below](#tool-choice-and-effort)). A router is `static`
 (`auto`'s order today), `oracle` (the backend that got each question right,
-cheapest first: the ceiling), `always:<backend>`, or your own callable as
-`module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
+cheapest first: the ceiling), `always:<backend>`, a built-in or registered
+router by name as `router:<name>` (`router:gemini`, built with no
+`router_config`: it reads its preset's key and each question bills its vendor,
+which the cost columns do not count; it routes on each question's text, so it
+needs `--joined`),
+or your own callable as `module:attr` or `path/file.py:attr`. `static` and `oracle` are always scored,
 as the yardsticks. Your callable is a router of the library's contract
 (`web_router.routing`): it takes a `RouteRequest` -- one candidate per backend
 the set has rows for, with its list price and p90, and the method pinned -- and

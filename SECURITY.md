@@ -33,17 +33,43 @@ Keep your `.env` out of version control — the shipped `.gitignore` already
 excludes it.
 
 The library itself never reads a `.env`. The MCP server does, at startup —
-from `WEB_ROUTER_ENV_FILE`, its working directory or your user config
-directory — and at runtime through its `load_env` tool, which takes a file's
+from `WEB_ROUTER_ENV_FILE`, your user config directory, a path `load_env`
+remembered or its working directory — and at runtime through its `load_env` tool, which takes a file's
 path from the model. Either way it takes only the provider credential
 variables web-router names and ignores everything else in the file, a variable
 already set keeps its value, `${...}` is not expanded, and neither the tool's
 result, its errors nor the capabilities resource carries a value: names and
-paths only. `load_env(remember=true)` records the path, never a copy of the
-keys. What this does not prevent: a model steered by a page it read could call
-`load_env` on a file someone planted on the machine, adding a key for a backend
-you hold none for, and later calls through `auto` could then run on that
-account. See [the MCP guide](https://docs.webrouter.net/mcp-server#loading-keys-mid-conversation-load_env).
+paths only. `load_env` opens only a file named as a `.env` is, and gives one
+refusal for any other path, so it cannot be used to probe the machine.
+`load_env(remember=true)` records the path, never a copy of the keys, in a
+file only you can read; `load_env(forget=true)` drops it. A configured key's
+value is masked wherever it appears in a tool's error or a `fetch_raw` payload.
+What this does not prevent: a model steered by a page it read could call
+`load_env` on a `.env` someone planted on the machine, adding a key for a
+backend you hold none for, and later calls through `auto` could then run on
+that account. See [the MCP guide](https://docs.webrouter.net/mcp-server#loading-keys-mid-conversation-load_env).
+
+Keep key files to yourself: `chmod 600` each `.env`. The MCP server warns on
+stderr about one it read that others can.
+
+### The MCP server and untrusted pages
+
+Every page the MCP tools read is untrusted input, and a page can be written to
+steer the model reading it. The server never returns a key and keeps its hard
+limits (no key-bearing redirect, no browser trip to its own debugging endpoint
+or a cloud metadata address, no vendor write without
+`WEB_ROUTER_ALLOW_VENDOR_WRITES`), but telling the model that web content is
+data is advice, not a control. One server that can read your vendor accounts,
+read hostile pages and send queries out can be steered to move one into the
+other. When a model will read pages you do not trust:
+
+- serve only the tools the task needs (`WEB_ROUTER_MCP_TOOLS`);
+- set a spending ceiling (`WEB_ROUTER_MCP_MAX_COST_USD`);
+- run `call_vendor` and `load_env` in a second server, enabled only when needed;
+- narrow where keys come from with `WEB_ROUTER_MCP_LOAD_ENV`,
+  `WEB_ROUTER_MCP_REMEMBERED_ENV` and `WEB_ROUTER_MCP_CWD_ENV`.
+
+See [Using this safely with untrusted pages](https://docs.webrouter.net/mcp-server#using-this-safely-with-untrusted-pages).
 
 ### Redirects are not followed
 

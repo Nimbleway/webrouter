@@ -48,7 +48,7 @@ _Entry: TypeAlias = "str | tuple[str, Mapping[str, Any]]"
 _ChainSpec: TypeAlias = "Sequence[_Entry] | Mapping[str, Sequence[_Entry]]"
 """A ``chain`` argument: the members of every method's chain, or each method's own, keyed by method."""
 
-_RECOVERABLE = (ProviderNotInstalledError, ConfigurationError, ProviderError)
+RECOVERABLE = (ProviderNotInstalledError, ConfigurationError, ProviderError)
 """Failures that mean "try the next backend".
 
 A missing extra, a missing credential and a backend that refused the call are
@@ -193,7 +193,7 @@ def _entry(item: _Entry) -> tuple[str, dict[str, Any]]:
     return _lookup_name(name), dict(options)
 
 
-def _nothing_started(exc: WebRouterError) -> bool:
+def nothing_started(exc: WebRouterError) -> bool:
     """Whether a member's failure proves it left nothing billing, so the next member may be tried.
 
     Shared by every chain whose members start something that bills until it

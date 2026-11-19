@@ -170,3 +170,9 @@ def attempt_p90(attempt: Attempt) -> float | None:
         return None
     provider, mode = priced_as(attempt)
     return mode_p90(provider, attempt.tool, mode)
+
+
+def usd(value: float) -> str:
+    """Dollars as the price list states them, never rounded to cents: ``$0.025``, ``$0.0011``, ``$1.00``."""
+    whole, _, cents = f"{value:.6f}".rstrip("0").partition(".")
+    return f"${whole}.{cents.ljust(2, '0')}"

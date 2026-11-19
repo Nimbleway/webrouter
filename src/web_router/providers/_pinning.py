@@ -76,7 +76,7 @@ def pinned_for(chain: Any, request: Any) -> Any:
     return pinned_request(chain, request, pinned) if pinned and takes else request
 
 
-def _costed(response: Any, owner: Any, request: NormalizedRequest) -> Any:
+def costed(response: Any, owner: Any, request: NormalizedRequest) -> Any:
     """``response`` carrying the mode's estimated price when it states none, as a chain member's answer must.
 
     An unpriced mode sets the cost to ``None`` explicitly, so the router leaves it unknown instead of pricing the
@@ -87,7 +87,7 @@ def _costed(response: Any, owner: Any, request: NormalizedRequest) -> Any:
 
     if not hasattr(response, "cost_usd") or response.cost_usd is not None:
         return response
-    cost = estimated_cost(owner.pinned_method, owner.name, request)
+    cost = estimated_cost(getattr(owner, "pinned_method", SEARCH), owner.name, request)
     source = None if cost is None else COST_ESTIMATED
     return response.model_copy(update={"cost_usd": cost, "cost_source": source})
 
@@ -99,11 +99,11 @@ def _pinned(base: type, mode: str, method: str) -> type:
 
     def call(self: Any, request: Any) -> Any:
         request = pinned_request(self, request, self.pinned)
-        return _costed(getattr(super(pinned, self), sync)(request), self, request)
+        return costed(getattr(super(pinned, self), sync)(request), self, request)
 
     async def acall(self: Any, request: Any) -> Any:
         request = pinned_request(self, request, self.pinned)
-        return _costed(await getattr(super(pinned, self), async_)(request), self, request)
+        return costed(await getattr(super(pinned, self), async_)(request), self, request)
 
     body = {"pinned": mode, "pinned_method": method, sync: call, async_: acall, "__module__": base.__module__}
     pinned = type(base.__name__, (base,), body)
