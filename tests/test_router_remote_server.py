@@ -85,6 +85,19 @@ def test_the_example_server_needs_a_key_to_bind_anything_but_loopback() -> None:
     assert reference._loopback("127.0.0.2") and reference._loopback("localhost") and not reference._loopback("::")
 
 
+def _ipv6_loopback_available() -> bool:
+    """Whether this machine can bind ``::1``; a container with IPv6 off cannot, though Python was built with it."""
+    if not socket.has_ipv6:
+        return False
+    try:
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as probe:
+            probe.bind(("::1", 0))
+    except OSError:
+        return False
+    return True
+
+
+@pytest.mark.skipif(not _ipv6_loopback_available(), reason="IPv6 loopback (::1) is not available on this machine")
 def test_the_example_server_serves_ipv6_loopback() -> None:
     server = reference.serve("::1", 0)
     try:
