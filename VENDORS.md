@@ -1,4 +1,4 @@
-# Vendor catalog
+# Data APIs
 
 `call_data_api()` reaches a vendor's own API with your account's credentials:
 your Google Ads reports, your Datadog logs, a contact-data vendor you pay
@@ -8,7 +8,7 @@ credentials, finds the endpoint, and keeps three guarantees (credentials go
 only to the vendor's host, no input is dropped or invented, writes are
 opt-in). Every endpoint listed here reads: none sends, publishes, writes or
 generates media, and none is a raw model call, though some return what an AI
-engine answered as data. See https://docs.webrouter.net/vendors for the API.
+engine answered as data. See https://docs.webrouter.net/vendors for the API and https://docs.webrouter.net/data-apis for the Web Catalog, a page per data API.
 
 Every entry is written from the vendor's own documentation. **Checked** says
 how: `docs <date>` means the entry was transcribed from the vendor's reference

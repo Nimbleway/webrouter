@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts prices vendors latency chains efforts shape-baseline check build clean
+.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts prices vendors docs-site docs-preview latency chains efforts shape-baseline check build clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -47,6 +47,12 @@ contracts: ## Regenerate the committed contracts; PROVIDER=search/brave starts a
 
 vendors: ## Regenerate VENDORS.md and the vendor section of .env.example from src/web_router/data/vendors
 	uv run python -m scripts.vendors
+
+docs-site: ## Build the docs site into build/docs-site/docs: docs/ plus the Data APIs pages generated from the catalog
+	uv run python -m scripts.data_api_docs
+
+docs-preview: docs-site ## Build the docs site and serve it locally with Mintlify
+	cd build/docs-site/docs && npx --yes mint@4.3.49 dev
 
 prices: ## Regenerate PRICING.md's price tables from src/web_router/data/prices.json
 	uv run python -m scripts.prices

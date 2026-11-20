@@ -95,7 +95,7 @@ names every variable and where to get it, and fill in the ones you hold.
 | [`live_data`](https://docs.webrouter.net/live-data) | A vendor's ready-made scraper for one site, returning records | No |
 | [`open_browser`](https://docs.webrouter.net/browser) | A browser session you drive, local or in the cloud | Yes (`local`) |
 | [`browse`](https://docs.webrouter.net/browser) | A task handed to a hosted browser agent | No |
-| [`call_data_api`](https://docs.webrouter.net/vendors) | A vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
+| [`call_data_api`](https://docs.webrouter.net/vendors) | A data API: a vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
 
 ```python
 with WebRouter() as router:
@@ -280,7 +280,7 @@ SealQA or your own CSV) with an LLM judge. See
 | [Providers](https://docs.webrouter.net/providers) | [Research](https://docs.webrouter.net/research) | [Adding a provider](https://docs.webrouter.net/custom-providers) |
 | [Configuration](https://docs.webrouter.net/configuration) | [Live data](https://docs.webrouter.net/live-data) | [MCP server](https://docs.webrouter.net/mcp-server) |
 | [Errors](https://docs.webrouter.net/errors) | [Browser](https://docs.webrouter.net/browser) | [Examples](https://github.com/Nimbleway/webrouter/tree/main/examples) |
-| | [Vendor data](https://docs.webrouter.net/vendors) | [Changelog](https://github.com/Nimbleway/webrouter/blob/main/CHANGELOG.md) |
+| | [Data APIs](https://docs.webrouter.net/vendors) | [Changelog](https://github.com/Nimbleway/webrouter/blob/main/CHANGELOG.md) |
 
 ## Contributing
 
