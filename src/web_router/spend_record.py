@@ -27,6 +27,7 @@ from web_router.exceptions import (
     ProviderNotInstalledError,
     ResearchTimeoutError,
 )
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._cooldown import CoolingDownError
 from web_router.spend import SpendEntry, SpendSink
 from web_router.types_decision import DecisionRecord
@@ -35,8 +36,9 @@ logger = logging.getLogger("web_router")
 
 _ResponseT = TypeVar("_ResponseT", bound=BaseModel)
 
-_NEVER_CALLED = (ConfigurationError, ProviderNotInstalledError, CoolingDownError)
-"""What a member fails with when no request went out: unconfigured, not installed, or cooling down."""
+_NEVER_CALLED = (ConfigurationError, ProviderNotInstalledError, CoolingDownError, BudgetExceededError)
+"""What a member fails with when no request went out: unconfigured, not installed, cooling down, or skipped by the
+budget -- which a chain's error lists among its failures so a cap does not read as an outage."""
 
 _NEVER_CALLED_HOPS = frozenset(getattr(kind, "hop_code", kind.__name__) for kind in _NEVER_CALLED)
 """The same, as a decision record's hop names them."""

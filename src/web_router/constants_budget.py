@@ -16,6 +16,7 @@ SKIP_ROUTE_REFUSED = "refused by the call's route"
 
 SKIPPED = "{id} skipped: {reason}"
 MSG_BUDGET_EXCEEDED = "Nothing fits the budget: {skipped}."
+MSG_BUDGET_SKIPPED_REST = "The budget skipped the rest: {skipped}."
 
 UNKNOWN_PRICE = "unknown_price"
 OVER_COST = "over_cost"

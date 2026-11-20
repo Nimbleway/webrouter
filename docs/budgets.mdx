@@ -226,9 +226,11 @@ log.entries()  # every SpendEntry, oldest first
 An entry holds when the call answered, the method, the backend, `cost_usd` and
 `cost_source`, `elapsed_s`, the decision's id, and `call_estimate_usd`: under a
 budget or a router, the decision record's estimate for the whole call, failed
-attempts included. It holds no prompt, query or URL. A call that raised logs
-nothing, and a submitted research or browse job logs once, when its answer is
-first seen. `SpendRow` splits each group's `cost_usd` into `reported_usd` and
+attempts included. It holds no prompt, query or URL. A call that raised a
+provider error or ran out of time logs a `failed` entry for each member it
+called, or one for the call when the error names none; a member it skipped,
+and a call that refused its own arguments, log nothing. A submitted research
+or browse job logs once, when its answer is first seen. `SpendRow` splits each group's `cost_usd` into `reported_usd` and
 `estimated_usd`, and counts the calls with no known cost in `unpriced_calls`.
 
 Any object with `record(entry)` is a sink -- a database, a metrics client --
