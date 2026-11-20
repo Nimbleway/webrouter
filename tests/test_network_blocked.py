@@ -17,7 +17,7 @@ from web_router import AllProvidersFailedError
 from web_router.cli.output import write_error
 from web_router.exceptions import ProviderError
 from web_router.providers.auto import AutoProvider
-from web_router.types import SearchRequest
+from web_router.types import ExtractFailure, SearchRequest
 from web_router.types_errors import CHAIN_STOPPING_KINDS
 
 
@@ -99,9 +99,10 @@ def test_every_backend_refused_names_each_host_once() -> None:
 
     error = AllProvidersFailedError("auto", "every backend failed: ...", failures)
 
-    assert error.blocked_hosts == ["api.tavily.com", "mcp.exa.ai", "keenable"], "no request: the backend's own name"
+    assert error.blocked_hosts == ["api.tavily.com", "mcp.exa.ai"], "only hosts an error named"
     assert error.kind == "network_blocked" and error.retryable is False
-    assert str(error).startswith("[auto] no backend host is reachable from this machine: api.tavily.com, mcp.exa.ai")
+    reachable = "[auto] no backend host is reachable from this machine: api.tavily.com, mcp.exa.ai, keenable's host."
+    assert str(error).startswith(reachable)
 
 
 def test_one_backend_failing_upstream_keeps_the_usual_error() -> None:
@@ -146,3 +147,11 @@ def test_the_cli_prints_the_hosts_and_each_hops_kind() -> None:
     assert envelope["hops"] == {"tavily": "network_blocked", "exa-mcp": "unreachable"}
     assert envelope["blocked_hosts"] == ["api.tavily.com", "mcp.exa.ai"]
     assert "\n" not in envelope["message"]
+
+
+def test_urls_failing_on_both_network_kinds_are_not_retryable() -> None:
+    failures = [
+        ExtractFailure(url=f"https://{kind}.test", error="x", kind=kind) for kind in ("network_blocked", "unreachable")
+    ]
+
+    assert ExtractFailure.batch_kind(failures) == "network_blocked"

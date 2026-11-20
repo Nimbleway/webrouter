@@ -16,7 +16,7 @@ from typing import Final, Literal, cast, get_args
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from web_router.types_errors_network import NetworkKind, network_kind
+from web_router.types_errors_network import ERROR_KIND_NETWORK_BLOCKED, NETWORK_KINDS, NetworkKind, network_kind
 from web_router.types_errors_network import cause_chain as _chain
 
 _CallKind = Literal["auth", "rate_limit", "bad_request", "not_found", "timeout", "target", "local", "upstream"]
@@ -244,6 +244,8 @@ class ExtractFailure(BaseModel):
         if shared is not None:
             return shared
         kinds = {failure.kind for failure in failures}
+        if kinds and kinds <= NETWORK_KINDS:
+            return ERROR_KIND_NETWORK_BLOCKED  # a proxy refusing one call and DNS failing another: no retry helps
         return next((kind for kind in _RECOVERABLE_FIRST if kind in kinds), ERROR_KIND_UPSTREAM)
 
     @classmethod

@@ -20,6 +20,9 @@ MSG_NO_HOST_REACHABLE: Final = (
 )
 """The whole message when every backend of a chain failed on this side's network, naming the hosts to allow."""
 
+MSG_HOST_OF: Final = "{backend}'s host"
+"""Names a backend whose error did not say which host it tried, in that message's list."""
+
 
 class InvalidParameterError(WebRouterError, ValueError):
     """A request option is not a value the method takes: an empty query, ``max_results=0``, an unknown level.
@@ -47,15 +50,17 @@ class AllProvidersFailedError(ProviderError):
 
     When every backend failed on this machine's network (``network_blocked``
     or ``unreachable``), the message is one line naming the hosts to allow,
-    and :attr:`blocked_hosts` lists them; otherwise that list is empty.
+    and :attr:`blocked_hosts` lists those the errors named; otherwise that list is empty.
     """
 
     def __init__(self, provider: str, message: str, failures: Mapping[str, WebRouterError]) -> None:
         kinds = {getattr(exc, "kind", None) for exc in failures.values()}
         shared = kinds.pop() if len(kinds) == 1 else None
-        self.blocked_hosts = blocked_hosts(failures)
-        if self.blocked_hosts:
-            message = MSG_NO_HOST_REACHABLE.format(hosts=", ".join(self.blocked_hosts))
+        hosts = blocked_hosts(failures)
+        self.blocked_hosts = list(dict.fromkeys(host for host in hosts.values() if host))
+        if hosts:
+            named = (host or MSG_HOST_OF.format(backend=name) for name, host in hosts.items())
+            message = MSG_NO_HOST_REACHABLE.format(hosts=", ".join(dict.fromkeys(named)))
             shared = shared or ERROR_KIND_NETWORK_BLOCKED  # a proxy refusing some hosts and DNS failing others
         super().__init__(provider, message, kind=shared or ERROR_KIND_UPSTREAM)
         self.failures = dict(failures)
@@ -89,12 +94,11 @@ def shared_status(statuses: Iterable[int | None]) -> int | None:
     return found.pop() if len(found) == 1 else None
 
 
-def blocked_hosts(failures: Mapping[str, BaseException]) -> list[str]:
-    """Each host this machine could not reach, when every failure was its network's; else none, as one was not.
+def blocked_hosts(failures: Mapping[str, BaseException]) -> dict[str, str | None]:
+    """Each backend's host, when every failure was this machine's network; else none, as one backend was reached.
 
-    A backend whose error carries no request is named by itself, so no failure drops out of the list.
+    A host is ``None`` when the backend's error did not carry the request it sent.
     """
     if not failures or any(getattr(exc, "kind", None) not in NETWORK_KINDS for exc in failures.values()):
-        return []
-    hosts = (request_host(getattr(exc, "original", None)) or name for name, exc in failures.items())
-    return list(dict.fromkeys(hosts))
+        return {}
+    return {name: request_host(getattr(exc, "original", None)) for name, exc in failures.items()}
