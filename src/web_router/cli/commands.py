@@ -13,7 +13,7 @@ from typing import Any
 
 from web_router.cli.args import CliInputError, json_object, json_records, pairs
 from web_router.client import WebRouter
-from web_router.registry_methods import configured_by_method
+from web_router.registry_methods import providers_report
 from web_router.routing.contract import Budget
 
 Handler = Callable[[WebRouter, argparse.Namespace], Any]
@@ -128,10 +128,12 @@ def _live_data(router: WebRouter, args: argparse.Namespace) -> Any:
         provider_options=pairs(args.option),
     )
 
+    """Per method, what the environment makes usable, what `auto` runs keyless and what needs a key; calls nothing."""
+
 
 def _providers(_router: WebRouter, _args: argparse.Namespace) -> dict[str, list[str]]:
     """What the environment makes usable per method, the table the MCP server's capabilities show; calls nothing."""
-    return configured_by_method()
+    return providers_report()
 
 
 HANDLERS: dict[str, Handler] = {
