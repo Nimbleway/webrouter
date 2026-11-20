@@ -136,6 +136,22 @@ MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE = (
 # them (metadata.query came back without them), and several `site:` keep each
 # site. An inline site: cannot be combined with its exclude_domains argument.
 
+# Checked keyless on 2026-11-20: a site: with a path keeps the host and drops the
+# path (site:github.com/python returned 0 of 10 results under /python, Exa 10 of
+# 10), and exclude_domains=["github.com/python"] dropped every github.com result.
+
+MSG_YOU_MCP_SITE_HOST = (
+    "include_domains goes into the query as site:, which You.com matches on the host alone and not on a path,"
+    " so each must be a host name with no path (github.com, not github.com/python)."
+)
+"""Why ``you-mcp`` refuses an ``include_domains`` value with a path, or one that is not a host name."""
+
+MSG_YOU_MCP_EXCLUDE_DOMAINS = (
+    "You.com takes one domain list, not both, and its exclude_domains drops a whole host, ignoring a path:"
+    " send one list, each entry a host name with no path."
+)
+"""Why ``you-mcp`` refuses an ``exclude_domains`` beside ``include_domains``, or one with a path."""
+
 YOU_MCP_PARAM_NAMES: dict[str, str] = {"max_results": "count", "exclude_domains": "exclude_domains"}
 """Normalized parameter -> argument of ``you-search``; the other filters go into the query, below."""
 
