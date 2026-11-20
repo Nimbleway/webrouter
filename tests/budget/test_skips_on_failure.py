@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from tests.budget.conftest import Chain, Table
 from web_router import AllProvidersFailedError, AsyncWebRouter, Budget, BudgetExceededError, ProviderError, WebRouter
+from web_router.spend import SpendEntry
 
 CAP = Budget(max_cost_usd=0.05)
 """Room for the first member at $0.04, not the second."""
@@ -49,3 +52,14 @@ def test_a_shared_budget_names_its_skips_once(chain: Chain, priced: Table) -> No
     with router.budget(CAP) as shared, pytest.raises(AllProvidersFailedError) as caught:
         shared.search("q", provider=chain.auto())
     _check(caught.value, chain)
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+def test_the_spend_log_counts_only_the_member_that_was_called(chain: Chain, priced: Table) -> None:
+    _setup(chain, priced)
+    logged: list[SpendEntry] = []
+    router = WebRouter()
+    router.log_spend(SimpleNamespace(record=logged.append))
+    with pytest.raises(AllProvidersFailedError):
+        router.search("q", provider=chain.auto(), budget=CAP)
+    assert [(entry.provider, entry.outcome) for entry in logged] == [("first", "failed")]
