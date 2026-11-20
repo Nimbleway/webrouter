@@ -85,7 +85,7 @@ class Settling:
         delta, tried.charged = cost - tried.charged, cost
         self.spent += delta
         if self.pool is not None and tried.own:
-            self.pool.release(-delta)
+            self.pool.reserve_unchecked(delta) if delta > 0 else self.pool.release(-delta)
             self.reserved += delta
 
     def _answered(self, provider: str | None, empty: bool) -> int | None:
