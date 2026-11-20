@@ -33,11 +33,32 @@ def _idna(netloc: str) -> str:
         return netloc
     userinfo, at, hostport = netloc.rpartition("@")
     host, colon, port = hostport.partition(":")
+    ascii_host = _browser_idna(host)
+    return netloc if ascii_host is None else f"{userinfo}{at}{ascii_host}{colon}{port}"
+
+
+def _browser_idna(host: str) -> str | None:
+    """``host`` as the URL Standard maps it (UTS #46, non-transitional), or ``None`` where it cannot be.
+
+    Python's own ``idna`` codec is IDNA 2003, which maps ``faß.de`` to ``fass.de`` where a browser, and a
+    backend fetching as one, sends ``xn--fa-hia.de``. The ``idna`` package, which ``httpx`` brings with every
+    extract extra, maps as the browser does; the codec is the fallback without it, or for a host it refuses.
+    """
     try:
-        host = host.encode("idna").decode("ascii")
+        import idna  # optional: arrives with httpx, which every extract backend needs
+    except ImportError:
+        return _idna2003(host)
+    try:
+        return idna.encode(host, uts46=True, transitional=False).decode("ascii")
+    except idna.IDNAError:
+        return _idna2003(host)
+
+
+def _idna2003(host: str) -> str | None:
+    try:
+        return host.encode("idna").decode("ascii")
     except UnicodeError:
-        return netloc
-    return f"{userinfo}{at}{host}{colon}{port}"
+        return None
 
 
 def _encoded(text: str) -> str:
