@@ -112,6 +112,26 @@ webrouter live-data source NAME -p PROVIDER          # its input_schema says wha
 webrouter live-data run NAME -p PROVIDER --input url=https://www.amazon.com/dp/...
 ```
 
+`webrouter --version` prints the installed version.
+
+## What runs here
+
+`webrouter providers` lists, per method, the backends you can name with `-p`
+on this machine. It reads the environment and calls nothing. Two more keys say
+what that list leaves out:
+
+- `keyless`: the backends `auto` runs with no key, in the order it tries them,
+  for `search`, `extract` and `browser`. One that is also in the method's own
+  list, such as `jina` or `local`, takes `-p` with no key; reach the rest
+  through `auto`, since naming one with `-p` and no key fails.
+- `needs_key`: each method with nothing to run here, and the variables that
+  would add a backend for it. Such a method lists no `auto` either, since
+  `auto` would have nothing to choose from.
+
+```json
+{"research": [], "keyless": {"search": ["nimble", "tavily", "..."]}, "needs_key": {"research": ["LINKUP_API_KEY", "..."]}}
+```
+
 ## The command line or the MCP server?
 
 Both expose the same methods. The [MCP server](/mcp-server) suits a client that
