@@ -12,7 +12,7 @@ import pytest
 from tests.budget.conftest import Chain, Table, pool_in_force
 from web_router import AsyncWebRouter, Budget, BudgetExceededError, DeadlineExceededError, WebRouter
 from web_router.constants_budget import SKIP_NO_TIME
-from web_router.exceptions import ConfigurationError, WebRouterError
+from web_router.exceptions import ProviderError, WebRouterError
 from web_router.providers._deadline import call_deadline, current_deadline
 from web_router.routing import ledger
 from web_router.routing.pool import PoolChain
@@ -167,7 +167,7 @@ def test_the_shared_clock_running_out_under_a_later_enclosing_deadline_is_the_bu
 
 @pytest.mark.parametrize("tool", ["search"], indirect=True)
 def test_a_member_after_an_enclosing_deadline_has_passed_is_not_reserved(chain: Chain, priced: Table) -> None:
-    chain.raises["first"] = ConfigurationError("first holds no key")
+    chain.raises["first"] = ProviderError("first", "read timed out")
     chain.sleeps["first"] = 0.15  # outlasts the enclosing deadline, then fails
     priced.update(first=(0.01, None), second=(0.02, None))
     with WebRouter().budget(Budget(max_cost_usd=1.0)) as scope, call_deadline(0.1), pytest.raises(WebRouterError):

@@ -33,6 +33,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
+- Budgets settle each attempt when it ends: a backend's reported cost replaces its estimate, and an attempt refused before it started (a 4xx other than 404 or 410, a connection never made, a missing key) counts nothing. `docs/budgets.mdx` opens with a table of what is counted.
 - Default routing: `auto` now gives each backend at most half the time left (the last gets all of it) and skips a backend for 30 s after three timeouts in a row. Opt out with `hop_timeout=False` or `timeout_cooldown=False`; `hop_timeout=4` sets a fixed cap.
 - Data API discovery no longer takes "close", "contact", "here", "reverse" or "tomorrow" alone as naming a data API, so an everyday search such as "weather in paris tomorrow" lists none; `close crm`, `here maps`, `reverse contact` and `tomorrow io` still name theirs.
 
