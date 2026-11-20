@@ -16,9 +16,10 @@ from web_router.constants_extract import HTML_NON_TEXT, HTML_TITLE
 from web_router.types import ExtractedDocument
 
 _META: Final = re.compile(r"<meta\b[^>]*>", re.IGNORECASE)
-_ATTRIBUTE: Final = re.compile(r"""([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+_ATTRIBUTE: Final = re.compile(r"""([\w:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))""")
+_SCRIPTS: Final = re.compile(r"<(script|style)\b.*?</\1\s*>", re.IGNORECASE | re.DOTALL)
 _HTML_H1: Final = re.compile(r"<h1\b[^>]*>(.*?)</h1\s*>", re.IGNORECASE | re.DOTALL)
-_FENCE: Final = re.compile(r"^ {0,3}(```|~~~).*?^ {0,3}\1", re.MULTILINE | re.DOTALL)
+_FENCE: Final = re.compile(r"^ {0,3}(```|~~~).*?(?:^ {0,3}\1|\Z)", re.MULTILINE | re.DOTALL)  # An unclosed one runs on
 _MARKDOWN_H1: Final = re.compile(
     r"^ {0,3}#[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$"  # `# Title`
     r"|^ {0,3}(\S.*)\n {0,3}=+[ \t]*$",  # `Title` over `=====`
@@ -53,14 +54,14 @@ def html_title(document: ExtractedDocument) -> str:
 
 def _og_title(content: str) -> str:
     for tag in _META.findall(content):
-        attributes = {name.lower(): double or single for name, double, single in _ATTRIBUTE.findall(tag)}
+        attributes = {name.lower(): "".join(values) for name, *values in _ATTRIBUTE.findall(tag)}
         if "og:title" in (attributes.get("property", "").lower(), attributes.get("name", "").lower()):
             return _clean(attributes.get("content", ""))
     return ""
 
 
 def _html_h1(content: str) -> str:
-    found = _HTML_H1.search(content)
+    found = _HTML_H1.search(_SCRIPTS.sub(" ", content))  # Not an H1 a script only writes
     return _clean(HTML_NON_TEXT.sub(" ", found.group(1))) if found else ""
 
 
