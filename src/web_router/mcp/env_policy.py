@@ -1,8 +1,9 @@
-"""The operator's switches over where keys may come from: ``load_env``, a remembered file, the working directory.
+"""The operator's switches: where keys may come from (``load_env``, a remembered file, the working directory),
+the browser's private addresses, and the tool profile.
 
 Each is read from the real environment only -- none is a credential, so no
-``.env`` can set one -- and each defaults to what the server did before it
-existed (:data:`~web_router.constants_mcp_env.MCP_ENV_SWITCHES`). A value
+``.env`` can set one -- and each defaults to the safer setting
+(:data:`~web_router.constants_mcp_env.MCP_ENV_SWITCHES`). A value
 that is not one of a switch's own stops the server rather than being guessed at.
 """
 

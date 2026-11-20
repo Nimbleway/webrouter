@@ -538,7 +538,7 @@ async def test_an_open_the_backend_never_answers_gives_up_and_frees_its_slot(
 
 
 async def test_without_playwright_the_tools_are_hidden_and_open_refuses_before_billing(
-    session: WebRouterTools, monkeypatch: pytest.MonkeyPatch
+    session: WebRouterTools, monkeypatch: pytest.MonkeyPatch, all_runnable: None
 ) -> None:
     monkeypatch.setattr(browsers_module, "playwright_installed", lambda: False)
     monkeypatch.setattr(tools_module, "playwright_installed", lambda: False)

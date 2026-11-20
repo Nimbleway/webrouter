@@ -210,9 +210,10 @@ def test_the_ipv6_forms_of_a_public_ipv4_and_ipv6_loopback_are_read_right() -> N
     assert is_loopback("::1") and str(host_address("::1")) == "::1", "::1 is IPv6's own loopback, not 0.0.0.1"
 
 
-def test_the_browser_navigation_guard_reads_a_bare_0x_octet_as_zero_too() -> None:
+def test_the_browser_navigation_guard_reads_a_bare_0x_octet_as_zero_too(monkeypatch: pytest.MonkeyPatch) -> None:
     from web_router.mcp.navigation import NavigationPolicy
 
+    monkeypatch.setenv("WEB_ROUTER_MCP_PRIVATE_URLS", "on")  # so the endpoint's own rule is what refuses it
     policy = NavigationPolicy.for_session("ws://127.0.0.1:9333/devtools/browser/abc", allow_files=False)
     reason = policy.refusal("http://127.0x.0x.1:9333/json")
     assert reason is not None and "debugging endpoint" in reason
