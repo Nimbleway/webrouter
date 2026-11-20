@@ -23,8 +23,10 @@ NETWORK_KINDS: Final = frozenset({ERROR_KIND_NETWORK_BLOCKED, ERROR_KIND_UNREACH
 PROXY_AUTH_STATUS: Final = 407
 """A proxy's own refusal: it wants credentials before it will pass the call on."""
 
-_PROXY_MARKER: Final = "proxy"
-"""In an exception's type name (httpx's, httpcore's, requests' and urllib3's ``ProxyError``): the proxy refused."""
+_PROXY_ERROR_NAMES: Final = ("ProxyError", "ProxyConnectionError")
+"""How the transports' own type names for a proxy's refusal end: httpx's, httpcore's, requests' and urllib3's
+``ProxyError``, aiohttp's ``ClientProxyConnectionError``. Matched at the end, so a provider's own config error
+that merely mentions a proxy is not one."""
 
 _UNREACHABLE_TYPES: Final = (socket.gaierror, ConnectionRefusedError)
 """A host name that did not resolve, and a host that refused the connection."""
@@ -50,7 +52,7 @@ def network_kind(chain: Iterable[BaseException], status: int | None) -> NetworkK
     if status == PROXY_AUTH_STATUS:
         return ERROR_KIND_NETWORK_BLOCKED
     links = list(chain)
-    if any(_PROXY_MARKER in type(link).__name__.lower() for link in links):
+    if any(type(link).__name__.endswith(_PROXY_ERROR_NAMES) for link in links):
         return ERROR_KIND_NETWORK_BLOCKED
     if any(isinstance(link, _UNREACHABLE_TYPES) for link in links):
         return ERROR_KIND_UNREACHABLE

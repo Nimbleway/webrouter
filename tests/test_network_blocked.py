@@ -155,3 +155,11 @@ def test_urls_failing_on_both_network_kinds_are_not_retryable() -> None:
     ]
 
     assert ExtractFailure.batch_kind(failures) == "network_blocked"
+
+
+class ProxySettingsInvalid(Exception):
+    """A provider's own error that only mentions a proxy in its name."""
+
+
+def test_an_error_merely_named_for_a_proxy_is_not_a_refusal() -> None:
+    assert ProviderError("acme", "bad config", original=ProxySettingsInvalid("bad")).kind != "network_blocked"
