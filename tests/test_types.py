@@ -3,6 +3,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from web_router.constants import SNIPPET_LIMIT
+from web_router.providers._search_text import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 
@@ -35,3 +37,25 @@ def test_response_exposes_length_and_urls() -> None:
     )
     assert len(response) == 2
     assert response.urls == ["https://a.com", "https://b.com"]
+
+
+def test_a_page_long_description_is_cut_to_a_snippet_and_content_keeps_the_page() -> None:
+    page = "word " * 3000
+    result = SearchResult(url="https://a.com", description=page, content=page)
+    assert len(result.description) <= SNIPPET_LIMIT and result.description.endswith("…")
+    assert page.startswith(result.description[:-1]) and result.content == page
+
+
+def test_a_snippet_survives_being_cut_again() -> None:
+    once = as_snippet("x" * 2000)
+    assert len(once) == SNIPPET_LIMIT and as_snippet(once) == once
+    assert SearchResult(url="https://a.com", description=once).description == once
+
+
+def test_a_short_description_is_kept_as_written() -> None:
+    assert SearchResult(url="https://a.com", description="A short summary.").description == "A short summary."
+
+
+def test_a_description_broken_by_lines_is_cut_between_words() -> None:
+    lines = "\n".join(["alpha", "beta"] * 200)
+    assert SearchResult(url="https://a.com", description=lines).description.split()[-1] in {"alpha\u2026", "beta\u2026"}

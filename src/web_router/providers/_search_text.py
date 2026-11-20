@@ -16,16 +16,16 @@ _SITE_DOMAIN = re.compile(SITE_DOMAIN_PATTERN)
 
 
 def as_snippet(text: str) -> str:
-    """Shorten body text to something the size of a snippet.
+    """Shorten text to at most ``SNIPPET_LIMIT`` characters, ellipsis included.
 
-    For providers that return page content but no summary, so ``description``
-    means the same thing everywhere. Breaks on whitespace to avoid cutting a
-    word in half.
+    :class:`~web_router.types.SearchResult` runs every ``description`` through
+    this, so the field means the same thing everywhere. Breaks on whitespace to
+    avoid cutting a word in half, and leaves its own output unchanged.
     """
     if len(text) <= SNIPPET_LIMIT:
         return text
-    head = text[:SNIPPET_LIMIT]
-    cut = head.rfind(" ")
+    head = text[: SNIPPET_LIMIT - 1]
+    cut = max(map(head.rfind, " \n\t"))
     return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"
 
 
