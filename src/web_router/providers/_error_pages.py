@@ -17,6 +17,7 @@ from web_router.constants import MSG_EXTRACT_BAD_STATUS
 from web_router.constants_extract import (
     EXTRACT_CHALLENGE_MARKERS,
     EXTRACT_CHALLENGE_TITLE,
+    EXTRACT_COUNTRY_SECOND_LEVELS,
     EXTRACT_LOGIN_MARKERS,
     EXTRACT_LOGIN_TITLE,
     EXTRACT_LOGIN_URL_PARTS,
@@ -160,8 +161,7 @@ def _title(document: ExtractedDocument) -> str:
     return html.unescape(found.group(1)).strip() if found else ""
 
 
-def near_empty(document: ExtractedDocument) -> bool:
-    """Some text, but under :data:`EXTRACT_NEAR_EMPTY_CHARS` characters of it: a shell more often than a page."""
+def near_empty(document: ExtractedDocument) -> bool:  # Under EXTRACT_NEAR_EMPTY_CHARS of text: likely a shell
     return MSG_EXTRACT_NEAR_EMPTY in junk(document)
 
 
@@ -178,20 +178,20 @@ def junk(document: ExtractedDocument, asked: str | None = None) -> list[str]:
 
 
 def off_site(asked: str, landed: str) -> bool:
-    """Whether ``landed`` is on another site than ``asked``: ``airbnb.com`` to ``airbnb.de`` is not, an ad host is."""
+    """Whether ``landed`` is on another site than ``asked``: ``shop.com`` to ``shop.de`` is not, an ad host is."""
     shortener = (urlsplit(asked).hostname or "").removeprefix("www.") in EXTRACT_SHORTENER_HOSTS
     return not shortener and "" not in (_site(asked), _site(landed)) and _site(asked) != _site(landed)
 
 
 def _site(url: str) -> str:  # The name a host is registered under: `example` for www.example.com, shop.example.co.uk
     labels = (urlsplit(url).hostname or "").split(".")
-    country_suffix = len(labels) > 2 and len(labels[-1]) == 2 and len(labels[-2]) <= 3
+    country_suffix = len(labels) > 2 and len(labels[-1]) == 2 and labels[-2] in EXTRACT_COUNTRY_SECOND_LEVELS
     return labels[-3 if country_suffix else -2] if len(labels) > 1 else labels[0]
 
 
-def _text(document: ExtractedDocument) -> str:
-    content = document.content
-    return (html.unescape(HTML_NON_TEXT.sub(" ", content)) if document.format == "html" else content).strip()
+def _text(document: ExtractedDocument) -> str:  # Its text: an HTML body's without its tags, scripts and styles
+    text = html.unescape(HTML_NON_TEXT.sub(" ", document.content)) if document.format == "html" else document.content
+    return text.strip()
 
 
 def _warned(document: ExtractedDocument, asked: str | None) -> ExtractedDocument:

@@ -44,6 +44,12 @@ MSG_EXTRACT_TRACKER_PIXEL: Final = "the backend got a tracking pixel instead of 
 MSG_EXTRACT_OFF_SITE: Final = "the backend landed on another site than the one asked for"
 """The warning on a page a redirect took to another site; ``auto`` tries the next backend for its URL."""
 
+MSG_EXTRACT_JUNK: Final = "[{provider}] {reason}"
+"""Why ``auto`` failed a junk page's URL on to the next backend: the backend, and the page's warning."""
+
+EXTRACT_COUNTRY_SECOND_LEVELS: Final = frozenset({"ac", "co", "com", "edu", "go", "gov", "ne", "net", "or", "org"})
+"""Labels before a country code that make a suffix (``co.uk``, ``com.au``): ``bar.co`` is a site, ``co.uk`` is not."""
+
 EXTRACT_PIXEL_MAX_CHARS: Final = 200
 """A tracking pixel's text is shorter than this: a longer page that mentions one is an article about it."""
 

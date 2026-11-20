@@ -16,7 +16,7 @@ from web_router.types import ExtractedDocument, ExtractRequest, ExtractResponse
 
 __all__ = ["registered"]
 
-ROOMS = "https://www.airbnb.com/rooms/42"
+ROOMS = "https://www.rentals.example/rooms/42"
 PIXEL = "A 1x1 image, likely be a tacker probe"
 SHORT = "Hello."
 
@@ -27,8 +27,9 @@ SHORT = "Hello."
         (PIXEL, ROOMS, [MSG_EXTRACT_NEAR_EMPTY, MSG_EXTRACT_TRACKER_PIXEL]),
         (f"{TEXT * 2} It loads a tracking pixel. {TEXT}", ROOMS, []),
         (TEXT, "https://ad.doubleclick.net/pixel?id=1", [MSG_EXTRACT_OFF_SITE]),
-        (TEXT, "https://www.airbnb.co.il/rooms/42", []),
-        (TEXT, "https://news.airbnb.com/story", []),
+        (TEXT, "https://www.rentals.co.uk/rooms/42", []),
+        (TEXT, "https://news.rentals.example/story", []),
+        (TEXT, "https://blog.x.co/story", [MSG_EXTRACT_OFF_SITE]),
     ],
 )
 def test_a_junk_page_is_told_by_its_text_and_where_it_landed(content: str, url: str, warnings: list[str]) -> None:
@@ -37,6 +38,10 @@ def test_a_junk_page_is_told_by_its_text_and_where_it_landed(content: str, url: 
 
 def test_a_link_shortener_landing_elsewhere_is_not_off_site() -> None:
     assert junk(ExtractedDocument(url="https://example.org/story", content=TEXT), "https://bit.ly/abc") == []
+
+
+def test_a_subdomain_of_a_short_name_under_a_country_code_is_the_same_site() -> None:
+    assert junk(ExtractedDocument(url="https://blog.bar.co/story", content=TEXT), "https://www.bar.co/") == []
 
 
 def test_every_backend_keeps_a_page_on_another_site_with_a_warning() -> None:
@@ -79,6 +84,15 @@ def test_a_near_empty_page_no_later_backend_beats_comes_back_with_its_warning(
 
     assert [document.warnings for document in response.documents] == [[MSG_EXTRACT_NEAR_EMPTY]]
     assert response.failures == []
+
+
+def test_a_later_backends_404_is_not_hidden_behind_a_near_empty_page(registered: list[str]) -> None:
+    class Gone(_member("second")):  # type: ignore[misc]
+        def _respond(self, urls: list[str]) -> ExtractResponse:
+            return ExtractResponse(provider="second", documents=[ExtractedDocument(url=urls[0], status_code=404)])
+
+    with pytest.raises(ExtractFailedError, match="404"):
+        _extract(registered, _serving("first", SHORT), Gone)
 
 
 def test_a_near_empty_page_from_the_only_backend_is_kept(registered: list[str]) -> None:
