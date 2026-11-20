@@ -21,6 +21,9 @@ attempt's estimate there is ``0``, as nothing ran.
 
 from __future__ import annotations
 
+import math
+from typing import TypeGuard
+
 from web_router.constants_cost import COST_REPORTED
 from web_router.exceptions import WebRouterError
 from web_router.providers._chain import nothing_started
@@ -52,7 +55,7 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
 def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
     """Charge the attempt whose answer ``response`` is (``empty``: an empty one) its reported cost, if it states one."""
     cost = getattr(response, "cost_usd", None)
-    if cost is None or getattr(response, "cost_source", None) != COST_REPORTED:
+    if getattr(response, "cost_source", None) != COST_REPORTED or not _a_cost(cost):
         return
     with ledger._lock:
         answering = ledger._answered(getattr(response, "provider", None), empty)
@@ -94,3 +97,8 @@ def _never_started(exc: WebRouterError) -> bool:
     if isinstance(exc, CoolingDownError):
         return True
     return nothing_started(exc) and getattr(exc, "status_code", None) not in TARGET_GONE_STATUSES
+
+
+def _a_cost(cost: object) -> TypeGuard[float]:
+    """Whether ``cost`` is one a budget can settle to: finite, 0 or more. A custom backend may state another."""
+    return isinstance(cost, int | float) and not isinstance(cost, bool) and math.isfinite(cost) and cost >= 0
