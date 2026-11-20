@@ -8,6 +8,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
+- Vendor catalog: GetYouTubeTranscript, with 14 read-only endpoints (YouTube transcripts, search, channels, playlists and videos), written from the vendor's own documentation and not yet called live. The catalog lists 471 vendors and 3,486 endpoints.
 - SpecStream as a search and extract backend: `search(provider="specstream")` over `GET /v1/web-search` and `extract(provider="specstream")` over `POST /v1/extract`, reading `SPECSTREAM_API_KEY`. Search maps `max_results` onto `num` (at most 100); `passages`, `speed` and the other query fields go through `provider_options`. Extract returns `markdown` (the default) or `text`, and a page whose `status` is not `ok` comes back as a failed URL. `auto` tries it after the keyless tier, with a key.
 - Vendor catalog: OpenCage Geocoding, MaxMind, IP2Location.io, Ipregistry and Abstract API, with 14 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 470 vendors and 3,472 endpoints.
 - Vendor catalog: Mention, Moltbook, Sprout Social, Crossref and Wikidata, with 42 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 465 vendors and 3,458 endpoints.
