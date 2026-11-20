@@ -9,6 +9,11 @@ are sent on down the chain, each pass to the members after the one that
 answered the last. The response keeps the first answering member as its
 ``provider``; a URL no later member reads stays in ``failures`` with the
 reason from each member that answered for it.
+
+A junk page fails its URL the same way (:func:`_screened`): a tracking pixel
+or a page on another site always, a near-empty page only while a member is
+left, and that page comes back, warning and all, when no later member reads
+its URL.
 """
 
 from __future__ import annotations
@@ -18,6 +23,7 @@ from dataclasses import replace
 from web_router.constants_extract import MSG_EXTRACT_RETRY_BLANK
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._attempt_loop import Order, Walk, arun, run
+from web_router.providers._auto_extract_pages import Held, _asked, _restored, _screened
 from web_router.providers._chain import _empty_extract
 from web_router.providers._url_match import asked_for, owners
 from web_router.routing.attempts import contributed
@@ -28,46 +34,50 @@ from web_router.types_errors import ERROR_KIND_LOCAL, ERROR_KIND_TARGET, ERROR_K
 
 def extract_down_chain(walk: Walk, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
     """The first member's answer, with each URL it failed retried on the members after it."""
-    response, rest = _first_answer(walk, request, urls)
+    held: Held = {}
+    response, rest = _first_answer(walk, request, urls, held)
     while rest and (retry := _failed_urls(response)):
         try:
-            retried, rest = _first_answer(replace(walk, order=rest), request, retry)
+            retried, rest = _first_answer(replace(walk, order=rest), request, retry, held)
         except WebRouterError as exc:
             if getattr(exc, "kind", None) == ERROR_KIND_LOCAL:
                 raise
-            return _also_failed(response, exc)
+            return _restored(_also_failed(response, exc), held, urls)
         if not _empty_extract(retried):
             contributed("extract", retried.provider)
         response = _merged(response, retried, urls, request)
-    return response
+    return _restored(response, held, urls)
 
 
 async def aextract_down_chain(walk: Walk, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
     """Async counterpart of :func:`extract_down_chain`."""
-    response, rest = await _afirst_answer(walk, request, urls)
+    held: Held = {}
+    response, rest = await _afirst_answer(walk, request, urls, held)
     while rest and (retry := _failed_urls(response)):
         try:
-            retried, rest = await _afirst_answer(replace(walk, order=rest), request, retry)
+            retried, rest = await _afirst_answer(replace(walk, order=rest), request, retry, held)
         except WebRouterError as exc:
             if getattr(exc, "kind", None) == ERROR_KIND_LOCAL:
                 raise
-            return _also_failed(response, exc)
+            return _restored(_also_failed(response, exc), held, urls)
         if not _empty_extract(retried):
             contributed("extract", retried.provider)
         response = _merged(response, retried, urls, request)
-    return response
+    return _restored(response, held, urls)
 
 
-def _first_answer(walk: Walk, request: ExtractRequest, urls: list[str]) -> tuple[ExtractResponse, Order]:
-    """The first member's answer for ``urls``, and the members after it; raises when none answers."""
-    ran = run(walk, request.model_copy(update={"urls": urls}))
-    return ran.response, ran.rest
+def _first_answer(walk: Walk, request: ExtractRequest, urls: list[str], held: Held) -> tuple[ExtractResponse, Order]:
+    """The first member's answer for ``urls``, junk pages failed (:func:`_screened`), and the members after it."""
+    ran = run(walk, _for(request, urls))
+    return _screened(ran.response, urls, bool(ran.rest), held), ran.rest
 
 
-async def _afirst_answer(walk: Walk, request: ExtractRequest, urls: list[str]) -> tuple[ExtractResponse, Order]:
+async def _afirst_answer(
+    walk: Walk, request: ExtractRequest, urls: list[str], held: Held
+) -> tuple[ExtractResponse, Order]:
     """Async counterpart of :func:`_first_answer`."""
-    ran = await arun(walk, request.model_copy(update={"urls": urls}))
-    return ran.response, ran.rest
+    ran = await arun(walk, _for(request, urls))
+    return _screened(ran.response, urls, bool(ran.rest), held), ran.rest
 
 
 def _failed_urls(response: ExtractResponse) -> list[str]:
@@ -140,34 +150,6 @@ def _merged(
             **combined_cost("extract", [(first, _for(request, urls)), (retried, _for(request, sent))]),
         }
     )
-
-
-def _asked(first: ExtractResponse, urls: list[str]) -> list[str | None]:
-    """The requested URL each page of ``first`` answers, so a page echoed under another URL keeps its place.
-
-    Nimble and Keenable echo the URL they resolved to (a slash added to a bare host, a redirect followed, a
-    fragment dropped), and Jina adds the slash. Told as :func:`~._url_match.owners` tells it; the pages it cannot
-    tell (two that both answer where a redirect landed) take the URLs ``first`` neither failed nor matched, in
-    turn, when there is one for each: a one-URL-per-call member answers in the order asked. Otherwise such a page
-    has no place and sorts last.
-
-    A place a page did not get from its own URL is a deduction, and it holds only while the pages stand in the
-    order they came in. A member that read one URL and echoed another one asked for would have it swap two pages,
-    so each page then keeps only what its own URL tells (:func:`~._url_match.asked_for`).
-    """
-    echoed = [document.url for document in first.documents]
-    failed = [failure.url for failure in first.failures]
-    named = owners(echoed, urls, failed)
-    taken = {*failed, *named}
-    left = [url for url in urls if url not in taken]
-    if named.count(None) == len(left):
-        turn = iter(left)
-        named = [owner or next(turn) for owner in named]
-    position = {url: index for index, url in enumerate(urls)}
-    places = [position[owner] for owner in named if owner is not None]
-    if places == sorted(places):
-        return named
-    return [next(iter(asked_for(url, urls)), None) for url in echoed]
 
 
 def _for(request: ExtractRequest, urls: list[str]) -> ExtractRequest:

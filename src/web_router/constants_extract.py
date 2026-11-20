@@ -30,12 +30,34 @@ MSG_EXTRACT_NEAR_EMPTY: Final = (
 """The warning on a document with under :data:`EXTRACT_NEAR_EMPTY_CHARS` characters of text."""
 
 EXTRACT_NEAR_EMPTY_CHARS: Final = 64
-"""Below this many characters of text a page is near-empty: kept, with a warning.
+"""Below this many characters of text a page is near-empty: it carries a warning.
 
 A script-rendered shell comes back as a few dozen characters. Some real
 answers are that short too -- a plain-text endpoint, a one-line JSON reply --
-which is why such a page stays a document rather than a failure.
+so ``auto`` tries the next backend for it while one is left, and otherwise
+the page stays a document.
 """
+
+MSG_EXTRACT_TRACKER_PIXEL: Final = "the backend got a tracking pixel instead of the page"
+"""The warning on a page that is a 1x1 image or a tracking pixel; ``auto`` tries the next backend for its URL."""
+
+MSG_EXTRACT_OFF_SITE: Final = "the backend landed on another site than the one asked for"
+"""The warning on a page a redirect took to another site; ``auto`` tries the next backend for its URL."""
+
+EXTRACT_PIXEL_MAX_CHARS: Final = 200
+"""A tracking pixel's text is shorter than this: a longer page that mentions one is an article about it."""
+
+EXTRACT_PIXEL_TEXT: Final = re.compile(
+    r"\b1\s*[x\u00d7]\s*1(?:\s*px)?\s+(?:transparent\s+)?(?:image|pixel|gif|png)\b"
+    r"|\b(?:tracking|tracker|transparent|spacer)\s+(?:pixel|gif|image)\b",
+    re.IGNORECASE,
+)
+"""What a tracking pixel's title or text says: ``A 1x1 image``, ``tracking pixel``, ``transparent gif``."""
+
+EXTRACT_SHORTENER_HOSTS: Final = frozenset(
+    {"t.co", "bit.ly", "goo.gl", "tinyurl.com", "ow.ly", "lnkd.in", "buff.ly", "is.gd", "cutt.ly", "rebrand.ly"}
+)
+"""Link shorteners: landing on another site is what a link from one is for, so it is never read as off-site."""
 
 EXTRACT_WALL_MAX_CHARS: Final = 3000
 """Text markers count only on a page shorter than this; an article that mentions a challenge page is not one."""
@@ -96,6 +118,9 @@ HTML_TITLE: Final = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.
 
 Markers in the body are not read on a long HTML page: a protected site's own pages carry the challenge scripts too.
 """
+
+HTML_NON_TEXT: Final = re.compile(r"<(script|style)\b.*?</\1>|<[^>]*>", re.IGNORECASE | re.DOTALL)
+"""What an HTML body holds besides its text: scripts, styles and tags, dropped before its text is measured."""
 
 # `profile` is left out on purpose, as on `browser_open`: a saved, logged-in
 # identity is the user's own, set in code, never from a conversation.
