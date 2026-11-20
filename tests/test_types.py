@@ -54,3 +54,8 @@ def test_a_snippet_survives_being_cut_again() -> None:
 
 def test_a_short_description_is_kept_as_written() -> None:
     assert SearchResult(url="https://a.com", description="A short summary.").description == "A short summary."
+
+
+def test_a_description_broken_by_lines_is_cut_between_words() -> None:
+    lines = "\n".join(["alpha", "beta"] * 200)
+    assert SearchResult(url="https://a.com", description=lines).description.split()[-1] in {"alpha\u2026", "beta\u2026"}

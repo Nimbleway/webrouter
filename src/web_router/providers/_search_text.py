@@ -25,7 +25,7 @@ def as_snippet(text: str) -> str:
     if len(text) <= SNIPPET_LIMIT:
         return text
     head = text[: SNIPPET_LIMIT - 1]
-    cut = head.rfind(" ")
+    cut = max(map(head.rfind, " \n\t"))
     return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"
 
 
