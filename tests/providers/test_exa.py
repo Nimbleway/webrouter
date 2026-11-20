@@ -171,3 +171,40 @@ def test_live_extract_returns_page_content() -> None:
 
     assert response.provider == "exa"
     assert response.documents[0].content
+
+
+def test_the_page_status_exa_reports_for_a_failed_url_is_kept_so_a_gone_page_reads_as_target(
+    extractor: ExaExtractProvider,
+) -> None:
+    gone, blocked = "https://gone.example", "https://blocked.example"
+    payload = {
+        "results": [],
+        "statuses": [
+            {"id": gone, "status": "error", "error": {"tag": "CRAWL_NOT_FOUND", "httpStatusCode": 404}},
+            {"id": blocked, "status": "error", "error": {"tag": "CRAWL_TIMEOUT", "httpStatusCode": None}},
+        ],
+    }
+
+    failures = extractor._to_response(ExtractRequest(urls=[gone, blocked]), [gone, blocked], payload).failures
+
+    assert [(f.url, f.error, f.status_code, f.kind) for f in failures] == [
+        (gone, "CRAWL_NOT_FOUND", 404, "target"),
+        (blocked, "CRAWL_TIMEOUT", None, "upstream"),
+    ]
+
+
+def test_a_page_the_site_throttled_does_not_read_as_exa_throttled(extractor: ExaExtractProvider) -> None:
+    from web_router.providers._cooldown import _cooldown_of
+    from web_router.providers._exhausted import nothing_returned
+
+    throttled = "https://busy.example"
+    payload = {
+        "results": [],
+        "statuses": [{"id": throttled, "status": "error", "error": {"tag": "CRAWL_FAILED", "httpStatusCode": 429}}],
+    }
+    failures = extractor._to_response(ExtractRequest(urls=[throttled]), [throttled], payload).failures
+
+    error = nothing_returned("exa", failures, [])
+
+    assert failures[0].status_code == 429, "the page's own status is kept on its failure"
+    assert error.status_code is None and _cooldown_of(error) == (None, None), "so auto does not sideline Exa"
