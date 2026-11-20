@@ -3,7 +3,8 @@
 Every backend's answer passes through :func:`split_error_pages`, so the rule
 is the same whichever one served the call: an error status, a bot challenge
 or a login wall lands in ``failures`` naming why; a junk page (:func:`junk`)
-stays a document whose warning tells ``auto`` to try the next backend.
+stays a document whose warning tells ``auto`` to try the next backend. A kept
+page the backend gave no title gets one from its content (:func:`~._extract_title.titled`).
 """
 
 from __future__ import annotations
@@ -27,13 +28,13 @@ from web_router.constants_extract import (
     EXTRACT_SHORTENER_HOSTS,
     EXTRACT_WALL_MAX_CHARS,
     HTML_NON_TEXT,
-    HTML_TITLE,
     MSG_EXTRACT_CHALLENGE,
     MSG_EXTRACT_LOGIN_WALL,
     MSG_EXTRACT_NEAR_EMPTY,
     MSG_EXTRACT_OFF_SITE,
     MSG_EXTRACT_TRACKER_PIXEL,
 )
+from web_router.providers._extract_title import html_title, titled
 from web_router.providers._url_match import asked_for, bare_url, owners
 from web_router.types import ExtractedDocument, ExtractFailure, ExtractResponse
 from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_UPSTREAM, TARGET_GONE_STATUSES
@@ -79,7 +80,7 @@ def split_error_pages(
     for document, owner in zip(pages, named, strict=True):
         reason = not_the_page(document)
         if reason is None:
-            kept.append((_warned(document, owner), owner))
+            kept.append((_warned(titled(document), owner), owner))
         else:
             (failed if owner else strays).append(_failure(document, reason, owner))
     if strays and asked and all(owner for _, owner in kept):
@@ -135,7 +136,7 @@ def not_the_page(document: ExtractedDocument) -> str | None:
         return MSG_EXTRACT_LOGIN_WALL
     if len(document.content) >= EXTRACT_WALL_MAX_CHARS:
         return None
-    title = _title(document)
+    title = document.title or html_title(document)
     if EXTRACT_CHALLENGE_TITLE.search(title):
         return MSG_EXTRACT_CHALLENGE
     if EXTRACT_LOGIN_TITLE.search(title):
@@ -151,14 +152,6 @@ def not_the_page(document: ExtractedDocument) -> str | None:
 def _is_login_path(path: str) -> bool:
     """Whether ``path`` is a login route itself or sits under one, not merely a longer name sharing its start."""
     return any(path == part or path.startswith(f"{part}/") for part in EXTRACT_LOGIN_URL_PARTS)
-
-
-def _title(document: ExtractedDocument) -> str:
-    """The page's title: the backend's, else the ``<title>`` of an HTML body, since some backends set none for HTML."""
-    if document.title or document.format != "html":
-        return document.title
-    found = HTML_TITLE.search(document.content)
-    return html.unescape(found.group(1)).strip() if found else ""
 
 
 def near_empty(document: ExtractedDocument) -> bool:  # Under EXTRACT_NEAR_EMPTY_CHARS of text: likely a shell

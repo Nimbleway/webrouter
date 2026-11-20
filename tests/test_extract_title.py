@@ -1,0 +1,61 @@
+"""A page the backend gave no title gets one from its content, whichever backend served it."""
+
+from __future__ import annotations
+
+import pytest
+
+from tests.conftest import FakeExtractProvider
+from web_router.providers._extract_title import page_title, titled
+from web_router.types import ExtractedDocument, ExtractFormat, ExtractRequest, ExtractResponse
+
+URL = "https://example.com/"
+BODY = " Some words about the page." * 20
+TITLE = "<title>Example &amp; Co</title>"
+OG = '<meta content="Open &quot;Graph&quot;" property="og:title">'
+H1 = '<h1 class="x">The <em>Heading</em></h1>'
+
+
+@pytest.mark.parametrize(
+    ("content", "format", "title"),
+    [
+        (f"<html><head>{TITLE}{OG}</head><body>{H1}</body></html>", "html", "Example & Co"),
+        (f"<html><head>{OG}</head><body>{H1}</body></html>", "html", 'Open "Graph"'),
+        ("<meta name='og:title' content='By name'><h1>H</h1>", "html", "By name"),
+        (f"<html><body>{H1}<h1>Second</h1></body></html>", "html", "The Heading"),
+        ("<html><body><p>No heading</p></body></html>", "html", ""),
+        ("Intro line\n\n# **Example** [Domain](https://x.test) #\n\n# Second", "markdown", "Example Domain"),
+        ("Example Domain\n==============\n\ntext", "markdown", "Example Domain"),
+        ("```\n# a comment in code\n```\n\n# Real", "markdown", "Real"),
+        ("#hashtag\n\n## Only an H2", "markdown", ""),
+        ("# Looks like a heading", "text", ""),
+        ("# Format unset", None, "Format unset"),
+    ],
+)
+def test_the_title_comes_from_title_then_og_title_then_the_first_h1(
+    content: str, format: ExtractFormat | None, title: str
+) -> None:
+    assert page_title(ExtractedDocument(url=URL, content=content, format=format)) == title
+
+
+def test_a_title_the_backend_gave_is_kept_and_the_h1_stays_in_the_content() -> None:
+    given = ExtractedDocument(url=URL, title="Backend's", content="# Other", format="markdown")
+    assert titled(given) is given
+
+    filled = titled(given.model_copy(update={"title": "  "}))
+    assert (filled.title, filled.content) == ("Other", "# Other")
+
+
+class _Untitled(FakeExtractProvider):
+    """A backend that, like Nimble, names no title."""
+
+    def _respond(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        content = f"# Example Domain\n\n{BODY}"
+        documents = [ExtractedDocument(url=url, content=content, format="markdown") for url in urls]
+        return ExtractResponse(provider=self.name, documents=documents)
+
+
+def test_an_explicit_provider_call_fills_the_title_and_keeps_the_h1() -> None:
+    document = _Untitled().extract(ExtractRequest(urls=[URL])).documents[0]
+
+    assert document.title == "Example Domain"
+    assert document.content.startswith("# Example Domain")
