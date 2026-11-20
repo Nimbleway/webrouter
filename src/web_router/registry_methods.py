@@ -81,8 +81,8 @@ def configured_by_method() -> dict[str, list[str]]:
 def providers_report() -> dict[str, Any]:
     """:func:`configured_by_method`, plus what ``auto`` runs keyless and the variables a method with nothing needs.
 
-    A keyless backend is reached through ``auto`` only, so it is not among the method's own names: naming it
-    as ``provider`` without its key fails.
+    A keyless backend missing from the method's own names is reached through ``auto`` only: naming it as
+    ``provider`` without its key fails. One in both, such as ``jina``, needs no key either way.
     """
     configured = configured_by_method()
     needs_key = {

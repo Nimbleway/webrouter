@@ -121,8 +121,9 @@ on this machine. It reads the environment and calls nothing. Two more keys say
 what that list leaves out:
 
 - `keyless`: the backends `auto` runs with no key, in the order it tries them,
-  for `search`, `extract` and `browser`. Reach them through `auto`; naming one
-  with `-p` and no key fails.
+  for `search`, `extract` and `browser`. One that is also in the method's own
+  list, such as `jina` or `local`, takes `-p` with no key; reach the rest
+  through `auto`, since naming one with `-p` and no key fails.
 - `needs_key`: each method with nothing to run here, and the variables that
   would add a backend for it. Such a method lists no `auto` either, since
   `auto` would have nothing to choose from.
