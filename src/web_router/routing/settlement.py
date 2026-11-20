@@ -6,7 +6,8 @@ charge, in the call's own cap and in every shared budget it reserves in:
 
 - :func:`refund_unstarted`: an attempt that failed before the backend did any
   work -- the failures :func:`~web_router.providers._chain.nothing_started`
-  names, a 4xx refusal or a connection never made -- is charged nothing. A 404
+  names, a 4xx refusal or a connection never made, and a backend passed over
+  while it cools down after timeouts -- is charged nothing. A 404
   or 410 stays charged: a fetch backend may bill a page it found gone;
 - :func:`settle_reported`: the attempt whose answer the call returns, when
   the response carries the backend's own reported cost, is charged that
@@ -23,6 +24,7 @@ from __future__ import annotations
 from web_router.constants_cost import COST_REPORTED
 from web_router.exceptions import WebRouterError
 from web_router.providers._chain import nothing_started
+from web_router.providers._cooldown import CoolingDownError
 from web_router.routing.budget_hooks import LEDGERS, check_own
 from web_router.routing.ledger import Ledger, _Tried
 from web_router.types_errors import TARGET_GONE_STATUSES
@@ -35,10 +37,8 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
     the call it was made in: an enclosing call's ledger, told of a nested
     call's failure, leaves its own open attempt as it is.
     """
-    if not isinstance(exc, WebRouterError) or not nothing_started(exc) or not check_own(ledger)():
+    if not isinstance(exc, WebRouterError) or not _never_started(exc) or not check_own(ledger)():
         return
-    if getattr(exc, "status_code", None) in TARGET_GONE_STATUSES:
-        return  # the page is gone, which a fetch backend may have billed finding out
     with ledger._lock:
         opened = ledger.trail.open
         if opened is None or opened.id != call_id or opened.attempt is None:
@@ -86,3 +86,11 @@ def _charge(ledger: Ledger, tried: _Tried, cost: float) -> None:
     if ledger.pool is not None and tried.own:
         ledger.pool.release(-delta)
         ledger.reserved += delta
+
+
+def _never_started(exc: WebRouterError) -> bool:
+    """Whether ``exc`` proves the attempt never started: a backend passed over while it cools down, whatever status
+    started the cooldown, or what :func:`nothing_started` names but a gone page, which a fetch backend may bill."""
+    if isinstance(exc, CoolingDownError):
+        return True
+    return nothing_started(exc) and getattr(exc, "status_code", None) not in TARGET_GONE_STATUSES
