@@ -601,10 +601,10 @@ itself: ``effort`` in particular reaches a member only as the caller set it.
 """
 
 AUTO_EXTRA = EXTRA_ALL
-"""The extra that installs every member of the chain.
+"""The extra named when no member of an ``auto`` chain imports.
 
-``all`` rather than ``search`` because the chain is the fallback of last resort: when none of its members import, the
-useful advice is to install everything, not to guess which method the caller will reach for next.
+The keyless members ship in the core install, so only a chain of members that each need an extra (``agentcore`` needs
+``aws``) or a broken install gets here; ``all`` covers both rather than guessing which one the caller hit.
 """
 
 AUTO_EXTRACT_PREFERRED: tuple[str, ...] = (
