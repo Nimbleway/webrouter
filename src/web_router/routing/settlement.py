@@ -6,7 +6,8 @@ charge, in the call's own cap and in every shared budget it reserves in:
 
 - :func:`refund_unstarted`: an attempt that failed before the backend did any
   work -- the failures :func:`~web_router.providers._chain.nothing_started`
-  names, a 4xx refusal or a connection never made -- is charged nothing. A 404
+  names, a 4xx refusal or a connection never made, or a member passed over
+  while it cools down or refusing an option itself -- is charged nothing. A 404
   or 410 stays charged: a fetch backend may bill a page it found gone;
 - :func:`settle_reported`: the attempt whose answer the call returns, when
   the response carries the backend's own reported cost, is charged that
@@ -21,11 +22,19 @@ attempt's estimate there is ``0``, as nothing ran.
 from __future__ import annotations
 
 from web_router.constants_cost import COST_REPORTED
-from web_router.exceptions import WebRouterError
+from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
+from web_router.exceptions import UnsupportedParameterError, WebRouterError
 from web_router.providers._chain import nothing_started
+from web_router.providers._cooldown import CoolingDownError
 from web_router.routing.budget_hooks import LEDGERS, check_own
 from web_router.routing.ledger import Ledger, _Tried
 from web_router.types_errors import TARGET_GONE_STATUSES
+
+_PASSED_OVER_UNSENT = (CoolingDownError, UnsupportedParameterError)
+"""Failures ``auto`` passes a member over with before it sends anything: its cooldown, or its own refusal.
+
+Each names the provider it is about. A mode clash (``InvalidParameterError``) names none, so a nested call's
+could not be told from the member's own, and it stays charged."""
 
 
 def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> None:
@@ -35,7 +44,7 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
     the call it was made in: an enclosing call's ledger, told of a nested
     call's failure, leaves its own open attempt as it is.
     """
-    if not isinstance(exc, WebRouterError) or not nothing_started(exc) or not check_own(ledger)():
+    if not isinstance(exc, WebRouterError) or not _never_sent(exc, call_id) or not check_own(ledger)():
         return
     if getattr(exc, "status_code", None) in TARGET_GONE_STATUSES:
         return  # the page is gone, which a fetch backend may have billed finding out
@@ -47,6 +56,23 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
         _charge(ledger, tried, 0.0)
         tried.est_cost_usd = 0.0
     _match_enclosing(ledger, tried, 0.0, refunded=True)
+
+
+def _never_sent(exc: WebRouterError, call_id: str) -> bool:
+    """Whether ``exc`` proves no request went out for ``call_id``: a failure :func:`nothing_started` names, or
+    ``call_id``'s own backend passed over while it cools down or refusing an option itself.
+
+    The last two are not in :func:`nothing_started`, which decides whether a job chain may move on. They count
+    only when they name ``call_id``'s backend: a registered provider can make a nested call whose refusal reaches
+    here after it did billable work itself, and that refusal says nothing about its own attempt.
+    """
+    if isinstance(exc, _PASSED_OVER_UNSENT):
+        return _backend(getattr(exc, "provider", "")) == _backend(call_id.partition(CANDIDATE_ID_SEPARATOR)[2])
+    return nothing_started(exc)
+
+
+def _backend(entry: str) -> str:
+    return entry.partition(CANDIDATE_ID_SEPARATOR)[0]
 
 
 def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
