@@ -2,8 +2,8 @@
 
 The capabilities resource and the server instructions tell the model; these
 tell the operator, who may never see either: keys from a remembered file, a
-``WEB_ROUTER_ENV_FILE`` that names nothing, a key file others can read, and
-billed keys with no ceiling. Each names paths and variables, never a value.
+``WEB_ROUTER_ENV_FILE`` that names nothing, a key file others can read,
+billed keys with no ceiling, and the slim tool profile's switch. Each names paths and variables, never a value.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from web_router.constants_mcp_env import (
     MCP_LOG_NO_CEILING,
     MCP_MSG_ENV_LOOSE_PERMISSIONS,
 )
-from web_router.mcp import env_pointer, methods
+from web_router.mcp import allowlist, env_pointer, methods
 from web_router.mcp.env_foreign import remembered_billed
 
 if TYPE_CHECKING:
@@ -51,6 +51,7 @@ def log_startup(sources: EnvSources) -> None:
     keyed = any(methods.keyed(method) for method in methods.EACH_METHOD)
     if keyed and not os.environ.get(ENV_MCP_MAX_COST_USD, "").strip():
         _LOG.warning(MCP_LOG_NO_CEILING, ENV_MCP_MAX_COST_USD)
+    allowlist.log_profile()
 
 
 def loose_permissions(path: Path) -> str | None:

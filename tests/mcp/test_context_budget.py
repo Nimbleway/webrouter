@@ -147,7 +147,7 @@ def test_a_result_is_rendered_compact() -> None:
     assert render({"a": [1, 2], "b": {"c": "d"}}) == '{"a":[1,2],"b":{"c":"d"}}'
 
 
-async def test_core_results_match_their_published_output_schemas(tools: WebRouterTools) -> None:
+async def test_core_results_match_their_published_output_schemas(tools: WebRouterTools, all_runnable: None) -> None:
     calls = {
         MCP_TOOL_SEARCH: {"query": "q"},
         MCP_TOOL_EXTRACT: {"urls": ["https://example.com"]},

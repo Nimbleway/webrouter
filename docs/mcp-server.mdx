@@ -142,7 +142,9 @@ and never reports one back to the model.
 
 ### Loading keys mid-conversation: `load_env`
 
-A model can load a file itself. `load_env` takes the file's **path** — the
+**Off by default.** Set `WEB_ROUTER_MCP_LOAD_ENV=load` (this session only) or
+`=remember` where the server starts, and a model can load a file itself.
+`load_env` takes the file's **path** — the
 model asks you where your `.env` is, and never asks you to paste a key — and
 loads its provider credentials under the same rules, without a restart:
 
@@ -211,8 +213,9 @@ carries whatever the model puts in it). A model steered by a page could read
 your data with one tool and send it out with the next. When the model will
 read pages you do not trust, give it less:
 
-- **Serve only the tools the task needs.** `WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw`
-  leaves out the browser, the vendor tools and `load_env`; see
+- **Serve only the tools the task needs.** The default `slim` profile already
+  leaves out the browser, the vendor tools, `live_data` and `load_env`;
+  `WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw` narrows it further; see
   [Serving fewer tools](#serving-fewer-tools-web_router_mcp_tools).
 - **Cap what one connection spends.** Set `WEB_ROUTER_MCP_MAX_COST_USD` (and
   `WEB_ROUTER_MCP_TIME_LIMIT_S`); with billed keys and no ceiling, the server
@@ -223,11 +226,11 @@ read pages you do not trust, give it less:
   own accounts, with `WEB_ROUTER_MCP_TOOLS=vendors,vendor_endpoint,call_vendor`,
   enabled only when you need it.
 - **Decide where keys may come from.** Three switches, each read from the
-  real environment only, each defaulting to the behaviour described above:
+  real environment only:
 
   | Variable | Values | Effect |
   | --- | --- | --- |
-  | `WEB_ROUTER_MCP_LOAD_ENV` | `remember` (default), `load`, `off` | `load` lets `load_env` load a file for the session but refuses `remember`; `off` neither lists nor serves `load_env`, so no key arrives through a conversation. |
+  | `WEB_ROUTER_MCP_LOAD_ENV` | `off` (default), `load`, `remember` | `off` neither lists nor serves `load_env`, so no key arrives through a conversation; `load` lets it load a file for the session but refuses `remember`; `remember` allows both. The `.env` files read at startup are read either way. |
   | `WEB_ROUTER_MCP_REMEMBERED_ENV` | `anywhere` (default), `project`, `off` | `project` reads a remembered `.env` only when it lies inside the directory the server started in, so keys from one checkout never bill in another; `off` never reads it. |
   | `WEB_ROUTER_MCP_CWD_ENV` | `on` (default), `off` | `off` skips the `.env` in the directory the server starts in, for a server registered at user scope that starts in whatever repo is open. |
 
@@ -279,6 +282,20 @@ what is configured — see below. `load_env` applies one at once; one changed in
 the client's `env` block or a file the server already read takes a restart.
 
 ## The tools
+
+<Warning>
+**Changed: a new server serves fewer tools.** By default the server runs the
+`slim` profile: `search`, `extract`, `answer`, `research` and
+`research_status`, `fetch_raw`, `web_run` and the budget tools. The browser
+tools, `browse`, the live data tools and the vendor tools, `call_vendor`
+among them, are off until you set `WEB_ROUTER_MCP_PROFILE=full` or name them in
+`WEB_ROUTER_MCP_TOOLS`; `load_env` is off until you set
+`WEB_ROUTER_MCP_LOAD_ENV`; and the browser refuses loopback and private
+addresses until you set `WEB_ROUTER_MCP_PRIVATE_URLS=on`. To keep what you had:
+`WEB_ROUTER_MCP_PROFILE=full`, `WEB_ROUTER_MCP_LOAD_ENV=remember` and
+`WEB_ROUTER_MCP_PRIVATE_URLS=on`. See
+[Serving fewer tools](#serving-fewer-tools-web_router_mcp_tools).
+</Warning>
 
 | Tool | What it is for | Latency |
 | --- | --- | --- |
@@ -641,17 +658,16 @@ service that hands out the machine's credentials. So the browser tools open
 | the session's own CDP host and port, under any loopback name | its `/json` endpoint hands out the socket that controls the browser |
 | cloud metadata hosts, and all of `169.254.0.0/16` | they answer anything running on the machine with its credentials |
 
-What is deliberately **not** refused: loopback and private-network (RFC 1918)
-addresses, beyond the session's own CDP endpoint and the metadata ranges above.
-A dev server on `localhost:8000` or an intranet page is a legitimate thing to
-point a browser on this machine at — but it also means a page can steer the
-model toward one, and what it serves enters the transcript. Run the server
-(and pick `local` sessions) on a machine whose network holds nothing a
-page-steered model should not read.
-Over HTTP the browser runs on the server, not the user's machine, so these are
-refused there too: `WEB_ROUTER_MCP_PRIVATE_URLS` is `off` unless the operator
-sets it, and loopback and private-network addresses -- a name that resolves to
-one included -- are turned away like the metadata ranges.
+Loopback and private-network (RFC 1918) addresses are refused too, by
+default, a name that resolves to one included: a page can steer the model
+toward your router's admin page or an intranet service, and what it serves
+enters the transcript. The refusal names the switch. A dev server on
+`localhost:8000` is a legitimate thing to point a browser on this machine at,
+so `WEB_ROUTER_MCP_PRIVATE_URLS=on` opens these again, never the session's own
+CDP endpoint or the metadata ranges above. Turn it on only on a machine whose
+network holds nothing a page-steered model should not read, and never over
+HTTP, where the browser runs on the server and these addresses are the
+server's own network.
 
 The policy is enforced at these points:
 
@@ -767,8 +783,11 @@ extract also `max`, which races them); research and browse offer only `auto`,
 which has nothing to run on; and the live data tools and `answer` offer nothing,
 since every backend bills. Once a key is set, `answer` with no `provider` tries
 the configured answer backends in ranked order. A tool with nothing to run on
-says so in its own description, in as many words, rather than pretending to
-work.
+is not listed at all -- research, browse, `answer` and the live data tools
+until a key for one of their backends is set -- and a call to one names the
+variable that would add it. The capabilities resource's `unlock` lists them
+either way. A tool `WEB_ROUTER_MCP_TOOLS` names is listed regardless, and its
+description says nothing is configured.
 
 The resource `web-router://capabilities` carries the same lists as JSON, plus `browse` and `browser`
 -- the three live data tools under one `live_data` key --
@@ -826,15 +845,28 @@ the server is restarted.
 ## Serving fewer tools: `WEB_ROUTER_MCP_TOOLS`
 
 The model reads every listed tool on every turn: all 27, with every key set,
-are about 26 KB (some 6.4k tokens). Name the ones you want, comma-separated, and
-the rest are neither listed nor callable:
+are about 26 KB (some 6.4k tokens). So the server serves a profile,
+`WEB_ROUTER_MCP_PROFILE`:
+
+| Profile | Serves | With every key |
+| --- | --- | --- |
+| `slim` (default) | `search`, `extract`, `answer`, `research`, `research_status`, `fetch_raw`, `web_run`, `budget_start`, `budget_status`, and `load_env` when its switch is on | about 10.7 KB (some 2.7k tokens) |
+| `full` | every tool: also the `browser_*` tools, `browse`, the live data tools and the vendor tools, `call_vendor` among them | about 26 KB |
+
+With no key at all, the slim profile lists six tools: the ones that need a key
+wait until one is set. At startup the server says on stderr that the slim
+profile is serving and which switch serves the rest, and the capabilities
+resource's `tools` names the profile, the tools it left off and the switch.
+
+`WEB_ROUTER_MCP_TOOLS` always wins over the profile. Name the tools you want,
+comma-separated, and the rest are neither listed nor callable:
 
 ```bash
 WEB_ROUTER_MCP_TOOLS=search,extract,answer,fetch_raw   # about 5.8 KB
 WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw,browser_*
 ```
 
-A trailing `*` matches a prefix. Unset or blank serves every tool; a name that
+A trailing `*` matches a prefix. Unset or blank serves the profile; a name that
 matches nothing is ignored with a warning in the server's log. Keep `fetch_raw`
 if results may be cut, and `load_env` if keys may be added mid-conversation.
 Read once at startup, from the real environment only. `research`, `browse` and
@@ -863,12 +895,13 @@ web-router-mcp --transport http --host 0.0.0.0 --port 9000
   `Authorization: Bearer <token>`; anything else gets a 401. Set one on
   loopback too if other users share the machine. Generate one with
   `openssl rand -hex 32`.
-- **`load_env` is off** unless you set `WEB_ROUTER_MCP_LOAD_ENV` yourself, so
-  a client cannot point the server at files on its host. Keys come from the
-  server's environment, or a `.env` it finds at startup.
+- **`load_env` is off**, as under stdio, and stays off even if
+  `WEB_ROUTER_MCP_LOAD_ENV` is blank, so a client cannot point the server at
+  files on its host. Keys come from the server's environment, or a `.env` it
+  finds at startup.
 - **The browser stays off the server's own network**: loopback and
-  private-network addresses are refused, since the browser runs on the server
-  (`WEB_ROUTER_MCP_PRIVATE_URLS=on` allows them again).
+  private-network addresses are refused, as under stdio, since the browser
+  runs on the server. Leave `WEB_ROUTER_MCP_PRIVATE_URLS` off here.
 - **Every client shares one session**: one router, one budget
   (`WEB_ROUTER_MCP_MAX_COST_USD` caps them all together) and one set of browser
   sessions.
@@ -907,8 +940,10 @@ the cloud browsers are.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `WEB_ROUTER_ENV_FILE` | unset | The `.env` file to load provider keys from, looked at before any other; see [Then add whichever keys you have](#then-add-whichever-keys-you-have). Read from the real environment only — no file can set it. |
-| `WEB_ROUTER_MCP_LOAD_ENV`, `WEB_ROUTER_MCP_REMEMBERED_ENV`, `WEB_ROUTER_MCP_CWD_ENV` | `remember` (`off` under HTTP), `anywhere`, `on` | Where keys may come from: what `load_env` may do, where a remembered `.env` is read, and whether the working directory's is. See [Using this safely with untrusted pages](#using-this-safely-with-untrusted-pages). |
-| `WEB_ROUTER_MCP_PRIVATE_URLS` | `on` (`off` under HTTP) | Whether the browser tools may open loopback and private-network addresses. See [Where the browser may go](#where-the-browser-may-go). Read from the real environment only. |
+| `WEB_ROUTER_MCP_PROFILE` | `slim` | Which tools are served when `WEB_ROUTER_MCP_TOOLS` is unset: `slim` or `full`. See [Serving fewer tools](#serving-fewer-tools-web_router_mcp_tools). A value it does not take stops the server. Read from the real environment only. |
+| `WEB_ROUTER_MCP_TOOLS` | unset | The tools to serve, comma-separated, a trailing `*` matching a prefix; wins over the profile. |
+| `WEB_ROUTER_MCP_LOAD_ENV`, `WEB_ROUTER_MCP_REMEMBERED_ENV`, `WEB_ROUTER_MCP_CWD_ENV` | `off`, `anywhere`, `on` | Where keys may come from: what `load_env` may do, where a remembered `.env` is read, and whether the working directory's is. See [Using this safely with untrusted pages](#using-this-safely-with-untrusted-pages). |
+| `WEB_ROUTER_MCP_PRIVATE_URLS` | `off` | `on` lets the browser tools open loopback and private-network addresses. See [Where the browser may go](#where-the-browser-may-go). Read from the real environment only. |
 | `WEB_ROUTER_MCP_TOKEN` | unset | Under `--transport http`, the bearer token every request must carry; required on any host but `127.0.0.1`, `localhost` and `::1`. See [Serve over HTTP for a team](#serve-over-http-for-a-team). Read from the real environment only. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |

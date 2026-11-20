@@ -12,6 +12,8 @@ import pytest
 # Every module here drives the server, which is the mcp extra's.
 pytest.importorskip("mcp", reason="mcp extra not installed")
 
+from tests.mcp.env_helpers import OPENED_UP
+from tests.mcp.switch_fixtures import all_runnable, every_tool_named, opened_up  # noqa: F401 -- fixtures
 from tests.routing_helpers import MEMBERS, TOOLS
 from tests.routing_helpers import member as _member
 from web_router import prices
@@ -87,7 +89,7 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_keys: None
     work.mkdir()
     for name, value in home_variables(home).items():
         monkeypatch.setenv(name, value)
-    for name in (ENV_MCP_ENV_FILE, *MCP_ENV_SWITCHES):
+    for name in (ENV_MCP_ENV_FILE, *(name for name in MCP_ENV_SWITCHES if name not in OPENED_UP)):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.chdir(work)
     return home
