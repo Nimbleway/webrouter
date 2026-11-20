@@ -1,10 +1,10 @@
 ---
-title: "Vendor data"
-description: "call_vendor() reaches a vendor's own API (Google Ads, Datadog, ...) with your credentials, from a curated catalog."
+title: "Data APIs"
+description: "call_data_api() reaches a vendor's own API (Google Ads, Datadog, ...) with your credentials, from a curated catalog."
 icon: "building"
 ---
 
-`call_vendor()` reaches a vendor's own API with your account's credentials —
+`call_data_api()` reaches a vendor's own API with your account's credentials —
 your Google Ads reports, your Datadog logs, a contact-data vendor you pay for.
 It is not a method with interchangeable backends: only Google Ads knows your
 Google Ads spend, so there is no `auto`, and nothing is normalized. The answer
@@ -34,11 +34,11 @@ from web_router import WebRouter
 
 router = WebRouter()
 
-router.vendors(configured=True)  # the vendors whose keys are set here
-router.find_vendor_endpoints("google ads spend by campaign")
-router.vendor_endpoint("google-ads.query")  # inputs, notes, credentials
+router.data_apis(configured=True)  # the data APIs whose keys are set here
+router.find_data_apis("google ads spend by campaign")
+router.data_api_endpoint("google-ads.query")  # inputs, notes, credentials
 
-response = router.call_vendor(
+response = router.call_data_api(
     "google-ads.query",
     {
         "customer_id": "1234567890",
@@ -48,11 +48,11 @@ response = router.call_vendor(
 response.data  # Google's JSON, untouched
 
 # A path the catalog does not name, still with the vendor's credentials:
-router.vendor_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
+router.data_api_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
 
-# The catalog names only endpoints that read. A write goes through vendor_request,
+# The catalog names only endpoints that read. A write goes through data_api_request,
 # refused unless you say so. Dry-run first where the vendor can.
-router.vendor_request(
+router.data_api_request(
     "google-ads",
     "POST",
     "/customers/1234567890/campaignBudgets:mutate",
@@ -66,7 +66,7 @@ each vendor's file lists — `make vendors` writes them all into
 `.env.example`. To load a `.env` yourself, run
 `uv run --env-file .env python app.py`, or call `load_dotenv()` from
 `python-dotenv`. To pass them in code instead, give the router
-`vendor_credentials={"datadog": {"api_key": ..., "app_key": ...}}`, read
+`data_api_credentials={"datadog": {"api_key": ..., "app_key": ...}}`, read
 before the environment; anything with a `get(vendor, name, env)` method can
 stand in for both, a vault, say. A vendor whose host depends on your region
 or account takes it as a setting: `DD_SITE=datadoghq.eu`.

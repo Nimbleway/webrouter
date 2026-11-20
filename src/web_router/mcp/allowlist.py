@@ -19,6 +19,7 @@ from web_router.constants_mcp_context import (
     MCP_TOOL_PARTNERS,
     MCP_TOOLS_SEPARATOR,
 )
+from web_router.constants_vendors_mcp import MCP_TOOL_RENAMED
 
 _T = TypeVar("_T")
 
@@ -34,7 +35,9 @@ def allowed(handlers: Mapping[str, _T], value: str | None = None) -> dict[str, _
     research run can still be polled and a browser closed.
     """
     value = os.environ.get(ENV_MCP_TOOLS, "") if value is None else value
-    patterns = [entry.strip() for entry in value.split(MCP_TOOLS_SEPARATOR) if entry.strip()]
+    # An allowlist written before the data API rename still names the tools it meant.
+    patterns = [MCP_TOOL_RENAMED.get(entry.strip(), entry.strip()) for entry in value.split(MCP_TOOLS_SEPARATOR)]
+    patterns = [pattern for pattern in patterns if pattern]
     if not patterns:
         return dict(handlers)
     if unknown := [pattern for pattern in patterns if not fnmatch.filter(handlers, pattern)]:

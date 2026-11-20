@@ -28,7 +28,7 @@ Calling the Python library instead? The methods match, under these names:
 | `research_status`, `browse_status` | `submit_research()` / `submit_browse()`, then the job's `status()` and `result()` |
 | `web_run` | `run()` (and `plan()` to see the choice first) |
 | `budget_start`, `budget_status` | `with router.budget(...) as scope:`, then `scope.status()` |
-| `vendors`, `vendor_endpoint`, `call_vendor` | the method of the same name |
+| `data_apis`, `data_api_endpoint`, `call_data_api` | the method of the same name |
 | `browser_open` … `browser_close` | `open_browser()`, then the handle's `goto`, `snapshot`, `click`, `type`, `press`, `screenshot`, `read`; it closes when its `with` block ends |
 | `fetch_raw` | the response's `raw` |
 | `load_env` | none: the library reads the process environment only |
@@ -84,11 +84,11 @@ Beside the ladder:
   server's router pick the method and backends. The built-in router picks
   `search` or `extract`; an operator's router may pick a billed method. Call
   a tool yourself when you know which you want.
-- **`vendors`**, **`vendor_endpoint`**, **`call_vendor`** reach one vendor's
+- **`data_apis`**, **`data_api_endpoint`**, **`call_data_api`** reach one vendor's
   own API (Google Ads, Datadog, ...) with the user's credentials. The data
   is the vendor's own, shaped to fit like every result: `fetch_raw` holds the
-  rest of a long one. List with `vendors`, read the endpoint's parameters
-  with `vendor_endpoint`, then call. This is the user's own account, not the
+  rest of a long one. List with `data_apis`, read the endpoint's parameters
+  with `data_api_endpoint`, then call. This is the user's own account, not the
   open web.
 
 ## Check what comes back

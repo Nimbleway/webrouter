@@ -1,4 +1,4 @@
-"""The three vendor tools: find a vendor endpoint, describe one, call one.
+"""The three data API tools: find a data API endpoint, describe one, call one.
 
 Kept out of :mod:`web_router.mcp.tools`, which already holds every other
 tool, the way the template and vendor shaping live beside
@@ -13,12 +13,14 @@ import os
 from collections.abc import Awaitable, Callable, Mapping
 from typing import TYPE_CHECKING, Any
 
+from web_router.client_vendors_compat import warn_data_api_renamed
 from web_router.constants import MCP_MSG_MISSING_ARGUMENT
-from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
+from web_router.constants_vendors import MSG_DATA_API_DEPRECATED, VENDOR_ENV_ALLOW_WRITES, VENDOR_ENV_ALLOW_WRITES_OLD
 from web_router.constants_vendors_mcp import (
     MCP_MSG_VENDOR_ARG_TYPE,
     MCP_MSG_VENDOR_CALL_ARGS,
     MCP_TOOL_CALL_VENDOR,
+    MCP_TOOL_RENAMED,
     MCP_TOOL_VENDOR_ENDPOINT,
     MCP_TOOL_VENDORS,
     MSG_VENDOR_MCP_WRITE_REFUSED,
@@ -59,12 +61,12 @@ async def vendors_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> d
     router = tools.router
     query, vendor = arguments.get("query"), arguments.get("vendor")
     if query or vendor:
-        endpoints = router.find_vendor_endpoints(
+        endpoints = router.find_data_apis(
             query or "", vendor=vendor, category=arguments.get("category"), limit=arguments.get("limit")
         )
-        vendors = {name: router.vendor(name) for name in {endpoint.vendor for endpoint in endpoints}}
+        vendors = {name: router.data_api(name) for name in {endpoint.vendor for endpoint in endpoints}}
         return shape_endpoint_list(endpoints, vendors, router.vendor_credential_source(), budget=max_response_chars())
-    rows = router.vendors(category=arguments.get("category"), configured=arguments.get("configured"))
+    rows = router.data_apis(category=arguments.get("category"), configured=arguments.get("configured"))
     return shape_vendor_list(rows, budget=max_response_chars())
 
 
@@ -74,9 +76,28 @@ async def vendor_endpoint_tool(tools: WebRouterTools, arguments: Mapping[str, An
     name = arguments.get("endpoint")
     if not name:
         raise ValueError(MCP_MSG_MISSING_ARGUMENT.format(tool=MCP_TOOL_VENDOR_ENDPOINT, name="endpoint"))
-    endpoint = router.vendor_endpoint(name)
-    vendor = router.vendor(endpoint.vendor)
+    endpoint = router.data_api_endpoint(name)
+    vendor = router.data_api(endpoint.vendor)
     return shape_endpoint(endpoint, vendor, router.vendor_credential_source(), budget=max_response_chars())
+
+
+def renamed_tool(name: str) -> tuple[str, str | None]:
+    """The tool a data API tool's old name now means, and the note to add to its answer; ``name`` itself else.
+
+    The old names are not listed, but a client that kept one still gets the answer, and is told.
+    """
+    new = MCP_TOOL_RENAMED.get(name)
+    return (new, MSG_DATA_API_DEPRECATED.format(old=name, new=new)) if new else (name, None)
+
+
+def writes_allowed() -> bool:
+    """Whether the server was started allowing writes: the variable set to ``1``, or its old name, with a warning."""
+    if os.environ.get(VENDOR_ENV_ALLOW_WRITES) == "1":
+        return True
+    if os.environ.get(VENDOR_ENV_ALLOW_WRITES_OLD) == "1":
+        warn_data_api_renamed(VENDOR_ENV_ALLOW_WRITES_OLD, VENDOR_ENV_ALLOW_WRITES)
+        return True
+    return False
 
 
 async def call_vendor_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -87,13 +108,13 @@ async def call_vendor_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) 
     if not ((endpoint and not any(raw)) or (not endpoint and all(raw))):
         raise ValueError(MCP_MSG_VENDOR_CALL_ARGS)
     # Writes need both: the user started this server allowing them, and the model asked for this one.
-    allow = arguments.get("allow_writes") is True and os.environ.get(VENDOR_ENV_ALLOW_WRITES) == "1"
+    allow = arguments.get("allow_writes") is True and writes_allowed()
     try:
         if endpoint:
-            response = await router.call_vendor(endpoint, arguments.get("params"), allow_writes=allow)
+            response = await router.call_data_api(endpoint, arguments.get("params"), allow_writes=allow)
         else:
             vendor, method, path = (str(value) for value in raw)
-            response = await router.vendor_request(
+            response = await router.data_api_request(
                 vendor,
                 method,
                 path,
@@ -117,4 +138,4 @@ TOOLS: dict[str, Callable[[WebRouterTools, Mapping[str, Any]], Awaitable[dict[st
     MCP_TOOL_VENDOR_ENDPOINT: vendor_endpoint_tool,
     MCP_TOOL_CALL_VENDOR: call_vendor_tool,
 }
-"""The three vendor tools, each a handler taking the session's tools, as :class:`WebRouterTools` registers them."""
+"""The three data API tools, each a handler taking the session's tools, as :class:`WebRouterTools` registers them."""

@@ -22,42 +22,43 @@ def _wire(router: WebRouter | AsyncWebRouter, recorder: Recorder) -> None:
 
 
 def test_vendors_lists_the_catalog_with_what_is_missing() -> None:
-    with WebRouter(vendor_credentials=DATADOG) as router:
-        rows = {row.vendor: row for row in router.vendors()}
+    with WebRouter(data_api_credentials=DATADOG) as router:
+        rows = {row.vendor: row for row in router.data_apis()}
         assert rows["datadog"].configured
         assert not rows["google-ads"].configured
         assert "GOOGLE_ADS_DEVELOPER_TOKEN" in rows["google-ads"].missing
-        configured = {row.vendor for row in router.vendors(configured=True)}
+        configured = {row.vendor for row in router.data_apis(configured=True)}
         assert "datadog" in configured
         assert "google-ads" not in configured
         # The rest of the configured list is vendors that need no key at all.
-        keyless = {row.vendor for row in router.vendors() if not router.vendor(row.vendor).auth.credentials}
+        keyless = {row.vendor for row in router.data_apis() if not router.data_api(row.vendor).auth.credentials}
         keyless |= {
             row.vendor
-            for row in router.vendors()
-            if all(not spec.required for spec in router.vendor(row.vendor).auth.credentials.values())
+            for row in router.data_apis()
+            if all(not spec.required for spec in router.data_api(row.vendor).auth.credentials.values())
         }
         assert configured - {"datadog"} <= keyless
-        assert all(row.category == "advertising" for row in router.vendors(category="advertising"))
+        assert all(row.category == "advertising" for row in router.data_apis(category="advertising"))
 
 
 def test_describe_and_find() -> None:
     with WebRouter() as router:
-        assert router.vendor("google-ads").name == "Google Ads"
-        assert router.vendor_endpoint("datadog.logs.search").method == "POST"
-        found = [endpoint.id for endpoint in router.find_vendor_endpoints("datadog error logs")]
+        assert router.data_api("google-ads").name == "Google Ads"
+        assert router.data_api_endpoint("datadog.logs.search").method == "POST"
+        found = [endpoint.id for endpoint in router.find_data_apis("datadog error logs")]
         assert found[0] == "datadog.logs.search"
-        reads = router.find_vendor_endpoints("google ads campaigns", kind="read")
+        reads = router.find_data_apis("google ads campaigns", kind="read")
         assert all(endpoint.kind == "read" for endpoint in reads)
         with pytest.raises(VendorNotFoundError):
-            router.vendor_endpoint("datadog.nope")
+            router.data_api_endpoint("datadog.nope")
 
 
 def test_call_vendor_sends_to_the_vendor() -> None:
     recorder = Recorder()
-    with WebRouter(vendor_credentials={**DATADOG, "datadog": {**DATADOG["datadog"], "site": "datadoghq.eu"}}) as router:
+    credentials = {**DATADOG, "datadog": {**DATADOG["datadog"], "site": "datadoghq.eu"}}
+    with WebRouter(data_api_credentials=credentials) as router:
         _wire(router, recorder)
-        response = router.call_vendor("datadog.monitors.search", {"query": "status:alert", "per_page": 5})
+        response = router.call_data_api("datadog.monitors.search", {"query": "status:alert", "per_page": 5})
 
     assert response.data == {"ok": True}
     assert str(recorder.last.url) == "https://api.datadoghq.eu/api/v1/monitor/search?query=status%3Aalert&per_page=5"
@@ -67,11 +68,11 @@ def test_call_vendor_sends_to_the_vendor() -> None:
 
 def test_vendor_request_reaches_paths_the_catalog_does_not_name() -> None:
     recorder = Recorder()
-    with WebRouter(vendor_credentials=DATADOG) as router:
+    with WebRouter(data_api_credentials=DATADOG) as router:
         _wire(router, recorder)
-        router.vendor_request("datadog", "GET", "/api/v2/users", query={"page[size]": 2})
+        router.data_api_request("datadog", "GET", "/api/v2/users", query={"page[size]": 2})
         with pytest.raises(VendorWriteRefusedError):
-            router.vendor_request("datadog", "DELETE", "/api/v1/monitor/1")
+            router.data_api_request("datadog", "DELETE", "/api/v1/monitor/1")
 
     assert recorder.last.url.path == "/api/v2/users"
     assert recorder.last.url.params["page[size]"] == "2"
@@ -100,9 +101,9 @@ def test_google_ads_writes_are_gated_and_reads_pass(ads_with_a_write: None) -> N
             return [r for r in self.requests if r.url.host != "oauth2.googleapis.com"][-1]
 
     recorder = GoogleToken()
-    with WebRouter(vendor_credentials=credentials) as router:
+    with WebRouter(data_api_credentials=credentials) as router:
         _wire(router, recorder)
-        router.call_vendor(
+        router.call_data_api(
             "google-ads.query", {"customer_id": "1234567890", "query": "SELECT campaign.name FROM campaign"}
         )
         sent = recorder.last
@@ -113,17 +114,17 @@ def test_google_ads_writes_are_gated_and_reads_pass(ads_with_a_write: None) -> N
 
         budget = {"customer_id": "1234567890", "operations": [], "validateOnly": True}
         with pytest.raises(VendorWriteRefusedError):
-            router.call_vendor("google-ads.campaign_budgets.mutate", budget)
-        router.call_vendor("google-ads.campaign_budgets.mutate", budget, allow_writes=True)
+            router.call_data_api("google-ads.campaign_budgets.mutate", budget)
+        router.call_data_api("google-ads.campaign_budgets.mutate", budget, allow_writes=True)
         assert recorder.last.url.path.endswith("/campaignBudgets:mutate")
 
 
 async def test_async_router() -> None:
     recorder = Recorder()
-    async with AsyncWebRouter(vendor_credentials=DATADOG) as router:
+    async with AsyncWebRouter(data_api_credentials=DATADOG) as router:
         _wire(router, recorder)
-        response = await router.call_vendor("datadog.auth.validate")
-        raw = await router.vendor_request("datadog", "GET", "/api/v1/validate")
+        response = await router.call_data_api("datadog.auth.validate")
+        raw = await router.data_api_request("datadog", "GET", "/api/v1/validate")
 
     assert response.status_code == raw.status_code == 200
     assert recorder.last.url.host == "api.datadoghq.com"

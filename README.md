@@ -95,7 +95,7 @@ names every variable and where to get it, and fill in the ones you hold.
 | [`live_data`](https://docs.webrouter.net/live-data) | A vendor's ready-made scraper for one site, returning records | No |
 | [`open_browser`](https://docs.webrouter.net/browser) | A browser session you drive, local or in the cloud | Yes (`local`) |
 | [`browse`](https://docs.webrouter.net/browser) | A task handed to a hosted browser agent | No |
-| [`call_vendor`](https://docs.webrouter.net/vendors) | A vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
+| [`call_data_api`](https://docs.webrouter.net/vendors) | A vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
 
 ```python
 with WebRouter() as router:

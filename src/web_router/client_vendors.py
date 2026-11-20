@@ -1,16 +1,18 @@
-"""Vendor data on the routers: a vendor's own API, called with your credentials.
+"""Data APIs on the routers: a vendor's own API, called with your credentials.
 
 Not a method with interchangeable backends. ``search`` asks "who can answer
 this?"; a vendor call asks "what does *my* Google Ads account say?", and only
 Google Ads can answer. So there is no ``auto``, nothing is normalized, and the
-vendor's answer comes back in its own shape -- the ``run_template`` rule,
+vendor's answer comes back in its own shape -- the ``live_data`` rule,
 for the same reason. What the router adds is everything around the call: a
 catalog to find the endpoint in, credentials placed the way the vendor wants
 them, OAuth tokens refreshed, and three guarantees -- credentials never leave
 the vendor's host, no input is dropped or invented, and writes are opt-in.
 
 :class:`~web_router.WebRouter` and :class:`~web_router.AsyncWebRouter` take these
-as mixins, so the methods sit beside ``search`` and ``extract``.
+as mixins, so the methods sit beside ``search`` and ``extract``. The methods
+were named for vendors (``call_vendor``, ``vendors``, ...); those names still
+work, with a :class:`DeprecationWarning` -- see :mod:`web_router.client_vendors_compat`.
 """
 
 from __future__ import annotations
@@ -19,6 +21,14 @@ import threading
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Self
 
+from web_router.client_vendors_compat import (
+    AsyncVendorMethods,
+    SyncVendorMethods,
+    VendorLookupMethods,
+)
+from web_router.client_vendors_compat import (
+    renamed_credentials as renamed_credentials,
+)
 from web_router.constants_vendors import EXTRA_VENDORS, VENDOR_FIND_LIMIT
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.vendors.catalog import get_catalog
@@ -30,11 +40,13 @@ from web_router.vendors.types import VendorResponse, VendorSummary
 if TYPE_CHECKING:
     from web_router.vendors.caller import VendorCaller
 
-VendorCredentials = CredentialSource | Mapping[str, Mapping[str, str]] | None
-"""``vendor_credentials=``: a source, or ``{vendor: {name: value}}`` read before the environment."""
+DataApiCredentials = CredentialSource | Mapping[str, Mapping[str, str]] | None
+"""``data_api_credentials=``: a source, or ``{vendor: {name: value}}`` read before the environment."""
+VendorCredentials = DataApiCredentials
+"""The old name of :data:`DataApiCredentials`."""
 
 
-class _VendorLookup:
+class _VendorLookup(VendorLookupMethods):
     """What both routers share: the catalog lookups, and the caller built on first use."""
 
     _vendor_credentials: VendorCredentials
@@ -57,7 +69,7 @@ class _VendorLookup:
             return self._vendor_caller
 
     def keeping_vendor_credentials_of(self, previous: _VendorLookup) -> Self:
-        """This router, given ``previous``'s ``vendor_credentials=`` when it was built without any.
+        """This router, given ``previous``'s ``data_api_credentials=`` when it was built without any.
 
         For a router rebuilt from the environment after a ``.env`` load: vendor keys an embedder passed in code are
         not in the environment, so the rebuilt router would otherwise lose them.
@@ -67,13 +79,13 @@ class _VendorLookup:
         return self
 
     def vendor_credential_source(self) -> CredentialSource:
-        """Where this router reads vendor credentials: ``vendor_credentials=`` first, then the environment."""
+        """Where this router reads data API credentials: ``data_api_credentials=`` first, then the environment."""
         return credential_source(self._vendor_credentials)
 
-    def vendors(self, *, category: str | None = None, configured: bool | None = None) -> list[VendorSummary]:
-        """Every vendor in the catalog, by name, with whether this router holds its credentials.
+    def data_apis(self, *, category: str | None = None, configured: bool | None = None) -> list[VendorSummary]:
+        """Every data API in the catalog, by name, with whether this router holds its credentials.
 
-        ``configured=True`` keeps the vendors every required credential is set
+        ``configured=True`` keeps the data APIs every required credential is set
         for, ``False`` the ones still missing one -- each row names the
         variable to set.
         """
@@ -85,15 +97,15 @@ class _VendorLookup:
             rows = [row for row in rows if row.configured is configured]
         return rows
 
-    def vendor(self, name: str) -> Vendor:
-        """One vendor's catalog entry: its API, its auth, its settings, and every endpoint it names."""
+    def data_api(self, name: str) -> Vendor:
+        """One data API's catalog entry: its API, its auth, its settings, and every endpoint it names."""
         return get_catalog().vendor(name)
 
-    def vendor_endpoint(self, endpoint: str) -> VendorEndpoint:
+    def data_api_endpoint(self, endpoint: str) -> VendorEndpoint:
         """One endpoint, by its id (``'<vendor>.<job>'``): its inputs, notes, and a recorded answer if any."""
         return get_catalog().endpoint(endpoint)
 
-    def find_vendor_endpoints(
+    def find_data_apis(
         self,
         query: str,
         *,
@@ -111,8 +123,8 @@ class _VendorLookup:
         )
 
 
-class SyncVendors(_VendorLookup):
-    def call_vendor(
+class SyncVendors(SyncVendorMethods, _VendorLookup):
+    def call_data_api(
         self,
         endpoint: str,
         params: Mapping[str, Any] | None = None,
@@ -121,7 +133,7 @@ class SyncVendors(_VendorLookup):
     ) -> VendorResponse:
         """Call one catalog endpoint with ``params`` and return the vendor's answer, untouched.
 
-        ``params`` are the endpoint's own, named as :meth:`vendor_endpoint`
+        ``params`` are the endpoint's own, named as :meth:`data_api_endpoint`
         lists them; each goes where the endpoint declares -- path, query, body
         or header. One it does not declare raises
         :class:`~web_router.UnsupportedParameterError`, and a required one
@@ -133,7 +145,7 @@ class SyncVendors(_VendorLookup):
         """
         return self._caller().send(endpoint_plan(endpoint, params), allow_writes=allow_writes)
 
-    def vendor_request(
+    def data_api_request(
         self,
         vendor: str,
         method: str,
@@ -162,8 +174,8 @@ class SyncVendors(_VendorLookup):
             self._vendor_caller.close()
 
 
-class AsyncVendors(_VendorLookup):
-    async def call_vendor(
+class AsyncVendors(AsyncVendorMethods, _VendorLookup):
+    async def call_data_api(
         self,
         endpoint: str,
         params: Mapping[str, Any] | None = None,
@@ -173,7 +185,7 @@ class AsyncVendors(_VendorLookup):
         """Call one catalog endpoint and return the vendor's answer, untouched. As on the sync router."""
         return await self._caller().asend(endpoint_plan(endpoint, params), allow_writes=allow_writes)
 
-    async def vendor_request(
+    async def data_api_request(
         self,
         vendor: str,
         method: str,
