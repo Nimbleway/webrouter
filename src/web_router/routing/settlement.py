@@ -10,8 +10,9 @@ charge, in the call's own cap and in every shared budget it reserves in:
   while it cools down after timeouts -- is charged nothing. A 404
   or 410 stays charged: a fetch backend may bill a page it found gone;
 - :func:`settle_reported`: the attempt whose answer the call returns, when
-  the response carries the backend's own reported cost, is charged that
-  instead of its estimate.
+  the response states its cost -- reported, or a keyless call's $0 -- is
+  charged that instead of its estimate, and the attempts that read part of
+  the same answer nothing, as the stated cost is all of theirs.
 
 Only the ledger of the call the attempt was made in settles it; the calls it
 is nested in, which counted it toward their own caps, are settled to match.
@@ -24,7 +25,7 @@ from __future__ import annotations
 import math
 from typing import TypeGuard
 
-from web_router.constants_cost import COST_REPORTED
+from web_router.constants_cost import COST_STATED
 from web_router.exceptions import WebRouterError
 from web_router.providers._chain import nothing_started
 from web_router.providers._cooldown import CoolingDownError
@@ -49,9 +50,10 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
 
 
 def settle_reported(ledger: Ledger, response: object, empty: bool) -> None:
-    """Charge the attempt whose answer ``response`` is (``empty``: an empty one) its reported cost, if it states one."""
+    """Charge the attempt whose answer ``response`` is (``empty``: an empty one) the cost it states: reported, or a
+    keyless call's $0. The attempts that read part of the same answer (an extract's retry) settle to none."""
     cost = getattr(response, "cost_usd", None)
-    if getattr(response, "cost_source", None) != COST_REPORTED or not _a_cost(cost):
+    if getattr(response, "cost_source", None) not in COST_STATED or not _a_cost(cost):
         return
     for attempt, charge in ledger.settle_answer(getattr(response, "provider", None), empty, cost):
         _match_enclosing(ledger, attempt, charge)
