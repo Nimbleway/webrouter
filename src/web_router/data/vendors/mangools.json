@@ -1,0 +1,375 @@
+{
+  "vendor": "mangools",
+  "name": "Mangools",
+  "category": "seo",
+  "summary": "Mangools SEO data: related keywords with volumes and difficulty, keyword SERPs, a domain's ranking keywords and competitors, backlinks and link metrics, and site overviews.",
+  "docs_url": "https://apidocs.mangools.com/",
+  "pricing_url": "https://mangools.com/plans",
+  "base_url": "https://api.mangools.com/v3",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MANGOOLS_API_KEY"
+        ],
+        "description": "a Mangools API token (mangools.com/api-token), sent in the x-access-token header"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-access-token",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Lookups draw from plan quota pools (daily for keywords, SERPs and metrics, monthly for backlink rows); mangools.limits shows what is left. A spent pool answers 429 with type CreditLimit. Identical requests within 24 hours come from cache and cost nothing.",
+    "Burst limit: 3 requests per 30 seconds per account and pool; send requests one at a time, at least 11 seconds apart in the same pool. Over it: 429 type RateLimit with retry_after seconds.",
+    "Locations are Google geotarget ids (2840 is the United States); find them with mangools.locations.search."
+  ],
+  "sources": [
+    "https://apidocs.mangools.com/",
+    "https://apidocs.mangools.com/authentication/",
+    "https://apidocs.mangools.com/rate-limits/",
+    "https://api.mangools.com/v3/openapi.json"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "mangools.limits",
+      "name": "Get remaining quotas",
+      "summary": "Usage and what is left in every quota pool (keyword lookups, SERP lookups, backlink rows...), with seconds to each reset.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/kwfinder/limits",
+      "params": {},
+      "notes": [
+        "Answers 200 with nothing left even for a bad or missing token, so it cannot check a key."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://apidocs.mangools.com/kwfinder/get-limits",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/kwfinder/get-limits"
+      }
+    },
+    {
+      "id": "mangools.locations.search",
+      "name": "Find location ids",
+      "summary": "Locations matching a name (country, region, city) with their location_id, used by every lookup.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/mangools/locations",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Location name.",
+          "example": "New York"
+        }
+      },
+      "job": "reference.geo",
+      "docs_url": "https://apidocs.mangools.com/kwfinder/get-locations",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/kwfinder/get-locations"
+      }
+    },
+    {
+      "id": "mangools.keywords.related",
+      "name": "Get related keywords",
+      "summary": "Keyword ideas for a seed keyword with search volume (sv), CPC and SEO difficulty (seo), for a location and language.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/kwfinder/related-keywords",
+      "params": {
+        "kw": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Seed keyword.",
+          "example": "running shoes"
+        },
+        "location_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Location id; 0 (default) for global volumes."
+        },
+        "language_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Language id; 0 by default."
+        }
+      },
+      "notes": [
+        "Draws on the Keyword lookups pool; an identical request within 24 hours is free."
+      ],
+      "job": "keywords.ideas",
+      "docs_url": "https://apidocs.mangools.com/kwfinder/get-related-keywords",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/kwfinder/get-related-keywords"
+      }
+    },
+    {
+      "id": "mangools.keywords.serp",
+      "name": "Get keyword difficulty and top results",
+      "summary": "A keyword's SEO difficulty, organic results with their link metrics, result count and CTR by position.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/kwfinder/serps",
+      "params": {
+        "kw": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Keyword."
+        },
+        "location_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Location id; 0 or none means 2840 (United States)."
+        },
+        "language_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "Language id."
+        },
+        "platform_id": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 desktop (default) or 2 mobile.",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results page, from 0."
+        }
+      },
+      "notes": [
+        "Draws on the SERP lookups pool; an identical request within 24 hours is free."
+      ],
+      "job": "keywords.difficulty",
+      "docs_url": "https://apidocs.mangools.com/kwfinder/get-serps",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/kwfinder/get-serps"
+      }
+    },
+    {
+      "id": "mangools.domain.keywords",
+      "name": "Get the keywords a site ranks for",
+      "summary": "Organic keywords a URL or domain ranks for in one location, with their metrics.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/kwfinder/competitor-keywords",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target URL, domain or subdomain.",
+          "example": "example.com"
+        },
+        "location_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Location id; 0 for anywhere."
+        }
+      },
+      "notes": [
+        "Draws on the Keyword lookups pool. Rows are capped by the plan's competitor-keywords-rows (see limits); ordered from worst position to best."
+      ],
+      "job": "domain.keywords.organic",
+      "docs_url": "https://apidocs.mangools.com/kwfinder/get-competitor-keywords",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/kwfinder/get-competitor-keywords"
+      }
+    },
+    {
+      "id": "mangools.domain.competitors",
+      "name": "Get organic competitor domains",
+      "summary": "Domains competing with a URL or domain for the same organic keywords.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/kwfinder/competitor-domain",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target URL, domain or subdomain.",
+          "example": "example.com"
+        },
+        "location_id": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Location id, as used for the keywords lookup."
+        }
+      },
+      "notes": [
+        "Needs a mangools.domain.keywords lookup for the same url and location_id within the last 24 hours, else 422 No result. Free."
+      ],
+      "job": "domain.competitors",
+      "docs_url": "https://apidocs.mangools.com/kwfinder/get-competitor-domain",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/kwfinder/get-competitor-domain"
+      }
+    },
+    {
+      "id": "mangools.links.list",
+      "name": "List backlinks",
+      "summary": "Backlinks to a URL, domain or path, all, new or lost, 500 per page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkminer/links",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "URL, domain or path.",
+          "example": "example.com"
+        },
+        "source": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "0 all, 1 new, 2 lost.",
+          "enum": [
+            0,
+            1,
+            2
+          ],
+          "example": 0
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Page, from 0.",
+          "example": 0
+        },
+        "links_per_domain": {
+          "in": "query",
+          "type": "integer",
+          "required": true,
+          "description": "Links per referring domain: 0 all, 1 one per domain.",
+          "example": 1
+        }
+      },
+      "notes": [
+        "Spends the monthly Backlink rows pool by each link returned."
+      ],
+      "job": "backlinks.list",
+      "docs_url": "https://apidocs.mangools.com/linkminer/get-links",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/linkminer/get-links"
+      }
+    },
+    {
+      "id": "mangools.links.metrics",
+      "name": "Get link authority metrics",
+      "summary": "Citation Flow, Trust Flow, referring domains and backlink counts for a URL or domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/linkminer/url-metrics",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target URL.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Draws on the daily lm-url-metrics pool."
+      ],
+      "job": "domain.rank",
+      "docs_url": "https://apidocs.mangools.com/linkminer/get-url-metrics",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/linkminer/get-url-metrics"
+      }
+    },
+    {
+      "id": "mangools.site.overview",
+      "name": "Get a site overview",
+      "summary": "Domain and page authority, Citation and Trust Flow, and rank and referring-IP history for a URL or domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/siteprofiler/overview",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target URL, domain or subdomain.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Draws on the daily sp-overview pool. Run it before site.competitors and site.top_content."
+      ],
+      "job": "domain.overview",
+      "docs_url": "https://apidocs.mangools.com/siteprofiler/get-overview",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/siteprofiler/get-overview"
+      }
+    },
+    {
+      "id": "mangools.site.competitors",
+      "name": "Get a site's competitors",
+      "summary": "Competing sites for a URL or domain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/siteprofiler/competitors",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target URL, domain or subdomain.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Needs a site.overview lookup of the same url in the last 24 hours, else 429 Not in history."
+      ],
+      "job": "domain.competitors",
+      "docs_url": "https://apidocs.mangools.com/siteprofiler/get-competitors",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/siteprofiler/get-competitors"
+      }
+    },
+    {
+      "id": "mangools.site.top_content",
+      "name": "Get a site's top content",
+      "summary": "The site's top pages, as SiteProfiler ranks them.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/siteprofiler/top-content",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Target URL, domain or subdomain.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Needs a site.overview lookup of the same url in the last 24 hours, else 429 Not in history."
+      ],
+      "job": "domain.pages",
+      "docs_url": "https://apidocs.mangools.com/siteprofiler/get-top-content",
+      "verified": {
+        "docs": "https://apidocs.mangools.com/siteprofiler/get-top-content"
+      }
+    }
+  ]
+}

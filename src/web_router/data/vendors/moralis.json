@@ -1,0 +1,777 @@
+{
+  "vendor": "moralis",
+  "name": "Moralis",
+  "category": "finance",
+  "summary": "EVM blockchain data: wallet balances with prices, net worth, decoded history and PnL, token prices, metadata, holders and search, DEX candles, and NFT holdings and floor prices.",
+  "docs_url": "https://docs.moralis.com/",
+  "pricing_url": "https://docs.moralis.com/get-started/pricing",
+  "base_url": "https://deep-index.moralis.io/api/v2.2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "MORALIS_API_KEY"
+        ],
+        "description": "A Moralis API key (admin.moralis.com). Sent in the X-API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "No self-serve free plan; paid plans include a monthly compute-unit (CU) allowance, and each endpoint costs a set number of CUs (info.endpoint_weights lists them). Multi-chain calls cost per chain.",
+    "Rate limits are requests per second per plan (40 on Starter), measured over a rolling 4-second window; over it returns 429.",
+    "chain takes a name (eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea...) or hex chain ID; default eth.",
+    "List endpoints page with cursor: pass the cursor from the previous response while one is returned."
+  ],
+  "sources": [
+    "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json",
+    "https://deep-index.moralis.io/api-docs-2.2/",
+    "https://docs.moralis.com/get-started/pricing",
+    "https://docs.moralis.com/llms.txt"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "moralis.wallet.tokens",
+      "name": "Get a wallet's token balances with prices",
+      "summary": "Native and ERC-20 balances with USD price, value, logos and spam flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wallets/{address}/tokens",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "token_addresses": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these token contracts."
+        },
+        "exclude_spam": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out spam tokens; default false."
+        },
+        "exclude_unverified_contracts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out unverified contracts; default false."
+        },
+        "exclude_native": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out the native balance."
+        },
+        "to_block": {
+          "in": "query",
+          "type": "integer",
+          "description": "Balances as of this block."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "cursor from the previous response, for the next page."
+        }
+      },
+      "job": "crypto.account",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.wallet.net_worth",
+      "name": "Get a wallet's net worth",
+      "summary": "Total USD value of a wallet, per chain and overall.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wallets/{address}/net-worth",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "chains": {
+          "in": "query",
+          "type": "array",
+          "description": "Chains to include, e.g. eth, base, polygon.",
+          "example": [
+            "eth",
+            "base"
+          ]
+        },
+        "exclude_spam": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out spam tokens; default false."
+        },
+        "exclude_unverified_contracts": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out unverified contracts; default false."
+        },
+        "min_pair_side_liquidity_usd": {
+          "in": "query",
+          "type": "number",
+          "description": "Ignore tokens whose pair has less USD liquidity on one side.",
+          "example": 1000
+        }
+      },
+      "notes": [
+        "Cost scales with the number of chains queried."
+      ],
+      "job": "crypto.account",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.wallet.history",
+      "name": "Get a wallet's decoded history",
+      "summary": "Every transaction of a wallet, decoded, categorized (send, swap, NFT, approval...) and summarized.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wallets/{address}/history",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "from_block": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lowest block; or use from_date."
+        },
+        "to_block": {
+          "in": "query",
+          "type": "integer",
+          "description": "Highest block; or use to_date."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, Unix seconds or a date string.",
+          "example": "2024-01-01"
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End, Unix seconds or a date string."
+        },
+        "include_internal_transactions": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include internal transactions."
+        },
+        "nft_metadata": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include NFT metadata."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "DESC (default, newest first) or ASC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "cursor from the previous response, for the next page."
+        }
+      },
+      "job": "crypto.transactions",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.wallet.erc20_transfers",
+      "name": "List a wallet's ERC-20 transfers",
+      "summary": "ERC-20 transfers in and out of a wallet, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{address}/erc20/transfers",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "from_block": {
+          "in": "query",
+          "type": "integer",
+          "description": "Lowest block; or use from_date."
+        },
+        "to_block": {
+          "in": "query",
+          "type": "integer",
+          "description": "Highest block; or use to_date."
+        },
+        "from_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Start, Unix seconds or a date string.",
+          "example": "2024-01-01"
+        },
+        "to_date": {
+          "in": "query",
+          "type": "string",
+          "description": "End, Unix seconds or a date string."
+        },
+        "contract_addresses": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these token contracts."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "DESC (default, newest first) or ASC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "cursor from the previous response, for the next page."
+        }
+      },
+      "notes": [
+        "value is in the token's smallest unit; a decimal-adjusted value_decimal comes alongside."
+      ],
+      "job": "crypto.transfers",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.wallet.profitability_summary",
+      "name": "Get a wallet's profit and loss",
+      "summary": "Realized profit and loss, trade counts and volume of a wallet over a period.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/wallets/{address}/profitability/summary",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "days": {
+          "in": "query",
+          "type": "string",
+          "description": "Period: all (default), 7, 30, 60 or 90.",
+          "enum": [
+            "all",
+            "7",
+            "30",
+            "60",
+            "90"
+          ]
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        }
+      },
+      "job": "crypto.account",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.wallet.nfts",
+      "name": "List NFTs owned by a wallet",
+      "summary": "NFTs a wallet holds, with metadata and optional last sale prices.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{address}/nft",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Wallet address.",
+          "example": "0x0000000000000000000000000000000000000001"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "token_addresses": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these NFT contracts."
+        },
+        "exclude_spam": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave out spam NFTs."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "Token ID format: decimal (default) or hex.",
+          "enum": [
+            "decimal",
+            "hex"
+          ]
+        },
+        "normalizeMetadata": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return normalized metadata; default true."
+        },
+        "media_items": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add preview media."
+        },
+        "include_prices": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add last sale prices."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "cursor from the previous response, for the next page."
+        }
+      },
+      "job": "nft.holdings",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.token.price",
+      "name": "Get an ERC-20 token's price",
+      "summary": "Current USD and native-currency price of a token, or its price at a past block.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/erc20/{address}/price",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Token contract.",
+          "example": "0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "exchange": {
+          "in": "query",
+          "type": "string",
+          "description": "DEX factory name or address to price from."
+        },
+        "to_block": {
+          "in": "query",
+          "type": "integer",
+          "description": "Price as of this block."
+        },
+        "min_pair_side_liquidity_usd": {
+          "in": "query",
+          "type": "number",
+          "description": "Ignore pairs with less USD liquidity on one side."
+        }
+      },
+      "job": "crypto.price",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.token.metadata",
+      "name": "Get ERC-20 token metadata",
+      "summary": "Name, symbol, decimals, logo, supply, categories and spam status of token contracts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/erc20/metadata",
+      "params": {
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "addresses": {
+          "in": "query",
+          "type": "array",
+          "required": true,
+          "description": "Token contracts.",
+          "example": [
+            "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+          ]
+        }
+      },
+      "job": "crypto.assets",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.token.owners",
+      "name": "List a token's top holders",
+      "summary": "Holders of an ERC-20 token with their share of supply and known entity labels.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/erc20/{token_address}/owners",
+      "params": {
+        "token_address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Token contract.",
+          "example": "0x6982508145454ce325ddbe47a25d4ec3d2311933"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "description": "DESC (default, newest first) or ASC.",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "cursor from the previous response, for the next page."
+        }
+      },
+      "job": "crypto.holders",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.token.search",
+      "name": "Search tokens",
+      "summary": "Tokens matching a name, symbol, contract or pair address, across chains.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/tokens/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Name, symbol, token or pair address.",
+          "example": "pepe"
+        },
+        "chains": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated chains to search; default all.",
+          "example": "eth,base"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results."
+        },
+        "isVerifiedContract": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only verified contracts."
+        },
+        "sortBy": {
+          "in": "query",
+          "type": "string",
+          "description": "volume1hDesc (default), volume24hDesc, liquidityDesc or marketCapDesc.",
+          "enum": [
+            "volume1hDesc",
+            "volume24hDesc",
+            "liquidityDesc",
+            "marketCapDesc"
+          ]
+        }
+      },
+      "job": "crypto.assets",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.pair.ohlcv",
+      "name": "Get DEX pair candles",
+      "summary": "OHLCV candles of a DEX trading pair over a date range.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pairs/{address}/ohlcv",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pair (pool) address.",
+          "example": "0xa43fe16908251ee70ef74718545e4fe6c5ccec9f"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "timeframe": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Candle size.",
+          "example": "1h",
+          "enum": [
+            "1s",
+            "10s",
+            "30s",
+            "1min",
+            "5min",
+            "10min",
+            "30min",
+            "1h",
+            "4h",
+            "12h",
+            "1d",
+            "1w",
+            "1M"
+          ]
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "usd or native.",
+          "example": "usd",
+          "enum": [
+            "usd",
+            "native"
+          ]
+        },
+        "fromDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start, Unix seconds or a date string.",
+          "example": "2025-01-01T10:00:00.000"
+        },
+        "toDate": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End, Unix seconds or a date string.",
+          "example": "2025-01-02T10:00:00.000"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page size."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "cursor from the previous response, for the next page."
+        }
+      },
+      "notes": [
+        "Takes a pair address, not a token address."
+      ],
+      "job": "market.history",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.nft.metadata",
+      "name": "Get one NFT's metadata",
+      "summary": "Metadata, owner, rarity and floor price of one token where available.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nft/{address}/{token_id}",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "NFT contract.",
+          "example": "0x524cab2ec69124574082676e6f654a18df49a048"
+        },
+        "token_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Token ID.",
+          "example": "1"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "description": "decimal (default) or hex.",
+          "enum": [
+            "decimal",
+            "hex"
+          ]
+        },
+        "normalizeMetadata": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return normalized metadata; default true."
+        },
+        "media_items": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add preview media."
+        },
+        "include_prices": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add last sale prices."
+        }
+      },
+      "job": "nft.metadata",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.nft.floor_price",
+      "name": "Get an NFT collection's floor price",
+      "summary": "Current floor price of a collection, refreshed every 30 minutes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/nft/{address}/floor-price",
+      "params": {
+        "address": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "NFT contract.",
+          "example": "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
+        },
+        "chain": {
+          "in": "query",
+          "type": "string",
+          "description": "Chain name or hex chain ID; default eth. e.g. eth, base, polygon, bsc, arbitrum, optimism, avalanche, linea.",
+          "example": "eth"
+        }
+      },
+      "job": "nft.collection",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    },
+    {
+      "id": "moralis.info.endpoint_weights",
+      "name": "List compute-unit costs per endpoint",
+      "summary": "Each Data API endpoint's compute-unit price and rate-limit weight.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/info/endpointWeights",
+      "job": "account.usage",
+      "docs_url": "https://deep-index.moralis.io/api-docs-2.2/",
+      "verified": {
+        "docs": "https://deep-index.moralis.io/api-docs-2.2/v2.2/swagger.json"
+      }
+    }
+  ]
+}

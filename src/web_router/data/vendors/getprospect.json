@@ -1,0 +1,432 @@
+{
+  "vendor": "getprospect",
+  "name": "GetProspect",
+  "category": "enrichment",
+  "summary": "B2B people and company search and enrichment, work email finding and email verification.",
+  "docs_url": "https://getprospect.com/api-docs",
+  "pricing_url": "https://getprospect.com/pricing",
+  "base_url": "https://api.getprospect.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GETPROSPECT_API_KEY"
+        ],
+        "description": "A GetProspect API key (Settings > API); it spends its workspace's credits. Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Searching is free; emails spend email credits and verifications spend the USD wallet, only when something is found. 402 with X-Limit-Reached when the balance is out.",
+    "Saving people or companies, lists, bulk jobs, exports, webhooks, phone reveals and the block list are not in this entry."
+  ],
+  "sources": [
+    "https://getprospect.com/api-docs.md",
+    "https://getprospect.com/api-docs/openapi.json",
+    "https://getprospect.com/api-docs/credits-and-limits.md",
+    "https://getprospect.com/api-docs/authentication.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "getprospect.account.credits",
+      "name": "Get credit balances",
+      "summary": "Live balance of each credit type (email_search, email_verification, phone_search) and the USD wallet.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/credits",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://getprospect.com/api-docs/credits",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/credits"
+      }
+    },
+    {
+      "id": "getprospect.people.search",
+      "name": "Search people",
+      "summary": "People by name, location, title, seniority, department and company filters, with email and phone availability.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filters, ANDed, at least one include: person_job_title {include, match_mode}, person_location, person_seniority, person_department, company {name|domain: {include}}, company_industry, company_headcount_range, max_person_per_company, ...",
+          "example": {
+            "person_job_title": {
+              "include": [
+                "Product Marketing Manager"
+              ],
+              "match_mode": "CONTAINS"
+            },
+            "company": {
+              "domain": {
+                "include": [
+                  "intercom.com"
+                ]
+              }
+            }
+          }
+        },
+        "sort_by": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort key; default followers, descending."
+        },
+        "sort_direction": {
+          "in": "body",
+          "type": "string",
+          "description": "asc or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, 1-based."
+        },
+        "per_page": {
+          "in": "body",
+          "type": "integer",
+          "description": "25 (default), 50 or 100.",
+          "enum": [
+            25,
+            50,
+            100
+          ]
+        },
+        "enrich_email": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Reveal each result's email for 1 email credit per email revealed; per_page must then be 25."
+        }
+      },
+      "notes": [
+        "A read over POST: searching is free; only enrich_email spends credits.",
+        "Allowed values of the closed filters come from getprospect.reference.enum; open ones from getprospect.reference.suggest."
+      ],
+      "job": "people.search",
+      "docs_url": "https://getprospect.com/api-docs/people-search",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/people-search"
+      }
+    },
+    {
+      "id": "getprospect.people.count",
+      "name": "Count people matching filters",
+      "summary": "How many people a people-search filter set matches, optionally broken down by country, department and seniority.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/count",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The same filters as getprospect.people.search."
+        },
+        "group_by": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to three of country, department, seniority."
+        },
+        "pivot": {
+          "in": "body",
+          "type": "boolean",
+          "description": "One row per combination of the group_by values."
+        },
+        "country_limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "How many countries to return, largest first."
+        }
+      },
+      "notes": [
+        "A read over POST. Free; answers can come from a cache up to an hour old (metadata.counted_at)."
+      ],
+      "job": "people.search",
+      "docs_url": "https://getprospect.com/api-docs/people-count",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/people-count"
+      }
+    },
+    {
+      "id": "getprospect.person.enrich",
+      "name": "Enrich a person",
+      "summary": "Full profile of one person (identity, location, work history) with a verified business email, by id, LinkedIn URL, email, or name and company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/people/enrich",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "One of: id, linkedin_id, linkedin_url, email, or first_name + last_name + company_domain (or company_name).",
+          "example": {
+            "linkedin_url": "https://www.linkedin.com/in/emily-carter-sample/"
+          }
+        },
+        "enrich_email": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Reveal a verified business email (default true); false skips it and its cost."
+        }
+      },
+      "notes": [
+        "A read over POST. 1 email credit per newly revealed email; nothing when no one matches (200 with NOT_FOUND in errors).",
+        "A first email search can run past call_vendor's 60-second timeout. A slow one may instead answer the email as searching with retry_after, free: it runs on, and asking again after that many seconds serves (and charges) the address. A 408 is free too; ask again in a few minutes."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://getprospect.com/api-docs/people-enrich",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/people-enrich"
+      }
+    },
+    {
+      "id": "getprospect.company.enrich",
+      "name": "Enrich a company",
+      "summary": "Full profile of one company: industry, headcount, locations, domains and LinkedIn data.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/enrich",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "One of: id, linkedin_id, linkedin_url, domain, or name.",
+          "example": {
+            "domain": "intercom.com"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST. Free; no match is 200 with data null and NOT_FOUND in errors."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://getprospect.com/api-docs/company-enrich",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/company-enrich"
+      }
+    },
+    {
+      "id": "getprospect.company.search",
+      "name": "Search companies",
+      "summary": "Companies by name, domain, industry, location, headcount, founding year, type and keywords.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/search",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Filters, ANDed, at least one include: company {name|domain: {include}}, company_industry, company_country, company_headcount_range, company_keywords, ...",
+          "example": {
+            "company_industry": {
+              "include": [
+                "Software Development"
+              ]
+            },
+            "company_country": {
+              "include": [
+                "US"
+              ]
+            }
+          }
+        },
+        "sort_by": {
+          "in": "body",
+          "type": "string",
+          "description": "Sort key, e.g. company_employee_count; default relevance with keywords, else followers."
+        },
+        "sort_direction": {
+          "in": "body",
+          "type": "string",
+          "description": "asc or desc.",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, 1-based."
+        },
+        "per_page": {
+          "in": "body",
+          "type": "integer",
+          "description": "25 (default), 50 or 100.",
+          "enum": [
+            25,
+            50,
+            100
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Free."
+      ],
+      "job": "company.search",
+      "docs_url": "https://getprospect.com/api-docs/company-search",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/company-search"
+      }
+    },
+    {
+      "id": "getprospect.email.find",
+      "name": "Find a work email",
+      "summary": "The verified business email of a person from their name and company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/email/find",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "The person: full_name, or first_name + last_name; plus domain (best results) or company (a name, used when no domain).",
+          "example": {
+            "first_name": "Emily",
+            "last_name": "Carter",
+            "domain": "intercom.com"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: the person goes in a data object. 1 email credit per address served that the workspace did not already own; not found and accept-all are free.",
+        "A live search can run past call_vendor's 60-second timeout. One that times out at GetProspect answers 408, free; ask again after Retry-After seconds, when its result is usually stored."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://getprospect.com/api-docs/email-finder",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/email-finder"
+      }
+    },
+    {
+      "id": "getprospect.email.verify",
+      "name": "Verify an email",
+      "summary": "Deliverability verdict for one address, with domain health and free or disposable flags.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/email/verify",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "{email: the address to check}.",
+          "example": {
+            "email": "emily.carter.sample@intercom.com"
+          }
+        }
+      },
+      "notes": [
+        "A read over POST: the address goes in a data object. Charged once per address per workspace for a valid, invalid or accept_all verdict: $0.0008 from the USD wallet per the credits page (the endpoint reference calls it 1 email verification credit); unknown verdicts and malformed addresses are free.",
+        "Verification can take up to 75 seconds, so it can run past call_vendor's 60-second timeout. A 408 is free; ask again after Retry-After seconds."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://getprospect.com/api-docs/email-verifier",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/email-verifier"
+      }
+    },
+    {
+      "id": "getprospect.reference.suggest",
+      "name": "Suggest filter values",
+      "summary": "Typeahead values for locations, job titles, industries, keywords, technologies, people or companies, to pass to the search filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/search/suggest",
+      "params": {
+        "type": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Vocabulary.",
+          "enum": [
+            "location",
+            "job_title",
+            "industry",
+            "company_keywords",
+            "technology",
+            "person",
+            "company"
+          ]
+        },
+        "query": {
+          "in": "body",
+          "type": "string",
+          "description": "Text typed so far."
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Maximum suggestions, up to 25."
+        }
+      },
+      "notes": [
+        "A read over POST. Free."
+      ],
+      "job": "reference.keywords",
+      "docs_url": "https://getprospect.com/api-docs/search-suggestions",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/search-suggestions"
+      }
+    },
+    {
+      "id": "getprospect.reference.enum",
+      "name": "Get a filter's allowed values",
+      "summary": "The accepted values of a closed filter vocabulary.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/enums/{name}",
+      "credentials": [],
+      "params": {
+        "name": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Vocabulary name.",
+          "enum": [
+            "industries",
+            "countries",
+            "employee_ranges",
+            "company_types",
+            "business_types",
+            "revenue_streams",
+            "keywords_sources",
+            "departments",
+            "seniorities",
+            "regions",
+            "ai_industries"
+          ]
+        }
+      },
+      "notes": [
+        "Free, needs no key, cached for an hour."
+      ],
+      "job": "reference.industries",
+      "docs_url": "https://getprospect.com/api-docs/enums",
+      "verified": {
+        "docs": "https://getprospect.com/api-docs/enums"
+      }
+    }
+  ]
+}

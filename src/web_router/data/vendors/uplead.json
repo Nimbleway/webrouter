@@ -1,0 +1,426 @@
+{
+  "vendor": "uplead",
+  "name": "UpLead",
+  "category": "enrichment",
+  "summary": "B2B contact and company data: person lookup by email or name, company lookup, contacts at a company, and contact search with verified emails.",
+  "docs_url": "https://docs.uplead.com/",
+  "pricing_url": "https://www.uplead.com/pricing/",
+  "base_url": "https://api.uplead.com/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "UPLEAD_API_KEY"
+        ],
+        "description": "An UpLead API key (account > API). Sent as the raw Authorization header value."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "500 requests a minute; X-RateLimit-* headers, and Retry-After on a 429. 403 means a paused account or no subscription.",
+    "Every response carries userInfo.availableCredits.",
+    "Saved lists and the reseller-only preview are not in this entry."
+  ],
+  "sources": [
+    "https://docs.uplead.com/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "uplead.account.credits",
+      "name": "Get remaining credits",
+      "summary": "The account email and credits left.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credits",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.uplead.com/#credits",
+      "verified": {
+        "docs": "https://docs.uplead.com/#credits"
+      }
+    },
+    {
+      "id": "uplead.company.get",
+      "name": "Look up a company",
+      "summary": "Company profile by domain, name or UpLead id: size, location, social links, description and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company-search",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Company domain; the most precise input.",
+          "example": "amazon.com"
+        },
+        "company": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name, when no domain."
+        },
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "UpLead company id."
+        }
+      },
+      "notes": [
+        "1 credit per company record, not charged twice for the same record. Send one of domain, company or id."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.uplead.com/#company-api",
+      "verified": {
+        "docs": "https://docs.uplead.com/#company-api"
+      }
+    },
+    {
+      "id": "uplead.person.get",
+      "name": "Look up a person",
+      "summary": "A person's title, email with verification status, phones, location and LinkedIn, by email or by name and company domain.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/person-search",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "description": "Email address (reverse lookup)."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name, with last_name and domain."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name."
+        },
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain."
+        },
+        "id": {
+          "in": "body",
+          "type": "string",
+          "description": "UpLead person id."
+        }
+      },
+      "notes": [
+        "A read over POST (the JSON body carries the lookup).",
+        "1 credit per record returned, never twice for the same record; a contact with an email is charged only when email_status is valid or accept_all."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.uplead.com/#person-api",
+      "verified": {
+        "docs": "https://docs.uplead.com/#person-api"
+      }
+    },
+    {
+      "id": "uplead.person.combined",
+      "name": "Look up a person and their company",
+      "summary": "Person and company records together for one email address.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/combined-search",
+      "params": {
+        "email": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Email address."
+        }
+      },
+      "notes": [
+        "A read over POST.",
+        "1 credit per record returned, never twice for the same record; a contact with an email is charged only when email_status is valid or accept_all."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.uplead.com/#combined-api",
+      "verified": {
+        "docs": "https://docs.uplead.com/#combined-api"
+      }
+    },
+    {
+      "id": "uplead.company.contacts",
+      "name": "Find contacts at a company",
+      "summary": "Contacts at one company domain, filtered by job function, seniority, title, location and email status.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/prospector-search",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "required": true,
+          "description": "Company domain.",
+          "example": "salesforce.com"
+        },
+        "job_function": {
+          "in": "body",
+          "type": "string",
+          "description": "Job function, e.g. finance, sales, marketing, engineering, human resources."
+        },
+        "management_level": {
+          "in": "body",
+          "type": "string",
+          "description": "Seniority.",
+          "enum": [
+            "M",
+            "D",
+            "VP",
+            "C",
+            "CX"
+          ]
+        },
+        "title": {
+          "in": "body",
+          "type": "string",
+          "description": "Job title."
+        },
+        "titles": {
+          "in": "body",
+          "type": "array",
+          "description": "Several job titles."
+        },
+        "title_search_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "include (default) or exact title matching.",
+          "enum": [
+            "include",
+            "exact"
+          ]
+        },
+        "cities": {
+          "in": "body",
+          "type": "array",
+          "description": "Person cities."
+        },
+        "states": {
+          "in": "body",
+          "type": "array",
+          "description": "Person states."
+        },
+        "countries": {
+          "in": "body",
+          "type": "array",
+          "description": "Person countries."
+        },
+        "regions": {
+          "in": "body",
+          "type": "array",
+          "description": "Regions, e.g. AMER, EMEA."
+        },
+        "name": {
+          "in": "body",
+          "type": "string",
+          "description": "Person name."
+        },
+        "email_status": {
+          "in": "body",
+          "type": "string",
+          "description": "Email status.",
+          "enum": [
+            "valid",
+            "invalid",
+            "accept_all",
+            "unknown"
+          ]
+        },
+        "count_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only the number of matches."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, default 25, max 100."
+        }
+      },
+      "notes": [
+        "A read over POST: the filters go in the body; GET with query parameters also works.",
+        "1 credit per record returned, never twice for the same record; a contact with an email is charged only when email_status is valid or accept_all."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://docs.uplead.com/#prospector-api",
+      "verified": {
+        "docs": "https://docs.uplead.com/#prospector-api"
+      }
+    },
+    {
+      "id": "uplead.people.search",
+      "name": "Search contacts",
+      "summary": "Contacts and their companies across all companies, by title, industry, location, size and revenue (Prospector Pro).",
+      "kind": "read",
+      "method": "POST",
+      "path": "/prospector-pro-search",
+      "params": {
+        "domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain.",
+          "example": "salesforce.com"
+        },
+        "domains": {
+          "in": "body",
+          "type": "array",
+          "description": "Several company domains, instead of domain."
+        },
+        "titles": {
+          "in": "body",
+          "type": "array",
+          "description": "Job titles."
+        },
+        "title_search_mode": {
+          "in": "body",
+          "type": "string",
+          "description": "include or exact.",
+          "enum": [
+            "include",
+            "exact"
+          ]
+        },
+        "countries": {
+          "in": "body",
+          "type": "array",
+          "description": "Countries."
+        },
+        "states": {
+          "in": "body",
+          "type": "array",
+          "description": "States."
+        },
+        "cities": {
+          "in": "body",
+          "type": "array",
+          "description": "Cities."
+        },
+        "regions": {
+          "in": "body",
+          "type": "array",
+          "description": "Regions, e.g. AMER, EMEA."
+        },
+        "location_target": {
+          "in": "body",
+          "type": "string",
+          "description": "Whether location filters apply to the company (default) or the contact.",
+          "enum": [
+            "company",
+            "contact"
+          ]
+        },
+        "industries": {
+          "in": "body",
+          "type": "array",
+          "description": "Industry names; see uplead.industries.search."
+        },
+        "employees": {
+          "in": "body",
+          "type": "array",
+          "description": "Employee ranges: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5001-10000, 10001+."
+        },
+        "revenues": {
+          "in": "body",
+          "type": "array",
+          "description": "Revenue ranges, e.g. 0-1m, 1m-10m, 10m-50m, 50m-100m."
+        },
+        "exclude_eu": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Leave out EU contacts."
+        },
+        "count_only": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Return only the number of matches."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "per_page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Results per page, default 25, max 100."
+        }
+      },
+      "notes": [
+        "A read over POST. Professional, Elite and Enterprise plans only.",
+        "1 credit per record returned, never twice for the same record; a contact with an email is charged only when email_status is valid or accept_all."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.uplead.com/#prospector-pro-api",
+      "verified": {
+        "docs": "https://docs.uplead.com/#prospector-pro-api"
+      }
+    },
+    {
+      "id": "uplead.company.name_to_domain",
+      "name": "Get a company's domain from its name",
+      "summary": "Website domain and logo for an exact company name; the highest-traffic match wins.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company-name-to-domain",
+      "params": {
+        "company_name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Company name.",
+          "example": "amazon"
+        }
+      },
+      "notes": [
+        "Names are not unique, so the match can be wrong."
+      ],
+      "job": "company.suggest",
+      "docs_url": "https://docs.uplead.com/#company-name-to-domain-api",
+      "verified": {
+        "docs": "https://docs.uplead.com/#company-name-to-domain-api"
+      }
+    },
+    {
+      "id": "uplead.industries.search",
+      "name": "Search industries",
+      "summary": "UpLead industry names and ids matching a text, for the search filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/industries",
+      "params": {
+        "text": {
+          "in": "query",
+          "type": "string",
+          "description": "Text to match.",
+          "example": "finance"
+        }
+      },
+      "notes": [
+        "Professional, Elite and Enterprise plans only."
+      ],
+      "job": "reference.industries",
+      "docs_url": "https://docs.uplead.com/#industries-api",
+      "verified": {
+        "docs": "https://docs.uplead.com/#industries-api"
+      }
+    }
+  ]
+}

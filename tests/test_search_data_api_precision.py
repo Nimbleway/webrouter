@@ -53,6 +53,10 @@ EVERYDAY = [
     "who is the ceo of openai",
     "job openings for data engineers in berlin",
     "covid vaccine side effects",
+    "close the deal",
+    "directions from here to the airport",
+    "contact phone number of a company",
+    "reverse email lookup",
 ]
 
 NAMED = {
@@ -72,6 +76,9 @@ NAMED = {
     "data.gov.au datasets search": "data-gov-au",
     "data.gov.ua datasets search": "data-gov-ua",
     "tomorrow io forecast": "tomorrow-io",
+    "close crm leads": "close-crm",
+    "here maps geocode": "here-maps",
+    "reverse contact enrich": "reverse-contact",
 }
 
 

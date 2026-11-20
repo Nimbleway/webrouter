@@ -33,7 +33,7 @@ import threading
 from collections.abc import Collection, Mapping
 from contextlib import AsyncExitStack, ExitStack
 from types import TracebackType
-from typing import Any
+from typing import Any, Literal
 
 from web_router._benchmark import Stragglers
 from web_router.client_answer import AsyncAnswer, SyncAnswer
@@ -54,12 +54,7 @@ from web_router.client_requests import (
 from web_router.client_search import AsyncSearch, SyncSearch
 from web_router.client_vendors import AsyncVendors, DataApiCredentials, SyncVendors, _VendorLookup, renamed_credentials
 from web_router.client_warmup import AsyncWarmup, SyncWarmup
-from web_router.constants import (
-    BROWSE_TIMEOUT,
-    DEFAULT_PROVIDER,
-    MSG_SYNC_ROUTER_ASYNC_CLIENT,
-    RESEARCH_TIMEOUT,
-)
+from web_router.constants import BROWSE_TIMEOUT, DEFAULT_PROVIDER, MSG_SYNC_ROUTER_ASYNC_CLIENT, RESEARCH_TIMEOUT
 from web_router.constants_routing import RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError, ProviderNotFoundError
 from web_router.providers._pinning import backend_of
@@ -104,8 +99,7 @@ from web_router.types import (
 class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     """Provider resolution and caching shared by the sync and async routers.
 
-    Generic only in the browser handle each one hands out, which is the one
-    thing the two routers hold on a caller's behalf.
+    Generic only in the browser handle each one hands out: the one thing the two routers hold for a caller.
     """
 
     def __init__(
@@ -122,11 +116,12 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         data_api_credentials: DataApiCredentials = None,
         vendor_credentials: DataApiCredentials = None,
         max_concurrency: int | None = None,
+        hop_timeout: float | Literal[False] | None = None,
+        timeout_cooldown: bool = True,
     ) -> None:
         """
         Args:
-            provider: Name of the default provider, e.g. ``"nimble"`` or
-                :attr:`Provider.NIMBLE`. Omit it to let ``auto`` choose.
+            provider: Name of the default provider, e.g. ``"nimble"`` or :attr:`Provider.NIMBLE`; omit it for ``auto``.
             provider_config: Constructor kwargs per provider, keyed by provider name: ``{"tavily": {"api_key": ...}}``.
                 This is the only place credentials are passed explicitly; everything else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
@@ -135,13 +130,14 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 router from ``router_config``, closed with this one -- see :mod:`web_router.routing.registry`.
                 ``route_modes=True`` shows it a candidate per vendor mode too (the router's own, else no).
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
-            data_api_credentials: for :meth:`call_data_api`, read before the environment -- see
-                :mod:`web_router.client_vendors`. ``vendor_credentials`` is its deprecated old name.
+            data_api_credentials: for :meth:`call_data_api`, read before the environment; once ``vendor_credentials``.
             max_concurrency: the most vendor calls this router has in flight at once, across every search,
                 extract and answer it serves (per event loop on the async router); ``None`` caps nothing. A call
                 waits for a slot within its own ``timeout`` -- see :mod:`web_router.providers._runtime`.
+            hop_timeout, timeout_cooldown: an ``auto`` hop's cap (half the time left unless set; ``False`` for none),
+                and a cooldown after timeouts in a row -- see :mod:`web_router.providers._hop`.
         """
-        self._runtime = Runtime.capped(max_concurrency)
+        self._runtime = Runtime.capped(max_concurrency, hop_timeout, timeout_cooldown)
         self._init_vendors(renamed_credentials(data_api_credentials, vendor_credentials))
         name = provider_name(provider)
         # Either registry names a default (a pinned search id by its backend); a method that can't serve it says so.
@@ -306,11 +302,13 @@ class WebRouter(
         data_api_credentials: DataApiCredentials = None,
         vendor_credentials: DataApiCredentials = None,
         max_concurrency: int | None = None,
+        hop_timeout: float | Literal[False] | None = None,
+        timeout_cooldown: bool = True,
     ) -> None:
         """
         Raises:
-            ConfigurationError: for a backend handed an ``async_client``, which this router, calling
-                synchronously, could never use: through ``auto`` the call would quietly go to another backend instead.
+            ConfigurationError: for a backend handed an ``async_client``, which this router, calling synchronously,
+                could never use: through ``auto`` the call would quietly go to another backend instead.
         """
         super().__init__(
             provider,
@@ -323,6 +321,8 @@ class WebRouter(
             url_policy=url_policy,
             data_api_credentials=renamed_credentials(data_api_credentials, vendor_credentials),
             max_concurrency=max_concurrency,
+            hop_timeout=hop_timeout,
+            timeout_cooldown=timeout_cooldown,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:

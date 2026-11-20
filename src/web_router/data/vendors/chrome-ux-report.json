@@ -1,0 +1,141 @@
+{
+  "vendor": "chrome-ux-report",
+  "name": "Chrome UX Report (CrUX)",
+  "category": "seo",
+  "summary": "Core Web Vitals from real Chrome users for any origin or popular URL: LCP, INP, CLS, FCP and TTFB distributions and 75th percentiles, as the latest 28 days or a weekly history of up to 40 periods.",
+  "docs_url": "https://developer.chrome.com/docs/crux/api",
+  "base_url": "https://chromeuxreport.googleapis.com/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "CRUX_API_KEY"
+        ],
+        "description": "a Google Cloud API key from a project with the Chrome UX Report API enabled (Google Cloud console > APIs & Services > Credentials); the API is free"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Both calls are POSTs that only read data.",
+    "Pass origin or url, never both. Only origins and URLs with enough Chrome traffic have a record; others have none.",
+    "Units follow the metric: LCP, INP, FCP and TTFB in milliseconds; CLS is unitless and its p75 comes back as a string ('0.05').",
+    "Quota: 150 queries per minute per Google Cloud project, shared by both calls, free and not raisable.",
+    "Every record is a 28-day rolling window ending about two days before the update; dates are Pacific Standard Time."
+  ],
+  "sources": [
+    "https://developer.chrome.com/docs/crux/api",
+    "https://developer.chrome.com/docs/crux/history-api"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "chrome-ux-report.records.query",
+      "name": "Get the latest Core Web Vitals for an origin or URL",
+      "summary": "Histograms and p75 for each metric over the latest 28 days, optionally for one form factor.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/records:queryRecord",
+      "params": {
+        "origin": {
+          "in": "body",
+          "type": "string",
+          "description": "An origin, aggregating all its pages: scheme and host, no path. Give this or url.",
+          "example": "https://www.example.com"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "One page's URL. Give this or origin."
+        },
+        "formFactor": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "DESKTOP",
+            "PHONE",
+            "TABLET"
+          ],
+          "description": "Limit to one device class; omitted means all combined (and adds the form_factors split)."
+        },
+        "metrics": {
+          "in": "body",
+          "type": "array",
+          "description": "Metric names; all available when omitted. E.g. largest_contentful_paint, interaction_to_next_paint, cumulative_layout_shift, first_contentful_paint, experimental_time_to_first_byte, navigation_types, round_trip_time, form_factors.",
+          "example": [
+            "largest_contentful_paint",
+            "interaction_to_next_paint",
+            "cumulative_layout_shift"
+          ]
+        }
+      },
+      "notes": [
+        "A POST that only reads data.",
+        "Updated daily around 04:00 UTC, best effort; calls the same day return the same record."
+      ],
+      "job": "web.performance.field",
+      "docs_url": "https://developer.chrome.com/docs/crux/api",
+      "verified": {
+        "docs": "https://developer.chrome.com/docs/crux/api"
+      }
+    },
+    {
+      "id": "chrome-ux-report.history.query",
+      "name": "Get the weekly Core Web Vitals history for an origin or URL",
+      "summary": "Weekly timeseries of each metric's histogram densities and p75, one value per 28-day collection period.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/records:queryHistoryRecord",
+      "params": {
+        "origin": {
+          "in": "body",
+          "type": "string",
+          "description": "An origin, aggregating all its pages. Give this or url.",
+          "example": "https://www.example.com"
+        },
+        "url": {
+          "in": "body",
+          "type": "string",
+          "description": "One page's URL. Give this or origin."
+        },
+        "formFactor": {
+          "in": "body",
+          "type": "string",
+          "enum": [
+            "DESKTOP",
+            "PHONE",
+            "TABLET"
+          ],
+          "description": "Limit to one device class; omitted means all combined."
+        },
+        "metrics": {
+          "in": "body",
+          "type": "array",
+          "description": "Metric names, as for the latest record; all available when omitted."
+        },
+        "collectionPeriodCount": {
+          "in": "body",
+          "type": "integer",
+          "description": "How many weekly periods, 1 to 40. 25 when omitted.",
+          "example": 40
+        }
+      },
+      "notes": [
+        "A POST that only reads data.",
+        "collectionPeriods lists the periods oldest first, and every timeseries array lines up with it by index. A period without enough data holds 'NaN' in densities and fractions and null in p75s.",
+        "Updated weekly on Mondays around 04:00 UTC with data through the previous Saturday."
+      ],
+      "job": "web.performance.field.history",
+      "docs_url": "https://developer.chrome.com/docs/crux/history-api",
+      "verified": {
+        "docs": "https://developer.chrome.com/docs/crux/history-api"
+      }
+    }
+  ]
+}

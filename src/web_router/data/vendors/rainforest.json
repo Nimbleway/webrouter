@@ -1,0 +1,436 @@
+{
+  "vendor": "rainforest",
+  "name": "Rainforest API",
+  "category": "commerce",
+  "summary": "Real-time Amazon product data from Traject Data's Rainforest API: product pages, search results, seller offers, bestseller lists and search suggestions on every Amazon domain, as structured JSON.",
+  "docs_url": "https://docs.trajectdata.com/rainforestapi/product-data-api/overview",
+  "pricing_url": "https://www.rainforestapi.com/pricing",
+  "base_url": "https://api.rainforestapi.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "RAINFOREST_API_KEY"
+        ],
+        "description": "A Rainforest API key (app.rainforestapi.com), sent as the api_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is GET /request with type naming the data; each endpoint here fixes type.",
+    "Billed in credits: 1 per page retrieved, more for some options; request_info.credits_used and credits_remaining in each answer show the cost.",
+    "Give asin (or gtin) with amazon_domain. The vendor's url parameter, which takes a raw Amazon page URL, is left out.",
+    "Calls are run against Amazon in real time when made, not served from a stored index."
+  ],
+  "sites": [
+    "amazon.com"
+  ],
+  "sources": [
+    "https://docs.trajectdata.com/rainforestapi/product-data-api/overview.md",
+    "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/common.md",
+    "https://docs.trajectdata.com/rainforestapi/product-data-api/pagination.md",
+    "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/product.md",
+    "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/search.md",
+    "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/offers.md",
+    "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/bestsellers.md",
+    "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/autocomplete.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "rainforest.product",
+      "name": "Get an Amazon product",
+      "summary": "The product page of one ASIN as structured data: title, price and buybox, ratings, images, variants and more.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/request",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "product"
+          ],
+          "description": "Always product.",
+          "example": "product"
+        },
+        "amazon_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon site, e.g. amazon.com, amazon.co.uk, amazon.de (see the supported domains list).",
+          "example": "amazon.com"
+        },
+        "asin": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon ASIN; use with amazon_domain.",
+          "example": "B073JYC4XM"
+        },
+        "gtin": {
+          "in": "query",
+          "type": "string",
+          "description": "GTIN, ISBN, UPC or EAN, converted to an ASIN first; use with amazon_domain."
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated product fields to keep, dot notation for nested ones."
+        },
+        "include_summarization_attributes": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the per-attribute ratings and customers_say summary."
+        },
+        "variant_prices": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add each variant's price; costs 2 credits instead of 1."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Display language of the Amazon page."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency to request the Amazon page in."
+        },
+        "customer_location": {
+          "in": "query",
+          "type": "string",
+          "description": "Country the page is viewed from, for cross-border prices and shipping."
+        }
+      },
+      "notes": [
+        "asin or gtin is required (one of them), or the call is a 400.",
+        "1 credit per call; variant_prices, include_safety_product_resources and similar options cost more, as listed per option. A gtin lookup is cached for 2 months."
+      ],
+      "job": "products.get",
+      "docs_url": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/product",
+      "verified": {
+        "docs": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/product.md"
+      }
+    },
+    {
+      "id": "rainforest.search",
+      "name": "Search Amazon products",
+      "summary": "Search results for a term on one Amazon site: position, ASIN, title, price, rating, sponsored flag.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/request",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "search"
+          ],
+          "description": "Always search.",
+          "example": "search"
+        },
+        "amazon_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon site, e.g. amazon.com, amazon.co.uk, amazon.de (see the supported domains list).",
+          "example": "amazon.com"
+        },
+        "search_term": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search term.",
+          "example": "memory cards"
+        },
+        "category_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Category id to search within (from the Categories API)."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "bestseller_rankings",
+            "most_recent",
+            "price_low_to_high",
+            "price_high_to_low",
+            "featured",
+            "average_review"
+          ],
+          "description": "Sort order."
+        },
+        "refinements": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated refinement values returned in a previous search's refinements array."
+        },
+        "exclude_sponsored": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Leave sponsored results out; default false."
+        },
+        "direct_search": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Do not let Amazon auto-correct the spelling."
+        },
+        "number_of_results": {
+          "in": "query",
+          "type": "integer",
+          "description": "How many results to return, at most what the page shows."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page to fetch; see pagination.total_pages in the answer."
+        },
+        "max_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Fetch pages 1..N and join them; each page fetched is a credit."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Display language of the Amazon page."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency to request the Amazon page in."
+        },
+        "customer_location": {
+          "in": "query",
+          "type": "string",
+          "description": "Country the page is viewed from, for cross-border prices and shipping."
+        }
+      },
+      "notes": [
+        "1 credit per page fetched (max_page multiplies it); include_products_count, which runs product calls for top results, is left out because each one is another credit."
+      ],
+      "job": "products.search",
+      "docs_url": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/search",
+      "verified": {
+        "docs": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/search.md"
+      }
+    },
+    {
+      "id": "rainforest.offers",
+      "name": "Get an Amazon product's offers",
+      "summary": "The seller offers for one ASIN, filterable by condition, Prime and free shipping.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/request",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "offers"
+          ],
+          "description": "Always offers.",
+          "example": "offers"
+        },
+        "amazon_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon site, e.g. amazon.com, amazon.co.uk, amazon.de (see the supported domains list).",
+          "example": "amazon.com"
+        },
+        "asin": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon ASIN; use with amazon_domain.",
+          "example": "B073JYC4XM"
+        },
+        "gtin": {
+          "in": "query",
+          "type": "string",
+          "description": "GTIN, ISBN, UPC or EAN, converted to an ASIN first; use with amazon_domain."
+        },
+        "offers_prime": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Prime-eligible offers only."
+        },
+        "offers_free_shipping": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Free-shipping offers only."
+        },
+        "offers_condition_new": {
+          "in": "query",
+          "type": "boolean",
+          "description": "New-condition offers only."
+        },
+        "show_different_asins": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include offers Amazon shows for other ASINs (e.g. when this one is out of stock)."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page to fetch; see pagination.total_pages in the answer."
+        },
+        "max_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Fetch pages 1..N and join them; each page fetched is a credit."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Display language of the Amazon page."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency to request the Amazon page in."
+        },
+        "customer_location": {
+          "in": "query",
+          "type": "string",
+          "description": "Country the page is viewed from, for cross-border prices and shipping."
+        }
+      },
+      "notes": [
+        "asin or gtin is required (one of them), or the call is a 400.",
+        "1 credit per page fetched."
+      ],
+      "job": "products.offers",
+      "docs_url": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/offers",
+      "verified": {
+        "docs": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/offers.md"
+      }
+    },
+    {
+      "id": "rainforest.bestsellers",
+      "name": "Get an Amazon bestsellers list",
+      "summary": "Ranked bestsellers of one Amazon category, with ASIN, title, price and rating.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/request",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "bestsellers"
+          ],
+          "description": "Always bestsellers.",
+          "example": "bestsellers"
+        },
+        "amazon_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon site, e.g. amazon.com, amazon.co.uk, amazon.de (see the supported domains list).",
+          "example": "amazon.com"
+        },
+        "category_id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Bestsellers category id from the Categories API."
+        },
+        "top_free": {
+          "in": "query",
+          "type": "boolean",
+          "description": "The Top 100 Free list instead of Paid, where a category has both."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page to fetch; see pagination.total_pages in the answer."
+        },
+        "max_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Fetch pages 1..N and join them; each page fetched is a credit."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Display language of the Amazon page."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency to request the Amazon page in."
+        },
+        "customer_location": {
+          "in": "query",
+          "type": "string",
+          "description": "Country the page is viewed from, for cross-border prices and shipping."
+        }
+      },
+      "notes": [
+        "1 credit per page fetched."
+      ],
+      "job": "products.bestsellers",
+      "docs_url": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/bestsellers",
+      "verified": {
+        "docs": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/bestsellers.md"
+      }
+    },
+    {
+      "id": "rainforest.autocomplete",
+      "name": "Get Amazon search suggestions",
+      "summary": "The search-box suggestions Amazon shows for a typed term.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/request",
+      "params": {
+        "type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "autocomplete"
+          ],
+          "description": "Always autocomplete.",
+          "example": "autocomplete"
+        },
+        "amazon_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon site, e.g. amazon.com, amazon.co.uk, amazon.de (see the supported domains list).",
+          "example": "amazon.com",
+          "required": true
+        },
+        "search_term": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Typed term.",
+          "example": "memory c"
+        },
+        "autocomplete_alias": {
+          "in": "query",
+          "type": "string",
+          "description": "Department to scope suggestions to; default all departments."
+        }
+      },
+      "notes": [
+        "1 credit per call."
+      ],
+      "job": "products.autocomplete",
+      "docs_url": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/autocomplete",
+      "verified": {
+        "docs": "https://docs.trajectdata.com/rainforestapi/product-data-api/parameters/autocomplete.md"
+      }
+    }
+  ]
+}

@@ -1,0 +1,447 @@
+{
+  "vendor": "tomtom",
+  "name": "TomTom",
+  "category": "maps",
+  "summary": "TomTom's Search API (free-text and POI search, nearby places, geocoding, reverse geocoding) and Routing API (traffic-aware routes for cars, trucks, bikes and walking).",
+  "docs_url": "https://docs.tomtom.com/search-api/documentation/product-information/introduction",
+  "pricing_url": "https://developer.tomtom.com/pricing",
+  "base_url": "https://api.tomtom.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "TOMTOM_API_KEY"
+        ],
+        "description": "A TomTom API key (developer.tomtom.com > Dashboard > Keys), sent as the key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Coordinates are latitude first everywhere here: lat,lon in positions, bounding boxes and route locations.",
+    "Search answers page with limit (max 100) and ofs; geocoding caps the whole result set at 2,000 (ofs up to 1,900).",
+    "lat and lon without radius only bias the ranking; add radius (metres) to restrict results to the circle.",
+    "These are the global hosts; South Korea uses kr-api.tomtom.com, which this entry does not cover. TomTom also offers newer Orbis versions of these APIs."
+  ],
+  "sources": [
+    "https://docs.tomtom.com/search-api/documentation/search-service/fuzzy-search",
+    "https://docs.tomtom.com/search-api/documentation/search-service/nearby-search",
+    "https://docs.tomtom.com/search-api/documentation/geocoding-service/geocode",
+    "https://docs.tomtom.com/search-api/documentation/reverse-geocoding-service/reverse-geocode",
+    "https://docs.tomtom.com/routing-api/documentation/tomtom-maps/calculate-route"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "tomtom.search.fuzzy",
+      "name": "Search places and addresses by free text",
+      "summary": "Addresses, POIs, streets and areas matching free text, with optional location and category limits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/2/search/{query}.json",
+      "params": {
+        "query": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Search text (or coordinates).",
+          "example": "pizza near Amsterdam Centraal"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 10, max 100."
+        },
+        "ofs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset into the result set, default 0."
+        },
+        "countrySet": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO alpha-2 or alpha-3 country codes, e.g. NL,BE."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude to bias or, with radius, restrict to."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude to bias or, with radius, restrict to."
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Metres around lat/lon to restrict to."
+        },
+        "topLeft": {
+          "in": "query",
+          "type": "string",
+          "description": "Bounding box top-left as lat,lon."
+        },
+        "btmRight": {
+          "in": "query",
+          "type": "string",
+          "description": "Bounding box bottom-right as lat,lon."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tag for results."
+        },
+        "idxSet": {
+          "in": "query",
+          "type": "string",
+          "description": "Indexes to search, default POI,PAD,Str,Xstr,Geo,Addr."
+        },
+        "categorySet": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated POI category ids."
+        },
+        "brandSet": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated brand names (quote a name containing a comma)."
+        },
+        "openingHours": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "nextSevenDays"
+          ],
+          "description": "nextSevenDays adds opening hours."
+        },
+        "typeahead": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Treat the text as partial input."
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "description": "Geopolitical view, e.g. Unified, IN, CN."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://docs.tomtom.com/search-api/documentation/search-service/fuzzy-search",
+      "verified": {
+        "docs": "https://docs.tomtom.com/search-api/documentation/search-service/fuzzy-search"
+      }
+    },
+    {
+      "id": "tomtom.search.nearby",
+      "name": "Find places near a point",
+      "summary": "POIs around a latitude and longitude, optionally by category or brand.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/2/nearbySearch/.json",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 36.98844
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -121.97483
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Metres to restrict to; without it the point only biases ranking.",
+          "example": 1000
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 10, max 100."
+        },
+        "ofs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset for paging, default 0."
+        },
+        "categorySet": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated POI category ids, e.g. 7315 (restaurant).",
+          "example": "7315"
+        },
+        "brandSet": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated brand names."
+        },
+        "countrySet": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO country codes."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tag."
+        },
+        "openingHours": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "nextSevenDays"
+          ],
+          "description": "nextSevenDays adds opening hours."
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "description": "Geopolitical view."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://docs.tomtom.com/search-api/documentation/search-service/nearby-search",
+      "verified": {
+        "docs": "https://docs.tomtom.com/search-api/documentation/search-service/nearby-search"
+      }
+    },
+    {
+      "id": "tomtom.geocode.forward",
+      "name": "Geocode an address",
+      "summary": "Coordinates and structured address for an address string.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/2/geocode/{query}.json",
+      "params": {
+        "query": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The address.",
+          "example": "De Ruijterkade 154, Amsterdam"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 10, max 100."
+        },
+        "ofs": {
+          "in": "query",
+          "type": "integer",
+          "description": "Offset, default 0, max 1900."
+        },
+        "countrySet": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated ISO alpha-2 or alpha-3 country codes."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude to bias toward."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude to bias toward."
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Metres around lat/lon to restrict to."
+        },
+        "topLeft": {
+          "in": "query",
+          "type": "string",
+          "description": "Bounding box top-left as lat,lon; radius wins if both are sent."
+        },
+        "btmRight": {
+          "in": "query",
+          "type": "string",
+          "description": "Bounding box bottom-right as lat,lon."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tag."
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "description": "Geopolitical view."
+        }
+      },
+      "notes": [
+        "storeResult and typeahead are deprecated on this call and may answer 400; leave them out."
+      ],
+      "job": "geo.geocode",
+      "docs_url": "https://docs.tomtom.com/search-api/documentation/geocoding-service/geocode",
+      "verified": {
+        "docs": "https://docs.tomtom.com/search-api/documentation/geocoding-service/geocode"
+      }
+    },
+    {
+      "id": "tomtom.geocode.reverse",
+      "name": "Reverse geocode a coordinate",
+      "summary": "The address, or the administrative area, at a latitude,longitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/2/reverseGeocode/{position}.json",
+      "params": {
+        "position": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "lat,lon.",
+          "example": "52.157831,5.223776"
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Search radius in metres, default 10000."
+        },
+        "returnSpeedLimit": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the posted speed limit."
+        },
+        "heading": {
+          "in": "query",
+          "type": "number",
+          "description": "Direction of travel, -360 to 360 (0 north, 90 east), to pick the right side of the road."
+        },
+        "entityType": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated area levels to return instead of an address: Country, CountrySubdivision, Municipality, PostalCodeArea, Neighbourhood..."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF language tag."
+        },
+        "view": {
+          "in": "query",
+          "type": "string",
+          "description": "Geopolitical view."
+        }
+      },
+      "notes": [
+        "Path values are percent-encoded, so the comma goes as %2C; not yet checked against a live call."
+      ],
+      "job": "geo.reverse",
+      "docs_url": "https://docs.tomtom.com/search-api/documentation/reverse-geocoding-service/reverse-geocode",
+      "verified": {
+        "docs": "https://docs.tomtom.com/search-api/documentation/reverse-geocoding-service/reverse-geocode"
+      }
+    },
+    {
+      "id": "tomtom.routing.calculate",
+      "name": "Calculate a route",
+      "summary": "Distance, travel time with live and historic traffic, legs and geometry between an origin, waypoints and a destination.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/routing/1/calculateRoute/{locations}/json",
+      "params": {
+        "locations": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "lat,lon points joined with colons, origin first and destination last; up to 150 waypoints between.",
+          "example": "52.50931,13.42936:52.50274,13.43872"
+        },
+        "travelMode": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "car",
+            "truck",
+            "taxi",
+            "bus",
+            "van",
+            "motorcycle",
+            "bicycle",
+            "pedestrian"
+          ],
+          "description": "Default car."
+        },
+        "routeType": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "fastest",
+            "shortest",
+            "short",
+            "eco",
+            "thrilling"
+          ],
+          "description": "Default fastest; shortest can time out on long routes."
+        },
+        "traffic": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Default true; false ignores live traffic (historic speeds still apply)."
+        },
+        "departAt": {
+          "in": "query",
+          "type": "string",
+          "description": "now (default) or an ISO date-time; not with arriveAt."
+        },
+        "arriveAt": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO date-time to arrive by; not with departAt."
+        },
+        "avoid": {
+          "in": "query",
+          "type": "string",
+          "description": "One of tollRoads, motorways, ferries, unpavedRoads, carpools, alreadyUsedRoads, borderCrossings, tunnels, carTrains, lowEmissionZones."
+        },
+        "maxAlternatives": {
+          "in": "query",
+          "type": "integer",
+          "description": "Alternative routes, 0-5, default 0."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "IETF tag for instructions, default en-GB."
+        },
+        "computeTravelTimeFor": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "none",
+            "all"
+          ],
+          "description": "all adds no-traffic, historic and live travel times."
+        },
+        "sectionType": {
+          "in": "query",
+          "type": "string",
+          "description": "Sections to report, e.g. toll, motorway, tunnel, traffic."
+        }
+      },
+      "notes": [
+        "Path values are percent-encoded, so the colons and commas go as %3A and %2C; not yet checked against a live call."
+      ],
+      "job": "routes.directions",
+      "docs_url": "https://docs.tomtom.com/routing-api/documentation/tomtom-maps/calculate-route",
+      "verified": {
+        "docs": "https://docs.tomtom.com/routing-api/documentation/tomtom-maps/calculate-route"
+      }
+    }
+  ]
+}
