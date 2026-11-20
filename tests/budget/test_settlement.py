@@ -14,6 +14,9 @@ from tests.budget.conftest import Chain, Table, call, scoped
 from web_router import Budget, WebRouter
 from web_router.constants_cost import COST_REPORTED
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.routing.attempts import Attempt
+from web_router.routing.ledger import Ledger
+from web_router.types import SearchRequest
 
 SHARED = Budget(max_cost_usd=0.10)
 _REQUEST = httpx.Request("GET", "https://api.test")
@@ -103,3 +106,14 @@ def test_a_stated_cost_that_is_no_cost_leaves_the_estimate(
     with WebRouter().budget(SHARED) as shared:
         scoped(chain, shared)
     assert (shared.status().spent_usd, shared.status().remaining_usd) == (0.006, pytest.approx(0.094))
+
+
+def test_a_refund_for_another_candidate_leaves_the_open_attempt_charged(priced: Table) -> None:
+    """A failure noted for a candidate that is not the open attempt refunds nothing: the open one may be running."""
+    priced.update(first=(0.01, None))
+    ledger = Ledger(Budget())
+    ledger.admit(Attempt(tool="search", provider="first", request=SearchRequest(query="q")))
+    assert ledger.refund_open("search:second") is None
+    assert ledger.spent == 0.01
+    assert ledger.refund_open("search:first") is not None
+    assert ledger.spent == 0.0
