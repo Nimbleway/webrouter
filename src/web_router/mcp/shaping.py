@@ -1,15 +1,13 @@
 """Turning a library response into something a context window can hold.
 
-This is the one place the MCP layer is allowed to differ from the library. The library's rule is that
-nothing is thrown away -- full page bodies, and the backend's untouched payload under ``raw``. Inside a
-model's context that rule stops being a virtue: a single deep search can be larger than the window it is
-being read in.
+This is the one place the MCP layer is allowed to differ from the library. The library's rule is that nothing is
+thrown away -- full page bodies, and the backend's untouched payload under ``raw``. Inside a model's context that
+rule stops being a virtue: a single deep search can be larger than the window it is being read in.
 
-So a shaped result keeps the fields a reader acts on, cuts long text at a word
-boundary with a visible marker, never inlines ``raw``, and says in the result
-itself that it was shortened and which handle gets the rest. Nothing is lost --
-the whole payload stays in the session's :class:`HandleStore` until it is
-evicted, and ``fetch_raw`` hands it back verbatim.
+So a shaped result keeps the fields a reader acts on, opens with a mark that its text is untrusted, cuts long
+text at a word boundary with a visible marker, never inlines ``raw``, and says in the result itself that it was
+shortened and which handle gets the rest. Nothing is lost -- the whole payload stays in the session's
+:class:`HandleStore` until it is evicted, and ``fetch_raw`` hands it back verbatim.
 
 Browse is the one exception to "verbatim". A task payload can carry the URL of the session the agent
 ran in, and some backends put a key in it, so a browse result -- shaped or raw -- goes through
@@ -37,6 +35,7 @@ from web_router.constants import (
     MCP_WORD_SEARCH_WINDOW,
 )
 from web_router.constants_mcp_context import MCP_EMPTY_VALUES, MCP_JSON_SEPARATORS
+from web_router.constants_mcp_instructions import MCP_UNTRUSTED_MARK
 from web_router.mcp.redaction import redact as redact  # re-exported: callers import it from here
 from web_router.mcp.redaction import redaction_note as redaction_note
 from web_router.mcp.shaping_cost import cost_fields
@@ -334,7 +333,7 @@ def _fit(
     extra_note: str = "",
     main: bool = True,
 ) -> dict[str, Any]:
-    """Shrink a shaped payload until it serializes inside ``budget``, and say so if it did.
+    """Shrink a shaped payload, marked untrusted, until it serializes inside ``budget``, and say so if it did.
 
     ``extra_note`` is appended to the note, and sets one on its own when nothing was cut; it is
     inside the loop so the budget counts it. ``main`` says whether the items' text is the result's
@@ -347,8 +346,9 @@ def _fit(
     last item is never dropped: a result listing nothing tells the reader less
     than a heavily cut one, so it is squeezed further instead.
     """
-    share = max(MCP_MIN_FIELD_CHARS, budget // max(len(items), 1))
-    dropped, total = 0, len(items)
+    share, dropped, total = max(MCP_MIN_FIELD_CHARS, budget // max(len(items), 1)), 0, len(items)
+    if "description" not in text_keys:  # first, before the page text; a vendor's catalog listing is not page text
+        payload.update({**MCP_UNTRUSTED_MARK, **{key: payload.pop(key) for key in list(payload)}})  # in place
     while True:
         shortened = (any([_shorten(item, text_keys, share) for item in items]) and main) or shortened  # cut every item
         payload["handle"] = handle
