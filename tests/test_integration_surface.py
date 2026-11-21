@@ -17,7 +17,7 @@ import pytest
 
 from tests.conftest import billing_aware
 from web_router import WebRouter
-from web_router.constants import ENV_BY_PROVIDER, EXTRACT_ENV_BY_PROVIDER
+from web_router.constants import ENV_BY_PROVIDER, EXTRACT_ENV_BY_PROVIDER, PROVIDER_LITEPARSE
 from web_router.exceptions import UnsupportedParameterError
 from web_router.registry import (
     available_extract_providers,
@@ -172,7 +172,10 @@ def test_every_effort_level_is_served(provider: str, effort: str) -> None:
 
 
 def _extractors(body_format: str | None = None) -> list:
-    """Every extract provider that can return ``body_format``, marked to skip without its keys."""
+    """Every web extract provider that can return ``body_format``, marked to skip without its keys.
+
+    LiteParse reads documents, not pages; its live test is in ``tests/providers/test_liteparse.py``.
+    """
     return [
         pytest.param(
             name,
@@ -183,7 +186,8 @@ def _extractors(body_format: str | None = None) -> list:
             id=name,
         )
         for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items()
-        if body_format is None or body_format in get_extract_provider_class(name).supported_formats
+        if name != PROVIDER_LITEPARSE
+        and (body_format is None or body_format in get_extract_provider_class(name).supported_formats)
     ]
 
 

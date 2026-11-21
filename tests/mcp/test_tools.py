@@ -47,6 +47,7 @@ from web_router.constants import (
     PROVIDER_HYPERBROWSER,
     PROVIDER_JINA,
     PROVIDER_LINKUP,
+    PROVIDER_LITEPARSE,
     PROVIDER_MAX,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_TAVILY,
@@ -101,17 +102,12 @@ def test_serves_every_tool_in_order(tools: WebRouterTools) -> None:
 
 
 def test_provider_enum_offers_only_configured_backends(tools: WebRouterTools, no_keys: None) -> None:
-    search = _tool(tools, MCP_TOOL_SEARCH)
-    extract = _tool(tools, MCP_TOOL_EXTRACT)
+    search = _tool(tools, MCP_TOOL_SEARCH).input_schema["properties"]["provider"]["enum"]
+    extract = _tool(tools, MCP_TOOL_EXTRACT).input_schema["properties"]["provider"]["enum"]
 
-    assert search.input_schema["properties"]["provider"]["enum"] == [
-        PROVIDER_AUTO,
-        PROVIDER_EXA_MCP,
-        PROVIDER_PARALLEL_MCP,
-        PROVIDER_YOU_MCP,
-    ]
-    assert extract.input_schema["properties"]["provider"]["enum"] == [PROVIDER_AUTO, PROVIDER_JINA, PROVIDER_MAX]
-    assert PROVIDER_TAVILY not in search.input_schema["properties"]["provider"]["enum"]
+    assert search == [PROVIDER_AUTO, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_YOU_MCP]
+    assert extract == [PROVIDER_AUTO, PROVIDER_JINA, PROVIDER_LITEPARSE, PROVIDER_MAX]
+    assert PROVIDER_TAVILY not in search
 
 
 def test_the_extract_schema_reads_max_as_the_members_it_would_race(no_keys: None) -> None:

@@ -99,6 +99,8 @@ class Provider(str, Enum):
     BRIGHTDATA = "brightdata"
     FIRECRAWL = "firecrawl"
     JINA = "jina"
+    LITEPARSE = "liteparse"
+    LLAMAPARSE = "llamaparse"
     STEEL = "steel"
     BROWSERBASE = "browserbase"
     HYPERBROWSER = "hyperbrowser"
@@ -351,9 +353,8 @@ def __getattr__(name: str) -> Any:
 JobState = Literal["queued", "running", "completed", "failed", "cancelled"]
 """Where a job -- work the backend carries on with after the call that started it -- currently is.
 
-``queued`` and ``running`` are the two non-terminal states; a job in any of the
-other three will not change again. Every method that is a job shares it, so
-what "finished" means cannot drift from one method to the next.
+``queued`` and ``running`` are the two non-terminal states; a job in any of the other three will not change again. Every
+method that is a job shares it, so what "finished" means cannot drift from one method to the next.
 """
 
 ResearchState = JobState
@@ -362,9 +363,8 @@ ResearchState = JobState
 ResearchOutcome = Literal["complete", "partial"]
 """Whether a finished run answered the whole question or stopped early.
 
-``partial`` only when the backend itself said so -- an exhausted budget, a
-truncated generation. A run that simply found little is ``complete``: it
-finished the work it was asked to do.
+``partial`` only when the backend itself said so -- an exhausted budget, a truncated generation. A run that simply
+found little is ``complete``: it finished the work it was asked to do.
 """
 
 

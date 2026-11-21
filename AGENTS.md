@@ -14,11 +14,12 @@ tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
 Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream,
-the keyless Jina Reader, `auto` again, and `max`, which sends the request to
-every member `auto` would try at once and returns the first document back -- the
-fastest answer any backend can give, at one fetch per member, so never the
-default. `profile` names a saved identity on the backend, the one a browser
-session logged into, whose cookies ride along; only Browserbase maps it.
+the keyless Jina Reader, LiteParse (documents, parsed locally), LlamaParse
+(documents), `auto` again, and `max`, which sends the request to every member
+`auto` would try at once and returns the first document back -- the fastest
+answer any backend can give, at one fetch per member, so never the default.
+`profile` names a saved identity on the backend, the one a browser session
+logged into, whose cookies ride along; only Browserbase maps it.
 
 **`live_data`** — a vendor's ready-made scraper for one site (Nimble's
 Extract Templates, Apify's Store Actors, Bright Data's scrapers, Oxylabs'
@@ -493,6 +494,8 @@ src/web_router/
     ├── oxylabs.py      extract, via httpx — HTTP Basic, username + password
     ├── brightdata.py   extract, via httpx — needs a zone beside its token
     ├── jina.py         extract, keyless — Jina Reader
+    ├── liteparse.py    extract, keyless — downloads a document, parses it locally
+    ├── llamaparse.py   extract, via httpx — a LlamaCloud parse job, polled until it ends
     ├── steel.py        browser, via httpx — the CDP URL carries the key
     ├── browserbase.py  browser + browse + extract, via httpx — Sessions, Agents
     │                   and Fetch APIs; one Context serves `profile` on sessions
@@ -1623,7 +1626,7 @@ not a secret either and comes from the real environment only, since no file can
 set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
-`auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
+`auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `liteparse` and `local` need none, and
 Nimble, Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —

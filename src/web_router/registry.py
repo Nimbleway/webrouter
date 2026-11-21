@@ -39,6 +39,8 @@ from web_router.constants import (
     PROVIDER_KEENABLE,
     PROVIDER_KEIROLABS,
     PROVIDER_LINKUP,
+    PROVIDER_LITEPARSE,
+    PROVIDER_LLAMAPARSE,
     PROVIDER_MAX,
     PROVIDER_NIMBLE,
     PROVIDER_OCTEN,
@@ -118,13 +120,14 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
     PROVIDER_SPECSTREAM: ("web_router.providers.specstream", "SpecStreamExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_LITEPARSE: ("web_router.providers.liteparse", "LiteParseExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_LLAMAPARSE: ("web_router.providers.llamaparse", "LlamaParseExtractProvider", EXTRA_EXTRACT),
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase_extract", "BrowserbaseExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
     PROVIDER_MAX: ("web_router.providers.max", "MaxExtractProvider", AUTO_EXTRA),
 }
 
-# A template run is the Extract API's, so the class ships with the extract extra.
-# No `auto`: a template's name belongs to one vendor, so there is nothing to route.
+# A template run is the Extract API's, so it ships with the extract extra. No `auto`: a template is one vendor's.
 _BUILTIN_LIVE_DATA_PROVIDERS = BUILTIN_LIVE_DATA_PROVIDERS
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
@@ -246,8 +249,7 @@ def _is_set(env_var: str) -> bool:
 def configured_providers() -> list[str]:
     """Every builtin search provider you currently have a credential for, plus the keyless ones.
 
-    Reports what the environment makes usable, which :func:`available_providers` deliberately does not: that
-    lists every name the router knows, key or no key.
+    Reports what the environment makes usable; :func:`available_providers` lists every known name, key or no key.
 
     This reads environment variables only. A key passed as ``provider_config`` is invisible here, and a key that is
     present may still be rejected by the service -- so treat this as "worth trying", not as a guarantee, and let the
@@ -286,9 +288,8 @@ def configured_live_data_providers() -> list[str]:
 def configured_research_providers() -> list[str]:
     """Every builtin research provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. Shorter than the other two in practice: every research backend
-    bills for the run, so there is no keyless member to pad it out, and with no key at all this is empty but for
-    ``auto`` -- which will then say which variables would fix it.
+    The same caveats as :func:`configured_providers`. Every research backend bills for the run, so there is no keyless
+    member, and with no key at all this is empty but for ``auto`` -- which will then say which variables would fix it.
     """
     return sorted(
         name for name, env_vars in RESEARCH_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -337,9 +338,8 @@ def _resolve(
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:
-        # Only the missing SDK means "not installed". An ImportError from inside
-        # the provider module is a bug, and reporting it as a missing extra would
-        # send the reader looking in entirely the wrong place.
+        # Only the missing SDK means "not installed". An ImportError from inside the provider module is a bug, and
+        # reporting it as a missing extra would send the reader looking in entirely the wrong place.
         if exc.name and exc.name.startswith("web_router"):
             raise
         raise ProviderNotInstalledError(key, extra) from exc

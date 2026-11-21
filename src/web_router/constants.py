@@ -1,8 +1,7 @@
 """Every literal the package depends on.
 
-Endpoints, environment variable names, timeouts and message templates live here
-rather than inline, so a provider's wire details can be reviewed in one place
-and changed without touching logic.
+Endpoints, environment variable names, timeouts and message templates live here rather than inline, so a provider's wire
+details can be reviewed in one place and changed without touching logic.
 """
 
 from __future__ import annotations
@@ -87,6 +86,8 @@ PROVIDER_OXYLABS = Provider.OXYLABS.value
 PROVIDER_BRIGHTDATA = Provider.BRIGHTDATA.value
 PROVIDER_FIRECRAWL = Provider.FIRECRAWL.value
 PROVIDER_JINA = Provider.JINA.value
+PROVIDER_LITEPARSE = Provider.LITEPARSE.value
+PROVIDER_LLAMAPARSE = Provider.LLAMAPARSE.value
 PROVIDER_STEEL = Provider.STEEL.value
 PROVIDER_BROWSERBASE = Provider.BROWSERBASE.value
 PROVIDER_HYPERBROWSER = Provider.HYPERBROWSER.value
@@ -176,6 +177,7 @@ ENV_BRIGHTDATA_API_KEY = "BRIGHTDATA_API_TOKEN"
 ENV_BRIGHTDATA_ZONE = "BRIGHTDATA_ZONE"
 ENV_FIRECRAWL_API_KEY = "FIRECRAWL_API_KEY"
 ENV_JINA_API_KEY = "JINA_API_KEY"
+ENV_LLAMA_CLOUD_API_KEY = "LLAMA_CLOUD_API_KEY"
 ENV_STEEL_API_KEY = "STEEL_API_KEY"
 ENV_BROWSERBASE_API_KEY = "BROWSERBASE_API_KEY"
 ENV_HYPERBROWSER_API_KEY = "HYPERBROWSER_API_KEY"
@@ -233,6 +235,8 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_SPECSTREAM: (ENV_SPECSTREAM_API_KEY,),
     PROVIDER_JINA: (),
+    PROVIDER_LITEPARSE: (),
+    PROVIDER_LLAMAPARSE: (ENV_LLAMA_CLOUD_API_KEY,),
     PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
     PROVIDER_AUTO: (),
     PROVIDER_MAX: (),
@@ -254,10 +258,9 @@ RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each research provider needs, all of them.
 
-Shaped like :data:`EXTRACT_ENV_BY_PROVIDER` rather than
-:data:`ENV_BY_PROVIDER`, so a backend that later needs a second value does not
-change the table's type. Every research backend costs money to call, so unlike
-the other two methods there is no keyless tier to fall back on.
+Shaped like :data:`EXTRACT_ENV_BY_PROVIDER` rather than :data:`ENV_BY_PROVIDER`, so a backend that later needs a second
+value does not change the table's type. Every research backend costs money to call, so unlike the other two methods
+there is no keyless tier to fall back on.
 """
 
 ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -270,9 +273,8 @@ ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each answer provider needs, all of them.
 
-Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the
-call, so there is no keyless tier; ``auto`` tries the configured ones in the
-order route-eval ranked them, and is not listed here since it needs no key.
+Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the call, so there is no keyless tier; ``auto``
+tries the configured ones in the order route-eval ranked them, and is not listed here since it needs no key.
 """
 
 BROWSER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -355,11 +357,9 @@ NIMBLE_PARAMS_BY_DEPTH: dict[SearchDepth, dict[str, Any]] = {
     # `standard` is a ~2K excerpt; the separate `full_content` flag is what turns it into the whole page.
     # (`deep_search` looks like the match but is deprecated in favour of exactly this pair.)
     #
-    # Verified live: Nimble also *tolerates* "fast" and "deep", which this table
-    # used to send, as undocumented aliases -- "fast" returns byte-identical
-    # results to "standard". They are outside the enum its own validator
-    # reports and the SDK types them as invalid, so do not go back to them
-    # because they happen to work.
+    # Verified live: Nimble also *tolerates* "fast" and "deep", which this table used to send, as undocumented aliases
+    # -- "fast" returns byte-identical results to "standard". They are outside the enum its own validator reports and
+    # the SDK types them as invalid, so do not go back to them because they happen to work.
     "lite": {"search_depth": "lite"},
     "fast": {"search_depth": "standard"},
     "deep": {"search_depth": "standard", "full_content": True},

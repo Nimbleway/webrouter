@@ -31,6 +31,8 @@ used here for identification only.
 | [Keenable](https://docs.keenable.ai) | ✓ keyless | ✓ keyless |  |  |  |  |  |
 | [Keirolabs](https://keirolabs.cloud) | ✓ |  |  |  |  |  |  |
 | [Kernel](https://kernel.sh) |  |  |  |  |  | ✓ |  |
+| [LiteParse](https://github.com/run-llama/liteparse) |  | ✓ keyless, documents |  |  |  |  |  |
+| [LlamaParse](https://www.llamaindex.ai/llamaparse) |  | ✓ documents |  |  |  |  |  |
 | [Linkup](https://www.linkup.so) | ✓ | ✓ |  | ✓ | ✓ |  |  |
 | [Local Chromium](https://www.chromium.org) |  |  |  |  |  | ✓ keyless |  |
 | [Nimble](https://nimbleway.com) | ✓ keyless | ✓ keyless | ✓ |  | ✓ |  |  |
@@ -121,6 +123,8 @@ which ones this environment can use.
 | `Provider.KEENABLE` | `keenable` | [Keenable Fetch](https://docs.keenable.ai/api-reference/fetch) | `KEENABLE_API_KEY`, or keyless with `allow_keyless=True` (rate-limited per IP) | `markdown` |
 | `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Fetch](https://api-docs.deepseek.com/guides/search) | `DEEPSEEK_API_KEY` | `markdown` |
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
+| `Provider.LITEPARSE` | `liteparse` | [LiteParse](https://github.com/run-llama/liteparse) — downloads a document and parses it on your machine; PDFs alone, Office files with LibreOffice installed | **none** | `markdown`, `text` |
+| `Provider.LLAMAPARSE` | `llamaparse` | [LlamaParse](https://www.llamaindex.ai/llamaparse) — a LlamaCloud parse job on its `cost_effective` tier (`provider_options={"tier": ...}` for another); opt-in as `auto`'s document parser | `LLAMA_CLOUD_API_KEY` | `markdown`, `text` |
 | `Provider.BROWSERBASE` | `browserbase` | [Browserbase Fetch](https://docs.browserbase.com/features/fetch) — a plain fetch, never a rendered page; the one backend that maps `profile` | `BROWSERBASE_API_KEY` | `markdown`, `html` |
 | `Provider.SPECSTREAM` | `specstream` | [SpecStream Extract](https://specstream.ai/agents.md) | `SPECSTREAM_API_KEY` | `markdown`, `text` |
 | `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase and SpecStream | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it; `profile` routed to one that maps it |
@@ -314,6 +318,17 @@ included, **pins** to `markdown` when you name none, rather than each applying
 its vendor's own default. `html` passes over Tavily and Exa, and `text` goes to
 Tavily, Exa or Jina Reader. A format is never relabelled: a member that cannot return it is
 not asked.
+
+A URL whose path ends in `.pdf`, `.docx`, `.doc`, `.pptx`, `.ppt`, `.xlsx` or `.xls` goes to
+LiteParse before the chain, and on to the chain only when LiteParse cannot read it. A web
+backend handed a PDF returns the viewer's page or the raw file. To send those URLs down the
+chain too:
+
+```python
+router = WebRouter(provider_config={"auto": {"document_parser": None}})
+```
+
+`"document_parser": "llamaparse"` sends them to LlamaParse instead, with `LLAMA_CLOUD_API_KEY` set.
 
 ### Choosing the order yourself
 

@@ -92,6 +92,8 @@ langchain-protocol==0.0.21
     # via langchain-core
 langsmith==0.14.17
     # via langchain-core
+liteparse==2.19.0
+    # via webrouter
 mcp==2.3.0
     # via webrouter
 mcp-types==2.3.0
