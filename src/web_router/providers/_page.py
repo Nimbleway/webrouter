@@ -565,10 +565,14 @@ class SyncPage(_PageCore):
             try:
                 act(locator)
             except Exception as exc:
-                if _is_timeout(exc) and self._count(locator) == 0:
-                    raise self._missing(action, ref, selector, seconds) from exc
-                raise
-            return self._state(page)
+                if not (_is_timeout(exc) and self._count(locator) == 0):
+                    raise
+                failure = self._missing(action, ref, selector, seconds)
+                cause = self._scrubbed(exc)[1]
+            else:
+                return self._state(page)
+            # Raise after the except, with a scrubbed cause: the original quotes the CDP URL.
+            _throw((failure, cause))
 
         return self._run(action, seconds, run)
 
@@ -778,10 +782,14 @@ class AsyncPage(_PageCore):
             try:
                 await act(locator)
             except Exception as exc:
-                if _is_timeout(exc) and await self._count(locator) == 0:
-                    raise self._missing(action, ref, selector, seconds) from exc
-                raise
-            return await self._state(page)
+                if not (_is_timeout(exc) and await self._count(locator) == 0):
+                    raise
+                failure = self._missing(action, ref, selector, seconds)
+                cause = self._scrubbed(exc)[1]
+            else:
+                return await self._state(page)
+            # Raise after the except, with a scrubbed cause: the original quotes the CDP URL.
+            _throw((failure, cause))
 
         return await self._run(action, seconds, run)
 
