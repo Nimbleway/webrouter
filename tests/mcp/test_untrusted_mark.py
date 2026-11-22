@@ -56,10 +56,14 @@ def test_the_instructions_name_the_results_that_are_not_yet_marked() -> None:
 
 
 @pytest.mark.parametrize("load_env", [True, False])
-@pytest.mark.parametrize("remote", [True, False])
-def test_the_instructions_point_at_keys_without_pushing_them(load_env: bool, remote: bool) -> None:
-    text = instructions_text(load_env=load_env, remote=remote)
+def test_the_instructions_point_at_keys_without_pushing_them(load_env: bool) -> None:
+    text = instructions_text(load_env=load_env, remote=False)
 
     assert "web-router://capabilities" in text and "`unlock`" in text and "marked `untrusted`" in text
     assert "Every key the user adds" not in text and "every capability is available" not in text
     assert "If the user asks to add a key" in text
+    if load_env:
+        assert "have them put it in their .env themselves, and call `load_env` with the path they give." in text
+    else:
+        assert "whoever runs this server adds it to its environment and restarts it; never ask for a key." in text
+        assert "`load_env`" not in text
