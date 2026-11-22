@@ -82,8 +82,8 @@ from web_router.registry import (
     create_research_provider,
 )
 from web_router.registry_answer import every_provider_name
-from web_router.routing import Budget, RouterLike, ToolName
-from web_router.routing.routed import RouterSetup
+from web_router.routing import Budget, Prefer, RouterLike, ToolName
+from web_router.routing.router_setup import RouterSetup
 from web_router.routing.submitted import asubmitted, submitted
 from web_router.routing.url_policy import UrlPolicy
 from web_router.types import (
@@ -114,6 +114,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         route_modes: bool | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        prefer: Prefer | None = None,
         data_api_credentials: DataApiCredentials = None,
         vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
@@ -131,6 +132,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 router from ``router_config``, closed with this one -- see :mod:`web_router.routing.registry`.
                 ``route_modes=True`` shows it a candidate per vendor mode too (the router's own, else no).
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
+                ``prefer="cheap"`` or ``"fast"`` is shown to the router on every call it is asked about, and recorded.
             data_api_credentials: for :meth:`call_data_api`, read before the environment; once ``vendor_credentials``.
             max_concurrency: the most vendor calls this router has in flight at once, across every search,
                 extract and answer it serves (per event loop on the async router); ``None`` caps nothing. A call
@@ -168,7 +170,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         self._providers_lock = threading.Lock()
         # Rows the sync benchmark() gave up on whose calls still run; close() waits for them, never shutting one.
         self._stragglers = Stragglers()
-        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config, route_modes)
+        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config, route_modes, prefer)
 
     def _config_for(self, key: str) -> dict[str, Any]:
         """Constructor kwargs for one backend: see :func:`~web_router.client_config.config_for`."""
@@ -191,10 +193,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
             return self._instances[key]
 
     def get_extract_provider(self, name: str | Provider | ExtractProvider | None = None) -> ExtractProvider:
-        """Return the named extract provider, constructing and caching it on first use.
-
-        The extract counterpart of :meth:`get_provider`, with the same ownership rule.
-        """
+        """The extract counterpart of :meth:`get_provider`, with the same caching and ownership rules."""
         if isinstance(name, ExtractProvider):
             return name
 
@@ -207,8 +206,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     def get_research_provider(self, name: str | Provider | ResearchProvider | None = None) -> ResearchProvider:
         """Return the named research provider, constructing and caching it on first use.
 
-        The research counterpart of :meth:`get_provider`, with the same
-        ownership rule.
+        The research counterpart of :meth:`get_provider`, with the same ownership rule.
         """
         if isinstance(name, ResearchProvider):
             return name
@@ -222,8 +220,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     def get_browser_provider(self, name: str | Provider | BrowserProvider | None = None) -> BrowserProvider:
         """Return the named browser provider, constructing and caching it on first use.
 
-        The browser counterpart of :meth:`get_provider`, with the same
-        ownership rule.
+        The browser counterpart of :meth:`get_provider`, with the same ownership rule.
         """
         if isinstance(name, BrowserProvider):
             return name
@@ -237,8 +234,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     def get_browse_provider(self, name: str | Provider | BrowseProvider | None = None) -> BrowseProvider:
         """Return the named browse provider, constructing and caching it on first use.
 
-        The browse counterpart of :meth:`get_provider`, with the same
-        ownership rule.
+        The browse counterpart of :meth:`get_provider`, with the same ownership rule.
         """
         if isinstance(name, BrowseProvider):
             return name
@@ -299,6 +295,7 @@ class WebRouter(
         route_modes: bool | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        prefer: Prefer | None = None,
         data_api_credentials: DataApiCredentials = None,
         vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
@@ -319,6 +316,7 @@ class WebRouter(
             route_modes=route_modes,
             fail_on_router_error=fail_on_router_error,
             url_policy=url_policy,
+            prefer=prefer,
             data_api_credentials=renamed_credentials(data_api_credentials, vendor_credentials),
             max_concurrency=max_concurrency,
             hop_timeout=hop_timeout,

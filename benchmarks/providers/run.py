@@ -59,6 +59,7 @@ from _common import (
     combine_scans,
     scan_main,
 )
+from _judge_check import checked_judge, judge_arg
 from _questions import (
     MSG_CANNOT_COMBINE,
     MSG_OTHER_QUESTIONS,
@@ -76,7 +77,6 @@ from _report_tables import breakdown, breakdown_tables, search_score
 from web_router import AsyncWebRouter
 from web_router.constants import BENCHMARK_EXCLUDED
 from web_router.constants_modes import DEPTH_LEVELS, PART_SEP
-from web_router.evals import OpenAIJudge
 from web_router.exceptions import ProviderNotFoundError
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.modes import ModeId, parse_id
@@ -202,7 +202,7 @@ async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> li
     for label in providers:  # every setup is read before anything is searched
         pinned = parse_setup(label)
         by_depth[_depth(pinned)][label] = str(pinned)
-    judge = OpenAIJudge()
+    judge = await checked_judge(args.judge)  # before any search: a judge that cannot run would fail every row
     labels = [label for label, _ in setup["breakdowns"]]
     rows: list[dict[str, Any]] = []
     try:
@@ -245,6 +245,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--providers", default=None, help="comma-separated (default: every configured backend)")
     parser.add_argument("--max-results", type=int, default=DEFAULT_MAX_RESULTS, help="per search")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY, help="questions at once")
+    judge_arg(parser)
     parser.add_argument("--out", type=Path, default=None, help=f"results folder (default: under {DEFAULT_OUT})")
     parser.add_argument(
         "--combine",

@@ -130,6 +130,13 @@ evals = [
     # SealQA is published as Parquet; read only inside Dataset.sealqa().
     "pyarrow>=15",
 ]
+# The LiteLLM judge (`--judge litellm:<model>`): one SDK that reaches most model
+# providers, for a judge on a model neither built-in judge serves. Large, so
+# apart from `evals`, and pinned exactly: an upgrade is a reviewed change.
+evals-litellm = [
+    "webrouter[evals]",
+    "litellm==1.108.0",
+]
 # Not a method either: LangChain tools over search and extract, for an agent
 # built on LangChain rather than one that speaks MCP. langchain-core is all the
 # tools need -- the agent loop and the model are the caller's own install.

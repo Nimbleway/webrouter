@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Any
 
 from _common import ANSWER_COMBINE_KEYS, DEFAULT_OUT, Sink, combine_scans, scan_main
+from _judge_check import checked_judge, judge_arg
 from _questions import (
     MSG_CANNOT_COMBINE,
     MSG_OTHER_QUESTIONS,
@@ -50,7 +51,7 @@ from _questions import (
 from answer_report import BASELINE_KEYS, check_baseline, markdown, stated_cost, stated_tokens, summarize
 
 from web_router import AsyncWebRouter
-from web_router.evals import Dataset, OpenAIJudge
+from web_router.evals import Dataset, Judge
 from web_router.exceptions import WebRouterError
 from web_router.registry_answer import configured_answer_providers
 
@@ -58,14 +59,11 @@ DEFAULT_CONCURRENCY = 3
 """Questions at once; every backend is asked each question together, so this many calls reach each backend."""
 OUT_PREFIX = "answer-"
 
-JUDGE_PROBE = ("What is 2 + 2?", "4", "4")
-"""One question the judge must grade before any backend is asked, so a judge that cannot run costs no answer."""
-MSG_JUDGE_FAILED = "The judge could not grade a test answer, so no backend was asked: {error}"
 MSG_NO_PROVIDERS = "No answer backend is configured: set a key for one (see .env.example), or name one with --providers"
 
 
 async def answer_row(
-    router: AsyncWebRouter, judge: OpenAIJudge, dataset: Dataset, provider: str, question: str, target: str
+    router: AsyncWebRouter, judge: Judge, dataset: Dataset, provider: str, question: str, target: str
 ) -> dict[str, Any]:
     """One backend's answer to one question, graded -- or why it was not.
 
@@ -109,23 +107,12 @@ async def answer_row(
     return row
 
 
-async def check_judge(judge: Any) -> None:
-    """Grade one known answer, so an expired key or a missing model stops the scan before anything is billed."""
-    try:
-        await judge.agrade(*JUDGE_PROBE)
-    except Exception as exc:  # whatever the judge's SDK raises, the scan must stop on it
-        await judge.aclose()
-        raise SystemExit(MSG_JUDGE_FAILED.format(error=exc)) from exc
-
-
 async def run(args: argparse.Namespace, setup: dict[str, Any], sink: Sink) -> list[dict[str, Any]]:
     dataset = load_checked_questions(args, setup)
     providers = setup["providers"]
     print(f"{len(providers)} answer backends x {len(dataset)} questions -> {args.out}: {', '.join(providers)}")
     labels = [label for label, _ in setup["breakdowns"]]
-    judge = OpenAIJudge()
-    judge.check()
-    await check_judge(judge)
+    judge = await checked_judge(args.judge)
     setup["judge"] = judge.label
     if setup.get("baseline"):
         check_baseline(setup, ("judge",))
@@ -156,6 +143,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     question_args(parser)
     parser.add_argument("--providers", default=None, help="comma-separated (default: every configured answer backend)")
     parser.add_argument("--concurrency", type=int, default=DEFAULT_CONCURRENCY, help="questions at once")
+    judge_arg(parser)
     parser.add_argument(
         "--baseline", type=Path, default=None, help="a finished search scan of the same questions, to set beside"
     )
