@@ -88,6 +88,17 @@ def test_a_retry_after_past_the_cap_is_held_to_it_and_other_failures_set_none() 
     assert cooldowns.remaining("b") is None and cooldowns.remaining("c") is None
 
 
+@pytest.mark.parametrize("wait", [float("nan"), float("inf")])
+def test_a_non_finite_retry_after_falls_back_to_the_default_cooldown(wait: float) -> None:
+    """A Retry-After a backend sent as nan or inf is no wait: the entry expires like an absent header's."""
+    cooldowns = Cooldowns()
+    error = _throttle(429)
+    error.retry_after = wait
+    cooldowns.note("tavily", error)
+    left = cooldowns.remaining("tavily")
+    assert left is not None and left[1] == 429 and 9.0 < left[0] <= 10.0
+
+
 def test_auto_passes_a_cooling_backend_over_without_calling_it() -> None:
     with _router() as router:
         first = router.search("q")

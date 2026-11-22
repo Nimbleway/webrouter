@@ -16,6 +16,7 @@ cooldown never passes over the last backend a call has left, and an answer ends 
 from __future__ import annotations
 
 import logging
+import math
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -170,7 +171,9 @@ def _cooldown_of(exc: BaseException) -> tuple[float | None, int | None]:
     if status not in COOLDOWN_STATUSES and exc.kind != _RATE_LIMIT:
         return None, None
     wait = exc.retry_after
-    if wait is None:
+    # A Retry-After a backend sent as nan or inf is no wait at all: left as is it escapes the clamp
+    # and pins the entry forever, so it falls back to the status's default like an absent header.
+    if wait is None or not math.isfinite(wait):
         wait = COOLDOWN_DEFAULT_S.get(status, COOLDOWN_FALLBACK_S) if status is not None else COOLDOWN_FALLBACK_S
     return min(max(wait, 0.0), COOLDOWN_MAX_S), status
 
