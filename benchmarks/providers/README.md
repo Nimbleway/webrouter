@@ -28,7 +28,11 @@ the report names how many it withheld per backend. Scans combine only on the
 same set, and only when they withheld the same pages.
 
 Keys come from the repo's `.env` (or the environment): each backend's own, and
-`OPENAI_API_KEY` for the default judge (`openai:gpt-4o`). Every configured
+`OPENAI_API_KEY` for the default judge (`openai:gpt-4o`). `--judge` picks
+another, as `judge_from()` names it: `anthropic`, `openai:gpt-6-luna`,
+`litellm:<model>` for any model LiteLLM reaches, or `package.module:Class` for a
+judge of your own (`run.py` and `answer.py` alike). Scans combine only under the
+same judge. Every configured
 search backend runs unless `--providers` names some; `auto` is left out,
 because it would repeat one of the others under a name that says nothing about
 who answered.

@@ -228,6 +228,8 @@ def test_a_depth_that_fails_keeps_the_depths_before_it_in_the_sink(
     scan: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fake_provider: Any
 ) -> None:
     """Each depth's rows reach the sink once its evaluate() returns, so a crash in the second keeps the first's."""
+    from unittest.mock import AsyncMock
+
     from web_router.evals.types import EvaluationReport, EvaluationRow
 
     path = tmp_path / "mine.csv"
@@ -249,6 +251,7 @@ def test_a_depth_that_fails_keeps_the_depths_before_it_in_the_sink(
             return EvaluationReport(dataset="csv", judge="stub", rows=rows)
 
     monkeypatch.setattr(scan, "AsyncWebRouter", Router)
+    monkeypatch.setattr(scan, "checked_judge", AsyncMock(return_value=AsyncMock()))  # no live test grade
     saved: list[list[dict[str, Any]]] = []
 
     def scan_run() -> list[dict[str, Any]]:
