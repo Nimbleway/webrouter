@@ -38,7 +38,7 @@ from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._language import language_code
-from web_router.providers._search_text import as_snippet, lite_body, site_operators, unsited_domains
+from web_router.providers._search_text import lite_body, site_operators, unsited_domains
 from web_router.providers._utils import best_text, build_payload
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
@@ -127,7 +127,7 @@ class DeepSeekProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=snippet or as_snippet(summary),
+            description=snippet or summary,
             content=lite_body(best_text(hit.get("content"), summary or snippet), depth),
             score=float(score) if isinstance(score, (int, float)) else None,
             published_date=published if isinstance(published, str) and published else None,

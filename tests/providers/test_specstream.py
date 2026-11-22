@@ -87,7 +87,7 @@ def test_the_recorded_reply_maps_from_data_sources(provider: SpecStreamProvider)
     # An empty snippet stays empty: nothing is made up for it, and no score is invented.
     assert (first.description, first.content, first.score) == ("", "", None)
     assert second.url == "https://www.businessinsider.com/the-tallest-buildings-in-the-world-2015-12"
-    assert second.description == second.content and second.description.startswith("Sep 21, 2020 - In September")
+    assert second.description.startswith("Sep 21, 2020 - In") and second.content.startswith(second.description[:-1])
     assert second.published_date == "2020-09-21"
     assert second.extra["site"] == "businessinsider.com" and second.extra["cited"] is True
     assert "snippet" not in second.extra and "published" not in second.extra

@@ -39,6 +39,7 @@ from web_router.constants_mcp_env import MCP_DESC_LOAD_ENV, MCP_LOAD_ENV_PROPERT
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
 from web_router.constants_vendors_mcp import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
+from web_router.snippet import SNIPPET_LIMIT as SNIPPET_LIMIT
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -330,16 +331,6 @@ MSG_HTTP_ERROR = "HTTP {status}: {body}"
 HTTP_ERROR_BODY_LIMIT = 500
 """How much of an error response body to quote back, to keep messages readable."""
 
-
-# --- Normalization ----------------------------------------------------------
-
-SNIPPET_LIMIT = 500
-"""Cap for a description synthesized from body text.
-
-Some providers return no snippet, only page content. Using the head of that
-content keeps ``description`` populated without letting a 9 KB excerpt sit in a
-field every other provider fills with a sentence or two.
-"""
 
 # --- Nimble -----------------------------------------------------------------
 

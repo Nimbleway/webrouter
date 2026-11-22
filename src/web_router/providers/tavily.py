@@ -139,7 +139,7 @@ class TavilyProvider(TavilyClientsMixin, SearchProvider):
                 SearchResult(
                     url=item.get("url", ""),
                     title=item.get("title") or "",
-                    description=lite_body(snippet, request.search_depth),
+                    description=snippet,
                     content=lite_body(best_text(item.get("raw_content"), snippet), request.search_depth),
                     score=item.get("score"),
                     published_date=item.get("published_date"),

@@ -17,8 +17,11 @@ from enum import Enum
 from importlib import import_module
 from typing import Annotated, Any, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr
 
+# The snippet helper must stay a leaf: constants imports these models, so
+# importing its helper or limit from constants would create an import cycle.
+from web_router.snippet import as_snippet
 from web_router.types_citation import Citation as Citation
 from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
 from web_router.types_data_api import DATA_API_SITE_DESCRIPTION, DATA_APIS_DESCRIPTION, DataApiMatch
@@ -219,12 +222,9 @@ class SearchResult(BaseModel):
 
     url: str
     title: str = ""
-    description: str = Field(
+    description: Annotated[str, AfterValidator(as_snippet)] = Field(
         default="",
-        description=(
-            "A snippet-length summary: the provider's own when it gives one, otherwise "
-            "the head of the page body so the field means the same thing everywhere."
-        ),
+        description="The provider's summary, or the page's head, cut to a snippet of at most 500 characters.",
     )
     content: str = Field(
         default="",

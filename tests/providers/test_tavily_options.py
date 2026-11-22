@@ -30,8 +30,8 @@ def test_lite_is_cut_to_a_snippet_and_raw_keeps_the_full_text(provider: TavilyPr
     payload = {"results": [{"url": "https://a.com", "content": BODY}]}
     response = provider._to_response(SearchRequest(query="q", search_depth=depth), payload)  # type: ignore[arg-type]
     result = response.results[0]
-    for text in (result.content, result.description):
-        assert (len(text) <= SNIPPET_LIMIT + 1) is cut and (text == BODY) is not cut
+    assert (len(result.content) <= SNIPPET_LIMIT + 1) is cut and (result.content == BODY) is not cut
+    assert len(result.description) <= SNIPPET_LIMIT  # a snippet at every depth
     assert response.raw["results"][0]["content"] == BODY
 
 
