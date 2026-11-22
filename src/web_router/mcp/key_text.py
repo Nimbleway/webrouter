@@ -31,10 +31,10 @@ def load_env_served() -> bool:
     return switch(ENV_MCP_LOAD_ENV) != MCP_LOAD_ENV_OFF
 
 
-def server_instructions(*, keyed: bool, remote: bool = False) -> str:
+def server_instructions(*, keyed: bool, remote: bool = False, browser: bool = True) -> str:
     """The server's instructions; ``remote`` for a server reached over HTTP, whose browsers open on it."""
     served = load_env_served()
-    text = instructions_text(load_env=served, remote=remote)
+    text = instructions_text(load_env=served, remote=remote, browser=browser)
     if not keyed:
         text += MCP_MSG_INSTRUCTIONS_NO_KEYS if served else MCP_MSG_INSTRUCTIONS_NO_KEYS_OPERATOR
     return text

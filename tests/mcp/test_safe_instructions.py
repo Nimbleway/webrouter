@@ -6,7 +6,7 @@ import pytest
 
 from tests.mcp.env_helpers import OPENED_UP
 from web_router.constants_mcp_context import ENV_MCP_TOOLS
-from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV
+from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, ENV_MCP_PROFILE
 from web_router.mcp.tools import WebRouterTools
 
 
@@ -30,4 +30,16 @@ async def test_live_data_no_key_error_only_names_load_env_when_available(
 
     assert ("load_env" in str(error.value)) is load_env
     assert "APIFY_TOKEN" in str(error.value)
+    await tools.router.aclose()
+
+
+@pytest.mark.parametrize("profile", ["slim", "full"])
+async def test_local_browser_advice_requires_served_browser_tools(
+    no_keys: None, monkeypatch: pytest.MonkeyPatch, profile: str
+) -> None:
+    monkeypatch.setenv(ENV_MCP_PROFILE, profile)
+    monkeypatch.setattr("web_router.mcp.tools.playwright_installed", lambda: True)
+    tools = WebRouterTools()
+
+    assert ("offer `browser_open`" in tools.instructions()) is (profile == "full")
     await tools.router.aclose()
