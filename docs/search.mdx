@@ -161,4 +161,5 @@ on to the next eligible backend.
 | WebIQ | A `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
 | Keenable | More than one `include_domains` entry |
 | DeepSeek | A query past 128 characters with its operators |
-| Brave, WebIQ, DeepSeek, You.com MCP | A domain filter that is not a host name, optionally with a path, because it goes into the query as `site:`. For You.com MCP, this applies only to `include_domains`; `exclude_domains` is a tool argument |
+| Brave, WebIQ, DeepSeek | A domain filter that is not a host name, optionally with a path, because it goes into the query as `site:` |
+| You.com MCP | An `include_domains` entry that is not a bare host name, or a path in either list (`github.com/python`, not `github.com`): `include_domains` goes into the query as `site:`, and You.com matches `site:` and `exclude_domains` on the host alone, so a path would be dropped |
