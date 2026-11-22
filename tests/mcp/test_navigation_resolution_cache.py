@@ -1,20 +1,24 @@
-"""A name the navigation guard judges is resolved once, not on every request it routes.
+"""A name the navigation guard judges is resolved once per short window, not on every request it routes.
 
 The guard memoizes each host:port answer -- the allowed one and the refusal
-alike -- for its lifetime, so a page's many subresources to one host cost one
-lookup and share the single executor hop, rather than stalling every session's
-routes once per request. No network: ``socket.getaddrinfo`` is answered from a
-table.
+alike -- briefly, so a page's many subresources to one host share one lookup
+and one executor hop, rather than stalling every session's routes once per
+request. The answer expires because a name can be rebound after the browser
+has made its own lookup, and the cache is capped so a busy page cannot grow it
+without bound. No network: ``socket.getaddrinfo`` is answered from a table.
 """
 
 from __future__ import annotations
 
+import asyncio
 import socket
+import threading
 from typing import Any
 
 import pytest
 
 from tests.mcp.test_navigation import FakeRequest, FakeRoute, _installed
+from web_router.constants_mcp_navigation import MCP_BROWSER_DNS_CACHE_MAX
 from web_router.mcp import navigation
 
 
@@ -37,9 +41,9 @@ async def test_a_repeated_host_is_resolved_once(monkeypatch: pytest.MonkeyPatch)
     guard, _ = await _installed()
     asked = _counted(monkeypatch, {})
 
-    first = await guard._resolved_refusal("https://example.com/a.js")  # noqa: SLF001
-    second = await guard._resolved_refusal("https://example.com/b.css")  # noqa: SLF001
-    third = await guard._resolved_refusal("https://example.com/c.png")  # noqa: SLF001
+    first = await guard._resolved_refusal("https://example.com/a.js")
+    second = await guard._resolved_refusal("https://example.com/b.css")
+    third = await guard._resolved_refusal("https://example.com/c.png")
 
     assert first is second is third is None
     assert asked == [("example.com", 443)]
@@ -49,9 +53,9 @@ async def test_each_distinct_host_is_resolved_once(monkeypatch: pytest.MonkeyPat
     guard, _ = await _installed()
     asked = _counted(monkeypatch, {})
 
-    await guard._resolved_refusal("https://a.test/")  # noqa: SLF001
-    await guard._resolved_refusal("https://b.test/")  # noqa: SLF001
-    await guard._resolved_refusal("https://a.test/other")  # noqa: SLF001
+    await guard._resolved_refusal("https://a.test/")
+    await guard._resolved_refusal("https://b.test/")
+    await guard._resolved_refusal("https://a.test/other")
 
     assert asked == [("a.test", 443), ("b.test", 443)]
 
@@ -60,8 +64,8 @@ async def test_a_refusal_is_cached_like_an_allowed_answer(monkeypatch: pytest.Mo
     guard, _ = await _installed()
     asked = _counted(monkeypatch, {"md.attacker.test": ["169.254.169.254"]})
 
-    first = await guard._resolved_refusal("http://md.attacker.test/latest/meta-data/")  # noqa: SLF001
-    second = await guard._resolved_refusal("http://md.attacker.test/v2/credentials")  # noqa: SLF001
+    first = await guard._resolved_refusal("http://md.attacker.test/latest/meta-data/")
+    second = await guard._resolved_refusal("http://md.attacker.test/v2/credentials")
 
     assert first is not None and "cloud metadata endpoint" in first
     assert second == first
@@ -76,3 +80,48 @@ async def test_a_page_with_many_subresources_resolves_its_host_once(monkeypatch:
         await page.context.routes["http"](FakeRoute(FakeRequest(f"https://example.com{path}", navigation=False)))
 
     assert asked == [("example.com", 443)]
+
+
+async def test_a_rebound_name_is_not_served_a_stale_allow(monkeypatch: pytest.MonkeyPatch) -> None:
+    guard, _ = await _installed()
+    monkeypatch.setattr(navigation, "MCP_BROWSER_DNS_CACHE_TTL_S", 0)
+    answers = {"example.com": ["93.184.215.14"]}
+    asked = _counted(monkeypatch, answers)
+
+    first = await guard._resolved_refusal("https://example.com/a")
+    answers["example.com"] = ["169.254.169.254"]
+    second = await guard._resolved_refusal("https://example.com/b")
+
+    assert first is None
+    assert second is not None
+    assert "cloud metadata endpoint" in second
+    assert asked == [("example.com", 443), ("example.com", 443)]
+
+
+async def test_concurrent_misses_share_one_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
+    guard, _ = await _installed()
+    gate = threading.Event()
+    asked: list[tuple[str, Any]] = []
+
+    def resolve(host: str, port: int, *args: Any, **kwargs: Any) -> list[Any]:
+        asked.append((host, port))
+        gate.wait(timeout=5)
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.215.14", port))]
+
+    monkeypatch.setattr(navigation.socket, "getaddrinfo", resolve)
+    calls = [asyncio.create_task(guard._resolved_refusal(f"https://example.com/{index}")) for index in range(5)]
+    await asyncio.sleep(0)
+    gate.set()
+
+    assert await asyncio.gather(*calls) == [None] * 5
+    assert asked == [("example.com", 443)]
+
+
+async def test_the_answer_cache_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    guard, _ = await _installed()
+    _counted(monkeypatch, {})
+
+    for index in range(MCP_BROWSER_DNS_CACHE_MAX + 10):
+        await guard._resolved_refusal(f"https://host{index}.example/")
+
+    assert len(guard._resolved) == MCP_BROWSER_DNS_CACHE_MAX
