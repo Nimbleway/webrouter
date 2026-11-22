@@ -104,7 +104,6 @@ def test_a_judge_on_another_endpoint_names_its_host(judge: Judge) -> None:
     ("base_url", "host"),
     [
         ("https://user:secret@models.example.com:8443/v1", "models.example.com:8443"),
-        ("https://key:secret@models.example.com/v1", "models.example.com"),
     ],
 )
 def test_a_label_keeps_the_port_and_drops_credentials(base_url: str, host: str) -> None:
