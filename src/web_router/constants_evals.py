@@ -15,6 +15,8 @@ EVALS_LITELLM_JUDGE_NAME = "litellm"
 """How ``LiteLLMJudge`` names itself in errors and in a report's ``judge`` field."""
 
 EXTRA_EVALS_LITELLM = "evals-litellm"
+EVALS_LITELLM_ENDPOINT_SUFFIXES = ("_API_BASE", "_BASE_URL")
+MSG_JUDGE_MISSING_KEY = "No API key for judge {judge!r}. Set the {variable} environment variable."
 
 EVALS_LITELLM_STOPPED_SHORT: frozenset[str] = frozenset({"length", "content_filter"})
 """The finish reasons, in LiteLLM's OpenAI-shaped reply, of a reply cut off before it held an answer to read."""

@@ -13,10 +13,12 @@ from typing import Any, ClassVar
 
 from web_router.constants import EVALS_JUDGE_TEMPERATURE, EVALS_JUDGE_TIMEOUT, MSG_EVALS_JUDGE_STOPPED
 from web_router.constants_evals import (
+    EVALS_LITELLM_ENDPOINT_SUFFIXES,
     EVALS_LITELLM_IMPORT_ENV,
     EVALS_LITELLM_JUDGE_NAME,
     EVALS_LITELLM_STOPPED_SHORT,
     EXTRA_EVALS_LITELLM,
+    MSG_JUDGE_MISSING_KEY,
 )
 from web_router.evals.judge import Judge
 from web_router.evals.labels import EndpointLabel
@@ -50,9 +52,13 @@ class LiteLLMJudge(EndpointLabel, Judge):
 
     def check(self) -> None:
         """Raise now what the first call would raise: the SDK is missing, or the model's provider has no key."""
-        missing = self._sdk().validate_environment(self.model, api_base=self.base_url).get("missing_keys") or []
+        sdk = self._sdk()
+        if self.base_url:
+            return
+        missing = sdk.validate_environment(self.model).get("missing_keys") or []
+        missing = [name for name in missing if not name.endswith(EVALS_LITELLM_ENDPOINT_SUFFIXES)]
         if missing:
-            raise ConfigurationError.missing_api_key(self.name, missing[0])
+            raise ConfigurationError(MSG_JUDGE_MISSING_KEY.format(judge=self.name, variable=missing[0]))
 
     def _sdk(self) -> Any:
         # On import LiteLLM reads the working directory's .env and fetches its price list from the web. The
