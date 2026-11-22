@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import socket
 from collections.abc import Iterable, Iterator
+from ipaddress import ip_address
 from typing import Final, Literal
 from urllib.parse import urlsplit
 
@@ -28,8 +29,7 @@ _PROXY_ERROR_NAMES: Final = ("ProxyError", "ProxyConnectionError")
 ``ProxyError``, aiohttp's ``ClientProxyConnectionError``. Matched at the end, so a provider's own config error
 that merely mentions a proxy is not one."""
 
-_UNREACHABLE_TYPES: Final = (socket.gaierror, ConnectionRefusedError)
-"""A host name that did not resolve, and a host that refused the connection."""
+_LOCALHOST: Final = "localhost"
 
 _CAUSE_DEPTH: Final = 6
 """How far down an error's causes to read: an SDK's error, httpx's, httpcore's, then the socket's own."""
@@ -54,9 +54,21 @@ def network_kind(chain: Iterable[BaseException], status: int | None) -> NetworkK
     links = list(chain)
     if any(type(link).__name__.endswith(_PROXY_ERROR_NAMES) for link in links):
         return ERROR_KIND_NETWORK_BLOCKED
-    if any(isinstance(link, _UNREACHABLE_TYPES) for link in links):
+    if any(isinstance(link, socket.gaierror) for link in links):
+        return ERROR_KIND_UNREACHABLE
+    if any(isinstance(link, ConnectionRefusedError) for link in links) and _public_host(request_host(links[0])):
         return ERROR_KIND_UNREACHABLE
     return None
+
+
+def _public_host(host: str | None) -> bool:
+    if not host or host.lower().rstrip(".") == _LOCALHOST:
+        return False
+    try:
+        address = ip_address(host)
+    except ValueError:
+        return True
+    return not (address.is_private or address.is_loopback or address.is_link_local)
 
 
 def request_host(exc: BaseException | None) -> str | None:

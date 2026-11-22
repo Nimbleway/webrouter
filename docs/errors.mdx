@@ -91,6 +91,11 @@ same network refuses the same host again, and `auto` moves on after either,
 since the next backend's host may be allowed. A failed call of either kind is
 logged in the spend log as `failed`, with no cost.
 
+A refused connection to `localhost`, a loopback, link-local or private address
+is the local backend's own failure: it stays `upstream` and retryable.
+A refusal with no request host stays `upstream` too; DNS failures remain
+`unreachable`.
+
 When every backend `auto` tried failed one of these two ways, the
 `AllProvidersFailedError` is one line naming the hosts, its `kind` is
 `network_blocked` (or `unreachable`, when every hop was), and `blocked_hosts`
