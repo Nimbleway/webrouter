@@ -128,11 +128,9 @@ def _live_data(router: WebRouter, args: argparse.Namespace) -> Any:
         provider_options=pairs(args.option),
     )
 
+
+def _providers(_router: WebRouter, _args: argparse.Namespace) -> dict[str, Any]:
     """Per method, what the environment makes usable, what `auto` runs keyless and what needs a key; calls nothing."""
-
-
-def _providers(_router: WebRouter, _args: argparse.Namespace) -> dict[str, list[str]]:
-    """What the environment makes usable per method, the table the MCP server's capabilities show; calls nothing."""
     return providers_report()
 
 
