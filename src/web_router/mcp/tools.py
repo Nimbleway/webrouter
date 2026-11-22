@@ -78,7 +78,6 @@ from web_router.constants import (
 )
 from web_router.constants_live_data import MCP_TOOL_LIVE_DATA, MCP_TOOL_LIVE_DATA_SOURCE, MCP_TOOL_LIVE_DATA_SOURCES
 from web_router.constants_mcp import (
-    MCP_MSG_NOTHING_CONFIGURED,
     MCP_MSG_UNKNOWN_ARGUMENTS,
     MCP_NO_ARGUMENTS,
 )
@@ -91,7 +90,7 @@ from web_router.mcp.browsers import BrowserSessions, check_target, playwright_in
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.env_tool import load_env_entry
-from web_router.mcp.key_text import env_hint, no_backend_hint, server_instructions
+from web_router.mcp.key_text import env_hint, no_backend_hint, nothing_configured, server_instructions
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
 from web_router.mcp.raw_tool import fetch_raw_tool
@@ -500,7 +499,7 @@ class WebRouterTools:
         if (method := methods.unconfigured_live_data(tool, arguments)) is not None:
             # The schema offers no `provider` when there is none: say what would add one, not that it is missing.
             env_vars = ", ".join(methods.env_vars(method))
-            raise ValueError(MCP_MSG_NOTHING_CONFIGURED.format(tool=tool, env_vars=env_vars))
+            raise ValueError(nothing_configured(tool, env_vars))
         if missing:
             raise ValueError(MCP_MSG_MISSING_ARGUMENT.format(tool=tool, name=missing[0]))
         return {name: arguments[name] for name in names if arguments.get(name) is not None}

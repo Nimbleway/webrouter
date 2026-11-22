@@ -13,13 +13,14 @@ from web_router.constants import (
     MCP_MSG_INSTRUCTIONS_NO_KEYS,
     MCP_MSG_NO_BACKEND_HINT,
 )
-from web_router.constants_mcp import MCP_MSG_KEY_HINT
+from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_MSG_NOTHING_CONFIGURED
 from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_OFF
 from web_router.constants_mcp_instructions import (
     MCP_MSG_ENV_HINT_OPERATOR,
     MCP_MSG_INSTRUCTIONS_NO_KEYS_OPERATOR,
     MCP_MSG_KEY_HINT_OPERATOR,
     MCP_MSG_NO_BACKEND_HINT_OPERATOR,
+    MCP_MSG_NOTHING_CONFIGURED_OPERATOR,
     instructions_text,
 )
 from web_router.mcp.env_policy import switch
@@ -42,6 +43,12 @@ def server_instructions(*, keyed: bool, remote: bool = False) -> str:
 def key_hint() -> str:
     """Said after a library error that named ``provider_config``: how a key reaches this server."""
     return MCP_MSG_KEY_HINT if load_env_served() else MCP_MSG_KEY_HINT_OPERATOR
+
+
+def nothing_configured(tool: str, env_vars: str) -> str:
+    """Why a tool cannot run, with key-loading advice this server can serve."""
+    message = MCP_MSG_NOTHING_CONFIGURED if load_env_served() else MCP_MSG_NOTHING_CONFIGURED_OPERATOR
+    return message.format(tool=tool, env_vars=env_vars)
 
 
 def no_backend_hint(env_vars: list[str]) -> str:

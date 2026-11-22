@@ -64,6 +64,10 @@ MCP_MSG_KEY_HINT_OPERATOR = (
     " Through this server: whoever runs it sets the key in the environment it starts with, and restarts it."
 )
 MCP_MSG_NO_BACKEND_HINT_OPERATOR = " A key in one of {env_vars}, set where the server starts, turns it on."
+MCP_MSG_NOTHING_CONFIGURED_OPERATOR = (
+    "{tool} has nothing to run on here: no backend for it has a key. Whoever runs this server can set "
+    "one of {env_vars} in its environment and restart it; never ask for a key in the conversation."
+)
 MCP_MSG_ENV_HINT_OPERATOR = (
     "No API keys were found, so only the keyless backends are configured; they work meanwhile. Keys are added "
     "to the environment this server starts with, by whoever runs it, and the server is restarted. Never "
