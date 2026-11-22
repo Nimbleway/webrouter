@@ -64,8 +64,8 @@ def test_every_tool_that_shows_web_text_is_marked_and_session_tools_are_not() ->
         MCP_TOOL_BROWSER_SCREENSHOT,
         MCP_TOOL_BROWSER_READ,
     }
-    assert {MCP_TOOL_FETCH_RAW, MCP_TOOL_CALL_VENDOR, *page_tools} == MCP_UNTRUSTED_TOOLS
-    assert not {MCP_TOOL_BROWSER_OPEN, MCP_TOOL_BROWSER_CLOSE} & MCP_UNTRUSTED_TOOLS
+    assert {MCP_TOOL_FETCH_RAW, *page_tools} == MCP_UNTRUSTED_TOOLS, "call_vendor's shaper marks its own answer"
+    assert not {MCP_TOOL_BROWSER_OPEN, MCP_TOOL_BROWSER_CLOSE, MCP_TOOL_CALL_VENDOR} & MCP_UNTRUSTED_TOOLS
 
 
 async def test_fetch_raw_is_marked_and_hands_back_the_payload_untouched(tools: WebRouterTools) -> None:
