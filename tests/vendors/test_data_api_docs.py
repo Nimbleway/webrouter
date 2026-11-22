@@ -53,7 +53,7 @@ def test_the_docs_have_two_tabs_and_the_navbar_is_unchanged() -> None:
 def test_the_committed_docs_are_left_untouched(site: Path) -> None:
     committed = _catalog_group(json.loads((DOCS / "docs.json").read_text(encoding="utf-8")))
     assert committed["pages"] == [PAGES_DIR]
-    assert not (DOCS / INDEX_FILE).exists()
+    assert "vendors: []" in (DOCS / INDEX_FILE).read_text(encoding="utf-8")  # the empty placeholder
     assert not (DOCS / PAGES_DIR).exists()
 
 
@@ -82,6 +82,11 @@ def test_build_replaces_an_earlier_build(site: Path) -> None:
     stale.write_text("old", encoding="utf-8")
     build(DOCS, site, builtin_catalog())
     assert not stale.exists()
+
+
+def test_the_committed_placeholder_has_the_shape_the_gallery_imports() -> None:
+    text = (DOCS / INDEX_FILE).read_text(encoding="utf-8")
+    assert "export const DATA_APIS = { categories: [], vendors: [] };" in text
 
 
 def test_the_gallery_index_is_a_named_export_with_every_vendor(site: Path) -> None:
