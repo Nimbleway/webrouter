@@ -440,7 +440,7 @@ src/web_router/
     ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
     ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
     ├── oxylabs_jobs.py          an Oxylabs job: its id, where it is read, and when it is done
-    ├── oxylabs_response.py      a scrape's answer as a live data response
+    ├── oxylabs_response.py      a scrape's answer, from either API, as a live data response
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
     ├── tavily_extract.py  extract, and the key and timeout both classes share
     ├── tavily_clients.py  the SDK clients both classes hold, each built on first use

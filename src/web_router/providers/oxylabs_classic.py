@@ -12,8 +12,9 @@ targets section of Oxylabs' docs by ``scripts/oxylabs_classic.py``: each
 source's inputs, which are mandatory, and which travel under ``context``. A
 run sends ``parse: true`` where Oxylabs documents a parser -- a source that
 answers in JSON of its own refuses it -- and answers with each result's
-``content`` as a record. Verified live on 2026-11-17: ``google_search``,
-``amazon_search``, ``amazon_product``, ``google_ai_mode``, ``youtube_subtitles``,
+``content`` as a record, read by :mod:`~web_router.providers.oxylabs_response`.
+Verified live on 2026-11-17: ``google_search``, ``amazon_search``,
+``amazon_product``, ``google_ai_mode``, ``youtube_subtitles``,
 ``youtube_video_trainability`` and ``google_trends_explore``, and
 ``lazada_search``'s ``parse_status_code`` 12003, a source with no parser.
 """
@@ -32,13 +33,7 @@ from web_router.constants import (
     OXYLABS_EXTRACT_PATH,
     PROVIDER_OXYLABS,
 )
-from web_router.constants_live_data_vendors import (
-    MSG_OXYLABS_NO_FIELDS,
-    MSG_OXYLABS_NOT_FETCHED,
-    OXYLABS_FAILED_FETCH_FLOOR,
-)
 from web_router.constants_oxylabs_classic import (
-    MSG_OXYLABS_NOT_PARSED,
     OXYLABS_CLASSIC_CONTEXT,
     OXYLABS_CLASSIC_DATA_DIR,
     OXYLABS_CLASSIC_DATA_FILE,
@@ -46,15 +41,12 @@ from web_router.constants_oxylabs_classic import (
     OXYLABS_CLASSIC_SOURCE,
     OXYLABS_CLASSIC_SOURCE_DESCRIPTION,
     OXYLABS_CLASSIC_TRANSPORT_PARAMS,
-    OXYLABS_PARSE_NOTES,
-    OXYLABS_PARSE_STATUS,
-    OXYLABS_PARSED,
 )
-from web_router.exceptions import ProviderError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers._utils import resolve_setting
 from web_router.providers.oxylabs import basic_auth
+from web_router.providers.oxylabs_response import WEB_SCRAPER_API, to_response
 from web_router.types_live_data import (
     LIVE_DATA_PARAMETERS,
     LiveDataRequest,
@@ -62,9 +54,6 @@ from web_router.types_live_data import (
     LiveDataSource,
     LiveDataSourcePage,
 )
-
-_CONTENT = "content"
-"""Where a result carries its parsed page."""
 
 
 @cache
@@ -95,67 +84,6 @@ def listed(provider: str, entry: dict[str, Any]) -> LiveDataSource:
         input_schema=_input_schema(entry),
         published=True,
         extra={"api": "web_scraper_api", "category": entry["category"], "context": entry["context"]},
-    )
-
-
-def _decoded(content: Any) -> Any:
-    """A source answered in JSON of its own may send it as a string (``google_trends_explore``): read it."""
-    if not isinstance(content, str):
-        return content
-    try:
-        return json.loads(content)
-    except ValueError:
-        return content
-
-
-def _records(provider: str, request: LiveDataRequest, result: dict[str, Any]) -> dict[str, Any]:
-    """One result's parsed page; raises for a page not fetched, or fetched and not parsed."""
-    status, url, content = result.get("status_code"), result.get("url"), _decoded(result.get(_CONTENT))
-    if isinstance(status, int) and status >= OXYLABS_FAILED_FETCH_FLOOR:
-        raise ProviderError(provider, MSG_OXYLABS_NOT_FETCHED.format(source=request.source, status=status, url=url))
-    if not isinstance(content, dict):
-        raise ProviderError(provider, MSG_OXYLABS_NO_FIELDS.format(source=request.source, url=url))
-    code = content.get(OXYLABS_PARSE_STATUS)
-    fields = {key: value for key, value in content.items() if key not in (OXYLABS_PARSE_STATUS, *OXYLABS_PARSE_NOTES)}
-    if (code is not None and code not in OXYLABS_PARSED) or not fields:
-        raise ProviderError(provider, MSG_OXYLABS_NOT_PARSED.format(source=request.source, code=code, url=url))
-    return fields
-
-
-def _result_meta(row: dict[str, Any]) -> dict[str, Any]:
-    """A result's fetch details, its parse status and the parser's errors or warnings: everything but the page."""
-    content = _decoded(row.get(_CONTENT))
-    meta = {key: value for key, value in row.items() if key != _CONTENT}
-    if isinstance(content, dict):
-        meta |= {key: content[key] for key in (OXYLABS_PARSE_STATUS, *OXYLABS_PARSE_NOTES) if key in content}
-    return meta
-
-
-def to_response(provider: str, request: LiveDataRequest, payload: Any) -> LiveDataResponse:
-    """Each result's parsed page as a record; the job's timestamps stay in ``extra``, none being the fetch time.
-
-    A page parsed in part is still records: its parse status and the parser's errors are in each result's
-    ``extra`` entry, so a field holding an error string is not taken for the page's own text.
-    """
-    body = payload if isinstance(payload, dict) else {}
-    results = [row for row in body.get("results") or [] if isinstance(row, dict)]
-    if not results:
-        raise ProviderError(provider, MSG_OXYLABS_NO_FIELDS.format(source=request.source, url=None))
-    records = [_records(provider, request, result) for result in results]
-    first, job = results[0], body.get("job") or {}
-    return LiveDataResponse(
-        provider=provider,
-        source=request.source,
-        inputs=dict(request.inputs),
-        records=records,
-        url=first.get("url"),
-        status_code=first.get("status_code"),
-        request_id=str(job["id"]) if job.get("id") is not None else None,
-        extra={
-            "job": job,
-            "results": [_result_meta(row) for row in results],
-        },
-        raw=payload,
     )
 
 
@@ -219,11 +147,12 @@ class OxylabsClassicLiveDataProvider(HttpLiveDataProvider):
         return payload
 
     def _run(self, request: LiveDataRequest) -> LiveDataResponse:
-        return to_response(self.name, request, self._send("POST", self.run_path, json=self._build_payload(request)))
+        payload = self._send("POST", self.run_path, json=self._build_payload(request))
+        return to_response(self.name, request, payload, WEB_SCRAPER_API)
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
         payload = await self._asend("POST", self.run_path, json=self._build_payload(request))
-        return to_response(self.name, request, payload)
+        return to_response(self.name, request, payload, WEB_SCRAPER_API)
 
     def sources(self) -> list[LiveDataSource]:
         """Every source, in the catalogue's order."""
