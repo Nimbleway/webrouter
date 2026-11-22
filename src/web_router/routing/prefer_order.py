@@ -14,10 +14,12 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 
-from web_router.routing.attempts import Attempt
-from web_router.routing.contract import Candidate, Prefer, ToolName
+from web_router.routing.attempts import Attempt, CallRoute
+from web_router.routing.candidates_priced import over_budget
+from web_router.routing.contract import Budget, Candidate, Prefer, ToolName, candidate_id
 from web_router.routing.pricing import attempt_cost, attempt_p90, cost_key
 from web_router.types import NormalizedRequest
+from web_router.types_decision import DecisionRecord
 
 _ESTIMATE: dict[Prefer, Callable[[Attempt], float | None]] = {"cheap": attempt_cost, "fast": attempt_p90}
 """What each preference sorts a member by, as a budget would charge it."""
@@ -40,3 +42,21 @@ def preferred_candidates(candidates: Iterable[Candidate], prefer: Prefer) -> lis
     """``candidates`` by ``prefer``'s estimate, unknowns last and ties as offered."""
     estimate = _CANDIDATE_ESTIMATE[prefer]
     return sorted(candidates, key=lambda candidate: cost_key(estimate(candidate)))
+
+
+def preferred_route(
+    tool: ToolName, names: Sequence[str], request: NormalizedRequest, budget: Budget | None, prefer: Prefer
+) -> tuple[CallRoute, DecisionRecord]:
+    """The preferred walk, recording initially excluded members as a plan does.
+
+    Keep them in the walk so the budget hook can record its skips and raise
+    BudgetExceededError when none fit. Setup failures stay in the walk too.
+    """
+    ordered = preferred(tool, names, request, prefer)
+    dropped = {}
+    for name in ordered:
+        attempt = Attempt(tool=tool, provider=name, request=request)
+        if (why := over_budget(attempt_cost(attempt), attempt_p90(attempt), budget)) is not None:
+            dropped[candidate_id(tool, name)] = why
+    merged = [candidate_id(tool, name) for name in ordered if candidate_id(tool, name) not in dropped]
+    return CallRoute(order={tool: ordered}), DecisionRecord(merged=merged, dropped=dropped or None, prefer=prefer)

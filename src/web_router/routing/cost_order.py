@@ -40,7 +40,7 @@ from web_router.routing.attempts import Attempt, CallRoute
 from web_router.routing.contract import Budget, Prefer, ToolName, candidate_id
 from web_router.routing.effort_call import Only
 from web_router.routing.eligible import eligible_members
-from web_router.routing.prefer_order import preferred
+from web_router.routing.prefer_order import preferred_route
 from web_router.routing.pricing import attempt_cost, cost_key
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -82,13 +82,14 @@ def cost_route(
     capped = budget is not None and budget.max_cost_usd is not None
     if not (capped or prefer) or getattr(chain, "name", None) != PROVIDER_AUTO or not _runs_default(chain):
         return None, None
-    members = eligible_members(Only(tool, chain), tool, request)[0]
+    members, unbuilt = eligible_members(Only(tool, chain), tool, request)
     names = [name for name, _ in members]
     if prefer is not None:
-        ordered = preferred(tool, names, request, prefer)
-        return CallRoute(order={tool: ordered}), DecisionRecord(
-            merged=[candidate_id(tool, n) for n in ordered], prefer=prefer
-        )
+        # A real walk must still report setup failures that a plan cannot offer as candidates.
+        names += [name for name, _ in chain._chain if name in unbuilt and name not in names]
+        if not names:
+            return None, DecisionRecord(prefer=prefer)
+        return preferred_route(tool, names, request, budget, prefer)
     # a keyless member shares its keyed namesake's measure but not its quality: unranked, it keeps its place
     ordered = cost_ordered(tool, names, request, {name for name, keyless in members if keyless})
     if ordered == names:

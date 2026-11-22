@@ -122,10 +122,8 @@ def build_candidates(
     """Every (tool, provider) ``router`` can serve ``requests`` with, within ``budget``.
 
     Args:
-        router: The :class:`~web_router.WebRouter` or
-            :class:`~web_router.AsyncWebRouter` making the call; its ``auto``
-            for each method, configured ``chain`` and keys included, says which
-            backends there are.
+        router: The router making the call; each method's ``auto`` supplies
+            its backends, configured ``chain`` and keys included.
         requests: The request each method would be sent, by method. A call to
             one method passes only its own: the router then orders that
             method's backends and no other.
