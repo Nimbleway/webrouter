@@ -19,6 +19,9 @@ from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr
 
+# The snippet helper must stay a leaf: constants imports these models, so
+# importing its helper or limit from constants would create an import cycle.
+from web_router.snippet import as_snippet
 from web_router.types_citation import Citation as Citation
 from web_router.types_cost import CostSourceField, CostUsd, ElapsedSeconds
 from web_router.types_data_api import DATA_API_SITE_DESCRIPTION, DATA_APIS_DESCRIPTION, DataApiMatch
@@ -211,9 +214,6 @@ EXTRACT_FORMAT_ONLY: frozenset[str] = frozenset({"format"})
 """The ``supported_parameters`` of an extract provider that maps ``format`` and no other option."""
 
 
-_SNIPPETS = "web_router.providers._search_text"  # imported on use: it imports this module
-
-
 class SearchResult(BaseModel):
     """A single result, normalized across providers."""
 
@@ -222,7 +222,7 @@ class SearchResult(BaseModel):
 
     url: str
     title: str = ""
-    description: Annotated[str, AfterValidator(lambda text: import_module(_SNIPPETS).as_snippet(text))] = Field(
+    description: Annotated[str, AfterValidator(as_snippet)] = Field(
         default="",
         description="The provider's summary, or the page's head, cut to a snippet of at most 500 characters.",
     )
