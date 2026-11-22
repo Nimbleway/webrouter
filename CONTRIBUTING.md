@@ -307,7 +307,8 @@ time.
   at most 400 characters; [changelog.d/README.md](changelog.d/README.md) has the format. Don't
   edit `CHANGELOG.md`: `make changelog` collects the fragments into it at release, so parallel
   PRs never conflict on it. A check fails the PR without a fragment; a PR with nothing to note
-  (CI, docs, tests, refactors) takes the `skip-changelog` label instead (release bumps too).
+  (CI, docs, tests, refactors) takes the `skip-changelog` label instead (release bumps too, and a
+  typo fix in an entry already in `CHANGELOG.md`).
 - Direct commits to `main` are blocked; work on a branch and open a PR.
 - Open the PR as a draft. Mark it ready once Qodo's review covers the latest commit and each
   finding has a reply starting with `@qodo` (`Fixed in <sha>: <what>` or

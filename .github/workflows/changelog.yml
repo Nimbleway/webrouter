@@ -28,21 +28,23 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | "\(.status) \(.filename)"' > files.txt
+          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | "\(.status) \(.filename) \(.previous_filename // "")"' > files.txt
           python3 - <<'PY'
+          import re
           import sys
 
           how = (
               "add changelog.d/<name>.<type>.md with your entry (see changelog.d/README.md), "
               "or label the PR skip-changelog if users would not notice the change."
           )
-          rows = [line.split(" ", 1) for line in open("files.txt").read().splitlines() if line]
-          if any(name == "CHANGELOG.md" for _, name in rows):
+          rows = [(line.split() + [""])[:3] for line in open("files.txt").read().splitlines() if line]
+          if any("CHANGELOG.md" in (name, previous) for _, name, previous in rows):
               sys.exit(f"::error::CHANGELOG.md is written at release from fragments. Undo your edit to it and {how}")
+          # The name only; tests/test_changelog_fragments.py checks the type and the text.
+          fragment = re.compile(r"changelog\.d/[a-z0-9][a-z0-9_-]*\.[a-z]+\.md")
           fragments = [
-              name for status, name in rows
-              if status in ("added", "renamed", "copied")
-              and name.startswith("changelog.d/") and name.count("/") == 1 and name != "changelog.d/README.md"
+              name for status, name, _ in rows
+              if status in ("added", "renamed", "copied") and fragment.fullmatch(name)
           ]
           if not fragments:
               sys.exit(f"::error::No changelog fragment: {how}")

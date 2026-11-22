@@ -52,7 +52,9 @@ def test_a_missing_directory_has_no_fragments(tmp_path: Path) -> None:
         ("fix.fixed.txt", "Text.", "name it <name>.<type>.md"),
         ("fix.fixed.md", "  \n", "is empty"),
         ("fix.fixed.md", "x" * (changelog.MAX_CHARS + 1), f"at most {changelog.MAX_CHARS}"),
-        ("fix.fixed.md", "- Text.", "starts with '- '"),
+        ("fix.fixed.md", "- Text.", "starts a bullet or a heading"),
+        ("fix.fixed.md", "Fix A.\n- Fix B.", "starts a bullet or a heading"),
+        ("fix.fixed.md", "Fix A.\n## [0.14.0]", "starts a bullet or a heading"),
         ("fix.fixed.md", "One.\n\nTwo.", "more than one paragraph"),
     ],
 )
@@ -127,3 +129,25 @@ def test_main_refuses_a_malformed_fragment(tmp_path: Path, monkeypatch: pytest.M
 
     assert changelog.main([]) == 1
     assert target.read_text(encoding="utf-8") == BASE
+
+
+def test_an_unknown_flag_writes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    directory = tmp_path / "changelog.d"
+    fragment = _write(directory, "feature.added.md", "A feature.\n")
+    target = tmp_path / "CHANGELOG.md"
+    target.write_text(BASE, encoding="utf-8")
+    monkeypatch.setattr(changelog, "FRAGMENT_DIR", directory)
+    monkeypatch.setattr(changelog, "CHANGELOG", target)
+
+    with pytest.raises(SystemExit):
+        changelog.main(["--preveiw"])
+    assert target.read_text(encoding="utf-8") == BASE
+    assert fragment.exists()
+
+
+def test_an_undatable_fragment_is_ordered_by_name_with_a_warning(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = _write(tmp_path, "feature.added.md", "A feature.")
+    assert changelog.added_at(path) == 0
+    assert "ordered by name" in capsys.readouterr().err
