@@ -27,6 +27,7 @@ from web_router.constants import (
 )
 from web_router.constants_mode_parts_extract import TAVILY_EXTRACT_TIERS
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.providers._cost import keyless_cost
 from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._utils import build_payload, resolve_api_key
 from web_router.providers.base import ExtractProvider
@@ -158,4 +159,5 @@ class TavilyExtractProvider(TavilyClientsMixin, ExtractProvider):
             ],
             request_id=payload.get("request_id"),
             raw=[payload],
+            **keyless_cost(self),
         )
