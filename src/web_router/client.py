@@ -52,7 +52,7 @@ from web_router.client_requests import (
     build_research_request,
 )
 from web_router.client_search import AsyncSearch, SyncSearch
-from web_router.client_vendors import AsyncVendors, DataApiCredentials, SyncVendors, _VendorLookup
+from web_router.client_vendors import AsyncVendors, DataApiCredentials, SyncVendors, VendorCredentials, _VendorLookup
 from web_router.client_vendors_compat import renamed_credentials
 from web_router.client_warmup import AsyncWarmup, SyncWarmup
 from web_router.constants import BROWSE_TIMEOUT, DEFAULT_PROVIDER, MSG_SYNC_ROUTER_ASYNC_CLIENT, RESEARCH_TIMEOUT
@@ -115,7 +115,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
         data_api_credentials: DataApiCredentials = None,
-        vendor_credentials: DataApiCredentials = None,
+        vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
         hop_timeout: float | Literal[False] | None = None,
         timeout_cooldown: bool = True,
@@ -300,7 +300,7 @@ class WebRouter(
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
         data_api_credentials: DataApiCredentials = None,
-        vendor_credentials: DataApiCredentials = None,
+        vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
         hop_timeout: float | Literal[False] | None = None,
         timeout_cooldown: bool = True,

@@ -79,7 +79,9 @@ def test_vendor_credentials_still_reaches_the_caller(router_class: type[WebRoute
 
 
 def test_the_old_credentials_type_is_still_importable_where_it_was() -> None:
-    assert VendorCredentials == DataApiCredentials
+    from web_router.client import VendorCredentials as from_client
+
+    assert VendorCredentials == from_client == DataApiCredentials
 
 
 def test_the_writes_variable_keeps_its_old_name(monkeypatch: pytest.MonkeyPatch) -> None:
