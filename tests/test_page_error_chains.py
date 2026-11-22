@@ -8,6 +8,9 @@ import types
 
 import pytest
 
+from web_router.exceptions import ElementNotFoundError
+from web_router.providers._page import AsyncPage, SyncPage
+
 # Playwright is optional; the page layer only reads its TimeoutError here.
 _sync_api = types.ModuleType("playwright.sync_api")
 
@@ -19,15 +22,6 @@ class TimeoutError(Exception):
 _sync_api.TimeoutError = TimeoutError
 _playwright = types.ModuleType("playwright")
 _playwright.sync_api = _sync_api
-sys.modules["playwright"] = _playwright
-sys.modules["playwright.sync_api"] = _sync_api
-
-from web_router.exceptions import ElementNotFoundError
-from web_router.providers._page import AsyncPage, SyncPage
-
-# Leave no trace: other tests probe for a real Playwright install.
-sys.modules.pop("playwright", None)
-sys.modules.pop("playwright.sync_api", None)
 
 
 @pytest.fixture(autouse=True)
