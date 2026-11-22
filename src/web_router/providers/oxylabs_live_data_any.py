@@ -8,18 +8,25 @@ and sources named like ``amazon_product``
 (:mod:`~web_router.providers.oxylabs_live_data`). Either credential makes
 ``oxylabs`` a live data backend, and with both its catalogue is the two
 together. A run or a description goes to the Web Scraper API when it has the
-source, and to the Web API otherwise.
+source, and to the Web API otherwise. A listing whose Web API half fails still
+returns the Web Scraper API's sources, naming the failure in ``failures``.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, ClassVar
 
 from web_router.constants import ENV_OXYLABS_PASSWORD, ENV_OXYLABS_USERNAME, PROVIDER_OXYLABS
 from web_router.constants_live_data_vendors import ENV_OXYLABS_WEB_API_KEY
-from web_router.constants_oxylabs_classic import MSG_OXYLABS_NO_CREDENTIALS, MSG_OXYLABS_ONE_BASE_URL
-from web_router.exceptions import ConfigurationError
+from web_router.constants_oxylabs_classic import (
+    LOG_OXYLABS_WEB_API_LEFT_OUT,
+    MSG_OXYLABS_NO_CREDENTIALS,
+    MSG_OXYLABS_ONE_BASE_URL,
+    OXYLABS_WEB_API_FAILURE,
+)
+from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers.base import LiveDataProvider
 from web_router.providers.oxylabs_classic import OxylabsClassicLiveDataProvider
@@ -31,6 +38,8 @@ from web_router.types_live_data import (
     LiveDataSource,
     LiveDataSourcePage,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _given(value: str | None, env_var: str) -> bool:
@@ -105,17 +114,43 @@ class OxylabsLiveDataProvider(LiveDataProvider):
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
         return await self._serving(request.source)._arun(request)
 
-    def _page(self, web: list[LiveDataSource], *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+    def _page(
+        self, web: list[LiveDataSource] | ProviderError, *, limit: int | None, offset: int | None
+    ) -> LiveDataSourcePage:
+        """Both catalogues as one page; a failed Web API listing leaves its half out and is named in ``failures``.
+
+        Raises:
+            ProviderError: the Web API's, when it failed and there is no Web Scraper API to answer instead.
+        """
+        failures: dict[str, str] = {}
+        if isinstance(web, ProviderError):
+            if self.classic is None:
+                raise web
+            logger.warning(LOG_OXYLABS_WEB_API_LEFT_OUT, web)
+            web, failures = [], {OXYLABS_WEB_API_FAILURE: str(web)}
         every = [*(self.classic.sources() if self.classic is not None else []), *web]
         page, start = HttpLiveDataProvider._local_page(every, limit=limit, offset=offset)
-        return LiveDataSourcePage(provider=self.name, sources=page, total=len(every), offset=start, limit=limit)
+        total = None if failures else len(every)
+        return LiveDataSourcePage(
+            provider=self.name, sources=page, total=total, offset=start, limit=limit, failures=failures
+        )
 
     def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
-        web = self.web_api._list(limit=None, offset=None).sources if self.web_api is not None else []
+        web: list[LiveDataSource] | ProviderError = []
+        if self.web_api is not None:
+            try:
+                web = self.web_api._list(limit=None, offset=None).sources
+            except ProviderError as error:
+                web = error
         return self._page(web, limit=limit, offset=offset)
 
     async def _alist(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
-        web = (await self.web_api._alist(limit=None, offset=None)).sources if self.web_api is not None else []
+        web: list[LiveDataSource] | ProviderError = []
+        if self.web_api is not None:
+            try:
+                web = (await self.web_api._alist(limit=None, offset=None)).sources
+            except ProviderError as error:
+                web = error
         return self._page(web, limit=limit, offset=offset)
 
     def _get(self, name: str) -> LiveDataSource:

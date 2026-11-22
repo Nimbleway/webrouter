@@ -48,6 +48,12 @@ MSG_OXYLABS_NO_CREDENTIALS: Final = (
 )
 """Neither of Oxylabs' two credentials is set: either one serves live data."""
 
+OXYLABS_WEB_API_FAILURE: Final = "oxylabs web_api"
+"""The key a listing's ``failures`` names the Web API under when it could not answer and the Web Scraper API did."""
+
+LOG_OXYLABS_WEB_API_LEFT_OUT: Final = "oxylabs: the Web API's sources are left out of the listing: %s"
+"""Logged when the Web API's listing fails beside the Web Scraper API's, whose sources are still returned."""
+
 MSG_OXYLABS_ONE_BASE_URL: Final = (
     "Oxylabs live data has both credentials and one base_url: the Web Scraper API and the Web API are on different"
     " hosts, so one override would send one API's credential to the other's host. Drop base_url, or keep one"
