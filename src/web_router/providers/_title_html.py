@@ -26,6 +26,8 @@ class _Titles(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self._hidden:
             return
+        if tag == "br" and self._capture:
+            self._parts.append(" ")
         if tag in {"script", "style", "textarea"}:
             self._hidden = tag
         elif tag == "meta" and not self.og:

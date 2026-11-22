@@ -9,6 +9,7 @@ _FENCE: Final = re.compile(r"^ {0,3}(?:(?:[-+*]|\d{1,9}[.)])[ \t]+)*(`{3,}|~{3,}
 _CLOSING_FENCE: Final = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _MAX_TITLE: Final = 1_000
 _H1: Final = re.compile(r"^ {0,3}#[ \t]+(.*)$")
+_ATX: Final = re.compile(r"^ {0,3}#{1,6}(?:[ \t]|$)")
 _SETEXT: Final = re.compile(r"^ {0,3}=+[ \t]*$")
 _TOKEN: Final = re.compile(
     r"\\([!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~])"
@@ -43,11 +44,11 @@ def page_title(content: str) -> str:
             continue
         if _SETEXT.fullmatch(line) and previous.strip() and not previous.startswith(("    ", "\t")):
             text = previous.strip()
-            if len(text) <= _MAX_TITLE:
-                return _inline(text)
+            if len(text) <= _MAX_TITLE and (title := _inline(text).strip()):
+                return title
             previous = ""
             continue
-        previous = line
+        previous = "" if _ATX.match(line) else line
     return ""
 
 
