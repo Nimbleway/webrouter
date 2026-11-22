@@ -161,10 +161,6 @@ def _title(document: ExtractedDocument) -> str:
     return html.unescape(found.group(1)).strip() if found else ""
 
 
-def near_empty(document: ExtractedDocument) -> bool:  # Under EXTRACT_NEAR_EMPTY_CHARS of text: likely a shell
-    return MSG_EXTRACT_NEAR_EMPTY in junk(document)
-
-
 def junk(document: ExtractedDocument, asked: str | None = None) -> list[str]:
     """The warnings ``document`` earns as junk: near-empty, a tracking pixel, another site than ``asked``'s."""
     text = _text(document)
