@@ -48,6 +48,7 @@ from web_router.providers._research_start import aread_or_running, read_or_runni
 from web_router.providers._utils import best_text, build_payload, compact, mapped, model_to_dict
 from web_router.providers.base import ExtractProvider, ResearchProvider, SearchProvider
 from web_router.providers.nimble_citations import research_citations
+from web_router.snippet import as_snippet
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
     RESEARCH_PARAMETERS,
@@ -94,7 +95,7 @@ class NimbleProvider(_NimbleKeyless, SearchProvider):
                 SearchResult(
                     url=item.get("url", ""),
                     title=item.get("title") or "",
-                    description=description,
+                    description=as_snippet(description),
                     content=best_text(item.get("content"), description),
                     published_date=additional.get("publish_date") or additional.get("published_date"),
                     extra={"metadata": item.get("metadata") or {}, **additional},

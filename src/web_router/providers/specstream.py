@@ -30,6 +30,7 @@ from web_router.constants_specstream import (
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._utils import best_text, build_payload
+from web_router.snippet import as_snippet
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
     ExtractedDocument,
@@ -93,7 +94,7 @@ class SpecStreamProvider(HttpSearchProvider):
         return SearchResult(
             url=hit["url"],
             title=hit.get("title") or "",
-            description=snippet,
+            description=as_snippet(snippet),
             content=best_text(hit.get("excerpt"), snippet),
             published_date=hit.get("published") or None,
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},

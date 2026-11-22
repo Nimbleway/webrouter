@@ -32,6 +32,7 @@ from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._language import language_code
 from web_router.providers._utils import best_text, build_payload, mapped
+from web_router.snippet import as_snippet
 from web_router.types import SearchDepth, SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "highlight", "full_content", "time_published"})
@@ -93,7 +94,7 @@ class OctenProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url") or "",
             title=hit.get("title") or "",
-            description=highlight,
+            description=as_snippet(highlight),
             content=best_text(hit.get("full_content"), highlight),
             published_date=hit.get("time_published"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},

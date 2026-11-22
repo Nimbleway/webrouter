@@ -44,6 +44,7 @@ from web_router.providers._http import HttpSearchProvider
 from web_router.providers._modes import merged
 from web_router.providers._search_text import lite_body, refused_domains
 from web_router.providers._utils import build_payload, compact, mapped
+from web_router.snippet import as_snippet
 from web_router.types import (
     SearchDepth,
     SearchRequest,
@@ -151,7 +152,7 @@ class ParallelProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=excerpts[0] if excerpts else "",
+            description=as_snippet(excerpts[0]) if excerpts else "",
             content=lite_body("\n\n".join(excerpts), depth),
             published_date=hit.get("publish_date"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},

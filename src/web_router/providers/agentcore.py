@@ -67,6 +67,7 @@ from web_router.providers._http import HttpSearchProvider
 from web_router.providers._mcp import McpSearchMixin
 from web_router.providers._utils import build_payload, compact
 from web_router.providers.agentcore_sigv4 import _SigV4
+from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"text", "url", "title", "publishedDate"})
@@ -313,7 +314,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
         return SearchResult(
             url=hit["url"],
             title=hit.get("title") or "",
-            description=text,
+            description=as_snippet(text),
             content=text,
             published_date=published if isinstance(published, str) else None,
             extra=extra,
