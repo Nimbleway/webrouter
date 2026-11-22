@@ -86,7 +86,7 @@ def _variables(vendor: Vendor) -> list[str]:
 
 def env_section(catalog: VendorCatalog, elsewhere: frozenset[str] = frozenset()) -> str:
     """The vendor section; a variable ``.env.example`` already sets for a backend is pointed to, not repeated."""
-    lines = [ENV_OPEN, "# Keys for call_vendor(): each vendor's own API, with your account. All optional.", ""]
+    lines = [ENV_OPEN, "# Keys for call_data_api(): each vendor's own API, with your account. All optional.", ""]
     for vendor in catalog.all():
         if not vendor.auth.credentials and not vendor.settings:
             continue

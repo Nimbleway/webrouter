@@ -8,33 +8,29 @@ exactly as it would without one. With a budget:
   attempt gets the time left; research and browse wait at most
   ``min(timeout, time left)``, and a time cap reached while a job runs raises
   the method's own timeout error, which carries the job's handle. The cap
-  limits how long the caller waits, not what the job spends. It bounds when
-  web-router stops waiting and starting attempts: a provider call that blocks
-  past it returns late. The built-in backends clamp each HTTP request to the
-  time left (no lower than half a second for a job's), so theirs do not;
-- before each attempt -- each member of an ``auto`` chain, in the order the
-  call tries them, or the one backend named -- a :class:`~.ledger.Ledger`
-  checks the estimate and the p90 against what is left, and skips a candidate
-  that does not fit, recording why;
+  limits how long the caller waits, not what the job spends; a provider call
+  that blocks past it returns late, though the built-in backends clamp each
+  HTTP request to the time left (no lower than half a second for a job's);
+- before each attempt -- each member of an ``auto`` chain, or the one backend
+  named -- a :class:`~.ledger.Ledger` checks the estimate and the p90 against
+  what is left, and skips a candidate that does not fit, recording why; an
+  attempt that never started is then charged nothing, and an answer with a
+  reported cost is charged that (:mod:`.settlement`);
 - a call where the budget skipped every candidate raises
   :class:`~web_router.BudgetExceededError`, naming each skip;
-- the response's ``decision`` carries the estimated spend and every attempt,
-  labelled an estimate, and every candidate moved past: skipped, failed, or
-  answered empty.
+- the response's ``decision`` carries the estimated spend, every attempt and
+  every candidate moved past: skipped, failed, or answered empty.
 
-:func:`recorded` gives a routed call with no budget the same record of its
-attempts, from a ledger that caps nothing.
+:func:`recorded` gives a routed call with no budget the same record, from a ledger that caps nothing.
 
 Inside a shared budget (:mod:`.pool`), a call runs here even with no
 ``budget=`` of its own: its budget is the tighter of the two, each attempt it
 admits is reserved in the pool, and what it reserved is settled when it ends.
-A call a backend makes inside another budgeted call runs here too, on any
-router and with no ``budget=`` of its own, on a budget that caps nothing: it
-passes the enclosing call's check, which counts it toward that call's own cap,
-and reserves its attempts in every shared budget the enclosing calls spend from. Only the ledger
-of the call an attempt is made in reserves it in the shared budget and settles
-it, so each attempt is reserved there once, and a nested call that runs on
-after the call that started it still reserves and settles its own.
+A call a backend makes inside another budgeted call runs here too, on a
+budget that caps nothing: the enclosing call's check counts it toward that
+call's cap, and it reserves its attempts in every shared budget the enclosing
+calls spend from. Only the ledger of the call an attempt is made in reserves
+and settles it there, so each attempt is reserved once.
 """
 
 from __future__ import annotations
@@ -57,6 +53,7 @@ from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
 from web_router.routing.pool import PoolChain, chain_in_force
 from web_router.routing.record import prompt_of, stamp
+from web_router.routing.settlement import refund_unstarted, settle_reported
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
@@ -77,12 +74,13 @@ class BudgetedCall(Generic[_BackendT]):
         return None if self.ledger is None else self.ledger.budget
 
     def settle(self, response: _ResponseT) -> _ResponseT:
-        """``response`` with the call's estimated spend in its decision record; as it came with no budget."""
+        """``response`` with its estimated spend recorded and its reported cost charged; as it came with no budget."""
         if self.ledger is None:
             return response
         decision: DecisionRecord | None = getattr(response, "decision", None)
-        answered = getattr(response, "provider", None)
-        record = self.ledger.record(decision, answered=answered, empty=_empty_response(response))
+        empty = _empty_response(response)
+        settle_reported(self.ledger, response, empty)
+        record = self.ledger.record(decision, answered=getattr(response, "provider", None), empty=empty)
         return response.model_copy(update={"decision": record})
 
 
@@ -150,7 +148,8 @@ def _held(
             raise ledger.refusal()
         try:
             yield BudgetedCall(backend, ledger)
-        except WebRouterError:
+        except WebRouterError as exc:
+            refund_unstarted(ledger, candidate_id(tool, name), exc)  # a named backend's refusal; auto's are noted
             # An `auto` chain whose every member the budget skipped ends as one with no backend
             # configured would. Nothing was sent, so that error is no cause: the budget is.
             if ledger.skipped and not ledger.tried and not ledger.sent:
@@ -217,6 +216,7 @@ def _hooked(ledger: Ledger, held: tuple[Ledger, ...] = ()) -> CallRoute:
     def note(tool: ToolName, provider: str, exc: BaseException | str) -> None:
         if outer_failed is not None:
             outer_failed(tool, provider, exc)
+        refund_unstarted(ledger, candidate_id(tool, provider), exc)
         ledger.failed(tool, provider, exc)
 
     on_answer, on_refund = answered(route.on_answer, ledger), refunds(route.on_refund, ledger, own)

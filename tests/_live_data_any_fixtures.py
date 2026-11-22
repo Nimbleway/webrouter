@@ -16,15 +16,13 @@ import pytest
 
 from tests._live_data_fake import FakeLiveDataProvider
 from tests._live_data_paged import PagedProvider
-from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
+from tests.live_data_env_helpers import clear_live_data_credentials
 from web_router.registry import register_live_data_provider, unregister_live_data_provider
 
 
 @pytest.fixture(name="no_vendor_keys", autouse=True)
 def no_vendor_keys_fixture(monkeypatch: pytest.MonkeyPatch) -> None:
-    for env_vars in LIVE_DATA_ENV_BY_PROVIDER.values():
-        for env_var in env_vars:
-            monkeypatch.delenv(env_var, raising=False)
+    clear_live_data_credentials(monkeypatch)
 
 
 @pytest.fixture(name="two_backends")
