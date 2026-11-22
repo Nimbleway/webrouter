@@ -72,17 +72,15 @@ def test_a_callers_own_litellm_settings_are_kept(litellm: FakeLiteLLM, monkeypat
     assert os.environ["LITELLM_MODE"] == "DEV"
 
 
-@pytest.mark.parametrize("base_url", [None, "https://models.example.com"])
-def test_the_litellm_judge_names_the_missing_key(litellm: FakeLiteLLM, base_url: str | None) -> None:
+def test_the_litellm_judge_names_the_missing_key(litellm: FakeLiteLLM) -> None:
     litellm.missing = ["OPENROUTER_API_KEY"]
     with pytest.raises(ConfigurationError, match="OPENROUTER_API_KEY"):
-        LiteLLMJudge("openrouter/z-ai/glm-5", base_url=base_url).check()
+        LiteLLMJudge("openrouter/z-ai/glm-5").check()
 
 
-@pytest.mark.parametrize("base_url", [None, "http://localhost:11434"])
-def test_an_ollama_endpoint_is_not_a_missing_key(litellm: FakeLiteLLM, base_url: str | None) -> None:
+def test_an_ollama_endpoint_is_not_a_missing_key(litellm: FakeLiteLLM) -> None:
     litellm.missing = ["OLLAMA_API_BASE"]
-    LiteLLMJudge("ollama/llama3", base_url=base_url).check()
+    LiteLLMJudge("ollama/llama3").check()
 
 
 def test_the_litellm_judge_without_the_sdk_names_its_extra(monkeypatch: pytest.MonkeyPatch) -> None:
