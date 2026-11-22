@@ -43,8 +43,9 @@ from typing import Generic, TypeVar
 from pydantic import BaseModel
 
 from web_router.constants import PROVIDER_AUTO
-from web_router.constants_budget import SKIP_NO_TIME, SKIP_ROUTE_REFUSED
+from web_router.constants_budget import MSG_BUDGET_SKIPPED_REST, SKIP_NO_TIME, SKIP_ROUTE_REFUSED, SKIPPED
 from web_router.exceptions import DeadlineExceededError, WebRouterError
+from web_router.exceptions_budget import BudgetExceededError
 from web_router.providers._chain import _empty_response
 from web_router.providers._deadline import Deadline, call_deadline, current_deadline, job_deadline
 from web_router.routing.attempts import Attempt, CallRoute, admitted, call_route, current_route
@@ -154,7 +155,26 @@ def _held(
             # configured would. Nothing was sent, so that error is no cause: the budget is.
             if ledger.skipped and not ledger.tried and not ledger.sent:
                 raise ledger.refusal() from None
+            _name_skips(ledger, exc)
             raise
+
+
+def _name_skips(ledger: Ledger, exc: WebRouterError) -> None:
+    """Say on ``exc`` which members the budget skipped after the others failed, so a cap never reads as an outage.
+
+    Each goes into an aggregate's ``failures`` as the :class:`~web_router.BudgetExceededError` it would have raised
+    alone, under the name its failures use, and the error carries a note naming them all.
+    """
+    if not ledger.skipped or isinstance(exc, BudgetExceededError):
+        return
+    failures = getattr(exc, "failures", None)
+    if isinstance(failures, dict):
+        for call_id, reason in ledger.skipped.items():
+            failures.setdefault(call_id.partition(":")[2], BudgetExceededError({call_id: reason}))
+    shown = "; ".join(SKIPPED.format(id=call_id, reason=reason) for call_id, reason in ledger.skipped.items())
+    note = MSG_BUDGET_SKIPPED_REST.format(skipped=shown)
+    if note not in getattr(exc, "__notes__", ()):  # an enclosing budget's ledger may have seen the same skips
+        exc.add_note(note)
 
 
 @contextmanager
