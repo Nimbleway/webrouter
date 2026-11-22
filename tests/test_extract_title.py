@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import pytest
 
 from tests.conftest import FakeExtractProvider
@@ -26,10 +29,21 @@ H1 = '<h1 class="x">The <em>Heading</em></h1>'
         ("<meta property=og:title content=Bare><h1>H</h1>", "html", "Bare"),
         ('<meta property="og:title" content=""><h1>Fallback</h1>', "html", "Fallback"),
         ('<script>x = "<h1>Loading</h1>"</script><h1>Actual</h1>', "html", "Actual"),
+        ('<meta property="og:title" content="A > B"><h1>Other</h1>', "html", "A > B"),
+        ('<!-- <meta property="og:title" content="Hidden"> --><h1>Actual</h1>', "html", "Actual"),
+        ("<!-- <title>Hidden</title><h1>Hidden</h1> --><h1>Actual</h1>", "html", "Actual"),
+        ('<script>x = \'<meta property="og:title" content="Hidden">\'</script><h1>Actual</h1>', "html", "Actual"),
         ("Intro line\n\n# **Example** [Domain](https://x.test) #\n\n# Second", "markdown", "Example Domain"),
         ("Example Domain\n==============\n\ntext", "markdown", "Example Domain"),
         ("```\n# a comment in code\n```\n\n# Real", "markdown", "Real"),
         ("Text\n\n```python\n# an unclosed fence", "markdown", ""),
+        ("```python\n```not-a-closer\n# Still code", "markdown", ""),
+        ("````\n```\n# Still code\n````\n# Actual", "markdown", "Actual"),
+        ("~~~\n~~~~\n# Actual", "markdown", "Actual"),
+        ("# [Docs](https://example.com/a_(b))", "markdown", "Docs"),
+        ("# 100 * 20", "markdown", "100 * 20"),
+        ("# `100 * 20`", "markdown", "100 * 20"),
+        (r"# Escaped \*literal\*", "markdown", "Escaped *literal*"),
         ("#hashtag\n\n## Only an H2", "markdown", ""),
         ("# Looks like a heading", "text", ""),
         ("# Format unset", None, "Format unset"),
@@ -63,3 +77,13 @@ def test_an_explicit_provider_call_fills_the_title_and_keeps_the_h1() -> None:
 
     assert document.title == "Example Domain"
     assert document.content.startswith("# Example Domain")
+
+
+def test_a_long_malformed_meta_attribute_does_not_stall_extraction() -> None:
+    script = """
+from web_router.providers._extract_title import page_title
+from web_router.types import ExtractedDocument
+content = '<meta ' + 'a' * 100_000 + '><h1>Actual</h1>'
+assert page_title(ExtractedDocument(url='https://example.com/', content=content, format='html')) == 'Actual'
+"""
+    subprocess.run([sys.executable, "-c", script], check=True, timeout=5)
