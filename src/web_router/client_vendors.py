@@ -22,6 +22,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Self
 
 from web_router.client_vendors_compat import AsyncVendorMethods, SyncVendorMethods, VendorLookupMethods
+from web_router.client_vendors_compat import VendorCredentials as VendorCredentials
 from web_router.constants_vendors import EXTRA_VENDORS, VENDOR_FIND_LIMIT
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.vendors.catalog import get_catalog

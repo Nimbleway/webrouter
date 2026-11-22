@@ -11,6 +11,7 @@ import pytest
 
 from tests.vendors.conftest import Recorder
 from web_router import AsyncWebRouter, WebRouter
+from web_router.client_vendors import DataApiCredentials, VendorCredentials
 from web_router.constants_data_api_compat import VENDOR_ENV_ALLOW_WRITES_OLD
 from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
 from web_router.constants_vendors_mcp import MCP_TOOL_RENAMED
@@ -75,6 +76,10 @@ def test_vendor_credentials_still_reaches_the_caller(router_class: type[WebRoute
         router = router_class(router=None, vendor_credentials=DATADOG)
     assert caught[0].filename == __file__  # pointed at the caller, not at the router
     assert router.vendor_credential_source().get("datadog", "api_key", ()) == "dd-api"
+
+
+def test_the_old_credentials_type_is_still_importable_where_it_was() -> None:
+    assert VendorCredentials == DataApiCredentials
 
 
 def test_the_writes_variable_keeps_its_old_name(monkeypatch: pytest.MonkeyPatch) -> None:
