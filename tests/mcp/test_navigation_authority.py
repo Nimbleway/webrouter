@@ -36,3 +36,10 @@ def test_a_socket_may_not_open_to_an_ambiguous_authority() -> None:
 
 def test_an_unambiguous_host_stays_allowed() -> None:
     assert POLICY.refusal("https://example.com/path@2x") is None
+
+def test_a_space_in_a_query_is_allowed_but_an_authority_trick_is_not() -> None:
+    # A space in a query cannot move the host boundary, so the address reaches the browser;
+    # a backslash or @ in the authority can, and is still refused before any navigation.
+    assert POLICY.refusal("https://example.com/search?q=solar panels") is None
+    for url in ("http://169.254.169.254\\@example.com/", "http://127.0.0.1:9333\\@example.com/"):
+        assert POLICY.refusal(url) == "a browser could read the host differently from how it is checked"

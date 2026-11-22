@@ -11,7 +11,7 @@ hosts, and a backend registered to fetch locally may be meant for an intranet.
 - ``"public_only"`` also refuses loopback, link-local and cloud metadata
   hosts, and private, shared (CGNAT) and reserved addresses, and any URL a
   browser could read a different host from (a backslash, ``@`` or ``%`` in
-  the authority; whitespace or a control character anywhere) -- for a server
+  the authority; whitespace or a control character there or at either end) -- for a server
   where a prompt could steer a locally fetching backend at its own network.
   For a cloud backend it mainly protects third parties.
 
@@ -79,17 +79,22 @@ def any_web_url(url: str) -> str | None:
 def _ambiguous(url: str) -> bool:
     """Whether a browser's WHATWG parse could read ``url``'s host differently from :func:`urllib.parse.urlsplit`.
 
-    Refused rather than reconciled: whitespace or a control character anywhere
-    (a browser strips some of them), and in the authority a backslash (a
-    browser reads it as ``/``, ending the host early), an ``@`` (userinfo, the
+    Refused rather than reconciled: whitespace or a control character in the
+    authority (a browser strips some of them, which can move the host boundary),
+    whitespace at either end of the whole URL, and in the authority a backslash
+    (a browser reads it as ``/``, ending the host early), an ``@`` (userinfo, the
     classic host confusion) or a ``%`` (a browser decodes a percent-encoded host).
+    Whitespace in a path or query cannot change the host, so an ordinary search
+    URL such as ``https://example.com/search?q=solar panels`` stays open.
     """
-    if any(ch.isspace() or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in url):
+    if url.strip() != url:
         return True
     _, sep, rest = url.partition(":")
     authority = rest[2:] if sep and rest.startswith("//") else rest
     for end in "/?#":
         authority = authority.split(end, 1)[0]
+    if any(ch.isspace() or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in authority):
+        return True
     return any(ch in authority for ch in AUTHORITY_REFUSED)
 
 
