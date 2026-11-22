@@ -15,28 +15,21 @@ import fnmatch
 import logging
 import os
 from collections.abc import Collection, Mapping
-from typing import Any, TypeVar
+from typing import TypeVar
 
-from web_router.constants import MCP_BROWSER_TOOLS, MCP_TOOL_BROWSER_OPEN, MCP_TOOL_LOAD_ENV
+from web_router.constants import MCP_BROWSER_TOOLS, MCP_TOOL_BROWSER_OPEN
 from web_router.constants_live_data import MCP_METHOD_LIVE_DATA
 from web_router.constants_mcp_context import (
     ENV_MCP_TOOLS,
     MCP_KEYLESS_TOOLS,
-    MCP_LOG_PROFILE_SLIM,
-    MCP_MSG_PROFILE_SWITCH,
     MCP_MSG_TOOLS_UNKNOWN,
     MCP_PROFILE_SLIM_TOOLS,
     MCP_TOOL_PARTNERS,
     MCP_TOOLS_SEPARATOR,
 )
 from web_router.constants_mcp_env import (
-    ENV_MCP_LOAD_ENV,
     ENV_MCP_PROFILE,
-    MCP_LOAD_ENV_LOAD,
-    MCP_MSG_LOAD_ENV_OFF,
-    MCP_PROFILE_ALLOWLIST,
     MCP_PROFILE_FULL,
-    MCP_PROFILE_SLIM,
 )
 from web_router.live_data_backends import custom_live_data_backends
 from web_router.mcp import methods
@@ -92,24 +85,6 @@ def _runnable(tool: str) -> bool:
     if method is None or tool in MCP_KEYLESS_TOOLS or methods.usable(method):
         return True
     return method.key == MCP_METHOD_LIVE_DATA and bool(custom_live_data_backends())
-
-
-def report(every: Collection[str], served: Collection[str]) -> dict[str, Any]:
-    """The capabilities resource's ``tools``: the profile, the tools it left off, and the switch that adds them."""
-    profile = MCP_PROFILE_ALLOWLIST if _patterns(None) else switch(ENV_MCP_PROFILE)
-    tools: dict[str, Any] = {"profile": profile}
-    if off := [name for name in every if name not in served]:
-        tools["off"] = off
-        tools["switch"] = MCP_MSG_PROFILE_SWITCH.format(profile=ENV_MCP_PROFILE, tools=ENV_MCP_TOOLS)
-    if MCP_TOOL_LOAD_ENV not in every:
-        tools[MCP_TOOL_LOAD_ENV] = MCP_MSG_LOAD_ENV_OFF.format(name=ENV_MCP_LOAD_ENV, value=MCP_LOAD_ENV_LOAD)
-    return tools
-
-
-def log_profile() -> None:
-    """Say on stderr, at startup, that the slim profile is serving and which switch serves the rest."""
-    if not _patterns(None) and switch(ENV_MCP_PROFILE) == MCP_PROFILE_SLIM:
-        _LOG.warning(MCP_LOG_PROFILE_SLIM, ENV_MCP_PROFILE, ENV_MCP_TOOLS)
 
 
 def _patterns(value: str | None) -> list[str]:

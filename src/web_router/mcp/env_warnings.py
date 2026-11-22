@@ -21,15 +21,19 @@ from web_router.constants import (
     MCP_ENV_STATUS_USED,
 )
 from web_router.constants_mcp import ENV_MCP_MAX_COST_USD
+from web_router.constants_mcp_context import ENV_MCP_TOOLS, MCP_LOG_PROFILE_SLIM
 from web_router.constants_mcp_env import (
+    ENV_MCP_PROFILE,
     MCP_LOG_ENV_EXPLICIT_MISSING,
     MCP_LOG_ENV_LOOSE_PERMISSIONS,
     MCP_LOG_ENV_REMEMBERED,
     MCP_LOG_NO_CEILING,
     MCP_MSG_ENV_LOOSE_PERMISSIONS,
+    MCP_PROFILE_SLIM,
 )
-from web_router.mcp import allowlist, env_pointer, methods
+from web_router.mcp import env_pointer, methods
 from web_router.mcp.env_foreign import remembered_billed
+from web_router.mcp.env_policy import switch
 
 if TYPE_CHECKING:
     from web_router.mcp.env import EnvSources
@@ -51,7 +55,7 @@ def log_startup(sources: EnvSources) -> None:
     keyed = any(methods.keyed(method) for method in methods.EACH_METHOD)
     if keyed and not os.environ.get(ENV_MCP_MAX_COST_USD, "").strip():
         _LOG.warning(MCP_LOG_NO_CEILING, ENV_MCP_MAX_COST_USD)
-    allowlist.log_profile()
+    log_profile()
 
 
 def loose_permissions(path: Path) -> str | None:
@@ -63,3 +67,9 @@ def loose_permissions(path: Path) -> str | None:
     except OSError:
         return None
     return MCP_MSG_ENV_LOOSE_PERMISSIONS.format(path=path) if mode & (stat.S_IRWXG | stat.S_IRWXO) else None
+
+
+def log_profile() -> None:
+    """Say on stderr, at startup, that the slim profile is serving and which switch serves the rest."""
+    if not os.environ.get(ENV_MCP_TOOLS, "").strip() and switch(ENV_MCP_PROFILE) == MCP_PROFILE_SLIM:
+        _LOG.warning(MCP_LOG_PROFILE_SLIM, ENV_MCP_PROFILE, ENV_MCP_TOOLS)

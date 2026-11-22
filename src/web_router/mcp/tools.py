@@ -84,7 +84,7 @@ from web_router.constants_mcp import (
 from web_router.constants_mcp_context import MCP_OUTPUT_SCHEMAS
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
-from web_router.mcp import allowlist, methods, schema
+from web_router.mcp import allowlist, methods, profile_report, schema
 from web_router.mcp.answer_tool import answer_tool
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
@@ -232,7 +232,7 @@ class WebRouterTools:
             "default_provider": self.router.default_provider,
             "env": env,
             "unlock": methods.unlock(),
-            "tools": allowlist.report(self._every, self.served),
+            "tools": profile_report.report(self._every, self.served),
             "routing": self.capabilities_routing(),
         }
 
@@ -241,7 +241,6 @@ class WebRouterTools:
         return self.routing.capabilities(self.budget.status())
 
     def keyed(self) -> bool:
-        """Whether any backend is configured here that needed a credential to be."""
         return any(methods.keyed(method) for method in methods.EACH_METHOD)
 
     def instructions(self, *, remote: bool = False) -> str:
@@ -495,11 +494,8 @@ class WebRouterTools:
         declare; one left unset stays unset rather than being sent as a default of ours.
         """
         names = schema.argument_names(tool)
-        # `is None`, not truthiness: browser_type's required `text` may be ""
-        # -- the way a field is cleared -- and supplied-but-empty is not missing.
         missing = [name for name in MCP_TOOL_REQUIRED[tool] if arguments.get(name) is None]
         if (method := methods.unconfigured_live_data(tool, arguments)) is not None:
-            # The schema offers no `provider` when there is none: say what would add one, not that it is missing.
             env_vars = ", ".join(methods.env_vars(method))
             raise ValueError(nothing_configured(tool, env_vars))
         if missing:

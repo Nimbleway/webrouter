@@ -26,7 +26,7 @@ from web_router.constants_mcp_env import (
 )
 from web_router.constants_vendors_mcp import MCP_TOOL_CALL_VENDOR
 from web_router.exceptions import ConfigurationError
-from web_router.mcp import allowlist
+from web_router.mcp import allowlist, env_warnings
 from web_router.mcp.env_credentials import credential_variables
 from web_router.mcp.navigation import NavigationPolicy
 from web_router.mcp.tools import WebRouterTools
@@ -95,9 +95,9 @@ def test_the_startup_log_names_the_switch_only_under_the_slim_profile(
     caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     with caplog.at_level(logging.WARNING):
-        allowlist.log_profile()
+        env_warnings.log_profile()
         monkeypatch.setenv(ENV_MCP_PROFILE, MCP_PROFILE_FULL)
-        allowlist.log_profile()
+        env_warnings.log_profile()
 
     assert [ENV_MCP_PROFILE in record.getMessage() for record in caplog.records] == [True]
 
