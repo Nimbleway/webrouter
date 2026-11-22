@@ -57,6 +57,10 @@ MCP_MSG_PROFILE_SWITCH = (
     "Left off by the slim profile. {profile}=full serves every tool; {tools} names tools one by one, "
     "e.g. {tools}=search,extract,browser_*."
 )
+MCP_MSG_ALLOWLIST_SWITCH = (
+    "Left off by the explicit {tools} allowlist. Add the required tools to {tools}, or unset it "
+    "to use {profile}; {profile}=full serves every tool only when no allowlist is set."
+)
 """The capabilities resource's ``tools.switch``, when the profile left tools off."""
 
 MCP_LOG_PROFILE_SLIM = (

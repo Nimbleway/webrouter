@@ -91,6 +91,18 @@ def test_the_capabilities_resource_names_the_switches(tools: WebRouterTools) -> 
     assert f"{ENV_MCP_LOAD_ENV}={MCP_LOAD_ENV_LOAD}" in report[MCP_TOOL_LOAD_ENV]
 
 
+def test_an_explicit_allowlist_explains_how_to_restore_omitted_tools(
+    monkeypatch: pytest.MonkeyPatch, fake_provider: Any
+) -> None:
+    monkeypatch.setenv(ENV_MCP_TOOLS, "search")
+    monkeypatch.setenv(ENV_MCP_PROFILE, MCP_PROFILE_FULL)
+    report = WebRouterTools(AsyncWebRouter(FAKE)).capabilities()["tools"]
+
+    assert report["profile"] == "allowlist"
+    assert "Add the required tools to WEB_ROUTER_MCP_TOOLS" in report["switch"]
+    assert "only when no allowlist is set" in report["switch"]
+
+
 def test_the_startup_log_names_the_switch_only_under_the_slim_profile(
     caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
