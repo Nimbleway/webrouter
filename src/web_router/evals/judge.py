@@ -105,6 +105,10 @@ class Judge(ABC):
     async def aclose(self) -> None:  # noqa: B027
         """The async twin of :meth:`close`."""
 
+    def _messages(self, system: str, user: str) -> list[dict[str, str]]:
+        messages = [{"role": "system", "content": system}] if system else []
+        return [*messages, {"role": "user", "content": user}]
+
     @abstractmethod
     def _complete(self, system: str, user: str) -> str: ...
 
@@ -187,12 +191,7 @@ class OpenAIJudge(EndpointLabel, Judge):
         return openai
 
     def _request(self, system: str, user: str) -> dict[str, Any]:
-        messages = (
-            [{"role": "system", "content": system}, {"role": "user", "content": user}]
-            if system
-            else [{"role": "user", "content": user}]
-        )
-        request: dict[str, Any] = {"model": self.model, "messages": messages}
+        request: dict[str, Any] = {"model": self.model, "messages": self._messages(system, user)}
         if self.temperature is not None:
             request["temperature"] = self.temperature
         return request

@@ -74,10 +74,9 @@ class LiteLLMJudge(EndpointLabel, Judge):
         return litellm
 
     def _request(self, system: str, user: str) -> dict[str, Any]:
-        messages = [{"role": "system", "content": system}] if system else []
         request: dict[str, Any] = {
             "model": self.model,
-            "messages": [*messages, {"role": "user", "content": user}],
+            "messages": self._messages(system, user),
             "timeout": self.timeout,
             "drop_params": True,
         }
