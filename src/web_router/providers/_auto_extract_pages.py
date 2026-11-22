@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from web_router.constants_extract import (
     MSG_EXTRACT_JUNK,
-    MSG_EXTRACT_NEAR_EMPTY,
     MSG_EXTRACT_OFF_SITE,
     MSG_EXTRACT_TRACKER_PIXEL,
 )
@@ -19,22 +18,18 @@ _FAIL_OVER = frozenset({MSG_EXTRACT_TRACKER_PIXEL})
 """The page warnings that fail its URL on to the next member even when none is left."""
 
 Held = dict[str, ExtractedDocument]
-"""The near-empty or off-site page each URL first got, put back when no later member reads it."""
+"""The off-site page each URL first got, put back when no later member reads it."""
 
 
 def _screened(response: ExtractResponse, urls: list[str], more: bool, held: Held) -> ExtractResponse:
     """``response`` with each junk page as its URL's failure, so the members after it try that URL.
 
-    A tracking pixel fails whatever is left; a near-empty or off-site page only when ``more`` members are,
-    and it is ``held`` so that :func:`_restored` can put it back. A page whose URL cannot be told stays.
+    A tracking pixel fails whatever is left; an off-site page only when ``more`` members are, and it is
+    ``held`` so that :func:`_restored` can put it back. A page whose URL cannot be told stays.
     """
     documents, failures = [], list(response.failures)
     for document, url in zip(response.documents, _asked(response, urls), strict=True):
-        why = [
-            w
-            for w in document.warnings
-            if w in _FAIL_OVER or (more and w in (MSG_EXTRACT_NEAR_EMPTY, MSG_EXTRACT_OFF_SITE))
-        ]
+        why = [w for w in document.warnings if w in _FAIL_OVER or (more and w == MSG_EXTRACT_OFF_SITE)]
         if url is None or not why:
             documents.append(document)
             continue

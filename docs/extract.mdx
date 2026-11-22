@@ -126,11 +126,12 @@ Three more kinds of page carry a warning in `document.warnings` instead:
   asked for, such as an ad server. A redirect from a link shortener
   (`bit.ly`, `t.co`, ...) does not count.
 
-Under `auto`, each of these is a failure of its URL, and `auto` tries the next backend for it. Only a tracking pixel
-stays a failure when no backend is left. A near-empty or off-site page comes back with its warning when no later
-backend reads the URL, unless a later backend reports the page gone (404 or 410). Some real answers are short, and
-redirects can intentionally cross sites. A call to one named `provider` returns all three as documents with their
-warning. `document.warnings` also holds a backend's own warning about the page, such as Jina's "This page maybe not
+A near-empty page stays a document under `auto` too, and `auto` does not try another backend for it: some real
+answers are that short (a plain-text endpoint, a one-line reply). Under `auto`, a tracking pixel or an off-site page is
+a failure of its URL, and `auto` tries the next backend for it. A tracking pixel stays a failure when no backend is
+left. An off-site page comes back with its warning when no later backend reads the URL, unless a later backend reports
+the page gone (404 or 410), since redirects can intentionally cross sites. A call to one named `provider` returns all
+three as documents with their warning. `document.warnings` also holds a backend's own warning about the page, such as Jina's "This page maybe not
 yet fully loaded".
 
 ### A batch under `auto`
