@@ -575,7 +575,7 @@ def _extract_member(
             return ExtractResponse(
                 provider=member_name,
                 documents=[
-                    ExtractedDocument(url=url, content="" if url in blank else "hi", format=self.format_of(request))
+                    ExtractedDocument(url=url, content="" if url in blank else "x" * 99, format=self.format_of(request))
                     for url in urls
                 ],
             )
