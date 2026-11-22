@@ -14,8 +14,8 @@ from typing import ClassVar
 import pytest
 
 from tests._live_data_paged import PagedProvider
+from tests.live_data_env_helpers import clear_live_data_credentials
 from web_router import AsyncWebRouter, WebRouter
-from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import DeadlineExceededError
 from web_router.providers._deadline import call_deadline, current_deadline
 from web_router.registry import register_live_data_provider, unregister_live_data_provider
@@ -24,9 +24,7 @@ from web_router.types_live_data import LiveDataSource, LiveDataSourcePage
 
 @pytest.fixture(autouse=True)
 def no_vendor_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    for env_vars in LIVE_DATA_ENV_BY_PROVIDER.values():
-        for env_var in env_vars:
-            monkeypatch.delenv(env_var, raising=False)
+    clear_live_data_credentials(monkeypatch)
 
 
 class CappedProvider(PagedProvider):

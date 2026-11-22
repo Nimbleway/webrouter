@@ -3011,7 +3011,7 @@
       "source_url": "https://oxylabs.io/products/scraper-api/web/pricing",
       "checked": "2026-11-11",
       "setup": null,
-      "setting": "Web API dedicated scrapers, `POST /v1/scrape/{scraper}` (or its async job), `output: [\"json\"]`",
+      "setting": "Web Scraper API parsed sources, `POST /v1/queries` with `parse: true`; or Web API dedicated scrapers, `POST /v1/scrape/{scraper}` (or its async job), `output: [\"json\"]`",
       "does": null,
       "kind": null,
       "depth_assumed": null,

@@ -68,7 +68,7 @@ result = router.live_data(
 | [Nimble](https://docs.nimbleway.com/api-reference/extract-templates-api/run-extract-template) (`nimble`) | `NIMBLE_API_KEY` | the Extract Template's name, `walmart_pdp` | the template's own (`product_id`, `url`…) |
 | [Apify](https://docs.apify.com/api/v2/act-run-sync-get-dataset-items-post) (`apify`) | `APIFY_TOKEN` | the Actor, `username~name` (or `username/name`) | the Actor's input, sent untouched |
 | [Bright Data](https://docs.brightdata.com/api-reference/web-scraper-api/synchronous-requests) (`brightdata`) | `BRIGHTDATA_API_TOKEN` | the dataset id `gd_l7q7dkf244hwjntr0`, or the scraper's name, `amazon_products` | one input object, `{"url": ...}` or `{"keyword": ...}` |
-| [Oxylabs](https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers) (`oxylabs`) | `OXYLABS_WEB_API_KEY` | the scraper's path, `amazon/product` | the scraper's own (`query` or `url`, plus `domain`, `locale`…) |
+| [Oxylabs](https://developers.oxylabs.io/products/web-scraper-api/targets) (`oxylabs`) | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD`, or `OXYLABS_WEB_API_KEY` | the Web Scraper API's source, `amazon_product`, or the Web API's scraper path, `amazon/product` | the source's own (`query`, `product_id`…, plus `geo_location`, `domain`…) |
 | `merchant` | none; your agent profile URL, `WEB_ROUTER_MERCHANT_AGENT_PROFILE_URL`, makes it usable without naming it | a store's domain, `shop.example.com` | `query`, and `limit`, `min_price`, `max_price`, `country`, `currency` where the registry has a passing test for the store |
 
 Switching vendor changes only the source's name and its inputs:
@@ -76,6 +76,7 @@ Switching vendor changes only the source's name and its inputs:
 ```python
 router.live_data("amazon_products", {"url": "https://www.amazon.com/dp/B07FZ8S74R"}, provider="brightdata")
 router.live_data("amazon_products_by_keyword", {"keyword": "earbuds"}, provider="brightdata")
+router.live_data("amazon_product", {"query": "B07FZ8S74R", "geo_location": "90210"}, provider="oxylabs")
 router.live_data("amazon/product", {"query": "B07FZ8S74R", "domain": "com"}, provider="oxylabs")
 ```
 
@@ -100,18 +101,34 @@ router.live_data("amazon/product", {"query": "B07FZ8S74R", "domain": "com"}, pro
     land in `result.extra["errors"]`.
   </Accordion>
   <Accordion title="Oxylabs">
-    Uses the Oxylabs Web API key, not the Realtime username and password that
-    Oxylabs' extract uses. Passed in code, it is `web_api_key` in
-    `provider_config["oxylabs"]`, since `api_key` there is extract's password. A scraper Oxylabs runs only as a job (`chatgpt`,
-    `gemini`…) is polled for up to five minutes or until the call's deadline.
-    Any error after the job is submitted is a `LiveDataJobError` whose `job_id`
-    names the job, so a billed run can still be read later.
+    Oxylabs has two scraping APIs with separate credentials, and either one
+    makes `oxylabs` a live data backend:
+
+    - **Web Scraper API** ("Classic"): `OXYLABS_USERNAME` and `OXYLABS_PASSWORD`,
+      the same credentials Oxylabs' extract uses. Its sources are named like
+      `amazon_product`, `google_search` or `youtube_subtitles`. The API lists
+      none itself, so WebRouter ships the ones Oxylabs parses: e-commerce
+      sources with a dedicated parser, Google, Bing and YouTube. Each record is
+      one parsed page. A page Oxylabs parsed only in part still answers, with its
+      `parse_status_code` (12004 or 12005) and the parser's `_errors` or
+      `_warnings` in `result.extra["results"]`. The LLM sources (`chatgpt`, `perplexity`,
+      `gemini`) run only as push-pull jobs there, and are not listed yet.
+    - **Web API**: `OXYLABS_WEB_API_KEY`, its scrapers named by path, like
+      `amazon/product`. Passed in code, it is `web_api_key` in
+      `provider_config["oxylabs"]`, since `api_key` there is the Web Scraper
+      API's password. A scraper it runs only as a job (`chatgpt`, `gemini`…)
+      is polled for up to five minutes or until the call's deadline. Any error
+      after the job is submitted is a `LiveDataJobError` whose `job_id` names
+      the job, so a billed run can still be read later.
+
+    With both set, the catalogue is the two together, and a run goes to the
+    API whose catalogue has the source.
   </Accordion>
 </AccordionGroup>
 
-Nimble was verified live on 2026-10-22, Apify and Bright Data on 2026-11-10.
-The Oxylabs Web API is written from its documentation and has not yet been
-called live.
+Nimble was verified live on 2026-10-22, Apify and Bright Data on 2026-11-10,
+and Oxylabs' Web Scraper API on 2026-11-17. The Oxylabs Web API is written
+from its documentation and has not yet been called live.
 
 ## Finding a source
 

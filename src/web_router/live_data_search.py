@@ -118,8 +118,11 @@ def _matched(
 
     ``raw`` holds the backend's untouched listing payloads the search read, in
     order, so a raw handle shows what the vendor answered, not what matched.
+    A listing page that names a part of the backend that did not answer
+    (``failures``) is named in the search page too, with no count claimed.
     """
     sources = [source for page in pages for source in page.sources]
+    failures = {name: reason for listing in pages for name, reason in listing.failures.items()}
     if not complete:
         logger.warning(MSG_LIVE_DATA_SEARCH_CAPPED.format(provider=provider, query=query, read=len(sources)))
     found = ranked(sources, query)
@@ -129,12 +132,13 @@ def _matched(
     return LiveDataSourcePage(
         provider=provider,
         sources=page,
-        total=len(found) if complete else None,
+        total=len(found) if complete and not failures else None,
         offset=start,
         limit=limit,
         query=query,
         search=LIVE_DATA_SEARCH_LOCAL,
         raw=raw or None,
+        failures=failures,
     )
 
 

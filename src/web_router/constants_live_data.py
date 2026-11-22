@@ -147,7 +147,7 @@ BUILTIN_LIVE_DATA_PROVIDERS: dict[str, tuple[str, str, str]] = {
     Provider.NIMBLE.value: ("web_router.providers.nimble_live_data", "NimbleLiveDataProvider", "extract"),
     Provider.APIFY.value: ("web_router.providers.apify", "ApifyLiveDataProvider", "extract"),
     Provider.BRIGHTDATA.value: ("web_router.providers.brightdata_live_data", "BrightDataLiveDataProvider", "extract"),
-    Provider.OXYLABS.value: ("web_router.providers.oxylabs_live_data", "OxylabsLiveDataProvider", "extract"),
+    Provider.OXYLABS.value: ("web_router.providers.oxylabs_live_data_any", "OxylabsLiveDataProvider", "extract"),
     PROVIDER_MERCHANT: ("web_router.providers.merchant_live_data", "MerchantLiveDataProvider", "extract"),
 }
 """Each built-in live data backend's module, class, and the extra that installs it."""
@@ -167,6 +167,18 @@ variable the provider's other methods read. A live data run fetches and
 parses on the backend's account, so there is no keyless tier, and no ``auto`` fallback:
 a source's name belongs to one vendor. Bright Data's live data needs its token
 alone -- the zone is its Web Unlocker's, which a scraper does not use.
-Oxylabs' live data runs on its Web API, whose key is not the Realtime
-username and password its extract uses.
+Oxylabs' entry is its Web API's key; its Web Scraper API's username and
+password, the ones its extract uses, serve live data as well, and are in
+:data:`LIVE_DATA_ALT_ENV_BY_PROVIDER`.
 """
+
+LIVE_DATA_ALT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
+    Provider.OXYLABS.value: ("OXYLABS_USERNAME", "OXYLABS_PASSWORD"),
+}
+"""A second set of variables that configures a live data provider on its own: Oxylabs' Web Scraper API's."""
+
+LIVE_DATA_CREDENTIAL_SETS: dict[str, tuple[tuple[str, ...], ...]] = {
+    name: (env, *((LIVE_DATA_ALT_ENV_BY_PROVIDER[name],) if name in LIVE_DATA_ALT_ENV_BY_PROVIDER else ()))
+    for name, env in LIVE_DATA_ENV_BY_PROVIDER.items()
+}
+"""Each set of variables that alone configures a live data provider: one, or Oxylabs' two."""

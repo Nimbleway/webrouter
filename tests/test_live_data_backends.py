@@ -13,16 +13,14 @@ from typing import Any
 
 import pytest
 
+from tests.live_data_env_helpers import clear_live_data_credentials
 from web_router import WebRouter
-from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import ConfigurationError
 
 
 @pytest.fixture(autouse=True)
 def no_vendor_keys(monkeypatch: pytest.MonkeyPatch) -> None:
-    for env_vars in LIVE_DATA_ENV_BY_PROVIDER.values():
-        for env_var in env_vars:
-            monkeypatch.delenv(env_var, raising=False)
+    clear_live_data_credentials(monkeypatch)
 
 
 @pytest.fixture

@@ -32,7 +32,8 @@ _read: weakref.WeakKeyDictionary[LiveDataProvider, tuple[float, Catalogue]] = we
 
 A catalogue changes slowly and is read whole to be searched -- dozens of
 pages on a large one -- so it is kept for :data:`LIVE_DATA_SEARCH_CACHE_SECONDS`.
-Only the listing is kept: a run still fetches its site on every call. Keyed
+Only the listing is kept, and only a read every part of the backend answered:
+a run still fetches its site on every call. Keyed
 weakly, so a closed and dropped provider takes its read with it.
 """
 
@@ -103,7 +104,16 @@ def _cached(provider: LiveDataProvider) -> Catalogue | None:
 
 
 def _keep(provider: LiveDataProvider, catalogue: Catalogue) -> Catalogue:
-    _read[provider] = (time.monotonic(), catalogue)
+    """Keep ``catalogue`` for the next search, unless a page names a part of the backend that did not answer.
+
+    A backend over several APIs (oxylabs) still lists the APIs that answered
+    when one fails, naming it in the page's ``failures``. That read is partial,
+    so it is not kept: the next search reads again rather than missing that
+    API's sources until the read expires.
+    """
+    pages, _complete = catalogue
+    if not any(page.failures for page in pages):
+        _read[provider] = (time.monotonic(), catalogue)
     return catalogue
 
 

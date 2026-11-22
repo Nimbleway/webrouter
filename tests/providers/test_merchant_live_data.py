@@ -16,6 +16,7 @@ from tests._merchant_fake import (
     record,
     router_config,
 )
+from tests.live_data_env_helpers import clear_live_data_credentials
 from web_router import AsyncWebRouter, ConfigurationError, LiveDataSourceNotFoundError, ProviderError, WebRouter
 from web_router.exceptions_merchant import MerchantNotValidatedError, MerchantRouteError
 from web_router.providers.merchant_live_data import MerchantLiveDataProvider
@@ -337,7 +338,10 @@ def test_a_described_source_advertises_an_option_only_where_the_registry_has_a_p
     assert source.input_schema["required"] == ["query"]  # type: ignore[index]
 
 
-def test_the_backend_is_usable_without_being_named_once_the_profile_is_configured() -> None:
+def test_the_backend_is_usable_without_being_named_once_the_profile_is_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clear_live_data_credentials(monkeypatch)
     merchant = Merchant()
     with WebRouter("nimble", provider_config={**router_config(merchant), "nimble": {}}) as router:
         reply = router.live_data(DOMAIN, {"query": "shoe"})

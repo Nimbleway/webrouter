@@ -151,28 +151,24 @@ def test_a_batch_does_not_retry_a_url_whose_page_is_gone() -> None:
     assert second.calls == [], "every backend would read the same 404"
 
 
-def test_oxylabs_live_data_says_the_extract_credentials_are_another_set(monkeypatch: pytest.MonkeyPatch) -> None:
-    from web_router.providers.oxylabs_live_data import OxylabsLiveDataProvider
+def test_oxylabs_live_data_takes_either_credential_and_names_both_when_neither(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from web_router.providers.oxylabs_live_data_any import OxylabsLiveDataProvider
 
     monkeypatch.delenv(ENV_OXYLABS_WEB_API_KEY, raising=False)
     monkeypatch.delenv("OXYLABS_PASSWORD", raising=False)
     monkeypatch.setenv(ENV_OXYLABS_USERNAME, "realtime-user")
 
-    with pytest.raises(ConfigurationError) as username_only:
-        OxylabsLiveDataProvider()
-    assert "separate credential" not in str(username_only.value), "the Realtime password is not set"
+    with pytest.raises(ConfigurationError, match=r"OXYLABS_USERNAME and OXYLABS_PASSWORD.*OXYLABS_WEB_API_KEY"):
+        OxylabsLiveDataProvider()  # a username alone is half a credential
 
-    with pytest.raises(ConfigurationError, match="separate credential"):
-        OxylabsLiveDataProvider(username="realtime-user", api_key="realtime-password")  # the shared config entry
-
-    monkeypatch.setenv("OXYLABS_PASSWORD", "realtime-password")
-    with pytest.raises(ConfigurationError, match="separate credential"):
-        OxylabsLiveDataProvider()
+    shared = OxylabsLiveDataProvider(username="realtime-user", api_key="realtime-password")  # extract's config entry
+    assert shared.classic is not None and shared.web_api is None
 
     monkeypatch.delenv(ENV_OXYLABS_USERNAME)
-    with pytest.raises(ConfigurationError) as caught:
-        OxylabsLiveDataProvider()
-    assert "separate credential" not in str(caught.value), "nothing to confuse it with"
+    keyed = OxylabsLiveDataProvider(web_api_key="web-key")
+    assert keyed.classic is None and keyed.web_api is not None
     assert os.environ.get(ENV_OXYLABS_WEB_API_KEY) is None
 
 
