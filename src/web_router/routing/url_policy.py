@@ -1,11 +1,11 @@
 """``url_policy``: which URLs a routed call or a plan may fetch, or hand a backend as a URL.
 
-Experimental. A pre-dispatch hostname check: it reads the URL as written --
-a literal address in any spelling a browser accepts is judged as the address
-it is -- and it neither resolves DNS nor follows redirects, so a public name
-that points at a private address is not caught here. Off by default: cloud
-backends fetch from their own networks and cannot reach a caller's private
-hosts, and a backend registered to fetch locally may be meant for an intranet.
+Experimental. A pre-dispatch hostname check: a literal address in any spelling
+a browser accepts is judged as the address it is, and a name is judged by the
+addresses it resolves to, so a public name that points at a private address is
+caught -- only a redirect it follows is not. Off by default: cloud backends
+fetch from their own networks and cannot reach a caller's private hosts, and a
+backend registered to fetch locally may be meant for an intranet.
 
 - ``None`` (the default) admits any ``http`` or ``https`` URL.
 - ``"public_only"`` also refuses loopback, link-local and cloud metadata
@@ -30,11 +30,12 @@ redirects, but admits loopback and private hosts.
 from __future__ import annotations
 
 import ipaddress
+import socket
 from collections.abc import Sequence
 from typing import Literal, get_args
 from urllib.parse import urlsplit
 
-from web_router._hosts import is_loopback, is_metadata, is_private, numeric_host
+from web_router._hosts import host_address, is_loopback, is_metadata, is_private, numeric_host
 from web_router._urls import host_of
 from web_router.constants_urls import (
     AUTHORITY_REFUSED,
@@ -127,6 +128,30 @@ def public_only(url: str) -> str | None:
         # 010.0.0.1: a browser reads octal, macOS's getaddrinfo decimal; 127.0.0.09, no octal, decimal there too.
         # No public URL needs such a spelling, whether or not inet_aton reads it.
         return MSG_URL_AMBIGUOUS
+    if host_address(host) is None:
+        # A name is only as public as the addresses it resolves to; a literal address was judged as it stands.
+        return _resolved_refusal(host)
+    return None
+
+def _resolved_refusal(host: str) -> str | None:
+    """Why the addresses ``host`` resolves to may not be fetched, or ``None``.
+
+    A name of anyone's choosing can point at loopback, the metadata service or a
+    private address, which the written host never shows.
+    """
+    try:
+        answers = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except (OSError, UnicodeError):
+        # A name that does not resolve here reaches nothing when fetched either.
+        return None
+    for answer in answers:
+        address = str(answer[4][0]).split("%", 1)[0].lower()
+        if is_metadata(address):
+            return MSG_URL_METADATA
+        if is_loopback(address):
+            return MSG_URL_LOOPBACK
+        if is_private(address):
+            return MSG_URL_PRIVATE
     return None
 
 
