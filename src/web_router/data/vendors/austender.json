@@ -29,7 +29,7 @@
           "type": "string",
           "description": "Contract Notice ID, e.g. CN followed by digits.",
           "required": true,
-          "example": "CN3000000"
+          "example": "CN4037940"
         }
       },
       "job": "contracts.get",
