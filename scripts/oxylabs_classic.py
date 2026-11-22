@@ -54,8 +54,11 @@ RENDERED = "html"
 CONTEXT_PREFIX = "context:"
 NOT_FOUND = "# Page Not Found"
 NAME = re.compile(r"[a-z][a-z0-9_]*[a-z0-9]")
-EMPTY = frozenset({"", "-", "\u2013", "\u2014"})
-"""What the docs write in an empty default cell: nothing, a hyphen, or an en or em dash."""
+EMPTY = frozenset({"", "-", "\u2013", "\u2014", "marketplace default"})
+"""What the docs write in a default cell with no value to send: nothing, a hyphen, an en or em dash, or a note."""
+DEFAULT_HEADS = ("default", "default value")
+"""A table's default column, by its header: a table without one, its third column a description or an example,
+gives each of its parameters no default."""
 PARSED_MARK = "✓"
 
 
@@ -93,13 +96,18 @@ def _pages(client: httpx.Client) -> dict[str, str]:
     return pages
 
 
-def _parameter(cells: list[str]) -> dict[str, Any] | None:
+def _default_column(head: list[str]) -> int | None:
+    """Where a table's defaults are, read from its header; ``None`` for a table with no default column."""
+    return next((at for at, cell in enumerate(head) if cell in DEFAULT_HEADS), None)
+
+
+def _parameter(cells: list[str], default_at: int | None) -> dict[str, Any] | None:
     """One parameter row: its name, whether it is mandatory, its default; ``None`` for a row that is no parameter."""
     words = _text(cells[0]).split()
     if not words:
         return None
     name = re.sub(r"[^\w.:\-]", "", words[0])
-    default = _text(cells[2]) if len(cells) > 2 else ""
+    default = _text(cells[default_at]) if default_at is not None and len(cells) > default_at else ""
     return {"name": name, "required": "<mark" in cells[0], "default": None if default in EMPTY else default}
 
 
@@ -124,8 +132,9 @@ def _parameters(pages: dict[str, str]) -> dict[str, dict[str, Any]]:
                 current = found.setdefault(source, {"docs": url.removesuffix(".md"), "params": {}})
             if current is None:
                 continue
+            default_at = _default_column(head)
             for row in rows:
-                parameter = _parameter(row) if len(row) > 1 else None
+                parameter = _parameter(row, default_at) if len(row) > 1 else None
                 if parameter and parameter["name"] != "source":
                     current["params"].setdefault(parameter["name"], parameter)
     return found
@@ -147,6 +156,13 @@ def _parsed_ecommerce(pages: dict[str, str]) -> set[str]:
     return parsed
 
 
+def _value(source: str, key: str, default: str | None) -> str | None:
+    """A shipped input's default, refused when it reads as a sentence: a docs layout change fails here, not ships."""
+    if default is not None and len(default.split()) > 1:
+        raise ValueError(f"{source}.{key}: default {default!r} is a sentence, not a value; has the docs table changed?")
+    return default
+
+
 def _entry(name: str, found: dict[str, Any]) -> dict[str, Any]:
     """One source as the library reads it: its inputs, those under ``context``, and the values always sent."""
     params = found["params"]
@@ -164,7 +180,7 @@ def _entry(name: str, found: dict[str, Any]) -> dict[str, Any]:
         if key == "render" and parameter["required"]:
             fixed["render"] = RENDERED
             continue
-        inputs[key] = {"required": parameter["required"], "default": parameter["default"]}
+        inputs[key] = {"required": parameter["required"], "default": _value(name, key, parameter["default"])}
     category, _, rest = found["docs"].removeprefix(DOCS + "/").partition("/")
     site = rest.split("/")[0] if rest else name
     parse = category == ECOMMERCE.strip("/") or "parse" in params

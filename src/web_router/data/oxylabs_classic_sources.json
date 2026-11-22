@@ -30,11 +30,11 @@
         },
         "locale": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         },
         "currency": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         }
       },
       "context": [
@@ -71,11 +71,11 @@
         },
         "locale": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         },
         "currency": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         }
       },
       "context": [
@@ -104,11 +104,11 @@
         },
         "locale": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         },
         "currency": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         },
         "autoselect_variant": {
           "required": false,
@@ -150,11 +150,11 @@
         },
         "locale": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         },
         "currency": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         },
         "sort_by": {
           "required": false,
@@ -208,7 +208,7 @@
         },
         "locale": {
           "required": false,
-          "default": "marketplace default"
+          "default": null
         }
       },
       "context": [],
@@ -231,15 +231,15 @@
         },
         "fulfillment_type": {
           "required": false,
-          "default": "Filters the search results by availability. Available values: pickup (requires store_id), shipping (requires delivery_zip)."
+          "default": null
         },
         "store_id": {
           "required": false,
-          "default": "Store ID as an integer, the trailing number in the store's URL on stores.bestbuy.com, e.g. 552. On search pages it only takes effect together with fulfillment_type: pickup; on product pages it sets the pickup store."
+          "default": null
         },
         "delivery_zip": {
           "required": false,
-          "default": "ZIP code as a string, e.g. \"10001\". On search pages it only takes effect together with fulfillment_type: shipping; on product pages it sets the ship-to location."
+          "default": null
         }
       },
       "context": [],
@@ -305,7 +305,7 @@
         },
         "store_id": {
           "required": false,
-          "default": "Shop-location filter, as an integer. Use the location ID that Etsy adds to the search URL as locationQuery when you choose a shop location on the site, e.g. 2635167 for the United Kingdom or 6252001 for the United States."
+          "default": null
         }
       },
       "context": [],
@@ -489,7 +489,7 @@
         },
         "page": {
           "required": false,
-          "default": "1"
+          "default": null
         },
         "filter": {
           "required": false,
