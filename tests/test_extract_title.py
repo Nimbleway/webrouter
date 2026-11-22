@@ -78,6 +78,31 @@ def test_a_title_the_backend_gave_is_kept_and_the_h1_stays_in_the_content() -> N
     assert (filled.title, filled.content) == ("Other", "# Other")
 
 
+@pytest.mark.parametrize(
+    "boundary",
+    [
+        "<h1>",
+        "<h2>",
+        "<h3>",
+        "<h4>",
+        "<h5>",
+        "<h6>",
+        "<p>",
+        "<div>",
+        "<section>",
+        "<article>",
+        "<header>",
+        "<ul>",
+        "<ol>",
+        "<table>",
+        "</body>",
+    ],
+)
+def test_an_unclosed_h1_ends_before_the_next_block_or_body_end(boundary: str) -> None:
+    content = f"<body><h1>First{boundary}Second</h1>"
+    assert page_title(ExtractedDocument(url=URL, content=content, format="html")) == "First"
+
+
 class _Untitled(FakeExtractProvider):
     """A backend that, like Nimble, names no title."""
 

@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from html.parser import HTMLParser
 
+_H1_ENDS = frozenset(
+    {"h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "section", "article", "header", "ul", "ol", "table"}
+)
+
 
 def page_title(content: str) -> str:
     """The first nonempty title candidate, in title / Open Graph / H1 order."""
@@ -26,6 +30,8 @@ class _Titles(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if self._hidden:
             return
+        if self._capture == "h1" and tag in _H1_ENDS:
+            self.handle_endtag("h1")
         if tag == "br" and self._capture:
             self._parts.append(" ")
         if tag in {"script", "style", "textarea"}:
@@ -40,6 +46,8 @@ class _Titles(HTMLParser):
             self._parts = []
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "body" and self._capture == "h1" and not self._hidden:
+            self.handle_endtag("h1")
         if self._hidden:
             if tag == self._hidden:
                 self._hidden = ""
