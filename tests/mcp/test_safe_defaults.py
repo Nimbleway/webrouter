@@ -26,7 +26,7 @@ from web_router.constants_mcp_env import (
 )
 from web_router.constants_vendors_mcp import MCP_TOOL_CALL_VENDOR
 from web_router.exceptions import ConfigurationError
-from web_router.mcp import env_warnings
+from web_router.mcp import allowlist, env_warnings
 from web_router.mcp.env_credentials import credential_variables
 from web_router.mcp.navigation import NavigationPolicy
 from web_router.mcp.tools import WebRouterTools
@@ -76,10 +76,10 @@ def test_load_env_is_served_once_its_switch_turns_it_on(fake_provider: Any, monk
     assert MCP_TOOL_LOAD_ENV in _served()
 
 
-@pytest.mark.parametrize("allowlist", ["", "search"])
-def test_a_profile_that_is_not_one_stops_the_server(monkeypatch: pytest.MonkeyPatch, allowlist: str) -> None:
+@pytest.mark.parametrize("tool_list", ["", "search"])
+def test_a_profile_that_is_not_one_stops_the_server(monkeypatch: pytest.MonkeyPatch, tool_list: str) -> None:
     monkeypatch.setenv(ENV_MCP_PROFILE, "everything")
-    monkeypatch.setenv(ENV_MCP_TOOLS, allowlist)
+    monkeypatch.setenv(ENV_MCP_TOOLS, tool_list)
 
     with pytest.raises(ConfigurationError, match=ENV_MCP_PROFILE):
         allowlist.allowed({"search": 1})
