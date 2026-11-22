@@ -193,10 +193,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
             return self._instances[key]
 
     def get_extract_provider(self, name: str | Provider | ExtractProvider | None = None) -> ExtractProvider:
-        """Return the named extract provider, constructing and caching it on first use.
-
-        The extract counterpart of :meth:`get_provider`, with the same ownership rule.
-        """
+        """The extract counterpart of :meth:`get_provider`, with the same caching and ownership rules."""
         if isinstance(name, ExtractProvider):
             return name
 
