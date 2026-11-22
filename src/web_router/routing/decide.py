@@ -25,6 +25,7 @@ from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
 from web_router.routing.merge_attempts import ranks, reasoned
 from web_router.routing.merge_shape import well_formed
+from web_router.routing.merge_types import Merged
 from web_router.routing.record import stamp
 from web_router.types_decision import DecisionRecord
 
@@ -101,16 +102,12 @@ def decided(
     )
     params = dict(merged.params)
     fields = merged.record()
-    effort = found.effort if merged.tool == "research" and "effort" not in params else None
-    if effort is not None:
-        # The effort the candidates were priced at: unless a router changed it, it is the one that runs.
-        if effort.effort is not None:
-            params["effort"] = effort.effort
-        fields.update(effort.fields(), params=shown(params) or None)
+    _with_effort(found, merged, params, fields)
     if outcome is None:
         fields["reason"] = None  # no router: the static order is no router's empty answer
     out = DecisionRecord(
         router=router,
+        prefer=None if outcome is None else req.prefer,  # recorded only when a router was shown it
         offered=[candidate.id for candidate in req.candidates],
         dropped={**(refused or {}), **found.dropped} or None,
         unmeasured=list(found.unmeasured) or None,
@@ -120,6 +117,15 @@ def decided(
         **fields,
     )
     return Decided(tool=merged.tool, providers=merged.providers, params=params, record=out)
+
+
+def _with_effort(found: CandidateSet, merged: Merged, params: dict[str, Any], fields: dict[str, Any]) -> None:
+    effort = found.effort if merged.tool == "research" and "effort" not in params else None
+    if effort is not None:
+        # The effort the candidates were priced at: unless a router changed it, it is the one that runs.
+        if effort.effort is not None:
+            params["effort"] = effort.effort
+        fields.update(effort.fields(), params=shown(params) or None)
 
 
 def router_set(record: DecisionRecord) -> frozenset[str]:

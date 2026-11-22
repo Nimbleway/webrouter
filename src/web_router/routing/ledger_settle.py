@@ -1,4 +1,4 @@
-"""How a ledger settles what its attempts are charged: a stated cost, or nothing.
+"""How a ledger settles what its attempts are charged: a stated cost, a part of an answer, or nothing.
 
 Apart from :mod:`.ledger` so each stays small: :class:`~.ledger.Ledger` takes
 these methods from :class:`Settling`, and :mod:`.settlement` decides when each
@@ -11,6 +11,7 @@ import threading
 from dataclasses import dataclass
 
 from web_router.routing.attempts import Attempt
+from web_router.routing.contract import candidate_id
 from web_router.routing.pool import PoolChain
 from web_router.routing.trail import HopTrail
 
@@ -33,8 +34,17 @@ class Settling:
     spent: float
     reserved: float
     tried: list[_Tried]
+    parts: list[_Tried]
     trail: HopTrail
     _lock: threading.Lock
+
+    def contributed(self, tool: str, provider: str) -> None:
+        """Note that ``provider`` read part of the answer though another member's response carries it."""
+        with self._lock:
+            opened, call_id = self.trail.open, candidate_id(tool, provider)
+            if opened is not None and opened.id == call_id and opened.attempt is not None:
+                self.parts.append(self.tried[opened.attempt])
+            self.trail.answered(call_id)
 
     def refund_open(self, call_id: str) -> Attempt | None:
         """Charge the open attempt, ``call_id``, nothing and list it at $0: it never started. Its attempt, if open."""
@@ -48,15 +58,17 @@ class Settling:
             return tried.attempt
 
     def settle_answer(self, provider: str | None, empty: bool, cost: float) -> list[tuple[Attempt, float]]:
-        """Charge the attempt that answered (``provider``'s; ``empty``, an empty answer) ``cost``. Returns each attempt
-        settled with its new charge."""
+        """Charge the attempt that answered (``provider``'s; ``empty``, an empty answer) ``cost``, and those that read
+        part of its answer nothing, as ``cost`` is all of theirs. Returns each attempt with its new charge."""
         with self._lock:
             answering = self._answered(provider, empty)
             if answering is None:
                 return []
-            tried = self.tried[answering]
-            self._charge(tried, cost)
-            return [(tried.attempt, cost)]
+            first = self.tried[answering]
+            charges = [(first, cost), *((part, 0.0) for part in self.parts if part is not first)]
+            for tried, charge in charges:
+                self._charge(tried, charge)
+            return [(tried.attempt, charge) for tried, charge in charges]
 
     def settle_counted(self, attempt: Attempt, cost: float, *, refunded: bool = False) -> None:
         """Charge ``cost`` for a nested call's ``attempt`` this call counted, if it did; ``refunded`` lists it at $0."""

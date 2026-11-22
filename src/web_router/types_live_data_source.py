@@ -103,7 +103,8 @@ class LiveDataSourcePage(BaseModel):
         default_factory=dict,
         description=(
             "On a page drawn from every configured backend (provider 'auto'), each backend that could not answer, "
-            "with why. Its sources are missing from the page. Empty otherwise."
+            "with why. Its sources are missing from the page. A backend over several APIs (oxylabs) names each API "
+            "that could not answer the same way. Empty otherwise."
         ),
     )
 

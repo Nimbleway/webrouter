@@ -315,6 +315,19 @@ time.
 - Don't commit drafts, decks, PDFs or images for feedback; open a
   [Discussion](https://github.com/Nimbleway/webrouter/discussions) and attach them.
 
+### Merging
+
+- Squash every pull request into `main`.
+- An integration branch collects a stack of dependent pull requests before its final pull request
+  into `main`. When a stack parent still has open child pull requests, merge that parent into the
+  integration branch with a merge commit so the stack keeps its ancestry. Squash only the final
+  integration pull request into `main`.
+- The required code-owner approval applies only to the head commit it covers; Qodo's review is a
+  separate gate. A new commit invalidates that approval, so the latest head needs fresh code-owner
+  approval before merge.
+- Enable auto-merge only after every merge requirement is satisfied, including green required
+  checks, approval of the current head, and selection of the correct merge method above.
+
 Every unit test must work without an API key. Anything that needs one belongs
 behind `@pytest.mark.integration`.
 

@@ -1,11 +1,13 @@
-"""Which tools ask the attached router, and whether it is shown vendor modes: the caller's choice, else the router's."""
+"""Which tools ask the attached router, whether it is shown vendor modes -- the caller's choice, else the router's --
+and what the caller prefers."""
 
 from __future__ import annotations
 
 from collections.abc import Collection
-from typing import get_args
+from typing import cast, get_args
 
 from web_router.constants_invoke import (
+    MSG_PREFER,
     MSG_ROUTE_MODES,
     MSG_ROUTE_TOOLS,
     MSG_ROUTER_ROUTE_MODES,
@@ -14,7 +16,7 @@ from web_router.constants_invoke import (
     ROUTER_ROUTE_TOOLS_ATTR,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.routing.contract import ToolName
+from web_router.routing.contract import Prefer, ToolName
 
 ALL_TOOLS: frozenset[ToolName] = frozenset(get_args(ToolName))
 """Every tool a router can be consulted on."""
@@ -61,3 +63,15 @@ def checked_route_modes(route_modes: object, router: object = None) -> bool:
     if not isinstance(route_modes, bool):
         raise ConfigurationError(message.format(got=route_modes))
     return route_modes
+
+
+def checked_prefer(prefer: object) -> Prefer | None:
+    """The caller's ``prefer``, shown to the router on every call it is asked about.
+
+    Raises:
+        ConfigurationError: for anything but ``None`` or one of :data:`Prefer`'s values, such as ``"cheapest"``.
+    """
+    known = get_args(Prefer)
+    if prefer is None or (isinstance(prefer, str) and prefer in known):
+        return cast("Prefer | None", prefer)
+    raise ConfigurationError(MSG_PREFER.format(known=", ".join(map(repr, known)), got=prefer))

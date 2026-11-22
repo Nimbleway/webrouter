@@ -19,6 +19,7 @@ from web_router.constants_mcp_context import (
     MCP_TOOL_PARTNERS,
     MCP_TOOLS_SEPARATOR,
 )
+from web_router.constants_vendors_mcp import MCP_TOOL_RENAMED
 
 _T = TypeVar("_T")
 
@@ -34,7 +35,7 @@ def allowed(handlers: Mapping[str, _T], value: str | None = None) -> dict[str, _
     research run can still be polled and a browser closed.
     """
     value = os.environ.get(ENV_MCP_TOOLS, "") if value is None else value
-    patterns = [entry.strip() for entry in value.split(MCP_TOOLS_SEPARATOR) if entry.strip()]
+    patterns = [pattern for entry in value.split(MCP_TOOLS_SEPARATOR) for pattern in _renamed(entry.strip(), handlers)]
     if not patterns:
         return dict(handlers)
     if unknown := [pattern for pattern in patterns if not fnmatch.filter(handlers, pattern)]:
@@ -42,3 +43,12 @@ def allowed(handlers: Mapping[str, _T], value: str | None = None) -> dict[str, _
     named = {name for name in handlers if any(fnmatch.fnmatchcase(name, p) for p in patterns)}
     named |= {MCP_TOOL_PARTNERS[name] for name in named if name in MCP_TOOL_PARTNERS}
     return {name: handler for name, handler in handlers.items() if name in named}
+
+
+def _renamed(entry: str, handlers: Mapping[str, object]) -> list[str]:
+    """``entry`` as today's patterns: one written before the data API rename (``vendors``, ``vendor*``) still names
+    the tools it meant, and is kept itself only when it also names a current tool (``*``)."""
+    if not entry:
+        return []
+    old = [MCP_TOOL_RENAMED[name] for name in fnmatch.filter(MCP_TOOL_RENAMED, entry)]
+    return [*old, entry] if not old or fnmatch.filter(handlers, entry) else old

@@ -172,7 +172,8 @@
         "limit": {
           "in": "query",
           "type": "integer",
-          "description": "At most this many records (capped by the site)."
+          "description": "At most this many records (capped by the site). Always pass it: without a limit the site sends response headers too large to read.",
+          "example": 10
         },
         "offset": {
           "in": "query",
