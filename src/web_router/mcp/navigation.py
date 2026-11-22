@@ -63,7 +63,9 @@ from web_router.constants import (
     MCP_MSG_BROWSER_REFUSED_UNVERIFIED,
     MS_PER_SECOND,
 )
+from web_router.constants_urls import MSG_URL_AMBIGUOUS
 from web_router.mcp.navigation_rules import files_allowed, private_allowed, private_refusal
+from web_router.routing.url_policy import _ambiguous
 
 if TYPE_CHECKING:
     from playwright.async_api import Frame, Page, Request, Route, WebSocketRoute
@@ -116,6 +118,10 @@ class NavigationPolicy:
         allowed = MCP_BROWSER_ALLOWED_SCHEMES | (MCP_BROWSER_WEBSOCKET_SCHEMES if websocket else frozenset())
         if scheme not in allowed:
             return MCP_MSG_BROWSER_REFUSED_SCHEME.format(scheme=scheme or "scheme-less")
+        if _ambiguous(url):
+            # urlsplit and a browser read a backslash, @ or % in the authority differently, so the
+            # host judged here may not be the host a browser opens; refused as url_policy does.
+            return MSG_URL_AMBIGUOUS
         return self._host_refusal(host, port)
 
     def resolved_refusal(self, url: str, addresses: Iterable[str]) -> str | None:
