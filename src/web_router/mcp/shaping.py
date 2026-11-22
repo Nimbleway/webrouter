@@ -1,12 +1,14 @@
 """Turning a library response into something a context window can hold.
 
-This is the one place the MCP layer is allowed to differ from the library. The library's rule is that nothing is
-thrown away -- full page bodies, and the backend's untouched payload under ``raw``. Inside a model's context that
-rule stops being a virtue: a single deep search can be larger than the window it is being read in.
+This is the one place the MCP layer is allowed to differ from the library. The library's rule is that
+nothing is thrown away -- full page bodies, and the backend's untouched payload under ``raw``. Inside a
+model's context that rule stops being a virtue: a single deep search can be larger than the window it is
+being read in.
 
-So a shaped result keeps the fields a reader acts on, opens with a mark that its text is untrusted, cuts long
-text at a word boundary with a visible marker, never inlines ``raw``, and says in the result itself that it was
-shortened and which handle gets the rest. Nothing is lost -- the whole payload stays in the session's
+So a shaped result keeps the fields a reader acts on, marks web text as untrusted,
+cuts long text at a word boundary with a visible marker, never inlines ``raw``,
+and says in the result itself that it was shortened and which handle gets the
+rest. Nothing is lost -- the whole payload stays in the session's
 :class:`HandleStore` until it is evicted, and ``fetch_raw`` hands it back verbatim.
 
 Browse is the one exception to "verbatim". A task payload can carry the URL of the session the agent
@@ -16,7 +18,6 @@ ran in, and some backends put a key in it, so a browse result -- shaped or raw -
 
 from __future__ import annotations
 
-import json
 import os
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -28,17 +29,14 @@ from web_router.constants import (
     MCP_HANDLE_LIMIT,
     MCP_HANDLE_TEMPLATE,
     MCP_MAX_RESPONSE_CHARS,
-    MCP_MIN_FIELD_CHARS,
-    MCP_MSG_DROPPED,
-    MCP_MSG_TRUNCATED,
-    MCP_TRUNCATION_MARKER,
-    MCP_WORD_SEARCH_WINDOW,
 )
-from web_router.constants_mcp_context import MCP_EMPTY_VALUES, MCP_JSON_SEPARATORS
-from web_router.constants_mcp_instructions import MCP_UNTRUSTED_MARK
+from web_router.constants_mcp_context import MCP_EMPTY_VALUES
 from web_router.mcp.redaction import redact as redact  # re-exported: callers import it from here
 from web_router.mcp.redaction import redaction_note as redaction_note
 from web_router.mcp.shaping_cost import cost_fields
+from web_router.mcp.shaping_fit import _fit as _fit
+from web_router.mcp.shaping_fit import render as render
+from web_router.mcp.shaping_fit import truncate as truncate
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
     BrowseResponse,
@@ -63,14 +61,6 @@ def max_response_chars() -> int:
         return MCP_MAX_RESPONSE_CHARS
 
 
-def render(payload: Any) -> str:
-    """Serialize a shaped result the way the tool returns it.
-
-    The budget is measured with it too, so the cap counts the characters that reach the client.
-    """
-    return json.dumps(payload, separators=MCP_JSON_SEPARATORS, ensure_ascii=False, default=str)
-
-
 def compact(row: dict[str, Any], *, whole: tuple[str, ...] = ()) -> dict[str, Any]:
     """``row`` without the keys that say nothing -- ``None``, ``""`` and ``[]`` -- which every turn would pay for.
 
@@ -83,19 +73,6 @@ def compact(row: dict[str, Any], *, whole: tuple[str, ...] = ()) -> dict[str, An
         for key, value in row.items()
         if value is not None and (key in whole or value not in MCP_EMPTY_VALUES)
     }
-
-
-def truncate(text: str, limit: int) -> str:
-    """Cut ``text`` to ``limit`` characters at a word boundary, marking where it was cut."""
-    if len(text) <= limit:
-        return text
-    head = text[:limit]
-    # Only a boundary near the cut will do: honouring one further back would
-    # throw away text that fits, which is a worse trade than a split word.
-    boundary = head.rfind(" ", limit - MCP_WORD_SEARCH_WINDOW)
-    if boundary > 0:
-        head = head[:boundary]
-    return head.rstrip() + MCP_TRUNCATION_MARKER
 
 
 @dataclass
@@ -320,81 +297,3 @@ def shape_pending(job: ResearchJob | BrowseJob, handle: str, *, wait: float, not
         "truncated": False,
         "note": note.format(wait=wait, handle=handle),
     }
-
-
-def _fit(
-    payload: dict[str, Any],
-    items: list[dict[str, Any]],
-    text_keys: tuple[str, ...],
-    *,
-    handle: str,
-    budget: int,
-    shortened: bool = False,
-    extra_note: str = "",
-    main: bool = True,
-) -> dict[str, Any]:
-    """Shrink a shaped payload, marked untrusted, until it serializes inside ``budget``, and say so if it did.
-
-    ``extra_note`` is appended to the note, and sets one on its own when nothing was cut; it is
-    inside the loop so the budget counts it. ``main`` says whether the items' text is the result's
-    main content, so that cutting it sets ``truncated``; when it is not -- a search result's text,
-    a citation's snippet -- only a cut answer (``shortened``) or a dropped item does.
-
-    Long text goes first: each item gets an equal share of the budget, lowered
-    until the payload fits. Only at :data:`MCP_MIN_FIELD_CHARS` are whole items
-    dropped, from the end -- the least useful place to cut a ranked list. The
-    last item is never dropped: a result listing nothing tells the reader less
-    than a heavily cut one, so it is squeezed further instead.
-    """
-    share, dropped, total = max(MCP_MIN_FIELD_CHARS, budget // max(len(items), 1)), 0, len(items)
-    if "description" not in text_keys:  # first, before the page text; a vendor's catalog listing is not page text
-        payload.update({**MCP_UNTRUSTED_MARK, **{key: payload.pop(key) for key in list(payload)}})  # in place
-    while True:
-        shortened = (any([_shorten(item, text_keys, share) for item in items]) and main) or shortened  # cut every item
-        payload["handle"] = handle
-        payload["truncated"] = shortened or dropped > 0
-        note = ""
-        if payload["truncated"]:
-            dropped_note = MCP_MSG_DROPPED.format(dropped=dropped, total=total) if dropped else ""
-            note = MCP_MSG_TRUNCATED.format(marker=MCP_TRUNCATION_MARKER, dropped=dropped_note, handle=handle)
-        note = (note + extra_note).strip()
-        if note:
-            payload["note"] = note
-
-        overflow = len(render(payload)) - budget
-        if overflow <= 0:
-            return payload
-        if len(items) > 1 and share > MCP_MIN_FIELD_CHARS:
-            # Spread the overflow over the items; the marker each cut adds back counts too.
-            share = max(MCP_MIN_FIELD_CHARS, share - -(-overflow // len(items)) - len(MCP_TRUNCATION_MARKER))
-        elif len(items) > 1:
-            items.pop()
-            dropped += 1
-        # The marker is added back by the cut, so its own length has to come out
-        # of the request or a shrink that small makes the text no shorter.
-        elif not any(
-            _shorten(item, text_keys, _room(item, text_keys) - overflow - len(MCP_TRUNCATION_MARKER)) for item in items
-        ):
-            # Nothing left to give: what remains is the shape itself, which is
-            # worth more than staying under a self-imposed cap.
-            return payload
-        else:
-            shortened = shortened or main
-
-
-def _shorten(item: dict[str, Any], text_keys: tuple[str, ...], limit: int) -> bool:
-    """Cut every text field of one item to ``limit``. ``True`` if anything was actually cut."""
-    cut = False
-    for key in text_keys:
-        text = item.get(key)
-        if text is None:
-            # Absent stays absent: an empty string would claim the backend sent one.
-            continue
-        item[key] = truncate(text, max(limit, 0))
-        cut = cut or item[key] != text
-    return cut
-
-
-def _room(item: dict[str, Any], text_keys: tuple[str, ...]) -> int:
-    """How long this item's longest text field is, which is what a further cut has to work with."""
-    return max((len(item.get(key) or "") for key in text_keys), default=0)
