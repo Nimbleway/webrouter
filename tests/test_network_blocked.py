@@ -54,6 +54,10 @@ class APIConnectionError(Exception):
     """Stands in for an SDK's "Connection error.", which carries httpx's error as its cause."""
 
 
+class ClientProxyConnectionError(Exception):
+    """Stands in for aiohttp's proxy connection failure without importing its optional transport."""
+
+
 def _sdk_wrapped() -> APIConnectionError:
     error = APIConnectionError("Connection error.")
     error.__cause__ = _proxy_refused("sdk.nimbleway.com")
@@ -66,6 +70,7 @@ def _sdk_wrapped() -> APIConnectionError:
         (_proxy_refused(), "network_blocked"),
         (_requests_proxy_refused(), "network_blocked"),
         (_sdk_wrapped(), "network_blocked"),
+        (ClientProxyConnectionError("proxy refused"), "network_blocked"),
         (_not_resolved(), "unreachable"),
         (_refused(), "unreachable"),
     ],
@@ -157,9 +162,9 @@ def test_urls_failing_on_both_network_kinds_are_not_retryable() -> None:
     assert ExtractFailure.batch_kind(failures) == "network_blocked"
 
 
-class ProxySettingsInvalid(Exception):
+class ProxyErrorSettings(Exception):
     """A provider's own error that only mentions a proxy in its name."""
 
 
 def test_an_error_merely_named_for_a_proxy_is_not_a_refusal() -> None:
-    assert ProviderError("acme", "bad config", original=ProxySettingsInvalid("bad")).kind != "network_blocked"
+    assert ProviderError("acme", "bad config", original=ProxyErrorSettings("bad")).kind != "network_blocked"
