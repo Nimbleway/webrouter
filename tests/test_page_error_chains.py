@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import sys
 import types
+from collections.abc import Iterator
 
 import pytest
 
@@ -71,10 +72,18 @@ class Browser:
         return True
 
 
-def _texts(error: BaseException):
-    while error is not None:
-        yield str(error)
-        error = error.__cause__ or error.__context__
+def _texts(error: BaseException) -> Iterator[str]:
+    """Every message and argument reachable through ``__cause__`` and ``__context__``."""
+    seen: set[int] = set()
+    pending: list[BaseException | None] = [error]
+    while pending:
+        current = pending.pop()
+        if current is None or id(current) in seen:
+            continue
+        seen.add(id(current))
+        yield str(current)
+        yield from (str(arg) for arg in current.args)
+        pending.extend((current.__cause__, current.__context__))
 
 
 def test_sync_missing_element_does_not_leak_the_cdp_url() -> None:
