@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 from typing import Final
 
-_FENCE: Final = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+_FENCE: Final = re.compile(r"^ {0,3}(?:(?:[-+*]|\d{1,9}[.)])[ \t]+)*(`{3,}|~{3,})(.*)$")
+_MAX_TITLE: Final = 1_000
 _H1: Final = re.compile(r"^ {0,3}#[ \t]+(.*)$")
 _SETEXT: Final = re.compile(r"^ {0,3}=+[ \t]*$")
 _TOKEN: Final = re.compile(
@@ -31,16 +32,20 @@ def page_title(content: str) -> str:
             continue
         heading = _H1.fullmatch(line)
         if heading:
-            text = heading[1].rstrip()
+            text = heading[1].strip()
             unmarked = text.rstrip("#")
             if unmarked != text and (not unmarked or unmarked.endswith((" ", "\t"))):
                 text = unmarked.rstrip()
-            if title := _inline(text).strip():
+            if len(text) <= _MAX_TITLE and (title := _inline(text).strip()):
                 return title
             previous = ""
             continue
         if _SETEXT.fullmatch(line) and previous.strip() and not previous.startswith(("    ", "\t")):
-            return _inline(previous.strip())
+            text = previous.strip()
+            if len(text) <= _MAX_TITLE:
+                return _inline(text)
+            previous = ""
+            continue
         previous = line
     return ""
 
