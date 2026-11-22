@@ -1,4 +1,4 @@
-"""``prefer``: what the caller prefers, shown to the router on every call and plan it is asked about, and recorded.
+"""``prefer`` and a router: shown to it on every call and plan it is asked about, and recorded.
 
 Each tool's ``auto`` runs over the routing harness's three fake members; a
 router built with ``prefer`` is shown it in its :class:`RouteRequest`, a
@@ -56,9 +56,9 @@ def test_a_plan_shows_the_router_the_preference_and_records_it() -> None:
 
 
 @pytest.mark.usefixtures("called")
-def test_with_no_router_shown_it_the_record_claims_no_preference() -> None:
-    plan = wr(router=None, prefer="cheap").plan(PROMPT)
-    assert plan.decision.prefer is None
+def test_with_no_router_the_plan_still_records_the_preference() -> None:
+    assert wr(router=None, prefer="cheap").plan(PROMPT).decision.prefer == "cheap"
+    assert wr(router=None).plan(PROMPT).decision.prefer is None
 
 
 @pytest.mark.parametrize("tool", ["search"], indirect=True)
@@ -75,6 +75,8 @@ def test_the_wire_carries_the_preference_and_an_old_request_reads_as_none() -> N
     assert request_from_wire(wire) == req
     del wire["prefer"]  # a client from before prefer existed
     assert request_from_wire(wire).prefer is None
+    unset = request_to_wire(RouteRequest(prompt="q", candidates=req.candidates, deadline_s=1))
+    assert "prefer" not in unset, "unset, a service gets the request it got before prefer existed"
 
 
 def tool_call(router: WebRouter, tool: Tool) -> Any:

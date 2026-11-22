@@ -27,6 +27,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from web_router.constants_remote import (
     CANDIDATE_MODE_KEY,
+    PREFER_KEY,
     REMOTE_WHY_DECISION,
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_SCHEMA,
@@ -87,12 +88,15 @@ def request_to_wire(req: RouteRequest) -> dict[str, Any]:
 
     It carries at most :data:`WIRE_MAX_NAMES` candidates in all, as a decision may name at most that many: past
     it, the vendor mode candidates lowest in their method's static order are left out (:func:`.request_modes.within`).
-    A candidate's ``mode`` is sent only when it has one, so a router shown backends only reads what it always has.
+    A candidate's ``mode`` is sent only when it has one, so a router shown backends only reads what it always has,
+    and ``prefer`` only when the caller set one.
     """
     body = _request_adapter().dump_python(within(req, WIRE_MAX_NAMES), mode="json")
     for candidate in body["candidates"]:
         if candidate.get(CANDIDATE_MODE_KEY, "") is None:
             del candidate[CANDIDATE_MODE_KEY]
+    if body.get(PREFER_KEY, "") is None:
+        del body[PREFER_KEY]  # unset, the request is the one a service got before prefer existed
     return _versioned(body)
 
 

@@ -139,13 +139,28 @@ alone; on the MCP server it holds for `web_run`'s plans only.
 
 ## Preferring cheap or fast
 
-`WebRouter(prefer="cheap")` or `prefer="fast"` tells the router what you
-prefer among the candidates your budget allows: `cheap`, the lowest estimated
-cost first, or `fast`, the lowest p90 latency first. Every call and plan the
-router is asked about shows it in `RouteRequest.prefer`, a remote router reads
-it in the wire format, and the decision record names it. It is a preference,
-not a cap: a `Budget` caps. `None`, the default, prefers nothing; any other
+`WebRouter(prefer="cheap")` or `prefer="fast"` says what you prefer among the
+backends your budget allows: `cheap`, the lowest estimated cost first ($0
+first), or `fast`, the lowest p90 latency first. A backend with no estimate
+goes last, and ties keep the default order, which is accuracy first. It is a
+preference, not a cap: a `Budget` still caps, and a backend with no known price
+never runs under a cost cap. `None`, the default, prefers nothing; any other
 value raises `ConfigurationError`.
+
+It orders `auto`'s backends on every call and plan, with or without a router:
+it replaces the cost-cap order of [Cost and budgets](/budgets#cheapest-first-under-a-cost-cap)
+for search and answer, and orders extract, research and browse too. A router
+that ranks a method's backends still decides that method; every router is
+shown the preference in `RouteRequest.prefer`, a remote one in the wire format
+when it is set, and the decision record names it. A `chain` you set or a
+backend you name runs as given.
+
+```python
+wr = WebRouter(prefer="cheap")
+wr.search("who won the 2022 world cup final").decision.merged  # $0 backends first, then the cheapest
+```
+
+A router of your own reads it too:
 
 ```python
 def route(req: RouteRequest) -> RouteDecision:
@@ -153,13 +168,10 @@ def route(req: RouteRequest) -> RouteDecision:
         timed = [c for c in req.candidates if c.tool == req.pinned_tool and c.est_latency_s is not None]
         return RouteDecision(providers={req.pinned_tool: [c.provider for c in sorted(timed, key=lambda c: c.est_latency_s)]})
     return RouteDecision()
-
-
-wr = WebRouter(router=route, prefer="fast")
 ```
 
-Your own router reads it today. The built-in routers do not act on it yet,
-and with no router asked it changes nothing.
+The built-in `cheapest_first` router is `prefer="cheap"`'s order whatever
+`prefer` says.
 
 ## The decision record
 
@@ -277,8 +289,7 @@ field may be left out or `null`):
     "time_limit_s": 30.0,
     "strict": false
   },
-  "pinned_tool": null,
-  "prefer": null
+  "pinned_tool": null
 }
 ```
 

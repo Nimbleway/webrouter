@@ -237,8 +237,7 @@
         "time_limit_s": 30.0,
         "strict": false
       },
-      "pinned_tool": null,
-      "prefer": null
+      "pinned_tool": null
     }
   ]
 }

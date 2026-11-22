@@ -107,7 +107,7 @@ def decided(
         fields["reason"] = None  # no router: the static order is no router's empty answer
     out = DecisionRecord(
         router=router,
-        prefer=None if outcome is None else req.prefer,  # recorded only when a router was shown it
+        prefer=req.prefer,
         offered=[candidate.id for candidate in req.candidates],
         dropped={**(refused or {}), **found.dropped} or None,
         unmeasured=list(found.unmeasured) or None,
