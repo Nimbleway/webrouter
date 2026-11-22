@@ -8,6 +8,8 @@ here are synthetic.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -16,6 +18,9 @@ from tests.providers._oxylabs_classic import PAGE, classic, no_oxylabs_env_fixtu
 from web_router.exceptions import ProviderError
 from web_router.providers.oxylabs_classic import classic_sources
 from web_router.types_live_data import LiveDataRequest
+
+SHIPPED = Path(__file__).resolve().parents[2] / "src" / "web_router" / "data" / "oxylabs_classic_sources.json"
+"""Read from disk, not through the provider, so the expected order is not the code's own."""
 
 # -- answers ------------------------------------------------------------------
 
@@ -72,7 +77,8 @@ async def test_an_async_run_reads_the_same_answer() -> None:
 def test_the_catalogue_is_the_shipped_list_with_each_sources_inputs() -> None:
     provider, api = classic()
     page = provider.live_data_sources(limit=2, offset=1)
-    names = list(classic_sources())
+    names = [entry["name"] for entry in json.loads(SHIPPED.read_text("utf-8"))["sources"]]
+    assert names[:3] == ["amazon_bestsellers", "amazon_pricing", "amazon_product"] and len(names) == 25
     assert [source.name for source in page.sources] == names[1:3] and page.total == len(names)
     assert api.requests == [], "the API lists no sources, so the catalogue is read from the package"
 
