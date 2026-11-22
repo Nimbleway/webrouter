@@ -40,6 +40,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - Vendor catalog: Adzuna, Pappers and OpenRegister, with 32 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 385 vendors and 2,798 endpoints.
 - Vendor catalog: Geoapify, TomTom, HERE, Yelp Fusion and ipdata, with 27 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 382 vendors and 2,766 endpoints.
 - Vendor catalog: SignalHire, BetterContact, SalesQL, Event Registry (NewsAPI.ai) and Tomorrow.io, with 34 read-only endpoints between them, each written from the vendor's own documentation and not yet called live. The catalog lists 377 vendors and 2,739 endpoints.
+- The `llm`, `gemini` and `systemone` routers are told the caller's `prefer` (experimental): a sentence in the instructions every decider reads, a `Prefer:` line for `llm` and `state.prefer` for `systemone`. Unset, each sends what it sent before.
 
 ### Changed
 

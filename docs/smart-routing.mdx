@@ -461,7 +461,7 @@ when the router is built, and is sent only to that vendor's host: naming one
 for another `base_url` raises `ConfigurationError`, as does a key that is
 missing. Each call sends the server the prompt -- for an extract, its URLs
 whole, query strings included -- the budget (except `gemini`, which sends
-none), and the candidate ids, which name
+none), the `prefer` you set, if any, and the candidate ids, which name
 your configured backends, with their estimated cost and p90 latency; never a
 provider key. The transport is the `remote` router's: `https` only (plain
 `http` only to this machine), no credentials, query or fragment in the URL,
@@ -475,6 +475,13 @@ raises carries the error class or HTTP status and the scheme and host on its
 httpx, which the `remote` extra installs. Each call bills on that server: the
 router's own call is billed by its vendor and is not counted in a `Budget`'s
 cost or the record's `estimated_cost_usd`.
+
+A `prefer` you set (see [Preferring cheap or fast](/smart-routing#preferring-cheap-or-fast))
+reaches every decider as one sentence in the question's `instructions`, asking
+it to rank lower cost, or lower p90 latency, first among options that serve the
+request alike, and as `DeciderQuestion.prefer` for a decider of your own. `llm`
+also lists it as a `Prefer:` line beside the budget, and `systemone` sends it in
+the `state`. Unset, each router sends what it sent before.
 
 ## Chaining routers
 
