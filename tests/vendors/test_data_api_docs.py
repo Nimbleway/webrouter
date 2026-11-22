@@ -62,6 +62,28 @@ def test_build_refuses_to_write_into_the_committed_docs() -> None:
         build(DOCS, DOCS, builtin_catalog())
 
 
+@pytest.mark.parametrize("out", [DOCS.parent, DOCS / "site", Path("/")])
+def test_build_refuses_a_folder_that_holds_or_sits_in_the_docs(out: Path) -> None:
+    with pytest.raises(SystemExit):
+        build(DOCS, out, builtin_catalog())
+    assert (DOCS / "docs.json").is_file()
+
+
+def test_build_leaves_a_folder_that_is_not_an_earlier_build(tmp_path: Path) -> None:
+    keep = tmp_path / "notes.txt"
+    keep.write_text("mine", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        build(DOCS, tmp_path, builtin_catalog())
+    assert keep.read_text(encoding="utf-8") == "mine"
+
+
+def test_build_replaces_an_earlier_build(site: Path) -> None:
+    stale = site / PAGES_DIR / "gone.mdx"
+    stale.write_text("old", encoding="utf-8")
+    build(DOCS, site, builtin_catalog())
+    assert not stale.exists()
+
+
 def test_the_gallery_index_is_a_named_export_with_every_vendor(site: Path) -> None:
     text = (site / INDEX_FILE).read_text(encoding="utf-8")
     prefix = "export const DATA_APIS = "

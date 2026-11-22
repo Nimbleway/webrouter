@@ -121,9 +121,14 @@ def with_catalog_tab(config: dict[str, Any], catalog: VendorCatalog) -> dict[str
 
 def build(source: Path, docs: Path, catalog: VendorCatalog) -> int:
     """Copy ``source`` to ``docs`` and write the generated files into it; return how many vendor pages."""
-    if docs.resolve() == source.resolve():
-        raise SystemExit("--out must not be the committed docs folder: the generated pages are never committed")
-    shutil.rmtree(docs, ignore_errors=True)
+    out, committed = docs.resolve(), source.resolve()
+    if out == committed or out in committed.parents or committed in out.parents:
+        raise SystemExit("--out must be outside the committed docs folder, and not a folder that holds it")
+    if out.exists():
+        # Only an earlier build is replaced: anything else at --out is left alone.
+        if not (out.is_dir() and (out / "docs.json").is_file() and (out / PAGES_DIR).is_dir()) and any(out.iterdir()):
+            raise SystemExit(f"--out {docs} is not empty and is not an earlier docs build; pick another folder")
+        shutil.rmtree(out)
     shutil.copytree(source, docs)
     pages = docs / PAGES_DIR
     pages.mkdir(parents=True, exist_ok=True)
