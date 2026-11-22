@@ -17,14 +17,13 @@ _LEAD = (
 )
 _BROWSER_LOCAL = (
     "For a page that needs the user's own credentials, offer `browser_open` with provider='local' and "
-    "headless=false, a visible window on their machine where they type their details themselves; never ask "
-    "for a password, an ID number or a date of birth in the conversation. "
+    "headless=false, a visible window on their machine where they type their details themselves. "
 )
 MCP_INSTRUCTIONS_BROWSER_REMOTE = (
     "This server runs on another machine, so a browser it opens is not on the user's screen: for a page that "
-    "needs the user's own credentials, tell them to finish it in their own browser; never ask for a password, "
-    "an ID number or a date of birth in the conversation. "
+    "needs the user's own credentials, tell them to finish it in their own browser. "
 )
+_PRIVATE_DETAILS = "Never ask for a password, an ID number or a date of birth in the conversation. "
 _UNTRUSTED = (
     "Shaped `search`, `extract`, `answer` and `live_data` results, and completed `research` and `browse` results, "
     "are marked `untrusted`. `browser_read` also carries the mark. `fetch_raw`, `call_vendor` and the other "
@@ -52,7 +51,14 @@ def instructions_text(*, load_env: bool, remote: bool, browser: bool = True) -> 
     """The instructions for a server that does or does not serve ``load_env``, reached locally or remotely."""
     browser_text = (MCP_INSTRUCTIONS_BROWSER_REMOTE if remote else _BROWSER_LOCAL) if browser else ""
     untrusted = _UNTRUSTED + ("`load_env`, " if load_env else "") + _UNTRUSTED_TOOLS
-    return _LEAD + browser_text + untrusted + _SHORTENED + (_ADD_KEYS_LOAD_ENV if load_env else _ADD_KEYS_OPERATOR)
+    return (
+        _LEAD
+        + browser_text
+        + _PRIVATE_DETAILS
+        + untrusted
+        + _SHORTENED
+        + (_ADD_KEYS_LOAD_ENV if load_env else _ADD_KEYS_OPERATOR)
+    )
 
 
 MCP_MSG_INSTRUCTIONS_NO_KEYS_OPERATOR = (
