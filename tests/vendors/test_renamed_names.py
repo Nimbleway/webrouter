@@ -12,7 +12,8 @@ import pytest
 
 from tests.vendors.conftest import Recorder
 from web_router import AsyncWebRouter, WebRouter
-from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES, VENDOR_ENV_ALLOW_WRITES_OLD
+from web_router.constants_data_api_compat import VENDOR_ENV_ALLOW_WRITES_OLD
+from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
 from web_router.constants_vendors_mcp import MCP_TOOL_RENAMED
 from web_router.mcp.allowlist import allowed
 from web_router.mcp.server import call_tool

@@ -21,11 +21,6 @@ team can pin a version or add a vendor without forking.
 
 VENDOR_ENV_ALLOW_WRITES: Final = "WEB_ROUTER_ALLOW_DATA_API_WRITES"
 """Set to ``1`` to let the MCP server's ``call_data_api`` send writes. The library takes ``allow_writes=`` per call."""
-VENDOR_ENV_ALLOW_WRITES_OLD: Final = "WEB_ROUTER_ALLOW_VENDOR_WRITES"
-"""The variable's old name, still read: the first write it allows logs a deprecation warning, once."""
-
-MSG_DATA_API_DEPRECATED: Final = "`{old}` is deprecated and will be removed: use `{new}`. Vendors are now data APIs."
-"""The warning for a vendor-era name: a router method, a keyword, an MCP tool or a variable."""
 
 VENDOR_HTTP_TIMEOUT: Final = 60.0
 """Seconds per vendor call. Reporting APIs (GAQL, log search) are slower than a search backend."""

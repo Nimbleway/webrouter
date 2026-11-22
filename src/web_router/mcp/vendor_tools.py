@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING, Any
 
 from web_router.client_vendors_compat import warn_data_api_renamed
 from web_router.constants import MCP_MSG_MISSING_ARGUMENT
-from web_router.constants_vendors import MSG_DATA_API_DEPRECATED, VENDOR_ENV_ALLOW_WRITES, VENDOR_ENV_ALLOW_WRITES_OLD
+from web_router.constants_data_api_compat import MSG_DATA_API_DEPRECATED, VENDOR_ENV_ALLOW_WRITES_OLD
+from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
 from web_router.constants_vendors_mcp import (
     MCP_MSG_VENDOR_ARG_TYPE,
     MCP_MSG_VENDOR_CALL_ARGS,

@@ -11,7 +11,7 @@ import warnings
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
-from web_router.constants_vendors import MSG_DATA_API_DEPRECATED
+from web_router.constants_data_api_compat import MSG_DATA_API_DEPRECATED
 from web_router.vendors.credentials import CredentialSource
 
 if TYPE_CHECKING:
