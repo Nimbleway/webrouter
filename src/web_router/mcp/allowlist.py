@@ -56,9 +56,10 @@ def allowed(handlers: Mapping[str, _T], value: str | None = None) -> dict[str, _
     Raises:
         ConfigurationError: for a value :data:`ENV_MCP_PROFILE` does not take.
     """
+    profile = switch(ENV_MCP_PROFILE)
     patterns = _patterns(value)
     if not patterns:
-        if switch(ENV_MCP_PROFILE) == MCP_PROFILE_FULL:
+        if profile == MCP_PROFILE_FULL:
             return dict(handlers)
         return {name: handler for name, handler in handlers.items() if name in MCP_PROFILE_SLIM_TOOLS}
     if unknown := [pattern for pattern in patterns if not fnmatch.filter(handlers, pattern)]:
