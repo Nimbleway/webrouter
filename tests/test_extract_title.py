@@ -29,6 +29,9 @@ H1 = '<h1 class="x">The <em>Heading</em></h1>'
         ("<meta property=og:title content=Bare><h1>H</h1>", "html", "Bare"),
         ('<meta property="og:title" content=""><h1>Fallback</h1>', "html", "Fallback"),
         ('<script>x = "<h1>Loading</h1>"</script><h1>Actual</h1>', "html", "Actual"),
+        ("<h1>Actual<script>Hidden</script><style>Hidden</style></h1>", "html", "Actual"),
+        ("<textarea><h1>Fake</h1></textarea><h1>Actual</h1>", "html", "Actual"),
+        ("<h1> </h1><h1>Actual</h1>", "html", "Actual"),
         ('<meta property="og:title" content="A > B"><h1>Other</h1>', "html", "A > B"),
         ('<!-- <meta property="og:title" content="Hidden"> --><h1>Actual</h1>', "html", "Actual"),
         ("<!-- <title>Hidden</title><h1>Hidden</h1> --><h1>Actual</h1>", "html", "Actual"),
@@ -44,6 +47,9 @@ H1 = '<h1 class="x">The <em>Heading</em></h1>'
         ("# 100 * 20", "markdown", "100 * 20"),
         ("# `100 * 20`", "markdown", "100 * 20"),
         (r"# Escaped \*literal\*", "markdown", "Escaped *literal*"),
+        ("# **bold [link](https://example.test)**", "markdown", "bold link"),
+        ("# [**bold** link](https://example.test)", "markdown", "bold link"),
+        ("# `[Docs](https://example.test)`", "markdown", "[Docs](https://example.test)"),
         ("#hashtag\n\n## Only an H2", "markdown", ""),
         ("# Looks like a heading", "text", ""),
         ("# Format unset", None, "Format unset"),
@@ -79,11 +85,19 @@ def test_an_explicit_provider_call_fills_the_title_and_keeps_the_h1() -> None:
     assert document.content.startswith("# Example Domain")
 
 
-def test_a_long_malformed_meta_attribute_does_not_stall_extraction() -> None:
+@pytest.mark.parametrize("case", ["meta", "spaces", "links", "emphasis"])
+def test_long_markup_does_not_stall_extraction(case: str) -> None:
     script = """
+import sys
 from web_router.providers._extract_title import page_title
 from web_router.types import ExtractedDocument
-content = '<meta ' + 'a' * 100_000 + '><h1>Actual</h1>'
-assert page_title(ExtractedDocument(url='https://example.com/', content=content, format='html')) == 'Actual'
+cases = {
+    'meta': ('<meta ' + 'a' * 100_000 + '><h1>Actual</h1>', 'html', 'Actual'),
+    'spaces': ('# a' + ' ' * 100_000 + 'b', 'markdown', 'a b'),
+    'links': ('# ' + '[x](' * 25_000, 'markdown', '[x](' * 25_000),
+    'emphasis': ('# ' + '*a*X' * 25_000, 'markdown', 'aX' * 25_000),
+}
+content, format, expected = cases[sys.argv[1]]
+assert page_title(ExtractedDocument(url='https://example.com/', content=content, format=format)) == expected
 """
-    subprocess.run([sys.executable, "-c", script], check=True, timeout=5)
+    subprocess.run([sys.executable, "-c", script, case], check=True, timeout=5)
