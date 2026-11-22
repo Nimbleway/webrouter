@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts oxylabs-classic prices vendors latency chains efforts shape-baseline check build clean
+.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts oxylabs-classic prices vendors latency chains efforts changelog shape-baseline check build clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -62,6 +62,9 @@ chains: ## Regenerate src/web_router/data/chains.json, the default auto orders, 
 
 efforts: ## Regenerate src/web_router/data/efforts.json, the research effort table, from the frozen results
 	uv run --all-extras python benchmarks/providers/efforts.py
+
+changelog: ## Move the changelog.d/ fragments under [Unreleased] in CHANGELOG.md (at release)
+	uv run python -m scripts.changelog
 
 shape-baseline: ## Rewrite tests/shape_baseline.json after a grandfathered file shrank; it refuses new or grown entries
 	uv run python -m scripts.shape
