@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Final, get_args
 
+from web_router.constants_merchant import ENV_MERCHANT_AGENT_PROFILE_URL, PROVIDER_MERCHANT
 from web_router.types import ExtractFormat, Provider
 
 LIVE_DATA_JOB_DEADLINE_MARGIN: Final = 0.5
@@ -147,6 +148,7 @@ BUILTIN_LIVE_DATA_PROVIDERS: dict[str, tuple[str, str, str]] = {
     Provider.APIFY.value: ("web_router.providers.apify", "ApifyLiveDataProvider", "extract"),
     Provider.BRIGHTDATA.value: ("web_router.providers.brightdata_live_data", "BrightDataLiveDataProvider", "extract"),
     Provider.OXYLABS.value: ("web_router.providers.oxylabs_live_data", "OxylabsLiveDataProvider", "extract"),
+    PROVIDER_MERCHANT: ("web_router.providers.merchant_live_data", "MerchantLiveDataProvider", "extract"),
 }
 """Each built-in live data backend's module, class, and the extra that installs it."""
 
@@ -155,6 +157,7 @@ LIVE_DATA_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     Provider.APIFY.value: (ENV_APIFY_TOKEN,),
     Provider.BRIGHTDATA.value: ("BRIGHTDATA_API_TOKEN",),
     Provider.OXYLABS.value: ("OXYLABS_WEB_API_KEY",),
+    PROVIDER_MERCHANT: (ENV_MERCHANT_AGENT_PROFILE_URL,),
 }
 """Which variables each live data provider needs, all of them.
 
