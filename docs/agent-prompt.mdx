@@ -103,6 +103,11 @@ Cost discipline:
   key in the conversation.
 
 When a call is refused:
+- network_blocked means this machine's proxy refused the backend's host;
+  unreachable means its name did not resolve or its public host refused the
+  connection. Do not retry the same host unchanged. If every backend failed
+  this way, ask the operator to allow the hosts named in the error, or use a
+  configured backend whose host is allowed.
 - A refused parameter or value is the tool telling you a backend cannot serve
   it. Drop the option, change its value, or pick another provider. Do not
   retry the same call unchanged, and do not work around a refusal by
@@ -119,6 +124,10 @@ Boundaries:
 ```
 
 ## Tuning it
+
+**A restricted network needs allowed backend hosts.** See
+[Network access](/production#network-access) for the hosts used by keyless
+and keyed backends. A network failure is not evidence that the page is gone.
 
 **Budget caps belong in code, not the prompt.** The prompt asks the model to
 be deliberate; the enforcement is `research(timeout=...)`, `browse(timeout=...)`,
