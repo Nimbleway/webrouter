@@ -19,8 +19,8 @@ A file there for a vendor the package already ships replaces it whole, so a
 team can pin a version or add a vendor without forking.
 """
 
-VENDOR_ENV_ALLOW_WRITES: Final = "WEB_ROUTER_ALLOW_VENDOR_WRITES"
-"""Set to ``1`` to let the MCP server's ``call_vendor`` send writes. The library takes ``allow_writes=`` per call."""
+VENDOR_ENV_ALLOW_WRITES: Final = "WEB_ROUTER_ALLOW_DATA_API_WRITES"
+"""Set to ``1`` to let the MCP server's ``call_data_api`` send writes. The library takes ``allow_writes=`` per call."""
 
 VENDOR_HTTP_TIMEOUT: Final = 60.0
 """Seconds per vendor call. Reporting APIs (GAQL, log search) are slower than a search backend."""
@@ -29,7 +29,7 @@ VENDOR_ERROR_BODY_LIMIT: Final = 2000
 """Characters of a vendor's error body kept in the raised message, after credentials are masked."""
 
 VENDOR_FIND_LIMIT: Final = 20
-"""Endpoints :meth:`~web_router.WebRouter.find_vendor_endpoints` returns when no limit is given."""
+"""Endpoints :meth:`~web_router.WebRouter.find_data_api_endpoints` returns when no limit is given."""
 
 VENDOR_FIND_STOP_WORDS: Final = frozenset(
     {
@@ -59,7 +59,7 @@ VENDOR_FIND_STOP_WORDS: Final = frozenset(
         "your",
     }
 )
-"""Query words :meth:`~web_router.WebRouter.find_vendor_endpoints` ignores: they say nothing about what an
+"""Query words :meth:`~web_router.WebRouter.find_data_api_endpoints` ignores: they say nothing about what an
 endpoint does, and counted as matches they let a summary's grammar outrank its meaning."""
 
 VENDOR_TOKEN_REFRESH_MARGIN: Final = 60.0
@@ -69,7 +69,7 @@ VENDOR_TOKEN_DEFAULT_LIFETIME: Final = 3000.0
 """Seconds an access token is reused when the token endpoint states no ``expires_in``."""
 
 VENDOR_READ_METHODS: Final = frozenset({"GET", "HEAD", "OPTIONS"})
-"""Methods a raw :meth:`~web_router.WebRouter.vendor_request` may send without ``allow_writes``."""
+"""Methods a raw :meth:`~web_router.WebRouter.data_api_request` may send without ``allow_writes``."""
 
 VENDOR_MASK: Final = "***"
 
@@ -149,7 +149,7 @@ MSG_VENDOR_ENDPOINT_HINT: Final = " {vendor!r} has: {known}"
 MSG_VENDOR_ENDPOINT_NO_VENDOR: Final = " No vendor is named {vendor!r}; endpoint ids are '<vendor>.<job>'."
 MSG_VENDOR_MISSING_CREDENTIAL: Final = (
     "{vendor} needs {what}. Set {variables} in your environment or .env file, "
-    "or pass vendor_credentials={{{vendor!r}: {{{name!r}: ...}}}} to the router."
+    "or pass data_api_credentials={{{vendor!r}: {{{name!r}: ...}}}} to the router."
 )
 MSG_VENDOR_WRITE_REFUSED: Final = (
     "{target} changes data on {vendor} and was refused: pass allow_writes=True to send it. "

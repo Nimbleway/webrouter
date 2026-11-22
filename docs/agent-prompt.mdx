@@ -28,7 +28,7 @@ methods map like this:
 | `research_status`, `browse_status` | `submit_research()` / `submit_browse()`, then the job's `status()` and `result()` |
 | `web_run` | `run()` (and `plan()` to see the choice first) |
 | `budget_start`, `budget_status` | `with router.budget(...) as scope:`, then `scope.status()` |
-| `vendors`, `vendor_endpoint`, `call_vendor` | the method of the same name |
+| `data_apis`, `data_api_endpoint`, `call_data_api` | the method of the same name |
 | `browser_open` … `browser_close` | `open_browser()`, then the handle's `goto`, `snapshot`, `click`, `type`, `press`, `screenshot`, `read` |
 | `fetch_raw` | the response's `raw` |
 | `load_env` | none: the library reads the process environment only |
@@ -65,9 +65,9 @@ Choosing a tool:
   picks search or extract; an operator's router may pick answer, research or
   browse too, which bill as those tools do. Call a tool yourself when you
   know which you want or need its options.
-- vendors, vendor_endpoint and call_vendor reach one vendor's own API (Google
-  Ads, Datadog, ...) with the user's credentials: list with vendors, read the
-  endpoint's parameters with vendor_endpoint, then call_vendor.
+- data_apis, data_api_endpoint and call_data_api reach one vendor's own API
+  (Google Ads, Datadog, ...) with the user's credentials: list with data_apis,
+  read the endpoint's parameters with data_api_endpoint, then call_data_api.
 - browser_open starts a session you drive yourself with browser_goto,
   browser_snapshot, browser_click, browser_type, browser_press,
   browser_screenshot and browser_read. local is free; a cloud session bills
