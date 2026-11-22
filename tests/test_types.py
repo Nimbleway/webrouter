@@ -3,8 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from web_router.constants import SNIPPET_LIMIT
-from web_router.providers._search_text import as_snippet
+from web_router.snippet import SNIPPET_LIMIT, as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 
@@ -56,6 +55,7 @@ def test_a_short_description_is_kept_as_written() -> None:
     assert SearchResult(url="https://a.com", description="A short summary.").description == "A short summary."
 
 
-def test_a_description_broken_by_lines_is_cut_between_words() -> None:
-    lines = "\n".join(["alpha", "beta"] * 200)
+@pytest.mark.parametrize("separator", [" ", "\n", "\t", "\r", "\u00a0", "\u2003"])
+def test_a_description_broken_by_whitespace_is_cut_between_words(separator: str) -> None:
+    lines = separator.join(["alpha", "beta"] * 200)
     assert SearchResult(url="https://a.com", description=lines).description.split()[-1] in {"alpha\u2026", "beta\u2026"}
