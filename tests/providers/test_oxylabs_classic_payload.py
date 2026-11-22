@@ -67,6 +67,14 @@ def test_a_source_that_requires_render_is_sent_it() -> None:
     assert api.body()["render"] == "html"
 
 
+def test_a_callers_render_does_not_replace_the_one_a_source_requires() -> None:
+    provider, api = classic()
+    options = {"render": "json", "geo_location": "United States"}
+    provider.run(LiveDataRequest(source="google_ai_mode", inputs={"query": "best laptop"}, provider_options=options))
+    assert api.body()["render"] == "html"
+    assert api.body()["geo_location"] == "United States", "other options still pass through"
+
+
 def test_an_unknown_source_is_not_found_before_anything_is_sent() -> None:
     provider, api = classic()
     with pytest.raises(LiveDataSourceNotFoundError):

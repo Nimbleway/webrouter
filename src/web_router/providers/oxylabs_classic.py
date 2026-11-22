@@ -125,7 +125,10 @@ class OxylabsClassicLiveDataProvider(HttpLiveDataProvider):
         return entry
 
     def _build_payload(self, request: LiveDataRequest) -> dict[str, Any]:
-        """The source, its fixed values, the inputs -- a ``context`` one in the array -- and ``parse: true`` last.
+        """The source, the inputs -- a ``context`` one in the array -- its fixed values, and ``parse: true`` last.
+
+        A fixed value (``google_ai_mode``'s ``render: "html"``) is the only one the source takes, so a caller's
+        own value for it does not replace it.
 
         A source Oxylabs answers in JSON of its own refuses ``parse``, so it is sent only where the docs list it.
         """
@@ -138,7 +141,7 @@ class OxylabsClassicLiveDataProvider(HttpLiveDataProvider):
             if key not in OXYLABS_CLASSIC_TRANSPORT_PARAMS and key not in under_context and value is not None
         }
         context = [{"key": key, "value": given[key]} for key in entry["context"] if given.get(key) is not None]
-        payload: dict[str, Any] = {OXYLABS_CLASSIC_SOURCE: entry["name"], **entry["fixed"], **plain}
+        payload: dict[str, Any] = {OXYLABS_CLASSIC_SOURCE: entry["name"], **plain, **entry["fixed"]}
         if context:
             payload[OXYLABS_CLASSIC_CONTEXT] = [*(plain.get(OXYLABS_CLASSIC_CONTEXT) or []), *context]
         if entry["parse"]:
