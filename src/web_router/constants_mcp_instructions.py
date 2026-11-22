@@ -68,6 +68,9 @@ MCP_MSG_NOTHING_CONFIGURED_OPERATOR = (
     "{tool} has nothing to run on here: no backend for it has a key. Whoever runs this server can set "
     "one of {env_vars} in its environment and restart it; never ask for a key in the conversation."
 )
+MCP_MSG_HIDDEN_TOOLS = " Tools unavailable without a backend key: {tools}. "
+MCP_MSG_HIDDEN_KEYS_LOAD_ENV = "If requested, the user can put keys in their .env and give its path to `load_env`."
+MCP_MSG_HIDDEN_KEYS_OPERATOR = "The operator can set the named variables in the server environment and restart it."
 MCP_MSG_ENV_HINT_OPERATOR = (
     "No API keys were found, so only the keyless backends are configured; they work meanwhile. Keys are added "
     "to the environment this server starts with, by whoever runs it, and the server is restarted. Never "

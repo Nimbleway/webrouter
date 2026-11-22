@@ -247,7 +247,8 @@ class WebRouterTools:
     def instructions(self, *, remote: bool = False) -> str:
         """The server's instructions, saying what the model can do about it when no key reached the server."""
         browser = MCP_TOOL_BROWSER_OPEN in self.served and playwright_installed()
-        return self.env.noted(server_instructions(keyed=self.keyed(), remote=remote, browser=browser))
+        hidden = allowlist.unrunnable(self.served, browser=playwright_installed())
+        return self.env.noted(server_instructions(keyed=self.keyed(), remote=remote, browser=browser, hidden=hidden))
 
     def tools_changed(self) -> bool:
         """Whether the tool list changed since this was last asked -- true once, so the client is told once."""

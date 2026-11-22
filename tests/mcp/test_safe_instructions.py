@@ -33,6 +33,19 @@ async def test_live_data_no_key_error_only_names_load_env_when_available(
     await tools.router.aclose()
 
 
+async def test_missing_key_tools_are_named_until_a_key_makes_them_runnable(
+    no_keys: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tools = WebRouterTools()
+    instructions = tools.instructions()
+
+    assert "answer (" in instructions and "research (" in instructions
+    assert "LINKUP_API_KEY" in instructions and "operator" in instructions
+    monkeypatch.setenv("LINKUP_API_KEY", "fake")
+    assert "Tools unavailable without a backend key:" not in tools.instructions()
+    await tools.router.aclose()
+
+
 @pytest.mark.parametrize("profile", ["slim", "full"])
 async def test_local_browser_advice_requires_served_browser_tools(
     no_keys: None, monkeypatch: pytest.MonkeyPatch, profile: str
