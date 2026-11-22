@@ -51,8 +51,10 @@ async def test_missing_key_tools_are_named_until_a_key_makes_them_runnable(
 
     assert "answer (" in instructions and "research (" in instructions
     assert "LINKUP_API_KEY" in instructions and "operator" in instructions
+    assert "At initialization, tools unavailable" in instructions
+    assert "After loading keys, use the current tool list" in instructions
     monkeypatch.setenv("LINKUP_API_KEY", "fake")
-    assert "Tools unavailable without a backend key:" not in tools.instructions()
+    assert "At initialization, tools unavailable" not in tools.instructions()
     await tools.router.aclose()
 
 

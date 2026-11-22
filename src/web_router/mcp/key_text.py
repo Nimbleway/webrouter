@@ -17,9 +17,11 @@ from web_router.constants import (
 from web_router.constants_mcp import MCP_MSG_KEY_HINT, MCP_MSG_NOTHING_CONFIGURED
 from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_OFF
 from web_router.constants_mcp_instructions import (
+    MCP_HIDDEN_TOOL_SEPARATOR,
     MCP_MSG_ENV_HINT_OPERATOR,
     MCP_MSG_HIDDEN_KEYS_LOAD_ENV,
     MCP_MSG_HIDDEN_KEYS_OPERATOR,
+    MCP_MSG_HIDDEN_TOOL_ENTRY,
     MCP_MSG_HIDDEN_TOOLS,
     MCP_MSG_INSTRUCTIONS_NO_KEYS_OPERATOR,
     MCP_MSG_KEY_HINT_OPERATOR,
@@ -54,11 +56,11 @@ def hidden_tools_hint(hidden: Collection[str]) -> str:
     for tool in sorted(hidden):
         if (method := methods.METHODS.get(tool)) is not None and not methods.usable(method) and method.key in unlock:
             variables = sorted({name for names in unlock[method.key].values() for name in names})
-            entries.append(f"{tool} ({', '.join(variables)})")
+            entries.append(MCP_MSG_HIDDEN_TOOL_ENTRY.format(tool=tool, variables=", ".join(variables)))
     if not entries:
         return ""
     advice = MCP_MSG_HIDDEN_KEYS_LOAD_ENV if load_env_served() else MCP_MSG_HIDDEN_KEYS_OPERATOR
-    return MCP_MSG_HIDDEN_TOOLS.format(tools="; ".join(entries)) + advice
+    return MCP_MSG_HIDDEN_TOOLS.format(tools=MCP_HIDDEN_TOOL_SEPARATOR.join(entries)) + advice
 
 
 def key_hint() -> str:

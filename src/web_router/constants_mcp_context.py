@@ -82,7 +82,8 @@ MCP_MSG_TOOLS_UNKNOWN = "%s names no tool this server has, so it was ignored: %s
 """Logged at startup for each allowlist entry that matches nothing: a typo should not pass in silence."""
 
 MCP_MSG_PLAN_NOT_SERVED = (
-    "web_run planned {tool}, which {env_var} leaves off this server, so nothing was run. Call a tool it serves."
+    "web_run planned {tool}, left off by this server's tool profile or allowlist "
+    "(WEB_ROUTER_MCP_PROFILE or {env_var}), so nothing was run. Call a tool it serves."
 )
 """``web_run`` refusing to run a method the allowlist excludes: the allowlist is not bypassed by routing."""
 
