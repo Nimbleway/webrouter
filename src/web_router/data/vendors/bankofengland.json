@@ -7,6 +7,7 @@
   "base_url": "https://www.bankofengland.co.uk/boeapps/database",
   "notes": [
     "Free and keyless; no credentials. There is no JSON: data comes back as CSV or XML.",
+    "The site answers 403 Access Denied to many automated clients, so a call can fail from a server or script even with correct parameters.",
     "Series are named by codes (e.g. LPMAUZI); look codes up in the database at bankofengland.co.uk/boeapps/database.",
     "Dates are DD/Mon/YYYY (01/Feb/2006), not ISO; Dateto also takes 'now'.",
     "At most 300 series codes per CSV or XML request.",

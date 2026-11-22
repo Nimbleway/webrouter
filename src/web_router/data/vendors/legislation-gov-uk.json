@@ -5,6 +5,9 @@
   "summary": "UK legislation (Acts, statutory instruments, devolved legislation) as revised and as enacted, in XML or Atom, from The National Archives' free Legislation API.",
   "docs_url": "https://www.legislation.gov.uk/developer",
   "base_url": "https://www.legislation.gov.uk",
+  "headers": {
+    "Accept": "application/xml, application/atom+xml;q=0.9, */*;q=0.8"
+  },
   "notes": [
     "Keyless; reuse is under the Open Government Licence v3.0 with exceptions the site lists, and a fair use policy applies.",
     "Items are addressed as /{type}/{year}/{number}: type is a code such as ukpga (UK Public General Acts), uksi (UK Statutory Instruments), asp, ssi, wsi, nia, nisr; all, primary and secondary work in listings.",
@@ -206,7 +209,7 @@
       "summary": "Atom feed of legislation whose title matches, optionally by type, year range and number range.",
       "kind": "read",
       "method": "GET",
-      "path": "/search",
+      "path": "/all",
       "params": {
         "title": {
           "in": "query",
@@ -258,7 +261,7 @@
         }
       },
       "notes": [
-        "A search that matches a simple listing URI redirects to it (301)."
+        "Calls the /all listing, which takes the same filters: /search only answers with a 301 to a listing, and redirects are never followed."
       ],
       "job": "legislation.search",
       "docs_url": "https://www.legislation.gov.uk/developer/searching",
