@@ -1604,6 +1604,19 @@ latest commit and every finding has a reply in its thread, starting with `@qodo`
 `Fixed in <sha>: <what>` or `Not fixing: <reason>`. Qodo does not review drafts on its own, so a
 `/agentic_review` comment on the draft is a good way to ask for one.
 
+### Merging
+
+Squash every pull request into `main`. An integration branch collects a stack of dependent pull
+requests before its final pull request into `main`. The only stack exception is a parent with open
+child pull requests: merge that parent into the integration branch with a merge commit so the stack
+keeps its ancestry, then squash only the final integration pull request into `main`.
+
+A required code-owner approval is valid only for the head commit it covers; Qodo's review is a
+separate gate. After any new commit, wait for fresh code-owner approval of the latest head.
+Immediately before enabling auto-merge, read the current head again and verify that every merge
+requirement is already satisfied, including green required checks, approval of that exact head, and
+the correct merge method. Do not enable auto-merge to wait for unfinished checks or approval.
+
 A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md`; anything else
 (CI, docs, tests, refactors) takes the `skip-changelog` label. The Changelog check fails the PR otherwise.
 
