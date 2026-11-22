@@ -147,8 +147,8 @@ MSG_YOU_MCP_SITE_HOST = (
 """Why ``you-mcp`` refuses an ``include_domains`` value with a path, or one that is not a host name."""
 
 MSG_YOU_MCP_EXCLUDE_DOMAINS = (
-    "You.com takes one domain list, not both, and its exclude_domains drops a whole host, ignoring a path:"
-    " send one list, each entry a host name with no path."
+    "You.com's exclude_domains drops a whole host and ignores a path, so each entry must be a host name with no"
+    " path (github.com, not github.com/python); You.com also takes only one of the two domain lists, not both."
 )
 """Why ``you-mcp`` refuses an ``exclude_domains`` beside ``include_domains``, or one with a path."""
 
