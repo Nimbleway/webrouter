@@ -124,9 +124,7 @@ def build_candidates(
     Args:
         router: The router making the call; each method's ``auto`` supplies
             its backends, configured ``chain`` and keys included.
-        requests: The request each method would be sent, by method. A call to
-            one method passes only its own: the router then orders that
-            method's backends and no other.
+        requests: Each method's request; a single-method call includes only its own.
         budget: What is left of the call's budget. ``None`` caps nothing.
         provider: The backend the caller named. One other than ``auto``
             leaves nothing for a router to choose, so there are no candidates.
@@ -147,7 +145,9 @@ def build_candidates(
         found.priced[tool] = request
         expand = partial(mode_requests, router, tool, request) if modes else None
         price_members(tool, request, eligible, budget, found, expand)
-        costed, _ = cost_route(getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget, prefer)
+        costed, _ = cost_route(
+            getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget, prefer, eligible=eligible
+        )
         if costed is not None:
             found.cost_order[tool] = list(costed.order[tool])
         found.unbuilt(tool, unbuilt)

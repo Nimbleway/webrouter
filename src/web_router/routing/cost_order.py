@@ -72,21 +72,29 @@ def cost_ordered(
 
 
 def cost_route(
-    chain: Any, tool: ToolName, request: NormalizedRequest, budget: Budget | None, prefer: Prefer | None = None
+    chain: Any,
+    tool: ToolName,
+    request: NormalizedRequest,
+    budget: Budget | None,
+    prefer: Prefer | None = None,
+    *,
+    eligible: Sequence[tuple[str, bool]] | None = None,
 ) -> tuple[CallRoute | None, DecisionRecord | None]:
     """The order a call no router ranks runs in, by ``prefer`` or under ``budget``, and the record naming it.
 
     ``None`` for both when the order is the static one: no ``prefer`` and no cost cap, a backend the caller named,
     a ``chain`` the caller set, or, with no ``prefer``, no tier the request's prices reorder.
+    ``eligible`` supplies a plan's buildable members; a direct preferred call uses the actual walk.
     """
     capped = budget is not None and budget.max_cost_usd is not None
     if not (capped or prefer) or getattr(chain, "name", None) != PROVIDER_AUTO or not _runs_default(chain):
         return None, None
-    members, unbuilt = eligible_members(Only(tool, chain), tool, request)
+    members = eligible if eligible is not None else eligible_members(Only(tool, chain), tool, request)[0]
     names = [name for name, _ in members]
     if prefer is not None:
-        # A real walk must still report setup failures that a plan cannot offer as candidates.
-        names += [name for name, _ in chain._chain if name in unbuilt and name not in names]
+        # Plans offer buildable candidates; direct calls preserve the walk's eligibility and setup failures.
+        if eligible is None:
+            names = [name for _, name in chain._eligible(request)]
         if not names:
             return None, DecisionRecord(prefer=prefer)
         return preferred_route(tool, names, request, budget, prefer)

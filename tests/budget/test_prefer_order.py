@@ -53,6 +53,7 @@ def test_every_method_runs_in_the_preferred_order_with_no_cap_and_records_it(cha
     assert (response.provider, chain.called[0]) == ("third", "third")
     assert response.decision.merged == [f"{chain.tool.name}:{name}" for name in ("third", "first", "second")]
     assert response.decision.prefer == "cheap"
+    assert response.decision.decision_id and response.decision.prompt_sha256
 
 
 @pytest.mark.usefixtures("default_order")

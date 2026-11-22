@@ -68,3 +68,28 @@ async def test_preferred_record_excludes_over_budget_members_and_keeps_the_reaso
     assert record.merged == [f"{tool}:second", f"{tool}:third"]
     assert f"{tool}:first" in record.dropped
     assert (record.ran, response.provider, chain.called) == (0, "second", ["second"])
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+@pytest.mark.parametrize("prefer", ["cheap", "fast"])
+def test_an_unbuildable_member_that_refuses_the_option_stays_out_of_the_record(
+    chain: Chain, priced: Table, monkeypatch: pytest.MonkeyPatch, prefer: Any
+) -> None:
+    for name in MEMBERS:
+        cls = chain.member(name)
+        cls.supported_parameters = frozenset() if name == "first" else frozenset({"country"})
+        chain.tool.register(name, cls)
+    auto = chain.auto()
+    original = auto._member
+
+    def member(position: int) -> Any:
+        if position == 0:
+            raise ConfigurationError("setup failure")
+        return original(position)
+
+    monkeypatch.setattr(auto, "_member", member)
+    priced.update(first=(0.0, 0.0), second=(0.001, 1.0), third=(0.002, 2.0))
+    record = WebRouter(prefer=prefer).search("q", country="US", provider=auto).decision
+    assert record.merged == ["search:second", "search:third"]
+    assert record.ran == 0
+    assert record.decision_id and record.prompt_sha256
