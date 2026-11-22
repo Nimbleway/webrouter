@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import warnings
 from typing import Any
 
 import httpx
@@ -86,8 +85,7 @@ def test_the_writes_variable_keeps_its_old_name(monkeypatch: pytest.MonkeyPatch)
     assert writes_allowed()
     monkeypatch.delenv(VENDOR_ENV_ALLOW_WRITES)
     monkeypatch.setenv(VENDOR_ENV_ALLOW_WRITES_OLD, "1")
-    with pytest.warns(DeprecationWarning, match=VENDOR_ENV_ALLOW_WRITES):
-        assert writes_allowed()
+    assert writes_allowed()
 
 
 def test_the_old_writes_variable_is_logged_once_for_the_operator(
@@ -96,8 +94,7 @@ def test_the_old_writes_variable_is_logged_once_for_the_operator(
     _log_old_writes_variable.cache_clear()
     monkeypatch.delenv(VENDOR_ENV_ALLOW_WRITES, raising=False)
     monkeypatch.setenv(VENDOR_ENV_ALLOW_WRITES_OLD, "1")
-    with caplog.at_level(logging.WARNING), warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)  # hidden by default: the log line is what reaches stderr
+    with caplog.at_level(logging.WARNING):
         assert writes_allowed()
         assert writes_allowed()
     assert [record.getMessage() for record in caplog.records].count(

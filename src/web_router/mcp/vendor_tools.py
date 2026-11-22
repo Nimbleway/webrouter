@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from mcp_types import CallToolResult, TextContent
 
-from web_router.client_vendors_compat import warn_data_api_renamed
 from web_router.constants import MCP_MSG_MISSING_ARGUMENT
 from web_router.constants_data_api_compat import MSG_DATA_API_DEPRECATED, VENDOR_ENV_ALLOW_WRITES_OLD
 from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
@@ -115,7 +114,6 @@ def writes_allowed() -> bool:
     if os.environ.get(VENDOR_ENV_ALLOW_WRITES) == "1":
         return True
     if os.environ.get(VENDOR_ENV_ALLOW_WRITES_OLD) == "1":
-        warn_data_api_renamed(VENDOR_ENV_ALLOW_WRITES_OLD, VENDOR_ENV_ALLOW_WRITES)
         _log_old_writes_variable()
         return True
     return False
@@ -123,7 +121,7 @@ def writes_allowed() -> bool:
 
 @functools.cache
 def _log_old_writes_variable() -> None:
-    """Tell the operator, once, on stderr: Python hides a library's ``DeprecationWarning`` by default."""
+    """Tell the operator, once, on stderr, that the old variable is deprecated."""
     _LOG.warning(MSG_DATA_API_DEPRECATED.format(old=VENDOR_ENV_ALLOW_WRITES_OLD, new=VENDOR_ENV_ALLOW_WRITES))
 
 
