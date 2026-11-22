@@ -12,11 +12,15 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 from web_router.constants_vendors import MSG_DATA_API_DEPRECATED
+from web_router.vendors.credentials import CredentialSource
 
 if TYPE_CHECKING:
     from web_router.client_vendors import AsyncVendors, SyncVendors, _VendorLookup
     from web_router.vendors.schema import Vendor, VendorEndpoint
     from web_router.vendors.types import VendorResponse, VendorSummary
+
+VendorCredentials = CredentialSource | Mapping[str, Mapping[str, str]] | None
+"""The old name of :data:`web_router.client_vendors.DataApiCredentials`."""
 
 
 def warn_data_api_renamed(old: str, new: str, *, stacklevel: int = 3) -> None:

@@ -52,7 +52,8 @@ from web_router.client_requests import (
     build_research_request,
 )
 from web_router.client_search import AsyncSearch, SyncSearch
-from web_router.client_vendors import AsyncVendors, DataApiCredentials, SyncVendors, _VendorLookup, renamed_credentials
+from web_router.client_vendors import AsyncVendors, DataApiCredentials, SyncVendors, _VendorLookup
+from web_router.client_vendors_compat import renamed_credentials
 from web_router.client_warmup import AsyncWarmup, SyncWarmup
 from web_router.constants import BROWSE_TIMEOUT, DEFAULT_PROVIDER, MSG_SYNC_ROUTER_ASYNC_CLIENT, RESEARCH_TIMEOUT
 from web_router.constants_routing import RULES_ROUTER_NAME
@@ -192,8 +193,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     def get_extract_provider(self, name: str | Provider | ExtractProvider | None = None) -> ExtractProvider:
         """Return the named extract provider, constructing and caching it on first use.
 
-        The extract counterpart of :meth:`get_provider`, with the same
-        ownership rule.
+        The extract counterpart of :meth:`get_provider`, with the same ownership rule.
         """
         if isinstance(name, ExtractProvider):
             return name
