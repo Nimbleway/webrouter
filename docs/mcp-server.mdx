@@ -200,27 +200,27 @@ model, not a control. What the server enforces is narrower: it never returns a
 key, a configured key's value is masked wherever it shows up in an error or a
 `fetch_raw` payload, the browser opens only http(s) pages and never its own
 debugging endpoint or a cloud metadata address
-([Where the browser may go](#where-the-browser-may-go)), `call_vendor` cannot change data without
-`WEB_ROUTER_ALLOW_VENDOR_WRITES`, and redirects are never followed with a key
+([Where the browser may go](#where-the-browser-may-go)), `call_data_api` cannot change data without
+`WEB_ROUTER_ALLOW_DATA_API_WRITES`, and redirects are never followed with a key
 attached.
 
 What it cannot stop on its own is one server holding all three of: private
-data (`call_vendor` reads your vendor accounts), untrusted input (every page
+data (`call_data_api` reads your vendor accounts), untrusted input (every page
 it reads), and a way out (a `search` query, or a URL `browser_goto` opens,
 carries whatever the model puts in it). A model steered by a page could read
 your data with one tool and send it out with the next. When the model will
 read pages you do not trust, give it less:
 
 - **Serve only the tools the task needs.** `WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw`
-  leaves out the browser, the vendor tools and `load_env`; see
+  leaves out the browser, the data API tools and `load_env`; see
   [Serving fewer tools](#serving-fewer-tools-web_router_mcp_tools).
 - **Cap what one connection spends.** Set `WEB_ROUTER_MCP_MAX_COST_USD` (and
   `WEB_ROUTER_MCP_TIME_LIMIT_S`); with billed keys and no ceiling, the server
   says so on stderr at startup.
-- **Keep `call_vendor` and `load_env` in a second server.** Register web-router
+- **Keep `call_data_api` and `load_env` in a second server.** Register web-router
   twice, under two names: one for browsing, with
   `WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw,browser_*`, and one for your
-  own accounts, with `WEB_ROUTER_MCP_TOOLS=vendors,vendor_endpoint,call_vendor`,
+  own accounts, with `WEB_ROUTER_MCP_TOOLS=data_apis,data_api_endpoint,call_data_api`,
   enabled only when you need it.
 - **Decide where keys may come from.** Three switches, each read from the
   real environment only, each defaulting to the behaviour described above:
@@ -297,9 +297,9 @@ the client's `env` block or a file the server already read takes a restart.
 | `web_run` | Hand a request in words to web-router's router, which picks the method and backends and runs it; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
 | `budget_start` | Open a task budget, in dollars and seconds, that every billed tool then spends from. | instant |
 | `budget_status` | What the budget has spent, reserved and left. | instant, and free |
-| `vendors` | Find a vendor API to call with the user's own account: with `query` ("google ads spend by campaign"), matching endpoints best first; without, the vendors in the catalog. Each row says whether its credentials are set here, and which variables to set when not. | instant, and free |
-| `vendor_endpoint` | Describe one vendor endpoint: every input and where it goes, the notes a caller gets wrong without (units, paging), and the credentials it needs. | instant, and free |
-| `call_vendor` | Call a vendor's API with the user's credentials -- a catalog `endpoint` with its `params`, or a raw `vendor` + `method` + `path` -- and get the vendor's own JSON back. Writes are refused unless the server was started with `WEB_ROUTER_ALLOW_VENDOR_WRITES=1` **and** the call passes `allow_writes: true`. | as long as the vendor takes; billed by the vendor, if at all |
+| `data_apis` | Find a data API to call with the user's own account: with `query` ("google ads spend by campaign"), matching endpoints best first; without, the vendors in the catalog. Each row says whether its credentials are set here, and which variables to set when not. | instant, and free |
+| `data_api_endpoint` | Describe one data API endpoint: every input and where it goes, the notes a caller gets wrong without (units, paging), and the credentials it needs. | instant, and free |
+| `call_data_api` | Call a data API with the user's credentials -- a catalog `endpoint` with its `params`, or a raw `vendor` + `method` + `path` -- and get the vendor's own JSON back. Writes are refused unless the server was started with `WEB_ROUTER_ALLOW_DATA_API_WRITES=1` **and** the call passes `allow_writes: true`. | as long as the vendor takes; billed by the vendor, if at all |
 | `browser_open` | Open a browser session and get a `session_id` for the tools below. | a few seconds; **a cloud backend bills per minute until it is closed**, `local` is free |
 | `browser_goto` | Load a URL in the session. | as long as the page takes |
 | `browser_snapshot` | The page's accessibility tree, each element tagged `[ref=eN]` to act on. | about a second |
@@ -798,7 +798,7 @@ So a shaped result:
   cut search snippet or citation carries only the marker;
 - keeps what the call cost and how long it took, as the library's response
   carries them: `elapsed_s` (seconds, to two decimals), `cost_usd` and
-  `cost_source` (`reported` by the backend or `estimated` from list prices) on
+  `cost_source` (`reported` by the backend, `estimated` from list prices, or `keyless` for a free tier's $0) on
   a search, extract, answer, research or browse result — a finished
   `research_status` or `browse_status` included — and left out when unknown.
   No cut ever touches them;
@@ -910,7 +910,7 @@ the cloud browsers are.
 | `WEB_ROUTER_MCP_LOAD_ENV`, `WEB_ROUTER_MCP_REMEMBERED_ENV`, `WEB_ROUTER_MCP_CWD_ENV` | `remember` (`off` under HTTP), `anywhere`, `on` | Where keys may come from: what `load_env` may do, where a remembered `.env` is read, and whether the working directory's is. See [Using this safely with untrusted pages](#using-this-safely-with-untrusted-pages). |
 | `WEB_ROUTER_MCP_PRIVATE_URLS` | `on` (`off` under HTTP) | Whether the browser tools may open loopback and private-network addresses. See [Where the browser may go](#where-the-browser-may-go). Read from the real environment only. |
 | `WEB_ROUTER_MCP_TOKEN` | unset | Under `--transport http`, the bearer token every request must carry; required on any host but `127.0.0.1`, `localhost` and `::1`. See [Serve over HTTP for a team](#serve-over-http-for-a-team). Read from the real environment only. |
-| `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
+| `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value, or one of zero or less, falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
 | `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
 | `WEB_ROUTER_MCP_ROUTER_CONFIG` | unset | With `WEB_ROUTER_MCP_ROUTER` naming a built-in router (or any name registered with `register_router` in the server's process, an override of a built-in name included), its `router_config` as a JSON object; each `api_key_env` in it is read once at startup and handed to the router as `api_key`, so a router's factory gets `api_key`, never `api_key_env`. Anything but a JSON object, or a value set beside no built-in router, stops the server from starting. Read from the real environment only. |
@@ -918,7 +918,7 @@ the cloud browsers are.
 | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` | unset | The bearer key sent to that service, never logged or shown. Read from the real environment only -- no `.env` file and no `load_env` call sets it. |
 | `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. An empty value stops the server from starting. |
 | `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. An empty value stops the server from starting. |
-| `WEB_ROUTER_ALLOW_VENDOR_WRITES` | unset | `1` lets `call_vendor` send calls that change data on a vendor (a budget change, a deleted monitor), and only those the model marks `allow_writes: true`. Off by default: the model can read your vendor accounts but not change them. |
+| `WEB_ROUTER_ALLOW_DATA_API_WRITES` | unset | `1` lets `call_data_api` send calls that change data on a vendor (a budget change, a deleted monitor), and only those the model marks `allow_writes: true`. Off by default: the model can read your vendor accounts but not change them. The old name `WEB_ROUTER_ALLOW_VENDOR_WRITES` still works, with a deprecation warning. |
 | `WEB_ROUTER_VENDOR_CATALOG` | unset | A directory of extra vendor files, read after the shipped ones; one named for a shipped vendor replaces it. |
 
 Everything else it reads is a provider or vendor credential, and belongs to the provider or vendor. `load_env` takes every variable a vendor's catalog file lists, settings such as `DD_SITE` included.

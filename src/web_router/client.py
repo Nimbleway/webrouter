@@ -52,7 +52,8 @@ from web_router.client_requests import (
     build_research_request,
 )
 from web_router.client_search import AsyncSearch, SyncSearch
-from web_router.client_vendors import AsyncVendors, SyncVendors, VendorCredentials, _VendorLookup
+from web_router.client_vendors import AsyncVendors, DataApiCredentials, SyncVendors, VendorCredentials, _VendorLookup
+from web_router.client_vendors_compat import renamed_credentials
 from web_router.client_warmup import AsyncWarmup, SyncWarmup
 from web_router.constants import BROWSE_TIMEOUT, DEFAULT_PROVIDER, MSG_SYNC_ROUTER_ASYNC_CLIENT, RESEARCH_TIMEOUT
 from web_router.constants_routing import RULES_ROUTER_NAME
@@ -99,8 +100,7 @@ from web_router.types import (
 class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     """Provider resolution and caching shared by the sync and async routers.
 
-    Generic only in the browser handle each one hands out, which is the one
-    thing the two routers hold on a caller's behalf.
+    Generic only in the browser handle each one hands out: the one thing the two routers hold for a caller.
     """
 
     def __init__(
@@ -114,6 +114,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         route_modes: bool | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        data_api_credentials: DataApiCredentials = None,
         vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
         hop_timeout: float | Literal[False] | None = None,
@@ -122,16 +123,15 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         """
         Args:
             provider: Name of the default provider, e.g. ``"nimble"`` or :attr:`Provider.NIMBLE`; omit it for ``auto``.
-            provider_config: Constructor kwargs per provider, keyed by provider name --
-                ``{"tavily": {"api_key": ..., "timeout": 30}}``. This is the only place
-                credentials are passed explicitly; everything else comes from the environment.
+            provider_config: Constructor kwargs per provider, keyed by provider name: ``{"tavily": {"api_key": ...}}``.
+                This is the only place credentials are passed explicitly; everything else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
                 ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental):
                 ``"rules"`` unless set (:mod:`web_router.routing.rules`), ``None`` for none. A name builds a registered
                 router from ``router_config``, closed with this one -- see :mod:`web_router.routing.registry`.
                 ``route_modes=True`` shows it a candidate per vendor mode too (the router's own, else no).
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
-            vendor_credentials: for :meth:`call_vendor`, read before the environment (:mod:`web_router.client_vendors`).
+            data_api_credentials: for :meth:`call_data_api`, read before the environment; once ``vendor_credentials``.
             max_concurrency: the most vendor calls this router has in flight at once, across every search,
                 extract and answer it serves (per event loop on the async router); ``None`` caps nothing. A call
                 waits for a slot within its own ``timeout`` -- see :mod:`web_router.providers._runtime`.
@@ -139,7 +139,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 and a cooldown after timeouts in a row -- see :mod:`web_router.providers._hop`.
         """
         self._runtime = Runtime.capped(max_concurrency, hop_timeout, timeout_cooldown)
-        self._init_vendors(vendor_credentials)
+        self._init_vendors(renamed_credentials(data_api_credentials, vendor_credentials))
         name = provider_name(provider)
         # Either registry names a default (a pinned search id by its backend); a method that can't serve it says so.
         known = every_provider_name()
@@ -193,8 +193,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
     def get_extract_provider(self, name: str | Provider | ExtractProvider | None = None) -> ExtractProvider:
         """Return the named extract provider, constructing and caching it on first use.
 
-        The extract counterpart of :meth:`get_provider`, with the same
-        ownership rule.
+        The extract counterpart of :meth:`get_provider`, with the same ownership rule.
         """
         if isinstance(name, ExtractProvider):
             return name
@@ -300,6 +299,7 @@ class WebRouter(
         route_modes: bool | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
+        data_api_credentials: DataApiCredentials = None,
         vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
         hop_timeout: float | Literal[False] | None = None,
@@ -319,7 +319,7 @@ class WebRouter(
             route_modes=route_modes,
             fail_on_router_error=fail_on_router_error,
             url_policy=url_policy,
-            vendor_credentials=vendor_credentials,
+            data_api_credentials=renamed_credentials(data_api_credentials, vendor_credentials),
             max_concurrency=max_concurrency,
             hop_timeout=hop_timeout,
             timeout_cooldown=timeout_cooldown,

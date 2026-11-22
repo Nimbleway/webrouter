@@ -1,6 +1,6 @@
 # Vendor catalog
 
-`call_vendor()` reaches a vendor's own API with your account's credentials:
+`call_data_api()` reaches a vendor's own API with your account's credentials:
 your Google Ads reports, your Datadog logs, a contact-data vendor you pay
 for. Unlike `search` or `extract`, nothing here is interchangeable or
 normalized: each vendor answers in its own shape, and the router adds the

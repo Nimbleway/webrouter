@@ -15,7 +15,7 @@ from web_router.vendors.caller import VendorCaller
 
 
 async def _tools(recorder: Recorder, credentials: dict[str, Any]) -> WebRouterTools:
-    router = AsyncWebRouter(vendor_credentials=credentials)
+    router = AsyncWebRouter(data_api_credentials=credentials)
     transport = httpx.MockTransport(recorder)
     router._vendor_caller = VendorCaller(router.vendor_credential_source(), async_transport=transport)
     return WebRouterTools(router)
@@ -117,7 +117,7 @@ async def test_vendor_keys_passed_in_code_survive_loading_a_dotenv(tmp_path: Any
     monkeypatch.setenv("TAVILY_API_KEY", "")
     monkeypatch.delenv("TAVILY_API_KEY")  # registered, so the key load_env sets is taken away afterwards
     (tmp_path / ".env").write_text("TAVILY_API_KEY=tvly-test\n", encoding="utf-8")
-    tools = WebRouterTools(AsyncWebRouter(vendor_credentials=_DATADOG))
+    tools = WebRouterTools(AsyncWebRouter(data_api_credentials=_DATADOG))
     try:
         await tools.call("load_env", {"path": str(tmp_path / ".env")})
         rows = (await tools.call(MCP_TOOL_VENDORS, {"category": "observability"}))["vendors"]

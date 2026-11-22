@@ -170,8 +170,19 @@ class ExaExtractProvider(HttpExtractProvider):
     @staticmethod
     def _failures(payload: dict[str, Any]) -> list[ExtractFailure]:
         """Exa reports each URL's outcome in `statuses`, keyed by the id it was asked for."""
-        return [
-            ExtractFailure(url=status.get("id", ""), error=str(status.get("error") or status.get("status")))
-            for status in payload.get("statuses") or []
-            if status.get("status") != "success"
-        ]
+        return [_failure(status) for status in payload.get("statuses") or [] if status.get("status") != "success"]
+
+
+def _failure(status: dict[str, Any]) -> ExtractFailure:
+    """One URL Exa did not read: its error's tag, and the page's own HTTP status where Exa reports one.
+
+    The status is what lets a 404 read as ``kind="target"`` -- the page is gone -- so ``auto`` does not fetch it again.
+    """
+    error = status.get("error")
+    detail = error if isinstance(error, dict) else {}
+    code = detail.get("httpStatusCode")
+    return ExtractFailure(
+        url=status.get("id", ""),
+        error=str(detail.get("tag") or error or status.get("status")),
+        status_code=code if isinstance(code, int) and not isinstance(code, bool) else None,
+    )

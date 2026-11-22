@@ -57,8 +57,8 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers import _page
-from web_router.providers._page import compact_snapshot
 from web_router.providers._png import png_size
+from web_router.providers._snapshot import compact_snapshot
 from web_router.types import BrowserRequest, Screenshot
 
 HAS_PLAYWRIGHT = importlib.util.find_spec("playwright") is not None
