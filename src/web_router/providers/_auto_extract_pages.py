@@ -15,22 +15,26 @@ from web_router.providers._url_match import asked_for, owners
 from web_router.types import ExtractedDocument, ExtractFailure, ExtractResponse
 from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_UPSTREAM
 
-_FAIL_OVER = frozenset({MSG_EXTRACT_TRACKER_PIXEL, MSG_EXTRACT_OFF_SITE})
+_FAIL_OVER = frozenset({MSG_EXTRACT_TRACKER_PIXEL})
 """The page warnings that fail its URL on to the next member even when none is left."""
 
 Held = dict[str, ExtractedDocument]
-"""The near-empty page each URL first got, by URL, put back when no later member reads it."""
+"""The near-empty or off-site page each URL first got, put back when no later member reads it."""
 
 
 def _screened(response: ExtractResponse, urls: list[str], more: bool, held: Held) -> ExtractResponse:
     """``response`` with each junk page as its URL's failure, so the members after it try that URL.
 
-    A tracking pixel or a page on another site fails whatever is left; a near-empty page only when ``more``
-    members are, and it is ``held`` so that :func:`_restored` can put it back. A page whose URL cannot be told stays.
+    A tracking pixel fails whatever is left; a near-empty or off-site page only when ``more`` members are,
+    and it is ``held`` so that :func:`_restored` can put it back. A page whose URL cannot be told stays.
     """
     documents, failures = [], list(response.failures)
     for document, url in zip(response.documents, _asked(response, urls), strict=True):
-        why = [w for w in document.warnings if w in _FAIL_OVER or (more and w == MSG_EXTRACT_NEAR_EMPTY)]
+        why = [
+            w
+            for w in document.warnings
+            if w in _FAIL_OVER or (more and w in (MSG_EXTRACT_NEAR_EMPTY, MSG_EXTRACT_OFF_SITE))
+        ]
         if url is None or not why:
             documents.append(document)
             continue
@@ -43,9 +47,9 @@ def _screened(response: ExtractResponse, urls: list[str], more: bool, held: Held
 
 
 def _restored(response: ExtractResponse, held: Held, urls: list[str]) -> ExtractResponse:
-    """``response`` with each held near-empty page back in place of its URL's failure: no later member read it.
+    """``response`` with each held page back in place of its URL's failure: no later member read it.
 
-    A later member's ``target`` failure -- the site saying the page is gone -- stands: the short page was not the page.
+    A later member's ``target`` failure -- the site saying the page is gone -- stands over a held page.
     """
     back = {failure.url for failure in response.failures if failure.kind != ERROR_KIND_TARGET} & held.keys()
     if not back:

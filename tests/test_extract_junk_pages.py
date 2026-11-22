@@ -51,12 +51,17 @@ def test_every_backend_keeps_a_page_on_another_site_with_a_warning() -> None:
     assert kept[0].warnings == [MSG_EXTRACT_OFF_SITE]
 
 
-def _serving(name: str, content: str, *, raises: bool = False) -> type[ExtractProvider]:
+def _serving(
+    name: str, content: str, *, raises: bool = False, landed: str | None = None, status_code: int | None = None
+) -> type[ExtractProvider]:
     class Serving(_member(name)):  # type: ignore[misc]
         def _respond(self, urls: list[str]) -> ExtractResponse:
             if raises:
                 raise ProviderError(name, "unavailable")
-            return ExtractResponse(provider=name, documents=[ExtractedDocument(url=u, content=content) for u in urls])
+            return ExtractResponse(
+                provider=name,
+                documents=[ExtractedDocument(url=landed or u, content=content, status_code=status_code) for u in urls],
+            )
 
     return Serving
 
@@ -87,12 +92,8 @@ def test_a_near_empty_page_no_later_backend_beats_comes_back_with_its_warning(
 
 
 def test_a_later_backends_404_is_not_hidden_behind_a_near_empty_page(registered: list[str]) -> None:
-    class Gone(_member("second")):  # type: ignore[misc]
-        def _respond(self, urls: list[str]) -> ExtractResponse:
-            return ExtractResponse(provider="second", documents=[ExtractedDocument(url=urls[0], status_code=404)])
-
     with pytest.raises(ExtractFailedError, match="404"):
-        _extract(registered, _serving("first", SHORT), Gone)
+        _extract(registered, _serving("first", SHORT), _serving("second", "", status_code=404))
 
 
 def test_a_near_empty_page_from_the_only_backend_is_kept(registered: list[str]) -> None:

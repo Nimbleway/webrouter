@@ -11,9 +11,9 @@ answered the last. The response keeps the first answering member as its
 reason from each member that answered for it.
 
 A junk page fails its URL the same way (:func:`_screened`): a tracking pixel
-or a page on another site always, a near-empty page only while a member is
-left, and that page comes back, warning and all, when no later member reads
-its URL.
+always, a near-empty or off-site page only while a member is left. A held
+page comes back, warning and all, when no later member reads its URL,
+unless a later member reports that the requested page is gone.
 """
 
 from __future__ import annotations
