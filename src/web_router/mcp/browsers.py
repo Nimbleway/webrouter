@@ -140,10 +140,6 @@ class BrowserSessions:
         self._sessions: dict[str, _Session] = {}
         self._ended: OrderedDict[str, str] = OrderedDict()
         self._opening = 0
-        # Every value that opens a session this server ever held. Kept after a
-        # session ends: a backend can recycle a port, and an old URL is still
-        # not the model's to see.
-        self._secrets: set[str] = set()
 
     def __len__(self) -> int:
         return len(self._sessions)
@@ -187,7 +183,6 @@ class BrowserSessions:
             raise BrowserToolError(MCP_MSG_BROWSER_OPEN_TIMED_OUT.format(timeout=timeout))
         session_id = MCP_BROWSER_SESSION_ID_TEMPLATE.format(token=secrets.token_urlsafe(MCP_BROWSER_SESSION_ID_BYTES))
         try:
-            self._remember_secrets(handle)
             guard = NavigationGuard(NavigationPolicy.for_session(handle.cdp_url))
             self._sessions[session_id] = _Session(session_id, handle, guard, self._clock())
             handle.on_connect(guard.install)
@@ -303,6 +298,11 @@ class BrowserSessions:
             for session in sessions:
                 group.start_soon(_release_quietly, session.handle)
 
+    @property
+    def _secrets(self) -> set[str]:
+        # Gathered from the open sessions, so a session's own values leave with it.
+        return {value for session in self._sessions.values() for value in self._remember_secrets(session.handle)}
+
     def scrub(self, value: Any) -> tuple[Any, int]:
         """``value`` with every session value this server holds, and every browser-session URL, redacted.
 
@@ -341,13 +341,13 @@ class BrowserSessions:
             return None
         return BrowserToolError(self.scrub_text(MCP_MSG_BROWSER_URL_REFUSED.format(tool=tool, reason=reason)))
 
-    def _remember_secrets(self, handle: AsyncBrowserHandle) -> None:
+    def _remember_secrets(self, handle: AsyncBrowserHandle) -> set[str]:
         cdp_url = handle.cdp_url
         # The control URL is read from the session, never asked for: the server
         # does not fetch one, but a backend that returns it on open puts it here.
         control_url = handle.session.control_url.get_secret_value() if handle.session.control_url else ""
         candidates = [cdp_url, urlsplit(cdp_url).query, handle.session_id, handle.live_view_url or "", control_url]
-        self._secrets.update(value for value in candidates if len(value) >= MCP_BROWSER_SECRET_MIN_CHARS)
+        return {value for value in candidates if len(value) >= MCP_BROWSER_SECRET_MIN_CHARS}
 
     def _translated(self, exc: BrowserActionError, tool: str, session_id: str) -> BrowserToolError:
         template = next(
