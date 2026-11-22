@@ -332,15 +332,6 @@ HTTP_ERROR_BODY_LIMIT = 500
 """How much of an error response body to quote back, to keep messages readable."""
 
 
-# --- Normalization ----------------------------------------------------------
-
-"""Cap for a description synthesized from body text.
-
-Some providers return no snippet, only page content. Using the head of that
-content keeps ``description`` populated without letting a 9 KB excerpt sit in a
-field every other provider fills with a sentence or two.
-"""
-
 # --- Nimble -----------------------------------------------------------------
 
 NIMBLE_PARAM_NAMES = {name: name for name in NORMALIZED_PARAMETERS - {"search_depth", "recency", "effort"}} | {
