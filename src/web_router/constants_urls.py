@@ -50,6 +50,7 @@ MSG_URL_LOOPBACK = "the host is loopback"
 MSG_URL_METADATA = "the host is a cloud metadata endpoint"
 MSG_URL_PRIVATE = "the host is a private, shared or reserved address"
 MSG_URL_AMBIGUOUS = "a browser could read the host differently from how it is checked"
+MSG_URL_UNSTABLE = "the host's addresses changed between two lookups"
 
 AUTHORITY_REFUSED = "\\@%"
 """Characters ``public_only`` refuses in a URL's authority: a browser ends the host at a backslash, ``@`` brings

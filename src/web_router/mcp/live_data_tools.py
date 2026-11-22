@@ -7,6 +7,7 @@ its method; a run spends from the connection's budget like any billed call.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
@@ -38,7 +39,8 @@ async def live_data_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) ->
     """One run, charged to the connection's budget, its records whole or left behind the handle."""
     kwargs = tools.arguments(MCP_TOOL_LIVE_DATA, arguments)
     # A URL among the inputs is screened like any other tool's: no private or metadata address.
-    screen(MCP_TOOL_LIVE_DATA, url_values(kwargs.get("inputs")))
+    # Screening resolves names, so keep that lookup off the event loop.
+    await asyncio.to_thread(screen, MCP_TOOL_LIVE_DATA, url_values(kwargs.get("inputs")))
     with live_data_charged(tools.router, kwargs):
         response = await tools.router.live_data(**kwargs)
     record = tools.store.add(MCP_TOOL_LIVE_DATA, raw=response.raw)

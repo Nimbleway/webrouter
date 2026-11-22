@@ -48,6 +48,7 @@ from web_router.constants_urls import (
     MSG_URL_PRIVATE,
     MSG_URL_SCHEME,
     MSG_URL_UNPARSEABLE,
+    MSG_URL_UNSTABLE,
     URL_REFUSED_KEY,
     URL_SCHEMES,
 )
@@ -133,19 +134,31 @@ def public_only(url: str) -> str | None:
         return _resolved_refusal(host)
     return None
 
+def _answers(host: str) -> frozenset[str] | None:
+    """The addresses ``host`` resolves to now, or ``None`` when the name does not resolve here."""
+    try:
+        answers = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except (OSError, UnicodeError):
+        return None
+    # A resolver may rotate the order of equal answers; only the set can be compared.
+    return frozenset(str(answer[4][0]).split("%", 1)[0].lower() for answer in answers)
+
 def _resolved_refusal(host: str) -> str | None:
     """Why the addresses ``host`` resolves to may not be fetched, or ``None``.
 
     A name of anyone's choosing can point at loopback, the metadata service or a
-    private address, which the written host never shows.
+    private address, which the written host never shows. A name that gives
+    different answers to two lookups cannot be pinned to the address checked
+    here: the backend's own lookup could get either one, so it is refused.
     """
-    try:
-        answers = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
-    except (OSError, UnicodeError):
+    first = _answers(host)
+    if first is None:
         # A name that does not resolve here reaches nothing when fetched either.
         return None
-    for answer in answers:
-        address = str(answer[4][0]).split("%", 1)[0].lower()
+    second = _answers(host)
+    if second is None or first != second:
+        return MSG_URL_UNSTABLE
+    for address in first:
         if is_metadata(address):
             return MSG_URL_METADATA
         if is_loopback(address):
