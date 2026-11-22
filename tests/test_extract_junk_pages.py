@@ -10,7 +10,7 @@ from tests.test_auto_extract_retry import TEXT, _chain, _member, registered
 from web_router.constants_extract import MSG_EXTRACT_NEAR_EMPTY, MSG_EXTRACT_OFF_SITE, MSG_EXTRACT_TRACKER_PIXEL
 from web_router.exceptions import ProviderError
 from web_router.exceptions_typed import ExtractFailedError
-from web_router.providers._error_pages import junk, split_error_pages
+from web_router.providers._error_pages import junk, off_site, split_error_pages
 from web_router.providers.base import ExtractProvider
 from web_router.types import ExtractedDocument, ExtractRequest, ExtractResponse
 
@@ -42,6 +42,12 @@ def test_a_link_shortener_landing_elsewhere_is_not_off_site() -> None:
 
 def test_a_subdomain_of_a_short_name_under_a_country_code_is_the_same_site() -> None:
     assert junk(ExtractedDocument(url="https://blog.bar.co/story", content=TEXT), "https://www.bar.co/") == []
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_a_www_redirect_of_a_government_domain_stays_on_site(reverse: bool) -> None:
+    asked, landed = "https://gov.uk/browse", "https://www.gov.uk/browse"
+    assert not off_site(landed, asked) if reverse else not off_site(asked, landed)
 
 
 def test_every_backend_keeps_a_page_on_another_site_with_a_warning() -> None:

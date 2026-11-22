@@ -184,7 +184,7 @@ def off_site(asked: str, landed: str) -> bool:
 
 
 def _site(url: str) -> str:  # The name a host is registered under: `example` for www.example.com, shop.example.co.uk
-    labels = (urlsplit(url).hostname or "").split(".")
+    labels = (urlsplit(url).hostname or "").removeprefix("www.").split(".")
     country_suffix = len(labels) > 2 and len(labels[-1]) == 2 and labels[-2] in EXTRACT_COUNTRY_SECOND_LEVELS
     return labels[-3 if country_suffix else -2] if len(labels) > 1 else labels[0]
 
