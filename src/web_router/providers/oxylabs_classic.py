@@ -97,16 +97,15 @@ class OxylabsClassicLiveDataProvider(HttpLiveDataProvider):
     run_path: ClassVar[str] = OXYLABS_EXTRACT_PATH
     env_api_key: ClassVar[str] = ENV_OXYLABS_PASSWORD
 
-    def __init__(self, *, username: str | None = None, web_api_key: str | None = None, **kwargs: Any) -> None:
+    def __init__(self, *, username: str | None = None, **kwargs: Any) -> None:
         """
         Args:
             username: Oxylabs API username. Falls back to ``OXYLABS_USERNAME``.
-            web_api_key: Accepted and unused: the Web API's key, from the same
-                ``provider_config["oxylabs"]`` entry.
             **kwargs: As :class:`~web_router.providers._http_live_data.HttpLiveDataProvider`;
-                ``api_key`` is the password and falls back to ``OXYLABS_PASSWORD``.
+                ``api_key`` is the password and falls back to ``OXYLABS_PASSWORD``. The Web API's
+                ``web_api_key`` is not one: :class:`~web_router.providers.oxylabs_live_data_any.OxylabsLiveDataProvider`
+                passes each API only its own credentials.
         """
-        del web_api_key
         # Resolved before super(), which needs it to build the auth header.
         self._username = resolve_setting(username, env_var=ENV_OXYLABS_USERNAME, provider=self.name, setting="username")
         super().__init__(**kwargs)

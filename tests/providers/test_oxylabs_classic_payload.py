@@ -16,9 +16,9 @@ from tests.providers._live_data_http import Api, wire
 from tests.providers._oxylabs import _answer, _scraped
 from tests.providers._oxylabs_classic import BASE, classic, no_oxylabs_env_fixture, parsed  # noqa: F401  (fixture)
 from web_router import WebRouter
-from web_router.exceptions import ConfigurationError
+from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.exceptions_live_data import LiveDataSourceNotFoundError
-from web_router.providers.oxylabs_classic import classic_sources
+from web_router.providers.oxylabs_classic import OxylabsClassicLiveDataProvider, classic_sources
 from web_router.providers.oxylabs_live_data_any import OxylabsLiveDataProvider
 from web_router.registry import configured_live_data_providers
 from web_router.types_live_data import LiveDataRequest
@@ -119,6 +119,16 @@ def test_with_the_username_and_password_alone_oxylabs_is_a_live_data_backend(mon
         assert isinstance(provider, OxylabsLiveDataProvider) and provider.web_api is None
         with pytest.raises(LiveDataSourceNotFoundError):
             provider.live_data_source("amazon/product")  # a Web API scraper, with no Web API key to run it
+
+
+def test_each_api_is_given_only_its_own_credentials() -> None:
+    provider = OxylabsLiveDataProvider(username="user", api_key="password", web_api_key="web-key")
+    assert provider.classic is not None and provider.web_api is not None
+    assert "web_api_key" not in provider.classic._client_kwargs and "username" not in provider.web_api._client_kwargs
+
+    stray = OxylabsClassicLiveDataProvider(username="user", api_key="password", web_api_key="web-key")
+    with pytest.raises(ProviderError, match="unexpected keyword argument 'web_api_key'"):
+        stray.run(LiveDataRequest(source="amazon_search", inputs={"query": "x"}))  # refused, not silently dropped
 
 
 def test_with_no_credential_the_error_names_both() -> None:
