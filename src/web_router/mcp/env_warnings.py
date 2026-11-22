@@ -32,6 +32,7 @@ from web_router.constants_mcp_env import (
     MCP_PROFILE_SLIM,
 )
 from web_router.mcp import env_pointer, methods
+from web_router.mcp.allowlist import allowlist_set
 from web_router.mcp.env_foreign import remembered_billed
 from web_router.mcp.env_policy import switch
 
@@ -71,5 +72,5 @@ def loose_permissions(path: Path) -> str | None:
 
 def log_profile() -> None:
     """Say on stderr, at startup, that the slim profile is serving and which switch serves the rest."""
-    if not os.environ.get(ENV_MCP_TOOLS, "").strip() and switch(ENV_MCP_PROFILE) == MCP_PROFILE_SLIM:
+    if not allowlist_set() and switch(ENV_MCP_PROFILE) == MCP_PROFILE_SLIM:
         _LOG.warning(MCP_LOG_PROFILE_SLIM, ENV_MCP_PROFILE, ENV_MCP_TOOLS)

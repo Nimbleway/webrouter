@@ -14,13 +14,13 @@ from web_router.constants_mcp_env import (
     MCP_MSG_LOAD_ENV_OFF,
     MCP_PROFILE_ALLOWLIST,
 )
-from web_router.mcp.allowlist import _patterns
+from web_router.mcp.allowlist import allowlist_set
 from web_router.mcp.env_policy import switch
 
 
 def report(every: Collection[str], served: Collection[str]) -> dict[str, Any]:
     """The capabilities resource's ``tools``: the profile, the tools it left off, and the switch that adds them."""
-    profile = MCP_PROFILE_ALLOWLIST if _patterns(None) else switch(ENV_MCP_PROFILE)
+    profile = MCP_PROFILE_ALLOWLIST if allowlist_set() else switch(ENV_MCP_PROFILE)
     tools: dict[str, Any] = {"profile": profile}
     if off := [name for name in every if name not in served]:
         tools["off"] = off

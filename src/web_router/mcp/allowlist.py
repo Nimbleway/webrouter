@@ -90,3 +90,8 @@ def _runnable(tool: str) -> bool:
 def _patterns(value: str | None) -> list[str]:
     value = os.environ.get(ENV_MCP_TOOLS, "") if value is None else value
     return [entry.strip() for entry in value.split(MCP_TOOLS_SEPARATOR) if entry.strip()]
+
+
+def allowlist_set() -> bool:
+    """Whether the operator named any tools instead of choosing a profile."""
+    return bool(_patterns(None))
