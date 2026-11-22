@@ -31,6 +31,8 @@ from typing import Any
 
 import httpx
 
+from web_router.constants_oxylabs_classic import OXYLABS_CLASSIC_TRANSPORT_PARAMS
+
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "src" / "web_router" / "data" / "oxylabs_classic_sources.json"
 
@@ -47,8 +49,6 @@ LEFT_OUT = frozenset(
 """Page fetches by URL, which ``extract`` covers; a download delivered to the caller's own bucket; two sources that
 refuse ``parse`` and answer with a page or with JavaScript rather than JSON; and the LLM sources, which the realtime
 endpoint refuses (HTTP 422) as they run only as push-pull jobs. All seen live on 2026-11-17."""
-TRANSPORT = frozenset({"source", "parse", "callback_url", "storage_type", "storage_url"})
-"""Set by the backend or never sent: what makes a run a parsed, synchronous answer."""
 RENDERED = "html"
 """The value a source that requires ``render`` is sent: its docs' only one."""
 CONTEXT_PREFIX = "context:"
@@ -175,7 +175,7 @@ def _entry(name: str, found: dict[str, Any]) -> dict[str, Any]:
             if not key:
                 continue
             context.append(key)
-        if key in TRANSPORT:
+        if key in OXYLABS_CLASSIC_TRANSPORT_PARAMS:
             continue
         if key == "render" and parameter["required"]:
             fixed["render"] = RENDERED
