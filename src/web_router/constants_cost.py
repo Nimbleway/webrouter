@@ -13,3 +13,7 @@ COST_CURRENCY_USD = "USD"
 
 COST_REPORTED = "reported"
 COST_ESTIMATED = "estimated"
+COST_KEYLESS = "keyless"
+"""A call on a backend's keyless tier, which bills nothing: its ``cost_usd`` is ``0.0``."""
+COST_STATED = frozenset({COST_REPORTED, COST_KEYLESS})
+"""The sources a backend's own response sets, never an estimate: a budget settles an attempt to either."""
