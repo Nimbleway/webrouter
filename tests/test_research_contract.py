@@ -151,17 +151,17 @@ def test_every_provider_declares_where_its_credentials_come_from() -> None:
 def test_no_research_backend_is_usable_without_a_key(monkeypatch: pytest.MonkeyPatch) -> None:
     """The one method with no keyless tier: every backend bills for the run.
 
-    `auto` is the exception only in that it is the chooser, and with nothing to
-    choose from it is the one that says which variables would fix that.
+    `auto` is listed only beside a backend it could run: alone it has nothing
+    to choose from, and calling it says which variables would fix that.
     """
     for env_var in ENV_VARS:
         monkeypatch.delenv(env_var, raising=False)
 
-    assert configured_research_providers() == ["auto"]
+    assert configured_research_providers() == []
 
     monkeypatch.setenv("LINKUP_API_KEY", "test-key")
 
-    assert "linkup" in configured_research_providers()
+    assert configured_research_providers() == ["auto", "linkup"]
     assert set(configured_research_providers()) <= set(available_research_providers())
 
 

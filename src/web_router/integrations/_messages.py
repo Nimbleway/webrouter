@@ -70,6 +70,8 @@ KIND_REASONS: Final[dict[str, str]] = {
     "target": "the page's address is the problem, so another backend would fail the same way",
     "local": "a failure on this side of the call, not the backend's",
     "upstream": "the backend failed",
+    "network_blocked": "this machine's proxy or firewall refused the backend's host",
+    "unreachable": "the backend's host did not resolve or refused the connection from here",
 }
 """What each failure kind means, in the words a model reads; the vendor's own text stays on the exception."""
 

@@ -68,17 +68,17 @@ print(results.provider, [doc.url for doc in pages.documents])
 ## Install
 
 ```bash
-pip install "webrouter[all]"     # or: uv add "webrouter[all]"
+pip install webrouter     # or: uv add webrouter
 ```
 
 Or try the command line with no install and no key:
 
 ```bash
-uvx --from "webrouter[search,extract]" webrouter search "rust async runtimes" -n 5
+uvx --from webrouter webrouter search "rust async runtimes" -n 5
 ```
 
-Python 3.11 or later. Extras per method (`search`, `extract`, `research`,
-`answer`, `browser`, `mcp`, ...) keep the install small; see the
+Python 3.11 or later. The base install runs search and extract with no key.
+Extras add the rest: `browser`, `mcp`, `aws`, or `all` for every one; see the
 [Quickstart](https://docs.webrouter.net/quickstart).
 
 Keys are read from the environment. Copy [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example), which

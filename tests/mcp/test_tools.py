@@ -347,7 +347,7 @@ def test_the_capabilities_resource_lists_what_this_install_serves(tools: WebRout
 
     body = json.loads(read_resource(tools, MCP_RESOURCE_URI).contents[0].text)
     assert body[MCP_TOOL_SEARCH] == [PROVIDER_AUTO, PROVIDER_EXA_MCP, PROVIDER_PARALLEL_MCP, PROVIDER_YOU_MCP]
-    assert body[MCP_TOOL_RESEARCH] == [PROVIDER_AUTO]
+    assert body[MCP_TOOL_RESEARCH] == []
     assert body[MCP_TOOL_ANSWER] == [], "no keyless tier and no auto"
     # Every browse backend bills, so with no key there is no keyless tier to list.
     assert set(body[MCP_TOOL_BROWSE]) <= {PROVIDER_AUTO}
@@ -501,16 +501,14 @@ class LeakyBrowseProvider(FakeBrowseProvider):
 def test_browse_takes_exactly_the_routers_arguments(tools: WebRouterTools, no_keys: None, all_runnable: None) -> None:
     schema = _tool(tools, MCP_TOOL_BROWSE).input_schema
 
-    # `provider` is there with no key at all because `auto` is, as for research.
+    # No `provider` with no key at all: `auto` would have nothing to run, as for research.
     assert set(schema["properties"]) == {
         "task",
         "start_url",
         "output_schema",
         "max_steps",
         "allowed_domains",
-        "provider",
     }
-    assert schema["properties"]["provider"]["enum"] == [PROVIDER_AUTO]
     assert schema["required"] == ["task"]
     assert "After 0s" in _tool(tools, MCP_TOOL_BROWSE).description
 
@@ -745,7 +743,7 @@ def test_the_capabilities_say_which_keys_would_unlock_more(
     assert "tavily" not in unlock["search"], "a backend with its key is not listed"
     assert unlock["extract"]["oxylabs"] == ["OXYLABS_USERNAME", "OXYLABS_PASSWORD"]
     assert "steel" in unlock["browser"] and "local" not in unlock["browser"]
-    assert "every capability is available" in tools.instructions()
+    assert "`unlock` names the variable" in tools.instructions()
 
 
 # -- answer ------------------------------------------------------------------
