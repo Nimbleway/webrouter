@@ -13,7 +13,9 @@ import functools
 import logging
 import os
 from collections.abc import Awaitable, Callable, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+
+from mcp_types import CallToolResult, TextContent
 
 from web_router.client_vendors_compat import warn_data_api_renamed
 from web_router.constants import MCP_MSG_MISSING_ARGUMENT
@@ -41,6 +43,7 @@ if TYPE_CHECKING:
     from web_router.mcp.tools import WebRouterTools
 
 _LOG = logging.getLogger(__name__)
+_T = TypeVar("_T")
 
 
 _ARG_KINDS: dict[str, tuple[str, Callable[[Any], bool]]] = {
@@ -93,6 +96,18 @@ def renamed_tool(name: str) -> tuple[str, str | None]:
     """
     new = MCP_TOOL_RENAMED.get(name)
     return (new, MSG_DATA_API_DEPRECATED.format(old=name, new=new)) if new else (name, None)
+
+
+def with_renamed_note(answer: _T, note: str | None) -> _T:
+    """``answer`` told of the new name when the tool was called by an old one; ``answer`` itself else.
+
+    A payload gets a ``deprecated`` key; a failed call's result gets the note as its first block.
+    """
+    if note is not None and isinstance(answer, CallToolResult):
+        answer.content.insert(0, TextContent(text=note))
+    elif note is not None and isinstance(answer, dict):
+        return cast("_T", {"deprecated": note, **answer})
+    return answer
 
 
 def writes_allowed() -> bool:

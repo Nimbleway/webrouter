@@ -65,7 +65,7 @@ from web_router.mcp.resources import list_resource_templates, list_resources, re
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.shaping import ToolOutput
 from web_router.mcp.tools import WebRouterTools
-from web_router.mcp.vendor_tools import renamed_tool
+from web_router.mcp.vendor_tools import renamed_tool, with_renamed_note
 
 
 def list_tools(tools: WebRouterTools) -> ListToolsResult:
@@ -83,15 +83,10 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
     """
     name, renamed_note = renamed_tool(name)
     try:
-        payload = await tools.call(name, arguments)
+        payload = with_renamed_note(await tools.call(name, arguments), renamed_note)
     except Exception as exc:
         # Any failure, a bug's too: its text can quote a key, so every one goes through error_text's masking.
-        failed = failure_result(exc)
-        if renamed_note is not None:  # a failed call by an old name is told of the new one too
-            failed.content.insert(0, TextContent(text=renamed_note))
-        return failed
-    if renamed_note is not None and isinstance(payload, dict):
-        payload = {"deprecated": renamed_note, **payload}
+        return with_renamed_note(failure_result(exc), renamed_note)
     output = payload if isinstance(payload, ToolOutput) else ToolOutput(payload=payload)
     text = render_masked(output.payload)
     content: list[ContentBlock] = [TextContent(text=text)]
