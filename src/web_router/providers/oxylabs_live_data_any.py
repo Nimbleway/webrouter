@@ -15,7 +15,6 @@ returns the Web Scraper API's sources, naming the failure in ``failures``.
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, ClassVar
 
 from web_router.constants import ENV_OXYLABS_PASSWORD, ENV_OXYLABS_USERNAME, PROVIDER_OXYLABS
@@ -28,6 +27,7 @@ from web_router.constants_oxylabs_classic import (
 )
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._http_live_data import HttpLiveDataProvider
+from web_router.providers._utils import credential_given
 from web_router.providers.base import LiveDataProvider
 from web_router.providers.oxylabs_classic import OxylabsClassicLiveDataProvider
 from web_router.providers.oxylabs_live_data import OxylabsWebApiLiveDataProvider
@@ -40,10 +40,6 @@ from web_router.types_live_data import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _given(value: str | None, env_var: str) -> bool:
-    return bool((value or "").strip() or (os.environ.get(env_var) or "").strip())
 
 
 class OxylabsLiveDataProvider(LiveDataProvider):
@@ -84,8 +80,8 @@ class OxylabsLiveDataProvider(LiveDataProvider):
         super().__init__(**kwargs)
         self.classic: OxylabsClassicLiveDataProvider | None = None
         self.web_api: OxylabsWebApiLiveDataProvider | None = None
-        classic = _given(username, ENV_OXYLABS_USERNAME) and _given(api_key, ENV_OXYLABS_PASSWORD)
-        web_api = _given(web_api_key, ENV_OXYLABS_WEB_API_KEY)
+        classic = credential_given(username, ENV_OXYLABS_USERNAME) and credential_given(api_key, ENV_OXYLABS_PASSWORD)
+        web_api = credential_given(web_api_key, ENV_OXYLABS_WEB_API_KEY)
         if classic and web_api and kwargs.get("base_url"):
             raise ConfigurationError(MSG_OXYLABS_ONE_BASE_URL)
         if classic:

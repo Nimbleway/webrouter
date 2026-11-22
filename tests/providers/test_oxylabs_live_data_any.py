@@ -74,3 +74,8 @@ async def test_a_working_web_api_lists_both_catalogues(mode: str) -> None:
 async def test_with_only_the_web_api_its_failure_still_raises(mode: str) -> None:
     with pytest.raises(ProviderError, match="401"):
         await _listing(_provider(401, classic=False), mode)
+
+
+def test_a_blank_credential_counts_as_none_by_the_providers_shared_rule() -> None:
+    provider = OxylabsLiveDataProvider(username=" ", api_key="password", web_api_key="web-key")
+    assert provider.classic is None and provider.web_api is not None
