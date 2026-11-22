@@ -9,17 +9,9 @@ from typing import Any
 import pytest
 
 from scripts.data_api_docs import DOCS, job_peers
-from scripts.data_api_page import (
-    DEFAULT_ICON,
-    ICON_DIR,
-    PAGES_DIR,
-    anchor,
-    icon_url,
-    mdx,
-    output_fields,
-    text,
-    vendor_page,
-)
+from scripts.data_api_io import output_fields
+from scripts.data_api_mdx import anchor, mdx, text
+from scripts.data_api_page import DEFAULT_ICON, ICON_DIR, PAGES_DIR, icon_url, vendor_page
 from web_router.vendors.catalog import builtin_catalog
 from web_router.vendors.schema import Vendor
 
