@@ -46,6 +46,6 @@ def refunds(outer: RefundHook | None, ledger: Ledger, own: Callable[[], bool]) -
     def refund(attempt: Attempt) -> None:
         if outer is not None:
             outer(attempt)
-        ledger.undo(attempt, release=own())
+        ledger.undo(attempt, release=own(), sent=True)
 
     return refund

@@ -35,6 +35,7 @@ from web_router.constants_tavily import (
     TAVILY_SEARCH_PARAMETERS,
     TAVILY_TIME_RANGE,
 )
+from web_router.providers._cost import keyless_cost
 from web_router.providers._language import language_code
 from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text, build_payload, mapped
@@ -154,4 +155,5 @@ class TavilyProvider(TavilyClientsMixin, SearchProvider):
             answer=payload.get("answer"),
             request_id=payload.get("request_id"),
             raw=payload,
+            **keyless_cost(self),
         )

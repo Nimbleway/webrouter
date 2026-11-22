@@ -21,11 +21,6 @@ team can pin a version or add a vendor without forking.
 
 VENDOR_ENV_ALLOW_WRITES: Final = "WEB_ROUTER_ALLOW_DATA_API_WRITES"
 """Set to ``1`` to let the MCP server's ``call_data_api`` send writes. The library takes ``allow_writes=`` per call."""
-VENDOR_ENV_ALLOW_WRITES_OLD: Final = "WEB_ROUTER_ALLOW_VENDOR_WRITES"
-"""The variable's old name, still read, with a deprecation warning logged once."""
-
-MSG_DATA_API_DEPRECATED: Final = "`{old}` is deprecated and will be removed: use `{new}`. Vendors are now data APIs."
-"""The warning for a vendor-era name: a router method, a keyword, an MCP tool or a variable."""
 
 VENDOR_HTTP_TIMEOUT: Final = 60.0
 """Seconds per vendor call. Reporting APIs (GAQL, log search) are slower than a search backend."""
@@ -34,7 +29,7 @@ VENDOR_ERROR_BODY_LIMIT: Final = 2000
 """Characters of a vendor's error body kept in the raised message, after credentials are masked."""
 
 VENDOR_FIND_LIMIT: Final = 20
-"""Endpoints :meth:`~web_router.WebRouter.find_data_apis` returns when no limit is given."""
+"""Endpoints :meth:`~web_router.WebRouter.find_data_api_endpoints` returns when no limit is given."""
 
 VENDOR_FIND_STOP_WORDS: Final = frozenset(
     {
@@ -64,7 +59,7 @@ VENDOR_FIND_STOP_WORDS: Final = frozenset(
         "your",
     }
 )
-"""Query words :meth:`~web_router.WebRouter.find_data_apis` ignores: they say nothing about what an
+"""Query words :meth:`~web_router.WebRouter.find_data_api_endpoints` ignores: they say nothing about what an
 endpoint does, and counted as matches they let a summary's grammar outrank its meaning."""
 
 VENDOR_TOKEN_REFRESH_MARGIN: Final = 60.0

@@ -21,14 +21,8 @@ import threading
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Self
 
-from web_router.client_vendors_compat import (
-    AsyncVendorMethods,
-    SyncVendorMethods,
-    VendorLookupMethods,
-)
-from web_router.client_vendors_compat import (
-    renamed_credentials as renamed_credentials,
-)
+from web_router.client_vendors_compat import AsyncVendorMethods, SyncVendorMethods, VendorLookupMethods
+from web_router.client_vendors_compat import VendorCredentials as VendorCredentials
 from web_router.constants_vendors import EXTRA_VENDORS, VENDOR_FIND_LIMIT
 from web_router.exceptions import ProviderNotInstalledError
 from web_router.vendors.catalog import get_catalog
@@ -42,18 +36,16 @@ if TYPE_CHECKING:
 
 DataApiCredentials = CredentialSource | Mapping[str, Mapping[str, str]] | None
 """``data_api_credentials=``: a source, or ``{vendor: {name: value}}`` read before the environment."""
-VendorCredentials = DataApiCredentials
-"""The old name of :data:`DataApiCredentials`."""
 
 
 class _VendorLookup(VendorLookupMethods):
     """What both routers share: the catalog lookups, and the caller built on first use."""
 
-    _vendor_credentials: VendorCredentials
+    _vendor_credentials: DataApiCredentials
     _vendor_caller: VendorCaller | None
     _vendor_lock: threading.Lock
 
-    def _init_vendors(self, vendor_credentials: VendorCredentials) -> None:
+    def _init_vendors(self, vendor_credentials: DataApiCredentials) -> None:
         self._vendor_credentials = vendor_credentials
         self._vendor_caller = None
         self._vendor_lock = threading.Lock()
@@ -105,7 +97,7 @@ class _VendorLookup(VendorLookupMethods):
         """One endpoint, by its id (``'<vendor>.<job>'``): its inputs, notes, and a recorded answer if any."""
         return get_catalog().endpoint(endpoint)
 
-    def find_data_apis(
+    def find_data_api_endpoints(
         self,
         query: str,
         *,

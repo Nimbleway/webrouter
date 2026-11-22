@@ -10,7 +10,7 @@ then takes that :class:`~web_router.LiveDataSource` whole, so the caller
 never names the vendor:
 
     >>> source = router.live_data_sources(query="amazon product").sources[0]
-    >>> router.live_data(source, {"url": "https://www.amazon.com/dp/B0CHX1W1XY"})
+    >>> router.live_data(source, {"url": "https://www.amazon.com/dp/B07FZ8S74R"})
 
 A backend that fails is left out and named in the page's ``failures``; the
 page raises :class:`~web_router.AllProvidersFailedError` only when every

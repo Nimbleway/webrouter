@@ -191,7 +191,7 @@ def test_main_writes_the_json_numbers(
 ) -> None:
     _tiny_set(tmp_path / "frozen")
     load_set = route_eval.load_set
-    monkeypatch.setattr(route_eval, "load_set", lambda name, _, joined: load_set(name, tmp_path / "frozen", joined))
+    monkeypatch.setattr(route_eval, "load_set", lambda n, _, j, m: load_set(n, tmp_path / "frozen", j, m))
     out = tmp_path / "numbers.json"
     route_eval.main(["--set", "tiny", "--router", "always:nimble", "--json", str(out)])
 

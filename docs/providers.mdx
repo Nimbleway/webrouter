@@ -40,6 +40,7 @@ used here for identification only.
 | [Perplexity](https://docs.perplexity.ai) | ✓ |  |  | ✓ | ✓ |  |  |
 | [Seltz](https://docs.seltz.ai) | ✓ |  |  |  |  |  |  |
 | [Skyvern](https://skyvern.com) |  |  |  |  |  |  | ✓ |
+| [SpecStream](https://specstream.ai/agents.md) | ✓ | ✓ |  |  |  |  |  |
 | [Steel](https://steel.dev) |  |  |  |  |  | ✓ |  |
 | [Tavily](https://tavily.com) | ✓ keyless | ✓ keyless |  |  |  |  |  |
 | [Valyu](https://docs.valyu.ai) | ✓ |  |  |  |  |  |  |
@@ -87,6 +88,7 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.SELTZ` | `seltz` | [Seltz Search](https://docs.seltz.ai/api-reference/search) | direct HTTP | `max_results`, `include_domains`, `exclude_domains`, `recency`. Results carry a URL, a date and the document body, but no title or score |
 | `Provider.OCTEN` | `octen` | [Octen Web Search](https://docs.octen.ai/api-reference/search) | direct HTTP | `max_results` (at most 100), `include_domains`, `exclude_domains`, `locale` (18 languages), `recency`, `search_depth` (`fast`, `deep`, as `full_content`) |
 | `Provider.KEIROLABS` | `keirolabs` | [Keirolabs](https://keirolabs.cloud) lite search | direct HTTP | `max_results`. Titles, links and snippets, billed per search whatever the count |
+| `Provider.SPECSTREAM` | `specstream` | [SpecStream Search](https://specstream.ai/agents.md) | direct HTTP, `GET /v1/web-search` | `max_results` (sent as `num`, at most 100). `passages=true` through `provider_options` puts each page's excerpt in `content` |
 | `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | all but `effort` |
 | `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp), its `web_search_advanced_exa` tool | direct HTTP, **no key** | all but `locale` |
 | `Provider.EXA_LITELLM` | `exa-litellm` | [Exa](https://exa.ai) through your [LiteLLM proxy](https://docs.litellm.ai/docs/search) | direct HTTP to the proxy's `/v1/search/exa`, its key (`LITELLM_PROXY_API_KEY`) | as `exa` |
@@ -120,7 +122,8 @@ which ones this environment can use.
 | `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Fetch](https://api-docs.deepseek.com/guides/search) | `DEEPSEEK_API_KEY` | `markdown` |
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
 | `Provider.BROWSERBASE` | `browserbase` | [Browserbase Fetch](https://docs.browserbase.com/features/fetch) — a plain fetch, never a rendered page; the one backend that maps `profile` | `BROWSERBASE_API_KEY` | `markdown`, `html` |
-| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable, DeepSeek and Browserbase | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it; `profile` routed to one that maps it |
+| `Provider.SPECSTREAM` | `specstream` | [SpecStream Extract](https://specstream.ai/agents.md) | `SPECSTREAM_API_KEY` | `markdown`, `text` |
+| `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase and SpecStream | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it; `profile` routed to one that maps it |
 | `Provider.MAX` | `max` |  | the same members as `auto`, **all at once**; the first document back wins, and every fetch started is paid for -- see [The fastest answer any backend can give](/extract#the-fastest-answer-any-backend-can-give-max) | as `auto` |
 
 Two need more than a key. Oxylabs authenticates with the username and password
@@ -253,8 +256,8 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Nimble keyless, Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM, Valyu, Seltz, Octen, Keirolabs |
-| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Nimble keyless, Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase |
+| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Nimble keyless, Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM, Valyu, Seltz, Octen, Keirolabs, SpecStream |
+| `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Nimble keyless, Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
 Search's keyed order is generated, not hand-written: `make chains` ranks the
@@ -263,7 +266,7 @@ accuracy to tell apart are ordered by cost, then speed.
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#the-default-auto-orders-make-chains)
 explains the method, and how close the top backends are. Every
 key you hold comes before the free tier — so a key you hold only for research,
-Perplexity's say, serves your plain searches too. Keenable, DeepSeek, AgentCore, Valyu, Seltz, Octen and Keirolabs have
+Perplexity's say, serves your plain searches too. Keenable, DeepSeek, AgentCore, Valyu, Seltz, Octen, Keirolabs and SpecStream have
 no rows in those results, so they come after the keyless tier until a scan places them: with a gateway set up, a plain
 `WebRouter().search()` is still served by a keyless member first, so name `Provider.AGENTCORE` to reach it. For extract, the backends that
 joined later come after the keyless tier, so holding one more key never moves a

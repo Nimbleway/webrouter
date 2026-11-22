@@ -27,6 +27,11 @@ def _tool_result(payload: dict[str, Any]) -> dict[str, Any]:
     return {"result": {"content": [{"type": "text", "text": json.dumps(payload)}]}}
 
 
+def _unescaped(value: dict[str, Any]) -> str:
+    """JSON as a server that writes non-ASCII as it is sends it, which a stream of ``json.dumps`` defaults never is."""
+    return json.dumps(value, ensure_ascii=False)
+
+
 def test_no_credential_is_required() -> None:
     """The point of this provider: it constructs with no key in the environment."""
     assert YouMcpProvider().api_key is None
@@ -103,6 +108,28 @@ def test_progress_notifications_do_not_masquerade_as_the_answer(provider: YouMcp
         {"jsonrpc": "2.0", "method": "notifications/message", "params": {"data": "two"}},
         _tool_result(payload),
     )
+
+    assert provider._payload(response) == payload
+
+
+@pytest.mark.parametrize("line_break", ["\u2028", "\u2029", "\x85"], ids=["U+2028", "U+2029", "U+0085"])
+def test_a_unicode_line_break_in_a_result_does_not_cut_the_reply_in_two(
+    provider: YouMcpProvider, line_break: str
+) -> None:
+    """JSON leaves these three unescaped, and Exa's and You.com's streams carry them as the page wrote them."""
+    payload = {"results": {"web": [{"url": "https://a.com", "title": f"one{line_break}two", "description": "d"}]}}
+    reply = {"jsonrpc": "2.0", "id": 1, "result": {"content": [{"type": "text", "text": _unescaped(payload)}]}}
+    body = f"event: message\ndata: {_unescaped(reply)}\n\n"
+    response = httpx.Response(200, text=body, request=httpx.Request("POST", "https://api.you.com/mcp"))
+
+    assert provider._payload(response) == payload
+
+
+@pytest.mark.parametrize("line_end", ["\n", "\r\n", "\r"], ids=["LF", "CRLF", "CR"])
+def test_the_stream_is_read_whichever_line_ending_it_uses(provider: YouMcpProvider, line_end: str) -> None:
+    payload = {"results": {"web": []}}
+    body = f"event: message{line_end}data: {json.dumps(_tool_result(payload))}{line_end}{line_end}"
+    response = httpx.Response(200, text=body, request=httpx.Request("POST", "https://api.you.com/mcp"))
 
     assert provider._payload(response) == payload
 
@@ -197,3 +224,39 @@ def test_live_inline_operators_are_taken_out_of_the_query() -> None:
     assert response.results
     assert all("docs.python.org" in result.url for result in response.results)
     assert response.raw["metadata"]["query"] == "asyncio tutorial"
+
+
+_NO_RESULTS_HINT = 'No results for "{".\nIssue a new query - don\'t repeat this one. Widen with more common terms.'
+
+
+def _empty_search_reply() -> httpx.Response:
+    """What You.com sends for a search with no hits: the JSON object, then a plain-text hint in the same content."""
+    payload = {"results": {}, "metadata": {"search_uuid": "abc", "query": "{"}}
+    return _sse({"result": {"content": [{"type": "text", "text": json.dumps(payload) + _NO_RESULTS_HINT}]}})
+
+
+def test_a_search_with_no_hits_is_an_empty_response_not_a_parse_error(provider: YouMcpProvider) -> None:
+    """The hint after the JSON made ``json.loads`` raise "Extra data", so a query with no hits failed the call."""
+    request = SearchRequest(query="{")
+
+    response = provider._to_response(request, provider._payload(_empty_search_reply()))
+
+    assert response.results == []
+    assert response.request_id == "abc"
+
+
+def test_a_hit_list_followed_by_text_is_still_read(provider: YouMcpProvider) -> None:
+    payload = {"results": {"web": [{"url": "https://a.example", "title": "A"}]}}
+    reply = _sse({"result": {"content": [{"type": "text", "text": json.dumps(payload) + "\nnote"}]}})
+
+    response = provider._to_response(SearchRequest(query="a"), provider._payload(reply))
+
+    assert [r.url for r in response.results] == ["https://a.example"]
+
+
+@pytest.mark.parametrize("text", ["No results at all.", "[1, 2]", '"a string"'])
+def test_text_that_is_not_a_json_object_is_still_no_result(provider: YouMcpProvider, text: str) -> None:
+    reply = _sse({"result": {"content": [{"type": "text", "text": text}]}})
+
+    with pytest.raises(ProviderError, match="no result payload"):
+        provider._payload(reply)

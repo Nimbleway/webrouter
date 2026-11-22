@@ -1,0 +1,474 @@
+{
+  "vendor": "crossref",
+  "name": "Crossref",
+  "category": "science",
+  "summary": "Metadata for the DOIs registered with Crossref: works (articles, books, datasets...), journals, funders, members and their references, licenses and funding.",
+  "docs_url": "https://www.crossref.org/documentation/retrieve-metadata/rest-api/",
+  "base_url": "https://api.crossref.org",
+  "notes": [
+    "Keyless. Adding mailto=<your email> (or an email in the User-Agent) moves calls to the polite pool: 10 requests per interval and 3 concurrent instead of 5 and 1; the interval is in the x-rate-limit-interval header. 429 means slow down, 403 means blocked.",
+    "Crossref Plus subscribers send their key as the header crossref-api-key: Bearer <key> for 150 requests per interval; not configured here, pass it through vendor_request if you hold one.",
+    "Lists return up to 1000 items (rows). For deep paging use cursor=* and then each response's next-cursor (cursors expire after 5 minutes); offset only reaches 10,000.",
+    "Pass a DOI as written (10.5555/12345678): path values are encoded, so the slash goes as %2F, which the API expects."
+  ],
+  "sources": [
+    "https://www.crossref.org/documentation/retrieve-metadata/rest-api/",
+    "https://www.crossref.org/documentation/retrieve-metadata/rest-api/access-and-authentication/",
+    "https://api.crossref.org/swagger-ui/index.html",
+    "https://api.crossref.org/swagger-docs"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "crossref.works.search",
+      "name": "Search and filter works",
+      "summary": "Works (articles, books, chapters, datasets...) matching a query and filters, with facets and sorting.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/works",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Words to look for in any field.",
+          "example": "protein folding"
+        },
+        "query_bibliographic": {
+          "in": "query",
+          "type": "string",
+          "description": "Looks only in citation fields (title, authors, volume, journal...); good for matching a reference string.",
+          "wire_name": "query.bibliographic"
+        },
+        "query_author": {
+          "in": "query",
+          "type": "string",
+          "description": "Author given and family names.",
+          "wire_name": "query.author"
+        },
+        "query_title": {
+          "in": "query",
+          "type": "string",
+          "description": "Title.",
+          "wire_name": "query.title"
+        },
+        "query_affiliation": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor affiliations.",
+          "wire_name": "query.affiliation"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated name:value filters, e.g. from-pub-date:2023-01-01,type:journal-article,has-abstract:true (full list on the filters page).",
+          "example": "from-pub-date:2024-01-01,type:journal-article"
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return, e.g. DOI,title,author."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, e.g. published (see the sorting section of the docs)."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Default desc."
+        },
+        "facet": {
+          "in": "query",
+          "type": "string",
+          "description": "Counts by a facet, e.g. type-name:* (approximate)."
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, max 1000; 0 returns only the summary and count."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, up to 10,000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "* to start deep paging, then the previous next-cursor."
+        },
+        "sample": {
+          "in": "query",
+          "type": "integer",
+          "description": "Return N randomly sampled items."
+        },
+        "mailto": {
+          "in": "query",
+          "type": "string",
+          "description": "Your email, for the polite pool."
+        }
+      },
+      "job": "scholar.search",
+      "docs_url": "https://api.crossref.org/swagger-ui/index.html#/Works/get_works",
+      "verified": {
+        "docs": "https://api.crossref.org/swagger-docs"
+      }
+    },
+    {
+      "id": "crossref.works.get",
+      "name": "Get a work's metadata by DOI",
+      "summary": "One registered work: title, authors with ORCIDs, container, dates, references, funders, license and citation count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/works/{doi}",
+      "params": {
+        "doi": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The DOI as written, e.g. 10.1038/nature12373; the slash is encoded for you.",
+          "example": "10.1038/nature12373"
+        },
+        "mailto": {
+          "in": "query",
+          "type": "string",
+          "description": "Your email, for the polite pool."
+        }
+      },
+      "notes": [
+        "A DOI registered with another agency (DataCite, mEDRA...) answers 404 here; /works/{doi}/agency says which agency holds it."
+      ],
+      "job": "scholar.paper",
+      "docs_url": "https://api.crossref.org/swagger-ui/index.html#/Works/get_works__doi_",
+      "verified": {
+        "docs": "https://api.crossref.org/swagger-docs"
+      }
+    },
+    {
+      "id": "crossref.works.agency",
+      "name": "Find which agency registered a DOI",
+      "summary": "The registration agency (Crossref, DataCite...) of a DOI.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/works/{doi}/agency",
+      "params": {
+        "doi": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The DOI as written; the slash is encoded for you.",
+          "example": "10.5555/12345678"
+        }
+      },
+      "job": "reference.doi.agency",
+      "docs_url": "https://api.crossref.org/swagger-ui/index.html#/Works/get_works__doi__agency",
+      "verified": {
+        "docs": "https://api.crossref.org/swagger-docs"
+      }
+    },
+    {
+      "id": "crossref.journals.search",
+      "name": "Search journals",
+      "summary": "Journals matching a title query, with ISSNs, publisher and DOI counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/journals",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Words in the journal title or publisher.",
+          "example": "nature"
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, max 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "* to start deep paging, then the previous next-cursor."
+        },
+        "mailto": {
+          "in": "query",
+          "type": "string",
+          "description": "Your email, for the polite pool."
+        }
+      },
+      "job": "scholar.sources.search",
+      "docs_url": "https://api.crossref.org/swagger-ui/index.html#/Journals/get_journals",
+      "verified": {
+        "docs": "https://api.crossref.org/swagger-docs"
+      }
+    },
+    {
+      "id": "crossref.journals.works",
+      "name": "List a journal's works",
+      "summary": "Works published in one journal, by ISSN, with the same query, filter and sort options as works search.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/journals/{issn}/works",
+      "params": {
+        "issn": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The journal's ISSN.",
+          "example": "0028-0836"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Words to look for in any field."
+        },
+        "query_bibliographic": {
+          "in": "query",
+          "type": "string",
+          "description": "Looks only in citation fields (titles, authors, ISSNs, years); good for matching a reference string.",
+          "wire_name": "query.bibliographic"
+        },
+        "query_author": {
+          "in": "query",
+          "type": "string",
+          "description": "Author given and family names.",
+          "wire_name": "query.author"
+        },
+        "query_title": {
+          "in": "query",
+          "type": "string",
+          "description": "Title.",
+          "wire_name": "query.title"
+        },
+        "query_affiliation": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor affiliations.",
+          "wire_name": "query.affiliation"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated name:value filters, e.g. from-pub-date:2024-01-01."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, e.g. published."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Default desc."
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, max 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, up to 10,000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "* to start deep paging, then the previous next-cursor."
+        },
+        "mailto": {
+          "in": "query",
+          "type": "string",
+          "description": "Your email, for the polite pool."
+        }
+      },
+      "job": "scholar.source.papers",
+      "docs_url": "https://api.crossref.org/swagger-ui/index.html#/Journals/get_journals__issn__works",
+      "verified": {
+        "docs": "https://api.crossref.org/swagger-docs"
+      }
+    },
+    {
+      "id": "crossref.funders.search",
+      "name": "Search funders",
+      "summary": "Funders in the Open Funder Registry matching a name, with their funder ids.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/funders",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Funder name words.",
+          "example": "national science foundation"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter, e.g. location:Germany."
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, max 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "* to start deep paging, then the previous next-cursor."
+        },
+        "mailto": {
+          "in": "query",
+          "type": "string",
+          "description": "Your email, for the polite pool."
+        }
+      },
+      "job": "scholar.funders.search",
+      "docs_url": "https://api.crossref.org/swagger-ui/index.html#/Funders/get_funders",
+      "verified": {
+        "docs": "https://api.crossref.org/swagger-docs"
+      }
+    },
+    {
+      "id": "crossref.funders.works",
+      "name": "List works a funder funded",
+      "summary": "Works that acknowledge one funder, by its Open Funder Registry id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/funders/{id}/works",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Funder id (the suffix of its 10.13039 DOI).",
+          "example": "100000001"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Words to look for in any field."
+        },
+        "query_bibliographic": {
+          "in": "query",
+          "type": "string",
+          "description": "Looks only in citation fields (titles, authors, ISSNs, years); good for matching a reference string.",
+          "wire_name": "query.bibliographic"
+        },
+        "query_author": {
+          "in": "query",
+          "type": "string",
+          "description": "Author given and family names.",
+          "wire_name": "query.author"
+        },
+        "query_title": {
+          "in": "query",
+          "type": "string",
+          "description": "Title.",
+          "wire_name": "query.title"
+        },
+        "query_affiliation": {
+          "in": "query",
+          "type": "string",
+          "description": "Contributor affiliations.",
+          "wire_name": "query.affiliation"
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated name:value filters."
+        },
+        "select": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to return."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Sort field, e.g. published."
+        },
+        "order": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "description": "Default desc."
+        },
+        "rows": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, max 1000."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items to skip, up to 10,000."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "* to start deep paging, then the previous next-cursor."
+        },
+        "mailto": {
+          "in": "query",
+          "type": "string",
+          "description": "Your email, for the polite pool."
+        }
+      },
+      "job": "scholar.funder.papers",
+      "docs_url": "https://api.crossref.org/swagger-ui/index.html#/Funders/get_funders__id__works",
+      "verified": {
+        "docs": "https://api.crossref.org/swagger-docs"
+      }
+    },
+    {
+      "id": "crossref.members.get",
+      "name": "Get a Crossref member",
+      "summary": "One member (publisher): names, prefixes, DOI counts and metadata coverage.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/members/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Member id.",
+          "example": 98
+        }
+      },
+      "job": "scholar.publisher",
+      "docs_url": "https://api.crossref.org/swagger-ui/index.html#/Members/get_members__id_",
+      "verified": {
+        "docs": "https://api.crossref.org/swagger-docs"
+      }
+    }
+  ]
+}

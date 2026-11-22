@@ -14,6 +14,7 @@ import pytest
 from tests.attempts_helpers import DEEP, INSTANT, TAVILY, Reply, fake_backends, hooked, price, routed
 from tests.candidates_helpers import Shown
 from web_router import AsyncWebRouter, Budget, BudgetExceededError, ProviderError, RouteDecision, WebRouter
+from web_router.constants_production import HOP_CODE_COOLING_DOWN
 from web_router.routing.attempts import CallRoute, call_route
 
 EMPTY: dict[str, Any] = {"results": []}
@@ -125,7 +126,8 @@ def test_a_throttled_mode_cools_its_backend_so_the_next_call_runs_none_of_its_mo
         response = wr.search("q")
     assert (calls.exa, len(calls.tavily)) == (["instant"], 2), "the second call sent Exa nothing"
     hops = {hop.id: hop.error for hop in (response.decision.hops if response.decision else None) or ()}
-    assert (hops[INSTANT], hops[DEEP]) == ("429", "backend_failed"), "refused while cooling, then stopped"
+    expected = (HOP_CODE_COOLING_DOWN, "backend_failed")
+    assert (hops[INSTANT], hops[DEEP]) == expected, "refused while cooling, then stopped"
 
 
 def test_a_cap_only_a_mode_fits_still_asks_the_router_and_runs_that_mode(monkeypatch: pytest.MonkeyPatch) -> None:

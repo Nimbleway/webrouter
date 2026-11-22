@@ -1,0 +1,526 @@
+{
+  "vendor": "explorium",
+  "name": "Explorium AgentSource",
+  "category": "company-data",
+  "summary": "B2B business data for 80M+ companies: match companies to ids, filter and count companies by firmographics, and enrich them with firmographics, technographics, funding, financials, workforce trends, hierarchies and recent business events.",
+  "docs_url": "https://developers.explorium.ai/v2/overview",
+  "pricing_url": "https://admin.explorium.ai/pricing",
+  "base_url": "https://api.explorium.ai",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EXPLORIUM_API_KEY"
+        ],
+        "description": "An Explorium AgentSource API key (admin.explorium.ai). Sent in the api_key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "api_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Calls spend credits by action (the price list is on the admin pricing page); check the balance with explorium.credits.get.",
+    "Rate limit: 200 queries a minute per key, where each entity in a batch counts as one query (50 ids = 50 queries). 429 carries Retry-After.",
+    "Most calls take Explorium business ids: get them from explorium.businesses.match first, or pass businesses_to_match to an enrichment.",
+    "This entry uses the v2 API. Async jobs, dataset uploads, event enrollments, webhooks, prospects and AI research are not in it."
+  ],
+  "sources": [
+    "https://developers.explorium.ai/llms.txt",
+    "https://developers.explorium.ai/v2/overview",
+    "https://developers.explorium.ai/v2/conventions",
+    "https://developers.explorium.ai/reference/rate-limit",
+    "https://developers.explorium.ai/reference/credits/tracking_your_credits",
+    "https://developers.explorium.ai/v2/businesses/match_businesses",
+    "https://developers.explorium.ai/v2/businesses/fetch_businesses",
+    "https://developers.explorium.ai/v2/businesses/fetch_businesses_statistics",
+    "https://developers.explorium.ai/v2/businesses/enrichments/overview",
+    "https://developers.explorium.ai/v2/autocomplete",
+    "https://developers.explorium.ai/v2/credits/get_credits",
+    "https://developers.explorium.ai/v2/businesses/events/fetch_events"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "explorium.businesses.match",
+      "name": "Match companies to ids",
+      "summary": "Explorium business ids for companies given by name, domain, website URL or LinkedIn URL, in input order.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/match",
+      "params": {
+        "businesses_to_match": {
+          "in": "body",
+          "type": "array",
+          "description": "Companies to match, each {name, domain, url, linkedin_url}; name plus domain is most reliable.",
+          "required": true,
+          "example": [
+            {
+              "name": "Explorium",
+              "domain": "explorium.ai"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "With name and domain, an unsure match falls back to the domain alone; a name alone relies on fuzzy matching."
+      ],
+      "job": "company.match",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/match_businesses",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/match_businesses.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.search",
+      "name": "Search companies by filters",
+      "summary": "Companies matching filters such as country, region, size, revenue, age, industry category, tech stack, intent topics or website keywords.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses",
+      "params": {
+        "mode": {
+          "in": "body",
+          "type": "string",
+          "description": "Detail level: full. preview (names and domains only) needs a custom plan.",
+          "required": true,
+          "enum": [
+            "full",
+            "preview"
+          ],
+          "example": "full"
+        },
+        "page_size": {
+          "in": "body",
+          "type": "integer",
+          "description": "Companies per page, 1-500.",
+          "required": true,
+          "example": 25
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Filters object: each field takes {\"values\": [...]} (OR within a field, AND across fields). Fields include country_code, region_country_code, company_size, company_revenue, company_age, linkedin_category, naics_category, google_category, company_tech_stack_tech, business_intent_topics, website_keywords, is_public_company, has_website; valid values come from explorium.autocomplete.",
+          "example": {
+            "country_code": {
+              "values": [
+                "us"
+              ]
+            },
+            "company_size": {
+              "values": [
+                "11-50",
+                "51-200"
+              ]
+            }
+          }
+        },
+        "exclude": {
+          "in": "body",
+          "type": "array",
+          "description": "Business ids to leave out."
+        },
+        "page": {
+          "in": "body",
+          "type": "integer",
+          "description": "Page number from 1; omit for cursor paging."
+        },
+        "next_cursor": {
+          "in": "body",
+          "type": "string",
+          "description": "page.next_cursor from the previous answer."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Only one category filter per request: Google category, LinkedIn industry or NAICS."
+      ],
+      "job": "company.search",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/fetch_businesses",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/fetch_businesses.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.stats",
+      "name": "Count companies by filters",
+      "summary": "How many companies match a filter set, broken down by category and location.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/stats",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "The same filters object as explorium.businesses.search.",
+          "required": true,
+          "example": {
+            "region_country_code": {
+              "values": [
+                "us-ca"
+              ]
+            }
+          }
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing."
+      ],
+      "job": "company.search",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/fetch_businesses_statistics",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/fetch_businesses_statistics.md"
+      }
+    },
+    {
+      "id": "explorium.autocomplete",
+      "name": "Autocomplete filter values",
+      "summary": "Valid filter values for a field (countries, regions, categories, tech, sizes, revenue bands, intent topics) from partial text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/autocomplete",
+      "params": {
+        "field": {
+          "in": "query",
+          "type": "string",
+          "description": "The field to suggest values for.",
+          "required": true,
+          "enum": [
+            "country",
+            "country_code",
+            "region_country_code",
+            "google_category",
+            "naics_category",
+            "linkedin_category",
+            "company_tech_stack_tech",
+            "company_tech_stack_categories",
+            "job_title",
+            "company_size",
+            "company_revenue",
+            "number_of_locations",
+            "company_age",
+            "job_department",
+            "job_level",
+            "city_region_country",
+            "company_name",
+            "business_intent_topics",
+            "city_region",
+            "skills",
+            "interests"
+          ],
+          "example": "country"
+        },
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Partial text.",
+          "example": "unit"
+        },
+        "semantic_search": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for broader topic-aware suggestions; meant for business_intent_topics."
+        }
+      },
+      "job": "reference.filters",
+      "docs_url": "https://developers.explorium.ai/v2/autocomplete",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/autocomplete.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.firmographics",
+      "name": "Get company firmographics",
+      "summary": "Revenue, employee count, industry classification, location and other core attributes per company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/firmographics/enrich",
+      "params": {
+        "business_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "One Explorium business id (32 hex characters) or a list of up to 50, from explorium.businesses.match. Send this or businesses_to_match, never both.",
+          "example": [
+            "8adce3ca1cef0c986b22310e369a0793"
+          ]
+        },
+        "businesses_to_match": {
+          "in": "body",
+          "type": "array",
+          "description": "Instead of ids: up to 50 companies as {name, domain, url, linkedin_url}, matched and enriched in one call; unmatched rows come back null and are not charged.",
+          "example": [
+            {
+              "name": "Explorium",
+              "domain": "explorium.ai"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/enrichments/firmographics_enrich",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/enrichments/firmographics_enrich.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.technographics",
+      "name": "Get company technographics",
+      "summary": "The technologies a company uses, by category.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/technographics/enrich",
+      "params": {
+        "business_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "One Explorium business id (32 hex characters) or a list of up to 50, from explorium.businesses.match. Send this or businesses_to_match, never both.",
+          "example": [
+            "8adce3ca1cef0c986b22310e369a0793"
+          ]
+        },
+        "businesses_to_match": {
+          "in": "body",
+          "type": "array",
+          "description": "Instead of ids: up to 50 companies as {name, domain, url, linkedin_url}, matched and enriched in one call; unmatched rows come back null and are not charged.",
+          "example": [
+            {
+              "name": "Explorium",
+              "domain": "explorium.ai"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing."
+      ],
+      "job": "company.technologies",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/enrichments/technographics_enrich",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/enrichments/technographics_enrich.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.funding_and_acquisition",
+      "name": "Get funding and acquisitions",
+      "summary": "Funding rounds, investors and M&A activity for public and private companies.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/funding_and_acquisition/enrich",
+      "params": {
+        "business_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "One Explorium business id (32 hex characters) or a list of up to 50, from explorium.businesses.match. Send this or businesses_to_match, never both.",
+          "example": [
+            "8adce3ca1cef0c986b22310e369a0793"
+          ]
+        },
+        "businesses_to_match": {
+          "in": "body",
+          "type": "array",
+          "description": "Instead of ids: up to 50 companies as {name, domain, url, linkedin_url}, matched and enriched in one call; unmatched rows come back null and are not charged.",
+          "example": [
+            {
+              "name": "Explorium",
+              "domain": "explorium.ai"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing."
+      ],
+      "job": "company.funding",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/enrichments/funding_and_acquisition_enrich",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/enrichments/funding_and_acquisition_enrich.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.financial_indicators",
+      "name": "Get public company financials",
+      "summary": "Annual and quarterly revenue, returns, profitability and valuation metrics for listed companies, up to 20 years back.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/financial_indicators/enrich",
+      "params": {
+        "business_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "One Explorium business id (32 hex characters) or a list of up to 50, from explorium.businesses.match. Send this or businesses_to_match, never both.",
+          "example": [
+            "8adce3ca1cef0c986b22310e369a0793"
+          ]
+        },
+        "businesses_to_match": {
+          "in": "body",
+          "type": "array",
+          "description": "Instead of ids: up to 50 companies as {name, domain, url, linkedin_url}, matched and enriched in one call; unmatched rows come back null and are not charged.",
+          "example": [
+            {
+              "name": "Explorium",
+              "domain": "explorium.ai"
+            }
+          ]
+        },
+        "parameters": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"date\": an ISO date-time}: the date the indicators are wanted for; required.",
+          "required": true,
+          "example": {
+            "date": "2025-12-31T00:00:00"
+          }
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/enrichments/financial_indicators_enrich",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/enrichments/financial_indicators_enrich.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.workforce_trends",
+      "name": "Get workforce trends",
+      "summary": "Department-level headcount changes and hiring trends per company.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/workforce_trends/enrich",
+      "params": {
+        "business_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "One Explorium business id (32 hex characters) or a list of up to 50, from explorium.businesses.match. Send this or businesses_to_match, never both.",
+          "example": [
+            "8adce3ca1cef0c986b22310e369a0793"
+          ]
+        },
+        "businesses_to_match": {
+          "in": "body",
+          "type": "array",
+          "description": "Instead of ids: up to 50 companies as {name, domain, url, linkedin_url}, matched and enriched in one call; unmatched rows come back null and are not charged.",
+          "example": [
+            {
+              "name": "Explorium",
+              "domain": "explorium.ai"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing."
+      ],
+      "job": "company.employees",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/enrichments/workforce_trends_enrich",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/enrichments/workforce_trends_enrich.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.company_hierarchies",
+      "name": "Get company hierarchy",
+      "summary": "A company's parent, ultimate parent and subsidiaries.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/company_hierarchies/enrich",
+      "params": {
+        "business_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "One Explorium business id (32 hex characters) or a list of up to 50, from explorium.businesses.match. Send this or businesses_to_match, never both.",
+          "example": [
+            "8adce3ca1cef0c986b22310e369a0793"
+          ]
+        },
+        "businesses_to_match": {
+          "in": "body",
+          "type": "array",
+          "description": "Instead of ids: up to 50 companies as {name, domain, url, linkedin_url}, matched and enriched in one call; unmatched rows come back null and are not charged.",
+          "example": [
+            {
+              "name": "Explorium",
+              "domain": "explorium.ai"
+            }
+          ]
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/enrichments/company_hierarchies_enrich",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/enrichments/company_hierarchies_enrich.md"
+      }
+    },
+    {
+      "id": "explorium.businesses.events",
+      "name": "Get recent business events",
+      "summary": "Recent events for up to 40 companies: funding rounds, IPOs, product launches, offices, partnerships, hires, departmental growth, lawsuits, breaches, cost cutting, M&A.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/businesses/events",
+      "params": {
+        "business_ids": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 40 business ids.",
+          "required": true
+        },
+        "event_types": {
+          "in": "body",
+          "type": "array",
+          "description": "Event types to return, e.g. new_funding_round, ipo_announcement, new_product, new_office, new_partnership, executive_joined_company, merger_and_acquisitions, lawsuits_and_legal_issues, outages_and_security_breaches, cost_cutting, hiring_in_engineering_department.",
+          "required": true,
+          "example": [
+            "new_funding_round",
+            "new_product"
+          ]
+        },
+        "timestamp_from": {
+          "in": "body",
+          "type": "string",
+          "description": "Earliest event time, ISO date-time or YYYY-MM-DD; keep it within the last three months."
+        },
+        "timestamp_to": {
+          "in": "body",
+          "type": "string",
+          "description": "Latest event time, same format."
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it looks data up and changes nothing.",
+        "Recent events only (about the last quarter); for history use the enrichments. An empty answer means nothing happened in the window."
+      ],
+      "job": "company.signals",
+      "docs_url": "https://developers.explorium.ai/v2/businesses/events/fetch_events",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/businesses/events/fetch_events.md"
+      }
+    },
+    {
+      "id": "explorium.credits.get",
+      "name": "Get credit balance",
+      "summary": "Allocated and remaining credits on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/credits",
+      "job": "account.usage",
+      "docs_url": "https://developers.explorium.ai/v2/credits/get_credits",
+      "verified": {
+        "docs": "https://developers.explorium.ai/v2/credits/get_credits.md"
+      }
+    }
+  ]
+}

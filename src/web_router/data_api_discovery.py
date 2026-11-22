@@ -5,7 +5,7 @@ extract lists those whose catalog ``sites`` serve each page's site. Matching is
 local and free: it reads the catalog and calls nothing. A match is
 only ever listed; running one stays :meth:`~web_router.WebRouter.call_data_api`'s.
 Only read endpoints are listed: a search or a page read is a question, and an endpoint that
-changes data is found with :meth:`~web_router.WebRouter.find_data_apis`.
+changes data is found with :meth:`~web_router.WebRouter.find_data_api_endpoints`.
 """
 
 from __future__ import annotations

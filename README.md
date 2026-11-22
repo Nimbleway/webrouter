@@ -52,7 +52,8 @@ print(results.provider, [doc.url for doc in pages.documents])
 - **Routing based on published benchmarks.** `auto` tries the providers you hold keys for in the
   order committed benchmark results rank them, and falls back on an error or an
   empty answer. `response.provider` always says who answered.
-- **Cost control.** Every response says what it cost and how long it took. Cap
+- **Cost control.** Search, extract, answer, research and browse responses say
+  how long they took and, where the backend's price is known, what they cost. Cap
   a call or a whole session in dollars and seconds, try the free backends
   first, and keep a log of what you spent ([budgets](#budgets-and-cost-control)).
 - **Keyless to start.** Search, extract and a local browser work with no API
@@ -112,8 +113,8 @@ Every method has an async twin on `AsyncWebRouter`.
 
 | Method | Providers |
 | --- | --- |
-| Search | Nimble, Tavily, Exa, Brave, Perplexity, Parallel, Linkup, You.com, WebIQ, Keenable, DeepSeek, AWS AgentCore, Valyu, Seltz, Octen, Keirolabs, plus the keyless You.com, Exa and Parallel MCP endpoints |
-| Extract | Nimble, Tavily, Firecrawl, Exa, Linkup, Oxylabs, Bright Data, Jina Reader, WebIQ, Keenable, DeepSeek, Browserbase |
+| Search | Nimble, Tavily, Exa, Brave, Perplexity, Parallel, Linkup, You.com, WebIQ, Keenable, DeepSeek, AWS AgentCore, Valyu, Seltz, Octen, Keirolabs, SpecStream, plus the keyless You.com, Exa and Parallel MCP endpoints |
+| Extract | Nimble, Tavily, Firecrawl, Exa, Linkup, Oxylabs, Bright Data, Jina Reader, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream |
 | Answer | Perplexity, You.com, Linkup, Parallel, Exa, Brave |
 | Research | Nimble, Parallel, Perplexity, Linkup, You.com |
 | Live data | Nimble, Apify, Bright Data, Oxylabs |
@@ -173,7 +174,8 @@ prices.estimate("tavily", "search")  # 0.008: list price of one request
 ```
 
 Every response carries `cost_usd`: the backend's own figure where it states
-one (`cost_source="reported"`), else an estimate. Unless a router ranks the
+one (`cost_source="reported"`), `0` for a call on a backend's keyless tier
+(`cost_source="keyless"`), else an estimate. Unless a router ranks the
 backends itself (the default `rules` router does not), a cost cap makes `auto`
 try the cheaper of the backends that score alike first.
 
@@ -220,6 +222,28 @@ tools = web_router_tools(WebRouter(), max_results=5)  # LangChain
 `web_router.integrations.anthropic` and `web_router.integrations.openai` give
 Claude and OpenAI agents the same tools as plain tool definitions. See
 [Agent integrations](https://docs.webrouter.net/integrations).
+
+## Data flow
+
+WebRouter runs inside your process, or as an MCP server you start yourself.
+There is no WebRouter service in between, and nothing to sign up for.
+
+- **Each call goes straight from your machine to the backend that serves it**,
+  carrying your query or URL and that backend's own key. A key is sent only to
+  its own provider.
+- **Which backends:** the ones you hold a key for, and, when `auto` has none
+  left for a method, the free tiers listed in
+  [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials).
+  Name a provider to keep a call on that backend alone.
+- **Beyond the backends:** `call_data_api` reaches the vendor API you name, with
+  that vendor's credentials; `WEB_ROUTER_MCP_ROUTER=remote` sends a prompt to
+  the router service at the URL you set; and `evaluate()` downloads the
+  question set you pick and calls the judge model you configure.
+- **No telemetry.** The package sends no usage data and does not call home.
+- **Keys stay in the process.** They are read from the environment (and, for
+  the MCP server, from a `.env` it is pointed at), held in memory, and kept out
+  of logs and tool results. The server writes no key to disk: `load_env`'s
+  `remember` records the file's path, never its contents.
 
 ## Compare providers on your own queries
 

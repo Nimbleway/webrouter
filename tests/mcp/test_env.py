@@ -269,7 +269,7 @@ def test_load_of_a_file_that_is_not_a_dotenv_yields_nothing_and_quotes_none_of_i
         'password = "hunter2"\n'
         '{"token": "json-secret"}\n'
     )
-    path = write(isolated_home / "notes.txt", secrets)
+    path = write(isolated_home / "notes.env", secrets)
 
     with pytest.raises(EnvFileError) as raised:
         EnvSources().load(str(path))
@@ -285,7 +285,7 @@ def test_load_of_a_file_that_is_not_a_dotenv_yields_nothing_and_quotes_none_of_i
 
 @pytest.mark.parametrize("kind", ["missing", "directory", "too large", "binary"])
 def test_load_refuses_what_is_not_a_readable_dotenv_by_path_alone(isolated_home: Path, kind: str) -> None:
-    path = isolated_home / "target"
+    path = isolated_home / "target.env"
     if kind == "directory":
         path.mkdir()
     elif kind == "too large":

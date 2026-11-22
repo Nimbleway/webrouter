@@ -77,7 +77,9 @@ response.failures[0].error  # why it did not come back
 ```
 
 A call where **nothing** came back raises instead, so a bad credential can never
-look like a page with no text. This works the same way whether the backend
+look like a page with no text. When the URLs failed separately, it raises an
+`ExtractFailedError` whose `url_failures` holds each URL's own failure, as
+`failures` would have. This works the same way whether the backend
 reports its own per-URL failures (Tavily, Exa) or was fanned out one URL at a
 time (everything else). That uniformity is enforced in `ExtractProvider`, not
 asked of each provider.

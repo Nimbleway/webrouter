@@ -1,0 +1,85 @@
+{
+  "vendor": "google-pagespeed-insights",
+  "name": "Google PageSpeed Insights",
+  "category": "seo",
+  "summary": "Lighthouse audits of any public URL (performance by default; accessibility, best-practices and SEO scores when asked for by category) plus the Chrome field data Google holds for the page and its origin.",
+  "docs_url": "https://developers.google.com/speed/docs/insights/v5/get-started",
+  "base_url": "https://pagespeedonline.googleapis.com/pagespeedonline/v5",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "PAGESPEED_API_KEY"
+        ],
+        "description": "a Google Cloud API key from a project with the PageSpeed Insights API enabled (Google Cloud console > APIs & Services > Credentials)"
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Each call runs a fresh Lighthouse audit of the live page, so it takes seconds to tens of seconds; the answer is large (every audit's details under lighthouseResult).",
+    "Lab data is lighthouseResult; field data from real Chrome users is loadingExperience (the URL) and originLoadingExperience (the whole origin), present only when Chrome has enough traffic for it. Google says this field data will leave the API: use the Chrome UX Report API for it.",
+    "Lighthouse category scores are 0 to 1 (multiply by 100 for the score PageSpeed shows)."
+  ],
+  "sources": [
+    "https://developers.google.com/speed/docs/insights/v5/get-started",
+    "https://developers.google.com/speed/docs/insights/rest/v5/pagespeedapi/runpagespeed"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "google-pagespeed-insights.run",
+      "name": "Audit a page with Lighthouse",
+      "summary": "Lighthouse scores and audits for one URL on mobile or desktop, with the page's and origin's Chrome field data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/runPagespeed",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The full URL to audit.",
+          "example": "https://www.example.com/"
+        },
+        "category": {
+          "in": "query",
+          "type": "array",
+          "description": "Lighthouse categories to run, repeated: PERFORMANCE, ACCESSIBILITY, BEST_PRACTICES, SEO. Only PERFORMANCE runs when omitted.",
+          "example": [
+            "PERFORMANCE",
+            "SEO"
+          ]
+        },
+        "strategy": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "DESKTOP",
+            "MOBILE"
+          ],
+          "description": "Device to emulate. DESKTOP when omitted."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Locale for the audit text in the answer, e.g. en or de."
+        }
+      },
+      "notes": [
+        "Asks for PERFORMANCE alone unless category names more; send each category as its own category value."
+      ],
+      "job": "web.performance.audit",
+      "docs_url": "https://developers.google.com/speed/docs/insights/rest/v5/pagespeedapi/runpagespeed",
+      "verified": {
+        "docs": "https://developers.google.com/speed/docs/insights/rest/v5/pagespeedapi/runpagespeed"
+      }
+    }
+  ]
+}

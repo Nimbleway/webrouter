@@ -168,7 +168,7 @@ class SyncPlan(_Planner, SyncRouted):
         run; for a prompt it holds the planning too. ``tool`` pins the method of a prompt's plan.
         """
         started = monotonic()
-        with ExitStack() as stack:
+        with self._spending(lambda: getattr(plan, "tool", tool)), ExitStack() as stack:
             if isinstance(plan, str):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = self.plan(plan, budget=budget, tool=tool)
@@ -188,7 +188,7 @@ class AsyncPlan(_Planner, AsyncRouted):
     async def run(self, plan: Plan | str, *, budget: Budget | None = None, tool: ToolName | None = None) -> RunResponse:
         """As :meth:`SyncPlan.run`."""
         started = monotonic()
-        with ExitStack() as stack:
+        with self._spending(lambda: getattr(plan, "tool", tool)), ExitStack() as stack:
             if isinstance(plan, str):
                 stack.enter_context(call_deadline(None if budget is None else budget.time_limit_s))
                 plan = await self.plan(plan, budget=budget, tool=tool)

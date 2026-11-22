@@ -1,0 +1,391 @@
+{
+  "vendor": "yelp",
+  "name": "Yelp Fusion",
+  "category": "maps",
+  "summary": "Yelp's Places API (Fusion): search local businesses by term, location, category and price, match a known business, and read its details, hours and review excerpts.",
+  "docs_url": "https://docs.developer.yelp.com/docs/places-authentication",
+  "pricing_url": "https://business.yelp.com/data/products/places-api/",
+  "base_url": "https://api.yelp.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "YELP_API_KEY"
+        ],
+        "description": "A Yelp Places API key (yelp.com/developers > Manage App), sent as Authorization: Bearer <key>."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Daily call limits depend on the plan (the Starter trial allows 300 calls per 24 hours, reset at midnight UTC); RateLimit-Remaining and RateLimit-ResetTime headers report what is left. Too many calls per second answer 429 TOO_MANY_REQUESTS_PER_SECOND.",
+    "Businesses with no reviews are not returned by search, phone search or reviews.",
+    "Yelp's API terms carry display requirements (attribution, linking back to Yelp) for data you show."
+  ],
+  "sites": [
+    "yelp.com"
+  ],
+  "sources": [
+    "https://docs.developer.yelp.com/docs/places-authentication.md",
+    "https://docs.developer.yelp.com/docs/places-rate-limiting.md",
+    "https://docs.developer.yelp.com/reference/v3_business_search.md",
+    "https://docs.developer.yelp.com/reference/v3_business_info.md",
+    "https://docs.developer.yelp.com/reference/v3_business_reviews.md",
+    "https://docs.developer.yelp.com/reference/v3_business_phone_search.md",
+    "https://docs.developer.yelp.com/reference/v3_business_match.md",
+    "https://docs.developer.yelp.com/reference/v3_autocomplete.md",
+    "https://docs.developer.yelp.com/reference/v3_all_categories.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "yelp.businesses.search",
+      "name": "Search local businesses",
+      "summary": "Businesses matching a term near a place or point, with rating, review count, price, categories and coordinates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/businesses/search",
+      "params": {
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Place text, e.g. NYC or 350 5th Ave, New York; required unless latitude and longitude are given.",
+          "example": "San Francisco, CA"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude; with longitude, instead of location."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude; with latitude, instead of location."
+        },
+        "term": {
+          "in": "query",
+          "type": "string",
+          "description": "What to look for, e.g. food, or a business name such as Starbucks.",
+          "example": "ramen"
+        },
+        "radius": {
+          "in": "query",
+          "type": "integer",
+          "description": "Suggested radius in metres, max 40000."
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated category aliases, ORed, e.g. bars,french."
+        },
+        "price": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated price levels 1-4 ($ to $$$$), e.g. 1,2."
+        },
+        "open_now": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Only businesses open now; not with open_at."
+        },
+        "open_at": {
+          "in": "query",
+          "type": "integer",
+          "description": "Unix time (in the location's time zone) the business must be open at."
+        },
+        "attributes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extra filters, e.g. hot_and_new, reservation."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "best_match",
+            "rating",
+            "review_count",
+            "distance"
+          ],
+          "description": "A suggestion, not strictly enforced; default best_match."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "language_COUNTRY, e.g. en_US."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 20, max 50."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results to skip."
+        }
+      },
+      "notes": [
+        "At most 240 businesses can be reached for one search, however you page with limit and offset."
+      ],
+      "job": "places.search",
+      "docs_url": "https://docs.developer.yelp.com/reference/v3_business_search",
+      "verified": {
+        "docs": "https://docs.developer.yelp.com/reference/v3_business_search.md"
+      }
+    },
+    {
+      "id": "yelp.businesses.get",
+      "name": "Get a business's details",
+      "summary": "One business: address, phone, hours, photos, categories, price, rating, review count and transactions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/businesses/{business_id_or_alias}",
+      "params": {
+        "business_id_or_alias": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The 22-character Yelp business id or the business alias.",
+          "example": "gary-danko-san-francisco"
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "language_COUNTRY, e.g. en_US."
+        }
+      },
+      "job": "places.details",
+      "docs_url": "https://docs.developer.yelp.com/reference/v3_business_info",
+      "verified": {
+        "docs": "https://docs.developer.yelp.com/reference/v3_business_info.md"
+      }
+    },
+    {
+      "id": "yelp.businesses.reviews",
+      "name": "Get a business's review excerpts",
+      "summary": "Review excerpts for one business in Yelp's default order, with rating, date and reviewer.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/businesses/{business_id_or_alias}/reviews",
+      "params": {
+        "business_id_or_alias": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Yelp business id or alias.",
+          "example": "gary-danko-san-francisco"
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "language_COUNTRY of the reviews."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Reviews to return, max 50."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Reviews to skip."
+        }
+      },
+      "notes": [
+        "Needs Enhanced or Premium plan access; other plans cannot call it.",
+        "Returns review excerpts, not full review text."
+      ],
+      "job": "places.reviews",
+      "docs_url": "https://docs.developer.yelp.com/reference/v3_business_reviews",
+      "verified": {
+        "docs": "https://docs.developer.yelp.com/reference/v3_business_reviews.md"
+      }
+    },
+    {
+      "id": "yelp.businesses.phone_search",
+      "name": "Find businesses by phone number",
+      "summary": "Businesses listed with a phone number (chains can share one).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/businesses/search/phone",
+      "params": {
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Phone number starting with + and the country code.",
+          "example": "+14159083801"
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "language_COUNTRY, e.g. en_US."
+        }
+      },
+      "job": "places.match",
+      "docs_url": "https://docs.developer.yelp.com/reference/v3_business_phone_search",
+      "verified": {
+        "docs": "https://docs.developer.yelp.com/reference/v3_business_phone_search.md"
+      }
+    },
+    {
+      "id": "yelp.businesses.match",
+      "name": "Match a known business to Yelp",
+      "summary": "The Yelp business that matches a name and address from another source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/businesses/matches",
+      "params": {
+        "name": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Business name.",
+          "example": "Gary Danko"
+        },
+        "address1": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First address line; an empty string matches businesses with no street address.",
+          "example": "800 N Point St"
+        },
+        "address2": {
+          "in": "query",
+          "type": "string",
+          "description": "Second address line."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "City.",
+          "example": "San Francisco"
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ISO 3166-2 state code.",
+          "example": "CA"
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "ISO 3166-1 alpha-2 country code.",
+          "example": "US"
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Postal code."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude hint."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude hint."
+        },
+        "phone": {
+          "in": "query",
+          "type": "string",
+          "description": "Phone, digits only or + and digits."
+        },
+        "yelp_business_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Known Yelp id, as a hint."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, default 3, max 10."
+        },
+        "match_threshold": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "none",
+            "default",
+            "strict"
+          ],
+          "description": "How strict a match must be; default default."
+        }
+      },
+      "job": "places.match",
+      "docs_url": "https://docs.developer.yelp.com/reference/v3_business_match",
+      "verified": {
+        "docs": "https://docs.developer.yelp.com/reference/v3_business_match.md"
+      }
+    },
+    {
+      "id": "yelp.autocomplete",
+      "name": "Autocomplete a search",
+      "summary": "Keyword, business and category suggestions for typed text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/autocomplete",
+      "params": {
+        "text": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Typed text.",
+          "example": "del"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude, with longitude, for business suggestions."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude, with latitude."
+        },
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "language_COUNTRY, e.g. en_US."
+        }
+      },
+      "job": "places.autocomplete",
+      "docs_url": "https://docs.developer.yelp.com/reference/v3_autocomplete",
+      "verified": {
+        "docs": "https://docs.developer.yelp.com/reference/v3_autocomplete.md"
+      }
+    },
+    {
+      "id": "yelp.categories",
+      "name": "List business categories",
+      "summary": "Every Yelp category alias with its title and parents, optionally for one locale.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/categories",
+      "params": {
+        "locale": {
+          "in": "query",
+          "type": "string",
+          "description": "Only categories available in this locale, with localized names."
+        }
+      },
+      "job": "places.categories",
+      "docs_url": "https://docs.developer.yelp.com/reference/v3_all_categories",
+      "verified": {
+        "docs": "https://docs.developer.yelp.com/reference/v3_all_categories.md"
+      }
+    }
+  ]
+}
