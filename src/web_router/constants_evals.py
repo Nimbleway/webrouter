@@ -1,4 +1,4 @@
-"""Choosing a judge by name, and the scorer's messages: kept apart so ``constants.py`` stops growing."""
+"""Choosing a judge by name: kept apart so ``constants.py`` stops growing."""
 
 from web_router.constants import EVALS_JUDGE_MODEL, EVALS_JUDGE_NAME
 
@@ -31,7 +31,3 @@ MSG_JUDGE_SPEC = (
 MSG_JUDGE_NEEDS_MODEL = "{spec!r} names no model: LiteLLM reaches many, so name one, as in litellm:<model>"
 MSG_JUDGE_IMPORT = "Could not load the judge {spec!r}: {error}"
 MSG_JUDGE_NOT_A_JUDGE = "{spec!r} is not a Judge subclass; a judge of your own subclasses web_router.evals.Judge"
-
-MSG_SCORE_OUT_OF_SCALE = "{name} is {value}, outside the scorecard's scale {low}-{high}"
-MSG_SCORE_UNKNOWN_REASON = "A reason is given for {names}, which the scorecard does not score"
-MSG_SCORE_BAD_SCALE = "A scorecard's scale is a finite lowest and highest score, lowest first, not {scale}"

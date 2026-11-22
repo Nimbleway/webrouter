@@ -1,14 +1,11 @@
-"""Choosing a judge by name, the LiteLLM judge, and the scorer interface. No network."""
+"""Choosing a judge by name and the LiteLLM judge. No network."""
 
 from __future__ import annotations
 
-import math
 import sys
 import types
-from collections.abc import Sequence
 
 import pytest
-from pydantic import ValidationError
 
 from web_router.constants_evals import EVALS_DEFAULT_JUDGE_SPEC
 from web_router.evals import (
@@ -16,12 +13,9 @@ from web_router.evals import (
     Judge,
     LiteLLMJudge,
     OpenAIJudge,
-    Scorecard,
-    Scorer,
     judge_from,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.types_citation import Citation
 
 
 class MyJudge(Judge):
@@ -122,59 +116,6 @@ async def test_a_judge_of_your_own_closes_without_holding_anything() -> None:
     judge.close()
     await judge.aclose()
     await LiteLLMJudge("openai/gpt-6-luna").aclose()
-
-
-class FixedScorer(Scorer):
-    name = "fixed-v1"
-
-    def score(
-        self, question: str, answer: str, citations: Sequence[Citation] = (), *, output_schema: object = None
-    ) -> Scorecard:
-        dimensions = {"sources_cited": None if not citations else 9.0, "schema": 8.0 if output_schema else None}
-        return Scorecard(scorer=self.label, scale=(1, 10), dimensions=dimensions, overall=7.0)
-
-
-async def test_a_scorer_of_your_own_scores_sync_and_async() -> None:
-    scorer = FixedScorer()
-    card = scorer.score("Who?", "Alice", [Citation(url="https://example.com")])
-    assert card.scorer == "fixed-v1" and card.dimensions["sources_cited"] == 9.0
-    assert (await scorer.ascore("Who?", "Alice")).dimensions == {"sources_cited": None, "schema": None}
-    schema = {"type": "object", "properties": {"author": {"type": "string"}}}
-    assert (await scorer.ascore("Who?", '{"author": "Alice"}', output_schema=schema)).dimensions["schema"] == 8.0
-
-
-@pytest.mark.parametrize("scale", [(10, 1), (5, 5), (1, math.inf), (-math.inf, 10)])
-def test_a_scorecard_refuses_a_scale_that_is_not_one(scale: tuple[float, float]) -> None:
-    with pytest.raises(ValidationError, match="finite lowest and highest"):
-        Scorecard(scorer="s", scale=scale, dimensions={}, overall=None)
-
-
-@pytest.mark.parametrize(("dimension", "overall"), [(11.0, 5.0), (5.0, 0.0)])
-def test_a_scorecard_refuses_a_score_off_its_scale(dimension: float, overall: float) -> None:
-    with pytest.raises(ValidationError, match="outside the scorecard's scale"):
-        Scorecard(scorer="s", scale=(1, 10), dimensions={"coverage": dimension}, overall=overall)
-
-
-def test_a_scorecard_carries_reasons_and_the_scorers_own_details() -> None:
-    card = Scorecard(
-        scorer="s-v2",
-        scale=(1, 10),
-        dimensions={"factual_accuracy": 9.0, "coverage": None},
-        overall=9.0,
-        reasons={"factual_accuracy": "Every claim checked out.", "coverage": "Not applicable: one fact asked."},
-        details={"usage": [{"role": "judge", "input_tokens": 900}], "comparable": True},
-    )
-    assert Scorecard.model_validate(card.model_dump(mode="json")) == card
-
-
-def test_a_reason_for_a_dimension_not_scored_is_refused() -> None:
-    with pytest.raises(ValidationError, match="reason is given for tone"):
-        Scorecard(scorer="s", scale=(1, 10), dimensions={"coverage": 5.0}, overall=5.0, reasons={"tone": "warm"})
-
-
-def test_reasons_and_details_default_to_empty() -> None:
-    card = Scorecard(scorer="s", scale=(1, 10), dimensions={}, overall=None)
-    assert card.reasons == {} and card.details == {}
 
 
 @pytest.mark.parametrize("model", ["gpt-6-luna", "gpt-6.1-sol", "gpt-5-mini"])

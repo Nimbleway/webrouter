@@ -219,42 +219,6 @@ grade differently; set `name` to the parent's only when it grades exactly as
 the parent does. Claude models may reply with a thinking block before the text:
 read the reply's text blocks, not its first block.
 
-### Scoring an answer with no gold one
-
-A judge grades against a known answer. For questions that have none — a
-research report, a comparison, this week's news — a `Scorer` rates the answer
-from the question, the answer and its citations, on dimensions it names
-(factual accuracy, coverage, ...), into a `Scorecard` that names the scorer
-and carries its reasons per dimension and its own record of the run.
-web-router ships the interface, not a scorer: subclass it to plug yours in.
-A scorer that fact-checks on the web should bring its own search, so it never
-checks a backend against itself.
-`output_schema` is the JSON Schema the answer was asked to follow, as `research()`
-takes it, so a scorer can judge whether the answer did; it is `None` for prose.
-
-```python
-from web_router.evals import Scorecard, Scorer
-
-
-class MyScorer(Scorer):
-    name = "my-scorer-v1"  # the version too: scores compare only with the same scorer's
-
-    def score(self, question, answer, citations=(), *, output_schema=None):
-        checked = my_fact_checker(question, answer, [c.url for c in citations])
-        return Scorecard(
-            scorer=self.label,
-            scale=(1, 10),
-            dimensions=checked.scores,       # {"factual_accuracy": 8.0, "coverage": None, ...}
-            overall=checked.overall,
-            reasons=checked.reasons,         # why each dimension got its score, keyed as dimensions
-            details={"usage": checked.usage},  # anything else the scorer reports: tokens, cost, searches
-        )
-
-
-response = router.answer("Which EU countries changed their VAT rate this year?")
-card = MyScorer().score(response.query, response.answer, response.citations)
-```
-
 Two things about the knobs. A `Dataset` is a model, so loop over
 `dataset.questions`, not the dataset itself. And `search_depth` and
 `max_results` go to every provider in the call unchanged, which is what makes
