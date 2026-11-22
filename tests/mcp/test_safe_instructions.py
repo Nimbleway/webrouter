@@ -65,6 +65,9 @@ async def test_local_browser_advice_requires_served_browser_tools(
     tools = WebRouterTools()
 
     assert ("offer `browser_open`" in tools.instructions()) is (profile == "full")
+    assert ("a browser could finish the task" in tools.instructions()) is (profile == "full")
+    if profile == "slim":
+        assert "finish it in their own browser" in tools.instructions()
     assert "Never ask for a password, an ID number or a date of birth in the conversation." in tools.instructions()
     assert "Never ask for a password, an ID number or a date of birth in the conversation." in tools.instructions(
         remote=True
