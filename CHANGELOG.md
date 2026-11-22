@@ -33,6 +33,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
+- **Breaking (MCP):** new servers use a slim tool profile, hide tools without a configured backend, leave `load_env` off, and refuse private browser destinations. To restore the previous configuration, set `WEB_ROUTER_MCP_PROFILE=full`, `WEB_ROUTER_MCP_LOAD_ENV=remember` and `WEB_ROUTER_MCP_PRIVATE_URLS=on`.
+
 - Default routing: `auto` now gives each backend at most half the time left (the last gets all of it) and skips a backend for 30 s after three timeouts in a row. Opt out with `hop_timeout=False` or `timeout_cooldown=False`; `hop_timeout=4` sets a fixed cap.
 - Data API discovery no longer takes "close", "contact", "here", "reverse" or "tomorrow" alone as naming a data API, so an everyday search such as "weather in paris tomorrow" lists none; `close crm`, `here maps`, `reverse contact` and `tomorrow io` still name theirs.
 
