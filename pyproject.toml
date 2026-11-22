@@ -132,9 +132,7 @@ evals = [
 ]
 # The LiteLLM judge (`--judge litellm:<model>`): one SDK that reaches most model
 # providers, for a judge on a model neither built-in judge serves. Large, so
-# apart from `evals`, and pinned exactly: LiteLLM releases often, and a
-# published release of it has been compromised before, so an upgrade is a
-# reviewed change.
+# apart from `evals`, and pinned exactly: an upgrade is a reviewed change.
 evals-litellm = [
     "webrouter[evals]",
     "litellm==1.108.0",
