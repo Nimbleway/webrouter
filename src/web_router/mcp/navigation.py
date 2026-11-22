@@ -150,6 +150,7 @@ class NavigationGuard:
         self._page: Page | None = None
         self._blocked: str | None = None
         self._named: dict[tuple[str, int | None], str] = {}
+        self._resolved: dict[tuple[str, int | None], str | None] = {}
         self._overflowed = False
 
     async def install(self, page: Page) -> None:
@@ -256,14 +257,22 @@ class NavigationGuard:
         if host is None or host_address(host) is not None:
             # No name to look up: a literal address was judged as it stands.
             return None
+        key = (host, port)
+        if key in self._resolved:
+            # One lookup per name: a page's many subresources share it, and so
+            # does every later request, so a slow resolver is paid for once.
+            return self._resolved[key]
         try:
             # On a worker thread: a lookup can take seconds, and every other
             # request of every session waits on this event loop meanwhile.
             answers = await asyncio.to_thread(socket.getaddrinfo, host, port, type=socket.SOCK_STREAM)
         except (OSError, UnicodeError):
             # A name that does not resolve here reaches nothing through the browser either.
-            return None
-        return self.policy.resolved_refusal(url, (str(answer[4][0]) for answer in answers))
+            reason = None
+        else:
+            reason = self.policy.resolved_refusal(url, (str(answer[4][0]) for answer in answers))
+        self._resolved[key] = reason
+        return reason
 
 
 def _is_subframe(request: Request) -> bool:
