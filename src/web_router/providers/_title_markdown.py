@@ -6,6 +6,7 @@ import re
 from typing import Final
 
 _FENCE: Final = re.compile(r"^ {0,3}(?:(?:[-+*]|\d{1,9}[.)])[ \t]+)*(`{3,}|~{3,})(.*)$")
+_CLOSING_FENCE: Final = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _MAX_TITLE: Final = 1_000
 _H1: Final = re.compile(r"^ {0,3}#[ \t]+(.*)$")
 _SETEXT: Final = re.compile(r"^ {0,3}=+[ \t]*$")
@@ -21,7 +22,7 @@ def page_title(content: str) -> str:
     fence = ""
     previous = ""
     for line in content.splitlines():
-        marker = _FENCE.fullmatch(line)
+        marker = (_CLOSING_FENCE if fence else _FENCE).fullmatch(line)
         if fence:
             if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence) and not marker[2].strip():
                 fence = ""

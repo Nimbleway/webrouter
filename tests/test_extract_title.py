@@ -45,6 +45,7 @@ H1 = '<h1 class="x">The <em>Heading</em></h1>'
         ("```\n~~~\n# Code", "markdown", ""),
         ("- ```\n  # code\n  ```\n# Real", "markdown", "Real"),
         ("1. + ~~~\n  # code\n  ~~~\n# Real", "markdown", "Real"),
+        ("```\n- ```\n# Still code\n```\n# Real", "markdown", "Real"),
         ("    ```\n# Real", "markdown", "Real"),
         ("# [Docs](https://example.com/a_(b))", "markdown", "Docs"),
         ("# 100 * 20", "markdown", "100 * 20"),
