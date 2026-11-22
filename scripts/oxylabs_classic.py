@@ -118,6 +118,15 @@ def _source_of(cells: list[str]) -> str | None:
     return named[0] if named else None
 
 
+def _table_params(current: dict[str, Any], head: list[str], rows: list[list[str]]) -> None:
+    """Add one table's parameters to ``current``, a source's entry; a name seen in an earlier table keeps that row."""
+    default_at = _default_column(head)
+    for row in rows:
+        parameter = _parameter(row, default_at) if len(row) > 1 else None
+        if parameter and parameter["name"] != "source":
+            current["params"].setdefault(parameter["name"], parameter)
+
+
 def _parameters(pages: dict[str, str]) -> dict[str, dict[str, Any]]:
     """Each source's docs page and parameters; a table with no ``source`` row adds to the page's last source."""
     found: dict[str, dict[str, Any]] = {}
@@ -130,13 +139,8 @@ def _parameters(pages: dict[str, str]) -> dict[str, dict[str, Any]]:
             source = next((_source_of(row) for row in rows if _text(row[0]) == "source" and len(row) > 1), None)
             if source:
                 current = found.setdefault(source, {"docs": url.removesuffix(".md"), "params": {}})
-            if current is None:
-                continue
-            default_at = _default_column(head)
-            for row in rows:
-                parameter = _parameter(row, default_at) if len(row) > 1 else None
-                if parameter and parameter["name"] != "source":
-                    current["params"].setdefault(parameter["name"], parameter)
+            if current is not None:
+                _table_params(current, head, rows)
     return found
 
 
