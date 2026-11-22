@@ -23,7 +23,7 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from web_router.constants_cost import COST_ESTIMATED, COST_REPORTED
+from web_router.constants_cost import COST_ESTIMATED, COST_REPORTED, COST_STATED
 from web_router.routing.attempts import Attempt
 from web_router.routing.contract import ToolName
 from web_router.routing.pricing import attempt_cost
@@ -53,7 +53,7 @@ def combined_cost(tool: ToolName, parts: Sequence[tuple[BaseModel, NormalizedReq
     """The cost fields of one answer several backends' calls made together: each call's cost, summed.
 
     A part's cost is its own ``cost_usd`` when set, else the estimate for its
-    backend and request. ``reported`` only when every part reported its own.
+    backend and request. Its source is :func:`_summed_source`'s.
     When any part's cost is unknown so is the sum: both fields are set to
     ``None``, which :func:`metered` leaves as they are rather than estimating
     the first backend's share alone.
@@ -61,10 +61,9 @@ def combined_cost(tool: ToolName, parts: Sequence[tuple[BaseModel, NormalizedReq
     costs = [_part_cost(tool, response, request) for response, request in parts]
     if any(cost is None for cost in costs):
         return {"cost_usd": None, "cost_source": None}
-    reported = all(getattr(response, "cost_source", None) == COST_REPORTED for response, _ in parts)
     return {
         "cost_usd": sum(cost for cost in costs if cost is not None),
-        "cost_source": COST_REPORTED if reported else COST_ESTIMATED,
+        "cost_source": _summed_source([response for response, _ in parts]),
     }
 
 
@@ -88,8 +87,16 @@ def collected_cost(responses: Sequence[BaseModel]) -> dict[str, Any]:
     costs = [getattr(response, "cost_usd", None) for response in responses]
     if any(cost is None for cost in costs):
         return {"cost_usd": None, "cost_source": None}
-    reported = all(getattr(response, "cost_source", None) == COST_REPORTED for response in responses)
     return {
         "cost_usd": sum(cost for cost in costs if cost is not None),
-        "cost_source": COST_REPORTED if reported else COST_ESTIMATED,
+        "cost_source": _summed_source(responses),
     }
+
+
+def _summed_source(parts: Sequence[BaseModel]) -> str:
+    """The source of a sum of ``parts``' costs: theirs when they share one, ``reported`` when each states its own
+    (a keyless part's $0 among them), else ``estimated``."""
+    sources = {getattr(part, "cost_source", None) for part in parts}
+    if len(sources) == 1:
+        return str(sources.pop() or COST_ESTIMATED)
+    return COST_REPORTED if sources <= COST_STATED else COST_ESTIMATED

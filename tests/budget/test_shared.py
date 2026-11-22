@@ -20,7 +20,7 @@ from web_router import (
     WebRouter,
 )
 from web_router.constants_budget import SKIP_OVER_COST, SKIP_ROUTE_REFUSED
-from web_router.exceptions import ConfigurationError
+from web_router.exceptions import ProviderError
 from web_router.routing.attempts import CallRoute, call_route
 
 SHARED = Budget(max_cost_usd=0.10)
@@ -108,7 +108,7 @@ def test_an_unknown_price_research_call_in_a_ten_cent_scope_is_skipped_and_a_kno
 
 @pytest.mark.parametrize("tool", ["search"], indirect=True)
 def test_every_attempt_a_call_makes_is_charged_to_the_scope_failed_ones_included(chain: Chain, priced: Table) -> None:
-    chain.raises["first"] = ConfigurationError("first holds no key")
+    chain.raises["first"] = ProviderError("first", "read timed out")  # the backend may have acted on it
     priced.update(first=(0.02, None), second=(0.03, None))
     with WebRouter().budget(SHARED) as shared:
         scoped(chain, shared)

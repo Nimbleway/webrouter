@@ -17,9 +17,11 @@ nothing else.
 
 from __future__ import annotations
 
+import json
 from typing import Any, ClassVar
 
 from web_router.constants import (
+    MSG_MCP_NO_RESULT,
     PROVIDER_YOU_MCP,
     YOU_MCP_BASE_URL,
     YOU_MCP_EXTRACTION_BY_DEPTH,
@@ -34,6 +36,7 @@ from web_router.constants_you import (
     YOU_MCP_PARAM_NAMES,
     YOU_RECENCY,
 )
+from web_router.exceptions import ProviderError
 from web_router.providers._language import language_tag
 from web_router.providers._mcp import McpSearchMixin
 from web_router.providers._search_text import site_operators, unsited_domains
@@ -74,6 +77,18 @@ class YouMcpProvider(McpSearchMixin, YouProvider):
             extraction=extraction,
             **{YOU_FRESHNESS_FIELD: mapped(YOU_RECENCY, request.recency)},
         )
+
+    def _unwrap(self, text: str, result: dict[str, Any]) -> dict[str, Any]:
+        # A search with no hits answers the JSON object and then a plain-text
+        # hint ("No results for ... Issue a new query"), so the text as a whole
+        # is not JSON. Read the object and leave the hint.
+        try:
+            payload, _ = json.JSONDecoder().raw_decode(text.lstrip()) if text else (None, 0)
+        except json.JSONDecodeError as exc:
+            raise ProviderError(self.name, MSG_MCP_NO_RESULT, original=exc) from exc
+        if not isinstance(payload, dict):
+            raise ProviderError(self.name, MSG_MCP_NO_RESULT)
+        return payload
 
     @staticmethod
     def _query(request: SearchRequest) -> str:
