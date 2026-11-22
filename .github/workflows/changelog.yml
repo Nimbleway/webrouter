@@ -27,9 +27,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
+          EXPECTED_FILES: ${{ github.event.pull_request.changed_files }}
         run: |
-          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | "\(.status) \(.filename) \(.previous_filename // "")"' > files.txt
+          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | {status, filename, previous_filename} | @json' > files.jsonl
           python3 - <<'PY'
+          import json
+          import os
           import re
           import sys
 
@@ -37,14 +40,18 @@ jobs:
               "add changelog.d/<name>.<type>.md with your entry (see changelog.d/README.md), "
               "or label the PR skip-changelog if users would not notice the change."
           )
-          rows = [(line.split() + [""])[:3] for line in open("files.txt").read().splitlines() if line]
-          if any("CHANGELOG.md" in (name, previous) for _, name, previous in rows):
+          with open("files.jsonl") as files:
+              rows = [json.loads(line) for line in files if line.strip()]
+          # GitHub caps this endpoint at 3,000 files, even with pagination.
+          if len(rows) != int(os.environ["EXPECTED_FILES"]):
+              sys.exit("::error::Incomplete PR file list; cannot verify changelog changes.")
+          if any("CHANGELOG.md" in (row["filename"], row.get("previous_filename")) for row in rows):
               sys.exit(f"::error::CHANGELOG.md is written at release from fragments. Undo your edit to it and {how}")
           # The name only; tests/test_changelog_fragments.py checks the type and the text.
           fragment = re.compile(r"changelog\.d/[a-z0-9][a-z0-9_-]*\.[a-z]+\.md")
           fragments = [
-              name for status, name, _ in rows
-              if status in ("added", "renamed", "copied") and fragment.fullmatch(name)
+              row["filename"] for row in rows
+              if row["status"] in ("added", "renamed", "copied") and fragment.fullmatch(row["filename"])
           ]
           if not fragments:
               sys.exit(f"::error::No changelog fragment: {how}")

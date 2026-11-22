@@ -94,7 +94,7 @@ def problems(directory: Path | None = None) -> list[str]:
 
 
 def added_at(path: Path) -> int:
-    """When git first saw ``path``, as a Unix time; 0 for a fragment not committed yet.
+    """When git most recently added ``path``, as a Unix time; 0 for a fragment not committed yet.
 
     When git can't answer, the fragment sorts by name, and a warning says so.
     """
@@ -113,7 +113,7 @@ def added_at(path: Path) -> int:
         print(GIT_FAILED.format(file=path.name, reason=run.stderr.strip()), file=sys.stderr)
         return 0
     out = run.stdout.split()
-    return int(out[-1]) if out else 0
+    return int(out[0]) if out else 0
 
 
 def load(directory: Path | None = None) -> list[Fragment]:
@@ -161,7 +161,7 @@ def collect(changelog: str, fragments: list[Fragment]) -> str:
     """``changelog`` with every fragment added under ``## [Unreleased]``."""
     lines = changelog.splitlines()
     for type_, heading in TYPES.items():
-        entries = [f"- {f.text}" for f in fragments if f.type == type_]
+        entries = ["- " + " ".join(f.text.splitlines()) for f in fragments if f.type == type_]
         if entries:
             _insert_section(lines, heading, entries)
     return "\n".join(lines) + "\n"
@@ -180,7 +180,11 @@ def main(argv: list[str]) -> int:
     if args.check:
         return 0
     fragments = load()
-    text = collect(CHANGELOG.read_text(encoding="utf-8"), fragments)
+    try:
+        text = collect(CHANGELOG.read_text(encoding="utf-8"), fragments)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
     if args.preview:
         print(text, end="")
         return 0
