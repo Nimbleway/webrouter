@@ -33,6 +33,16 @@ async def test_live_data_no_key_error_only_names_load_env_when_available(
     await tools.router.aclose()
 
 
+async def test_missing_playwright_does_not_suggest_browser_keys(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(ENV_MCP_PROFILE, "full")
+    monkeypatch.setattr("web_router.mcp.tools.playwright_installed", lambda: False)
+    tools = WebRouterTools()
+
+    assert "browser_open (" not in tools.instructions()
+    assert "research (" in tools.instructions()
+    await tools.router.aclose()
+
+
 async def test_missing_key_tools_are_named_until_a_key_makes_them_runnable(
     no_keys: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:

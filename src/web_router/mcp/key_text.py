@@ -52,7 +52,7 @@ def hidden_tools_hint(hidden: Collection[str]) -> str:
     unlock = methods.unlock()
     entries = []
     for tool in sorted(hidden):
-        if (method := methods.METHODS.get(tool)) is not None and method.key in unlock:
+        if (method := methods.METHODS.get(tool)) is not None and not methods.usable(method) and method.key in unlock:
             variables = sorted({name for names in unlock[method.key].values() for name in names})
             entries.append(f"{tool} ({', '.join(variables)})")
     if not entries:
