@@ -32,6 +32,24 @@ Costs are estimates from the list prices shipped in
 [`web_router.prices`](#estimated-prices), not your bill, except where a
 backend's response states its own cost.
 
+### What is counted
+
+Each attempt is charged its estimate when it starts, and settled when it ends:
+
+| The attempt | A budget counts | `cost_usd` | `decision` lists it at |
+| --- | --- | --- | --- |
+| Answers, and the backend states its cost | the stated cost | the stated cost, `reported` | its estimate |
+| Answers, with no stated cost | its estimate | its estimate, `estimated` | its estimate |
+| Answers on a backend's keyless tier (Nimble, Tavily, Firecrawl, Keenable with no key) | $0, though the keyed price is checked before the call | $0, `keyless` | its estimate |
+| Fails after the request may have reached the backend: a timeout, a 5xx, an answer that could not be read | its estimate | not counted | its estimate |
+| Fails with a 404 or 410: the page is gone, which a fetch backend may bill | its estimate | not counted | its estimate |
+| Is refused before the backend did any work: any other 4xx, a connection never made, a missing key | nothing | not counted | $0 |
+| Is skipped because it does not fit the budget | nothing | not counted | a hop with the reason |
+
+The check before each attempt uses its estimate, so a stated cost above the
+estimate can take `spent_usd` past the cap: by at most the difference, for
+each attempt in flight.
+
 ## What each call cost
 
 Every `search`, `extract`, `answer`, `research` and `browse` response carries,
@@ -45,7 +63,8 @@ with or without a budget:
   `usage.cost.total_cost`, Exa's `costDollars.total`), `estimated` when it is
   the list price for this request -- its depth, result count and URLs -- or,
   for a backend billed by tokens, the mean its own responses stated over the
-  published benchmark (Perplexity's answer, about $0.0012).
+  published benchmark (Perplexity's answer, about $0.0012), and `keyless` when
+  the call ran on a backend's keyless tier, which bills nothing (`cost_usd` is 0).
 
 Attempts that failed before the answer are not in `cost_usd`; with a budget or
 a router, `response.decision` lists each with its estimate and seconds, and
@@ -56,8 +75,8 @@ a router, `response.decision` lists each with its estimate and seconds, and
 
 | Method | $0 backends | Cheapest listed | Notes |
 | --- | --- | --- | --- |
-| `search` | `you-mcp`, `exa-mcp`, `parallel-mcp` (keyless) | `deepseek`, $0.00075 | Keyless Nimble, Tavily and Keenable are priced as with a key, $0.005, $0.008 and $0.004 |
-| `extract` | none | `deepseek`, $0.00075 a page | Keyless Nimble, Tavily and Keenable are priced as with a key, $0.001, $0.008 and $0.004 a page; keyless Jina is free at 20 requests a minute but billed by tokens with a key, so a cost cap skips it |
+| `search` | `you-mcp`, `exa-mcp`, `parallel-mcp` (keyless) | `deepseek`, $0.00075 | Keyless Nimble, Tavily and Keenable report $0, but a cost cap checks them at their keyed price, $0.005, $0.008 and $0.004 |
+| `extract` | none | `deepseek`, $0.00075 a page | Keyless Nimble, Tavily, Firecrawl and Keenable report $0, but a cost cap checks them at their keyed price, $0.001, $0.008, $0.005 and $0.004 a page; keyless Jina is free at 20 requests a minute but billed by tokens with a key, so a cost cap skips it |
 | `answer` | none | `perplexity`, about $0.0012 (measured) | Then Brave ($0.004 plus tokens, a floor a cap skips), Exa and You.com ($0.005) |
 | `research` | none | `parallel`, $0.005 a run at `effort="low"` | Nimble at its default and at `max`, and You.com, have no known price; Perplexity is billed by tokens |
 | `browse` | none | `browser-use`, $0.01 a task plus steps | Its price is a floor, so a cost cap skips it |
@@ -77,8 +96,9 @@ limit that is not a finite number of 0 or more raises `InvalidParameterError`. B
 each attempt WebRouter checks its estimate against what is left and skips it
 if it does not fit; when nothing fits, it raises `BudgetExceededError`, naming
 each skip. Costs are estimates from the list prices in
-[`web_router.prices`](#estimated-prices), not your bill, and a
-failed attempt still counts.
+[`web_router.prices`](#estimated-prices), settled as [What is counted](#what-is-counted)
+says: a backend's stated cost replaces its estimate, and an attempt refused
+before it started counts nothing.
 
 - **Unknown price.** Under a cost cap, a backend whose price is unknown never
   runs: it is skipped, and the record says why. A price marked as a floor
@@ -92,9 +112,11 @@ failed attempt still counts.
   (Perplexity's answer), and is unknown otherwise (Perplexity's research).
 - **Free tiers.** The keyless MCP search endpoints (`you-mcp`, `exa-mcp`,
   `parallel-mcp`) are priced $0, so a cost cap does not skip them. Keyless
-  Nimble, Tavily and Keenable are priced as with a key -- a search $0.005,
-  $0.008 and $0.004, a page $0.001, $0.008 and $0.004 -- so their calls count
-  against a cap and in the spend log.
+  Nimble, Tavily, Firecrawl and Keenable answer with `cost_usd` 0 and
+  `cost_source="keyless"`, and a budget settles them to $0. Before the call a
+  budget cannot tell the tier, so a cost cap checks them at their keyed price
+  -- a search $0.005, $0.008 and $0.004, a page $0.001, $0.008, $0.005 and
+  $0.004 -- and can skip one that does not fit.
 - **Unknown p90.** Under a time cap, a backend with no measured p90 runs
   within the time left; `strict=True` skips it instead. Research's p90 comes
   from the effort table first, then the price list.
@@ -134,8 +156,9 @@ dollars and seconds, and that is what a router is shown. A call spends from
 every scope of its router in force when it starts, wherever the scope was
 made, so a scope made before an outer block cannot escape that block's cap.
 Each attempt reserves its estimate before it starts, so parallel threads and
-tasks cannot reserve past the cap together. The cap is on estimates, not on
-the bill. A call a backend makes inside a budgeted call, on its own router or
+tasks cannot reserve past the cap together. When the call ends, each attempt
+settles as [What is counted](#what-is-counted) says, so `status().spent_usd`
+holds a backend's stated cost where it gave one and estimates elsewhere. A call a backend makes inside a budgeted call, on its own router or
 another, is reserved once, by the call it is made in; it settles in the shared budget
 even when it runs in another thread or task, or after the call that started it
 has ended. An outer call's own `budget=` counts every nested call's attempts
