@@ -2,8 +2,18 @@
 
 import ipaddress
 
-URL_TRAILING_PUNCTUATION = ".,;:!?"
-"""Stripped from a URL found in prose: the end of a sentence, not part of the address."""
+URL_TRAILING_PUNCTUATION = ".,;:!?*"
+"""Stripped from a URL found in prose: the end of a sentence, or markdown emphasis (``**url**``), not the address."""
+
+URL_PROSE_STOPS = (
+    "\u201c\u201d\u2018\u2019\u201e\u201a\u00ab\u00bb\u2039\u203a"  # typographic quotes and guillemets
+    "\u3001\u3002\uff0c\uff1b\uff1a\uff01\uff1f"  # CJK and full-width comma, full stop, ;  :  !  ?
+    "\u300c\u300d\u300e\u300f\u3010\u3011\uff08\uff09\u300a\u300b\u3008\u3009"  # CJK and full-width brackets
+)
+"""Characters that end a URL found in prose, as an ASCII quote does: typographic quotes, which autocorrect writes
+in place of ``"`` and ``'``, and full-width CJK punctuation, which follows a URL with no space between them.
+Listed rather than every Unicode punctuation mark, so a path such as ``/wiki/Mason\N{EN DASH}Dixon_line`` keeps
+its dash."""
 
 URL_BRACKETS = {")": "(", "]": "[", "}": "{"}
 """Each closing bracket and its opener: a URL found in prose keeps a closing bracket only when it opened it."""
