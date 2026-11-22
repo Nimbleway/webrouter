@@ -10,8 +10,8 @@ from typing import Any
 import httpx
 import pytest
 
+from tests.mcp.env_helpers import OPENED_UP
 from tests.vendors.data import ALL_VENDORS, CREDENTIALS
-from web_router.constants_mcp_env import ENV_MCP_LOAD_ENV, ENV_MCP_PROFILE, MCP_LOAD_ENV_REMEMBER, MCP_PROFILE_FULL
 from web_router.vendors.caller import VendorCaller
 from web_router.vendors.catalog import VendorCatalog
 from web_router.vendors.plan import plan_endpoint
@@ -23,8 +23,8 @@ MakeCaller = Callable[..., VendorCaller]
 @pytest.fixture(autouse=True)
 def vendor_tools_served(monkeypatch: pytest.MonkeyPatch) -> None:
     """The MCP server's vendor tools and ``load_env``, which a default server leaves off, served."""
-    monkeypatch.setenv(ENV_MCP_PROFILE, MCP_PROFILE_FULL)
-    monkeypatch.setenv(ENV_MCP_LOAD_ENV, MCP_LOAD_ENV_REMEMBER)
+    for name, value in OPENED_UP.items():
+        monkeypatch.setenv(name, value)
 
 
 def _call(caller: VendorCaller, catalog: VendorCatalog, endpoint: str, params: dict[str, Any], **kw: Any) -> Any:
