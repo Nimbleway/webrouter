@@ -22,6 +22,19 @@ def test_a_firecrawl_crawl_sends_the_cap_it_was_given() -> None:
     assert plan.body == {"url": "https://example.com", "limit": 10}
 
 
+def test_an_engagemii_search_without_a_limit_is_refused_before_sending() -> None:
+    """Without a limit, /records returns its default 1,000 records and bills a unit for each."""
+    with pytest.raises(MissingParameterError) as raised:
+        endpoint_plan("engagemii.company.search", {"filters": {"industries": ["Technology"]}})
+    assert raised.value.parameters == ["limit"]
+
+
+def test_an_engagemii_search_sends_the_limit_it_was_given() -> None:
+    plan = endpoint_plan("engagemii.company.search", {"filters": {"industries": ["Technology"]}, "limit": 100})
+    assert (plan.method, plan.path) == ("POST", "/records")
+    assert plan.body == {"filters": {"industries": ["Technology"]}, "limit": 100}
+
+
 def test_firecrawl_scrapes_stay_with_extract() -> None:
     """AGENTS.md: extract already scrapes one URL or a list through Firecrawl, so the catalog names no scrape."""
     paths = [endpoint.path for endpoint in get_catalog().vendor("firecrawl").endpoints]
