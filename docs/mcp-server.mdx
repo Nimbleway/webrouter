@@ -297,6 +297,11 @@ addresses until you set `WEB_ROUTER_MCP_PRIVATE_URLS=on`. To keep what you had:
 [Serving fewer tools](#serving-fewer-tools-web_router_mcp_tools).
 </Warning>
 
+If code registers a live data provider under a built-in name without that
+backend's environment key, automatic availability detection still treats it as
+unconfigured. Explicitly list `live_data_sources,live_data_source,live_data`
+in `WEB_ROUTER_MCP_TOOLS` to keep those tools visible in that setup.
+
 | Tool | What it is for | Latency |
 | --- | --- | --- |
 | `search` | Find pages: ranked links with their titles and page text. | a few seconds |
