@@ -5,8 +5,9 @@ from __future__ import annotations
 import pytest
 
 from web_router import AllProvidersFailedError
+from web_router.constants_extract import MSG_EXTRACT_NEAR_EMPTY
 from web_router.exceptions import ProviderError
-from web_router.providers._error_pages import near_empty
+from web_router.providers._error_pages import junk
 from web_router.types import ExtractedDocument, ExtractFailure
 
 
@@ -35,7 +36,7 @@ def test_auto_keeps_the_longest_member_delay() -> None:
 
 def test_a_script_shell_is_near_empty() -> None:
     shell = "<html><head><script>" + "x=1;" * 2000 + "</script></head><body><div>Loading</div></body></html>"
-    assert near_empty(ExtractedDocument(url="https://a.test", content=shell, format="html"))
+    assert MSG_EXTRACT_NEAR_EMPTY in junk(ExtractedDocument(url="https://a.test", content=shell, format="html"))
 
 
 def test_a_longer_name_sharing_a_login_path_start_is_a_page() -> None:

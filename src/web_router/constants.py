@@ -39,6 +39,7 @@ from web_router.constants_mcp_env import MCP_DESC_LOAD_ENV, MCP_LOAD_ENV_PROPERT
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
 from web_router.constants_vendors_mcp import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
+from web_router.snippet import SNIPPET_LIMIT as SNIPPET_LIMIT
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -331,16 +332,6 @@ HTTP_ERROR_BODY_LIMIT = 500
 """How much of an error response body to quote back, to keep messages readable."""
 
 
-# --- Normalization ----------------------------------------------------------
-
-SNIPPET_LIMIT = 500
-"""Cap for a description synthesized from body text.
-
-Some providers return no snippet, only page content. Using the head of that
-content keeps ``description`` populated without letting a 9 KB excerpt sit in a
-field every other provider fills with a sentence or two.
-"""
-
 # --- Nimble -----------------------------------------------------------------
 
 NIMBLE_PARAM_NAMES = {name: name for name in NORMALIZED_PARAMETERS - {"search_depth", "recency", "effort"}} | {
@@ -601,10 +592,10 @@ itself: ``effort`` in particular reaches a member only as the caller set it.
 """
 
 AUTO_EXTRA = EXTRA_ALL
-"""The extra that installs every member of the chain.
+"""The extra named when no member of an ``auto`` chain imports.
 
-``all`` rather than ``search`` because the chain is the fallback of last resort: when none of its members import, the
-useful advice is to install everything, not to guess which method the caller will reach for next.
+The keyless members ship in the core install, so only a chain of members that each need an extra (``agentcore`` needs
+``aws``) or a broken install gets here; ``all`` covers both rather than guessing which one the caller hit.
 """
 
 AUTO_EXTRACT_PREFERRED: tuple[str, ...] = (

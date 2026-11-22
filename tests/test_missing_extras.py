@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import builtins
+import re
 import sys
 import tomllib
 from collections.abc import Callable
@@ -71,3 +72,17 @@ def test_the_mcp_extra_carries_the_browser_tools() -> None:
     (bundled, *_) = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["optional-dependencies"]["mcp"]
 
     assert "browser" in bundled.split("[")[1].rstrip("]").split(",")
+
+
+def test_the_keyless_chains_need_no_extra() -> None:
+    """``pip install webrouter`` alone runs a keyless search or extract: its members' extras add nothing to core."""
+    from web_router.constants import AUTO_EXTRACT_KEYLESS, AUTO_KEYLESS
+    from web_router.registry import _BUILTIN_EXTRACT_PROVIDERS, _BUILTIN_PROVIDERS
+
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
+    core = {re.split(r"[<>=!~;\[ ]", dep)[0] for dep in project["dependencies"]}
+    members = [_BUILTIN_PROVIDERS[name] for name, _ in AUTO_KEYLESS]
+    members += [_BUILTIN_EXTRACT_PROVIDERS[name] for name, _ in AUTO_EXTRACT_KEYLESS]
+
+    assert {"httpx", "nimble-python", "tavily-python"} <= core
+    assert {extra: project["optional-dependencies"][extra] for _, _, extra in members} == {"search": [], "extract": []}

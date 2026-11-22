@@ -60,7 +60,6 @@ from web_router.providers._http import (
     HttpResearchProvider,
     HttpSearchProvider,
 )
-from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import build_payload, error_detail, mapped
 from web_router.providers.answer import cited_marker
 from web_router.types import (
@@ -139,7 +138,7 @@ class LinkupProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("name") or "",
-            description=as_snippet(content),
+            description=content,
             content=content,
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
         )

@@ -3,8 +3,7 @@
 Every backend's answer passes through :func:`split_error_pages`, so the rule
 is the same whichever one served the call: an error status, a bot challenge
 or a login wall lands in ``failures`` naming why; a junk page (:func:`junk`)
-stays a document whose warning tells ``auto`` to try the next backend. A kept
-page the backend gave no title gets one from its content (:func:`~._extract_title.titled`).
+stays a document whose warning tells ``auto`` to try the next backend.
 """
 
 from __future__ import annotations
@@ -154,10 +153,6 @@ def _is_login_path(path: str) -> bool:
     return any(path == part or path.startswith(f"{part}/") for part in EXTRACT_LOGIN_URL_PARTS)
 
 
-def near_empty(document: ExtractedDocument) -> bool:  # Under EXTRACT_NEAR_EMPTY_CHARS of text: likely a shell
-    return MSG_EXTRACT_NEAR_EMPTY in junk(document)
-
-
 def junk(document: ExtractedDocument, asked: str | None = None) -> list[str]:
     """The warnings ``document`` earns as junk: near-empty, a tracking pixel, another site than ``asked``'s."""
     text = _text(document)
@@ -177,7 +172,7 @@ def off_site(asked: str, landed: str) -> bool:
 
 
 def _site(url: str) -> str:  # The name a host is registered under: `example` for www.example.com, shop.example.co.uk
-    labels = (urlsplit(url).hostname or "").split(".")
+    labels = (urlsplit(url).hostname or "").removeprefix("www.").split(".")
     country_suffix = len(labels) > 2 and len(labels[-1]) == 2 and labels[-2] in EXTRACT_COUNTRY_SECOND_LEVELS
     return labels[-3 if country_suffix else -2] if len(labels) > 1 else labels[0]
 

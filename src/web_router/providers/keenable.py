@@ -36,7 +36,6 @@ from web_router.constants_keenable import (
 )
 from web_router.constants_mode_parts import KEENABLE_TIERS
 from web_router.providers._http import HttpSearchProvider
-from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.keenable_extract import KeenableExtractProvider as KeenableExtractProvider
 from web_router.providers.keenable_extract import _KeenableKeyless
@@ -116,7 +115,7 @@ class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=description or as_snippet(snippet),
+            description=description or snippet,
             content=best_text(snippet, description),
             published_date=published if isinstance(published, str) else None,
             extra=extra,

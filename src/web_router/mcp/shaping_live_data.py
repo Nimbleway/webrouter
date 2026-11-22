@@ -46,7 +46,9 @@ def shape_live_data_sources(page: LiveDataSourcePage, handle: str, *, budget: in
             omitted += 1
     # One note for the page, whatever the count: a note per row would itself crowd out the rows.
     extra_note = " " + MCP_MSG_SAMPLES_OMITTED.format(count=omitted, handle=handle) if omitted else ""
-    fitted = _fit(payload, templates, ("description",), handle=handle, budget=budget, extra_note=extra_note)
+    fitted = _fit(
+        payload, templates, ("description",), handle=handle, budget=budget, extra_note=extra_note, untrusted=False
+    )
     fitted["truncated"] = fitted["truncated"] or bool(omitted)
     fitted = _bounded(fitted, tuple((row, "sample_inputs") for row in templates), handle=handle, budget=budget)
     # Counted after the fit, which may have dropped rows: the count is of what is shown.
@@ -72,7 +74,7 @@ def shape_live_data_source(template: LiveDataSource, handle: str, *, budget: int
         "samples": [sample.model_dump() for sample in template.samples],
     }
     payload: dict[str, Any] = {"provider": template.provider, "source": row}
-    fitted = _fit(payload, [row], ("description",), handle=handle, budget=budget)
+    fitted = _fit(payload, [row], ("description",), handle=handle, budget=budget, untrusted=False)
     return _bounded(
         fitted, ((row, "samples"), (row, "output_schema"), (row, "input_schema")), handle=handle, budget=budget
     )
