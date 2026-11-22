@@ -3024,6 +3024,28 @@
       "latency_measured": null
     },
     {
+      "provider": "merchant",
+      "method": "live_data",
+      "mode": null,
+      "price_usd": 0,
+      "unit": "per_request",
+      "note": "no vendor bills the call: it goes to the store's own agent interface; the registry it reads is free; a store may rate-limit",
+      "source_url": "https://ucp.dev/2026-08-25/specification/overview/",
+      "checked": "2026-11-18",
+      "setup": null,
+      "setting": "the store's own UCP-over-MCP catalog search",
+      "does": null,
+      "kind": null,
+      "depth_assumed": null,
+      "adds_usd": null,
+      "writes": null,
+      "latency_p50_s": null,
+      "latency_p90_s": null,
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
+    },
+    {
       "provider": "browserbase",
       "method": "extract",
       "mode": null,
