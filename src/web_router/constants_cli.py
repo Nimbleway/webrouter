@@ -10,6 +10,14 @@ from __future__ import annotations
 CLI_PROG = "webrouter"
 """The console script's name, as ``--help`` and every usage error print it."""
 
+CLI_VERSION = "%(prog)s {version}"
+"""What ``--version`` prints: the script's name and the installed package's version."""
+
+CLI_KEYLESS = "keyless"
+"""The ``providers`` key listing, per method, the backends ``auto`` runs with no key."""
+CLI_NEEDS_KEY = "needs_key"
+"""The ``providers`` key listing, per method that has nothing to run, the variables that would add a backend."""
+
 EXIT_OK = 0
 EXIT_FAILED = 1
 """The call ran and failed: a backend error, a timeout, a router that found nothing to serve it."""
@@ -104,6 +112,7 @@ HELP = {
     "live_format": "Also return the page in this format.",
     "raw": "Include the backend's untouched payload (raw) in the output.",
     "pretty": "Indent the JSON output.",
+    "version": "Print the installed version and exit.",
 }
 """Every flag's help, keyed by what the flag sets."""
 

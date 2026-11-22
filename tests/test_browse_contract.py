@@ -133,16 +133,16 @@ def test_every_provider_declares_where_its_credentials_come_from() -> None:
 
 
 def test_no_browse_backend_is_usable_without_a_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Every task vendor bills for the run, so an empty environment configures only the chooser.
+    """Every task vendor bills for the run, so an empty environment configures nothing, not even the chooser.
 
-    `auto` is listed as it is for research: with nothing to choose from, it is
-    the one that says which variables would fix that.
+    `auto` joins as it does for research: only beside a backend it could run.
     """
     for env_vars in BROWSE_ENV_BY_PROVIDER.values():
         for env_var in env_vars:
             monkeypatch.delenv(env_var, raising=False)
-
-    assert configured_browse_providers() == ["auto"]
+    assert configured_browse_providers() == []
+    monkeypatch.setenv("SKYVERN_API_KEY", "test-key")
+    assert configured_browse_providers() == ["auto", "skyvern"]
 
 
 def test_a_browse_backend_is_unknown_to_the_other_methods(fake_browse_provider: type) -> None:
