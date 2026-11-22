@@ -18,8 +18,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-CostSource = Literal["reported", "estimated"]
-"""Where :attr:`cost_usd` came from: the backend's own figure, or an estimate made here."""
+CostSource = Literal["reported", "estimated", "keyless"]
+"""Where :attr:`cost_usd` came from: the backend's own figure, an estimate made here, or a keyless call's $0."""
 
 ElapsedSeconds = Annotated[
     float | None,
@@ -47,7 +47,8 @@ CostSourceField = Annotated[
     Field(
         description=(
             "`reported` when the backend stated `cost_usd`; `estimated` when it is the list price, or for a "
-            "backend billed by tokens the mean a published benchmark measured. None when there is no cost."
+            "backend billed by tokens the mean a published benchmark measured; `keyless` when the call ran on a "
+            "backend's keyless tier, which bills nothing (`cost_usd` is 0). None when there is no cost."
         )
     ),
 ]
