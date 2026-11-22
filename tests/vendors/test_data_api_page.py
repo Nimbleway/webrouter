@@ -51,6 +51,7 @@ def _vendor(**endpoint: Any) -> Vendor:
         ("costs $0.10 per $1", "costs &#36;0.10 per &#36;1"),
         ('keeps `{"a": "$b"}` as code', 'keeps `{"a": "$b"}` as code'),
         ("an odd ` backtick <x>", "an odd ` backtick &lt;x&gt;"),
+        ("C:\\data\\<file>", "C:&#92;data&#92;&lt;file&gt;"),
     ],
 )
 def test_mdx_escapes_markup_outside_code(value: str, expected: str) -> None:
@@ -124,6 +125,41 @@ def test_no_shipped_page_leaves_raw_text_in_its_blocks() -> None:
                 bare = re.sub(r'\{"(?:[^"\\]|\\.)*"\}', "", line)  # the literals
                 bare = re.sub(r"<[^>]*>", "", bare)  # the elements
                 assert not bare.strip(" "), (vendor.vendor, line)
+
+
+def _prose_lines(page: str) -> list[str]:
+    """The Markdown lines a page writes outside its JSX blocks and code fences: table rows, notes, headings."""
+    lines, fenced = [], False
+    for line in page.splitlines():
+        if line.startswith("```"):
+            fenced = not fenced
+        elif not fenced and line.startswith(("| ", "- ", "### ")):
+            lines.append(re.sub(r" \{#[a-z0-9-]+\}$", "", line))  # a heading's own anchor
+    return lines
+
+
+def test_prose_outside_jsx_blocks_is_mdx_safe() -> None:
+    """Setup rows, notes and endpoint headings are Markdown: no raw markup character outside backticks."""
+    catalog = builtin_catalog()
+    peers = job_peers(catalog)
+    for vendor in catalog.all():
+        for line in _prose_lines(vendor_page(vendor, peers)):
+            outside = line.split("`")[::2] if line.count("`") % 2 == 0 else [line]
+            assert not re.search(r"[<>{}$\\]", "".join(outside)), (vendor.vendor, line)
+
+
+def test_catalog_text_with_markup_stays_escaped_in_prose() -> None:
+    notes = ["Costs $1 per <call> {id}"]
+    page = vendor_page(_vendor(name="Get <thing> {id} for $1", notes=notes), {})
+    for line in _prose_lines(page):
+        assert not re.search(r"[<>{}$]", line), line
+
+
+def test_a_required_param_without_example_gets_no_call_example() -> None:
+    params = {"kind": {"in": "path", "type": "string", "required": True}}
+    page = vendor_page(_vendor(params=params), {})
+    assert "router.call_data_api" not in page
+    assert "call_data_api(endpoint=" not in page
 
 
 def test_endpoint_anchors_are_unique_across_the_catalog() -> None:
