@@ -34,6 +34,7 @@ from web_router.constants import (
     PROVIDER_OXYLABS,
 )
 from web_router.constants_oxylabs_classic import (
+    OXYLABS_CLASSIC_API,
     OXYLABS_CLASSIC_CONTEXT,
     OXYLABS_CLASSIC_DATA_DIR,
     OXYLABS_CLASSIC_DATA_FILE,
@@ -83,7 +84,7 @@ def listed(provider: str, entry: dict[str, Any]) -> LiveDataSource:
         entity_type=kind or None,
         input_schema=_input_schema(entry),
         published=True,
-        extra={"api": "web_scraper_api", "category": entry["category"], "context": entry["context"]},
+        extra={"api": OXYLABS_CLASSIC_API, "category": entry["category"], "context": entry["context"]},
     )
 
 

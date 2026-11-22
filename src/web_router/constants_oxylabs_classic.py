@@ -23,6 +23,11 @@ OXYLABS_CLASSIC_TRANSPORT_PARAMS: Final = frozenset(
 )
 """Set here or never sent: a run is one parsed, synchronous answer, not a webhook or a bucket upload."""
 
+OXYLABS_CLASSIC_CONTENT: Final = "content"
+"""Where a result carries its parsed page."""
+OXYLABS_CLASSIC_API: Final = "web_scraper_api"
+"""A listed source's ``extra["api"]``: which of Oxylabs' two APIs runs it."""
+
 OXYLABS_PARSE_STATUS: Final = "parse_status_code"
 OXYLABS_PARSE_NOTES: Final = ("_errors", "_warnings")
 """Where a page parsed in part lists what its parser could not read; kept out of the record."""

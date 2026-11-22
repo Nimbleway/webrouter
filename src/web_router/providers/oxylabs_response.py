@@ -30,15 +30,13 @@ from web_router.constants_live_data_vendors import (
 )
 from web_router.constants_oxylabs_classic import (
     MSG_OXYLABS_NOT_PARSED,
+    OXYLABS_CLASSIC_CONTENT,
     OXYLABS_PARSE_NOTES,
     OXYLABS_PARSE_STATUS,
     OXYLABS_PARSED,
 )
 from web_router.exceptions import ProviderError
 from web_router.types_live_data import LiveDataRequest, LiveDataResponse
-
-_CONTENT = "content"
-"""Where a Web Scraper API result carries its parsed page."""
 
 Records = Callable[[str, LiveDataRequest, dict[str, Any]], list[dict[str, Any]]]
 
@@ -85,7 +83,7 @@ def _decoded(content: Any) -> Any:
 
 def _parsed(provider: str, request: LiveDataRequest, result: dict[str, Any]) -> list[dict[str, Any]]:
     """A Web Scraper API result's parsed page, its parse status and notes left out; raises for one not parsed."""
-    status, url, content = result.get("status_code"), result.get("url"), _decoded(result.get(_CONTENT))
+    status, url, content = result.get("status_code"), result.get("url"), _decoded(result.get(OXYLABS_CLASSIC_CONTENT))
     _not_fetched(provider, request, status, url)
     if not isinstance(content, dict):
         raise ProviderError(provider, MSG_OXYLABS_NO_FIELDS.format(source=request.source, url=url))
@@ -98,8 +96,8 @@ def _parsed(provider: str, request: LiveDataRequest, result: dict[str, Any]) -> 
 
 def _parsed_meta(row: dict[str, Any]) -> dict[str, Any]:
     """A Web Scraper API result's fetch details, its parse status and the parser's errors or warnings."""
-    content = _decoded(row.get(_CONTENT))
-    meta = {key: value for key, value in row.items() if key != _CONTENT}
+    content = _decoded(row.get(OXYLABS_CLASSIC_CONTENT))
+    meta = {key: value for key, value in row.items() if key != OXYLABS_CLASSIC_CONTENT}
     if isinstance(content, dict):
         meta |= {key: content[key] for key in (OXYLABS_PARSE_STATUS, *OXYLABS_PARSE_NOTES) if key in content}
     return meta
