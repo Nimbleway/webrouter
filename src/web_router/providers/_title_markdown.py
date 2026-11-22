@@ -33,9 +33,12 @@ def page_title(content: str) -> str:
         if heading:
             text = heading[1].rstrip()
             unmarked = text.rstrip("#")
-            if unmarked != text and unmarked.endswith((" ", "\t")):
+            if unmarked != text and (not unmarked or unmarked.endswith((" ", "\t"))):
                 text = unmarked.rstrip()
-            return _inline(text)
+            if title := _inline(text).strip():
+                return title
+            previous = ""
+            continue
         if _SETEXT.fullmatch(line) and previous.strip() and not previous.startswith(("    ", "\t")):
             return _inline(previous.strip())
         previous = line

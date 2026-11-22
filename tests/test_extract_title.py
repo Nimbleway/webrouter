@@ -49,6 +49,8 @@ H1 = '<h1 class="x">The <em>Heading</em></h1>'
         (r"# Escaped \*literal\*", "markdown", "Escaped *literal*"),
         ("# **bold [link](https://example.test)**", "markdown", "bold link"),
         ("# [**bold** link](https://example.test)", "markdown", "bold link"),
+        ("# \n# Actual", "markdown", "Actual"),
+        ("# ###\n# Actual", "markdown", "Actual"),
         ("# `[Docs](https://example.test)`", "markdown", "[Docs](https://example.test)"),
         ("#hashtag\n\n## Only an H2", "markdown", ""),
         ("# Looks like a heading", "text", ""),
