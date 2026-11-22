@@ -48,7 +48,7 @@ from web_router.constants_tavily import TAVILY_SEARCH_PARAMETERS
 from web_router.exceptions import ConfigurationError
 from web_router.modes import ModeDeclarations
 from web_router.providers._http import HttpSearchProvider
-from web_router.providers._search_text import as_snippet, lite_body
+from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text
 from web_router.providers.exa import ExaProvider
 from web_router.providers.parallel_search import ParallelProvider
@@ -142,7 +142,7 @@ def _to_result(hit: dict[str, Any], request: SearchRequest) -> SearchResult:
     return SearchResult(
         url=hit.get("url", ""),
         title=hit.get("title") or "",
-        description=as_snippet(snippet),
+        description=snippet,
         content=lite_body(body, request.search_depth),
         score=hit.get(LITELLM_SCORE_FIELD),
         published_date=hit.get(LITELLM_DATE_FIELD),
