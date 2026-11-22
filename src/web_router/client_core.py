@@ -75,7 +75,7 @@ class SyncCore(_CoreLookup, SyncRouted):
         ``data_apis`` (on by default) also lists, on each page's
         :attr:`~web_router.ExtractedDocument.data_apis`, the read endpoints of
         the data APIs that serve that page's site -- found locally, at no
-        cost, and never called: run one with :meth:`call_vendor`.
+        cost, and never called: run one with :meth:`call_data_api`.
         ``configured_only`` keeps the ones this router holds credentials for.
         """
         request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)

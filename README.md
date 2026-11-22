@@ -95,7 +95,7 @@ names every variable and where to get it, and fill in the ones you hold.
 | [`live_data`](https://docs.webrouter.net/live-data) | A vendor's ready-made scraper for one site, returning records | No |
 | [`open_browser`](https://docs.webrouter.net/browser) | A browser session you drive, local or in the cloud | Yes (`local`) |
 | [`browse`](https://docs.webrouter.net/browser) | A task handed to a hosted browser agent | No |
-| [`call_vendor`](https://docs.webrouter.net/vendors) | A vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
+| [`call_data_api`](https://docs.webrouter.net/vendors) | A vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
 
 ```python
 with WebRouter() as router:
@@ -235,7 +235,7 @@ There is no WebRouter service in between, and nothing to sign up for.
   left for a method, the free tiers listed in
   [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials).
   Name a provider to keep a call on that backend alone.
-- **Beyond the backends:** `call_vendor` reaches the vendor API you name, with
+- **Beyond the backends:** `call_data_api` reaches the vendor API you name, with
   that vendor's credentials; `WEB_ROUTER_MCP_ROUTER=remote` sends a prompt to
   the router service at the URL you set; and `evaluate()` downloads the
   question set you pick and calls the judge model you configure.

@@ -93,8 +93,7 @@
         "lastTimePeriod": {
           "in": "query",
           "type": "integer",
-          "description": "The N latest periods.",
-          "example": 1
+          "description": "The N latest periods; not with time."
         }
       },
       "notes": [

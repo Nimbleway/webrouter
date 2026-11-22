@@ -58,14 +58,14 @@ Every page the MCP tools read is untrusted input, and a page can be written to
 steer the model reading it. The server never returns a key and keeps its hard
 limits (no key-bearing redirect, no browser trip to its own debugging endpoint
 or a cloud metadata address, no vendor write without
-`WEB_ROUTER_ALLOW_VENDOR_WRITES`), but telling the model that web content is
+`WEB_ROUTER_ALLOW_DATA_API_WRITES`), but telling the model that web content is
 data is advice, not a control. One server that can read your vendor accounts,
 read hostile pages and send queries out can be steered to move one into the
 other. When a model will read pages you do not trust:
 
 - serve only the tools the task needs (`WEB_ROUTER_MCP_TOOLS`);
 - set a spending ceiling (`WEB_ROUTER_MCP_MAX_COST_USD`);
-- run `call_vendor` and `load_env` in a second server, enabled only when needed;
+- run `call_data_api` and `load_env` in a second server, enabled only when needed;
 - narrow where keys come from with `WEB_ROUTER_MCP_LOAD_ENV`,
   `WEB_ROUTER_MCP_REMEMBERED_ENV` and `WEB_ROUTER_MCP_CWD_ENV`.
 
