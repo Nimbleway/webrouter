@@ -10,7 +10,7 @@ shell loop). Each subcommand calls the public method a library caller would. It
 validates, routes and fails exactly as the library does.
 
 ```bash
-pip install "webrouter[all]"
+pip install webrouter
 
 webrouter search "rust async runtimes" -n 5
 webrouter extract https://example.com https://example.org --format markdown
@@ -18,16 +18,14 @@ webrouter answer "When was the Eiffel Tower completed?"
 webrouter providers
 ```
 
-To try it without installing anything, run it through `uvx` with the extras the
-command needs. With no key, `search` and `extract` work through the keyless
-backends:
+To try it without installing anything, run it through `uvx`. With no key,
+`search` and `extract` work through the keyless backends:
 
 ```bash
-uvx --from "webrouter[search,extract]" webrouter search "rust async runtimes" -n 5
+uvx --from webrouter webrouter search "rust async runtimes" -n 5
 ```
 
-A bare `uvx webrouter` installs the core package alone, which has no search or
-extract backend, so it exits 3 and names the extra to add. Keys come from the environment only, as everywhere else in the
+Keys come from the environment only, as everywhere else in the
 library, and the command never reads a `.env` by itself. Load one into the
 command's environment:
 
