@@ -724,7 +724,7 @@ def test_the_server_steers_an_interactive_page_to_a_browser_the_user_agrees_to(t
     instructions = tools.instructions()
     assert "ask before opening one" in instructions
     assert "provider='local' and headless=false" in instructions
-    assert "never ask for a password" in instructions
+    assert "never ask for a password" in instructions.lower()
     described = {tool.name: tool.description for tool in tools.list_tools()}
     assert "browser_open" in described["extract"]
     opener = described.get("browser_open")
