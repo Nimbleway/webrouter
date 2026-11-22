@@ -14,12 +14,12 @@ from pydantic import BaseModel, ConfigDict, Field
 class DataApiMatch(BaseModel):
     """One catalog endpoint that matches a search query or an extracted page's site: found locally, never called.
 
-    Run it with :meth:`~web_router.WebRouter.call_vendor` and :attr:`endpoint`.
+    Run it with :meth:`~web_router.WebRouter.call_data_api` and :attr:`endpoint`.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    endpoint: str = Field(description="The endpoint id ('<data API>.<job>'), the name call_vendor takes.")
+    endpoint: str = Field(description="The endpoint id ('<data API>.<job>'), the name call_data_api takes.")
     data_api: str = Field(description="The data API the endpoint belongs to, as the catalog names it.")
     name: str = Field(description="What the call does, as a short action phrase.")
     summary: str = ""

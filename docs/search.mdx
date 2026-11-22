@@ -52,13 +52,13 @@ results:
 
 ```python
 response = router.search("datadog monitors")
-response.data_apis[0].endpoint  # 'datadog.monitors.list', the name call_vendor takes
+response.data_apis[0].endpoint  # 'datadog.monitors.list', the name call_data_api takes
 response.data_apis[0].configured  # False until its credentials are set
 response.data_apis[0].missing  # the variable to set for each one that is not
 ```
 
 Matching reads the local catalog, so it costs nothing and calls nothing; a match
-is never run, and calling it stays `call_vendor()`'s. A search lists a data API
+is never run, and calling it stays `call_data_api()`'s. A search lists a data API
 only when the query names it — by its id (`datadog`, `google ads`) or a
 distinctive word of its name (`edgar`) — and asks for something it serves: another
 query word in an endpoint's id or job, or, for an API named by its id, in an

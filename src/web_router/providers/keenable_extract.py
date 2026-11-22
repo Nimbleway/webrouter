@@ -26,6 +26,7 @@ from web_router.constants import (
     PROVIDER_KEENABLE,
 )
 from web_router.exceptions import ConfigurationError
+from web_router.providers._cost import keyless_cost
 from web_router.providers._http import HttpExtractProvider, _HttpProvider
 from web_router.providers._utils import build_payload
 from web_router.types import (
@@ -112,7 +113,7 @@ class KeenableExtractProvider(_KeenableKeyless, HttpExtractProvider):
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         if "content" not in payload:
             failure = ExtractFailure(url=urls[0], error=str(payload.get("message") or MSG_EXTRACT_UNSUCCESSFUL))
-            return ExtractResponse(provider=self.name, failures=[failure], raw=[payload])
+            return ExtractResponse(provider=self.name, failures=[failure], raw=[payload], **keyless_cost(self))
 
         document = ExtractedDocument(
             url=payload.get("url") or urls[0],
@@ -121,4 +122,4 @@ class KeenableExtractProvider(_KeenableKeyless, HttpExtractProvider):
             format=self.format_of(request),
             extra={k: v for k, v in payload.items() if k not in _MAPPED_DOCUMENT_FIELDS},
         )
-        return ExtractResponse(provider=self.name, documents=[document], raw=[payload])
+        return ExtractResponse(provider=self.name, documents=[document], raw=[payload], **keyless_cost(self))

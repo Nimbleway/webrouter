@@ -11,9 +11,15 @@ from typing import Any, Final
 
 from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_ENV_ALLOW_WRITES
 
-MCP_TOOL_VENDORS: Final = "vendors"
-MCP_TOOL_VENDOR_ENDPOINT: Final = "vendor_endpoint"
-MCP_TOOL_CALL_VENDOR: Final = "call_vendor"
+MCP_TOOL_VENDORS: Final = "data_apis"
+MCP_TOOL_VENDOR_ENDPOINT: Final = "data_api_endpoint"
+MCP_TOOL_CALL_VENDOR: Final = "call_data_api"
+MCP_TOOL_RENAMED: Final = {
+    "vendors": MCP_TOOL_VENDORS,
+    "vendor_endpoint": MCP_TOOL_VENDOR_ENDPOINT,
+    "call_vendor": MCP_TOOL_CALL_VENDOR,
+}
+"""The data API tools' old names: not listed, but a call by one still runs the new tool, with a deprecation note."""
 
 MCP_VENDORS_PROPERTIES: dict[str, dict[str, Any]] = {
     "query": {
@@ -40,7 +46,7 @@ MCP_CALL_VENDOR_PROPERTIES: dict[str, dict[str, Any]] = {
     },
     "params": {
         "type": "object",
-        "description": "The endpoint's own inputs, named as vendor_endpoint lists them. An undeclared one is refused.",
+        "description": "The endpoint's own inputs, as data_api_endpoint lists them. An undeclared one is refused.",
     },
     "vendor": {"type": "string", "description": "For a raw call: the vendor's slug."},
     "method": {"type": "string", "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"], "description": "For a raw call."},
@@ -58,15 +64,15 @@ MCP_CALL_VENDOR_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_DESC_VENDORS = (
-    "Find a vendor API (Google Ads, Datadog, ...) to call with the user's own credentials. With 'query', "
-    "matching endpoints, best first; without, the vendors. Then 'vendor_endpoint' and 'call_vendor'."
+    "Find a data API (Google Ads, Datadog, ...) to call with the user's own credentials. With 'query', "
+    "matching endpoints, best first; without, the data APIs. Then 'data_api_endpoint' and 'call_data_api'."
 )
 MCP_DESC_VENDOR_ENDPOINT = (
-    "Describe one vendor endpoint: every input with where it goes and an example, the notes a caller gets "
-    "wrong without (units, paging, quirks), and the credentials it needs. Read it before 'call_vendor'."
+    "Describe one data API endpoint: every input with where it goes and an example, the notes a caller gets "
+    "wrong without (units, paging, quirks), and the credentials it needs. Read it before 'call_data_api'."
 )
 MCP_DESC_CALL_VENDOR = (
-    "Call a vendor's API with the user's credentials (never shown) and return its answer as sent. Writes "
+    "Call a data API with the user's credentials (never shown) and return its answer as sent. Writes "
     "are refused unless 'allow_writes' is true and the server allows them. A large answer stays behind "
     "the handle for 'fetch_raw'."
 )
@@ -78,7 +84,7 @@ MSG_VENDOR_MCP_WRITE_REFUSED: Final = (
     + "=1 and the call passes allow_writes=true. Ask the user before enabling either."
 )
 MCP_MSG_VENDOR_CALL_ARGS: Final = (
-    "call_vendor needs either 'endpoint' (with 'params'), or 'vendor', 'method' and 'path' -- not both."
+    "call_data_api needs either 'endpoint' (with 'params'), or 'vendor', 'method' and 'path' -- not both."
 )
 MCP_MSG_VENDOR_TRUNCATED: Final = "The answer was cut to fit; the whole of it is behind handle {handle!r} (fetch_raw)."
 MCP_MSG_VENDOR_BINARY: Final = (

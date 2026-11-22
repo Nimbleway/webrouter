@@ -152,7 +152,7 @@ def test_a_broken_catalog_fails_a_data_apis_only_search(fake_provider: Any, brok
 
 def test_data_apis_only_keeps_only_the_configured_ones_when_asked(fake_provider: Any) -> None:
     datadog = {"datadog": {"api_key": "dd-api", "app_key": "dd-app"}}
-    with WebRouter("fake", vendor_credentials=datadog) as router:
+    with WebRouter("fake", data_api_credentials=datadog) as router:
         assert (
             router.search("google ads campaign performance", data_apis_only=True, configured_only=True).data_apis == []
         )

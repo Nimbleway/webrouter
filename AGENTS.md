@@ -39,7 +39,7 @@ own backend, and `live_data`/`live_data_source` take that `LiveDataSource`
 whole; a bare name needs `provider` unless one backend is configured.
 **A backend joins only
 if it fetches on request**: data a vendor collected earlier and serves from
-storage is that vendor's own API, reached through `call_vendor`, never here.
+storage is that vendor's own API, reached through `call_data_api`, never here.
 These were `run_template`, `templates` and `template`; the old names, and the
 `Template*` types, are deprecated aliases in `client_live_data.py` and
 `live_data_compat.py` until a release removes them.
@@ -74,13 +74,13 @@ later. It is research's shape on the same job core, with `submit_browse` for
 the job handle. Browser Use, Skyvern, Browserbase, and `auto`. Like research, it
 has no keyless tier, because every task bills.
 
-**Vendor data** (`call_vendor`, `vendor_request`, and `vendors`,
-`vendor`, `vendor_endpoint`, `find_vendor_endpoints` to find what to call) is
-not an eighth method of interchangeable backends. It reaches one vendor's own
+**Data APIs** (`call_data_api`, `data_api_request`, and `data_apis`,
+`data_api`, `data_api_endpoint`, `find_data_api_endpoints` to find what to call; the old
+vendor names still work, with a `DeprecationWarning`) are not an eighth method of interchangeable backends. It reaches one vendor's own
 API with the user's credentials -- their Google Ads, their Datadog -- and
 returns the vendor's answer untouched. `search` lists the read endpoints that
 match its query in `data_apis` -- locally, never calling one -- and only
-`call_vendor` runs one. The vendors are data, not classes: one
+`call_data_api` runs one. The vendors are data, not classes: one
 JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
 `web_router/vendors/`. See "Adding a vendor" below.
 
@@ -139,7 +139,7 @@ src/web_router/
 │                       country live_data_rank_site.py
 ├── live_data_merge.py  several backends' answers as one order: in turn, or merged by score
 ├── live_data_compat.py the old Template* names, importable from web_router with a warning
-├── client_vendors.py   call_vendor(), vendor_request() and the catalog lookups, mixed into
+├── client_vendors.py   call_data_api(), data_api_request() and the catalog lookups, mixed into
 │                       both routers
 ├── client_handles.py   the browser sessions a router hands out, tracked for close()
 
@@ -348,7 +348,7 @@ src/web_router/
 ├── exceptions.py       WebRouterError and subclasses
 ├── exceptions_vendors.py VendorNotFoundError and VendorWriteRefusedError, apart on the
 │                       terms exceptions_budget.py is
-├── vendors/            call_vendor's vendor-blind code: schema.py (the catalog file's
+├── vendors/            call_data_api's vendor-blind code: schema.py (the catalog file's
 │                       models, with schema_base.py, schema_auth.py and
 │                       schema_endpoint.py), catalog.py, credentials.py, tokens.py
 │                       (OAuth tokens), masking.py, plan.py (inputs placed),
@@ -377,7 +377,7 @@ src/web_router/
 │   ├── routing_keys.py where such a router posts, a preset's host included, and its key,
 │   │                   read from the process environment before any .env file
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
-│   ├── vendor_tools.py vendors, vendor_endpoint and call_vendor
+│   ├── vendor_tools.py data_apis, data_api_endpoint and call_data_api
 │   ├── session_tools.py the routing and vendor tools, registered after the methods' own
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
 │   │                   the charge for live_data and browser_open
@@ -1297,7 +1297,7 @@ stale. New frozen results mean running it again.
 Against `LiveDataProvider`, or `HttpLiveDataProvider`
 (`providers/_http_live_data.py`) for a REST API. First check the rule: the
 vendor's sources fetch the site on request. A catalogue of data collected
-earlier belongs in the vendor catalogue for `call_vendor`, not here.
+earlier belongs in the vendor catalogue for `call_data_api`, not here.
 
 1. Implement `_run`/`_arun` -- one request in, one `LiveDataResponse` out,
    every record in `records` -- `_list`/`_alist`, returning one
@@ -1355,7 +1355,7 @@ method covering it.
    4. a write: anything that changes the user's data or account, sends
       something to other people, or deletes; every DELETE, PUT and PATCH.
 
-   The shipped catalog holds kinds 1 and 2 only; `vendor_request` and a
+   The shipped catalog holds kinds 1 and 2 only; `data_api_request` and a
    user's own catalog directory carry writes. A read over POST says so in
    its notes. A write is what `allow_writes` gates, so a write marked
    `read` is a safety bug. A callback or webhook URL input is left out

@@ -14,7 +14,7 @@ import pytest
 from tests.budget.conftest import Chain, Table
 from tests.conftest import FakeProvider
 from web_router import AsyncWebRouter, Budget, BudgetExceededError, WebRouter, prices
-from web_router.exceptions import ConfigurationError, WebRouterError
+from web_router.exceptions import ProviderError, WebRouterError
 from web_router.registry import register_provider, unregister_provider
 from web_router.types import SearchRequest, SearchResponse
 
@@ -110,7 +110,7 @@ async def test_a_call_a_backend_leaves_running_after_it_returns_settles_its_own_
 def test_a_nested_call_left_running_never_takes_the_shared_budget_past_its_cap(
     chain: Chain, registered: Any, priced: Table, joined: bool
 ) -> None:
-    chain.sleeps["first"], chain.raises["first"] = 0.3, ConfigurationError("first holds no key")
+    chain.sleeps["first"], chain.raises["first"] = 0.3, ProviderError("first", "read timed out")
     priced.update(wrapper=(0.02, None), first=(0.01, None), second=(0.04, None), fake=(0.05, None))
     router, started = WebRouter(), []
 
