@@ -42,7 +42,7 @@ H1 = '<h1 class="x">The <em>Heading</em></h1>'
         ("Text\n\n```python\n# an unclosed fence", "markdown", ""),
         ("```python\n```not-a-closer\n# Still code", "markdown", ""),
         ("````\n```\n# Still code\n````\n# Actual", "markdown", "Actual"),
-        ("~~~\n~~~~\n# Actual", "markdown", "Actual"),
+        ("```\n~~~\n# Code", "markdown", ""),
         ("# [Docs](https://example.com/a_(b))", "markdown", "Docs"),
         ("# 100 * 20", "markdown", "100 * 20"),
         ("# `100 * 20`", "markdown", "100 * 20"),
