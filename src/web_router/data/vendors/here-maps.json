@@ -1,0 +1,422 @@
+{
+  "vendor": "here-maps",
+  "name": "HERE",
+  "category": "maps",
+  "summary": "HERE Geocoding & Search v7 (geocode, reverse geocode, place search by text or category, lookup by id) and Routing v8 (traffic-aware routes for cars, trucks, walking and more).",
+  "docs_url": "https://docs.here.com/geocoding-and-search/docs/introduction-to-here-geocoding-search-api-v7",
+  "pricing_url": "https://www.here.com/get-started/pricing",
+  "base_url": "https://geocode.search.hereapi.com",
+  "hosts": {
+    "revgeocode": "https://revgeocode.search.hereapi.com",
+    "discover": "https://discover.search.hereapi.com",
+    "browse": "https://browse.search.hereapi.com",
+    "lookup": "https://lookup.search.hereapi.com",
+    "router": "https://router.hereapi.com"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "HERE_API_KEY"
+        ],
+        "description": "A HERE API key (platform.here.com > Access manager > Apps > API keys), sent as the apiKey query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apiKey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Each service has its own host; this entry routes each call to the right one.",
+    "Points are latitude first (at=52.5308,13.3856; origin=52.5308,13.3856), but a bbox is west longitude, south latitude, east longitude, north latitude.",
+    "Search areas: in=countryCode:USA,CAN (ISO alpha-3, uppercase), in=circle:52.53,13.38;r=10000 (metres) or in=bbox:13.08,52.33,13.76,52.67.",
+    "Parameters marked RESTRICTED or ALPHA in HERE's reference need a contract or may change; they are left out here."
+  ],
+  "sources": [
+    "https://docs.here.com/geocoding-and-search/docs/introduction-to-here-geocoding-search-api-v7",
+    "https://docs.here.com/geocoding-and-search/reference/get_geocode.md",
+    "https://docs.here.com/geocoding-and-search/reference/get_revgeocode.md",
+    "https://docs.here.com/geocoding-and-search/reference/get_discover.md",
+    "https://docs.here.com/geocoding-and-search/reference/get_browse.md",
+    "https://docs.here.com/geocoding-and-search/reference/get_lookup.md",
+    "https://docs.here.com/routing/reference/routing-api-v8-calculateroutes.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "here-maps.geocode",
+      "name": "Geocode an address or place",
+      "summary": "Coordinates, full postal address and match scoring for a free-text or qualified address query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/geocode",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-text query; q or qq is required.",
+          "example": "Invalidenstr 116, 10115 Berlin"
+        },
+        "qq": {
+          "in": "query",
+          "type": "string",
+          "description": "Qualified query, semicolon-separated sub-parameters, e.g. houseNumber=116;street=Invalidenstr;city=Berlin;country=Germany."
+        },
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "Search centre as lat,lon, to favour nearby matches."
+        },
+        "area": {
+          "in": "query",
+          "type": "string",
+          "description": "Hard country filter: countryCode:DEU or countryCode:CAN,MEX,USA.",
+          "example": "countryCode:DEU",
+          "wire_name": "in"
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated result types, e.g. address, area, city, houseNumber, place, postalCode, street."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "BCP 47 language code for results."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 20."
+        },
+        "politicalView": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-3 country code for disputed borders."
+        }
+      },
+      "job": "geo.geocode",
+      "docs_url": "https://docs.here.com/geocoding-and-search/reference/get_geocode",
+      "verified": {
+        "docs": "https://docs.here.com/geocoding-and-search/reference/get_geocode.md"
+      }
+    },
+    {
+      "id": "here-maps.revgeocode",
+      "name": "Reverse geocode a coordinate",
+      "summary": "The nearest address, street, place or area to a point.",
+      "kind": "read",
+      "method": "GET",
+      "host": "revgeocode",
+      "path": "/v1/revgeocode",
+      "params": {
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "lat,lon; at or in=circle is required.",
+          "example": "52.5308,13.3856"
+        },
+        "area": {
+          "in": "query",
+          "type": "string",
+          "description": "circle:lat,lon;r=metres, instead of at.",
+          "wire_name": "in"
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: address, area, city, houseNumber, place, street."
+        },
+        "bearing": {
+          "in": "query",
+          "type": "integer",
+          "description": "Heading in degrees from north, to match the street being driven (types=street only)."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "BCP 47 language code."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 1."
+        },
+        "politicalView": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-3 country code for disputed borders."
+        }
+      },
+      "job": "geo.reverse",
+      "docs_url": "https://docs.here.com/geocoding-and-search/reference/get_revgeocode",
+      "verified": {
+        "docs": "https://docs.here.com/geocoding-and-search/reference/get_revgeocode.md"
+      }
+    },
+    {
+      "id": "here-maps.discover",
+      "name": "Search places and addresses by text",
+      "summary": "Places and addresses matching free text (a name, category, chain or phone number) near a point or in an area, by relevance.",
+      "kind": "read",
+      "method": "GET",
+      "host": "discover",
+      "path": "/v1/discover",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Free-text query.",
+          "example": "coffee"
+        },
+        "at": {
+          "in": "query",
+          "type": "string",
+          "description": "Search centre lat,lon; one of at, in=circle or in=bbox is required.",
+          "example": "52.5308,13.3856"
+        },
+        "area": {
+          "in": "query",
+          "type": "string",
+          "description": "countryCode:..., circle:lat,lon;r=metres or bbox:west,south,east,north.",
+          "wire_name": "in"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "BCP 47 language code."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 20."
+        },
+        "politicalView": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-3 country code for disputed borders."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://docs.here.com/geocoding-and-search/reference/get_discover",
+      "verified": {
+        "docs": "https://docs.here.com/geocoding-and-search/reference/get_discover.md"
+      }
+    },
+    {
+      "id": "here-maps.browse",
+      "name": "Browse places by category near a point",
+      "summary": "Places filtered by HERE category, chain, cuisine or name, ranked by distance from a point.",
+      "kind": "read",
+      "method": "GET",
+      "host": "browse",
+      "path": "/v1/browse",
+      "params": {
+        "at": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search centre lat,lon.",
+          "example": "52.5308,13.3856"
+        },
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated HERE category ids; prefix ! to exclude one (ids are listed in the HERE Places Category System)."
+        },
+        "chains": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated HERE chain ids."
+        },
+        "foodTypes": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated HERE cuisine ids."
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Partial match on the place name."
+        },
+        "area": {
+          "in": "query",
+          "type": "string",
+          "description": "Hard area filter: countryCode:..., circle:lat,lon;r=metres or bbox:west,south,east,north.",
+          "wire_name": "in"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "BCP 47 language code."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results, 1-100, default 20."
+        },
+        "politicalView": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-3 country code for disputed borders."
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://docs.here.com/geocoding-and-search/reference/get_browse",
+      "verified": {
+        "docs": "https://docs.here.com/geocoding-and-search/reference/get_browse.md"
+      }
+    },
+    {
+      "id": "here-maps.lookup",
+      "name": "Look up a place by HERE id",
+      "summary": "The full record of one result (address, contacts, opening hours, categories) by the id a search returned.",
+      "kind": "read",
+      "method": "GET",
+      "host": "lookup",
+      "path": "/v1/lookup",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "A result id from geocode, discover or browse.",
+          "example": "here:pds:place:276u33db-8097f3194e4b411081b761ea9a366776"
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "BCP 47 language code."
+        },
+        "politicalView": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO alpha-3 country code for disputed borders."
+        }
+      },
+      "job": "places.details",
+      "docs_url": "https://docs.here.com/geocoding-and-search/reference/get_lookup",
+      "verified": {
+        "docs": "https://docs.here.com/geocoding-and-search/reference/get_lookup.md"
+      }
+    },
+    {
+      "id": "here-maps.routes",
+      "name": "Calculate a route",
+      "summary": "Routes between an origin and a destination, through optional vias, with duration, length, traffic and turn-by-turn actions.",
+      "kind": "read",
+      "method": "GET",
+      "host": "router",
+      "path": "/v8/routes",
+      "params": {
+        "transportMode": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "car",
+            "truck",
+            "pedestrian",
+            "bicycle",
+            "scooter",
+            "taxi",
+            "bus",
+            "privateBus",
+            "networkRestrictedTruck"
+          ],
+          "description": "Mode; bicycle, bus, privateBus and networkRestrictedTruck are beta.",
+          "example": "car"
+        },
+        "origin": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "lat,lon of the start.",
+          "example": "52.5308,13.3847"
+        },
+        "destination": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "lat,lon of the end.",
+          "example": "52.5323,13.3789"
+        },
+        "via": {
+          "in": "query",
+          "type": "array",
+          "description": "Stops in order, each lat,lon (append !passThrough=true to pass without stopping); sent as repeated via parameters."
+        },
+        "return_parts": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated parts to include: summary, polyline, actions, instructions, travelSummary, turnByTurnActions, typicalDuration, elevation, incidents, tolls...",
+          "example": "summary,polyline",
+          "wire_name": "return"
+        },
+        "routingMode": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "fast",
+            "short"
+          ],
+          "description": "Default fast."
+        },
+        "departureTime": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339 date-time, or any for time-independent routing."
+        },
+        "arrivalTime": {
+          "in": "query",
+          "type": "string",
+          "description": "RFC 3339 date-time to arrive by."
+        },
+        "alternatives": {
+          "in": "query",
+          "type": "integer",
+          "description": "Alternative routes, 0-6, default 0."
+        },
+        "avoid_features": {
+          "in": "query",
+          "type": "string",
+          "wire_name": "avoid[features]",
+          "description": "Comma-separated: tollRoad, controlledAccessHighway, ferry, carShuttleTrain, tunnel, dirtRoad, seasonalClosure, uTurns..."
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "metric",
+            "imperial"
+          ],
+          "description": "Units in instructions, default metric."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Preferred BCP 47 language for instructions."
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 4217 code for toll costs."
+        }
+      },
+      "notes": [
+        "Pass return to choose what each route section carries: summary for duration and length, polyline for geometry, actions and instructions for turn-by-turn.",
+        "polyline comes in HERE's Flexible Polyline encoding, not Google's."
+      ],
+      "job": "routes.directions",
+      "docs_url": "https://docs.here.com/routing/reference/routing-api-v8-calculateroutes",
+      "verified": {
+        "docs": "https://docs.here.com/routing/reference/routing-api-v8-calculateroutes.md"
+      }
+    }
+  ]
+}

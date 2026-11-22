@@ -44,15 +44,23 @@ dropped**, so a call never runs under weaker constraints than you asked for.
 Four rules keep the abstraction honest:
 
 **Unset stays unset.** Fields you leave alone are not sent, so each backend
-applies its own defaults rather than inheriting ours. (Three deliberate
-exceptions: an extract sends a format even when you named none, `markdown`
-wherever the backend can return it, so the same call answers alike whichever
-backend serves it, and `document.format` is true because it was asked for, not
-because a vendor default has not moved. A
-browser session opened with no `timeout` gets ten minutes rather than the
-vendor's own limit, because it is billed until something ends it. And `local`
-is headless unless you say otherwise, because there is no vendor default to
-keep and a window would open on your screen.)
+applies its own defaults rather than inheriting ours. A few deliberate
+exceptions, each for a stated reason:
+
+- An extract always sends a format, `markdown` wherever the backend can return
+  it, so the same call answers alike whichever backend serves it, and
+  `document.format` reports the format you asked for rather than a vendor
+  default.
+- A browser session opened with no `timeout` gets ten minutes rather than the
+  vendor's limit, because it is billed until something ends it.
+- `local` is headless unless you say otherwise: there is no vendor default to
+  keep, and a window would open on your screen.
+- A backend that requires a field you left unset gets a stated value rather
+  than a guess: research on Parallel or Perplexity sends effort `medium`
+  ([Research](/research#effort)), and a Linkup search or answer sends depth
+  `fast`.
+- A Parallel search with no `effort` sends mode `fast`, because Parallel's own
+  default is slower and costs five times as much.
 
 **Nothing is silently dropped.** If a provider does not map an option you set,
 or cannot return the `format` you asked for, it says so instead of quietly

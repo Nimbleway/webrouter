@@ -20,9 +20,10 @@ answer, with the members it asked, always arrives before the call stops waiting.
 
 Every member asked is sent the prompt, a member that times out after receiving
 it included. A member that declares ``route_tools`` is asked only on those
-tools. Its own time limit is the sum of its members' plus that margin, unless
-``timeout_s`` sets it. The decision record names it ``fallback(<member>, ...)`` and lists in
-``members`` each one asked: its name, its outcome, its milliseconds, and
+tools; a member that does not declare ``route_modes=True`` -- a ``remote`` one, in its
+``router_config`` -- is never shown vendor mode candidates. Its own time limit is the sum
+of its members' plus that margin, unless ``timeout_s`` sets it. The decision record names
+it ``fallback(<member>, ...)`` and lists in ``members`` each one asked: its name, its outcome, its milliseconds, and
 whether its decision counted. A member passed in is named by its
 ``router_name``, else ``custom``; one built by name by its ``router_name``, else
 its registered name. Members built by name are closed when this router is;
@@ -48,6 +49,7 @@ from web_router.routing.composite import CompositeDecision, composed, decides_no
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.fallback_members import Member, aclose_members, built_members, close_members
 from web_router.routing.invoke import RouterOutcome
+from web_router.routing.request_modes import shown
 from web_router.routing.route_tools import ALL_TOOLS
 from web_router.types_decision import DecisionMember, MemberOutcome
 
@@ -104,10 +106,12 @@ class _Asking:
             yield member
 
     def request_for(self, member: Member) -> RouteRequest:
-        """The request ``member`` is shown: its deadline the smaller of its own limit and the time left."""
+        """The request ``member`` is shown: its deadline the smaller of its own limit and the time left, and its
+        vendor mode candidates only when it opts in to them."""
         left = self.left()
         self.cut = left < member.attached.timeout_s
-        return replace(self.req, deadline_s=min(member.attached.timeout_s, left))
+        req = shown(self.req, member.modes)
+        return replace(req, deadline_s=min(member.attached.timeout_s, left))
 
     def settle(self, member: Member, outcome: RouterOutcome) -> RouteDecision | None:
         """``member``'s decision when it decides something, else ``None``; either way recorded."""
@@ -135,6 +139,7 @@ class FallbackRouter:
         routers: Sequence[Any],
         timeout_s: float | None = None,
         route_tools: Collection[str] | None = None,
+        route_modes: bool | None = None,
     ) -> None:
         """
         Args:
@@ -144,6 +149,8 @@ class FallbackRouter:
                 20 ms margin it keeps back from its deadline.
             route_tools: The tools it is consulted on when the caller passes none; unless set, every tool a
                 member is asked on.
+            route_modes: Whether it is shown vendor mode candidates when the caller passes no ``route_modes``;
+                unless set, whether any member opts in. A member that does not is never shown them.
 
         Raises:
             ConfigurationError: for ``routers`` empty or not a list, a ``timeout_s`` not above the 20 ms margin,
@@ -157,6 +164,7 @@ class FallbackRouter:
         self.router_name = FALLBACK_DISPLAY_NAME.format(members=", ".join(m.name for m in self._members))
         served = frozenset().union(*(m.tools for m in self._members))
         self.route_tools = route_tools if route_tools is not None or served == ALL_TOOLS else sorted(served)
+        self.route_modes = any(m.modes for m in self._members) if route_modes is None else route_modes
         self.min_url_policy = next((m.url_policy for m in self._members if m.url_policy), None)
 
     def __repr__(self) -> str:

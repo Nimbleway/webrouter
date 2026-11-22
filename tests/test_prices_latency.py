@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
 from datetime import date
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from scripts import latency
-from scripts.benchmark_loader import BENCHMARKS, FROZEN_SIBLINGS
 from tests.test_prices import _row
 from web_router import prices
 from web_router.prices import Price
@@ -37,7 +33,7 @@ def test_estimate_latency_reads_the_row() -> None:
 
 
 def test_latency_is_unknown_where_nothing_measured_it() -> None:
-    assert prices.estimate_latency("nimble", "search", "deep") is None
+    assert prices.estimate_latency("octen", "search", "deep") is None
     assert prices.estimate_latency("tavily", "extract") is None
     assert prices.estimate_latency("parallel", "research") is None
     assert prices.estimate_latency("nobody", "search") is None
@@ -49,9 +45,9 @@ def test_latency_is_unknown_where_nothing_measured_it() -> None:
     ("method", "mode", "expected"),
     [
         ("search", "default", None),
-        ("search", "@deep", "deep"),
-        ("search", "ultra-fast", "tavily-ultra-fast"),
+        *[("search", old, new) for old, new in (("ultra-fast", "tavily-ultra-fast"), ("@deep", "deep"))],
         ("search", "ultra-fast@deep", "tavily-ultra-fast+deep"),
+        *[("search", canonical, canonical) for canonical in ("tavily-ultra-fast", "fast", "tavily-fast+deep")],
         ("research", "low", "low"),
         ("research", "default", None),
     ],
@@ -73,7 +69,7 @@ def _frozen(
     }
 
 
-def test_a_pooled_backend_keeps_its_rows_in_every_mode() -> None:
+def test_a_pooled_set_keeps_only_its_pooled_setups() -> None:
     rows = {
         "a": [
             _frozen("tavily", "default", 1.0),
@@ -82,29 +78,8 @@ def test_a_pooled_backend_keeps_its_rows_in_every_mode() -> None:
         ],
         "b": [_frozen("tavily", "default", 4.0, set_name="b")],
     }
-    kept = latency.pooled_rows(rows, {"a": frozenset({"tavily"})})
+    kept = latency.pooled_rows(rows, {"a": frozenset({("tavily", "default"), ("tavily", "ultra-fast@deep")})})
     assert [(r["provider"], r["mode"]) for r in kept] == [("tavily", "default"), ("tavily", "ultra-fast@deep")]
-
-
-def test_loading_frozen_keeps_the_siblings_another_loader_imported(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.syspath_prepend(str(BENCHMARKS))
-    mine = {name: importlib.import_module(name) for name in FROZEN_SIBLINGS}
-    for name, module in mine.items():
-        monkeypatch.setitem(sys.modules, name, module)
-    latency._benchmarks()
-    assert all(sys.modules.get(name) is module for name, module in mine.items())
-
-
-def _benchmark_modules() -> set[str]:
-    return {n for n, m in list(sys.modules.items()) if Path(getattr(m, "__file__", None) or "/").parent == BENCHMARKS}
-
-
-def test_loading_frozen_leaves_none_of_its_siblings_behind(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``FROZEN_SIBLINGS`` names every module ``frozen.py`` imports from its folder: none outlives the load."""
-    for name in _benchmark_modules():
-        monkeypatch.delitem(sys.modules, name)
-    latency._benchmarks()
-    assert _benchmark_modules() == set(), "add them to FROZEN_SIBLINGS in scripts/benchmark_loader.py"
 
 
 def test_measure_pools_sets_skips_failures_and_reports_unmatched() -> None:
@@ -168,19 +143,27 @@ def test_a_malformed_latency_is_refused(fields: dict[str, object]) -> None:
         Price.model_validate(_row(**fields))
 
 
+def _set(answers: str, *labels: str, method: str = "search") -> dict[str, object]:
+    return {"answers_sha256": answers, "method": method, "runs": [{"providers": list(labels)}]}
+
+
 def test_a_rerun_of_the_same_questions_and_a_mixed_set_are_not_pooled() -> None:
     sets = {
-        "sealqa": {"answers_sha256": "s", "method": "search", "providers": ["nimble", "webiq", "exa"]},
-        "sealqa-twin": {"answers_sha256": "s", "method": "search", "providers": ["nimble", "webiq", "brave"]},
-        "simpleqa": {"answers_sha256": "q", "method": "search", "providers": ["nimble"]},
-        "answer-simpleqa": {"answers_sha256": "q", "method": "answer", "providers": ["exa"]},
-        "tools-effort": {"answers_sha256": "t", "method": "mixed", "providers": ["nimble"]},
+        "sealqa": _set("s", "nimble", "webiq", "exa"),
+        "sealqa-twin": _set("s", "nimble", "webiq", "brave"),
+        "sealqa-modes": _set("s", "exa", "exa:exa-fast", "tavily:fast"),
+        "simpleqa": _set("q", "nimble"),
+        "answer-simpleqa": _set("q", "exa", method="answer"),
+        "tools-effort": _set("t", "nimble", method="mixed"),
     }
-    assert latency.pooled_sets(sets, mixed="mixed") == {
-        "sealqa": frozenset({"nimble", "webiq", "exa"}),
-        "sealqa-twin": frozenset({"brave"}),  # only the backend the first run did not have
-        "simpleqa": frozenset({"nimble"}),
-        "answer-simpleqa": frozenset({"exa"}),
+    split_setup = latency._benchmarks()[0].split_setup
+    assert latency.pooled_sets(sets, mixed="mixed", split_setup=split_setup) == {
+        "sealqa": frozenset({("nimble", "default"), ("webiq", "default"), ("exa", "default")}),
+        "sealqa-twin": frozenset({("brave", "default")}),  # only the backend the first run did not have
+        # A mode is a setup of its own: new data beside a backend whose default ran before.
+        "sealqa-modes": frozenset({("exa", "exa-fast"), ("tavily", "fast")}),
+        "simpleqa": frozenset({("nimble", "default")}),
+        "answer-simpleqa": frozenset({("exa", "default")}),
     }
 
 

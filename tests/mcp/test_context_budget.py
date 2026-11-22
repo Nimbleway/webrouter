@@ -28,20 +28,21 @@ from web_router.mcp.shaping import render, shape_research
 from web_router.mcp.tools import WebRouterTools
 from web_router.types import ResearchResponse
 
-TOOL_LIST_BUDGET = 26_650
+TOOL_LIST_BUDGET = 26_670
 """Bytes of compact JSON the whole tool list may take with every backend configured -- about 6.6k tokens.
 
 It was 31,051 (about 7.8k tokens) before descriptions were cut down and the
 provider sentence said once, and 25,630 with the output schemas. ``search``'s
 three data API options (``data_apis``, ``data_apis_only``, ``configured_only``)
 bring it to 26,289; ``extract``'s two (``data_apis``, ``configured_only``), to 26,602.
+SpecStream's name in the ``search`` and ``extract`` provider lists brings it to 26,663.
 """
 
 TOOL_BUDGET = 2_650
 """Bytes any one tool may take: ``search``, the largest, is 2,606 with its data API options.
 
 Each search backend adds its name to ``search``'s ``provider`` list; Valyu, Seltz and
-Octen together bring it to about 2,620.
+Octen together bring it to about 2,620, and SpecStream to 2,647.
 """
 
 

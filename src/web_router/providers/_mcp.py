@@ -19,13 +19,14 @@ from web_router.constants import (
     HTTP_ERROR_BODY_LIMIT,
     MCP_ACCEPT,
     MCP_JSONRPC_VERSION,
-    MCP_SSE_DATA_PREFIX,
     MSG_HTTP_ERROR,
     MSG_MCP_ERROR,
     MSG_MCP_NO_RESULT,
 )
 from web_router.constants_errors import RATE_LIMIT_MARKERS
 from web_router.exceptions import ProviderError
+from web_router.modes import ModeDeclarations
+from web_router.providers._sse import data_lines
 from web_router.types import SearchRequest
 from web_router.types_errors import ERROR_KIND_RATE_LIMIT
 
@@ -39,6 +40,7 @@ class McpSearchMixin:
 
     name: ClassVar[str]
     mcp_tool: ClassVar[str]
+    tiers, contents, flags = ModeDeclarations.tiers, ModeDeclarations.contents, ModeDeclarations.flags  # not sent
     env_api_key: ClassVar[str | None] = None
 
     def __init__(self, **kwargs: Any) -> None:
@@ -120,10 +122,9 @@ class McpSearchMixin:
             except json.JSONDecodeError:
                 return []
         messages = []
-        for line in body.splitlines():
-            if line.startswith(MCP_SSE_DATA_PREFIX):
-                try:
-                    messages.append(json.loads(line[len(MCP_SSE_DATA_PREFIX) :]))
-                except json.JSONDecodeError:
-                    continue
+        for data in data_lines(body):
+            try:
+                messages.append(json.loads(data))
+            except json.JSONDecodeError:
+                continue
         return messages

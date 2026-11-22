@@ -1,0 +1,218 @@
+{
+  "vendor": "dune",
+  "name": "Dune",
+  "category": "finance",
+  "summary": "Onchain analytics from Dune: results of saved SQL queries over blockchain data, fetched from the query's latest run.",
+  "docs_url": "https://docs.dune.com/api-reference/apis/quickstart-dashboards",
+  "pricing_url": "https://dune.com/pricing",
+  "base_url": "https://api.dune.com/api",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DUNE_API_KEY"
+        ],
+        "description": "A Dune API key with at least Read scope (dune.com settings > API). Sent in the X-Dune-Api-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Dune-Api-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "API access needs a trial or paid plan; free accounts are view-only.",
+    "Credits: runs are charged for compute used (by engine tier); fetching results is charged per MB exported (2 credits/MB on Plus, 10 on Analyst).",
+    "Rate limits on Plus: 70 requests/minute for runs, 200/minute for reads; Enterprise from 350 and 1000.",
+    "Results stored over 32 GB are truncated; ask with allow_partial_results to read them.",
+    "Running a query (POST /v1/query/{query_id}/execute) is not in this entry: it starts a billed run. The execution calls read runs started elsewhere, such as in the Dune app."
+  ],
+  "sources": [
+    "https://docs.dune.com/api-reference/apis/quickstart-dashboards",
+    "https://docs.dune.com/api-reference/executions/endpoint/get-query-result",
+    "https://docs.dune.com/api-reference/executions/endpoint/execute-query",
+    "https://docs.dune.com/api-reference/executions/endpoint/get-execution-status",
+    "https://docs.dune.com/api-reference/executions/endpoint/get-execution-result",
+    "https://docs.dune.com/api-reference/queries/endpoint/read",
+    "https://docs.dune.com/api-reference/overview/rate-limits",
+    "https://docs.dune.com/api-reference/overview/billing",
+    "https://docs.dune.com/api-reference/executions/pagination",
+    "https://docs.dune.com/api-reference/executions/filtering"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "dune.query.latest_result",
+      "name": "Get a query's latest result",
+      "summary": "Rows of the latest finished run of a saved query (public or yours), from the app or the API.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/query/{query_id}/results",
+      "params": {
+        "query_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Saved query ID, the number in dune.com/queries/<id>.",
+          "example": "3567562"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return; with offset for paging. Not with sample_count."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "First row to return, from 0."
+        },
+        "columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return; fewer columns cost fewer credits."
+        },
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "SQL WHERE-like row filter, e.g. block_time > '2024-01-01'. Not with sample_count."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "SQL ORDER BY-like expression, e.g. amount_usd desc."
+        },
+        "sample_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Return a random uniform sample of this many rows."
+        },
+        "allow_partial_results": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the truncated part of a result over the 32 GB storage limit instead of failing."
+        }
+      },
+      "notes": [
+        "Does not run the query, but costs credits per MB of result returned.",
+        "404 when the query's SQL changed since its last run: run it again in Dune first.",
+        "Page with limit and offset; the response carries next_offset while rows remain."
+      ],
+      "job": "datasets.query",
+      "docs_url": "https://docs.dune.com/api-reference/executions/endpoint/get-query-result",
+      "verified": {
+        "docs": "https://docs.dune.com/api-reference/executions/endpoint/get-query-result"
+      }
+    },
+    {
+      "id": "dune.execution.status",
+      "name": "Check a query run's status",
+      "summary": "State of an execution (pending, executing, completed, failed...), with timing and credits used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/execution/{execution_id}/status",
+      "params": {
+        "execution_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Execution ID of a run started in Dune or through its API."
+        }
+      },
+      "notes": [
+        "Done when state is QUERY_STATE_COMPLETED; also QUERY_STATE_FAILED, _CANCELED, _EXPIRED or _COMPLETED_PARTIAL."
+      ],
+      "job": "jobs.status",
+      "docs_url": "https://docs.dune.com/api-reference/executions/endpoint/get-execution-status",
+      "verified": {
+        "docs": "https://docs.dune.com/api-reference/executions/endpoint/get-execution-status"
+      }
+    },
+    {
+      "id": "dune.execution.results",
+      "name": "Get a query run's results",
+      "summary": "Rows of one execution, once it has completed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/execution/{execution_id}/results",
+      "params": {
+        "execution_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Execution ID of a run started in Dune or through its API."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Rows to return; with offset for paging. Not with sample_count."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "First row to return, from 0."
+        },
+        "columns": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated columns to return; fewer columns cost fewer credits."
+        },
+        "filters": {
+          "in": "query",
+          "type": "string",
+          "description": "SQL WHERE-like row filter, e.g. block_time > '2024-01-01'. Not with sample_count."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "SQL ORDER BY-like expression, e.g. amount_usd desc."
+        },
+        "sample_count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Return a random uniform sample of this many rows."
+        },
+        "allow_partial_results": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Return the truncated part of a result over the 32 GB storage limit instead of failing."
+        }
+      },
+      "notes": [
+        "Costs credits per MB of result returned."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://docs.dune.com/api-reference/executions/endpoint/get-execution-result",
+      "verified": {
+        "docs": "https://docs.dune.com/api-reference/executions/endpoint/get-execution-result"
+      }
+    },
+    {
+      "id": "dune.query.get",
+      "name": "Read a saved query",
+      "summary": "SQL text, parameters, name, tags and state of a saved query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/query/{queryId}",
+      "params": {
+        "queryId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "Saved query ID.",
+          "example": 1215383
+        }
+      },
+      "notes": [
+        "Queries endpoints need the Plus or Enterprise plan. Private queries are readable only with their owner's key."
+      ],
+      "job": "datasets.schema",
+      "docs_url": "https://docs.dune.com/api-reference/queries/endpoint/read",
+      "verified": {
+        "docs": "https://docs.dune.com/api-reference/queries/endpoint/read"
+      }
+    }
+  ]
+}

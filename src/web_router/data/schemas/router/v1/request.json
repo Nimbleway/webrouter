@@ -43,7 +43,7 @@
       "type": "object"
     },
     "Candidate": {
-      "description": "One (tool, provider) pair that could serve the call, with what it is estimated to cost and take.",
+      "description": "One (tool, provider) pair, or one of its vendor modes, that could serve the call, with its cost and time.",
       "properties": {
         "tool": {
           "description": "The method this candidate calls.",
@@ -61,6 +61,19 @@
           "description": "The backend that would serve it, by registry name.",
           "title": "Provider",
           "type": "string"
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The backend's vendor mode, canonical (``exa-instant+lite``); ``None`` for its default. Offered only to a router\nthat opts in with ``route_modes``.",
+          "title": "Mode"
         },
         "est_cost_usd": {
           "anyOf": [
@@ -90,7 +103,7 @@
         },
         "id": {
           "default": "",
-          "description": "``tool:provider``, the name every decision field uses: filled in when left empty, refused when it differs.",
+          "description": "``tool:provider``, or ``tool:provider:mode`` with a mode: the name every decision field uses. Filled in when\nleft empty, refused when it differs.",
           "title": "Id",
           "type": "string"
         }

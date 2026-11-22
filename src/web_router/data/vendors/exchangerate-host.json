@@ -1,0 +1,258 @@
+{
+  "vendor": "exchangerate-host",
+  "name": "exchangerate.host",
+  "category": "finance",
+  "summary": "Live and historical foreign exchange rates for 170+ currencies, with conversion, time frames and rate changes.",
+  "docs_url": "https://docs.apilayer.com/exchangerate/docs/api-documentation",
+  "pricing_url": "https://exchangerate.host/pricing",
+  "base_url": "https://api.exchangerate.host",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "EXCHANGERATE_HOST_API_KEY"
+        ],
+        "description": "A exchangerate.host API access key (account dashboard). Sent as the access_key query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "access_key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call needs an access key.",
+    "The default source currency is USD; switching it needs the Basic plan or higher.",
+    "Errors come back as JSON with success false and an error object (code, type, info); check success, not only the HTTP status."
+  ],
+  "sources": [
+    "https://docs.apilayer.com/exchangerate/docs/api-documentation",
+    "https://api.swaggerhub.com/apis/apilayer-863/ExchangeratehostAPI/1.0.0/swagger.json"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "exchangerate-host.live",
+      "name": "Get live exchange rates",
+      "summary": "Latest quotes for every currency (or the ones asked for) against the source currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/live",
+      "params": {
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Source (base) currency, 3-letter code; default USD. Basic plan and higher.",
+          "example": "EUR"
+        },
+        "currencies": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the quotes returned.",
+          "example": "EUR,GBP,JPY"
+        },
+        "spread": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds bid and ask to each quote; not on every plan (see the pricing page).",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "Refreshed every 60 minutes on Free and Basic, every 10 minutes on Professional and every 60 seconds on Business.",
+        "Quotes are keyed by the joined pair, e.g. USDEUR."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/exchangerate/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/ExchangeratehostAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "exchangerate-host.historical",
+      "name": "Get exchange rates for a past date",
+      "summary": "End-of-day quotes for one date, back to 1999 for most currencies.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/historical",
+      "params": {
+        "date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Date, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Source (base) currency, 3-letter code; default USD. Basic plan and higher.",
+          "example": "EUR"
+        },
+        "currencies": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the quotes returned.",
+          "example": "EUR,GBP,JPY"
+        },
+        "spread": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds bid and ask to each quote; not on every plan (see the pricing page).",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "A date before a currency was added fails the whole call with currency_not_available_on_date."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/exchangerate/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/ExchangeratehostAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "exchangerate-host.convert",
+      "name": "Convert an amount between currencies",
+      "summary": "Converts an amount at the live rate, or at a past date's rate, returning the rate used.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/convert",
+      "params": {
+        "from": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Currency to convert from.",
+          "example": "USD"
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Currency to convert to.",
+          "example": "GBP"
+        },
+        "amount": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Amount to convert.",
+          "example": 10
+        },
+        "date": {
+          "in": "query",
+          "type": "string",
+          "description": "Use this date's rates, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        }
+      },
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/exchangerate/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/ExchangeratehostAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "exchangerate-host.timeframe",
+      "name": "Get daily rates over a date range",
+      "summary": "Daily quotes between two dates, at most 365 days apart.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/timeframe",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "First date, YYYY-MM-DD.",
+          "example": "2024-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Last date, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Source (base) currency, 3-letter code; default USD. Basic plan and higher.",
+          "example": "EUR"
+        },
+        "currencies": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the quotes returned.",
+          "example": "EUR,GBP,JPY"
+        },
+        "spread": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 adds bid and ask to each quote; not on every plan (see the pricing page).",
+          "enum": [
+            0,
+            1
+          ]
+        }
+      },
+      "notes": [
+        "Limit currencies: an unfiltered year of every currency is very large."
+      ],
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/exchangerate/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/ExchangeratehostAPI/1.0.0/swagger.json"
+      }
+    },
+    {
+      "id": "exchangerate-host.change",
+      "name": "Get rate changes between two dates",
+      "summary": "Start rate, end rate, absolute and percent change per currency.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/change",
+      "params": {
+        "start_date": {
+          "in": "query",
+          "type": "string",
+          "description": "First date, YYYY-MM-DD. Without dates, yesterday's close is compared with the latest rate.",
+          "example": "2024-01-01"
+        },
+        "end_date": {
+          "in": "query",
+          "type": "string",
+          "description": "Last date, YYYY-MM-DD.",
+          "example": "2024-01-31"
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Source (base) currency, 3-letter code; default USD. Basic plan and higher.",
+          "example": "EUR"
+        },
+        "currencies": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated 3-letter codes to limit the quotes returned.",
+          "example": "EUR,GBP,JPY"
+        }
+      },
+      "job": "market.fx",
+      "docs_url": "https://docs.apilayer.com/exchangerate/docs/api-documentation",
+      "verified": {
+        "docs": "https://api.swaggerhub.com/apis/apilayer-863/ExchangeratehostAPI/1.0.0/swagger.json"
+      }
+    }
+  ]
+}

@@ -45,6 +45,16 @@ def test_no_hint_for_a_variable_the_dotenv_leaves_empty(project: Path, name: str
     assert dotenv_hint(f"Set the {name} environment variable.") == ""
 
 
+def test_a_dotenv_saved_with_a_byte_order_mark_still_names_its_first_variable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # PowerShell 5's `Set-Content -Encoding utf8` and some Windows editors write one; python-dotenv skips it.
+    (tmp_path / ".env").write_text(f"{KEY}=abc\n", encoding="utf-8-sig")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv(KEY, raising=False)
+    assert f"sets {KEY}" in str(ConfigurationError.missing_api_key("nimble", KEY))
+
+
 def test_no_hint_without_a_dotenv(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(KEY, raising=False)
     assert nearest_dotenv(tmp_path) is None

@@ -36,9 +36,8 @@ def test_every_set_has_the_rows_and_questions_its_manifest_names(frozen: ModuleT
         assert sorted({r["provider"] for r in rows}) == entry["providers"], set_name
         mixed = entry["method"] == frozen.MIXED
         if not mixed:
-            assert entry["row_count"] == entry["question_count"] * len(entry["providers"]), (
-                "one row per question and backend"
-            )
+            setups = {(r["provider"], r["mode"]) for r in rows}
+            assert entry["row_count"] == entry["question_count"] * len(setups), "one row per question and setup"
         else:
             assert len(entry["sample"]) == entry["question_count"], set_name
         for row in rows:
@@ -59,6 +58,7 @@ def test_the_sets_route_eval_needs_are_frozen_at_their_sizes(frozen: ModuleType)
     assert sizes == {
         "sealqa-hard-254": (254, 2540),
         "sealqa-hard-254-twin": (254, 508),
+        "sealqa-hard-254-modes": (254, 9144),
         "simpleqa-300-v2": (300, 3600),
         "answer-simpleqa-300": (300, 1500),
         "tools-effort-60": (60, 1150),

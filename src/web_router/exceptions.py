@@ -5,6 +5,7 @@ handle failures uniformly regardless of which backend served the request:
 
     WebRouterError
     ├── ConfigurationError          bad or missing configuration
+    │   └── LiveDataBackendChoiceError  a bare live data source could be on several backends
     ├── ProviderNotFoundError       no provider registered under that name
     │   └── NoAnswerProviderError       answer() named no backend and none could be chosen
     ├── ProviderNotInstalledError   provider known, optional dependency missing
@@ -356,5 +357,6 @@ def _named(parameter: str, values: Mapping[str, Any]) -> str:
 
 
 # Re-exported so every existing import keeps working; at the bottom because that module imports WebRouterError.
+from web_router.exceptions_provider import LiveDataBackendChoiceError as LiveDataBackendChoiceError  # noqa: E402
 from web_router.exceptions_provider import NoAnswerProviderError as NoAnswerProviderError  # noqa: E402
 from web_router.exceptions_provider import ProviderNotFoundError as ProviderNotFoundError  # noqa: E402

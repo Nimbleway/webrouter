@@ -108,9 +108,10 @@ vendor's own pricing page (`unknown` if it publishes none), and run
    Nimble and Tavily do.
 
    `HttpSearchProvider` clients never follow redirects, and a provider sending
-   a credential refuses to. `httpx` replays the auth header to the redirect
-   target even on another host, so if your endpoint redirects, point `base_url`
-   at where it lands rather than turning redirects on.
+   a credential refuses to. On a redirect to another host, `httpx` drops a
+   standard `Authorization` header but keeps a custom one such as `X-API-Key`,
+   so if your endpoint redirects, point `base_url` at where it lands rather than
+   turning redirects on.
 
    An endpoint that needs no credential sets `env_api_key = None`: no auth
    header is sent and a missing key never raises. `you_mcp.py` is the worked

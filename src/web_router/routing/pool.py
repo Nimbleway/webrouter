@@ -1,7 +1,6 @@
 """A budget several calls spend from: what :meth:`~web_router.WebRouter.budget` holds.
 
-A pool keeps one :class:`~web_router.Budget` for every call
-made through its scope, and is the only state those calls share:
+A pool keeps one :class:`~web_router.Budget` for every call made through its scope, the only state they share:
 
 - each call's budget is the tighter of its own ``budget=`` and what the
   pools in force have left (:meth:`PoolChain.limit`): the dollars and the
@@ -13,22 +12,16 @@ made through its scope, and is the only state those calls share:
   has reserved, under one lock, so calls in parallel -- threads or asyncio
   tasks -- can never reserve more than the cap between them. One that does not
   fit is refused at once; nothing waits for another call to finish;
-- when a call ends, however it ends, what it reserved is settled
-  (:meth:`PoolChain.settle`): moved from reserved to spent, at the estimate,
-  since no call reports what it was billed. A failed attempt stays charged.
+- when a call ends, what it reserved is settled (:meth:`PoolChain.settle`): moved to spent, at what each attempt
+  was charged (:mod:`.settlement`).
 
-A pool belongs to the router that made it: only that router's calls spend
-from it, and another router's calls inside the block run as they would
-outside it. A call spends from every pool of its router in force where it
-starts -- its :class:`PoolChain`, taken once when the call starts --
-whichever scope it is made through and wherever that scope was made, so an
-outer block's cap holds for a scope made before the block was entered. Each
-reservation must fit every pool in the chain, checked and taken under all
-their locks at once, and the clock is the earliest of theirs.
+A pool belongs to the router that made it: only that router's calls spend from it. A call spends from every
+pool of its router in force where it starts (its :class:`PoolChain`, taken once), wherever its scope was made, so an
+outer block's cap holds for a scope made before the block was entered. Each reservation must fit every pool in the
+chain, checked and taken under all their locks at once, and the clock is the earliest of theirs.
 
-The pools in force are held in a context variable, as the per-call deadline
-is (:mod:`.pool_bind`), so a call made on the router inside ``with wr.budget(...)`` spends from
-it too. An asyncio task inherits them; a thread does not, so a thread calls
+The pools in force are held in a context variable (:mod:`.pool_bind`), so a call on the router inside
+``with wr.budget(...)`` spends from it too. An asyncio task inherits them; a thread does not, so a thread calls
 through the scope (``b.search``), which binds the pool for the call.
 """
 
@@ -37,7 +30,8 @@ from __future__ import annotations
 import itertools
 import threading
 import time
-from contextlib import ExitStack
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
 
 from web_router.constants_budget import STATUS_DIGITS
@@ -133,18 +127,9 @@ class PoolChain:
         return None if ends is None else max(0.0, ends - time.monotonic())
 
     def reserve(self, cost: float) -> float | None:
-        """Reserve ``cost`` in every pool of the chain, or in none of them.
-
-        Every pool's lock is held at once, taken in one order shared by all
-        chains, so no other call sees a reservation that is about to be undone
-        and no two chains wait on each other.
-
-        Returns ``None`` once reserved; otherwise the dollars left in the
-        innermost pool that refused, which ``cost`` does not fit.
-        """
-        with ExitStack() as held:
-            for pool in sorted(self.pools, key=lambda pool: pool.order):
-                held.enter_context(pool._lock)
+        """Reserve ``cost`` in every pool of the chain or in none, under every pool's lock: ``None`` once reserved,
+        else the dollars left in the innermost pool that refused, which ``cost`` does not fit."""
+        with self._held():
             for pool in self.pools:
                 left = pool._left()
                 if left is not None and over_cost(cost, left):
@@ -152,6 +137,27 @@ class PoolChain:
             for pool in self.pools:
                 pool._reserved += cost
         return None
+
+    def release(self, cost: float) -> None:
+        """Give back ``cost``, reserved for an attempt taken back, in every pool of the chain at once."""
+        with self._held():
+            for pool in self.pools:
+                pool._reserved -= cost
+
+    def reserve_unchecked(self, cost: float) -> None:
+        """Reserve ``cost`` in every pool of the chain without a check: what a backend billed past its estimate."""
+        with self._held():
+            for pool in self.pools:
+                pool._reserved += cost
+
+    @contextmanager
+    def _held(self) -> Iterator[None]:
+        """Every pool's lock, taken in one order all chains share, so no other call sees a reservation half made
+        or half undone and no two chains wait on each other; a lock taken is given back if a later one fails."""
+        with ExitStack() as held:
+            for pool in sorted(self.pools, key=lambda pool: pool.order):
+                held.enter_context(pool._lock)
+            yield
 
     def settle(self, cost: float) -> None:
         """Move ``cost``, what a call that has ended reserved, from reserved to spent in every pool of the chain."""

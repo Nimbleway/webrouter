@@ -9,9 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from tests.vendors.data import OAUTH, shipped_dir
+from tests.vendors.data import ACME, OAUTH, shipped_dir
 from web_router.constants_vendors import VENDOR_CALLBACK_KEY, VENDOR_CATEGORIES, VENDOR_ENV_CATALOG_DIR
-from web_router.vendors.catalog import builtin_catalog, get_catalog, load_vendor_file, reload_catalog
+from web_router.vendors.catalog import VendorCatalog, builtin_catalog, get_catalog, load_vendor_file, reload_catalog
+from web_router.vendors.schema import Vendor
 
 SHIPPED = builtin_catalog()
 
@@ -113,6 +114,19 @@ def test_vendors_md_and_env_example_are_current() -> None:
     env = ENV_EXAMPLE.read_text(encoding="utf-8")
     assert regenerate_markdown(markdown, SHIPPED) == markdown, "VENDORS.md is stale: run `make vendors`."
     assert regenerate_env(env, SHIPPED) == env, ".env.example is stale: run `make vendors`."
+
+
+def test_env_example_sets_a_shared_variable_once() -> None:
+    """A second blank line for one variable would override the key a user filled into the first."""
+    from scripts.vendors import env_section
+
+    shared = copy.deepcopy(ACME)
+    specs = list(shared["auth"]["credentials"].values())
+    for spec in specs:
+        spec["env"] = ["SHARED_KEY"]
+    catalog = VendorCatalog([Vendor.model_validate(shared)])
+    assert len(specs) > 1
+    assert env_section(catalog).count("SHARED_KEY=") == 1
 
 
 def test_the_generated_files_ignore_a_local_vendor_folder(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

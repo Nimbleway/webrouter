@@ -1,0 +1,467 @@
+{
+  "vendor": "alienvault-otx",
+  "name": "AlienVault OTX (LevelBlue Open Threat Exchange)",
+  "category": "security",
+  "summary": "Community threat intelligence: pulses (threat reports with IOCs, adversaries and malware families) and indicator reputation, passive DNS, malware and analysis for IPs, domains, hostnames, file hashes and CVEs.",
+  "docs_url": "https://otx.alienvault.com/api",
+  "base_url": "https://otx.alienvault.com/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ALIENVAULT_OTX_API_KEY",
+          "OTX_API_KEY"
+        ],
+        "description": "An OTX API key (shown on otx.alienvault.com/api once signed in to a free account), sent in the X-OTX-API-KEY header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-OTX-API-KEY",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Indicator calls return one section at a time: ask for general first, which also lists the sections that hold data for that indicator.",
+    "List calls page with limit and page.",
+    "File and URL submission, pulse creation and editing, and subscribe or follow actions (some of them GETs) are not in this entry. URL indicators are left out because the docs show the raw URL inside the path."
+  ],
+  "sources": [
+    "https://otx.alienvault.com/api",
+    "https://otx.alienvault.com/assets/static/external_api.html"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "alienvault-otx.indicators.ipv4",
+      "name": "Get threat data for an IPv4 address",
+      "summary": "Pulses, reputation, geo, malware samples, URLs, passive DNS or HTTP scans for an IPv4 address, one section per call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/indicators/IPv4/{ip}/{section}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "IPv4 address.",
+          "example": "8.8.8.8"
+        },
+        "section": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Which section: general, reputation, geo, malware, url_list, passive_dns, http_scans. general also lists the sections available for this indicator.",
+          "example": "general",
+          "enum": [
+            "general",
+            "reputation",
+            "geo",
+            "malware",
+            "url_list",
+            "passive_dns",
+            "http_scans"
+          ]
+        }
+      },
+      "job": "security.ip.report",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.indicators.ipv6",
+      "name": "Get threat data for an IPv6 address",
+      "summary": "The same sections as for IPv4, except http_scans.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/indicators/IPv6/{ip}/{section}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "IPv6 address.",
+          "example": "2001:4860:4860::8888"
+        },
+        "section": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Which section: general, reputation, geo, malware, url_list, passive_dns. general also lists the sections available for this indicator.",
+          "example": "general",
+          "enum": [
+            "general",
+            "reputation",
+            "geo",
+            "malware",
+            "url_list",
+            "passive_dns"
+          ]
+        }
+      },
+      "job": "security.ip.report",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.indicators.domain",
+      "name": "Get threat data for a domain",
+      "summary": "Pulses, geo, malware, URLs, passive DNS, WHOIS or HTTP scans for a domain, one section per call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/indicators/domain/{domain}/{section}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Domain name.",
+          "example": "spywaresite.info"
+        },
+        "section": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Which section: general, geo, malware, url_list, passive_dns, whois, http_scans. general also lists the sections available for this indicator.",
+          "example": "malware",
+          "enum": [
+            "general",
+            "geo",
+            "malware",
+            "url_list",
+            "passive_dns",
+            "whois",
+            "http_scans"
+          ]
+        }
+      },
+      "job": "security.domain.report",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.indicators.hostname",
+      "name": "Get threat data for a hostname",
+      "summary": "Pulses, geo, malware, URLs, passive DNS or HTTP scans for a hostname, one section per call.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/indicators/hostname/{hostname}/{section}",
+      "params": {
+        "hostname": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Hostname.",
+          "example": "mail.vspcord.com"
+        },
+        "section": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Which section: general, geo, malware, url_list, passive_dns, http_scans. general also lists the sections available for this indicator.",
+          "example": "general",
+          "enum": [
+            "general",
+            "geo",
+            "malware",
+            "url_list",
+            "passive_dns",
+            "http_scans"
+          ]
+        }
+      },
+      "job": "security.domain.report",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.indicators.file",
+      "name": "Get threat data for a file hash",
+      "summary": "General metadata and pulses, or static and dynamic analysis, for a file hash.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/indicators/file/{file_hash}/{section}",
+      "params": {
+        "file_hash": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The file's hash (the docs' example is a SHA-1).",
+          "example": "6c5360d41bd2b14b1565f5b18e5c203cf512e493"
+        },
+        "section": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Which section: general, analysis. general also lists the sections available for this indicator.",
+          "example": "general",
+          "enum": [
+            "general",
+            "analysis"
+          ]
+        }
+      },
+      "job": "security.file.report",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.indicators.cve",
+      "name": "Get threat data for a CVE",
+      "summary": "MITRE CVE data (CPEs, CWEs) and the pulses that reference the CVE.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/indicators/cve/{cve}/general",
+      "params": {
+        "cve": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "CVE ID.",
+          "example": "CVE-2014-0160"
+        }
+      },
+      "job": "security.vulns.get",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.pulses.search",
+      "name": "Search pulses",
+      "summary": "Community threat reports (pulses) matching a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search/pulses",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search text.",
+          "example": "emotet"
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order by modified, created or subscriber_count.",
+          "enum": [
+            "modified",
+            "created",
+            "subscriber_count"
+          ]
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "security.threats.search",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.pulses.get",
+      "name": "Get a pulse",
+      "summary": "One pulse (threat report) with its details and indicators.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pulses/{pulse_id}",
+      "params": {
+        "pulse_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pulse ID.",
+          "example": "57204e9b3c4c3e015d93cb12"
+        }
+      },
+      "job": "security.threats.get",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.pulses.indicators",
+      "name": "List a pulse's indicators",
+      "summary": "The indicators (IOCs) inside a pulse, paginated.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pulses/{pulse_id}/indicators",
+      "params": {
+        "pulse_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pulse ID.",
+          "example": "57204e9b3c4c3e015d93cb12"
+        }
+      },
+      "job": "security.threats.indicators",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.pulses.related_to_pulse",
+      "name": "List pulses sharing an indicator",
+      "summary": "Every pulse that shares at least one indicator with the given pulse.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pulses/{pulse_id}/related",
+      "params": {
+        "pulse_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Pulse ID.",
+          "example": "57204e9b3c4c3e015d93cb12"
+        }
+      },
+      "job": "security.threats.search",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.pulses.related",
+      "name": "Find pulses by malware family or adversary",
+      "summary": "Pulses related to a pulse, in a malware family, or tagged with an adversary; give exactly one of the three.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pulses/related",
+      "params": {
+        "pulse_id": {
+          "in": "query",
+          "type": "string",
+          "description": "A pulse ID (pulses sharing its IOCs)."
+        },
+        "malware_family": {
+          "in": "query",
+          "type": "string",
+          "description": "A malware family.",
+          "example": "Virus:Win32/Nabucur"
+        },
+        "adversary": {
+          "in": "query",
+          "type": "string",
+          "description": "An adversary name.",
+          "example": "Equation Group"
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        }
+      },
+      "job": "security.threats.search",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.pulses.subscribed",
+      "name": "List subscribed pulses",
+      "summary": "Pulses the key's user subscribes to, directly or through users and groups, plus their own.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pulses/subscribed",
+      "params": {
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page number, from 1."
+        },
+        "modified_since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only pulses modified after this ISO 8601 UTC datetime.",
+          "example": "2026-01-01T00:00:00+00:00"
+        }
+      },
+      "notes": [
+        "The usual way to sync a feed: keep the last modified time and pass it as modified_since."
+      ],
+      "job": "security.threats.feed",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.pulses.user",
+      "name": "List a user's pulses",
+      "summary": "Pulses created by a given OTX user, latest modified first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pulses/user/{username}",
+      "params": {
+        "username": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OTX username.",
+          "example": "LevelBlue"
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only pulses modified after this ISO 8601 UTC datetime.",
+          "example": "2026-01-01T00:00:00+00:00"
+        }
+      },
+      "job": "security.threats.feed",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    },
+    {
+      "id": "alienvault-otx.indicator_types.list",
+      "name": "List indicator types",
+      "summary": "The indicator type names OTX recognizes (domain, IPv4, FileHash-SHA256...).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/pulses/indicators/types",
+      "job": "reference.codes",
+      "docs_url": "https://otx.alienvault.com/assets/static/external_api.html",
+      "verified": {
+        "docs": "https://otx.alienvault.com/assets/static/external_api.html"
+      }
+    }
+  ]
+}

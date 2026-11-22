@@ -1,0 +1,630 @@
+{
+  "vendor": "pappers",
+  "name": "Pappers",
+  "category": "company-data",
+  "summary": "French company data by SIREN/SIRET: full company records with directors, beneficial owners, finances and BODACC notices, search of companies, directors and notices, annual accounts, relationship maps and PEP/sanctions checks.",
+  "docs_url": "https://www.pappers.fr/api/documentation",
+  "base_url": "https://api.pappers.fr/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "PAPPERS_API_KEY"
+        ],
+        "description": "A Pappers API key (pappers.fr member area). Sent in the api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Calls spend credits from your plan; some optional fields add credits only when they return data (listed under champs_supplementaires). Check the balance with pappers.credits.usage.",
+    "Parameter names and values are French. Dates in search filters are JJ-MM-AAAA (day first).",
+    "A SIREN is 9 digits (the company); a SIRET is 14 (one establishment).",
+    "Lists, notifications and webhooks are writes and are not in this entry; the document downloads (PDF/XLSX) are left out too."
+  ],
+  "sources": [
+    "https://www.pappers.fr/api/documentation",
+    "https://www.pappers.fr/api_v2.yaml"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "pappers.companies.get",
+      "name": "Get a French company",
+      "summary": "Everything Pappers holds on one company: identity, establishments, directors, beneficial owners, finances, filings, BODACC notices, plus optional extra fields.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise",
+      "params": {
+        "siren": {
+          "in": "query",
+          "type": "string",
+          "description": "9-digit SIREN; returns every establishment under etablissements.",
+          "example": "443061841"
+        },
+        "siret": {
+          "in": "query",
+          "type": "string",
+          "description": "14-digit SIRET; returns that establishment only under etablissement."
+        },
+        "champs_supplementaires": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated extra fields, some billed only when present: sites_internet (+1 credit), telephone (+3), email (+3), lien_linkedin (+3), sanctions (+1), personne_politiquement_exposee (+1), entreprises_dirigees (+1), scoring_financier (+30), scoring_non_financier (+30), finances_estimations (+5), informations_boursieres (+5), marques/brevets/dessins (+1); free: labels, categorie_entreprise, representants_legaux, code_region, departement and more.",
+          "example": "sites_internet,telephone"
+        },
+        "format_publications_bodacc": {
+          "in": "query",
+          "type": "string",
+          "description": "Shape of BODACC notices, default objet.",
+          "enum": [
+            "objet",
+            "texte"
+          ]
+        },
+        "publications_bodacc_brutes": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true for BODACC notices without Pappers' removal of outdated ones."
+        },
+        "validite_tva_intracommunautaire": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to check the EU VAT number with the European Commission."
+        },
+        "autoriser_absence_insee": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to also return the rare companies INSEE does not know (404 otherwise); categorie_juridique and siege may then be null."
+        }
+      },
+      "notes": [
+        "Give siren or siret. Companies with diffusable=false (partial INSEE disclosure) have names and address fields nulled."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Fiche-entreprise/operation/entreprise",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Fiche-entreprise/operation/entreprise"
+      }
+    },
+    {
+      "id": "pappers.associations.get",
+      "name": "Get a French association",
+      "summary": "Everything Pappers holds on one association, by RNA id, SIREN or SIRET.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/association",
+      "params": {
+        "id_association": {
+          "in": "query",
+          "type": "string",
+          "description": "RNA identifier of the association."
+        },
+        "siren": {
+          "in": "query",
+          "type": "string",
+          "description": "SIREN of the association."
+        },
+        "siret": {
+          "in": "query",
+          "type": "string",
+          "description": "SIRET of the association."
+        }
+      },
+      "job": "company.enrich",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Fiche-association/operation/association",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Fiche-association/operation/association"
+      }
+    },
+    {
+      "id": "pappers.companies.search",
+      "name": "Search French companies",
+      "summary": "Companies matching a name and filters: NAF code, location, legal category, RCS status, dates, capital, revenue, profit, headcount band and director traits.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/recherche",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Name to search (company name, or first and last name of a person).",
+          "example": "google france"
+        },
+        "precision": {
+          "in": "query",
+          "type": "string",
+          "description": "Match precision, default standard.",
+          "enum": [
+            "approximative",
+            "standard",
+            "exacte"
+          ]
+        },
+        "code_naf": {
+          "in": "query",
+          "type": "string",
+          "description": "NAF code(s), comma-separated, e.g. 62.01Z."
+        },
+        "departement": {
+          "in": "query",
+          "type": "string",
+          "description": "Department number(s) of one of the establishments, comma-separated.",
+          "example": "75"
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE region code(s), comma-separated."
+        },
+        "code_postal": {
+          "in": "query",
+          "type": "string",
+          "description": "Postcode(s) of one of the establishments, comma-separated."
+        },
+        "categorie_juridique": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE legal category code (SASU 5720, EURL 5498)."
+        },
+        "entreprise_cessee": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Whether the company has ceased trading."
+        },
+        "statut_rcs": {
+          "in": "query",
+          "type": "string",
+          "description": "RCS registration status.",
+          "enum": [
+            "inscrit",
+            "radie",
+            "non inscrit"
+          ]
+        },
+        "objet_social": {
+          "in": "query",
+          "type": "string",
+          "description": "Words of the declared corporate purpose."
+        },
+        "date_creation_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest creation date, JJ-MM-AAAA."
+        },
+        "date_creation_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest creation date, JJ-MM-AAAA."
+        },
+        "chiffre_affaires_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum revenue in euros; drops every company with unpublished accounts."
+        },
+        "chiffre_affaires_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Maximum revenue in euros; drops every company with unpublished accounts."
+        },
+        "tranche_effectif_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Minimum Sirene headcount band code (NN, 00, 01, 02, 03, 11, 12 ...)."
+        },
+        "tranche_effectif_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Maximum Sirene headcount band code."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Centre latitude for a radius search."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Centre longitude for a radius search."
+        },
+        "distance": {
+          "in": "query",
+          "type": "number",
+          "description": "Radius around latitude/longitude, in kilometres."
+        },
+        "nom_dirigeant": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name of one of the directors."
+        },
+        "prenom_dirigeant": {
+          "in": "query",
+          "type": "string",
+          "description": "First name of one of the directors."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1; pages reach the first 400 results only."
+        },
+        "par_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 10."
+        },
+        "curseur": {
+          "in": "query",
+          "type": "string",
+          "description": "Cursor paging past 400 results: * on the first call, then the curseurSuivant value returned."
+        },
+        "par_curseur": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per cursor page, 1-1000, default 50."
+        }
+      },
+      "notes": [
+        "Page paging stops at 400 results; use curseur (start with *) to walk further."
+      ],
+      "job": "company.search",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Recherche/operation/recherche",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Recherche/operation/recherche"
+      }
+    },
+    {
+      "id": "pappers.directors.search",
+      "name": "Search French company directors",
+      "summary": "Directors (people or companies) matching a name, role, nationality, age and company filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/recherche-dirigeants",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Director's name (first and last name for a person)."
+        },
+        "precision": {
+          "in": "query",
+          "type": "string",
+          "description": "Match precision, default standard.",
+          "enum": [
+            "approximative",
+            "standard",
+            "exacte"
+          ]
+        },
+        "type_dirigeant": {
+          "in": "query",
+          "type": "string",
+          "description": "Natural or legal person.",
+          "enum": [
+            "physique",
+            "morale"
+          ]
+        },
+        "qualite_dirigeant": {
+          "in": "query",
+          "type": "string",
+          "description": "Role, e.g. Président, Gérant."
+        },
+        "nationalite_dirigeant": {
+          "in": "query",
+          "type": "string",
+          "description": "Nationality."
+        },
+        "age_dirigeant_min": {
+          "in": "query",
+          "type": "integer",
+          "description": "Minimum age."
+        },
+        "age_dirigeant_max": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum age."
+        },
+        "code_naf": {
+          "in": "query",
+          "type": "string",
+          "description": "NAF code(s), comma-separated, e.g. 62.01Z."
+        },
+        "departement": {
+          "in": "query",
+          "type": "string",
+          "description": "Department number(s) of one of the establishments, comma-separated.",
+          "example": "75"
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE region code(s), comma-separated."
+        },
+        "code_postal": {
+          "in": "query",
+          "type": "string",
+          "description": "Postcode(s) of one of the establishments, comma-separated."
+        },
+        "categorie_juridique": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE legal category code (SASU 5720, EURL 5498)."
+        },
+        "entreprise_cessee": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Whether the company has ceased trading."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "par_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 10."
+        }
+      },
+      "job": "people.search",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Recherche/operation/recherche-dirigeants",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Recherche/operation/recherche-dirigeants"
+      }
+    },
+    {
+      "id": "pappers.publications.search",
+      "name": "Search BODACC notices",
+      "summary": "Legal notices from the BODACC (creations, changes, sales, deregistrations, insolvency proceedings, filed accounts) matching a company name and filters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/recherche-publications",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name."
+        },
+        "type_publication": {
+          "in": "query",
+          "type": "string",
+          "description": "Notice type.",
+          "enum": [
+            "Création",
+            "Immatriculation",
+            "Modification",
+            "Vente",
+            "Radiation",
+            "Procédure collective",
+            "Dépôt des comptes"
+          ]
+        },
+        "date_publication_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Earliest publication date, JJ-MM-AAAA."
+        },
+        "date_publication_max": {
+          "in": "query",
+          "type": "string",
+          "description": "Latest publication date, JJ-MM-AAAA."
+        },
+        "code_naf": {
+          "in": "query",
+          "type": "string",
+          "description": "NAF code(s), comma-separated, e.g. 62.01Z."
+        },
+        "departement": {
+          "in": "query",
+          "type": "string",
+          "description": "Department number(s) of one of the establishments, comma-separated.",
+          "example": "75"
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE region code(s), comma-separated."
+        },
+        "code_postal": {
+          "in": "query",
+          "type": "string",
+          "description": "Postcode(s) of one of the establishments, comma-separated."
+        },
+        "categorie_juridique": {
+          "in": "query",
+          "type": "string",
+          "description": "INSEE legal category code (SASU 5720, EURL 5498)."
+        },
+        "entreprise_cessee": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Whether the company has ceased trading."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page, default 1."
+        },
+        "par_page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 10."
+        }
+      },
+      "job": "company.insolvency",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Recherche/operation/recherche-publications",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Recherche/operation/recherche-publications"
+      }
+    },
+    {
+      "id": "pappers.companies.suggest",
+      "name": "Autocomplete companies",
+      "summary": "Companies whose name, director, SIREN or SIRET starts with the text typed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/suggestions",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "The start of the text.",
+          "required": true,
+          "example": "googl"
+        },
+        "longueur": {
+          "in": "query",
+          "type": "integer",
+          "description": "Number of results, default 10, max 100."
+        },
+        "cibles": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated fields to match: nom_entreprise (default), denomination, nom_complet, representant, siren, siret."
+        }
+      },
+      "job": "company.suggest",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Suggestions-Autocomplete/operation/suggestions",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Suggestions-Autocomplete/operation/suggestions"
+      }
+    },
+    {
+      "id": "pappers.companies.accounts",
+      "name": "Get annual accounts",
+      "summary": "A company's published annual accounts (balance sheet and income statement figures) by closing year.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/comptes",
+      "params": {
+        "siren": {
+          "in": "query",
+          "type": "string",
+          "description": "9-digit SIREN.",
+          "required": true,
+          "example": "443061841"
+        },
+        "annee": {
+          "in": "query",
+          "type": "string",
+          "description": "Closing year(s), comma-separated; all available years when left out."
+        }
+      },
+      "job": "company.financials",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Comptes-annuels/operation/comptes-annuels",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Comptes-annuels/operation/comptes-annuels"
+      }
+    },
+    {
+      "id": "pappers.companies.map",
+      "name": "Get a company relationship map",
+      "summary": "The nodes and links of a company's map: its directors, the companies it runs or is run by, and optionally companies named alongside it in filings.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/entreprise/cartographie",
+      "params": {
+        "siren": {
+          "in": "query",
+          "type": "string",
+          "description": "9-digit SIREN.",
+          "required": true,
+          "example": "443061841"
+        },
+        "inclure_entreprises_dirigees": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include companies it directs and companies directing it; default true."
+        },
+        "inclure_entreprises_citees": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include companies cited with it in deeds and statutes; default false."
+        },
+        "inclure_sci": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include property companies (SCI); default true."
+        },
+        "autoriser_modifications": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Let the map adjust these settings when they are not ideal; default false."
+        },
+        "rejeter_premier_degre": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to get a free 404 instead of a 1-credit map holding only direct directors."
+        },
+        "degre": {
+          "in": "query",
+          "type": "integer",
+          "description": "Depth: 2 or less, or more than 2 (values on one side give the same map)."
+        }
+      },
+      "notes": [
+        "Free (404) when only the company itself is found; 1 credit when only its direct directors are; 3 credits for a larger map."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Cartographie/operation/cartographie",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Cartographie/operation/cartographie"
+      }
+    },
+    {
+      "id": "pappers.compliance.person",
+      "name": "Check a person for PEP and sanctions",
+      "summary": "Whether a natural person is a politically exposed person or under international sanctions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/conformite/personne_physique",
+      "params": {
+        "nom": {
+          "in": "query",
+          "type": "string",
+          "description": "Last name.",
+          "required": true
+        },
+        "prenom": {
+          "in": "query",
+          "type": "string",
+          "description": "First name.",
+          "required": true
+        },
+        "date_de_naissance": {
+          "in": "query",
+          "type": "string",
+          "description": "Date of birth, AAAA-MM-JJ or AAAA-MM.",
+          "required": true
+        }
+      },
+      "notes": [
+        "For a company's directors and beneficial owners, ask pappers.companies.get for the sanctions and personne_politiquement_exposee fields instead."
+      ],
+      "job": "sanctions.screen",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Conformite/operation/conformite",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Conformite/operation/conformite"
+      }
+    },
+    {
+      "id": "pappers.credits.usage",
+      "name": "Get credit usage",
+      "summary": "Credits used and remaining on the API key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/suivi-jetons",
+      "job": "account.usage",
+      "docs_url": "https://www.pappers.fr/api/documentation#tag/Suivi-utilisation/operation/suivi-jetons",
+      "verified": {
+        "docs": "https://www.pappers.fr/api/documentation#tag/Suivi-utilisation/operation/suivi-jetons"
+      }
+    }
+  ]
+}

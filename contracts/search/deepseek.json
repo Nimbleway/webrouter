@@ -63,11 +63,21 @@
       "year": {
         "body.query": "probe query after:2025-01-15"
       }
+    },
+    "mode": {
+      "deepseek-content": {
+        "body.need_content": true
+      }
     }
   },
   "not_mapped": [
     "country",
     "effort"
+  ],
+  "offers": [
+    "lite",
+    "deep",
+    "deepseek-content"
   ],
   "source": [
     "https://api-docs.deepseek.com/api/search",
@@ -79,7 +89,8 @@
     "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
     "locale": "live: tests/providers/test_deepseek.py::test_live_lang_operator_changes_the_language_of_the_results",
     "search_depth": "live: 2026-11-09 search-options check: deep (need_content) up to 21,354 characters; lite 1,065-5,830, longer than lite promises, as the README says",
-    "recency": "live: 2026-11-09 search-options check: week (after:), 10 of 10 results dated inside the window"
+    "recency": "live: 2026-11-09 search-options check: week (after:), 10 of 10 results dated inside the window",
+    "mode.deepseek-content": "docs: https://api-docs.deepseek.com/api/search"
   },
   "vendor_options": {
     "ori_question": {

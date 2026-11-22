@@ -12,16 +12,13 @@ from types import ModuleType
 
 import pytest
 
-from scripts.benchmark_loader import load_script
+from scripts.benchmark_loader import FROZEN_SIBLINGS, load_script
 from web_router import RouteDecision, RouteRequest
 from web_router.routing.contract import Candidate
 
 SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "router_latency.py"
 SIBLINGS = (
-    "_common",
-    "_frozen_checks",
-    "_frozen_mixed",
-    "_tools_effort_plan",
+    *FROZEN_SIBLINGS,
     "frozen",
     "route_eval_paths",
     "route_eval_sets",

@@ -54,7 +54,8 @@ def test_the_schemas_carry_the_version_and_the_contract_field_names() -> None:
     assert {"prompt", "candidates", "deadline_s", "urls", "budget", "pinned_tool"} <= set(request["properties"])
     assert set(request["$defs"]["Budget"]["properties"]) == {"max_cost_usd", "time_limit_s", "strict"}
     assert "answer" in request["$defs"]["Candidate"]["properties"]["tool"]["enum"]
-    assert set(response["properties"]) == {"schema", "tools", "providers", "exclude", "params", "confidence", "reason"}
+    fields = {"schema", "tools", "providers", "attempts", "exclude", "params", "confidence", "reason"}
+    assert set(response["properties"]) == fields
     assert "additionalProperties" not in response, "a service may add fields; the client ignores them"
     assert {"type": "number", "minimum": 0, "maximum": 1} in response["properties"]["confidence"]["anyOf"]
     assert all(

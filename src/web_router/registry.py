@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib
 import os
+from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from web_router.constants import (
@@ -46,6 +47,7 @@ from web_router.constants import (
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
     PROVIDER_SELTZ,
+    PROVIDER_SPECSTREAM,
     PROVIDER_TAVILY,
     PROVIDER_VALYU,
     PROVIDER_WEBIQ,
@@ -58,6 +60,7 @@ from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as 
 from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
 from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_CREDENTIAL_SETS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
+from web_router.providers._pinning import pinned_class
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:
@@ -91,6 +94,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_KEENABLE: ("web_router.providers.keenable", "KeenableProvider", EXTRA_SEARCH),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekProvider", EXTRA_SEARCH),
     PROVIDER_VALYU: ("web_router.providers.valyu", "ValyuProvider", EXTRA_SEARCH),
+    PROVIDER_SPECSTREAM: ("web_router.providers.specstream", "SpecStreamProvider", EXTRA_SEARCH),
     PROVIDER_AGENTCORE: ("web_router.providers.agentcore", "AgentCoreProvider", EXTRA_AWS),
     PROVIDER_YOU_MCP: ("web_router.providers.you_mcp", "YouMcpProvider", EXTRA_SEARCH),
     PROVIDER_EXA_MCP: ("web_router.providers.exa_mcp", "ExaMcpProvider", EXTRA_SEARCH),
@@ -112,6 +116,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_WEBIQ: ("web_router.providers.webiq", "WebIQExtractProvider", EXTRA_EXTRACT),
     PROVIDER_KEENABLE: ("web_router.providers.keenable_extract", "KeenableExtractProvider", EXTRA_EXTRACT),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_SPECSTREAM: ("web_router.providers.specstream", "SpecStreamExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase_extract", "BrowserbaseExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
@@ -259,9 +264,8 @@ def configured_providers() -> list[str]:
 def configured_extract_providers() -> list[str]:
     """Every builtin extract provider you currently have credentials for, plus the keyless ones.
 
-    The same caveats as :func:`configured_providers`. A backend needing more
-    than one variable -- Oxylabs its username and password, Bright Data its
-    token and zone -- is reported only when it has all of them.
+    The same caveats as :func:`configured_providers`. A backend needing more than one variable -- Oxylabs its
+    username and password, Bright Data its token and zone -- is reported only when it has all of them.
     """
     return sorted(
         name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -271,9 +275,8 @@ def configured_extract_providers() -> list[str]:
 def configured_live_data_providers() -> list[str]:
     """Every builtin template provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. A template run fetches
-    and parses on the backend's account, so there is no keyless member and
-    no ``auto``; with no key at all this is empty.
+    The same caveats as :func:`configured_providers`. A template run fetches and parses on the backend's account,
+    so there is no keyless member and no ``auto``; with no key at all this is empty.
     """
     return sorted(name for name, sets in LIVE_DATA_CREDENTIAL_SETS.items() if any(all(map(_is_set, e)) for e in sets))
 
@@ -304,9 +307,8 @@ def configured_browser_providers() -> list[str]:
 def configured_browse_providers() -> list[str]:
     """Every builtin browse provider you currently have credentials for.
 
-    The same caveats as :func:`configured_providers`. No keyless tier: every
-    task backend bills for the run, so with no key at all this is empty but for
-    ``auto`` -- which will then say which variables would fix it.
+    The same caveats as :func:`configured_providers`. No keyless tier: every task backend bills for the run, so
+    with no key at all this is empty but for ``auto`` -- which will then say which variables would fix it.
     """
     return sorted(
         name for name, env_vars in BROWSE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -345,23 +347,15 @@ def _resolve(
 
 
 def get_provider_class(name: str | Provider) -> type[SearchProvider]:
-    """Resolve a search provider name to its class, importing the module on first use."""
-    return _resolve(
-        name,
-        builtin=_BUILTIN_PROVIDERS,
-        custom=_CUSTOM_PROVIDERS,
-        available=available_providers(),
-    )
+    """Resolve a search provider name to its class, importing the module on first use; ``exa:exa-instant`` pins."""
+    resolve = partial(_resolve, builtin=_BUILTIN_PROVIDERS, custom=_CUSTOM_PROVIDERS, available=available_providers())
+    return pinned_class(name, resolve)
 
 
 def get_extract_provider_class(name: str | Provider) -> type[ExtractProvider]:
-    """Resolve an extract provider name to its class, importing the module on first use."""
-    return _resolve(
-        name,
-        builtin=_BUILTIN_EXTRACT_PROVIDERS,
-        custom=_CUSTOM_EXTRACT_PROVIDERS,
-        available=available_extract_providers(),
-    )
+    """Resolve an extract provider name to its class, on first use; ``tavily:tavily-advanced`` pins."""
+    tables: dict[str, Any] = {"builtin": _BUILTIN_EXTRACT_PROVIDERS, "custom": _CUSTOM_EXTRACT_PROVIDERS}
+    return pinned_class(name, partial(_resolve, **tables, available=available_extract_providers()), "extract")
 
 
 def create_provider(name: str | Provider, **kwargs: Any) -> SearchProvider:
@@ -420,13 +414,9 @@ def create_browser_provider(name: str | Provider, **kwargs: Any) -> BrowserProvi
 
 
 def get_browse_provider_class(name: str | Provider) -> type[BrowseProvider]:
-    """Resolve a browse provider name to its class, importing the module on first use."""
-    return _resolve(
-        name,
-        builtin=_BUILTIN_BROWSE_PROVIDERS,
-        custom=_CUSTOM_BROWSE_PROVIDERS,
-        available=available_browse_providers(),
-    )
+    """Resolve a browse provider name to its class, on first use; ``skyvern:skyvern-2.0`` pins."""
+    tables: dict[str, Any] = {"builtin": _BUILTIN_BROWSE_PROVIDERS, "custom": _CUSTOM_BROWSE_PROVIDERS}
+    return pinned_class(name, partial(_resolve, **tables, available=available_browse_providers()), "browse")
 
 
 def create_browse_provider(name: str | Provider, **kwargs: Any) -> BrowseProvider:
