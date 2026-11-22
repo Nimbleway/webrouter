@@ -447,8 +447,10 @@ or a `.env` file. Set empty, it stops the server from starting.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
 loopback, private or cloud-metadata host is not sent to a backend as a URL.
-It is a check of the host as written: it resolves no DNS and follows no
-redirect. The same check holds for the URLs an agent passes the direct tools:
+It resolves the host and refuses a name whose answers are unstable or point
+at a private, loopback or metadata address; a literal address is judged as
+written. It follows no redirect. The same check holds for the URLs an agent
+passes the direct tools:
 `extract`'s `urls`, `browse`'s `start_url` and any URL among `live_data`'s
 `inputs` that is not a public `http(s)` one -- `file:`, loopback, private,
 metadata -- refuses the call before anything is sent, naming the URL's scheme
