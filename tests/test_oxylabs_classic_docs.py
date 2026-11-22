@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from scripts.oxylabs_classic import DOCS, _entry, _parameters
+from scripts.oxylabs_classic import _entry
+from scripts.oxylabs_docs import DOCS, parameters
 from web_router.providers.oxylabs_classic import classic_sources
 
 PAGE = f"{DOCS}/e-commerce/example.md"
@@ -22,7 +23,7 @@ def _table(third: str, store_id: str) -> str:
 
 
 def _default(third: str, cell: str) -> str | None:
-    found = _parameters({PAGE: _table(third, cell)})
+    found = parameters({PAGE: _table(third, cell)})
     default: str | None = found["example_product"]["params"]["store_id"]["default"]
     return default
 
