@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from web_router.exceptions import ConfigurationError
-from web_router.providers._utils import resolve_api_key, resolve_setting
+from web_router.providers._utils import credential_given, resolve_api_key, resolve_setting
 
 ENV_VAR = "ACME_TEST_VALUE"
 
@@ -36,6 +36,25 @@ def test_a_blank_explicit_value_falls_back_to_the_variable(monkeypatch: pytest.M
     monkeypatch.setenv(ENV_VAR, "abc")
     assert resolve_api_key(explicit, env_var=ENV_VAR, provider="acme") == "abc"
     assert resolve_setting(explicit, env_var=ENV_VAR, provider="acme", setting="zone") == "abc"
+
+
+@pytest.mark.parametrize(
+    ("explicit", "env", "given"),
+    [(None, None, False), (" ", "\n", False), ("abc", None, True), (None, " abc ", True), ("", "abc", True)],
+)
+def test_credential_given_follows_the_same_rule_and_never_raises(
+    monkeypatch: pytest.MonkeyPatch, explicit: str | None, env: str | None, given: bool
+) -> None:
+    if env is None:
+        monkeypatch.delenv(ENV_VAR, raising=False)
+    else:
+        monkeypatch.setenv(ENV_VAR, env)
+    assert credential_given(explicit, ENV_VAR) is given
+    if given:
+        assert resolve_api_key(explicit, env_var=ENV_VAR, provider="acme")
+    else:
+        with pytest.raises(ConfigurationError):
+            resolve_api_key(explicit, env_var=ENV_VAR, provider="acme")
 
 
 @pytest.mark.parametrize("bad", ["example.com OR site:evil.com", "a.com -x", 'a.com"', "site:a.com", "localhost", ""])

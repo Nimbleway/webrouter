@@ -18,6 +18,8 @@ from tests._live_data_fake import FakeLiveDataProvider
 from tests._live_data_paged import PagedProvider
 from web_router import AllProvidersFailedError, AsyncWebRouter, WebRouter
 from web_router.exceptions import ProviderError
+from web_router.registry import register_live_data_provider, unregister_live_data_provider
+from web_router.types_live_data import LiveDataSourcePage
 
 
 def test_a_backend_that_fails_is_left_out_and_named(two_backends: None) -> None:
@@ -73,3 +75,32 @@ def test_every_backend_failing_keeps_each_ones_error_and_kind(
     assert (caught.value.kind, caught.value.retryable) == ("auth", False)
     warned = {record.getMessage().split()[0] for record in caplog.records if record.levelno == logging.WARNING}
     assert warned == {"fake", "paged"}
+
+
+class _HalfAnswered(PagedProvider):
+    """A backend over two APIs whose second one did not answer: its own page names that, as oxylabs' does."""
+
+    name = "half"
+
+    def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
+        page = super()._list(limit=limit, offset=offset)
+        return page.model_copy(update={"total": None, "failures": {"half second_api": "HTTP 503"}})
+
+
+@pytest.mark.parametrize("use_async", [False, True])
+@pytest.mark.parametrize("query", [None, "amazon"])
+def test_a_backend_pages_own_failures_reach_the_merged_page(
+    two_backends: None, use_async: bool, query: str | None
+) -> None:
+    register_live_data_provider("half", _HalfAnswered)
+    try:
+        if use_async:
+            page = asyncio.run(AsyncWebRouter().live_data_sources(query=query))
+        else:
+            page = WebRouter().live_data_sources(query=query)
+    finally:
+        unregister_live_data_provider("half")
+
+    assert page.sources, "the backends that answered still list their sources"
+    assert page.failures.get("half second_api") == "HTTP 503"
+    assert page.total is None, "part of one backend's catalogue is missing"

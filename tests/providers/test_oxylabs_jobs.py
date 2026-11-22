@@ -20,7 +20,7 @@ from web_router import WebRouter
 from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotFoundError
 from web_router.providers._deadline import call_deadline
-from web_router.providers.oxylabs_live_data import OxylabsLiveDataProvider
+from web_router.providers.oxylabs_live_data import OxylabsWebApiLiveDataProvider
 from web_router.types_live_data import LiveDataRequest
 
 
@@ -51,7 +51,7 @@ def test_a_faulted_job_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_a_job_still_running_past_the_wait_names_it(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(OxylabsLiveDataProvider, "wait_seconds", 0.0)
+    monkeypatch.setattr(OxylabsWebApiLiveDataProvider, "wait_seconds", 0.0)
     provider, _ = _job([PENDING], monkeypatch)
     with pytest.raises(ProviderError, match="GET /v1/async/scrape/7497734325668954113"):
         provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
@@ -59,7 +59,7 @@ def test_a_job_still_running_past_the_wait_names_it(monkeypatch: pytest.MonkeyPa
 
 def test_a_lost_job_is_not_reported_as_an_unknown_source(monkeypatch: pytest.MonkeyPatch) -> None:
     """The source resolved and the job was accepted: a 404 on its poll names the job, not a missing scraper."""
-    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
+    monkeypatch.setattr(OxylabsWebApiLiveDataProvider, "poll_seconds", 0.0)
     submitted = {"status": "pending", "metadata": {"request_id": "42"}}
     provider, _ = _provider(
         lambda r: httpx.Response(202, json=submitted) if r.method == "POST" else httpx.Response(404)
@@ -71,8 +71,8 @@ def test_a_lost_job_is_not_reported_as_an_unknown_source(monkeypatch: pytest.Mon
 
 def test_an_async_only_scraper_with_no_request_id_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """With no job id there is nothing to poll: the run raises at once and sends no GET."""
-    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
-    monkeypatch.setattr(OxylabsLiveDataProvider, "wait_seconds", 0.2)
+    monkeypatch.setattr(OxylabsWebApiLiveDataProvider, "poll_seconds", 0.0)
+    monkeypatch.setattr(OxylabsWebApiLiveDataProvider, "wait_seconds", 0.2)
     provider, api = _provider(lambda r: httpx.Response(202, json={"status": "pending"}))
     with pytest.raises(ProviderError, match="returned no job id"):
         provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
@@ -80,7 +80,7 @@ def test_an_async_only_scraper_with_no_request_id_raises(monkeypatch: pytest.Mon
 
 
 def test_a_failed_poll_names_the_job_the_caller_can_read_later(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
+    monkeypatch.setattr(OxylabsWebApiLiveDataProvider, "poll_seconds", 0.0)
     provider, _ = _provider(lambda r: httpx.Response(202, json=PENDING) if r.method == "POST" else httpx.Response(500))
     with pytest.raises(LiveDataJobError, match="7497734325668954113") as caught:
         provider.run(LiveDataRequest(source="chatgpt", inputs={"query": "hello"}))
@@ -92,7 +92,7 @@ async def test_a_call_deadline_ends_the_wait_with_the_jobs_id(
     monkeypatch: pytest.MonkeyPatch, asynchronous: bool
 ) -> None:
     """The job is billed: a wait cut short by the caller's deadline still says which job to read later."""
-    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.05)
+    monkeypatch.setattr(OxylabsWebApiLiveDataProvider, "poll_seconds", 0.05)
     provider, _ = _provider(lambda r: httpx.Response(202 if r.method == "POST" else 200, json=PENDING))
     request = LiveDataRequest(source="chatgpt", inputs={"query": "hello"})
     started = time.monotonic()
@@ -129,7 +129,7 @@ def _broken_poll(failure: str) -> Any:
 
 @pytest.mark.parametrize("failure", ["connection", "timeout", "not json"])
 async def test_a_poll_that_breaks_below_http_still_names_the_job(monkeypatch: pytest.MonkeyPatch, failure: str) -> None:
-    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
+    monkeypatch.setattr(OxylabsWebApiLiveDataProvider, "poll_seconds", 0.0)
     request = LiveDataRequest(source="chatgpt", inputs={"query": "hello"})
     provider, _ = _provider(_broken_poll(failure))
     with pytest.raises(LiveDataJobError) as caught:
@@ -147,19 +147,19 @@ def test_a_shared_extract_config_does_not_send_the_realtime_password(monkeypatch
     """``provider_config["oxylabs"]`` is extract's too: its api_key is the Realtime password, refused by the Web API."""
     monkeypatch.setenv("OXYLABS_WEB_API_KEY", "web-key")
     api = Api(_answer(lambda request: httpx.Response(500)))
-    provider = wire(OxylabsLiveDataProvider(username="user", api_key="realtime-password"), api)
+    provider = wire(OxylabsWebApiLiveDataProvider(username="user", api_key="realtime-password"), api)
     provider.live_data_sources()
     assert api.last.headers["Authorization"] == "Bearer web-key"
 
     # The username may come from OXYLABS_USERNAME rather than the entry: the api_key is still the password.
     monkeypatch.setenv("OXYLABS_USERNAME", "user")
     api = Api(_answer(lambda request: httpx.Response(500)))
-    provider = wire(OxylabsLiveDataProvider(api_key="realtime-password"), api)
+    provider = wire(OxylabsWebApiLiveDataProvider(api_key="realtime-password"), api)
     provider.live_data_sources()
     assert api.last.headers["Authorization"] == "Bearer web-key"
 
     api = Api(_answer(lambda request: httpx.Response(500)))
-    provider = wire(OxylabsLiveDataProvider(username="user", api_key="pw", web_api_key="explicit"), api)
+    provider = wire(OxylabsWebApiLiveDataProvider(username="user", api_key="pw", web_api_key="explicit"), api)
     provider.live_data_sources()
     assert api.last.headers["Authorization"] == "Bearer explicit"
 
@@ -168,7 +168,7 @@ def test_with_no_web_api_key_the_error_names_web_api_key(monkeypatch: pytest.Mon
     """A Realtime password in ``api_key`` is not a key here, so the error says where the Web API key goes."""
     monkeypatch.delenv("OXYLABS_WEB_API_KEY", raising=False)
     with pytest.raises(ConfigurationError, match=r"OXYLABS_WEB_API_KEY.*'web_api_key'"):
-        OxylabsLiveDataProvider(api_key="realtime-password")
+        OxylabsWebApiLiveDataProvider(api_key="realtime-password")
 
 
 def test_one_oxylabs_config_entry_serves_extract_and_live_data(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -180,7 +180,9 @@ def test_one_oxylabs_config_entry_serves_extract_and_live_data(monkeypatch: pyte
         extract = router.get_extract_provider("oxylabs")
         live = router.get_live_data_provider("oxylabs")
         assert extract._client.headers["Authorization"].startswith("Basic ")  # type: ignore[attr-defined]
-        assert live._client.headers["Authorization"] == "Bearer web-key"  # type: ignore[attr-defined]
+        assert live.web_api._client.headers["Authorization"] == "Bearer web-key"  # type: ignore[attr-defined]
+        # The same entry's username and password are the Web Scraper API's, so live data runs on both.
+        assert live.classic._client.headers["Authorization"].startswith("Basic ")  # type: ignore[attr-defined]
 
 
 @pytest.mark.integration
