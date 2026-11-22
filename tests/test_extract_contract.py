@@ -459,11 +459,12 @@ _STUB_PAYLOADS: dict[str, Any] = {
     "keenable": lambda urls: {"url": urls[0], "title": "", "content": _body(urls[0]), "description": ""},
     "deepseek": lambda urls: {"title": "", "content": _body(urls[0])},
     "browserbase": lambda urls: {"statusCode": 200, "content": _body(urls[0]), "contentType": "text/html"},
+    "specstream": lambda urls: {"data": {"results": [{"url": u, "status": "ok", "text": _body(u)} for u in urls]}},
 }
 """The shape each backend really answers with, trimmed to what is mapped.
 
-Keyed by provider so a new backend has to be added here to pass the guarantees
-below -- which is the point: they are the ones a single-URL test cannot check.
+Keyed by provider so a new backend has to be added here to pass the guarantees below -- which is the point: they are
+the ones a single-URL test cannot check.
 """
 
 
@@ -476,9 +477,8 @@ def test_every_backend_is_stubbed_for_the_multi_url_guarantees(name: str) -> Non
 def test_each_document_is_labelled_with_the_url_its_own_call_asked_for(name: str, credentialed: None) -> None:
     """A backend called once per URL must not label every document with the first one.
 
-    Bright Data's envelope carries no URL at all (nor does Browserbase Fetch's), so
-    before `_to_response` was handed its own batch it labelled document two with URL
-    one -- two documents, the same `url`, different bodies, and no way to tell which.
+    Bright Data's envelope carries no URL at all (nor does Browserbase Fetch's), so before `_to_response` got its own
+    batch it labelled document two with URL one -- two documents, the same `url`, different bodies, no way to tell.
     """
     provider = _build(name)
     try:

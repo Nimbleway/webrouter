@@ -83,3 +83,14 @@ def request(deadline_s: float = 1.0, pinned_tool: Any = None) -> RouteRequest:
 def outcomes(decision: Any) -> list[tuple[str, str, bool]]:
     """Each member a decision lists: its name, its outcome and whether it counted."""
     return [(m.name, m.outcome, m.counted) for m in decision.members]
+
+
+def strings(value: Any) -> list[str]:
+    """Every string in a dump, keys too: the text a URL could show in, unlike the random id, the hash and timings."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [s for k, v in value.items() for s in [*strings(k), *strings(v)]]
+    if isinstance(value, list):
+        return [s for v in value for s in strings(v)]
+    return []

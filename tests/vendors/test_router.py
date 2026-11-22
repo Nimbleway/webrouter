@@ -45,9 +45,9 @@ def test_describe_and_find() -> None:
     with WebRouter() as router:
         assert router.data_api("google-ads").name == "Google Ads"
         assert router.data_api_endpoint("datadog.logs.search").method == "POST"
-        found = [endpoint.id for endpoint in router.find_data_apis("datadog error logs")]
+        found = [endpoint.id for endpoint in router.find_data_api_endpoints("datadog error logs")]
         assert found[0] == "datadog.logs.search"
-        reads = router.find_data_apis("google ads campaigns", kind="read")
+        reads = router.find_data_api_endpoints("google ads campaigns", kind="read")
         assert all(endpoint.kind == "read" for endpoint in reads)
         with pytest.raises(VendorNotFoundError):
             router.data_api_endpoint("datadog.nope")

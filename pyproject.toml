@@ -108,11 +108,11 @@ vendors = [
 # The one extra not named after a method -- see EXTRA_MCP in constants.py. It
 # installs the stdio MCP server, which exposes the methods above to an agent
 # rather than adding one of its own.
-# Not `browser`: Playwright is a large install most MCP users never drive. The
-# server lists its browser_* tools only when it is present, so
-# `webrouter[mcp,browser]` is what turns them on.
+# `browser` is in, so a plain `webrouter[mcp]` lists every tool, the browser_*
+# ones included; WEB_ROUTER_MCP_TOOLS trims the list for a client that does not
+# need them.
 mcp = [
-    "webrouter[search,extract,research,answer,vendors]",
+    "webrouter[search,extract,research,answer,browser,vendors]",
     "mcp>=2.2,<3",
     # The server's entry point loads the project .env, so keys reach it
     # without being exported; the library itself never reads dotfiles.

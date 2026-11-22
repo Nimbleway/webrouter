@@ -4,7 +4,7 @@
   "category": "developer",
   "summary": "IBM Cloud's catalog of services, plans and deployments with their public pricing, from the Global Catalog API.",
   "docs_url": "https://cloud.ibm.com/apidocs/resource-catalog/global-catalog",
-  "base_url": "https://globalcatalog.cloud.ibm.com/api/v1",
+  "base_url": "https://globalcatalog.cloud.ibm.com/api",
   "notes": [
     "This entry sends no credentials: getting an entry, its children and its pricing work unauthenticated for publicly available services. Private or account-scoped entries need an IAM token, which this entry does not mint.",
     "Entries form a tree: services have child plans, and plans have child deployments. Walk down with entry.children and price a plan with pricing.get or pricing.deployments.",
@@ -22,7 +22,7 @@
       "summary": "Catalog entries matching keywords and filters.",
       "kind": "read",
       "method": "GET",
-      "path": "/",
+      "path": "/v1",
       "params": {
         "q": {
           "in": "query",
@@ -82,7 +82,7 @@
       "summary": "One service, plan or deployment entry by id.",
       "kind": "read",
       "method": "GET",
-      "path": "/{id}",
+      "path": "/v1/{id}",
       "params": {
         "id": {
           "in": "path",
@@ -123,7 +123,7 @@
       "summary": "Child entries of a kind (e.g. the plans of a service, the deployments of a plan).",
       "kind": "read",
       "method": "GET",
-      "path": "/{id}/{kind}",
+      "path": "/v1/{id}/{kind}",
       "params": {
         "id": {
           "in": "path",
@@ -200,7 +200,7 @@
       "summary": "Pricing of a plan or deployment entry.",
       "kind": "read",
       "method": "GET",
-      "path": "/{id}/pricing",
+      "path": "/v1/{id}/pricing",
       "params": {
         "id": {
           "in": "path",
@@ -226,7 +226,7 @@
       "summary": "One pricing per visible child deployment of a plan.",
       "kind": "read",
       "method": "GET",
-      "path": "/{id}/pricing/deployment",
+      "path": "/v1/{id}/pricing/deployment",
       "params": {
         "id": {
           "in": "path",

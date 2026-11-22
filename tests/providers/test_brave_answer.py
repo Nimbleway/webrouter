@@ -56,11 +56,16 @@ CONTENT = [
 ]
 
 
-def _stream(content: list[str], finish: str = "stop", request_id: str = "00000000-0000-4000-8000-000000000001") -> str:
+def _stream(
+    content: list[str],
+    finish: str = "stop",
+    request_id: str = "00000000-0000-4000-8000-000000000001",
+    escaped: bool = True,
+) -> str:
     def event(delta: dict[str, Any], finish_reason: str | None) -> str:
         chunk = {"id": request_id, "object": "chat.completion.chunk", "model": "brave-pro"}
         chunk["choices"] = [{"delta": delta, "finish_reason": finish_reason}]
-        return "data: " + json.dumps(chunk)
+        return "data: " + json.dumps(chunk, ensure_ascii=escaped)
 
     lines = [event({"role": "assistant", "content": part}, None) for part in content]
     lines.append(event({}, finish))
@@ -135,6 +140,17 @@ def test_an_answer_cut_off_at_its_token_limit_is_partial(provider: BraveAnswerPr
     _stub(provider, _stream(CONTENT[:3], finish="length"))
 
     assert provider.answer(AnswerRequest(query=QUESTION)).outcome == "partial"
+
+
+@pytest.mark.parametrize("line_break", ["\u2028", "\u2029", "\x85"], ids=["U+2028", "U+2029", "U+0085"])
+def test_a_unicode_line_break_in_the_answer_does_not_end_its_event(
+    provider: BraveAnswerProvider, line_break: str
+) -> None:
+    """JSON leaves these three unescaped, so a stream that writes non-ASCII as it is carries them inside a line."""
+    text = f"Argentina won{line_break}on penalties."
+    _stub(provider, _stream([text], escaped=False))
+
+    assert provider.answer(AnswerRequest(query=QUESTION)).answer == text
 
 
 def test_an_error_event_in_the_stream_is_a_provider_error(provider: BraveAnswerProvider) -> None:

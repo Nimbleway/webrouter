@@ -64,14 +64,14 @@ def decision_for(
     instead when a ranked id is a vendor mode (:func:`~.decider_modes.by_score`).
 
     ``ranked`` is already checked against the offered ids. The reason names the decider and the first id, with
-    its score when it has one: never the decider's own words.
+    the score it ranked on when it has one: never the decider's own words.
     """
     if not ranked:
         return RouteDecision(confidence=confidence)
     by_id = {c.id: c for c in req.candidates}
     if not all(by_id[cid].is_backend for cid in ranked):
-        attempts = by_score(by_id, ranked, scores)
-        return RouteDecision(attempts=attempts, confidence=confidence, reason=_reason(name, attempts[0], scores))
+        attempts, ranked_on = by_score(by_id, ranked, scores)
+        return RouteDecision(attempts=attempts, confidence=confidence, reason=_reason(name, attempts[0], ranked_on))
     providers: dict[ToolName, list[str]] = {}
     for cid in ranked:
         providers.setdefault(by_id[cid].tool, []).append(by_id[cid].provider)

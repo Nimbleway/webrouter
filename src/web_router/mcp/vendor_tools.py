@@ -9,13 +9,17 @@ well as the call's) and how much of an answer fits.
 
 from __future__ import annotations
 
+import functools
+import logging
 import os
 from collections.abc import Awaitable, Callable, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-from web_router.client_vendors_compat import warn_data_api_renamed
+from mcp_types import CallToolResult, TextContent
+
 from web_router.constants import MCP_MSG_MISSING_ARGUMENT
-from web_router.constants_vendors import MSG_DATA_API_DEPRECATED, VENDOR_ENV_ALLOW_WRITES, VENDOR_ENV_ALLOW_WRITES_OLD
+from web_router.constants_data_api_compat import MSG_DATA_API_DEPRECATED, VENDOR_ENV_ALLOW_WRITES_OLD
+from web_router.constants_vendors import VENDOR_ENV_ALLOW_WRITES
 from web_router.constants_vendors_mcp import (
     MCP_MSG_VENDOR_ARG_TYPE,
     MCP_MSG_VENDOR_CALL_ARGS,
@@ -36,6 +40,9 @@ from web_router.mcp.shaping_vendors import (
 
 if TYPE_CHECKING:
     from web_router.mcp.tools import WebRouterTools
+
+_LOG = logging.getLogger(__name__)
+_T = TypeVar("_T")
 
 
 _ARG_KINDS: dict[str, tuple[str, Callable[[Any], bool]]] = {
@@ -61,7 +68,7 @@ async def vendors_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> d
     router = tools.router
     query, vendor = arguments.get("query"), arguments.get("vendor")
     if query or vendor:
-        endpoints = router.find_data_apis(
+        endpoints = router.find_data_api_endpoints(
             query or "", vendor=vendor, category=arguments.get("category"), limit=arguments.get("limit")
         )
         vendors = {name: router.data_api(name) for name in {endpoint.vendor for endpoint in endpoints}}
@@ -90,14 +97,32 @@ def renamed_tool(name: str) -> tuple[str, str | None]:
     return (new, MSG_DATA_API_DEPRECATED.format(old=name, new=new)) if new else (name, None)
 
 
+def with_renamed_note(answer: _T, note: str | None) -> _T:
+    """``answer`` told of the new name when the tool was called by an old one; ``answer`` itself else.
+
+    A payload gets a ``deprecated`` key; a failed call's result gets the note as its first block.
+    """
+    if note is not None and isinstance(answer, CallToolResult):
+        answer.content.insert(0, TextContent(text=note))
+    elif note is not None and isinstance(answer, dict):
+        return cast("_T", {"deprecated": note, **answer})
+    return answer
+
+
 def writes_allowed() -> bool:
     """Whether the server was started allowing writes: the variable set to ``1``, or its old name, with a warning."""
     if os.environ.get(VENDOR_ENV_ALLOW_WRITES) == "1":
         return True
     if os.environ.get(VENDOR_ENV_ALLOW_WRITES_OLD) == "1":
-        warn_data_api_renamed(VENDOR_ENV_ALLOW_WRITES_OLD, VENDOR_ENV_ALLOW_WRITES)
+        _log_old_writes_variable()
         return True
     return False
+
+
+@functools.cache
+def _log_old_writes_variable() -> None:
+    """Tell the operator, once, on stderr, that the old variable is deprecated."""
+    _LOG.warning(MSG_DATA_API_DEPRECATED.format(old=VENDOR_ENV_ALLOW_WRITES_OLD, new=VENDOR_ENV_ALLOW_WRITES))
 
 
 async def call_vendor_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:

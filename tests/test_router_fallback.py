@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from tests.routing_fallback_helpers import aanswers, answers, empty, invalid, outcomes, raises, request
+from tests.routing_fallback_helpers import aanswers, answers, empty, invalid, outcomes, raises, request, strings
 from tests.routing_registry_helpers import NAME, Closable, built_fixture  # noqa: F401  (fixture)
 from web_router import AsyncWebRouter, CompositeDecision, DecisionMember, RouterError, WebRouter
 from web_router.exceptions import ConfigurationError
@@ -69,7 +69,8 @@ def test_members_are_named_without_paths_and_the_router_after_them(built: list[C
     members = f"{NAME}, {NAME}, custom, my-classifier, remote(https://router.example.com)"
     assert plan.decision.router == f"fallback({members})"
     assert built[1].config == {"threshold": 0.5}, "a mapping's other keys are that router's config"
-    assert "8443" not in str(plan.decision) and "v1" not in str(plan.decision)
+    text = " ".join(strings(plan.decision.model_dump(exclude={"decision_id", "prompt_sha256"})))
+    assert "8443" not in text and "v1" not in text, "the remote router's port and path never show"
 
 
 def test_a_member_that_declares_route_tools_is_asked_only_on_those_tools() -> None:

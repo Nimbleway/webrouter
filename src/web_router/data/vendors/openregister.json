@@ -1,0 +1,531 @@
+{
+  "vendor": "openregister",
+  "name": "OpenRegister",
+  "category": "company-data",
+  "summary": "German company data from the Handelsregister, Bundesanzeiger, Transparenzregister and insolvency notices: company search, register details, owners, UBOs, holdings, financials, contacts, people and insolvency proceedings.",
+  "docs_url": "https://docs.openregister.de/introduction",
+  "pricing_url": "https://docs.openregister.de/pricing",
+  "base_url": "https://api.openregister.de",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OPENREGISTER_API_KEY"
+        ],
+        "description": "An OpenRegister API key (openregister.de/keys). Sent as a Bearer token."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits per call: autocomplete 1; company, owners, holdings, financials, contact, person, searches and insolvency 10; UBO and historical owners 25; realtime=true adds 10. The free plan has 500 credits a month; 402 means out of credits.",
+    "Company ids look like DE-HRB-F1103-267645; get them from a search or autocomplete first.",
+    "Monitors, Transparenzregister credential storage and extract orders, and background jobs are not in this entry."
+  ],
+  "sources": [
+    "https://docs.openregister.de/llms.txt",
+    "https://docs.openregister.de/introduction",
+    "https://docs.openregister.de/authentication",
+    "https://docs.openregister.de/pricing",
+    "https://docs.openregister.de/filtering",
+    "https://docs.openregister.de/endpoint/autocomplete-company",
+    "https://docs.openregister.de/endpoint/filter-company",
+    "https://docs.openregister.de/endpoint/company",
+    "https://docs.openregister.de/endpoint/company-owners",
+    "https://docs.openregister.de/endpoint/company-holdings",
+    "https://docs.openregister.de/endpoint/company-financials",
+    "https://docs.openregister.de/endpoint/company-ubo",
+    "https://docs.openregister.de/endpoint/company-historical-owners",
+    "https://docs.openregister.de/endpoint/search-lookup",
+    "https://docs.openregister.de/endpoint/company-contact",
+    "https://docs.openregister.de/endpoint/filter-person",
+    "https://docs.openregister.de/endpoint/person",
+    "https://docs.openregister.de/endpoint/person-holdings",
+    "https://docs.openregister.de/endpoint/search-insolvency",
+    "https://docs.openregister.de/endpoint/insolvency",
+    "https://docs.openregister.de/endpoint/credits"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "openregister.companies.autocomplete",
+      "name": "Autocomplete German companies",
+      "summary": "Companies whose current or former name matches, with id, name and register details.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/autocomplete/company",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "Company name text.",
+          "required": true,
+          "example": "Descartes Technologies UG"
+        }
+      },
+      "notes": [
+        "1 credit."
+      ],
+      "job": "company.suggest",
+      "docs_url": "https://docs.openregister.de/endpoint/autocomplete-company",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/autocomplete-company.md"
+      }
+    },
+    {
+      "id": "openregister.companies.search",
+      "name": "Search German companies",
+      "summary": "Companies matching a text query and up to 70+ field filters: status, legal form, register, city, postcode, industry, incorporation date, financial figures, ownership traits, insolvency, LEI or VAT id, or a radius.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search/company",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "description": "Text search: {\"value\": \"...\"}.",
+          "example": {
+            "value": "Descartes Technologies"
+          }
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "description": "A list of filters, ANDed: each {\"field\": ..., and one of \"value\", \"values\" (any of), \"keywords\" or \"min\"/\"max\"}; dates YYYY-MM-DD. Fields include status, legal_form, register_court, register_type, city, zip, active, incorporated_at, revenue, employees, balance_sheet_total, estimated_revenue (cents), estimated_employees, youngest_owner_age, has_open_insolvency, lei, vat_id; see the filtering guide.",
+          "example": [
+            {
+              "field": "city",
+              "value": "Berlin"
+            },
+            {
+              "field": "legal_form",
+              "value": "gmbh"
+            }
+          ]
+        },
+        "location": {
+          "in": "body",
+          "type": "object",
+          "description": "Radius search: {\"latitude\": ..., \"longitude\": ..., \"radius\": km}."
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "Paging: {\"page\": 1, \"per_page\": 10}.",
+          "example": {
+            "page": 1,
+            "per_page": 10
+          }
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body: it searches and changes nothing. 10 credits per search.",
+        "Estimated revenue and EBITDA filters are in cents. The value, values, keywords and min/max forms are mutually exclusive within one filter."
+      ],
+      "job": "company.search",
+      "docs_url": "https://docs.openregister.de/endpoint/filter-company",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/filter-company.md"
+      }
+    },
+    {
+      "id": "openregister.companies.lookup_by_website",
+      "name": "Find a company by website",
+      "summary": "The German company behind a website URL.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/search/lookup",
+      "params": {
+        "url": {
+          "in": "query",
+          "type": "string",
+          "description": "Website URL.",
+          "required": true,
+          "example": "https://openregister.de"
+        }
+      },
+      "notes": [
+        "10 credits."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.openregister.de/endpoint/search-lookup",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/search-lookup.md"
+      }
+    },
+    {
+      "id": "openregister.companies.get",
+      "name": "Get a German company",
+      "summary": "Register details for one company: names and history, register, legal form, address, capital, purpose, representatives, industry codes and key figures.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/{company_id}",
+      "params": {
+        "company_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister company id, from a search.",
+          "example": "DE-HRB-F1103-267645"
+        },
+        "realtime": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to fetch the newest data live from the Handelsregister: +10 credits and much slower."
+        },
+        "export": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to return the company without sources."
+        }
+      },
+      "notes": [
+        "10 credits, 20 with realtime=true."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://docs.openregister.de/endpoint/company",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/company.md"
+      }
+    },
+    {
+      "id": "openregister.companies.owners",
+      "name": "Get a company's owners",
+      "summary": "The shareholders of a company with their shares, people and companies alike.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/{company_id}/owners",
+      "params": {
+        "company_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister company id, from a search.",
+          "example": "DE-HRB-F1103-267645"
+        },
+        "realtime": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to fetch the newest data live from the Handelsregister: +10 credits and much slower."
+        },
+        "export": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true to return owners already known without processing unprocessed documents."
+        },
+        "best_available": {
+          "in": "query",
+          "type": "boolean",
+          "description": "For AG and SE companies: owners read from register documents, which may be out of date."
+        }
+      },
+      "notes": [
+        "10 credits, 20 with realtime=true."
+      ],
+      "job": "company.shareholders",
+      "docs_url": "https://docs.openregister.de/endpoint/company-owners",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/company-owners.md"
+      }
+    },
+    {
+      "id": "openregister.companies.owners_history",
+      "name": "Get a company's historical owners",
+      "summary": "Past shareholder lists of a company over time.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/{company_id}/owners/historical",
+      "params": {
+        "company_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister company id, from a search.",
+          "example": "DE-HRB-F1103-267645"
+        }
+      },
+      "notes": [
+        "25 credits."
+      ],
+      "job": "company.shareholders",
+      "docs_url": "https://docs.openregister.de/endpoint/company-historical-owners",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/company-historical-owners.md"
+      }
+    },
+    {
+      "id": "openregister.companies.ubo",
+      "name": "Get a company's ultimate beneficial owners",
+      "summary": "The natural persons who ultimately own or control a company, through the ownership chain.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/{company_id}/ubo",
+      "params": {
+        "company_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister company id, from a search.",
+          "example": "DE-HRB-F1103-267645"
+        }
+      },
+      "notes": [
+        "25 credits."
+      ],
+      "job": "company.ownership",
+      "docs_url": "https://docs.openregister.de/endpoint/company-ubo",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/company-ubo.md"
+      }
+    },
+    {
+      "id": "openregister.companies.holdings",
+      "name": "Get a company's holdings",
+      "summary": "The companies in which a company holds shares.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/{company_id}/holdings",
+      "params": {
+        "company_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister company id, from a search.",
+          "example": "DE-HRB-F1103-267645"
+        }
+      },
+      "notes": [
+        "10 credits."
+      ],
+      "job": "company.investments",
+      "docs_url": "https://docs.openregister.de/endpoint/company-holdings",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/company-holdings.md"
+      }
+    },
+    {
+      "id": "openregister.companies.financials",
+      "name": "Get a company's financials",
+      "summary": "Balance sheet, income statement and key figures from the reports a company published in the Bundesanzeiger.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/company/{company_id}/financials",
+      "params": {
+        "company_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister company id, from a search.",
+          "example": "DE-HRB-F1103-267645"
+        }
+      },
+      "notes": [
+        "10 credits."
+      ],
+      "job": "company.financials",
+      "docs_url": "https://docs.openregister.de/endpoint/company-financials",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/company-financials.md"
+      }
+    },
+    {
+      "id": "openregister.companies.contact",
+      "name": "Get a company's contact details",
+      "summary": "Emails, phone numbers and social profiles gathered from the company's website.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v0/company/{company_id}/contact",
+      "params": {
+        "company_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister company id, from a search.",
+          "example": "DE-HRB-F1103-267645"
+        }
+      },
+      "notes": [
+        "10 credits."
+      ],
+      "job": "company.contacts",
+      "docs_url": "https://docs.openregister.de/endpoint/company-contact",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/company-contact.md"
+      }
+    },
+    {
+      "id": "openregister.people.search",
+      "name": "Search people",
+      "summary": "People in the German registers matching a name query and filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search/person",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "description": "Text search: {\"value\": \"...\"}."
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "description": "A list of filters, ANDed: each {\"field\": ..., and one of \"value\", \"values\" (any of), \"keywords\" or \"min\"/\"max\"}; dates YYYY-MM-DD. See the filtering guide for person fields."
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "Paging: {\"page\": 1, \"per_page\": 10}.",
+          "example": {
+            "page": 1,
+            "per_page": 10
+          }
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body. 10 credits."
+      ],
+      "job": "people.search",
+      "docs_url": "https://docs.openregister.de/endpoint/filter-person",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/filter-person.md"
+      }
+    },
+    {
+      "id": "openregister.people.get",
+      "name": "Get a person",
+      "summary": "One person's details and register roles.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/person/{person_id}",
+      "params": {
+        "person_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister person id (a UUID), from a company's representatives or a person search."
+        }
+      },
+      "notes": [
+        "10 credits."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://docs.openregister.de/endpoint/person",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/person.md"
+      }
+    },
+    {
+      "id": "openregister.people.holdings",
+      "name": "Get a person's holdings",
+      "summary": "The companies in which a person holds shares.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/person/{person_id}/holdings",
+      "params": {
+        "person_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "OpenRegister person id (a UUID), from a company's representatives or a person search."
+        }
+      },
+      "notes": [
+        "10 credits."
+      ],
+      "job": "company.investments",
+      "docs_url": "https://docs.openregister.de/endpoint/person-holdings",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/person-holdings.md"
+      }
+    },
+    {
+      "id": "openregister.insolvencies.search",
+      "name": "Search insolvency proceedings",
+      "summary": "German insolvency proceedings for companies and individuals by debtor, case number, administrator or court text, plus status, kind, court, city and date filters.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v1/search/insolvency",
+      "params": {
+        "query": {
+          "in": "body",
+          "type": "object",
+          "description": "Text search: {\"value\": \"...\"}; matches debtor name, case number, administrator and court."
+        },
+        "filters": {
+          "in": "body",
+          "type": "array",
+          "description": "A list of filters, ANDed: each {\"field\": ..., and one of \"value\", \"values\" (any of), \"keywords\" or \"min\"/\"max\"}; dates YYYY-MM-DD. Fields: debtor_kind, debtor_legal_form, court, city, current_status, has_open_insolvency, proceeding_kind, administration_kind, insolvency_grounds, opened_at, closed_at, last_event_at, claims_filing_deadline, company_id, person_id.",
+          "example": [
+            {
+              "field": "has_open_insolvency",
+              "value": "true"
+            }
+          ]
+        },
+        "pagination": {
+          "in": "body",
+          "type": "object",
+          "description": "Paging: {\"page\": 1, \"per_page\": 10}.",
+          "example": {
+            "page": 1,
+            "per_page": 10
+          }
+        }
+      },
+      "notes": [
+        "A read sent as POST with a JSON body. 10 credits per search."
+      ],
+      "job": "company.insolvency",
+      "docs_url": "https://docs.openregister.de/endpoint/search-insolvency",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/search-insolvency.md"
+      }
+    },
+    {
+      "id": "openregister.insolvencies.get",
+      "name": "Get an insolvency proceeding",
+      "summary": "One proceeding: status, event timeline, administrators and the linked company or person.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/insolvency/{insolvency_id}",
+      "params": {
+        "insolvency_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Insolvency proceeding id, from a search."
+        }
+      },
+      "notes": [
+        "10 credits."
+      ],
+      "job": "company.insolvency",
+      "docs_url": "https://docs.openregister.de/endpoint/insolvency",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/insolvency.md"
+      }
+    },
+    {
+      "id": "openregister.credits.get",
+      "name": "Get credit usage",
+      "summary": "Credits used and left on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/credits",
+      "notes": [
+        "Free."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://docs.openregister.de/endpoint/credits",
+      "verified": {
+        "docs": "https://docs.openregister.de/endpoint/credits.md"
+      }
+    }
+  ]
+}

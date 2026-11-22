@@ -16,6 +16,7 @@ from web_router.types import ExtractedDocument, ExtractFailure, ExtractRequest, 
 DOCS = "https://docs.example.org/authors/"
 GITHUB = "https://github.com/psf/requests/blob/main/AUTHORS.rst"
 NEWS = "https://news.example.org/story"
+HOME = "https://example.org"
 TEXT = "A page with enough text in it to count as the page that was asked for, not a shell."
 
 
@@ -148,6 +149,28 @@ def test_with_no_member_left_the_partial_answer_is_returned(registered: list[str
 
     assert [failure.url for failure in response.failures] == [GITHUB]
     assert response.failures[0].error == "[only] HTTP 403", "nothing else was tried, so nothing else to say"
+
+
+def test_pages_echoed_as_the_first_member_resolved_them_keep_the_order_asked_for(registered: list[str]) -> None:
+    """Nimble and Keenable echo the URL they resolved to: a slash added to a bare host, a redirect followed."""
+    resolved = {HOME: f"{HOME}/", NEWS: "https://www.news.example.org/story"}
+
+    class Resolving(_member("first", refuses=frozenset({GITHUB}))):  # type: ignore[misc]
+        batches_urls = False
+
+        def _respond(self, urls: list[str]) -> ExtractResponse:
+            response = super()._respond(urls)
+            documents = [page.model_copy(update={"url": resolved[page.url]}) for page in response.documents]
+            return response.model_copy(update={"documents": documents})
+
+    auto = _chain(registered, Resolving, _member("second"))
+    try:
+        response = auto.extract(ExtractRequest(urls=[HOME, GITHUB, NEWS]))
+    finally:
+        auto.close()
+
+    assert [document.url for document in response.documents] == [resolved[HOME], GITHUB, resolved[NEWS]]
+    assert response.failures == []
 
 
 def test_a_redirected_error_page_is_retried_and_reported_under_the_url_asked_for(registered: list[str]) -> None:

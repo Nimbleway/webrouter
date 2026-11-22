@@ -40,7 +40,7 @@ from web_router import WebRouter
 router = WebRouter()
 
 router.data_apis(configured=True)  # the data APIs whose keys are set here
-router.find_data_apis("google ads spend by campaign")
+router.find_data_api_endpoints("google ads spend by campaign")
 router.data_api_endpoint("google-ads.query")  # inputs, notes, credentials
 
 response = router.call_data_api(

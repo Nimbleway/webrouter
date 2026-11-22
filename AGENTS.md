@@ -9,11 +9,11 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search and Keirolabs, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search, Keirolabs and SpecStream, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
-Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, Browserbase,
+Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream,
 the keyless Jina Reader, `auto` again, and `max`, which sends the request to
 every member `auto` would try at once and returns the first document back -- the
 fastest answer any backend can give, at one fetch per member, so never the
@@ -75,7 +75,7 @@ the job handle. Browser Use, Skyvern, Browserbase, and `auto`. Like research, it
 has no keyless tier, because every task bills.
 
 **Data APIs** (`call_data_api`, `data_api_request`, and `data_apis`,
-`data_api`, `data_api_endpoint`, `find_data_apis` to find what to call; the old
+`data_api`, `data_api_endpoint`, `find_data_api_endpoints` to find what to call; the old
 vendor names still work, with a `DeprecationWarning`) are not an eighth method of interchangeable backends. It reaches one vendor's own
 API with the user's credentials -- their Google Ads, their Datadog -- and
 returns the vendor's answer untouched. `search` lists the read endpoints that
@@ -449,6 +449,7 @@ src/web_router/
     ├── you_research.py research, a polled background task
     ├── you_answer.py   answer, in one call
     ├── _mcp.py         the keyless MCP search transport: one JSON-RPC tools/call
+    ├── _sse.py         an event stream's data: lines, cut only where the stream ends one (CR, LF)
     ├── you_mcp.py      You.com's keyless MCP endpoint; subclasses you.py
     ├── exa_mcp.py      Exa's keyless MCP server; subclasses exa.py, reads its text
     ├── parallel_mcp.py Parallel's keyless Search MCP; subclasses parallel_search.py
@@ -464,6 +465,8 @@ src/web_router/
     │                   before each member, hop or job submit, failures, empty answers held
     ├── _attempt_step.py one attempt of that walk: its request in its vendor mode, its
     │                   price, and a failure's outcome (refund, stop the backend, raise)
+    ├── _mode_timeout.py whether a mode's timeout leaves the backend's next mode to
+    │                   run: its p90 fits the time left (one-call walks only)
     ├── _auto_extract.py which members of extract `auto` can serve a request: the
     │                   format and every option it sets; apart so auto.py stops growing
     ├── auto.py         the default for search, extract, research, browser and

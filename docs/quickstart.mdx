@@ -18,7 +18,7 @@ This page takes you from install to a working search and extract in four steps. 
     ```
 
     ```bash MCP server
-    pip install "webrouter[mcp,browser]"  # the MCP server with its browser tools
+    pip install "webrouter[mcp]"  # the MCP server, browser tools included
     ```
     </CodeGroup>
 
@@ -104,7 +104,7 @@ You can install fewer extras by naming them in place of `all`. Extras are named 
 | --- | --- |
 | `search`, `extract`, `research`, `answer` | Every provider that can serve that method |
 | `browser` | Playwright, so a browser handle can drive the page |
-| `mcp` | The MCP server, which exposes the methods as tools. Add `browser` for its `browser_*` tools |
+| `mcp` | The MCP server, which exposes the methods as tools, the `browser_*` ones included |
 | `evals` | The OpenAI and Anthropic SDKs behind the built-in judges of `evaluate()` |
 | `langchain` | `langchain-core` for the LangChain tools |
 | `remote` | httpx for the built-in `remote` router |

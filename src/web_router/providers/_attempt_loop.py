@@ -38,6 +38,7 @@ from web_router.providers._attempt_step import Failures, Tried, failure, prepare
 from web_router.providers._chain import RECOVERABLE, _held_or_raise
 from web_router.providers._chain_deadline import _held_or_late, _late_answer
 from web_router.providers._hop import ahop, hop
+from web_router.providers._runtime import current_runtime
 from web_router.routing.attempts import in_call_order
 from web_router.routing.contract import ToolName
 from web_router.routing.entry_names import entry_name
@@ -124,7 +125,8 @@ def run(walk: Walk, request: Any) -> Ran[Any]:
             continue
         try:
             call = getattr(walk.member(position), walk.method)
-            response = hop(walk.tool, name, call, attempt.request) if walk.hops else call(attempt.request)
+            last = _last(walk, tried, index)
+            response = hop(walk.tool, name, call, attempt.request, last) if walk.hops else call(attempt.request)
         except _deadline(walk) as exc:
             return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, entry_name(name, mode), walk.tool))
         except walk.refusals as exc:
@@ -149,7 +151,10 @@ async def arun(walk: Walk, request: Any) -> Ran[Any]:
             continue
         try:
             call = getattr(walk.member(position), f"a{walk.method}")
-            response = await (ahop(walk.tool, name, call, attempt.request) if walk.hops else call(attempt.request))
+            last = _last(walk, tried, index)
+            response = await (
+                ahop(walk.tool, name, call, attempt.request, last) if walk.hops else call(attempt.request)
+            )
         except _deadline(walk) as exc:
             return Ran(_held_or_late(tried.held, walk.owner, tried.failures, exc, entry_name(name, mode), walk.tool))
         except walk.refusals as exc:
@@ -162,6 +167,15 @@ async def arun(walk: Walk, request: Any) -> Ran[Any]:
             return Ran(response, name, walk.order[index + 1 :])
         tried.hold(response)
     return Ran(walk.exhausted(tried.held, tried.failures, tried.refused))
+
+
+def _last(walk: Walk, tried: Tried, index: int) -> bool:
+    """Whether the attempt at ``index`` is the last that could run: every later one's backend stopped or cools down."""
+    runtime = current_runtime()
+    return all(
+        position in tried.stopped or (runtime is not None and runtime.cooldowns.refusal(name) is not None)
+        for position, name, _ in walk.order[index + 1 :]
+    )
 
 
 def _late(walk: Walk, tried: Tried) -> Any:

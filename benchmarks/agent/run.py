@@ -714,9 +714,9 @@ class WithholdingRouter(AsyncWebRouter):
         message = MSG_WITHHELD_READ.format(urls=", ".join(withheld))
         rest = [url for url in asked if url not in withheld]
         if not rest:
-            raise ProviderError(str(kwargs.get("provider") or "auto"), message)
+            raise ProviderError(str(kwargs.get("provider") or "auto"), message, kind="target")
         response = await super().extract(rest, **kwargs)
-        failures = [*response.failures, *(ExtractFailure(url=url, error=message) for url in withheld)]
+        failures = [*response.failures, *(ExtractFailure(url=url, error=message, kind="target") for url in withheld)]
         return response.model_copy(update={"failures": failures})
 
 
@@ -1068,7 +1068,7 @@ def _record(result: Any, row: Row) -> None:
     row.tool_chars = (row.tool_chars or 0) + len(result.content)
     # A refusal to read an answer-key page is counted under `withheld`, not as a tool that failed: only an arm whose
     # tools run here can refuse, so counting it as an error would mark those arms down for it.
-    row.tool_errors += result.is_error and WITHHELD_SIGNATURE not in result.content
+    row.tool_errors += result.is_error and WITHHELD_SIGNATURE not in f"{result.content} {getattr(result, 'error', '')}"
     if result.provider:
         row.providers.append(result.provider)
     if isinstance(result, DirectResult):

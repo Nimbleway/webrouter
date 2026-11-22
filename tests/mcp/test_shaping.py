@@ -147,6 +147,12 @@ def test_the_budget_is_overridable_from_the_environment(monkeypatch: pytest.Monk
     assert max_response_chars() == MCP_MAX_RESPONSE_CHARS
 
 
+@pytest.mark.parametrize("value", ["0", "-200"])
+def test_a_budget_of_zero_or_less_falls_back_to_the_default(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    monkeypatch.setenv(ENV_MCP_MAX_CHARS, value)
+    assert max_response_chars() == MCP_MAX_RESPONSE_CHARS
+
+
 def test_the_last_result_is_squeezed_rather_than_dropped() -> None:
     payload = shape_search(_search_response(count=1), "search-0001", budget=800)
 
