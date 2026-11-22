@@ -14,7 +14,8 @@ from types import SimpleNamespace
 from pydantic import SecretStr
 
 from web_router.constants import MCP_BROWSER_END_CLOSED, MCP_REDACTED
-from web_router.mcp.browsers import BrowserSessions
+from web_router.exceptions import PageClosedError, WebRouterError
+from web_router.mcp.browsers import BrowserSessions, BrowserToolError
 
 SHARED_QUERY = "apiKey=shared-account-key"
 """Like a real key: one account's key rides in every CDP URL of that account."""
@@ -60,3 +61,52 @@ async def test_a_closed_sessions_secrets_are_not_kept() -> None:
     assert MCP_REDACTED in sessions.scrub_text(handle.cdp_url)
     assert MCP_REDACTED in sessions.scrub_text(SHARED_QUERY)
     assert len(sessions._secrets) <= 10
+
+
+async def test_ending_session_values_still_scrub_that_operations_error() -> None:
+    sessions = BrowserSessions()
+    lost_id = await sessions.open(_opener(7))
+    lost = sessions._sessions[lost_id].handle
+
+    async def _closed(_: object) -> None:
+        raise PageClosedError(
+            "fake",
+            lost.session_id,
+            "click",
+            f"backend {lost.session_id} at {lost.cdp_url} view {lost.live_view_url}",
+        )
+
+    error: BrowserToolError | None = None
+    try:
+        await sessions.run(lost_id, "browser_click", _closed)
+    except BrowserToolError as exc:
+        error = exc
+    assert error is not None
+    message = str(error)
+    assert MCP_REDACTED in message
+    assert lost_id not in sessions._sessions
+    for value in (lost.session_id, lost.cdp_url, lost.live_view_url):
+        assert value not in message
+        assert value not in sessions._secrets
+
+    class _FailingRelease(_Handle):
+        async def release(self) -> None:
+            raise WebRouterError(f"cannot release {self.session_id} at {self.cdp_url} view {self.live_view_url}")
+
+    async def open_failing() -> _Handle:
+        return _FailingRelease(8)
+
+    closing_id = await sessions.open(open_failing)
+    closing = sessions._sessions[closing_id].handle
+    error = None
+    try:
+        await sessions.close(closing_id, MCP_BROWSER_END_CLOSED)
+    except BrowserToolError as exc:
+        error = exc
+    assert error is not None
+    message = str(error)
+    assert MCP_REDACTED in message
+    assert closing_id not in sessions._sessions
+    for value in (closing.session_id, closing.cdp_url, closing.live_view_url):
+        assert value not in message
+        assert value not in sessions._secrets
