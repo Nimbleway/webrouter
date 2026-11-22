@@ -34,6 +34,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Changed
 
+- The Oxylabs Web API live data class in `web_router.providers.oxylabs_live_data` is now `OxylabsWebApiLiveDataProvider`; the name `OxylabsLiveDataProvider` moves to `web_router.providers.oxylabs_live_data_any`, which serves `oxylabs` over either API. Code that imports or subclasses the old path needs the new name. Built with no Oxylabs credential, it raises a `ConfigurationError` naming both sets: `OXYLABS_USERNAME` and `OXYLABS_PASSWORD`, or `OXYLABS_WEB_API_KEY`.
 - A call on the keyless tier of Nimble, Tavily, Firecrawl or Keenable now reports `cost_usd=0.0` with `cost_source="keyless"` instead of the keyed list price, and a budget settles it to $0.
 - Budgets settle each attempt when it ends: a backend's reported cost replaces its estimate, and an attempt refused before it started (a 4xx other than 404 or 410, a connection never made, a missing key) counts nothing. `docs/budgets.mdx` opens with a table of what is counted.
 - Default routing: `auto` now gives each backend at most half the time left (the last gets all of it) and skips a backend for 30 s after three timeouts in a row. Opt out with `hop_timeout=False` or `timeout_cooldown=False`; `hop_timeout=4` sets a fixed cap.
