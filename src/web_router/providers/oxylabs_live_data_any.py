@@ -18,7 +18,7 @@ from typing import Any, ClassVar
 
 from web_router.constants import ENV_OXYLABS_PASSWORD, ENV_OXYLABS_USERNAME, PROVIDER_OXYLABS
 from web_router.constants_live_data_vendors import ENV_OXYLABS_WEB_API_KEY
-from web_router.constants_oxylabs_classic import MSG_OXYLABS_NO_CREDENTIALS
+from web_router.constants_oxylabs_classic import MSG_OXYLABS_NO_CREDENTIALS, MSG_OXYLABS_ONE_BASE_URL
 from web_router.exceptions import ConfigurationError
 from web_router.providers._http_live_data import HttpLiveDataProvider
 from web_router.providers.base import LiveDataProvider
@@ -65,17 +65,23 @@ class OxylabsLiveDataProvider(LiveDataProvider):
             api_key: The Web Scraper API password, as extract reads it from the
                 same ``provider_config["oxylabs"]`` entry. Falls back to ``OXYLABS_PASSWORD``.
             web_api_key: The Web API key. Falls back to ``OXYLABS_WEB_API_KEY``.
-            **kwargs: Passed to each API's provider: ``timeout`` and the ``httpx`` options.
+            **kwargs: Passed to each API's provider: ``timeout``, the ``httpx`` options, and ``base_url``
+                when only one credential is set.
 
         Raises:
-            ConfigurationError: when neither credential is set, naming both.
+            ConfigurationError: when neither credential is set, naming both; or when both are and so is
+                ``base_url``, which cannot be both APIs' host.
         """
         super().__init__(**kwargs)
         self.classic: OxylabsClassicLiveDataProvider | None = None
         self.web_api: OxylabsWebApiLiveDataProvider | None = None
-        if _given(username, ENV_OXYLABS_USERNAME) and _given(api_key, ENV_OXYLABS_PASSWORD):
+        classic = _given(username, ENV_OXYLABS_USERNAME) and _given(api_key, ENV_OXYLABS_PASSWORD)
+        web_api = _given(web_api_key, ENV_OXYLABS_WEB_API_KEY)
+        if classic and web_api and kwargs.get("base_url"):
+            raise ConfigurationError(MSG_OXYLABS_ONE_BASE_URL)
+        if classic:
             self.classic = OxylabsClassicLiveDataProvider(username=username, api_key=api_key, **kwargs)
-        if _given(web_api_key, ENV_OXYLABS_WEB_API_KEY):
+        if web_api:
             self.web_api = OxylabsWebApiLiveDataProvider(web_api_key=web_api_key, **kwargs)
         if self.classic is None and self.web_api is None:
             raise ConfigurationError(MSG_OXYLABS_NO_CREDENTIALS)

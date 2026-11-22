@@ -42,3 +42,10 @@ MSG_OXYLABS_NO_CREDENTIALS: Final = (
     " 'username' and 'api_key', or 'web_api_key'."
 )
 """Neither of Oxylabs' two credentials is set: either one serves live data."""
+
+MSG_OXYLABS_ONE_BASE_URL: Final = (
+    "Oxylabs live data has both credentials and one base_url: the Web Scraper API and the Web API are on different"
+    " hosts, so one override would send one API's credential to the other's host. Drop base_url, or keep one"
+    " credential: 'username' and 'api_key', or 'web_api_key'."
+)
+"""A host override with both credentials set: each API has a host of its own, so one override cannot serve both."""

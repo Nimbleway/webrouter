@@ -131,6 +131,29 @@ def test_each_api_is_given_only_its_own_credentials() -> None:
         stray.run(LiveDataRequest(source="amazon_search", inputs={"query": "x"}))  # refused, not silently dropped
 
 
+def test_with_both_credentials_each_api_signs_in_to_its_own_host() -> None:
+    provider = OxylabsLiveDataProvider(username="user", api_key="password", web_api_key="web-key")
+    assert provider.classic is not None and provider.web_api is not None
+    classic_client, web_client = provider.classic._client_kwargs, provider.web_api._client_kwargs
+    assert classic_client["base_url"] == BASE and classic_client["headers"]["Authorization"].startswith("Basic ")
+    assert web_client["base_url"] == "https://webapi.oxylabs.io"
+    assert web_client["headers"]["Authorization"] == "Bearer web-key"
+
+
+def test_one_base_url_with_both_credentials_is_refused() -> None:
+    with pytest.raises(ConfigurationError, match="both credentials and one base_url"):
+        OxylabsLiveDataProvider(username="user", api_key="password", web_api_key="web-key", base_url="https://x.test")
+
+
+@pytest.mark.parametrize(
+    "credential", [{"username": "user", "api_key": "password"}, {"web_api_key": "web-key"}], ids=["classic", "web"]
+)
+def test_one_credential_keeps_its_base_url(credential: dict[str, str]) -> None:
+    provider = OxylabsLiveDataProvider(**credential, base_url="https://proxy.example.test")
+    api = provider.classic or provider.web_api
+    assert api is not None and api._client_kwargs["base_url"] == "https://proxy.example.test"
+
+
 def test_with_no_credential_the_error_names_both() -> None:
     with pytest.raises(ConfigurationError, match=r"OXYLABS_USERNAME and OXYLABS_PASSWORD.*OXYLABS_WEB_API_KEY"):
         OxylabsLiveDataProvider()
