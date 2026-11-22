@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-470 vendors, 3472 endpoints.
+471 vendors, 3486 endpoints.
 
 ### advertising
 
@@ -93,6 +93,7 @@ Social networks and communities: profiles, posts, creators.
 | [Facebook Pages (Graph API)](https://developers.facebook.com/docs/pages-api) `facebook` | Facebook Pages you manage through Meta's Graph API: Page details and the Page feed. | 3 read | key in query | `FACEBOOK_ACCESS_TOKEN` | docs 2026-11-08 |
 | [FastMoss](https://developer.fastmoss.com/api/docs/guide/quickStart.html) `fastmoss` | TikTok Shop data: products, shops, creators, videos and rankings, with sales and revenue estimates by region. | 8 read | key in header | `FASTMOSS_API_KEY` | docs 2026-11-09 |
 | [Fetchin](https://docs.fetchin.io/) `fetchinio` | Professional-network profiles, posts, comments, reactions and company pages as a credit-billed API. | 10 read | key in header | `FETCHIN_API_KEY` | docs 2026-11-08 |
+| [GetYouTubeTranscript](https://getyoutubetranscript.com/docs) `getyoutubetranscript` | YouTube transcripts in any caption language the video has, YouTube search, and channel, playlist and video data. | 14 read | key in header | `GETYOUTUBETRANSCRIPT_API_KEY` | docs 2026-11-20 |
 | [HarvestAPI](https://docs.harvestapi.io) `harvestapi` | LinkedIn data without a LinkedIn login: profiles, companies, jobs, posts, comments and reactions, searchable by filters. | 18 read | key in header | `HARVESTAPI_API_KEY` | docs 2026-11-08 |
 | [Influencers Club](https://docs.influencers.club/) `influencersclub` | Creator discovery, similar creators and enrichment (profile, analytics, posts, audience overlap) across social platforms. | 13 read | key in header | `INFLUENCERS_CLUB_API_KEY` | docs 2026-11-08 |
 | [Instagram Graph API](https://developers.facebook.com/docs/instagram-platform/instagram-graph-api) `instagram` | Your Instagram professional account through Meta's Graph API: profile, media, insights, comments and other businesses' public data. | 7 read | key in query | `INSTAGRAM_ACCESS_TOKEN` | docs 2026-11-08 |

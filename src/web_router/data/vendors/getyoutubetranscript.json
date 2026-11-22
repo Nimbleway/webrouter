@@ -1,0 +1,448 @@
+{
+  "vendor": "getyoutubetranscript",
+  "name": "GetYouTubeTranscript",
+  "category": "social",
+  "summary": "YouTube transcripts in any caption language the video has, YouTube search, and channel, playlist and video data.",
+  "docs_url": "https://getyoutubetranscript.com/docs",
+  "pricing_url": "https://getyoutubetranscript.com/pricing",
+  "base_url": "https://getyoutubetranscript.com/api/v1",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GETYOUTUBETRANSCRIPT_API_KEY"
+        ],
+        "description": "a GetYouTubeTranscript API key (sk_live_..., from getyoutubetranscript.com/developers). Sent in the x-api-key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-api-key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billed in credits: 1 per successful call, failed calls and /credits are free. A new account gets 100 free credits.",
+    "Batch transcript jobs (POST /batch) and agent self-signup are in the API but not in this entry."
+  ],
+  "sources": [
+    "https://getyoutubetranscript.com/openapi.json",
+    "https://getyoutubetranscript.com/docs",
+    "https://getyoutubetranscript.com/llms.txt",
+    "https://getyoutubetranscript.com/pricing"
+  ],
+  "curated": "2026-11-20",
+  "endpoints": [
+    {
+      "id": "getyoutubetranscript.transcript.get",
+      "name": "Get a video transcript",
+      "summary": "Full transcript for one video, plus title/author/thumbnail metadata.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/transcript",
+      "params": {
+        "v": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video URL (full or short) or an 11-character video ID."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Caption language code, e.g. 'en', 'es'."
+        },
+        "timestamps": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Set to 'true' to include 'segments': per-line {start, duration, text} timestamps in seconds, e.g. for citing a moment in the video."
+        },
+        "translate": {
+          "in": "query",
+          "type": "string",
+          "description": "Language code to machine-translate the transcript into, e.g. 'es', 'de', 'zh-CN'."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; a failed call (no captions, private or removed video) costs nothing.",
+        "Text comes from the captions the video already has; a video with captions turned off has no transcript. timestamps=true adds per-line segments with start and duration in seconds."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.transcript.languages",
+      "name": "List a video's caption languages",
+      "summary": "The caption languages a video offers, creator-uploaded ('manual') and YouTube speech recognition ('auto'), so you can pick one before calling /transcript.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/transcript/languages",
+      "params": {
+        "v": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video URL (full or short) or an 11-character video ID."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.search",
+      "name": "Search YouTube",
+      "summary": "Search YouTube videos or channels.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/search",
+      "params": {
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Search query."
+        },
+        "page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "Short opaque cursor (data.continuation_token) from the previous page."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "description": "'video' (default) or 'channel'.",
+          "enum": [
+            "video",
+            "channel"
+          ]
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter region code, e.g. us."
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Result language hint, e.g. en."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Max results for this page."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free.",
+        "Paged: pass data.continuation_token from the previous response as page_token to get the next page; each page is a separate 1-credit call."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.channel.resolve",
+      "name": "Resolve a channel handle",
+      "summary": "Resolve a channel handle/URL to a channel ID.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/resolve",
+      "params": {
+        "handle": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Channel @handle, channel URL, or UC... id."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.channel.latest",
+      "name": "A channel's details and latest uploads",
+      "summary": "Get a channel's metadata and latest uploads.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/channel/latest",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Channel @handle, channel URL, or UC... id."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.channel.videos",
+      "name": "List a channel's videos",
+      "summary": "The channel's full upload list, paginated - not just the home-tab shelf /channel/latest returns.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/channel/videos",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "description": "Channel @handle, URL, or UC... id."
+        },
+        "tab": {
+          "in": "query",
+          "type": "string",
+          "description": "Which list: 'videos' (uploads), 'shorts', or 'streams' (the Live tab).",
+          "enum": [
+            "videos",
+            "shorts",
+            "streams"
+          ]
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Order: 'latest', 'popular' or 'oldest'.",
+          "enum": [
+            "latest",
+            "popular",
+            "oldest"
+          ]
+        },
+        "continuation": {
+          "in": "query",
+          "type": "string",
+          "description": "Short opaque cursor (data.continuation_token) from the previous page."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free.",
+        "Paged: pass data.continuation_token from the previous response as continuation to get the next page; each page is a separate 1-credit call."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.channel.search",
+      "name": "Search one channel's videos",
+      "summary": "Search within one channel's videos.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/channel/search",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "description": "Channel @handle, URL, or UC... id."
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Query to search within the channel."
+        },
+        "continuation": {
+          "in": "query",
+          "type": "string",
+          "description": "Short opaque cursor (data.continuation_token) from the previous page."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free.",
+        "Paged: pass data.continuation_token from the previous response as continuation to get the next page; each page is a separate 1-credit call."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.channel.playlists",
+      "name": "List a channel's playlists",
+      "summary": "List a channel's playlists.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/channel/playlists",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "description": "Channel @handle, URL, or UC... id."
+        },
+        "continuation": {
+          "in": "query",
+          "type": "string",
+          "description": "Short opaque cursor (data.continuation_token) from the previous page."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free.",
+        "Paged: pass data.continuation_token from the previous response as continuation to get the next page; each page is a separate 1-credit call."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.channel.posts",
+      "name": "List a channel's community posts",
+      "summary": "The channel's Posts tab, paginated: text, links, likes, comments and the attached image or poll.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/channel/posts",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "description": "Channel @handle, URL, or UC... id."
+        },
+        "continuation": {
+          "in": "query",
+          "type": "string",
+          "description": "Short opaque cursor (data.continuation_token) from the previous page."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free.",
+        "Paged: pass data.continuation_token from the previous response as continuation to get the next page; each page is a separate 1-credit call."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.channel.banner",
+      "name": "A channel's banner and avatar",
+      "summary": "Get a channel's banner and avatar.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/channel/banner",
+      "params": {
+        "channel": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Channel @handle, URL, or UC... id."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.playlist.videos",
+      "name": "List the videos in a playlist",
+      "summary": "List every video in a playlist.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/playlist",
+      "params": {
+        "list": {
+          "in": "query",
+          "type": "string",
+          "description": "Playlist ID or URL."
+        },
+        "continuation": {
+          "in": "query",
+          "type": "string",
+          "description": "Short opaque cursor (data.continuation_token) from the previous page."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free.",
+        "Paged: pass data.continuation_token from the previous response as continuation to get the next page; each page is a separate 1-credit call."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.video.related",
+      "name": "Videos suggested next to a video",
+      "summary": "Get the videos YouTube suggests next to a video.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/video/related",
+      "params": {
+        "v": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video ID or full URL."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.video.dislikes",
+      "name": "A video's estimated likes and dislikes",
+      "summary": "Get a video's estimated likes and dislikes.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/video/dislikes",
+      "params": {
+        "v": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "YouTube video ID or full URL."
+        }
+      },
+      "notes": [
+        "1 credit per successful call; failed calls are free."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    },
+    {
+      "id": "getyoutubetranscript.credits",
+      "name": "Remaining credit balance",
+      "summary": "Check the remaining credit balance for this key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/credits",
+      "notes": [
+        "Free: 0 credits."
+      ],
+      "docs_url": "https://getyoutubetranscript.com/docs",
+      "verified": {
+        "docs": "https://getyoutubetranscript.com/openapi.json"
+      }
+    }
+  ]
+}
