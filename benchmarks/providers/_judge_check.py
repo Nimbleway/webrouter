@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from contextlib import suppress
 from typing import Any
 
 from web_router.constants_evals import EVALS_DEFAULT_JUDGE_SPEC, EVALS_JUDGE_SPEC_HELP
@@ -36,10 +37,12 @@ async def check_judge(judge: Any) -> None:
             await asyncio.sleep(PROBE_RETRY_SECONDS)
             await judge.agrade(*JUDGE_PROBE)
     except Exception as exc:  # whatever the judge's SDK raises, the scan must stop on it
-        await judge.aclose()
+        with suppress(Exception):
+            await judge.aclose()
         raise SystemExit(MSG_JUDGE_FAILED.format(error=exc)) from exc
     except BaseException:  # cancelled or interrupted mid-check: close the client, then let it through
-        await judge.aclose()
+        with suppress(Exception):
+            await judge.aclose()
         raise
 
 

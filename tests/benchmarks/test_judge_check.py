@@ -93,3 +93,26 @@ async def test_a_cancelled_check_closes_the_judge_and_stays_cancelled(
     with pytest.raises(asyncio.CancelledError):
         await scan.checked_judge("openai")
     assert judge.closed
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("original setup failure"), asyncio.CancelledError()])
+async def test_cleanup_cannot_replace_the_preflight_failure(
+    scan: ModuleType, monkeypatch: pytest.MonkeyPatch, failure: BaseException
+) -> None:
+    judge = FlakyJudge(fails=0)
+
+    def failed_setup() -> None:
+        raise failure
+
+    async def failed_cleanup() -> None:
+        raise RuntimeError("cleanup failure")
+
+    monkeypatch.setattr(judge, "check", failed_setup)
+    monkeypatch.setattr(judge, "aclose", failed_cleanup)
+    _wire(scan, monkeypatch, judge)
+    if isinstance(failure, asyncio.CancelledError):
+        with pytest.raises(asyncio.CancelledError):
+            await scan.checked_judge("openai")
+    else:
+        with pytest.raises(SystemExit, match="original setup failure"):
+            await scan.checked_judge("openai")

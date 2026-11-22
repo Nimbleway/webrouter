@@ -72,10 +72,11 @@ def test_a_callers_own_litellm_settings_are_kept(litellm: FakeLiteLLM, monkeypat
     assert os.environ["LITELLM_MODE"] == "DEV"
 
 
-def test_the_litellm_judge_names_the_missing_key(litellm: FakeLiteLLM) -> None:
+@pytest.mark.parametrize("base_url", [None, "https://models.example.com"])
+def test_the_litellm_judge_names_the_missing_key(litellm: FakeLiteLLM, base_url: str | None) -> None:
     litellm.missing = ["OPENROUTER_API_KEY"]
     with pytest.raises(ConfigurationError, match="OPENROUTER_API_KEY"):
-        LiteLLMJudge("openrouter/z-ai/glm-5").check()
+        LiteLLMJudge("openrouter/z-ai/glm-5", base_url=base_url).check()
 
 
 @pytest.mark.parametrize("base_url", [None, "http://localhost:11434"])

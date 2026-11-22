@@ -53,9 +53,7 @@ class LiteLLMJudge(EndpointLabel, Judge):
     def check(self) -> None:
         """Raise now what the first call would raise: the SDK is missing, or the model's provider has no key."""
         sdk = self._sdk()
-        if self.base_url:
-            return
-        missing = sdk.validate_environment(self.model).get("missing_keys") or []
+        missing = sdk.validate_environment(self.model, api_base=self.base_url).get("missing_keys") or []
         missing = [name for name in missing if not name.endswith(EVALS_LITELLM_ENDPOINT_SUFFIXES)]
         if missing:
             raise ConfigurationError(MSG_JUDGE_MISSING_KEY.format(judge=self.name, variable=missing[0]))
