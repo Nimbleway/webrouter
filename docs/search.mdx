@@ -97,11 +97,11 @@ Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
 the body in the field others use for the snippet; that is normalized away, so
 `content` is the field to read whatever the backend did.
 
-`result.description` is the provider's snippet **when it returns one as a
-separate field**. Not every backend does at every depth: Nimble at `fast`
-returns the page body and no snippet, so `description` holds that body and is
-identical to `content`. Read `description` when you want the short form and
-have checked your backend supplies one; read `content` when you want text.
+`result.description` is always a snippet of at most about 500 characters, cut
+at a word boundary with a trailing `…` when it was shortened. It is the
+provider's own summary when it returns one, otherwise the head of the page
+body, and every backend's value is cut the same way, so it never repeats a
+whole page. Read `description` for the short form and `content` for the text.
 
 ## Effort
 

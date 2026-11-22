@@ -36,6 +36,9 @@ class AcmeProvider(HttpSearchProvider):
 register_provider("acme", AcmeProvider)  # custom names are strings: the enum is closed
 ```
 
+Put the result's full text in `content`. `description` is cut to a snippet of at
+most 500 characters, so text placed only there is truncated.
+
 Wrapping a real SDK instead? Subclass `SearchProvider` and implement `_search`
 and `_asearch`, as `nimble.py` and `tavily.py` do.
 

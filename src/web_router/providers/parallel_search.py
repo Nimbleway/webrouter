@@ -42,7 +42,7 @@ from web_router.constants_parallel import (
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._modes import merged
-from web_router.providers._search_text import as_snippet, lite_body, refused_domains
+from web_router.providers._search_text import lite_body, refused_domains
 from web_router.providers._utils import build_payload, compact, mapped
 from web_router.types import (
     SearchDepth,
@@ -151,7 +151,7 @@ class ParallelProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=as_snippet(excerpts[0]) if excerpts else "",
+            description=excerpts[0] if excerpts else "",
             content=lite_body("\n\n".join(excerpts), depth),
             published_date=hit.get("publish_date"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},

@@ -44,7 +44,7 @@ from web_router.constants_mode_parts_extract import EXA_EXTRACT_FLAGS
 from web_router.providers._clock import recency_start
 from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
-from web_router.providers._search_text import as_snippet, lite_body
+from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.exa_answer import ExaAnswerProvider as ExaAnswerProvider
 from web_router.types import (
@@ -109,7 +109,7 @@ class ExaProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=lite_body(summary, request.search_depth) or as_snippet(text),
+            description=summary or text,
             # lite's highlights cap is soft: Exa keeps a passage it will not split whole, up to ~2,800
             # characters live against a 500 cap, so lite is cut to a snippet here.
             content=lite_body(best_text(text, summary), request.search_depth),
