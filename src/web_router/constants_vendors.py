@@ -29,7 +29,7 @@ VENDOR_ERROR_BODY_LIMIT: Final = 2000
 """Characters of a vendor's error body kept in the raised message, after credentials are masked."""
 
 VENDOR_FIND_LIMIT: Final = 20
-"""Endpoints :meth:`~web_router.WebRouter.find_data_apis` returns when no limit is given."""
+"""Endpoints :meth:`~web_router.WebRouter.find_data_api_endpoints` returns when no limit is given."""
 
 VENDOR_FIND_STOP_WORDS: Final = frozenset(
     {
@@ -59,7 +59,7 @@ VENDOR_FIND_STOP_WORDS: Final = frozenset(
         "your",
     }
 )
-"""Query words :meth:`~web_router.WebRouter.find_data_apis` ignores: they say nothing about what an
+"""Query words :meth:`~web_router.WebRouter.find_data_api_endpoints` ignores: they say nothing about what an
 endpoint does, and counted as matches they let a summary's grammar outrank its meaning."""
 
 VENDOR_TOKEN_REFRESH_MARGIN: Final = 60.0

@@ -55,9 +55,9 @@ class VendorLookupMethods:
         return cast("_VendorLookup", self).data_api_endpoint(endpoint)
 
     def find_vendor_endpoints(self, query: str, **kwargs: Any) -> list[VendorEndpoint]:
-        """Deprecated: :meth:`find_data_apis`."""
-        warn_data_api_renamed("find_vendor_endpoints", "find_data_apis")
-        return cast("_VendorLookup", self).find_data_apis(query, **kwargs)
+        """Deprecated: :meth:`find_data_api_endpoints`."""
+        warn_data_api_renamed("find_vendor_endpoints", "find_data_api_endpoints")
+        return cast("_VendorLookup", self).find_data_api_endpoints(query, **kwargs)
 
 
 class SyncVendorMethods:

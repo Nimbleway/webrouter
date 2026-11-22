@@ -75,7 +75,7 @@ the job handle. Browser Use, Skyvern, Browserbase, and `auto`. Like research, it
 has no keyless tier, because every task bills.
 
 **Data APIs** (`call_data_api`, `data_api_request`, and `data_apis`,
-`data_api`, `data_api_endpoint`, `find_data_apis` to find what to call; the old
+`data_api`, `data_api_endpoint`, `find_data_api_endpoints` to find what to call; the old
 vendor names still work, with a `DeprecationWarning`) are not an eighth method of interchangeable backends. It reaches one vendor's own
 API with the user's credentials -- their Google Ads, their Datadog -- and
 returns the vendor's answer untouched. `search` lists the read endpoints that

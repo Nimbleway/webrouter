@@ -2,7 +2,7 @@
 
 The router methods are :meth:`~web_router.WebRouter.vendors`,
 :meth:`~web_router.WebRouter.vendor`, :meth:`~web_router.WebRouter.vendor_endpoint`,
-:meth:`~web_router.WebRouter.find_data_apis`,
+:meth:`~web_router.WebRouter.find_data_api_endpoints`,
 :meth:`~web_router.WebRouter.call_data_api` and
 :meth:`~web_router.WebRouter.data_api_request`. This package holds what they
 share: the catalog's file format (:mod:`~web_router.vendors.schema`), its

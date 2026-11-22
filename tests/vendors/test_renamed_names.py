@@ -37,7 +37,7 @@ def _wire(router: WebRouter | AsyncWebRouter, recorder: Recorder) -> None:
         ("vendors", "data_apis", ()),
         ("vendor", "data_api", ("datadog",)),
         ("vendor_endpoint", "data_api_endpoint", ("datadog.monitors.list",)),
-        ("find_vendor_endpoints", "find_data_apis", ("datadog error logs",)),
+        ("find_vendor_endpoints", "find_data_api_endpoints", ("datadog error logs",)),
     ],
 )
 def test_old_lookup_names_warn_and_answer_like_the_new(old: str, new: str, args: tuple[Any, ...]) -> None:

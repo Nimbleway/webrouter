@@ -96,7 +96,7 @@ class _VendorLookup(VendorLookupMethods):
         """One endpoint, by its id (``'<vendor>.<job>'``): its inputs, notes, and a recorded answer if any."""
         return get_catalog().endpoint(endpoint)
 
-    def find_data_apis(
+    def find_data_api_endpoints(
         self,
         query: str,
         *,

@@ -68,7 +68,7 @@ async def vendors_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> d
     router = tools.router
     query, vendor = arguments.get("query"), arguments.get("vendor")
     if query or vendor:
-        endpoints = router.find_data_apis(
+        endpoints = router.find_data_api_endpoints(
             query or "", vendor=vendor, category=arguments.get("category"), limit=arguments.get("limit")
         )
         vendors = {name: router.data_api(name) for name in {endpoint.vendor for endpoint in endpoints}}
