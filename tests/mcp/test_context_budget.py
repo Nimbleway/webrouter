@@ -182,8 +182,7 @@ async def test_web_run_will_not_run_a_method_the_allowlist_leaves_out(
     failed, text = await outcome(routed(), MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
 
     assert failed and f"web_run planned {MCP_TOOL_EXTRACT}" in text and ENV_MCP_TOOLS in text
-    assert "WEB_ROUTER_MCP_PROFILE" in text
-    assert members == [], "nothing was run"
+    assert members == [] and "WEB_ROUTER_MCP_PROFILE" in text, "nothing was run"
 
 
 def test_an_empty_structured_answer_is_kept() -> None:
