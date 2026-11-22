@@ -71,6 +71,11 @@ def test_the_readme_is_not_a_fragment(tmp_path: Path) -> None:
     assert changelog.problems(tmp_path) == []
 
 
+def test_an_entry_may_start_with_a_pull_request_number(tmp_path: Path) -> None:
+    _write(tmp_path, "num.fixed.md", "#123 no longer drops the path.")
+    assert changelog.problems(tmp_path) == []
+
+
 def test_a_wrapped_entry_is_one_paragraph(tmp_path: Path) -> None:
     _write(tmp_path, "wrap.added.md", "A long entry\nwrapped over two lines.\n")
     assert changelog.problems(tmp_path) == []

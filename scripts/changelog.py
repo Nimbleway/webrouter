@@ -86,7 +86,7 @@ def problems(directory: Path | None = None) -> list[str]:
             found.append(EMPTY.format(file=file))
         elif len(text) > MAX_CHARS:
             found.append(TOO_LONG.format(file=file, chars=len(text), limit=MAX_CHARS))
-        elif re.search(r"^\s*(?:[-*+] |#)", text, re.MULTILINE):
+        elif re.search(r"^\s*(?:[-*+] |#+\s)", text, re.MULTILINE):
             found.append(BULLET.format(file=file))
         elif re.search(r"\n\s*\n", text):
             found.append(PARAGRAPHS.format(file=file))
