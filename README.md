@@ -234,7 +234,7 @@ There is no WebRouter service in between, and nothing to sign up for.
   left for a method, the free tiers listed in
   [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials).
   Name a provider to keep a call on that backend alone.
-- **Beyond the backends:** `call_vendor` reaches the vendor API you name, with
+- **Beyond the backends:** `call_data_api` reaches the vendor API you name, with
   that vendor's credentials; `WEB_ROUTER_MCP_ROUTER=remote` sends a prompt to
   the router service at the URL you set; and `evaluate()` downloads the
   question set you pick and calls the judge model you configure.

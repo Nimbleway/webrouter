@@ -86,7 +86,10 @@ async def call_tool(tools: WebRouterTools, name: str, arguments: Mapping[str, An
         payload = await tools.call(name, arguments)
     except Exception as exc:
         # Any failure, a bug's too: its text can quote a key, so every one goes through error_text's masking.
-        return failure_result(exc)
+        failed = failure_result(exc)
+        if renamed_note is not None:  # a failed call by an old name is told of the new one too
+            failed.content.insert(0, TextContent(text=renamed_note))
+        return failed
     if renamed_note is not None and isinstance(payload, dict):
         payload = {"deprecated": renamed_note, **payload}
     output = payload if isinstance(payload, ToolOutput) else ToolOutput(payload=payload)

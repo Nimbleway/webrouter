@@ -9,6 +9,8 @@ well as the call's) and how much of an answer fits.
 
 from __future__ import annotations
 
+import functools
+import logging
 import os
 from collections.abc import Awaitable, Callable, Mapping
 from typing import TYPE_CHECKING, Any
@@ -36,6 +38,8 @@ from web_router.mcp.shaping_vendors import (
 
 if TYPE_CHECKING:
     from web_router.mcp.tools import WebRouterTools
+
+_LOG = logging.getLogger(__name__)
 
 
 _ARG_KINDS: dict[str, tuple[str, Callable[[Any], bool]]] = {
@@ -96,8 +100,15 @@ def writes_allowed() -> bool:
         return True
     if os.environ.get(VENDOR_ENV_ALLOW_WRITES_OLD) == "1":
         warn_data_api_renamed(VENDOR_ENV_ALLOW_WRITES_OLD, VENDOR_ENV_ALLOW_WRITES)
+        _log_old_writes_variable()
         return True
     return False
+
+
+@functools.cache
+def _log_old_writes_variable() -> None:
+    """Tell the operator, once, on stderr: Python hides a library's ``DeprecationWarning`` by default."""
+    _LOG.warning(MSG_DATA_API_DEPRECATED.format(old=VENDOR_ENV_ALLOW_WRITES_OLD, new=VENDOR_ENV_ALLOW_WRITES))
 
 
 async def call_vendor_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:

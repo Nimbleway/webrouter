@@ -200,27 +200,27 @@ model, not a control. What the server enforces is narrower: it never returns a
 key, a configured key's value is masked wherever it shows up in an error or a
 `fetch_raw` payload, the browser opens only http(s) pages and never its own
 debugging endpoint or a cloud metadata address
-([Where the browser may go](#where-the-browser-may-go)), `call_vendor` cannot change data without
-`WEB_ROUTER_ALLOW_VENDOR_WRITES`, and redirects are never followed with a key
+([Where the browser may go](#where-the-browser-may-go)), `call_data_api` cannot change data without
+`WEB_ROUTER_ALLOW_DATA_API_WRITES`, and redirects are never followed with a key
 attached.
 
 What it cannot stop on its own is one server holding all three of: private
-data (`call_vendor` reads your vendor accounts), untrusted input (every page
+data (`call_data_api` reads your vendor accounts), untrusted input (every page
 it reads), and a way out (a `search` query, or a URL `browser_goto` opens,
 carries whatever the model puts in it). A model steered by a page could read
 your data with one tool and send it out with the next. When the model will
 read pages you do not trust, give it less:
 
 - **Serve only the tools the task needs.** `WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw`
-  leaves out the browser, the vendor tools and `load_env`; see
+  leaves out the browser, the data API tools and `load_env`; see
   [Serving fewer tools](#serving-fewer-tools-web_router_mcp_tools).
 - **Cap what one connection spends.** Set `WEB_ROUTER_MCP_MAX_COST_USD` (and
   `WEB_ROUTER_MCP_TIME_LIMIT_S`); with billed keys and no ceiling, the server
   says so on stderr at startup.
-- **Keep `call_vendor` and `load_env` in a second server.** Register web-router
+- **Keep `call_data_api` and `load_env` in a second server.** Register web-router
   twice, under two names: one for browsing, with
   `WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw,browser_*`, and one for your
-  own accounts, with `WEB_ROUTER_MCP_TOOLS=vendors,vendor_endpoint,call_vendor`,
+  own accounts, with `WEB_ROUTER_MCP_TOOLS=data_apis,data_api_endpoint,call_data_api`,
   enabled only when you need it.
 - **Decide where keys may come from.** Three switches, each read from the
   real environment only, each defaulting to the behaviour described above:
