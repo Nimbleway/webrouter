@@ -1,0 +1,319 @@
+{
+  "vendor": "oanda",
+  "name": "OANDA",
+  "category": "finance",
+  "summary": "Forex, metals and CFD prices from OANDA's v20 REST API: tradeable instruments, live bid/ask pricing and historical candles.",
+  "docs_url": "https://developer.oanda.com/rest-live-v20/introduction/",
+  "base_url": "https://{host}",
+  "settings": {
+    "host": {
+      "env": [
+        "OANDA_HOST"
+      ],
+      "default": "api-fxpractice.oanda.com",
+      "choices": [
+        "api-fxpractice.oanda.com",
+        "api-fxtrade.oanda.com"
+      ],
+      "description": "api-fxpractice.oanda.com for a practice (demo) account token, api-fxtrade.oanda.com for a live account token. Use the host that matches the account the token belongs to."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "OANDA_API_KEY",
+          "OANDA_ACCESS_TOKEN"
+        ],
+        "description": "An OANDA personal access token (fxTrade Account Management Portal > Manage API Access). Sent as an Authorization Bearer header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Needs an OANDA fxTrade account, practice or live; every data call is scoped to an account ID.",
+    "Limit: 120 requests per second per IP, and at most 2 new connections per second; over it returns 429.",
+    "Instruments are written BASE_QUOTE with an underscore: EUR_USD, XAU_USD.",
+    "Times come back RFC 3339 by default; an Accept-Datetime-Format: UNIX header switches them to Unix seconds.",
+    "Only market-data reads are listed; the order, trade and transfer endpoints are left out on purpose."
+  ],
+  "sources": [
+    "https://developer.oanda.com/rest-live-v20/introduction/",
+    "https://developer.oanda.com/rest-live-v20/development-guide/",
+    "https://developer.oanda.com/rest-live-v20/authentication/",
+    "https://developer.oanda.com/rest-live-v20/account-ep/",
+    "https://developer.oanda.com/rest-live-v20/pricing-ep/",
+    "https://developer.oanda.com/rest-live-v20/instrument-df/",
+    "https://developer.oanda.com/rest-live-v20/primitives-df/",
+    "https://developer.oanda.com/rest-live-v20/pricing-df/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "oanda.accounts.list",
+      "name": "List the token's accounts",
+      "summary": "IDs and tags of every account the access token can read.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/accounts",
+      "notes": [
+        "Use it to find the accountID the other calls need; it reads nothing about balances or positions."
+      ],
+      "job": "account.validate",
+      "docs_url": "https://developer.oanda.com/rest-live-v20/account-ep/",
+      "verified": {
+        "docs": "https://developer.oanda.com/rest-live-v20/account-ep/"
+      }
+    },
+    {
+      "id": "oanda.instruments.list",
+      "name": "List tradeable instruments",
+      "summary": "Instruments the account can trade, with display precision, pip location, margin rate and type (CURRENCY, CFD or METAL).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/accounts/{accountID}/instruments",
+      "params": {
+        "accountID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account ID (list them with oanda.accounts.list)."
+        },
+        "instruments": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated instruments to return, e.g. EUR_USD,XAU_USD.",
+          "example": "EUR_USD,USD_JPY"
+        }
+      },
+      "notes": [
+        "The list depends on the account's regulatory division."
+      ],
+      "job": "market.symbols",
+      "docs_url": "https://developer.oanda.com/rest-live-v20/account-ep/",
+      "verified": {
+        "docs": "https://developer.oanda.com/rest-live-v20/account-ep/"
+      }
+    },
+    {
+      "id": "oanda.pricing.get",
+      "name": "Get current prices",
+      "summary": "Latest bid and ask ladders, closeout prices and tradeable status for instruments.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/accounts/{accountID}/pricing",
+      "params": {
+        "accountID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account ID (list them with oanda.accounts.list)."
+        },
+        "instruments": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated instruments, e.g. EUR_USD,USD_CAD.",
+          "example": "EUR_USD,USD_CAD"
+        },
+        "since": {
+          "in": "query",
+          "type": "string",
+          "description": "Only prices that changed after this time (RFC 3339 or Unix seconds)."
+        },
+        "includeHomeConversions": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add conversion factors to the account's home currency; default false."
+        }
+      },
+      "job": "market.fx",
+      "docs_url": "https://developer.oanda.com/rest-live-v20/pricing-ep/",
+      "verified": {
+        "docs": "https://developer.oanda.com/rest-live-v20/pricing-ep/"
+      }
+    },
+    {
+      "id": "oanda.instrument.candles",
+      "name": "Get candles for an instrument",
+      "summary": "Mid, bid and/or ask OHLC candles and tick volume for one instrument.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/accounts/{accountID}/instruments/{instrument}/candles",
+      "params": {
+        "accountID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account ID (list them with oanda.accounts.list)."
+        },
+        "instrument": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Instrument, e.g. EUR_USD, XAU_USD.",
+          "example": "EUR_USD"
+        },
+        "price": {
+          "in": "query",
+          "type": "string",
+          "description": "Any mix of M (mid), B (bid), A (ask), e.g. MBA; default M.",
+          "example": "M"
+        },
+        "granularity": {
+          "in": "query",
+          "type": "string",
+          "description": "Candle size: S5 (default) to M (month), e.g. M1, H1, D, W.",
+          "example": "H1",
+          "enum": [
+            "S5",
+            "S10",
+            "S15",
+            "S30",
+            "M1",
+            "M2",
+            "M4",
+            "M5",
+            "M10",
+            "M15",
+            "M30",
+            "H1",
+            "H2",
+            "H3",
+            "H4",
+            "H6",
+            "H8",
+            "H12",
+            "D",
+            "W",
+            "M"
+          ]
+        },
+        "count": {
+          "in": "query",
+          "type": "integer",
+          "description": "Candles to return, default 500, at most 5000. Leave out when giving both from and to."
+        },
+        "from": {
+          "in": "query",
+          "type": "string",
+          "description": "Range start, RFC 3339 or Unix seconds.",
+          "example": "2024-01-01T00:00:00Z"
+        },
+        "to": {
+          "in": "query",
+          "type": "string",
+          "description": "Range end, RFC 3339 or Unix seconds."
+        },
+        "smooth": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Open each candle at the previous close; default false."
+        },
+        "includeFirst": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include the candle covering from; default true. false helps polling."
+        },
+        "dailyAlignment": {
+          "in": "query",
+          "type": "integer",
+          "description": "Hour (0-23) daily candles close at, in alignmentTimezone; default 17."
+        },
+        "alignmentTimezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Time zone for dailyAlignment; default America/New_York. Times still come back in UTC.",
+          "example": "America/New_York"
+        },
+        "weeklyAlignment": {
+          "in": "query",
+          "type": "string",
+          "description": "Day weekly candles start on; default Friday.",
+          "enum": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ]
+        }
+      },
+      "notes": [
+        "The last candle can be incomplete: check complete on each candle.",
+        "Prices are strings, to keep their precision."
+      ],
+      "job": "market.history",
+      "docs_url": "https://developer.oanda.com/rest-live-v20/pricing-ep/",
+      "verified": {
+        "docs": "https://developer.oanda.com/rest-live-v20/pricing-ep/"
+      }
+    },
+    {
+      "id": "oanda.pricing.latest_candles",
+      "name": "Get the latest candles for several instruments",
+      "summary": "Current and last completed candle for several instrument, granularity and price combinations.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v3/accounts/{accountID}/candles/latest",
+      "params": {
+        "accountID": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Account ID (list them with oanda.accounts.list)."
+        },
+        "candleSpecifications": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated INSTRUMENT:GRANULARITY:PRICE specs, e.g. EUR_USD:M1:M,USD_JPY:H1:BA.",
+          "example": "EUR_USD:S10:BM"
+        },
+        "smooth": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Open each candle at the previous close; default false."
+        },
+        "dailyAlignment": {
+          "in": "query",
+          "type": "integer",
+          "description": "Hour (0-23) daily candles close at, in alignmentTimezone; default 17."
+        },
+        "alignmentTimezone": {
+          "in": "query",
+          "type": "string",
+          "description": "Time zone for dailyAlignment; default America/New_York. Times still come back in UTC.",
+          "example": "America/New_York"
+        },
+        "weeklyAlignment": {
+          "in": "query",
+          "type": "string",
+          "description": "Day weekly candles start on; default Friday.",
+          "enum": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+          ]
+        }
+      },
+      "job": "market.history",
+      "docs_url": "https://developer.oanda.com/rest-live-v20/pricing-ep/",
+      "verified": {
+        "docs": "https://developer.oanda.com/rest-live-v20/pricing-ep/"
+      }
+    }
+  ]
+}

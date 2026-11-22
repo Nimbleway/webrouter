@@ -1,0 +1,280 @@
+{
+  "vendor": "clinicaltrials-gov",
+  "name": "ClinicalTrials.gov",
+  "category": "health",
+  "summary": "The US National Library of Medicine's registry of clinical studies worldwide: search studies by condition, intervention, sponsor, location or status, and fetch one study's full record.",
+  "docs_url": "https://clinicaltrials.gov/data-api/api",
+  "base_url": "https://clinicaltrials.gov/api/v2",
+  "notes": [
+    "Keyless.",
+    "Search terms use ClinicalTrials.gov's Essie expression syntax (AND, OR, NOT, AREA[Field]value, quotes for phrases).",
+    "Paging is by token: a response with nextPageToken has more; pass it as pageToken and repeat every other parameter unchanged (only countTotal, pageSize and pageToken may change). A page can come back with an empty studies list.",
+    "A full study record is large: pass fields (comma- or pipe-separated piece names such as NCTId,BriefTitle,OverallStatus) to keep responses small. /studies/metadata lists the field names."
+  ],
+  "sources": [
+    "https://clinicaltrials.gov/data-api/api",
+    "https://clinicaltrials.gov/api/oas/v2"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "clinicaltrials-gov.studies.search",
+      "name": "Search clinical studies",
+      "summary": "Studies matching query and filter parameters, one page at a time, as JSON or CSV.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/studies",
+      "params": {
+        "query_cond": {
+          "in": "query",
+          "type": "string",
+          "description": "Condition or disease, in Essie syntax.",
+          "example": "lung cancer",
+          "wire_name": "query.cond"
+        },
+        "query_term": {
+          "in": "query",
+          "type": "string",
+          "description": "Other terms, searched across the record.",
+          "wire_name": "query.term"
+        },
+        "query_intr": {
+          "in": "query",
+          "type": "string",
+          "description": "Intervention or treatment.",
+          "example": "pembrolizumab",
+          "wire_name": "query.intr"
+        },
+        "query_locn": {
+          "in": "query",
+          "type": "string",
+          "description": "Location terms (city, state, country, facility).",
+          "wire_name": "query.locn"
+        },
+        "query_titles": {
+          "in": "query",
+          "type": "string",
+          "description": "Title or acronym.",
+          "wire_name": "query.titles"
+        },
+        "query_outc": {
+          "in": "query",
+          "type": "string",
+          "description": "Outcome measure.",
+          "wire_name": "query.outc"
+        },
+        "query_spons": {
+          "in": "query",
+          "type": "string",
+          "description": "Sponsor or collaborator.",
+          "wire_name": "query.spons"
+        },
+        "query_lead": {
+          "in": "query",
+          "type": "string",
+          "description": "Lead sponsor name only.",
+          "wire_name": "query.lead"
+        },
+        "query_id": {
+          "in": "query",
+          "type": "string",
+          "description": "Study IDs (NCT number, org study ID, secondary IDs).",
+          "wire_name": "query.id"
+        },
+        "filter_overallStatus": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma- or pipe-separated statuses, e.g. RECRUITING,NOT_YET_RECRUITING,COMPLETED.",
+          "example": "RECRUITING",
+          "wire_name": "filter.overallStatus"
+        },
+        "filter_geo": {
+          "in": "query",
+          "type": "string",
+          "description": "distance(latitude,longitude,distance), e.g. distance(39.0035707,-77.1013313,50mi).",
+          "example": "distance(39.0035707,-77.1013313,50mi)",
+          "wire_name": "filter.geo"
+        },
+        "filter_ids": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma- or pipe-separated NCT IDs (aliases match too).",
+          "wire_name": "filter.ids"
+        },
+        "filter_advanced": {
+          "in": "query",
+          "type": "string",
+          "description": "Extra filter in Essie syntax, e.g. AREA[Phase]PHASE3; does not affect ranking.",
+          "wire_name": "filter.advanced"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma- or pipe-separated fields to return; all when omitted."
+        },
+        "sort": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to two sort keys, field[:asc|desc], e.g. LastUpdatePostDate:desc or @relevance. Only date and numeric fields sort; unsorted by default."
+        },
+        "countTotal": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true returns totalCount with the first page."
+        },
+        "pageSize": {
+          "in": "query",
+          "type": "integer",
+          "description": "Studies per page, default 10, max 1000."
+        },
+        "pageToken": {
+          "in": "query",
+          "type": "string",
+          "description": "nextPageToken from the previous page; omit for the first page."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv"
+          ],
+          "description": "json (default) or csv; for csv the next page token is in the x-next-page-token header."
+        },
+        "markupFormat": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "markdown",
+            "legacy"
+          ],
+          "description": "How markup text fields are formatted in JSON; default markdown."
+        }
+      },
+      "notes": [
+        "With no query or filter every study matches. If a query.* value holds only NCT IDs, the filters are ignored.",
+        "filter.* parameters do not change ranking; query.* parameters do when sorted by @relevance."
+      ],
+      "job": "health.trials.search",
+      "docs_url": "https://clinicaltrials.gov/data-api/api",
+      "verified": {
+        "docs": "https://clinicaltrials.gov/api/oas/v2"
+      }
+    },
+    {
+      "id": "clinicaltrials-gov.studies.get",
+      "name": "Get one study by NCT number",
+      "summary": "The full record of one study: design, arms, eligibility, locations, contacts, outcomes and results when posted.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/studies/{nctId}",
+      "params": {
+        "nctId": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "NCT number.",
+          "example": "NCT04852770"
+        },
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma- or pipe-separated fields to return; all when omitted."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "json",
+            "csv",
+            "json.zip",
+            "fhir.json",
+            "ris"
+          ],
+          "description": "Default json."
+        },
+        "markupFormat": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "markdown",
+            "legacy"
+          ],
+          "description": "How markup text fields are formatted in JSON; default markdown."
+        }
+      },
+      "notes": [
+        "An old NCT number kept as an alias answers with a 301 redirect to the current study."
+      ],
+      "job": "health.trials.get",
+      "docs_url": "https://clinicaltrials.gov/data-api/api",
+      "verified": {
+        "docs": "https://clinicaltrials.gov/api/oas/v2"
+      }
+    },
+    {
+      "id": "clinicaltrials-gov.studies.metadata",
+      "name": "List the study data model's fields",
+      "summary": "Every field of a study record with its type, for the fields and sort parameters.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/studies/metadata",
+      "params": {
+        "includeIndexedOnly": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include indexed-only fields."
+        },
+        "includeHistoricOnly": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include fields found only in historic data."
+        }
+      },
+      "job": "reference.fields",
+      "docs_url": "https://clinicaltrials.gov/data-api/api",
+      "verified": {
+        "docs": "https://clinicaltrials.gov/api/oas/v2"
+      }
+    },
+    {
+      "id": "clinicaltrials-gov.studies.enums",
+      "name": "List enumeration values",
+      "summary": "Each enum type (status, phase, study type...) with the fields that use it and its allowed values.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/studies/enums",
+      "job": "reference.codes",
+      "docs_url": "https://clinicaltrials.gov/data-api/api",
+      "verified": {
+        "docs": "https://clinicaltrials.gov/api/oas/v2"
+      }
+    },
+    {
+      "id": "clinicaltrials-gov.stats.field_values",
+      "name": "Count the values of study fields",
+      "summary": "Value statistics for leaf fields across all studies, e.g. how many studies have each overall status or phase.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/stats/field/values",
+      "params": {
+        "fields": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma- or pipe-separated piece names or field paths, e.g. OverallStatus,Phase.",
+          "example": "OverallStatus"
+        },
+        "types": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma- or pipe-separated field types to filter by."
+        }
+      },
+      "job": "health.trials.stats",
+      "docs_url": "https://clinicaltrials.gov/data-api/api",
+      "verified": {
+        "docs": "https://clinicaltrials.gov/api/oas/v2"
+      }
+    }
+  ]
+}

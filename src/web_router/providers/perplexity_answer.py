@@ -20,6 +20,7 @@ from web_router.constants import (
     PERPLEXITY_RESEARCH_PATH,
     PROVIDER_PERPLEXITY,
 )
+from web_router.constants_mode_parts_answer import PERPLEXITY_ANSWER_TIERS
 from web_router.constants_perplexity import (
     MSG_PERPLEXITY_ANSWER_DOMAINS_EXCLUSIVE,
     MSG_PERPLEXITY_ANSWER_STOPPED,
@@ -75,10 +76,11 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
     a domain list is ``search_domain_filter`` (an excluded domain prefixed
     ``-``; the two lists together are refused before the call), ``recency`` is ``search_recency_filter`` and ``country``
     is ``user_location.country``. ``locale`` has no field and is refused.
-    Another effort level goes through ``provider_options``.
+    Another effort level is a vendor mode (``perplexity:perplexity-high``).
     """
 
     name: ClassVar[str] = PROVIDER_PERPLEXITY
+    tiers = PERPLEXITY_ANSWER_TIERS
     supported_parameters: ClassVar[frozenset[str]] = frozenset(
         {"include_domains", "exclude_domains", "recency", "country"}
     )
@@ -94,6 +96,8 @@ class PerplexityAnswerProvider(HttpAnswerProvider):
         tool = self._web_search(request)
         return build_payload(
             request,
+            None,
+            self,
             input=request.query,
             tools=[tool] if tool else None,
             **{PERPLEXITY_ANSWER_EFFORT_FIELD: PERPLEXITY_ANSWER_EFFORT},

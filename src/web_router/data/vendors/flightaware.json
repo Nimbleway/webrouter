@@ -1,0 +1,627 @@
+{
+  "vendor": "flightaware",
+  "name": "FlightAware AeroAPI",
+  "category": "commerce",
+  "summary": "FlightAware's flight-tracking API: live and recent flight status, tracks and positions, airport arrivals, departures, delays and weather, airline schedules and operator details.",
+  "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+  "pricing_url": "https://www.flightaware.com/commercial/aeroapi/",
+  "base_url": "https://aeroapi.flightaware.com/aeroapi",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "FLIGHTAWARE_API_KEY"
+        ],
+        "description": "An AeroAPI key (flightaware.com/aeroapi/portal > API keys), sent in the x-apikey header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "x-apikey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call is billed: each endpoint has a fee per result set (15 records), and a call that returns several pages pays for each page, up to max_pages. Fees run from $0.002 (airport weather) to $0.05 (flight search) per set and more for history; the Personal tier includes $5 of free usage a month.",
+    "Rate limits by tier: Personal 10 result sets a minute, Standard 5 a second, Premium 100 a second.",
+    "Prefer ICAO codes (KJFK, UAL, UAL1234) over IATA to avoid ambiguous matches.",
+    "Paging: links.next is a link to the next set of records; pass its cursor value back as cursor.",
+    "Alerts, flight intents, maps, Foresight and history endpoints are not in this entry."
+  ],
+  "sites": [
+    "flightaware.com"
+  ],
+  "sources": [
+    "https://www.flightaware.com/aeroapi/portal/documentation",
+    "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml",
+    "https://www.flightaware.com/commercial/aeroapi/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "flightaware.flights.get",
+      "name": "Get a flight's status",
+      "summary": "Status, times (scheduled, estimated, actual), gates, route and aircraft for recent and upcoming flights of an ident, registration or fa_flight_id.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/flights/{ident}",
+      "params": {
+        "ident": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Flight ident (ICAO form preferred, e.g. UAL1234), registration, or fa_flight_id.",
+          "example": "UAL1234"
+        },
+        "ident_type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "designator",
+            "registration",
+            "fa_flight_id"
+          ],
+          "description": "How to read ident; by default it is taken as a registration when it could be one."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, inclusive; no more than 10 days back or 2 days ahead. Defaults to about 14 days of recent and scheduled flights."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, exclusive; same window."
+        },
+        "max_pages": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages to fetch in this call, default 1; each page returned is billed."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "links.next cursor from the previous response, for the next page."
+        }
+      },
+      "notes": [
+        "Billed per result set returned: max_pages above 1 bills each page fetched.",
+        "Use the ICAO ident (UAL1234) rather than IATA (UA1234) to avoid matching the wrong flight."
+      ],
+      "job": "travel.flights.status",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      }
+    },
+    {
+      "id": "flightaware.flights.search",
+      "name": "Search airborne flights",
+      "summary": "Flights in the air now matching a query: area, ident or type wildcards, origin, destination, altitude, speed.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/flights/search",
+      "params": {
+        "query": {
+          "in": "query",
+          "type": "string",
+          "description": "'-key value' pairs, e.g. -origin KLAX -type B77*, or -latlong \"MINLAT MINLON MAXLAT MAXLON\"; keys include -prefix, -type, -idents, -identOrReg, -airline, -destination, -origin, -originOrDestination, -aboveAltitude, -belowAltitude, -aboveGroundspeed, -belowGroundspeed, -filter ga|airline. Max 1000 bytes.",
+          "example": "-latlong \"44.953469 -111.045360 40.962321 -104.046577\""
+        },
+        "max_pages": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages to fetch in this call, default 1; each page returned is billed."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "links.next cursor from the previous response, for the next page."
+        }
+      },
+      "notes": [
+        "Billed per result set returned: max_pages above 1 bills each page fetched.",
+        "Among the dearer calls per result set; narrow the query and keep max_pages low."
+      ],
+      "job": "travel.flights.search",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      }
+    },
+    {
+      "id": "flightaware.flights.track",
+      "name": "Get a flight's track",
+      "summary": "Positions (time, lat, lon, altitude, speed) along a flight from the last 10 days.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/flights/{id}/track",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "fa_flight_id from flights.get."
+        },
+        "include_estimated_positions": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include estimated positions."
+        }
+      },
+      "notes": [
+        "Older than 10 days needs the history endpoints, which are not in this entry."
+      ],
+      "job": "travel.flights.track",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      }
+    },
+    {
+      "id": "flightaware.flights.position",
+      "name": "Get a flight's latest position",
+      "summary": "The most recent position report of a flight.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/flights/{id}/position",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "fa_flight_id from flights.get."
+        }
+      },
+      "job": "travel.flights.track",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      }
+    },
+    {
+      "id": "flightaware.airports.get",
+      "name": "Get an airport",
+      "summary": "Name, city, state, coordinates and time zone of an airport.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/airports/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Airport code: ICAO preferred (KJFK), IATA or LID also accepted.",
+          "example": "KJFK"
+        }
+      },
+      "job": "travel.airports.get",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      }
+    },
+    {
+      "id": "flightaware.airports.departures",
+      "name": "List recent departures from an airport",
+      "summary": "Flights that have departed an airport, newest first; default window the last 24 hours.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/airports/{id}/flights/departures",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Airport code: ICAO preferred (KJFK), IATA or LID also accepted.",
+          "example": "KJFK"
+        },
+        "airline": {
+          "in": "query",
+          "type": "string",
+          "description": "Airline code to filter by; not with type."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "General_Aviation",
+            "Airline"
+          ],
+          "description": "Kind of flights; not with airline."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, inclusive; no more than 10 days back or 2 days ahead. Default start is 24 hours ago."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, exclusive; same window."
+        },
+        "max_pages": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages to fetch in this call, default 1; each page returned is billed."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "links.next cursor from the previous response, for the next page."
+        }
+      },
+      "job": "travel.airports.flights",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      },
+      "notes": [
+        "Billed per result set returned: max_pages above 1 bills each page fetched."
+      ]
+    },
+    {
+      "id": "flightaware.airports.arrivals",
+      "name": "List recent arrivals at an airport",
+      "summary": "Flights that have arrived at an airport, newest first; default window the last 24 hours.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/airports/{id}/flights/arrivals",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Airport code: ICAO preferred (KJFK), IATA or LID also accepted.",
+          "example": "KJFK"
+        },
+        "airline": {
+          "in": "query",
+          "type": "string",
+          "description": "Airline code to filter by; not with type."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "General_Aviation",
+            "Airline"
+          ],
+          "description": "Kind of flights; not with airline."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, inclusive; no more than 10 days back or 2 days ahead. Default start is 24 hours ago."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, exclusive; same window."
+        },
+        "max_pages": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages to fetch in this call, default 1; each page returned is billed."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "links.next cursor from the previous response, for the next page."
+        }
+      },
+      "job": "travel.airports.flights",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      },
+      "notes": [
+        "Billed per result set returned: max_pages above 1 bills each page fetched."
+      ]
+    },
+    {
+      "id": "flightaware.airports.scheduled_departures",
+      "name": "List upcoming departures from an airport",
+      "summary": "Flights scheduled to depart soon, or recently cancelled, soonest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/airports/{id}/flights/scheduled_departures",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Airport code: ICAO preferred (KJFK), IATA or LID also accepted.",
+          "example": "KJFK"
+        },
+        "airline": {
+          "in": "query",
+          "type": "string",
+          "description": "Airline code to filter by; not with type."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "General_Aviation",
+            "Airline"
+          ],
+          "description": "Kind of flights; not with airline."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, inclusive; no more than 10 days back or 2 days ahead. Default start is 2 hours ago."
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, exclusive; same window."
+        },
+        "max_pages": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages to fetch in this call, default 1; each page returned is billed."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "links.next cursor from the previous response, for the next page."
+        }
+      },
+      "job": "travel.airports.flights",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      },
+      "notes": [
+        "Billed per result set returned: max_pages above 1 bills each page fetched."
+      ]
+    },
+    {
+      "id": "flightaware.airports.flights_to",
+      "name": "Find flights between two airports",
+      "summary": "Non-stop and one-stop flights from one airport to another.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/airports/{id}/flights/to/{dest_id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Origin airport code (ICAO preferred).",
+          "example": "KJFK"
+        },
+        "dest_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Destination airport code (ICAO preferred).",
+          "example": "KLAX"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "General_Aviation",
+            "Airline"
+          ],
+          "description": "Kind of flights."
+        },
+        "connection": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "nonstop",
+            "onestop"
+          ],
+          "description": "Must be nonstop (the default then) when start or end is given."
+        },
+        "start": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, inclusive; no more than 10 days back or 2 days ahead. "
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 8601 date or datetime, exclusive; same window."
+        },
+        "max_pages": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages to fetch in this call, default 1; each page returned is billed."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "links.next cursor from the previous response, for the next page."
+        }
+      },
+      "notes": [
+        "Billed per result set returned: max_pages above 1 bills each page fetched.",
+        "Results can hold multi-leg trips, so the response shape differs from the other flight lists."
+      ],
+      "job": "travel.flights.search",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      }
+    },
+    {
+      "id": "flightaware.airports.delays",
+      "name": "Get an airport's delays",
+      "summary": "Reported delay reasons at an airport (an airport-level delay; single flights can be late without one).",
+      "kind": "read",
+      "method": "GET",
+      "path": "/airports/{id}/delays",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Airport code: ICAO preferred (KJFK), IATA or LID also accepted.",
+          "example": "KJFK"
+        }
+      },
+      "job": "travel.airports.delays",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      }
+    },
+    {
+      "id": "flightaware.airports.weather",
+      "name": "Get an airport's weather observations",
+      "summary": "Decoded METAR reports for an airport, newest first.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/airports/{id}/weather/observations",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Airport code: ICAO preferred (KJFK), IATA or LID also accepted.",
+          "example": "KJFK"
+        },
+        "temperature_units": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "C",
+            "F",
+            "Celsius",
+            "Fahrenheit"
+          ],
+          "description": "Default Celsius."
+        },
+        "return_nearby_weather": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Use the nearest airport within 30 miles when this one has no report."
+        },
+        "timestamp": {
+          "in": "query",
+          "type": "string",
+          "description": "Return the day of reports before this time."
+        },
+        "max_pages": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages to fetch in this call, default 1; each page returned is billed."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "links.next cursor from the previous response, for the next page."
+        }
+      },
+      "job": "weather.current",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      },
+      "notes": [
+        "Billed per result set returned: max_pages above 1 bills each page fetched."
+      ]
+    },
+    {
+      "id": "flightaware.schedules",
+      "name": "List published airline schedules",
+      "summary": "Scheduled flights airlines have published, from 3 months back to a year ahead, by date window, route, airline or flight number.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/schedules/{date_start}/{date_end}",
+      "params": {
+        "date_start": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Earliest departure, ISO date or datetime; no earlier than 3 months ago and at most 3 weeks before date_end.",
+          "example": "2026-12-01"
+        },
+        "date_end": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "Latest departure; no later than a year ahead and at most 3 weeks after date_start.",
+          "example": "2026-12-02"
+        },
+        "origin": {
+          "in": "query",
+          "type": "string",
+          "description": "Origin airport, ICAO or IATA."
+        },
+        "destination": {
+          "in": "query",
+          "type": "string",
+          "description": "Destination airport, ICAO or IATA."
+        },
+        "airline": {
+          "in": "query",
+          "type": "string",
+          "description": "Carrier, ICAO or IATA."
+        },
+        "flight_number": {
+          "in": "query",
+          "type": "integer",
+          "description": "Flight number."
+        },
+        "include_codeshares": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include ticketing codeshares, default true."
+        },
+        "include_regional": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Include regional codeshares, default true."
+        },
+        "max_pages": {
+          "in": "query",
+          "type": "integer",
+          "description": "Pages to fetch in this call, default 1; each page returned is billed."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "links.next cursor from the previous response, for the next page."
+        }
+      },
+      "job": "travel.flights.schedules",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      },
+      "notes": [
+        "Billed per result set returned: max_pages above 1 bills each page fetched."
+      ]
+    },
+    {
+      "id": "flightaware.operators.get",
+      "name": "Get an airline or operator",
+      "summary": "Name, ICAO and IATA codes, headquarters and other details of an operator.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/operators/{id}",
+      "params": {
+        "id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "ICAO (preferred) or IATA operator code.",
+          "example": "UAL"
+        }
+      },
+      "job": "travel.airlines.get",
+      "docs_url": "https://www.flightaware.com/aeroapi/portal/documentation",
+      "verified": {
+        "docs": "https://flightaware.com/commercial/aeroapi/resources/aeroapi-openapi.yml"
+      }
+    }
+  ]
+}

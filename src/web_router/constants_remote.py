@@ -78,6 +78,10 @@ WIRE_MAX_NAME = 128
 """The longest name a decision may set -- candidate id, provider, option -- since a record may show it; a longer
 one is dropped, not shortened, so it can never spell a real name."""
 
+CANDIDATE_MODE_KEY = "mode"
+"""A candidate's vendor mode on the wire: left out when it has none, as every candidate of a router shown backends
+only."""
+
 WIRE_MAX_NAMES = 64
 """The most entries a decision may hold in one list or mapping: ``tools``, one method's ``providers``,
 ``exclude``, or one method's ``params``. Past it, the decision is refused."""

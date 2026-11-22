@@ -124,5 +124,5 @@ MCP_DESC_EXTRACT = (
     "Read pages you have URLs for, as markdown, HTML or text, in a few seconds. It reads, it does not "
     "find: URLs come from `search`, the user or a page. A page behind a login or clicks is "
     "`browser_open`'s. provider='max' races every backend, one fetch each: only when the user wants speed "
-    "over cost. `data_apis`: its site's vendor APIs, for `call_vendor`."
+    "over cost. `data_apis`: its site's data APIs, for `call_data_api`."
 )

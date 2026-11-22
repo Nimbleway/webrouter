@@ -39,6 +39,8 @@ from web_router.constants_exa import (
     EXA_TYPE_BY_EFFORT,
     EXA_TYPE_FIELD,
 )
+from web_router.constants_mode_parts import EXA_CONTENT_PARTS, EXA_TIERS
+from web_router.constants_mode_parts_extract import EXA_EXTRACT_FLAGS
 from web_router.providers._clock import recency_start
 from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
@@ -65,6 +67,8 @@ class ExaProvider(HttpSearchProvider):
     """Routes searches to the Exa Search API."""
 
     name: ClassVar[str] = PROVIDER_EXA
+    tiers = EXA_TIERS
+    contents = EXA_CONTENT_PARTS
     supported_parameters: ClassVar[frozenset[str]] = frozenset({*EXA_PARAM_NAMES, "recency", "search_depth", "effort"})
 
     base_url: ClassVar[str] = EXA_BASE_URL
@@ -77,6 +81,7 @@ class ExaProvider(HttpSearchProvider):
         return build_payload(
             request,
             EXA_PARAM_NAMES,
+            self,
             query=request.query,
             contents=EXA_CONTENTS_BY_DEPTH[request.search_depth] if request.search_depth else EXA_CONTENTS,
             **{
@@ -123,6 +128,7 @@ class ExaExtractProvider(HttpExtractProvider):
     """
 
     name: ClassVar[str] = PROVIDER_EXA
+    flags = EXA_EXTRACT_FLAGS
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(EXA_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = EXA_EXTRACT_DEFAULT_FORMAT
@@ -137,7 +143,7 @@ class ExaExtractProvider(HttpExtractProvider):
         # `urls` and `ids` are both accepted and the schema requires one of
         # them; Exa documents `urls` as "backwards compatible with the ids
         # parameter", so `ids` is the older spelling rather than the current one.
-        return build_payload(request, urls=urls, **EXA_EXTRACT_FORMATS[self.format_of(request)])
+        return build_payload(request, None, self, urls=urls, **EXA_EXTRACT_FORMATS[self.format_of(request)])
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
         body_format = self.format_of(request)
@@ -164,8 +170,19 @@ class ExaExtractProvider(HttpExtractProvider):
     @staticmethod
     def _failures(payload: dict[str, Any]) -> list[ExtractFailure]:
         """Exa reports each URL's outcome in `statuses`, keyed by the id it was asked for."""
-        return [
-            ExtractFailure(url=status.get("id", ""), error=str(status.get("error") or status.get("status")))
-            for status in payload.get("statuses") or []
-            if status.get("status") != "success"
-        ]
+        return [_failure(status) for status in payload.get("statuses") or [] if status.get("status") != "success"]
+
+
+def _failure(status: dict[str, Any]) -> ExtractFailure:
+    """One URL Exa did not read: its error's tag, and the page's own HTTP status where Exa reports one.
+
+    The status is what lets a 404 read as ``kind="target"`` -- the page is gone -- so ``auto`` does not fetch it again.
+    """
+    error = status.get("error")
+    detail = error if isinstance(error, dict) else {}
+    code = detail.get("httpStatusCode")
+    return ExtractFailure(
+        url=status.get("id", ""),
+        error=str(detail.get("tag") or error or status.get("status")),
+        status_code=code if isinstance(code, int) and not isinstance(code, bool) else None,
+    )

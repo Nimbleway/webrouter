@@ -1,0 +1,351 @@
+{
+  "vendor": "bettercontact",
+  "name": "BetterContact",
+  "category": "enrichment",
+  "summary": "Waterfall work email and mobile phone enrichment across many providers, lead and company search, and person and company profiles.",
+  "docs_url": "https://doc.bettercontact.rocks/",
+  "base_url": "https://app.bettercontact.rocks/api/v2",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "BETTERCONTACT_API_KEY"
+        ],
+        "description": "A BetterContact API key (app.bettercontact.rocks/api_requests). Sent in the X-API-Key header."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-API-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Credits are charged per valid data point returned, once per result however many providers were tried; every result carries credits_consumed and credits_left.",
+    "100 requests a minute per key (200 on Pro or from 1,000 monthly credits), across all endpoints.",
+    "Webhook delivery is left out: poll the *_result endpoints instead."
+  ],
+  "sources": [
+    "https://doc.bettercontact.rocks/llms.txt",
+    "https://doc.bettercontact.rocks/api-reference/openapi.json",
+    "https://doc.bettercontact.rocks/api-reference/credits.md",
+    "https://doc.bettercontact.rocks/api-reference/api_rate_limits.md",
+    "https://doc.bettercontact.rocks/api-reference/authentication.md"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "bettercontact.account.credits",
+      "name": "Get credit balance",
+      "summary": "Credits left for the organization behind the key.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/account",
+      "notes": [
+        "Free and exempt from the rate limit. The balance is shared across the organization."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/endpoint/account",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/endpoint/account"
+      }
+    },
+    {
+      "id": "bettercontact.person.get",
+      "name": "Look up a person profile",
+      "summary": "A person's LinkedIn profile and current company, without email or phone.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrich_profile/lead",
+      "params": {
+        "linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Public LinkedIn profile URL; enough alone."
+        },
+        "first_name": {
+          "in": "body",
+          "type": "string",
+          "description": "First name, when no linkedin_url."
+        },
+        "last_name": {
+          "in": "body",
+          "type": "string",
+          "description": "Last name, when no linkedin_url."
+        },
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company domain, when no linkedin_url."
+        },
+        "company": {
+          "in": "body",
+          "type": "string",
+          "description": "Company name; complements company_domain, cannot replace it."
+        }
+      },
+      "notes": [
+        "A read over POST, answered synchronously. 0.1 credit per profile found; no match is a free 404."
+      ],
+      "job": "people.enrich",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/enrich_profile/lead",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/enrich_profile/lead"
+      }
+    },
+    {
+      "id": "bettercontact.company.get",
+      "name": "Look up a company profile",
+      "summary": "One company's profile by domain or LinkedIn URL.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/enrich_profile/company",
+      "params": {
+        "company_domain": {
+          "in": "body",
+          "type": "string",
+          "description": "Company website or domain.",
+          "example": "hubspot.com"
+        },
+        "company_linkedin_url": {
+          "in": "body",
+          "type": "string",
+          "description": "Company LinkedIn page URL."
+        }
+      },
+      "notes": [
+        "A read over POST, answered synchronously. Free."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/enrich_profile/company",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/enrich_profile/company"
+      }
+    },
+    {
+      "id": "bettercontact.contacts.enrich",
+      "name": "Start a waterfall email and phone enrichment",
+      "summary": "Finds verified work emails and mobile phones for 1 to 100 leads across many providers; answers with a request id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/async",
+      "params": {
+        "data": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "1-100 leads: {first_name, last_name, company_domain or company, linkedin_url, custom_fields}.",
+          "example": [
+            {
+              "first_name": "Elon",
+              "last_name": "Musk",
+              "company_domain": "tesla.com"
+            }
+          ]
+        },
+        "enrich_email_address": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Find the work email (the default when no enrich_* flag is set)."
+        },
+        "enrich_phone_number": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Find the mobile phone; needs the phone add-on, else 402. Pass linkedin_url for best results."
+        },
+        "enrich_profile": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Also return the LinkedIn profile; needs linkedin_url."
+        },
+        "verify_catch_all": {
+          "in": "body",
+          "type": "boolean",
+          "description": "Run the catch-all verification layer; needs its add-on."
+        },
+        "timeout_seconds": {
+          "in": "body",
+          "type": "integer",
+          "description": "Stop the waterfall after this long and keep what was found."
+        }
+      },
+      "notes": [
+        "Starts a billed job: credits are spent only per verified email or phone returned (undeliverable or not found is free); nothing else changes in the account.",
+        "Asynchronous: poll bettercontact.contacts.enrich_result with the returned id. Submissions are not idempotent: a retried POST is charged again."
+      ],
+      "job": "people.email.find",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/endpoint/create",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/endpoint/create"
+      }
+    },
+    {
+      "id": "bettercontact.contacts.enrich_result",
+      "name": "Get waterfall enrichment results",
+      "summary": "Emails, phones and statuses found for each lead of an enrichment request.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/async/{request_id}",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The id returned by bettercontact.contacts.enrich."
+        }
+      },
+      "notes": [
+        "Free. Answers 202 with no data while running; read status and stop only at terminated (on_hold means credits ran out mid-run: top up, do not resubmit)."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/endpoint/get",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/endpoint/get"
+      }
+    },
+    {
+      "id": "bettercontact.leads.search",
+      "name": "Start a lead search",
+      "summary": "Finds people by company criteria (domain, industry, location, size, funding, hiring, tech) and person criteria (title, seniority, department, location); answers with a request id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/lead_finder/async",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Criteria, each {include: [...], exclude: [...]}: company, company_industry, company_hq_location, company_technologies, company_headcount_min/max, lead_job_title, lead_seniority, lead_department, lead_location, ...; closed lists are in Taxonomies.",
+          "example": {
+            "company": {
+              "include": [
+                "hubspot.com"
+              ]
+            },
+            "lead_job_title": {
+              "include": [
+                "head of sales"
+              ]
+            }
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Leads to return, 1-200; use with offset to page."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Leads to skip; only with limit."
+        },
+        "max_leads": {
+          "in": "body",
+          "type": "integer",
+          "description": "Leads to return without paging, 1-200, default 100."
+        }
+      },
+      "notes": [
+        "A read over POST, free: the search spends no credits (its enrich_email_address and enrich_phone_number flags, which do, are left out of this entry).",
+        "Runs in the background: poll bettercontact.leads.search_result with the request_id."
+      ],
+      "job": "people.search",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/endpoint/lead_finder_post",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/endpoint/lead_finder_post"
+      }
+    },
+    {
+      "id": "bettercontact.leads.search_result",
+      "name": "Get lead search results",
+      "summary": "The leads a lead search found.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lead_finder/async/{request_id}",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The request_id returned by bettercontact.leads.search."
+        }
+      },
+      "notes": [
+        "Free. Answers 202 with no data while running; read status and stop only at terminated (on_hold means credits ran out mid-run: top up, do not resubmit)."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/endpoint/lead_finder_get",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/endpoint/lead_finder_get"
+      }
+    },
+    {
+      "id": "bettercontact.company.search",
+      "name": "Start a company search",
+      "summary": "Finds companies by domain, industry, HQ location, headcount, revenue, funding, technologies and hiring; answers with a request id.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/company_finder/async",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "required": true,
+          "description": "Criteria, each {include: [...]}: company, company_industry, company_hq_location, company_technologies, company_keywords, company_headcount_min/max, revenue_ranges, last_funding_round_names, job_post_titles, is_public, ...",
+          "example": {
+            "company_industry": {
+              "include": [
+                "Software Development"
+              ]
+            }
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Companies per page, 1-200, default 100."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "Matches to skip."
+        }
+      },
+      "notes": [
+        "Starts a billed job: 0.1 credit per company returned, each page charged on its own; no match is free.",
+        "Asynchronous: poll bettercontact.company.search_result with the request_id. Domains must be lowercase."
+      ],
+      "job": "company.search",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/endpoint/company_finder_post",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/endpoint/company_finder_post"
+      }
+    },
+    {
+      "id": "bettercontact.company.search_result",
+      "name": "Get company search results",
+      "summary": "The companies a company search found, with the total match count.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/company_finder/async/{request_id}",
+      "params": {
+        "request_id": {
+          "in": "path",
+          "type": "string",
+          "required": true,
+          "description": "The request_id returned by bettercontact.company.search."
+        }
+      },
+      "notes": [
+        "Free. Answers 202 with no data while running; read status and stop only at terminated (on_hold means credits ran out mid-run: top up, do not resubmit)."
+      ],
+      "job": "jobs.result",
+      "docs_url": "https://doc.bettercontact.rocks/api-reference/endpoint/company_finder_get",
+      "verified": {
+        "docs": "https://doc.bettercontact.rocks/api-reference/endpoint/company_finder_get"
+      }
+    }
+  ]
+}

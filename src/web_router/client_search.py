@@ -93,7 +93,7 @@ class SyncSearch(_SearchPlan):
         ``data_apis`` (on by default) also lists, in
         :attr:`~web_router.SearchResponse.data_apis`, the catalog endpoints
         whose words match the query -- found locally, at no cost, and never
-        called: run one with :meth:`call_vendor`. ``configured_only`` keeps
+        called: run one with :meth:`call_data_api`. ``configured_only`` keeps
         the ones this router holds credentials for. ``data_apis_only`` lists
         them alone and calls no web backend, so it refuses every web option
         but ``max_results``, which then caps the matches.

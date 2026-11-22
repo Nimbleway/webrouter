@@ -51,3 +51,11 @@ def test_an_overlong_name_never_spells_its_shortened_form() -> None:
     decision = decision_from_wire(overlong)
     assert decision.exclude == {} and decision.providers == {"search": []}, "no prefix + '\u2026' to match"
     assert decision_from_wire({"schema": 1, "exclude": {prefix: "why"}}).exclude == {prefix: "why"}, "at the limit"
+
+
+def test_a_decision_with_more_attempts_than_the_entry_limit_is_refused() -> None:
+    attempts = [f"search:exa:mode-{i}" for i in range(WIRE_MAX_NAMES + 1)]
+    with pytest.raises(WireError, match=f"more than {WIRE_MAX_NAMES} entries"):
+        decision_from_wire({"schema": 1, "attempts": attempts})
+    kept = decision_from_wire({"schema": 1, "attempts": [*attempts[: WIRE_MAX_NAMES - 1], "search:" + "z" * 20_000]})
+    assert kept.attempts == attempts[: WIRE_MAX_NAMES - 1], "an overlong id dropped"

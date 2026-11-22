@@ -22,4 +22,20 @@ html.dark #sidebar {
 .nimble-mark:hover,.nimble-mark:focus-visible{opacity:1}
 .nimble-mark-icon{width:16px;height:16px;background-color:currentColor;-webkit-mask:url(/logo/nimble.svg) center/contain no-repeat;mask:url(/logo/nimble.svg) center/contain no-repeat}
 .nimble-mark-text{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .25s}
-.nimble-mark:hover .nimble-mark-text,.nimble-mark:focus-visible .nimble-mark-text{max-width:8rem}
+/* The mark keeps its open width at rest, so the footer row never moves when the label slides in.
+   Only the icon and label take the pointer, not the empty reserved space.
+   Below 640px the open label does not fit the row, so it stays closed. */
+@media (min-width:640px){
+  .nimble-mark{width:calc(16px + .4rem + 8rem);justify-content:flex-end;pointer-events:none}
+  .nimble-mark>*{pointer-events:auto}
+  .nimble-mark:hover .nimble-mark-text,.nimble-mark:focus-visible .nimble-mark-text{max-width:8rem}
+}
+
+/* Wide tables scroll sideways: keep the first column (the row labels) in view, on the page color.
+   The ::before strip covers the page gutter to its left, so scrolled cells do not show there. */
+.mdx-content table :is(th,td):first-child{position:sticky;left:var(--page-padding,0px);z-index:1}
+.mdx-content table :is(th,td):first-child,
+.mdx-content table :is(th,td):first-child::before{background-color:rgb(var(--background-light))}
+html.dark .mdx-content table :is(th,td):first-child,
+html.dark .mdx-content table :is(th,td):first-child::before{background-color:rgb(var(--background-dark))}
+.mdx-content table :is(th,td):first-child::before{content:"";position:absolute;top:0;bottom:0;right:100%;width:var(--page-padding,0px)}

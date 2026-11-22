@@ -70,7 +70,7 @@ def markdown_table(catalog: VendorCatalog) -> str:
             "|---|---|---|---|---|---|",
         ]
         for vendor in vendors:
-            variables = ", ".join(f"`{spec.env[0]}`" for spec in vendor.auth.credentials.values()) or "none"
+            variables = ", ".join(f"`{name}`" for name in _variables(vendor)) or "none"
             lines.append(
                 f"| [{vendor.name}]({vendor.docs_url}) `{vendor.vendor}` | {vendor.summary} | {_counts(vendor)} "
                 f"| {_auth(vendor)} | {variables} | {_verified(vendor)} |"
@@ -79,18 +79,20 @@ def markdown_table(catalog: VendorCatalog) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _variables(vendor: Vendor) -> list[str]:
+    """Each variable a vendor's credentials read, once: several credentials can share one key."""
+    return list(dict.fromkeys(spec.env[0] for spec in vendor.auth.credentials.values()))
+
+
 def env_section(catalog: VendorCatalog, elsewhere: frozenset[str] = frozenset()) -> str:
     """The vendor section; a variable ``.env.example`` already sets for a backend is pointed to, not repeated."""
-    lines = [ENV_OPEN, "# Keys for call_vendor(): each vendor's own API, with your account. All optional.", ""]
+    lines = [ENV_OPEN, "# Keys for call_data_api(): each vendor's own API, with your account. All optional.", ""]
     for vendor in catalog.all():
         if not vendor.auth.credentials and not vendor.settings:
             continue
         lines.append(f"# {vendor.name} - {vendor.docs_url}")
-        for spec in vendor.auth.credentials.values():
-            if spec.env[0] in elsewhere:
-                lines.append(f"#   uses {spec.env[0]} above")
-            else:
-                lines.append(f"{spec.env[0]}=")
+        for name in _variables(vendor):
+            lines.append(f"#   uses {name} above" if name in elsewhere else f"{name}=")
         for name, setting in vendor.settings.items():
             default = f" (default {setting.default})" if setting.default else ""
             lines.append(f"# {setting.env[0]}=   # optional {name}{default}")

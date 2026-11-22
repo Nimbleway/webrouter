@@ -25,7 +25,9 @@ from web_router.constants import (
     TAVILY_EXTRACT_RESULT_FIELD,
     TAVILY_SDK_EXTRACT_TIMEOUT,
 )
+from web_router.constants_mode_parts_extract import TAVILY_EXTRACT_TIERS
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.providers._cost import keyless_cost
 from web_router.providers._deadline import call_budget, current_deadline
 from web_router.providers._utils import build_payload, resolve_api_key
 from web_router.providers.base import ExtractProvider
@@ -77,6 +79,7 @@ class TavilyExtractProvider(TavilyClientsMixin, ExtractProvider):
     """Fetches page contents through the Tavily Extract API."""
 
     name: ClassVar[str] = PROVIDER_TAVILY
+    tiers = TAVILY_EXTRACT_TIERS
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(TAVILY_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = TAVILY_EXTRACT_DEFAULT_FORMAT
@@ -124,6 +127,8 @@ class TavilyExtractProvider(TavilyClientsMixin, ExtractProvider):
         """Translate a normalized request into Tavily ``extract()`` keyword arguments."""
         payload = build_payload(
             request,
+            None,
+            self,
             urls=urls,
             format=TAVILY_EXTRACT_FORMATS[self.format_of(request)],
             timeout=self._timeout,
@@ -154,4 +159,5 @@ class TavilyExtractProvider(TavilyClientsMixin, ExtractProvider):
             ],
             request_id=payload.get("request_id"),
             raw=[payload],
+            **keyless_cost(self),
         )

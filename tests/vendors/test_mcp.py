@@ -28,7 +28,7 @@ def recorder() -> Recorder:
 
 @pytest.fixture
 async def tools(recorder: Recorder) -> Any:
-    router = AsyncWebRouter(vendor_credentials=DATADOG)
+    router = AsyncWebRouter(data_api_credentials=DATADOG)
     router._vendor_caller = VendorCaller(
         router.vendor_credential_source(), async_transport=httpx.MockTransport(recorder)
     )

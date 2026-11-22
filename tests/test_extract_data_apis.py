@@ -57,7 +57,7 @@ def _clips_catalog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[
 def test_a_page_on_a_served_site_lists_its_read_endpoints_those_its_path_names_first(
     fake_extract_provider: Any,
 ) -> None:
-    with WebRouter("fake", vendor_credentials=KEYED) as router:
+    with WebRouter("fake", data_api_credentials=KEYED) as router:
         response = router.extract("https://www.clips.test/videos/abc")
     matches = response.documents[0].data_apis
     assert len(matches) == DATA_API_EXTRACT_LIMIT
@@ -90,7 +90,7 @@ def test_each_page_gets_its_own_matches(fake_extract_provider: Any) -> None:
 
 
 async def test_the_async_router_lists_them_too(fake_extract_provider: Any) -> None:
-    async with AsyncWebRouter("fake", vendor_credentials=KEYED) as router:
+    async with AsyncWebRouter("fake", data_api_credentials=KEYED) as router:
         response = await router.extract("https://clips.test/playlists")
     assert response.documents[0].data_apis[0].endpoint == "clips.playlists.list"
 

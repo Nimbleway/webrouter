@@ -23,7 +23,7 @@ from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import ToolName
 from web_router.routing.invoke import AttachedRouter, RouterLike
 from web_router.routing.registry import aclose_router, discard_router, resolve_router
-from web_router.routing.route_tools import checked_route_tools
+from web_router.routing.route_tools import checked_route_modes, checked_route_tools
 from web_router.routing.router_owner import _discard_refused
 from web_router.routing.url_policy import url_check
 
@@ -40,6 +40,9 @@ class Member:
     """The tools it is asked on: the ``route_tools`` it declares, else all five."""
     url_policy: str | None
     """Its ``min_url_policy``, when it declares one."""
+    modes: bool = False
+    """Whether it is shown vendor mode candidates: the ``route_modes`` it declares (a ``remote`` member's
+    ``router_config``), else no."""
 
 
 def _spec(index: int, spec: object) -> tuple[Any, dict[str, Any] | None]:
@@ -71,13 +74,14 @@ def _member(index: int, spec: object) -> Member:
     try:
         attached = AttachedRouter(built, fail_on_error=False)
         tools = checked_route_tools(None, built)
+        modes = checked_route_modes(None, built)
         policy = getattr(built, ROUTER_URL_POLICY_ATTR, None)  # a property may raise: the router is closed too
         url_check(policy)  # refused as attaching it directly refuses it
         name = _name(built, router.strip() if isinstance(router, str) else None)  # router_name may raise too
     except BaseException:
         _discard_refused(owned)
         raise
-    return Member(name, attached, owned, tools, policy if isinstance(policy, str) else None)
+    return Member(name, attached, owned, tools, policy if isinstance(policy, str) else None, modes)
 
 
 def built_members(routers: object) -> list[Member]:

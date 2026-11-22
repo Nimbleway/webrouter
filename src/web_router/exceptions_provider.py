@@ -10,8 +10,9 @@ from collections.abc import Iterable
 from web_router._dotenv import with_dotenv_hint
 from web_router.constants import MSG_UNKNOWN_PROVIDER
 from web_router.constants_answer import MSG_ANSWER_NO_DEFAULT, MSG_ANSWER_NONE_CONFIGURED
+from web_router.constants_live_data_any import MSG_LIVE_DATA_WHICH_BACKEND
 from web_router.constants_providers import MSG_PROVIDER_WRONG_METHOD
-from web_router.exceptions import WebRouterError
+from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.types import Provider
 
 _BUILTIN_NAMES = frozenset(provider.value for provider in Provider)
@@ -52,3 +53,16 @@ class NoAnswerProviderError(ProviderNotFoundError):
         else:
             message = MSG_ANSWER_NONE_CONFIGURED.format(default=default, env_vars=", ".join(self.env_vars) or "none")
         WebRouterError.__init__(self, *with_dotenv_hint((message,)))
+
+
+class LiveDataBackendChoiceError(ConfigurationError):
+    """A bare live data source name could be on several configured backends, so the caller must name one.
+
+    A :class:`ConfigurationError`, so an ``except`` for that still catches it. Unlike a missing key, nothing
+    is wrong with this machine: :attr:`providers` names the backends, and ``provider=`` picks one.
+    """
+
+    def __init__(self, source: str, providers: Iterable[str]):
+        self.source = source
+        self.providers = list(providers)
+        super().__init__(MSG_LIVE_DATA_WHICH_BACKEND.format(source=source, providers=", ".join(self.providers)))

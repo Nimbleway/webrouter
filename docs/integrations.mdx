@@ -68,9 +68,11 @@ model, which could not fix it.
 tool answers in LangChain's `content_and_artifact` form: the model sees JSON in
 one layout for every backend, each result's text cut to `result_chars` (a
 page to `document_chars`), and the tool message's `artifact` carries the
-untouched `SearchResponse` or `ExtractResponse`. A backend failure reaches the
-model as a one-line error it can react to; `web_extract` names the URLs it
-could not read rather than failing the call.
+untouched `SearchResponse` or `ExtractResponse`. A backend failure, or a call
+past `timeout`, reaches the model as the short error the Claude and OpenAI
+tools give (see [What the model reads when a call fails](#what-the-model-reads-when-a-call-fails));
+`web_extract` names the URLs it could not read rather than failing the call,
+and refuses private hosts unless built with `url_policy=None`.
 
 ## Claude agents
 
@@ -104,9 +106,10 @@ them, and `call` / `acall` run each call here, on your keys. The options rule
 is the LangChain tools' — the model supplies the query or the URLs, you fix the
 rest — and so is the rendering, byte for byte. Input the model got wrong comes
 back as an error result it can fix; a backend failure does too; your own setup
-mistake raises. The tools are named `web_router_search` and
-`web_router_extract`, never `web_search`, so an agent that also holds Claude's
-built-in search cannot confuse the two.
+mistake raises (see [What the model reads when a call fails](#what-the-model-reads-when-a-call-fails)).
+The tools are named `web_router_search` and `web_router_extract`, never
+`web_search`, so an agent that also holds Claude's built-in search cannot
+confuse the two (see [Tool names](#tool-names)).
 
 **Answer is opt-in.** `methods=["search", "extract", "answer"]` adds
 `web_router_answer`: one question in, the backend's written answer and its
@@ -153,6 +156,75 @@ strict, so OpenAI holds the model's arguments to the schema. OpenAI has no
 error flag on a tool's output, so an error's text says on its own that the
 call failed or did not run. The tools keep their `web_router_` names, so they
 never collide with OpenAI's built-in `web_search` either.
+
+## Tool names
+
+The LangChain tools and the Claude and OpenAI tools are named differently, on
+purpose: Claude and OpenAI each have a built-in `web_search`, so their tools
+carry a `web_router_` prefix that never collides with it.
+
+| Method  | LangChain     | Claude and OpenAI    |
+| ------- | ------------- | -------------------- |
+| search  | `web_search`  | `web_router_search`  |
+| extract | `web_extract` | `web_router_extract` |
+| answer  | `web_answer`  | `web_router_answer`  |
+
+A Claude or OpenAI model that calls a LangChain name gets an error result
+pointing it at the name it meant.
+
+## What the model reads when a call fails
+
+The Claude, OpenAI and LangChain tools fail the same way. The text says in words
+that the call did not run or failed, since an OpenAI tool output has no error
+flag, and `is_error` is set on the Claude and OpenAI result.
+
+- **Input the model got wrong** does not run and bills nothing: a tool name this
+  instance does not serve, arguments that are null, not an object or not valid
+  JSON, a key the schema does not take (`max_results`, say), a missing or blank
+  `query`, or `urls` that are not a list of 1 to 5 strings. Each says what was
+  wrong. LangChain checks the name and the JSON itself; its tools report the
+  rest the same way.
+- **A backend failure** is told from the error's fields, never the vendor's
+  text, and cut to `result_chars`. `auto` adds each backend it tried and its kind; a throttle adds `status` and
+  `retry_after`. The exception, with the vendor's whole text, is on
+  `result.error` (on the LangChain `ToolException`'s `__cause__`).
+- **A call past `timeout`** (60 seconds by default; `timeout=None` lifts it) is
+  a `kind=timeout, retryable=true` failure.
+- **An extract** answers in one shape whether some URLs failed or all did:
+  `failures` lists each URL with a `reason`, its `kind`, `retryable` and any
+  `status_code`. When no page came back, an `error` line comes first, the
+  result is an error, and each URL sent carries that call's kind.
+
+```text
+web_router_search did not run: it takes only `query`; leave out `max_results`.
+web_router_search failed: nimble: the page's address is the problem, so another backend would fail the same way (kind=target, retryable=false).
+```
+
+Everything else is your setup — a missing key, an option the provider does not
+map — and raises, because no retry by the model fixes it.
+
+`short_error(exc)` builds that one line for any web-router error, for a CLI's
+stderr or a log:
+
+```python
+from web_router.integrations import short_error
+
+try:
+    router.search(query)
+except WebRouterError as exc:
+    print(short_error(exc), file=sys.stderr)
+```
+
+### URLs the model passes
+
+The extract tools hold a model's URLs to `url_policy="public_only"` by default:
+a loopback, private, link-local or cloud metadata host (`169.254.169.254`), or
+any URL that is not `http` or `https`, is never sent to a backend and comes
+back in `failures` with `kind="refused"` and why. The other URLs in the call
+are still read. Pass `url_policy=None` to send any `http` or `https` URL, for a
+backend you run on your own network. The check reads the host as written: it
+does not resolve DNS, and it does not follow or re-check redirects, since the
+backend fetches the page.
 
 ## Wrapping `search` for your own agent
 

@@ -61,6 +61,23 @@
       "description": "Per method, the backends to try, best first.",
       "title": "Providers"
     },
+    "attempts": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "maxItems": 64
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Candidate ids to try, best first, vendor modes included; non-empty, they replace ``tools`` and ``providers``.",
+      "title": "Attempts"
+    },
     "exclude": {
       "anyOf": [
         {
@@ -153,6 +170,7 @@
           "jina"
         ]
       },
+      "attempts": null,
       "exclude": {
         "search:tavily": "the prompt names a URL"
       },

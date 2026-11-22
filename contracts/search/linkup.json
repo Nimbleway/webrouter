@@ -67,12 +67,28 @@
       "max": {
         "body.depth": "deep"
       }
+    },
+    "mode": {
+      "linkup-flash": {
+        "body.depth": "flash"
+      },
+      "linkup-standard": {
+        "body.depth": "standard"
+      },
+      "linkup-deep": {
+        "body.depth": "deep"
+      }
     }
   },
   "not_mapped": [
     "country",
     "locale",
     "search_depth"
+  ],
+  "offers": [
+    "linkup-flash",
+    "linkup-standard",
+    "linkup-deep"
   ],
   "source": [
     "https://docs.linkup.so/pages/documentation/endpoints/search/reference"
@@ -82,7 +98,10 @@
     "include_domains": "live: tests/test_integration_surface.py::test_domain_filters_are_honored",
     "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
     "recency": "docs: https://docs.linkup.so/pages/documentation/endpoints/search/reference (fromDate checked live on answer, 2026-11-01). Linkup applies the filter, and its results carry no date: live on 2026-11-09 week returned none dated, so web-router's results cannot show the window",
-    "effort": "live: 2026-11-09 search-options check: low (flash), medium (fast), high (standard) and max (deep) all answered, max in about 33 s"
+    "effort": "live: 2026-11-09 search-options check: low (flash), medium (fast), high (standard) and max (deep) all answered, max in about 33 s",
+    "mode.linkup-flash": "docs: https://docs.linkup.so/pages/documentation/endpoints/search/reference",
+    "mode.linkup-standard": "docs: https://docs.linkup.so/pages/documentation/endpoints/search/reference",
+    "mode.linkup-deep": "docs: https://docs.linkup.so/pages/documentation/endpoints/search/reference"
   },
   "vendor_options": {
     "toDate": {

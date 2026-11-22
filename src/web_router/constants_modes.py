@@ -28,6 +28,16 @@ LEVELS: frozenset[str] = frozenset(DEPTH_LEVELS + EFFORT_LEVELS)
 TOOLS: tuple[str, ...] = ("search", "extract", "live_data", "answer", "research", "open_browser", "browse")
 """The router methods an id's first part may name."""
 
+PINNED_CALLS: dict[str, tuple[str, str]] = {
+    "search": ("search", "asearch"),
+    "extract": ("extract", "aextract"),
+    "answer": ("answer", "aanswer"),
+    "browse": ("submit", "asubmit"),
+}
+"""The methods a mode may be pinned on, and the provider calls a pinned class stamps the mode on.
+
+A browse task starts in ``submit``, which ``browse`` waits on, so the job it hands back keeps the pinned request."""
+
 KIND_TIER = "tier"
 KIND_CONTENT = "content"
 KIND_FLAG = "flag"
@@ -53,3 +63,9 @@ ROW_VENDOR = "a {kind} row's mode starts with the provider's name, as {prefix!r}
 ROW_ADDS = "adds_usd and writes belong on a flag row only"
 ROW_ADDS_VALUE = "adds_usd is a finite amount, not negative"
 ROW_DEPTH = "depth_assumed is a search_depth level, on a tier or content row only; a content row needs it"
+MSG_PIN_TOOL = "{text!r} names {tool!r}: a pinned {method} backend is {method}:provider:mode or provider:mode"
+MSG_PIN_LEVEL = "mode {mode!r} names the level {level!r}, which a {method} request has no option for: drop it"
+MSG_PIN_OPTION = "mode {mode!r} writes {field!r}, which provider_options sets too: drop one"
+MSG_PIN_DEPTH = "mode {mode!r} stands for search_depth={depth!r}, not {asked!r}: drop one"
+MSG_PIN_EFFORT = "mode {mode!r} stands for effort={effort!r}, not {asked!r}: drop one"
+MSG_PIN_WRITES = "mode {mode!r} writes {field!r}, which {option}={value!r} sets to another value: drop one"

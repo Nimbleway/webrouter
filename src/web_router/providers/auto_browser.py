@@ -30,14 +30,14 @@ from web_router.constants import (
 )
 from web_router.exceptions import MissingParameterError, ProviderError, UnsupportedParameterError, WebRouterError
 from web_router.providers._chain import (
-    _RECOVERABLE,
+    RECOVERABLE,
     _ChainSpec,
     _exhausted,
     _keyed_chain,
     _members_and_chain,
-    _nothing_started,
     _quoted,
     _valued,
+    nothing_started,
 )
 from web_router.providers._members import _Members
 from web_router.providers.base import AsyncBrowserHandle, BrowserHandle, BrowserProvider
@@ -121,8 +121,8 @@ class AutoBrowserProvider(BrowserProvider):
             try:
                 # Returned as it is: the first session opened is the only one.
                 return self._member(position).open(request)
-            except _RECOVERABLE as exc:
-                if not _nothing_started(exc):
+            except RECOVERABLE as exc:
+                if not nothing_started(exc):
                     raise
                 failures[provider_name] = exc
         raise _exhausted(self.name, failures, MSG_AUTO_BROWSER_EXHAUSTED)
@@ -132,8 +132,8 @@ class AutoBrowserProvider(BrowserProvider):
         for position, provider_name in self._eligible(request):
             try:
                 return await self._member(position).aopen(request)
-            except _RECOVERABLE as exc:
-                if not _nothing_started(exc):
+            except RECOVERABLE as exc:
+                if not nothing_started(exc):
                     raise
                 failures[provider_name] = exc
         raise _exhausted(self.name, failures, MSG_AUTO_BROWSER_EXHAUSTED)

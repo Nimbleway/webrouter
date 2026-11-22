@@ -1,0 +1,638 @@
+{
+  "vendor": "affinity",
+  "name": "Affinity",
+  "category": "analytics",
+  "summary": "An Affinity relationship CRM: companies, people and opportunities with their field data, lists and saved views, relationship strength, and notes.",
+  "docs_url": "https://developer.affinity.co/pages/external-api-v2/introduction",
+  "pricing_url": "https://www.affinity.co/pricing",
+  "base_url": "https://api.affinity.co",
+  "headers": {
+    "X-Affinity-Api-Version": "2026-09-17"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "AFFINITY_API_KEY"
+        ],
+        "description": "an Affinity API key from Settings > Manage Apps (needs the Generate an API key permission); it reads as its user"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every call pins API version 2026-09-17 with the X-Affinity-Api-Version header.",
+    "Field data comes back only for the fields named in fieldIds or fieldTypes; get the ids from the fields calls. Several values repeat the key (fieldIds=a&fieldIds=b).",
+    "Paging is a cursor: follow pagination.nextUrl, or pass its cursor.",
+    "Limits: 900 requests per user per minute; monthly calls by plan (Scale and Advanced 100k, Enterprise unlimited); 429 when hit. Calls to API v1 and v2 share the pool."
+  ],
+  "sources": [
+    "https://developer.affinity.co/pages/external-api-v2/getting-started",
+    "https://developer.affinity.co/pages/external-api-v2/authentication",
+    "https://developer.affinity.co/pages/external-api-v2/rate-limits",
+    "https://developer.affinity.co/pages/external-api-v2/pagination",
+    "https://developer.affinity.co/pages/external-api-v2/versioning"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "affinity.whoami",
+      "name": "Identify the key",
+      "summary": "The key's user, organization and API permissions.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/auth/whoami",
+      "params": {},
+      "job": "account.validate",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/auth/get-current-user",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/auth/get-current-user"
+      }
+    },
+    {
+      "id": "affinity.companies.list",
+      "name": "List companies",
+      "summary": "Companies with their non-list field data, page by page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these company ids."
+        },
+        "fieldIds": {
+          "in": "query",
+          "type": "array",
+          "description": "Field ids to return data for, each sent as its own fieldIds; find them with the fields calls. Without fieldIds or fieldTypes no field data comes back."
+        },
+        "fieldTypes": {
+          "in": "query",
+          "type": "array",
+          "description": "Field categories to return data for, each sent as its own fieldTypes: enriched, global, relationship-intelligence. Not with fieldIds."
+        }
+      },
+      "job": "crm.companies.list",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/companies/get-all-companies",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/companies/get-all-companies"
+      }
+    },
+    {
+      "id": "affinity.companies.search",
+      "name": "Search companies",
+      "summary": "Companies matching a keyword, field filters and sorts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/companies/search",
+      "params": {
+        "fieldIds": {
+          "in": "query",
+          "type": "array",
+          "description": "Field ids to return data for. Not with fieldTypes."
+        },
+        "fieldTypes": {
+          "in": "query",
+          "type": "array",
+          "description": "Field categories to return data for: enriched, global, relationship-intelligence. Not with fieldIds."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "totalCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the total match count; costs more."
+        },
+        "search": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"term\": text of 3+ characters, \"fieldIds\": [more fields to match]}; the term always matches name and primary domain (or name and emails).",
+          "example": {
+            "term": "Acme"
+          }
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "A filter group: {\"operator\": \"and\"|\"or\", \"filters\": [{fieldId, valueType, operator, value}]}, nestable, up to 50 items per group.",
+          "example": {
+            "operator": "and",
+            "filters": [
+              {
+                "fieldId": "last-email",
+                "attributeId": "date-of-activity",
+                "valueType": "date",
+                "operator": "is-within-the-last",
+                "value": {
+                  "amount": [
+                    30
+                  ],
+                  "unit": "day"
+                }
+              }
+            ]
+          }
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 5 sorts: [{fieldId, direction: asc|desc}]."
+        }
+      },
+      "notes": [
+        "A POST that only searches; it changes nothing. Beta.",
+        "Needs the Export All Organizations directory permission. With no body it lists all companies."
+      ],
+      "job": "crm.companies.search",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/companies/search-companies",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/companies/search-companies"
+      }
+    },
+    {
+      "id": "affinity.companies.get",
+      "name": "Get a company",
+      "summary": "One company with the field data asked for.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/{companyId}",
+      "params": {
+        "companyId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The company id."
+        },
+        "fieldIds": {
+          "in": "query",
+          "type": "array",
+          "description": "Field ids to return data for, each sent as its own fieldIds; find them with the fields calls. Without fieldIds or fieldTypes no field data comes back."
+        },
+        "fieldTypes": {
+          "in": "query",
+          "type": "array",
+          "description": "Field categories to return data for, each sent as its own fieldTypes: enriched, global, relationship-intelligence. Not with fieldIds."
+        }
+      },
+      "job": "crm.companies.get",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/companies/get-a-single-company",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/companies/get-a-single-company"
+      }
+    },
+    {
+      "id": "affinity.companies.relationships",
+      "name": "Get a company's relationships",
+      "summary": "Pairs of people connected through a company with an interaction score from emails, meetings and chats.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/{companyId}/relationships",
+      "params": {
+        "companyId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The company id."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression."
+        },
+        "orderBy": {
+          "in": "query",
+          "type": "string",
+          "description": "interactionScore or -interactionScore (the default).",
+          "enum": [
+            "interactionScore",
+            "-interactionScore"
+          ]
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 20 when omitted."
+        },
+        "totalCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the total count."
+        }
+      },
+      "notes": [
+        "interactionScore runs from 0.0 to 1.0."
+      ],
+      "job": "crm.relationships",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/companies/get-relationships-for-a-company",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/companies/get-relationships-for-a-company"
+      }
+    },
+    {
+      "id": "affinity.companies.fields",
+      "name": "List company fields",
+      "summary": "Ids, names and types of the non-list company fields, to ask for their data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/companies/fields",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression on the fields."
+        },
+        "includes": {
+          "in": "query",
+          "type": "array",
+          "description": "Extra properties: filterability, sortability."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/companies/get-metadata-on-company-fields",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/companies/get-metadata-on-company-fields"
+      }
+    },
+    {
+      "id": "affinity.persons.list",
+      "name": "List persons",
+      "summary": "People with their non-list field data, page by page.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/persons",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these person ids."
+        },
+        "fieldIds": {
+          "in": "query",
+          "type": "array",
+          "description": "Field ids to return data for, each sent as its own fieldIds; find them with the fields calls. Without fieldIds or fieldTypes no field data comes back."
+        },
+        "fieldTypes": {
+          "in": "query",
+          "type": "array",
+          "description": "Field categories to return data for, each sent as its own fieldTypes: enriched, global, relationship-intelligence. Not with fieldIds."
+        }
+      },
+      "job": "crm.contacts.list",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/persons/get-all-persons",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/persons/get-all-persons"
+      }
+    },
+    {
+      "id": "affinity.persons.search",
+      "name": "Search persons",
+      "summary": "People matching a keyword, field filters and sorts.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/v2/persons/search",
+      "params": {
+        "fieldIds": {
+          "in": "query",
+          "type": "array",
+          "description": "Field ids to return data for. Not with fieldTypes."
+        },
+        "fieldTypes": {
+          "in": "query",
+          "type": "array",
+          "description": "Field categories to return data for: enriched, global, relationship-intelligence. Not with fieldIds."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "totalCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the total match count; costs more."
+        },
+        "search": {
+          "in": "body",
+          "type": "object",
+          "description": "{\"term\": text of 3+ characters, \"fieldIds\": [more fields to match]}; the term always matches name and primary domain (or name and emails).",
+          "example": {
+            "term": "Acme"
+          }
+        },
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "A filter group: {\"operator\": \"and\"|\"or\", \"filters\": [{fieldId, valueType, operator, value}]}, nestable, up to 50 items per group.",
+          "example": {
+            "operator": "and",
+            "filters": [
+              {
+                "fieldId": "last-email",
+                "attributeId": "date-of-activity",
+                "valueType": "date",
+                "operator": "is-within-the-last",
+                "value": {
+                  "amount": [
+                    30
+                  ],
+                  "unit": "day"
+                }
+              }
+            ]
+          }
+        },
+        "sorts": {
+          "in": "body",
+          "type": "array",
+          "description": "Up to 5 sorts: [{fieldId, direction: asc|desc}]."
+        }
+      },
+      "notes": [
+        "A POST that only searches; it changes nothing. Beta.",
+        "Needs the Export All People directory permission."
+      ],
+      "job": "crm.contacts.search",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/persons/search-persons",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/persons/search-persons"
+      }
+    },
+    {
+      "id": "affinity.lists.list",
+      "name": "List lists",
+      "summary": "Every list the key can see, with owner and privacy.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/lists",
+      "params": {
+        "term": {
+          "in": "query",
+          "type": "string",
+          "description": "Only lists whose name contains this, case-insensitive."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        }
+      },
+      "job": "lists.list",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/lists/get-metadata-on-all-lists",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/lists/get-metadata-on-all-lists"
+      }
+    },
+    {
+      "id": "affinity.lists.fields",
+      "name": "List a list's fields",
+      "summary": "Ids, names and types of the fields on one list, including list-specific ones.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/lists/{listId}/fields",
+      "params": {
+        "listId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The list id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression on the fields."
+        },
+        "includes": {
+          "in": "query",
+          "type": "array",
+          "description": "Extra properties: filterability, sortability."
+        }
+      },
+      "job": "datasets.schema",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/lists/get-metadata-on-a-single-lists-fields",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/lists/get-metadata-on-a-single-lists-fields"
+      }
+    },
+    {
+      "id": "affinity.lists.entries",
+      "name": "List a list's entries",
+      "summary": "The rows of a list (companies, people or opportunities) with list-specific field data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/lists/{listId}/list-entries",
+      "params": {
+        "listId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The list id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "fieldIds": {
+          "in": "query",
+          "type": "array",
+          "description": "Field ids to return data for, each sent as its own fieldIds; find them with the fields calls. Without fieldIds or fieldTypes no field data comes back."
+        },
+        "fieldTypes": {
+          "in": "query",
+          "type": "array",
+          "description": "Field categories to return data for: enriched, global, list, relationship-intelligence. Not with fieldIds."
+        }
+      },
+      "job": "lists.items",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/lists/get-all-list-entries-on-a-list",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/lists/get-all-list-entries-on-a-list"
+      }
+    },
+    {
+      "id": "affinity.lists.view_entries",
+      "name": "List a saved view's entries",
+      "summary": "The rows of a saved view, with its filters and only its columns' field data.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/lists/{listId}/saved-views/{viewId}/list-entries",
+      "params": {
+        "listId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The list id."
+        },
+        "viewId": {
+          "in": "path",
+          "type": "integer",
+          "required": true,
+          "description": "The saved view id."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        }
+      },
+      "job": "lists.items",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/lists/get-all-list-entries-on-a-saved-view",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/lists/get-all-list-entries-on-a-saved-view"
+      }
+    },
+    {
+      "id": "affinity.opportunities.list",
+      "name": "List opportunities",
+      "summary": "Opportunities' basic information; their field data comes from list entries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/opportunities",
+      "params": {
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, 1 to 100; 100 when omitted."
+        },
+        "ids": {
+          "in": "query",
+          "type": "array",
+          "description": "Only these opportunity ids."
+        }
+      },
+      "notes": [
+        "Needs the Export data from Lists permission."
+      ],
+      "job": "crm.deals.list",
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/opportunities/get-all-opportunities",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/opportunities/get-all-opportunities"
+      }
+    },
+    {
+      "id": "affinity.notes.list",
+      "name": "List notes",
+      "summary": "Notes (not replies), filterable by creator and dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/notes",
+      "params": {
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Filter expression, e.g. creator.id=1 or createdAt>2026-11-01T00:00:00Z.",
+          "example": "createdAt>2026-11-01T00:00:00Z"
+        },
+        "includes": {
+          "in": "query",
+          "type": "array",
+          "description": "Extras: companiesPreview, personsPreview, opportunitiesPreview, repliesCount."
+        },
+        "cursor": {
+          "in": "query",
+          "type": "string",
+          "description": "The cursor from pagination.nextUrl of the previous page."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Items per page, up to 100; 20 when omitted."
+        },
+        "totalCount": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Add the total count."
+        }
+      },
+      "docs_url": "https://developer.affinity.co/api-reference/2026-09-17/notes/get-all-notes",
+      "verified": {
+        "docs": "https://developer.affinity.co/api-reference/2026-09-17/notes/get-all-notes"
+      }
+    }
+  ]
+}

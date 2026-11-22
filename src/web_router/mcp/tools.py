@@ -32,10 +32,8 @@ from web_router.constants import (
     ENV_MCP_ENV_FILE,
     MCP_ARG_HANDLE,
     MCP_ARG_MAX_CHARS,
-    MCP_ARG_PATH,
     MCP_ARG_PROVIDER,
     MCP_ARG_REF,
-    MCP_ARG_REMEMBER,
     MCP_ARG_SELECTOR,
     MCP_ARG_SESSION_ID,
     MCP_BROWSE_WAIT,
@@ -49,15 +47,8 @@ from web_router.constants import (
     MCP_MSG_BROWSER_ALREADY_ENDED,
     MCP_MSG_BROWSER_LOWERED,
     MCP_MSG_BROWSER_OPENED,
-    MCP_MSG_ENV_BAD_ARGUMENTS,
-    MCP_MSG_ENV_HINT,
-    MCP_MSG_ENV_NOTHING_NEW,
-    MCP_MSG_ENV_REMEMBERED,
-    MCP_MSG_INSTRUCTIONS_NO_KEYS,
     MCP_MSG_MISSING_ARGUMENT,
     MCP_MSG_NO_BACKEND,
-    MCP_MSG_NO_BACKEND_HINT,
-    MCP_MSG_NO_RAW,
     MCP_MSG_NOT_A_JOB,
     MCP_MSG_RESEARCH_PENDING,
     MCP_MSG_SNAPSHOT_TRUNCATED,
@@ -79,7 +70,6 @@ from web_router.constants import (
     MCP_TOOL_DESCRIPTIONS,
     MCP_TOOL_EXTRACT,
     MCP_TOOL_FETCH_RAW,
-    MCP_TOOL_LOAD_ENV,
     MCP_TOOL_PROPERTIES,
     MCP_TOOL_REQUIRED,
     MCP_TOOL_RESEARCH,
@@ -92,7 +82,6 @@ from web_router.constants_mcp import (
     MCP_MSG_NOTHING_CONFIGURED,
     MCP_MSG_UNKNOWN_ARGUMENTS,
     MCP_NO_ARGUMENTS,
-    MCP_SERVER_INSTRUCTIONS,
 )
 from web_router.constants_mcp_context import MCP_OUTPUT_SCHEMAS
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
@@ -102,8 +91,11 @@ from web_router.mcp.answer_tool import answer_tool
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
+from web_router.mcp.env_tool import load_env_entry
+from web_router.mcp.key_text import env_hint, no_backend_hint, server_instructions
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
+from web_router.mcp.raw_tool import fetch_raw_tool
 from web_router.mcp.routing_config import McpRouting
 from web_router.mcp.session_tools import SESSION_TOOLS
 from web_router.mcp.shaping import (
@@ -189,8 +181,8 @@ class WebRouterTools:
                 MCP_TOOL_RESEARCH_STATUS: self._research_status,
                 MCP_TOOL_BROWSE: self._browse,
                 MCP_TOOL_BROWSE_STATUS: self._browse_status,
-                MCP_TOOL_FETCH_RAW: self._fetch_raw,
-                MCP_TOOL_LOAD_ENV: self._load_env,
+                MCP_TOOL_FETCH_RAW: partial(fetch_raw_tool, self),
+                **load_env_entry(self),  # none when the operator turned load_env off
                 **{name: functools.partial(handler, self) for name, handler in SESSION_TOOLS.items()},
                 MCP_TOOL_BROWSER_OPEN: self._browser_open,
                 MCP_TOOL_BROWSER_GOTO: self._browser_goto,
@@ -237,7 +229,7 @@ class WebRouterTools:
         """
         env = self.env.report()
         if not self.keyed():
-            env["hint"] = MCP_MSG_ENV_HINT.format(env_var=ENV_MCP_ENV_FILE, user_dir=user_config_dir())
+            env["hint"] = env_hint(ENV_MCP_ENV_FILE, user_config_dir())
         return {
             **methods.configured(),
             "default_provider": self.router.default_provider,
@@ -254,9 +246,9 @@ class WebRouterTools:
         """Whether any backend is configured here that needed a credential to be."""
         return any(methods.keyed(method) for method in methods.EACH_METHOD)
 
-    def instructions(self) -> str:
+    def instructions(self, *, remote: bool = False) -> str:
         """The server's instructions, saying what the model can do about it when no key reached the server."""
-        return self.env.noted(MCP_SERVER_INSTRUCTIONS + ("" if self.keyed() else MCP_MSG_INSTRUCTIONS_NO_KEYS))
+        return self.env.noted(server_instructions(keyed=self.keyed(), remote=remote))
 
     def tools_changed(self) -> bool:
         """Whether the tool list changed since this was last asked -- true once, so the client is told once."""
@@ -315,7 +307,7 @@ class WebRouterTools:
         return shape_research(response, record.handle, budget=max_response_chars())
 
     async def _research_status(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        record = self._record(MCP_TOOL_RESEARCH_STATUS, arguments)
+        record = self.record(MCP_TOOL_RESEARCH_STATUS, arguments)
         if not isinstance(record.job, ResearchJob):
             raise self._not_a_job(record, MCP_TOOL_RESEARCH_STATUS, MCP_TOOL_RESEARCH)
         progress = await record.job.astatus()
@@ -338,7 +330,7 @@ class WebRouterTools:
         return shape_browse(response, record.handle, budget=max_response_chars())
 
     async def _browse_status(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        record = self._record(MCP_TOOL_BROWSE_STATUS, arguments)
+        record = self.record(MCP_TOOL_BROWSE_STATUS, arguments)
         if not isinstance(record.job, BrowseJob):
             raise self._not_a_job(record, MCP_TOOL_BROWSE_STATUS, MCP_TOOL_BROWSE)
         progress = await record.job.astatus()
@@ -351,43 +343,7 @@ class WebRouterTools:
         record.raw = progress.response.raw
         return shape_browse(progress.response, record.handle, budget=max_response_chars())
 
-    async def _fetch_raw(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        record = self._record(MCP_TOOL_FETCH_RAW, arguments)
-        if record.raw is None:
-            raise ValueError(MCP_MSG_NO_RAW.format(handle=record.handle))
-        if not isinstance(record.job, BrowseJob) and record.tool not in MCP_BROWSER_TOOLS:
-            # Deliberately unbounded: this tool exists to hand back exactly what
-            # the shaped result could not carry.
-            return {"handle": record.handle, "tool": record.tool, "raw": record.raw}
-        # A browse payload is the one that is not handed back verbatim: it can
-        # carry the session the agent ran in, and a live view or a key-bearing
-        # CDP URL is control of a billed browser, not data about the task.
-        raw, count = redact(record.raw)
-        payload: dict[str, Any] = {"handle": record.handle, "tool": record.tool, "raw": raw}
-        if count:
-            payload["note"] = redaction_note(count).strip()
-        return payload
-
-    async def _load_env(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
-        kwargs = self.arguments(MCP_TOOL_LOAD_ENV, arguments)
-        path, remember = kwargs[MCP_ARG_PATH], kwargs.get(MCP_ARG_REMEMBER, False)
-        if not isinstance(path, str) or not isinstance(remember, bool):
-            raise ValueError(MCP_MSG_ENV_BAD_ARGUMENTS)
-        applied = self.env.load(path, remember=remember)
-        if applied.loaded:
-            self._rebuild()
-        payload: dict[str, Any] = {"file": str(applied.path), "loaded": list(applied.loaded)}
-        if applied.already_set:
-            payload["already_set"] = list(applied.already_set)
-        payload["configured"] = methods.configured()
-        notes = [] if applied.loaded else [MCP_MSG_ENV_NOTHING_NEW]
-        if applied.remembered is not None:
-            notes.append(MCP_MSG_ENV_REMEMBERED.format(pointer=applied.remembered))
-        if notes:
-            payload["note"] = " ".join(notes)
-        return payload
-
-    def _rebuild(self) -> None:
+    def rebuild(self) -> None:
         """Hand every later call to a router built from the environment as it is now.
 
         A router resolves each ``auto`` chain once, when it first builds it, and
@@ -524,7 +480,7 @@ class WebRouterTools:
             MCP_MSG_NOT_A_JOB.format(handle=record.handle, tool=record.tool, poller=poller, job_tool=job_tool)
         )
 
-    def _record(self, tool: str, arguments: Mapping[str, Any]) -> Record:
+    def record(self, tool: str, arguments: Mapping[str, Any]) -> Record:
         handle = str(self.arguments(tool, arguments)[MCP_ARG_HANDLE])
         record = self.store.get(handle)
         if record is None:
@@ -563,7 +519,7 @@ class WebRouterTools:
         if method is not None and not methods.usable(method):
             description += MCP_MSG_NO_BACKEND
             if names := methods.env_vars(method):
-                description += MCP_MSG_NO_BACKEND_HINT.format(env_vars=", ".join(names))
+                description += no_backend_hint(names)
         return description
 
     def _schema(self, tool: str) -> dict[str, Any]:

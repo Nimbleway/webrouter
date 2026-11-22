@@ -1,0 +1,498 @@
+{
+  "vendor": "geoapify",
+  "name": "Geoapify",
+  "category": "maps",
+  "summary": "Geocoding, address autocomplete, points of interest by category, place details and turn-by-turn routing, built on OpenStreetMap data.",
+  "docs_url": "https://apidocs.geoapify.com/",
+  "pricing_url": "https://www.geoapify.com/pricing/",
+  "base_url": "https://api.geoapify.com",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "GEOAPIFY_API_KEY"
+        ],
+        "description": "A Geoapify API key (myprojects.geoapify.com > project > API keys), sent as the apiKey query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "apiKey",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Billing is in credits; the free plan has 3,000 credits a day. A geocode is 1 credit, a places page 1 credit per 20 places returned, a route 1 credit per waypoint pair plus surcharges.",
+    "Coordinate order differs by call: filter and bias strings are longitude first (circle:lon,lat,radius; rect:lon1,lat1,lon2,lat2; proximity:lon,lat), routing waypoints are latitude first unless prefixed lonlat:, and reverse geocoding takes separate lat and lon.",
+    "Responses are GeoJSON by default; pass format=json for a flat results list where the call offers it."
+  ],
+  "sources": [
+    "https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/",
+    "https://apidocs.geoapify.com/docs/geocoding/reverse-geocoding/",
+    "https://apidocs.geoapify.com/docs/geocoding/address-autocomplete/",
+    "https://apidocs.geoapify.com/docs/places/",
+    "https://apidocs.geoapify.com/docs/place-details/",
+    "https://apidocs.geoapify.com/docs/routing/"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "geoapify.geocode.search",
+      "name": "Geocode an address",
+      "summary": "Coordinates and structured address for a free-text or structured address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/geocode/search",
+      "params": {
+        "text": {
+          "in": "query",
+          "type": "string",
+          "description": "Free-form address; do not combine with the structured fields.",
+          "example": "38 Upper Montagu Street, London W1H 1LJ"
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Structured: place or amenity name."
+        },
+        "housenumber": {
+          "in": "query",
+          "type": "string",
+          "description": "Structured: house number."
+        },
+        "street": {
+          "in": "query",
+          "type": "string",
+          "description": "Structured: street."
+        },
+        "postcode": {
+          "in": "query",
+          "type": "string",
+          "description": "Structured: postcode."
+        },
+        "city": {
+          "in": "query",
+          "type": "string",
+          "description": "Structured: city."
+        },
+        "state": {
+          "in": "query",
+          "type": "string",
+          "description": "Structured: state or region."
+        },
+        "country": {
+          "in": "query",
+          "type": "string",
+          "description": "Structured: country."
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "country",
+            "state",
+            "city",
+            "postcode",
+            "street",
+            "amenity",
+            "locality"
+          ],
+          "description": "Kind of location wanted."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 639-1 language code."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results, default 5."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Hard limits, joined with |: circle:lon,lat,radiusM, rect:lon1,lat1,lon2,lat2, countrycode:de,fr, place:placeId.",
+          "example": "countrycode:gb"
+        },
+        "bias": {
+          "in": "query",
+          "type": "string",
+          "description": "Ranking preference, joined with |: proximity:lon,lat, circle:..., rect:..., countrycode:...; default countrycode:auto (by caller IP)."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "geojson",
+            "json",
+            "xml"
+          ],
+          "description": "Default geojson."
+        }
+      },
+      "notes": [
+        "The default bias favours the country of the caller's IP; pass bias=countrycode:none to turn it off."
+      ],
+      "job": "geo.geocode",
+      "docs_url": "https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/",
+      "verified": {
+        "docs": "https://apidocs.geoapify.com/docs/geocoding/forward-geocoding/"
+      }
+    },
+    {
+      "id": "geoapify.geocode.reverse",
+      "name": "Reverse geocode a coordinate",
+      "summary": "The address or place at a latitude and longitude.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/geocode/reverse",
+      "params": {
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Latitude.",
+          "example": 51.5214
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "required": true,
+          "description": "Longitude.",
+          "example": -0.1595
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "country",
+            "state",
+            "city",
+            "postcode",
+            "street",
+            "amenity",
+            "locality",
+            "building"
+          ],
+          "description": "Kind of location wanted."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 639-1 language code."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum results, default 1."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "geojson",
+            "json",
+            "xml"
+          ],
+          "description": "Default geojson."
+        }
+      },
+      "job": "geo.reverse",
+      "docs_url": "https://apidocs.geoapify.com/docs/geocoding/reverse-geocoding/",
+      "verified": {
+        "docs": "https://apidocs.geoapify.com/docs/geocoding/reverse-geocoding/"
+      }
+    },
+    {
+      "id": "geoapify.geocode.autocomplete",
+      "name": "Autocomplete an address",
+      "summary": "Address and place suggestions for partly typed text.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/geocode/autocomplete",
+      "params": {
+        "text": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Partial address or place name.",
+          "example": "Mosco"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "country",
+            "state",
+            "city",
+            "postcode",
+            "street",
+            "amenity",
+            "locality"
+          ],
+          "description": "Kind of location wanted."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 639-1 language code."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum suggestions."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Hard limits, e.g. countrycode:de or circle:lon,lat,radiusM."
+        },
+        "bias": {
+          "in": "query",
+          "type": "string",
+          "description": "Ranking preference, e.g. proximity:lon,lat."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "geojson",
+            "json",
+            "xml"
+          ],
+          "description": "Default geojson."
+        }
+      },
+      "notes": [
+        "1 credit per request, so every keystroke costs; debounce."
+      ],
+      "job": "places.autocomplete",
+      "docs_url": "https://apidocs.geoapify.com/docs/geocoding/address-autocomplete/",
+      "verified": {
+        "docs": "https://apidocs.geoapify.com/docs/geocoding/address-autocomplete/"
+      }
+    },
+    {
+      "id": "geoapify.places.search",
+      "name": "Find places by category in an area",
+      "summary": "Points of interest of given categories (supermarkets, cafes, hospitals...) inside or near an area.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/places",
+      "params": {
+        "categories": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Comma-separated category keys from Geoapify's category list, e.g. commercial.supermarket.",
+          "example": "commercial.supermarket"
+        },
+        "conditions": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated condition keys, e.g. wheelchair.yes."
+        },
+        "filter": {
+          "in": "query",
+          "type": "string",
+          "description": "Area, joined with |: circle:lon,lat,radiusM, rect:lon1,lat1,lon2,lat2, place:placeId, geometry:geometryId, countrycode:de.",
+          "example": "circle:-0.1276,51.5072,1000"
+        },
+        "bias": {
+          "in": "query",
+          "type": "string",
+          "description": "Ranking: proximity:lon,lat, circle:..., or rect:...",
+          "example": "proximity:-0.1276,51.5072"
+        },
+        "name": {
+          "in": "query",
+          "type": "string",
+          "description": "Keep places whose name matches."
+        },
+        "limit": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, default 20, max 500."
+        },
+        "offset": {
+          "in": "query",
+          "type": "integer",
+          "description": "Zero-based start index for paging."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 639-1 language code."
+        }
+      },
+      "notes": [
+        "Give filter or bias: one of them is required. 1 credit per 20 places returned, so a limit of 500 can cost 25 credits."
+      ],
+      "job": "places.search",
+      "docs_url": "https://apidocs.geoapify.com/docs/places/",
+      "verified": {
+        "docs": "https://apidocs.geoapify.com/docs/places/"
+      }
+    },
+    {
+      "id": "geoapify.places.details",
+      "name": "Get a place's details",
+      "summary": "Contact details, opening hours, names and geometry of one place, plus optional nearby places and isolines.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v2/place-details",
+      "params": {
+        "id": {
+          "in": "query",
+          "type": "string",
+          "description": "place_id from places.search or a geocode; preferred over coordinates."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude, with lon, instead of id."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude, with lat, instead of id."
+        },
+        "features": {
+          "in": "query",
+          "type": "string",
+          "description": "Feature groups, default details: details, details.names, details.population, details.full_geometry, building, radius_500, walk_10, drive_5.hospital..."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "ISO 639-1 language code."
+        }
+      },
+      "notes": [
+        "Each extra feature costs: details and building 1 credit each, an isoline 1 credit per 5 minutes, nearby places 1 credit per 20."
+      ],
+      "job": "places.details",
+      "docs_url": "https://apidocs.geoapify.com/docs/place-details/",
+      "verified": {
+        "docs": "https://apidocs.geoapify.com/docs/place-details/"
+      }
+    },
+    {
+      "id": "geoapify.routing",
+      "name": "Get a route between waypoints",
+      "summary": "Distance, time, geometry and turn-by-turn steps for driving, trucks, walking, cycling or transit.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/routing",
+      "params": {
+        "waypoints": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Two or more points joined with |, each lat,lon (latitude first) or lonlat:lon,lat.",
+          "example": "50.96209,4.83289|50.96226,4.83396"
+        },
+        "mode": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "walk",
+            "hike",
+            "scooter",
+            "motorcycle",
+            "drive",
+            "light_truck",
+            "medium_truck",
+            "truck",
+            "heavy_truck",
+            "truck_dangerous_goods",
+            "long_truck",
+            "bicycle",
+            "mountain_bike",
+            "road_bike",
+            "bus",
+            "transit",
+            "approximated_transit"
+          ],
+          "description": "Travel mode; drive is a car.",
+          "example": "drive"
+        },
+        "type": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "balanced",
+            "short",
+            "less_maneuvers"
+          ],
+          "description": "Route preference, default balanced."
+        },
+        "units": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "metric",
+            "imperial"
+          ],
+          "description": "Default metric."
+        },
+        "lang": {
+          "in": "query",
+          "type": "string",
+          "description": "Language of the instructions, e.g. en, de."
+        },
+        "avoid": {
+          "in": "query",
+          "type": "string",
+          "description": "Joined with |: tolls, ferries, highways (optionally :0-1 importance), location:lat,lon. Soft: kept if there is no alternative."
+        },
+        "details": {
+          "in": "query",
+          "type": "string",
+          "description": "Comma-separated: instruction_details, route_details, elevation, admin_areas, polyline5, polyline6."
+        },
+        "traffic": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "free_flow",
+            "approximated"
+          ],
+          "description": "Default free_flow; motorized modes only."
+        },
+        "max_speed": {
+          "in": "query",
+          "type": "number",
+          "description": "Speed cap, 10-252 km/h (or mph with units=imperial)."
+        },
+        "optimize_stops": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Reorder intermediate waypoints; first and last stay."
+        },
+        "format": {
+          "in": "query",
+          "type": "string",
+          "enum": [
+            "geojson",
+            "json",
+            "xml"
+          ],
+          "description": "Default geojson."
+        }
+      },
+      "notes": [
+        "Cost: 1 credit per consecutive waypoint pair, plus 1 per avoid rule, 1 per pair each for route_details and elevation, 1 per 500 km, and a matrix charge when optimize_stops reorders more than three waypoints."
+      ],
+      "job": "routes.directions",
+      "docs_url": "https://apidocs.geoapify.com/docs/routing/",
+      "verified": {
+        "docs": "https://apidocs.geoapify.com/docs/routing/"
+      }
+    }
+  ]
+}

@@ -19,7 +19,7 @@ def _no_google_ads_keys(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_a_web_search_lists_the_data_apis_that_match(fake_provider: Any) -> None:
-    with WebRouter("fake", vendor_credentials=DATADOG) as router:
+    with WebRouter("fake", data_api_credentials=DATADOG) as router:
         response = router.search("datadog monitors")
     assert response.urls == ["https://example.com"]
     assert 0 < len(response.data_apis) <= DATA_API_SEARCH_LIMIT
@@ -45,18 +45,18 @@ def test_a_match_without_its_key_names_the_variable_to_set(fake_provider: Any) -
 
 
 def test_configured_only_keeps_the_callable_matches(fake_provider: Any) -> None:
-    with WebRouter("fake", vendor_credentials=DATADOG) as router:
+    with WebRouter("fake", data_api_credentials=DATADOG) as router:
         assert router.search("google ads campaign performance", configured_only=True).data_apis == []
         assert router.search("datadog monitors", configured_only=True).data_apis
 
 
 def test_data_apis_false_is_a_plain_web_search(fake_provider: Any) -> None:
-    with WebRouter("fake", vendor_credentials=DATADOG) as router:
+    with WebRouter("fake", data_api_credentials=DATADOG) as router:
         assert router.search("datadog monitors", data_apis=False).data_apis == []
 
 
 def test_data_apis_only_calls_no_web_backend(fake_provider: Any) -> None:
-    with WebRouter("fake", vendor_credentials=DATADOG) as router:
+    with WebRouter("fake", data_api_credentials=DATADOG) as router:
         response = router.search("datadog monitors", data_apis_only=True, max_results=1)
         assert router.get_provider("fake").requests == []  # type: ignore[attr-defined]
     assert response.provider == DATA_APIS_ONLY_PROVIDER
@@ -75,10 +75,10 @@ def test_data_apis_only_refuses_what_it_would_drop(fake_provider: Any, options: 
 
 
 async def test_the_async_router_lists_the_same_matches(fake_provider: Any) -> None:
-    async with AsyncWebRouter("fake", vendor_credentials=DATADOG) as router:
+    async with AsyncWebRouter("fake", data_api_credentials=DATADOG) as router:
         response = await router.search("datadog monitors")
         only = await router.search("datadog monitors", data_apis_only=True)
-    with WebRouter("fake", vendor_credentials=DATADOG) as router:
+    with WebRouter("fake", data_api_credentials=DATADOG) as router:
         assert response.data_apis == router.search("datadog monitors").data_apis
     assert only.data_apis == response.data_apis
 

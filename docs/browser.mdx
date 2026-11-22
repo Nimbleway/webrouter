@@ -193,12 +193,19 @@ against `local`, sync and async, with no key.
 <Accordion title="Steel">
 **Steel.** Its `cdp_url` carries your API key in its query string, which is
 Steel's own connection scheme. It keeps a session across a reconnect, as
-`local` does. Proxies, stealth, CAPTCHA solving, profiles, viewport and
-headless are reachable through `provider_options` until a live call confirms a
-mapping for them. `profile` and `persist_profile` map onto `profileId` and
-`persistProfile`. `live_view_url` is its `sessionViewerUrl`, a dashboard page
-that asks for a Steel login; its `debugUrl` needs none, so it is
-`control_url()`.
+`local` does. Its options fall into three groups:
+
+- **Mapped and verified live** (2026-10-20): `profile` and `persist_profile`,
+  onto `profileId` and `persistProfile`, and `control_url()`.
+- **Mapped from Steel's documentation, awaiting a live run**: `timeout`,
+  `idle_timeout`, `solve_captchas` (onto `solveCaptcha`) and `proxy_country`
+  (onto `useProxy.geolocation.country`).
+- **Only through `provider_options`**: `stealth` is not mapped, since Steel
+  has no on/off or tiered stealth switch (send `stealthConfig` yourself), and
+  neither are `viewport`, `headless` or proxy settings beyond the country.
+
+`live_view_url` is its `sessionViewerUrl`, a dashboard page that asks for a
+Steel login; its `debugUrl` needs none, so it is `control_url()`.
 </Accordion>
 <Accordion title="Browserbase">
 **Browserbase.** Its `cdp_url` is the `connectUrl` it returns, which is enough

@@ -19,6 +19,7 @@ from web_router.constants import (
     MSG_OPTION_VALUE,
 )
 from web_router.exceptions import ConfigurationError
+from web_router.providers._modes import ModeOwner, with_mode
 from web_router.types import (
     REQUEST_VALUE,
     BrowserField,
@@ -59,10 +60,7 @@ def resolve_setting(value: str | None, *, env_var: str, provider: str, setting: 
 
 
 def build_payload(
-    request: NormalizedRequest,
-    names: Mapping[str, str] | None = None,
-    /,
-    **fixed: Any,
+    request: NormalizedRequest, names: Mapping[str, str] | None = None, modes: ModeOwner | None = None, /, **fixed: Any
 ) -> dict[str, Any]:
     """Assemble a provider payload from the options it maps.
 
@@ -73,10 +71,10 @@ def build_payload(
             which is every extract backend so far. Positional-only, so a payload
             field of any type can be passed as a keyword without colliding
             with it.
-        **fixed: Fields the provider always sends, such as the query itself, or
-            ones it derives (a depth or format mapping, say). ``None`` values are
-            dropped, so a derived field that does not apply can be passed
-            unconditionally.
+        modes: The provider, when it declares vendor modes: the request's ``mode`` is merged in
+            by :func:`~web_router.providers._modes.with_mode`, before ``provider_options``.
+        **fixed: Fields the provider always sends, such as the query itself, or ones it derives
+            (a depth or format mapping, say). ``None`` values are dropped.
 
     Every search, extract and research provider builds its payload through
     here, which is what guarantees two things a new provider would otherwise
@@ -87,6 +85,7 @@ def build_payload(
     """
     mapped = {theirs: getattr(request, ours) for ours, theirs in (names or {}).items()}
     payload = compact({**fixed, **mapped})
+    payload = with_mode(payload, modes, request) if modes is not None else payload
     payload.update(request.provider_options)
     return payload
 

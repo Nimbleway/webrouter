@@ -1,0 +1,115 @@
+{
+  "vendor": "kickbox",
+  "name": "Kickbox",
+  "category": "verification",
+  "summary": "Single email verification with result, reason, Sendex quality score, role, free, disposable and accept-all flags and typo suggestions, plus a free disposable-domain check.",
+  "docs_url": "https://docs.kickbox.com/docs/api-overview-copy",
+  "pricing_url": "https://kickbox.com/pricing/",
+  "base_url": "https://{host}/v2",
+  "hosts": {
+    "open": "https://open.kickbox.com/v1"
+  },
+  "settings": {
+    "host": {
+      "env": [
+        "KICKBOX_API_HOST"
+      ],
+      "default": "api.kickbox.com",
+      "choices": [
+        "api.kickbox.com",
+        "api.eu.kickbox.com"
+      ],
+      "description": "API host: the default, or api.eu.kickbox.com for an EU-only account (one that signs in at app.eu.kickbox.com)."
+    }
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "KICKBOX_API_KEY"
+        ],
+        "description": "A Kickbox API key (app.kickbox.com > API Keys > Add). Sent as a Bearer token; the apikey query parameter also works."
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Up to 25 parallel requests per IP and 8,000 requests per clock minute; a 429 can be retried at once.",
+    "Each response carries X-Kickbox-Balance (verification credits left) and X-Kickbox-Response-Time headers.",
+    "A sandbox key verifies without using credits and returns mock results (deliverable unless the address names another outcome, such as rejected-email@example.com); a key is created as sandbox or production and cannot switch."
+  ],
+  "sources": [
+    "https://docs.kickbox.com/docs/using-the-api",
+    "https://docs.kickbox.com/docs/single-verification-api",
+    "https://docs.kickbox.com/docs/terminology",
+    "https://docs.kickbox.com/docs/sandbox-api",
+    "https://docs.kickbox.com/reference/disposable-email-check"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "kickbox.email.verify",
+      "name": "Verify one email",
+      "summary": "Result (deliverable, undeliverable, risky, unknown), reason, Sendex score from 0 to 1, role, free, disposable and accept_all flags, did_you_mean suggestion and the normalized address.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/verify",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to verify.",
+          "example": "bill.lumbergh@gamil.com"
+        },
+        "timeout": {
+          "in": "query",
+          "type": "integer",
+          "description": "Maximum time for the verification in milliseconds; default 6000, maximum 30000."
+        }
+      },
+      "notes": [
+        "Uses a verification credit. Reasons: invalid_email, invalid_domain, rejected_email, accepted_email, low_quality, low_deliverability, no_connect, timeout, invalid_smtp, unavailable_smtp, unexpected_error.",
+        "An unknown result means the mail server did not answer in time; retrying after about 5 minutes often resolves it.",
+        "success false with a message (invalid API key, balance depleted, rate limit exceeded) is a request failure, not a verification result."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://docs.kickbox.com/docs/single-verification-api",
+      "verified": {
+        "docs": "https://docs.kickbox.com/docs/single-verification-api"
+      }
+    },
+    {
+      "id": "kickbox.email.disposable",
+      "name": "Check if an email or domain is disposable",
+      "summary": "Whether an address or domain is hosted by a known disposable email service.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/disposable/{address}",
+      "host": "open",
+      "params": {
+        "address": {
+          "in": "path",
+          "required": true,
+          "description": "The email address or domain to check.",
+          "example": "example@mailinator.com"
+        }
+      },
+      "notes": [
+        "Free and open: needs no key and uses no credits."
+      ],
+      "job": "email.disposable",
+      "docs_url": "https://docs.kickbox.com/reference/disposable-email-check",
+      "verified": {
+        "docs": "https://docs.kickbox.com/reference/disposable-email-check"
+      },
+      "credentials": []
+    }
+  ]
+}

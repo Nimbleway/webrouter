@@ -1,0 +1,160 @@
+{
+  "vendor": "debounce",
+  "name": "DeBounce",
+  "category": "verification",
+  "summary": "Single email validation with result, reason, role and free-provider flags and typo suggestions, optional name and avatar append, a free disposable-domain check, and credit and usage history.",
+  "docs_url": "https://developers.debounce.com/",
+  "pricing_url": "https://debounce.com/pricing/",
+  "base_url": "https://api.debounce.io",
+  "hosts": {
+    "disposable": "https://disposable.debounce.io"
+  },
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "DEBOUNCE_API_KEY"
+        ],
+        "description": "A private DeBounce API key, 13 characters (app.debounce.io/api). Sent as the api query parameter."
+      }
+    },
+    "inject": [
+      {
+        "in": "query",
+        "name": "api",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "A private key allows 5 concurrent calls, or 2 when data enrichment (append) is on; past that the API answers 429.",
+    "Every reply carries success as \"1\" or \"0\"; on failure the debounce object holds an error message (401 wrong key, 402 credits low).",
+    "Values come back as strings (\"true\", \"1\", balance as a string), not booleans or numbers.",
+    "Bulk list upload and its status are not in this entry: only one bulk job runs per account and results come back as a CSV download link."
+  ],
+  "sources": [
+    "https://developers.debounce.com/index",
+    "https://developers.debounce.com/api-concepts/authentication",
+    "https://developers.debounce.com/api-concepts/rate-limiting",
+    "https://developers.debounce.com/api-concepts/responses",
+    "https://developers.debounce.com/api-reference/endpoint/single-validation",
+    "https://developers.debounce.com/api-reference/endpoint/enrichment",
+    "https://developers.debounce.com/api-reference/endpoint/miscellaneous/balance",
+    "https://developers.debounce.com/api-reference/endpoint/miscellaneous/usage",
+    "https://developers.debounce.com/api-reference/endpoint/free/disposible-detector"
+  ],
+  "curated": "2026-11-16",
+  "endpoints": [
+    {
+      "id": "debounce.email.validate",
+      "name": "Validate one email",
+      "summary": "Result (Safe to Send, Risky, Invalid, Unknown), reason, numeric code, role and free-email flags, send_transactional and a did_you_mean suggestion, with the remaining balance.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address to validate.",
+          "example": "jane.doe@example.com"
+        },
+        "photo": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return a profile photo when one is found; 1 extra credit per photo returned."
+        },
+        "append": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Also return the person's full name and avatar; 20 extra credits per successful enrichment."
+        },
+        "gsuite": {
+          "in": "query",
+          "type": "boolean",
+          "description": "Detect G Suite accept-all addresses."
+        }
+      },
+      "notes": [
+        "Uses validation credits; photo and append add their own charges only when they return data.",
+        "For signup forms DeBounce advises accepting deliverable, accept-all and unknown results, or any result with send_transactional = 1.",
+        "The numeric code maps to a detailed reason; the code table lives on DeBounce's help site."
+      ],
+      "job": "email.verify",
+      "docs_url": "https://developers.debounce.com/api-reference/endpoint/single-validation",
+      "verified": {
+        "docs": "https://developers.debounce.com/api-reference/endpoint/single-validation"
+      }
+    },
+    {
+      "id": "debounce.email.disposable",
+      "name": "Check if an email or domain is disposable",
+      "summary": "Whether an address or domain belongs to a known disposable email service.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/",
+      "host": "disposable",
+      "params": {
+        "email": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The email address or domain to check.",
+          "example": "someone@mailinator.com"
+        }
+      },
+      "notes": [
+        "Free and needs no key; daily and speed limits apply but are not published. Answers disposable as the string \"true\" or \"false\"."
+      ],
+      "job": "email.disposable",
+      "docs_url": "https://developers.debounce.com/api-reference/endpoint/free/disposible-detector",
+      "verified": {
+        "docs": "https://developers.debounce.com/api-reference/endpoint/free/disposible-detector"
+      },
+      "credentials": []
+    },
+    {
+      "id": "debounce.account.balance",
+      "name": "Get credit balance",
+      "summary": "The validation credits left on the account.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/balance/",
+      "job": "account.usage",
+      "docs_url": "https://developers.debounce.com/api-reference/endpoint/miscellaneous/balance",
+      "verified": {
+        "docs": "https://developers.debounce.com/api-reference/endpoint/miscellaneous/balance"
+      }
+    },
+    {
+      "id": "debounce.account.usage",
+      "name": "Get daily usage for a date range",
+      "summary": "Validations performed on each day between two dates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/v1/usage/",
+      "params": {
+        "start": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Start date in YY-MM-DD (two-digit year), no earlier than 20-08-14.",
+          "example": "26-01-01"
+        },
+        "end": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "End date in YY-MM-DD, no later than today.",
+          "example": "26-01-31"
+        }
+      },
+      "job": "account.usage",
+      "docs_url": "https://developers.debounce.com/api-reference/endpoint/miscellaneous/usage",
+      "verified": {
+        "docs": "https://developers.debounce.com/api-reference/endpoint/miscellaneous/usage"
+      }
+    }
+  ]
+}

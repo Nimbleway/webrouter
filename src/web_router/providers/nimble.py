@@ -40,7 +40,9 @@ from web_router.constants import (
     RESEARCH_HTTP_TIMEOUT,
 )
 from web_router.constants_extract import MSG_EXTRACT_FETCHED_NOTHING
+from web_router.constants_mode_parts_extract import NIMBLE_EXTRACT_TIERS
 from web_router.exceptions import ProviderError
+from web_router.providers._cost import keyless_cost
 from web_router.providers._deadline import research_budget
 from web_router.providers._nimble_clients import _NimbleClients, _NimbleKeyless
 from web_router.providers._research_start import aread_or_running, read_or_running
@@ -107,6 +109,7 @@ class NimbleProvider(_NimbleKeyless, SearchProvider):
             answer=payload.get("answer"),
             request_id=payload.get("request_id"),
             raw=payload,
+            **keyless_cost(self),
         )
 
 
@@ -114,6 +117,7 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
     """Fetches page contents through the Nimble Extract API."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
+    tiers = NIMBLE_EXTRACT_TIERS
     supported_parameters: ClassVar[frozenset[str]] = EXTRACT_FORMAT_ONLY
     supported_formats: ClassVar[frozenset[ExtractFormat]] = frozenset(NIMBLE_EXTRACT_FORMATS)
     default_format: ClassVar[ExtractFormat] = NIMBLE_EXTRACT_DEFAULT_FORMAT
@@ -130,11 +134,12 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
 
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """Translate a normalized request into Nimble ``extract.run()`` keyword arguments."""
-        return build_payload(request, url=urls[0], formats=[NIMBLE_EXTRACT_FORMATS[self.format_of(request)]])
+        return build_payload(
+            request, None, self, url=urls[0], formats=[NIMBLE_EXTRACT_FORMATS[self.format_of(request)]]
+        )
 
     def _to_response(self, request: ExtractRequest, urls: list[str], payload: dict[str, Any]) -> ExtractResponse:
-        # Nimble echoes the URL it resolved to, which is the better label; this
-        # call's own URL stands in so a failure always names something.
+        # Nimble echoes the URL it resolved to, the better label; ours stands in so a failure always names one.
         url = payload.get("url") or urls[0]
         status = payload.get("status")
         data = payload.get("data") or {}
@@ -145,7 +150,7 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
             detail = MSG_EXTRACT_FETCHED_NOTHING.format(status=status)
             reason = "; ".join([detail, *(payload.get("warnings") or [])])
             failure = ExtractFailure(url=url, error=reason, status_code=_as_int(payload.get("status_code")))
-            return ExtractResponse(provider=self.name, failures=[failure], raw=[payload])
+            return ExtractResponse(provider=self.name, failures=[failure], raw=[payload], **keyless_cost(self))
 
         body_format = self.format_of(request)
         body_field = NIMBLE_EXTRACT_FORMATS[body_format]
@@ -154,8 +159,7 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
             content=data.get(body_field) or "",
             format=body_format,
             status_code=_as_int(payload.get("status_code")),
-            # Read rather than popped: `data` is `payload["data"]`, and taking
-            # the body out of it would take it out of `raw` too.
+            # Read rather than popped: `data` is `payload["data"]`, so popping would take the body out of `raw` too.
             extra=compact({"metadata": payload.get("metadata"), **{k: v for k, v in data.items() if k != body_field}}),
         )
 
@@ -164,6 +168,7 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
             documents=[document],
             request_id=payload.get("task_id"),
             raw=[payload],
+            **keyless_cost(self),
         )
 
 
@@ -317,8 +322,7 @@ class NimbleResearchProvider(_NimbleClients, ResearchProvider):
             answer=content if prose else None,
             structured=None if prose else content,
             citations=research_citations(content if prose else None, output),
-            # `outcome` keeps its default: nothing Nimble returns reports a run
-            # that stopped short of the work it was given.
+            # `outcome` keeps its default: nothing Nimble returns reports a run stopped short of its work.
             request_id=run.get("id"),
             raw=[run, result],
         )
