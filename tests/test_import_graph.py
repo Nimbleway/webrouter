@@ -36,6 +36,7 @@ def test_types_imports_nothing_of_ours() -> None:
     import web_router.types_data_api as data_api_module
     import web_router.types_decision as decision_module
     import web_router.types_errors as errors_module
+    import web_router.types_errors_network as errors_network_module
     import web_router.types_options as options_module
     import web_router.types_page as page_module
 
@@ -50,12 +51,13 @@ def test_types_imports_nothing_of_ours() -> None:
         "web_router.types_data_api",
     }
     assert set(_ours(types_module)) == leaves
+    assert set(_ours(errors_module)) == {"web_router.types_errors_network"}, "the one leaf below the error kinds"
     leaf_modules = (
         snippet_module,
         decision_module,
         page_module,
         options_module,
-        errors_module,
+        errors_network_module,
         citation_module,
         cost_module,
         data_api_module,

@@ -74,7 +74,7 @@ jobs:
           path: coverage.xml
 
   import-without-extras:
-    name: Imports with no providers installed
+    name: Base install imports and setup errors
     if: ${{ github.ref == 'refs/heads/main' || github.base_ref == 'main' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
@@ -89,43 +89,36 @@ jobs:
           uv venv /tmp/base
           uv pip install --python /tmp/base/bin/python .
 
-      - name: Base import must not require any provider SDK
-        # Providers are optional extras and resolve lazily. Importing the
-        # package, listing providers and building a router must all work
-        # without any SDK installed; only reaching for one may fail, and it
-        # must fail with an actionable error rather than an ImportError.
+      - name: Base install fails actionably without optional extras or keys
+        # Core includes the keyless backends. Optional providers and missing
+        # credentials must still fail actionably, without making network calls.
         run: |
           /tmp/base/bin/python - <<'PY'
+          import os
+
           import web_router
-          from web_router.providers import SearchProvider  # must not pull in httpx
+          from web_router.providers import SearchProvider
 
           assert "tavily" in web_router.available_providers()
-          router = web_router.WebRouter("tavily")  # lazy: no SDK needed yet
 
           try:
-              router.search("anything")
+              with web_router.WebRouter("agentcore") as router:
+                  router.search("anything")
           except web_router.ProviderNotInstalledError as exc:
+              assert "webrouter[aws]" in str(exc)
               print(f"correctly reported: {exc}")
           else:
-              raise SystemExit("expected ProviderNotInstalledError without the extra installed")
+              raise SystemExit("expected ProviderNotInstalledError without the aws extra")
 
-          # The default provider is `auto`, whose members are all optional too.
-          # With nothing installed it must still fail actionably rather than
-          # with an ImportError from inside the chain.
+          os.environ.pop("TAVILY_API_KEY", None)
           try:
-              web_router.WebRouter().search("anything")
-          except web_router.ProviderNotInstalledError as exc:
-              print(f"auto correctly reported: {exc}")
+              with web_router.WebRouter("tavily") as router:
+                  router.search("anything")
+          except web_router.ConfigurationError as exc:
+              assert "TAVILY_API_KEY" in str(exc)
+              print(f"correctly reported: {exc}")
           else:
-              raise SystemExit("expected auto to report a missing extra")
-
-          # HttpSearchProvider needs httpx, so it must stay deferred here.
-          try:
-              web_router.providers.HttpSearchProvider
-          except (AttributeError, ModuleNotFoundError):
-              print("HttpSearchProvider correctly deferred")
-          else:
-              raise SystemExit("HttpSearchProvider imported httpx into the base package")
+              raise SystemExit("expected ConfigurationError without a Tavily key")
           PY
 
   hygiene:

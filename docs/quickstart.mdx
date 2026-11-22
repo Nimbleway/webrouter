@@ -10,11 +10,11 @@ This page takes you from install to a working search and extract in four steps. 
   <Step title="Install">
     <CodeGroup>
     ```bash pip
-    pip install "webrouter[all]"
+    pip install webrouter
     ```
 
     ```bash uv
-    uv add "webrouter[all]"
+    uv add webrouter
     ```
 
     ```bash MCP server
@@ -22,7 +22,7 @@ This page takes you from install to a working search and extract in four steps. 
     ```
     </CodeGroup>
 
-    The package is `webrouter`; the import name is `web_router`. Put the keys you hold in your environment; none is required. The library reads the environment only, so load a `.env` yourself: `uv run --env-file .env python app.py`, or `load_dotenv()` from `python-dotenv`. [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names each variable.
+    The base install runs search and extract with no key; `webrouter[all]` adds the browser tools, the MCP server and the AWS backends. The package is `webrouter`; the import name is `web_router`. Put the keys you hold in your environment; none is required. The library reads the environment only, so load a `.env` yourself: `uv run --env-file .env python app.py`, or `load_dotenv()` from `python-dotenv`. [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names each variable.
   </Step>
   <Step title="Search with no key">
     ```python quickstart.py wrap
@@ -98,21 +98,19 @@ Serving requests? [Running in production](/production) covers timeouts, one shar
 
 ## Install options
 
-You can install fewer extras by naming them in place of `all`. Extras are named after the **methods you call**, not the backends behind them: `search` brings in every provider that can serve one, so choosing between them stays a runtime decision.
+The base install carries every search, extract, research and answer provider except AWS AgentCore, which needs `aws`, so choosing between them stays a runtime decision. Extras add the rest, named after what they enable; name several, or `all`.
 
 | Extra | Installs |
 | --- | --- |
-| `search`, `extract`, `research`, `answer` | Every provider that can serve that method |
+| `search`, `extract`, `research`, `answer`, `remote`, `vendors` | Nothing more: what they need is in the base install. Kept so older install lines still work |
 | `browser` | Playwright, so a browser handle can drive the page |
 | `mcp` | The MCP server, which exposes the methods as tools, the `browser_*` ones included |
 | `evals` | The OpenAI and Anthropic SDKs behind the built-in judges of `evaluate()` |
 | `langchain` | `langchain-core` for the LangChain tools |
-| `remote` | httpx for the built-in `remote` router |
-| `vendors` | httpx for `call_vendor()` and the vendor catalog |
 | `aws` | `botocore`, for AWS AgentCore Web Search |
-| `all` | Every method's providers, the MCP server, `browser`, `vendors`, `aws` and `remote`. Not `evals` or `langchain`: add those by name, as in `webrouter[all,evals]` |
+| `all` | The MCP server, `browser` and `aws`. Not `evals` or `langchain`: add those by name, as in `webrouter[all,evals]` |
 
-`open_browser` needs no Playwright: a vendor session opens over httpx, which `[all]` installs, and `local` needs only the standard library and a Chrome or Chromium.
+`open_browser` needs no Playwright: a vendor session opens over httpx, which the base install carries, and `local` needs only the standard library and a Chrome or Chromium.
 
 <Accordion title="From source">
 For contributors or to track `main`: the one prerequisite is

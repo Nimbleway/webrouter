@@ -137,7 +137,7 @@ async def test_the_schemas_describe_an_install_with_no_credentials() -> None:
     # Every research backend bills, so with no key there is nothing but the
     # chooser -- and its description has to say so rather than offering a tool
     # that can only fail.
-    assert _provider_enum(schemas[MCP_TOOL_RESEARCH]) == [PROVIDER_AUTO]
+    assert _provider_enum(schemas[MCP_TOOL_RESEARCH]) is None
 
 
 async def test_a_failure_arrives_as_a_tool_error_and_not_a_broken_pipe() -> None:

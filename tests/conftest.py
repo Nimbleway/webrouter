@@ -125,7 +125,7 @@ class FakeExtractProvider(ExtractProvider):
         return ExtractResponse(
             provider=self.name,
             documents=[
-                ExtractedDocument(url=url, title="Example", content="hello", format=self.format_of(request))
+                ExtractedDocument(url=url, title="Example", content="hello " * 16, format=self.format_of(request))
                 for url in urls
             ],
             raw=[{"urls": list(urls)}],
