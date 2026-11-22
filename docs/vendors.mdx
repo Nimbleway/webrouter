@@ -70,7 +70,8 @@ router.data_api_request(
 
 Every way of finding a data API reads the same local catalog, the one the
 [Web Catalog](/data-apis) shows. None of them calls a vendor or costs
-anything, and none of them runs a data API: only `call_data_api()` does.
+anything, and none of them runs a data API: only `call_data_api()` and
+`data_api_request()` do.
 
 **From a search.** A [search](/search#data-apis-that-match-the-search) also
 lists the data APIs whose catalog entries match the query, under
@@ -80,7 +81,7 @@ lists none.
 
 ```python
 response = router.search("datadog monitors")
-response.data_apis[0].endpoint    # 'datadog.monitors.list', the name call_data_api takes
+response.data_apis[0].endpoint    # 'datadog.monitors.search', the name call_data_api takes
 response.data_apis[0].configured  # False until its credentials are set
 response.data_apis[0].missing     # the variable to set when it is not
 

@@ -270,9 +270,9 @@ def _examples(endpoint: VendorEndpoint) -> list[str]:
     if not any(param.required and param.example is None for param in endpoint.params.values()):
         args = {name: param.example for name, param in endpoint.params.items() if param.example is not None}
         params = json.dumps(args, ensure_ascii=False)
-        python = (
-            f'router.call_data_api("{endpoint.id}", {params})' if args else f'router.call_data_api("{endpoint.id}")'
-        )
+        # A Python literal, not JSON: true, false and null are not Python.
+        call = f'router.call_data_api("{endpoint.id}"'
+        python = f"{call}, {args!r})" if args else f"{call})"
         mcp = f'call_data_api(endpoint="{endpoint.id}"' + (f", params={params})" if args else ")")
         blocks += [f"```python Python\n{python}\n```", f"```text MCP\n{mcp}\n```"]
     if endpoint.example_response is not None:

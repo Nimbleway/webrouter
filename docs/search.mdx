@@ -52,7 +52,7 @@ results:
 
 ```python
 response = router.search("datadog monitors")
-response.data_apis[0].endpoint  # 'datadog.monitors.list', the name call_data_api takes
+response.data_apis[0].endpoint  # 'datadog.monitors.search', the name call_data_api takes
 response.data_apis[0].configured  # False until its credentials are set
 response.data_apis[0].missing  # the variable to set for each one that is not
 ```

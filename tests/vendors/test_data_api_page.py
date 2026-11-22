@@ -75,7 +75,20 @@ def test_a_page_without_a_recorded_response_shows_input_only() -> None:
     assert '<div className="wc-io">' in page
     assert "Output" not in page and "wc-io-split" not in page
     assert '<code>{"kind"}</code> <span className="wc-required">{"required"}</span>' in page
-    assert 'router.call_data_api("acme.things.list", {"kind": "big"})' in page
+    assert "router.call_data_api(\"acme.things.list\", {'kind': 'big'})" in page
+
+
+def test_the_python_example_is_python_and_the_mcp_one_json() -> None:
+    params = {
+        "kind": {"in": "path", "type": "string", "required": True, "example": "big"},
+        "all": {"in": "query", "type": "boolean", "example": True},
+        "since": {"in": "query", "type": "string", "example": None},
+    }
+    page = vendor_page(_vendor(params=params), {})
+    python = "router.call_data_api(\"acme.things.list\", {'kind': 'big', 'all': True})"
+    assert python in page
+    compile(python, "<example>", "eval")
+    assert 'params={"kind": "big", "all": true})' in page
 
 
 def test_a_recorded_response_adds_the_output_panel_and_its_example() -> None:

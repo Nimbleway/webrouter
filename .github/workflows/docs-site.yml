@@ -15,6 +15,7 @@ on:
       - "src/web_router/constants_vendors.py"
       - "src/web_router/vendors/**"
       - "scripts/data_api_docs.py"
+      - "scripts/data_api_page.py"
       - "scripts/vendors.py"
       - ".github/workflows/docs-site.yml"
   workflow_dispatch:
@@ -32,6 +33,8 @@ env:
 jobs:
   publish:
     name: Build and publish
+    # Only main is published, also when the workflow is run by hand on another branch.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
