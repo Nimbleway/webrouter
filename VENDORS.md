@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-471 vendors, 3476 endpoints.
+472 vendors, 3479 endpoints.
 
 ### advertising
 
@@ -470,6 +470,7 @@ Maps, places, routing and geolocation.
 | [Google Maps Platform](https://developers.google.com/maps/documentation) `google-maps` | Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups. | 6 read | key in query | `GOOGLE_MAPS_API_KEY` | docs 2026-11-09 |
 | [GraphHopper Directions API](https://docs.graphhopper.com/) `graphhopper` | Routing, distance matrices, isochrones and geocoding on OpenStreetMap data. | 5 read | key in query | `GRAPHHOPPER_API_KEY` | docs 2026-11-09 |
 | [HERE](https://docs.here.com/geocoding-and-search/docs/introduction-to-here-geocoding-search-api-v7) `here-maps` | HERE Geocoding & Search v7 (geocode, reverse geocode, place search by text or category, lookup by id) and Routing v8 (traffic-aware routes for cars, trucks, walking and more). | 6 read | key in query | `HERE_API_KEY` | docs 2026-11-16 |
+| [InternetData](https://docs.internetdata.io/api) `internetdata` | IP, AS and domain data: an address's country, time zone, ASN, company, abuse contact, hostname and Tor, relay, bot and anycast flags on the free plan, and city-level geolocation, VPN, proxy and hosting detection on paid plans. | 3 read | key in header | `INTERNETDATA_API_KEY` | live 2026-11-23 |
 | [IP2Location.io](https://www.ip2location.io/ip2location-documentation) `ip2location-io` | IP geolocation with ISP, ASN, usage type, mobile carrier and proxy/fraud data (by plan), plus domain WHOIS records and the domains hosted on an IP. | 3 read | key in header | `IP2LOCATIONIO_API_KEY` | docs 2026-11-16 |
 | [ipapi.is](https://ipapi.is/developers.html) `ipapiis` | IP address intelligence: geolocation, ASN, owning company and abuse contact, and VPN, proxy, Tor, datacenter and crawler detection. | 3 read | key in query | `IPAPI_IS_API_KEY` | docs 2026-11-09 |
 | [ipdata](https://docs.ipdata.co/docs/getting-started) `ipdata` | IP geolocation with ASN, company, mobile carrier, time zone, currency and threat data (Tor, proxy, VPN, datacenter, known attacker or abuser, blocklists), plus detailed ASN records. | 3 read | key in query | `IPDATA_API_KEY` | docs 2026-11-16 |
