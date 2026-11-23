@@ -150,7 +150,10 @@ never caps: a `Budget` still caps, and a backend with no known price never runs
 under a cost cap. The default `rules` router takes no preference.
 
 The built-in `preferred` router sorts each method's backends by its
-preference, with no model and no key:
+preference, with no model and no key. It orders backends without choosing a
+method: `plan()` and `run()` default to search even when the prompt contains a
+URL. Set `tool="extract"` to read that URL, or call `extract()` directly; a
+method you name is kept. The `rules` router chooses extract for a URL instead.
 
 ```python
 from web_router import PreferredRouter, WebRouter

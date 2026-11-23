@@ -38,7 +38,11 @@ from web_router.routing.route_tools import checked_route_modes
 
 
 class PreferredRouter:
-    """Orders each call's backends by ``prefer``, the way the caller chose: cheap, fast or accurate."""
+    """Orders each call's backends by ``prefer``: cheap, fast or accurate.
+
+    Does not choose a method: ``plan()`` and ``run()`` default to search even for a URL prompt,
+    unless the caller names a method (for example, ``tool="extract"``).
+    """
 
     def __init__(self, prefer: Prefer, accuracy: AccuracyLike | None = None, route_modes: bool | None = None) -> None:
         """
