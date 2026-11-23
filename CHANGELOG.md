@@ -41,6 +41,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 - A search no longer fails when a result carries U+2028, U+2029 or U+0085. An event stream's lines were split with `str.splitlines`, which also breaks at those three characters; JSON leaves them unescaped, so a reply holding one in a title or a page's text was cut mid-object. `you-mcp` and `exa-mcp` raised `ProviderError` ("MCP response carried no result payload") for a query that had results, and `auto` moved on to its next backend. Brave's answer stream and an `agentcore` gateway that streams were read the same way. A stream's lines now end only at CR, LF or CRLF.
 - `plan()` and `run()` recognize HTTP(S) URLs with uppercase or mixed-case schemes, preserving the path and query and applying the URL policy as usual.
 - Under `auto`, an extract that retried a failed URL on a later backend could return its documents out of the order asked for. A page the first backend echoed under the URL it resolved to was sorted after the retried pages: Nimble and Keenable echo a slash added to a bare host, a redirect followed and a fragment dropped, and Jina the added slash. Each page now sorts by the URL it answers, so the documents come back in the order asked, as the Extract guide says.
+- A backend whose throttle reports a nan wait no longer stays out of `auto` for the rest of the process: the cooldown falls back to the status's default (10 s for a 429). An infinite wait is still capped at 600 s.
 
 ## [0.14.0] - 2026-11-19
 
