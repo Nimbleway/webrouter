@@ -42,5 +42,6 @@ async def test_the_mcp_environment_name_starts_and_routes_without_repeated_warni
             first = await router.plan("http://localhost:8080")
             second = await router.plan("https://youtu.be/dQw4w9WgXcQ")
     assert len(caught) == 1
+    assert first.decision.router == second.decision.router == "cheapest_first"
     assert first.decision.merged == second.decision.merged
     assert first.decision.merged[0] == f"{tool.name}:third"

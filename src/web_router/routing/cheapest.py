@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 
 from web_router.constants_invoke import ROUTER_ROUTE_MODES_ATTR
-from web_router.constants_routing import MSG_CHEAPEST_DEPRECATED
+from web_router.constants_routing import CHEAPEST_ROUTER_NAME, MSG_CHEAPEST_DEPRECATED
 from web_router.routing.contract import RouteDecision, RouteRequest
 from web_router.routing.preferred import PreferredRouter, ordered
 
@@ -22,4 +22,6 @@ setattr(cheapest_first, ROUTER_ROUTE_MODES_ATTR, False)  # preserve the alias's 
 def cheapest_router() -> PreferredRouter:
     """Build the deprecated named router, warning once when it is built rather than on every call."""
     warnings.warn(MSG_CHEAPEST_DEPRECATED, DeprecationWarning, stacklevel=2)
-    return PreferredRouter("cheap")
+    router = PreferredRouter("cheap")
+    router.router_name = CHEAPEST_ROUTER_NAME
+    return router
