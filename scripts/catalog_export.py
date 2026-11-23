@@ -1,7 +1,8 @@
-"""Export the data API catalog as one JSON file for the public Web Catalog site.
+"""Export the data API catalog as one JSON file, for any site or tool that lists it.
 
 Reads the same vendor files as ``make vendors`` and writes, per category and per
-vendor, the fields a catalog page shows. Only public catalog data goes in: what
+vendor, the fields a catalog page shows. Each record carries a ``hash`` of its
+fields, so a consumer can tell which records changed since its last read. Only public catalog data goes in: what
 each vendor's API holds, its endpoints, how its key is sent and its docs links.
 
     uv run python -m scripts.catalog_export                  # writes build/catalog.json
@@ -39,7 +40,7 @@ def category_title(category: str) -> str:
 
 
 def _fingerprint(fields: dict[str, Any]) -> str:
-    """A short hash of the synced fields, so an unchanged item is never rewritten."""
+    """A short hash of a record's fields, so a consumer can skip records that did not change."""
     return hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()[:16]
 
 
