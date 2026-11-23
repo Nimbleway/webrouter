@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts.data_api_page import DEFAULT_ICON, NO_PEERS, PAGES_DIR, Peers, category_label, icon_url, vendor_page
-from scripts.vendors import needs_key
+from scripts.vendors import needs_key, some_calls_need_key
 from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_CATEGORY_DESCRIPTIONS
 from web_router.vendors.catalog import VendorCatalog, builtin_catalog
 from web_router.vendors.schema import Vendor, VendorEndpoint
@@ -77,6 +77,8 @@ def index_entries(catalog: VendorCatalog, icons: dict[str, str] | None = None) -
             "endpoints": len(vendor.endpoints),
             # The catalog page's one fact per row: whether a call needs a key the user must set first.
             "needs_key": needs_key(vendor),
+            # A key that is optional for the vendor but required by some of its endpoints.
+            "some_key": some_calls_need_key(vendor),
             # Searched, not shown: what a visitor might type for this vendor besides its name.
             "terms": " ".join(
                 [vendor.vendor, *vendor.sites, *(endpoint.name for endpoint in vendor.endpoints)]

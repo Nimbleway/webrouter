@@ -117,6 +117,13 @@ def test_index_rows_say_whether_a_key_is_needed() -> None:
     assert rows["rcc-acis"]["needs_key"] is False
 
 
+def test_an_optional_key_some_endpoints_need_is_flagged_on_the_index() -> None:
+    rows = {row["id"]: row for row in index_entries(builtin_catalog())["vendors"]}
+    assert (rows["context7"]["needs_key"], rows["context7"]["some_key"]) == (False, True)
+    assert rows["rcc-acis"]["some_key"] is False
+    assert rows["hunter"]["some_key"] is False
+
+
 def test_with_catalog_tab_replaces_rather_than_duplicates() -> None:
     config = {"navigation": {"tabs": [{"tab": TAB, "groups": [{"group": TAB, "pages": [PAGES_DIR]}]}]}}
     once = with_catalog_tab(config, builtin_catalog())

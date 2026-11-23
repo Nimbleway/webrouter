@@ -15,8 +15,9 @@ import json
 from pathlib import Path
 
 from scripts.data_api_io import input_panel, output_panel
+from scripts.data_api_keys import endpoint_key_badge, key_badge
 from scripts.data_api_mdx import anchor, code, href, literal, mdx, text
-from scripts.vendors import auth_label, needs_key, settings
+from scripts.vendors import auth_label, settings
 from web_router.vendors.schema import Vendor, VendorEndpoint
 
 PAGES_DIR = "data-apis"
@@ -41,16 +42,6 @@ def category_label(category: str) -> str:
 
 def _method(method: str) -> str:
     return f'<span className="wc-method wc-method-{method.lower()}">{literal(method)}</span>'
-
-
-def _key_badge(vendor: Vendor) -> str:
-    if not vendor.auth.credentials:
-        return f'<span className="wc-badge wc-badge-free">{literal("No key needed")}</span>'
-    if not needs_key(vendor):
-        return f'<span className="wc-badge">{literal("Key optional")}</span>'
-    required = [spec.env[0] for spec in vendor.auth.credentials.values() if spec.required]
-    names = literal(", ").join(code(name) for name in required)
-    return f'<span className="wc-badge wc-badge-key">{literal("Needs ")}{names}</span>'
 
 
 def _stat(label: str, value: str) -> str:
@@ -82,7 +73,7 @@ def _header(vendor: Vendor, icon: str) -> list[str]:
         f'<img className="wc-icon" src={href(icon)} alt="" width="40" height="40" noZoom />'
         f'<a className="wc-category" href="/{PAGES_DIR}?category={vendor.category}">'
         f"{literal('Web Catalog · ' + category_label(vendor.category))}</a></span>",
-        _key_badge(vendor),
+        key_badge(vendor),
         "</div>",
         '<div className="wc-stats">',
         _stat("Endpoints", text(str(len(vendor.endpoints)))),
@@ -153,6 +144,7 @@ def _endpoint(endpoint: VendorEndpoint, vendor: Vendor, peers: list[tuple[Vendor
         f'{_method(endpoint.method)}<code className="wc-path">{literal(endpoint.path)}</code>'
         f'<code className="wc-id">{literal(endpoint.id)}</code>'
         + (f'<span className="wc-write">{literal("writes")}</span>' if endpoint.writes else "")
+        + endpoint_key_badge(vendor, endpoint)
         + "</div>",
     ]
     if endpoint.summary:

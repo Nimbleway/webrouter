@@ -18,7 +18,7 @@ from pathlib import Path
 
 from web_router.constants_vendors import VENDOR_CATEGORIES, VENDOR_CATEGORY_DESCRIPTIONS
 from web_router.vendors.catalog import VendorCatalog, builtin_catalog
-from web_router.vendors.schema import Vendor, VendorSetting
+from web_router.vendors.schema import Vendor, VendorEndpoint, VendorSetting
 
 ROOT = Path(__file__).resolve().parent.parent
 VENDORS_MD = ROOT / "VENDORS.md"
@@ -88,6 +88,19 @@ def credential_vars(vendor: Vendor) -> list[str]:
 def needs_key(vendor: Vendor) -> bool:
     """Whether a call needs a credential the user must set first."""
     return any(spec.required for spec in vendor.auth.credentials.values())
+
+
+def endpoint_keys(vendor: Vendor, endpoint: VendorEndpoint) -> list[str]:
+    """The variables an endpoint cannot be called without: its own credential list, else the vendor's required."""
+    names = endpoint.credentials
+    if names is None:
+        names = [name for name, spec in vendor.auth.credentials.items() if spec.required]
+    return [vendor.auth.credentials[name].env[0] for name in names if name in vendor.auth.credentials]
+
+
+def some_calls_need_key(vendor: Vendor) -> bool:
+    """Whether a vendor whose key is optional still has endpoints that cannot be called without one."""
+    return not needs_key(vendor) and any(endpoint_keys(vendor, endpoint) for endpoint in vendor.endpoints)
 
 
 def settings(vendor: Vendor) -> list[tuple[str, str, VendorSetting]]:

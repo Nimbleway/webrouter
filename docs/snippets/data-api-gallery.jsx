@@ -66,8 +66,8 @@ export const DataApiGallery = () => {
               {vendor.name}
             </span>
             <span className="dag-summary">{vendor.summary}</span>
-            <span className={vendor.needs_key ? "dag-key" : "dag-key dag-key-free"}>
-              {vendor.needs_key ? "Needs key" : "No key"}
+            <span className={vendor.needs_key || vendor.some_key ? "dag-key" : "dag-key dag-key-free"}>
+              {vendor.needs_key ? "Needs key" : vendor.some_key ? "Key for some calls" : "No key"}
             </span>
           </a>
         ))}
