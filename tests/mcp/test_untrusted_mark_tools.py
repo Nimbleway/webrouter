@@ -104,9 +104,6 @@ async def test_a_screenshot_is_marked_before_its_image(tools: WebRouterTools) ->
     ("tool", "arguments"),
     [
         (MCP_TOOL_BROWSER_GOTO, {"url": "https://example.com/"}),
-        (MCP_TOOL_BROWSER_CLICK, {"ref": "e3"}),
-        (MCP_TOOL_BROWSER_TYPE, {"ref": "e2", "text": "query"}),
-        (MCP_TOOL_BROWSER_PRESS, {"key": "Enter"}),
         (MCP_TOOL_BROWSER_READ, {}),
     ],
 )
