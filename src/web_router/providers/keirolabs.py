@@ -26,6 +26,7 @@ from web_router.constants_keirolabs import (
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._utils import build_payload
+from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "snippet", "score"})
@@ -74,7 +75,7 @@ class KeirolabsProvider(HttpSearchProvider):
         return SearchResult(
             url=hit["url"],
             title=hit.get("title") or "",
-            description=snippet,
+            description=as_snippet(snippet),
             content=snippet,
             score=_finite_score(hit.get("score")),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},

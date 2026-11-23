@@ -54,6 +54,7 @@ from web_router.providers.exa import ExaProvider
 from web_router.providers.parallel_search import ParallelProvider
 from web_router.providers.tavily import TavilyProvider, search_fields
 from web_router.routing.remote_url import checked_url
+from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 
@@ -142,7 +143,7 @@ def _to_result(hit: dict[str, Any], request: SearchRequest) -> SearchResult:
     return SearchResult(
         url=hit.get("url", ""),
         title=hit.get("title") or "",
-        description=snippet,
+        description=as_snippet(snippet),
         content=lite_body(body, request.search_depth),
         score=hit.get(LITELLM_SCORE_FIELD),
         published_date=hit.get(LITELLM_DATE_FIELD),

@@ -41,7 +41,6 @@ def test_types_imports_nothing_of_ours() -> None:
     import web_router.types_page as page_module
 
     leaves = {
-        "web_router.snippet",
         "web_router.types_decision",
         "web_router.types_page",
         "web_router.types_options",
