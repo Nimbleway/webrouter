@@ -25,6 +25,7 @@ from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._attempt_loop import Order, Walk, arun, run
 from web_router.providers._auto_extract_pages import Held, _asked, _restored, _screened
 from web_router.providers._chain import _empty_extract
+from web_router.providers._delegated import delegating
 from web_router.providers._url_match import asked_for, owners
 from web_router.routing.attempts import contributed
 from web_router.routing.metered import combined_cost
@@ -68,7 +69,8 @@ async def aextract_down_chain(walk: Walk, request: ExtractRequest, urls: list[st
 
 def _first_answer(walk: Walk, request: ExtractRequest, urls: list[str], held: Held) -> tuple[ExtractResponse, Order]:
     """The first member's answer for ``urls``, junk pages failed (:func:`_screened`), and the members after it."""
-    ran = run(walk, _for(request, urls))
+    with delegating():
+        ran = run(walk, _for(request, urls))
     return _screened(ran.response, urls, bool(ran.rest), held), ran.rest
 
 
@@ -76,7 +78,8 @@ async def _afirst_answer(
     walk: Walk, request: ExtractRequest, urls: list[str], held: Held
 ) -> tuple[ExtractResponse, Order]:
     """Async counterpart of :func:`_first_answer`."""
-    ran = await arun(walk, _for(request, urls))
+    with delegating():
+        ran = await arun(walk, _for(request, urls))
     return _screened(ran.response, urls, bool(ran.rest), held), ran.rest
 
 

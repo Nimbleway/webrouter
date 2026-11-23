@@ -33,6 +33,7 @@ from web_router.constants_extract import (
     MSG_EXTRACT_OFF_SITE,
     MSG_EXTRACT_TRACKER_PIXEL,
 )
+from web_router.providers._delegated import is_delegated
 from web_router.providers._extract_title import html_title, titled
 from web_router.providers._url_match import asked_for, bare_url, owners
 from web_router.types import ExtractedDocument, ExtractFailure, ExtractResponse
@@ -79,7 +80,7 @@ def split_error_pages(
     for document, owner in zip(pages, named, strict=True):
         reason = not_the_page(document)
         if reason is None:
-            kept.append((_warned(titled(document), owner), owner))
+            kept.append((_warned(document if is_delegated() else titled(document), owner), owner))
         else:
             (failed if owner else strays).append(_failure(document, reason, owner))
     if strays and asked and all(owner for _, owner in kept):
