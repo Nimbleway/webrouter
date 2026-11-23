@@ -274,7 +274,7 @@ class ExtractedDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     url: str
-    title: str = Field(default="", description="The page title, when the provider returned one.")
+    title: str = Field(default="", description="The page title, from the provider or the page's title, og:title or H1.")
     content: str = Field(default="", description="The page body, in the representation :attr:`format` names.")
     format: ExtractFormat | None = Field(
         default=None,

@@ -148,7 +148,7 @@ class LinkupProvider(HttpSearchProvider):
 class LinkupExtractProvider(HttpExtractProvider):
     """Fetches page contents through the Linkup Fetch API.
 
-    Linkup returns no title, so ``title`` stays empty. It always returns
+    Linkup returns no title; shared extraction fills it from the page. It returns
     markdown and adds the page's raw content on request, which is the only
     other representation it has: asking for plain text raises, and asking for
     HTML on a page whose raw content is not HTML (a PDF has none) is reported as

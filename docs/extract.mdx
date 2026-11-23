@@ -57,6 +57,10 @@ HTML: an agent reading the page pays for every character. Exa, which returns onl
 Ask for `html` by name to get the markup. `auto` takes all three formats and sends each call only to a member that
 returns the one asked for.
 
+`document.title` is filled on every backend. When a backend returns none,
+WebRouter reads it from the page: the HTML `<title>`, then `og:title`, then the
+first H1 of the HTML or markdown. Markdown headings over 1,000 characters are skipped. The H1 stays in `content`.
+
 ## Partial failure
 
 Extracting several URLs can partly succeed, and it says so rather than pretending
