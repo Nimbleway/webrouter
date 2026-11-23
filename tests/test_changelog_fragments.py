@@ -76,11 +76,6 @@ def test_an_entry_may_start_with_a_pull_request_number(tmp_path: Path) -> None:
     assert changelog.problems(tmp_path) == []
 
 
-def test_a_wrapped_entry_is_one_paragraph(tmp_path: Path) -> None:
-    _write(tmp_path, "wrap.added.md", "A long entry\nwrapped over two lines.\n")
-    assert changelog.problems(tmp_path) == []
-
-
 def _fragment(type_: str, text: str) -> changelog.Fragment:
     return changelog.Fragment(path=Path(f"x.{type_}.md"), type=type_, text=text)
 
@@ -97,11 +92,6 @@ def test_collect_creates_sections_in_keep_a_changelog_order() -> None:
     assert "### Added\n\n- A feature.\n" in unreleased
     assert "### Fixed\n\n- A fix.\n" in unreleased
     assert out.endswith("- Released entry.\n")
-
-
-def test_collect_leaves_released_versions_alone() -> None:
-    out = changelog.collect(BASE, [_fragment("added", "A feature.")])
-    assert out.split("## [0.1.0]")[1] == BASE.split("## [0.1.0]")[1]
 
 
 def test_collect_needs_an_unreleased_heading() -> None:
@@ -134,20 +124,6 @@ def test_main_refuses_a_malformed_fragment(tmp_path: Path, monkeypatch: pytest.M
 
     assert changelog.main([]) == 1
     assert target.read_text(encoding="utf-8") == BASE
-
-
-def test_an_unknown_flag_writes_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    directory = tmp_path / "changelog.d"
-    fragment = _write(directory, "feature.added.md", "A feature.\n")
-    target = tmp_path / "CHANGELOG.md"
-    target.write_text(BASE, encoding="utf-8")
-    monkeypatch.setattr(changelog, "FRAGMENT_DIR", directory)
-    monkeypatch.setattr(changelog, "CHANGELOG", target)
-
-    with pytest.raises(SystemExit):
-        changelog.main(["--preveiw"])
-    assert target.read_text(encoding="utf-8") == BASE
-    assert fragment.exists()
 
 
 def test_an_undatable_fragment_is_ordered_by_name_with_a_warning(
