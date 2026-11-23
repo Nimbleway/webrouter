@@ -29,3 +29,25 @@ def test_a_keyless_vendor_has_no_key_badges() -> None:
     vendor = builtin_catalog().vendor("rcc-acis")
     assert "No key needed" in key_badge(vendor) or "Key optional" in key_badge(vendor)
     assert all(endpoint_key_badge(vendor, endpoint) == "" for endpoint in vendor.endpoints)
+
+
+def test_an_endpoint_that_needs_a_different_key_than_its_vendor_names_it() -> None:
+    vendor = builtin_catalog().vendor("brandfetch")
+    search = next(endpoint for endpoint in vendor.endpoints if endpoint.id == "brandfetch.brands.search")
+    assert "BRANDFETCH_CLIENT_ID" in endpoint_key_badge(vendor, search)
+    assert "BRANDFETCH_API_KEY" not in endpoint_key_badge(vendor, search)
+
+
+def test_an_endpoint_that_needs_only_some_of_its_vendors_keys_names_those() -> None:
+    vendor = builtin_catalog().vendor("datadog")
+    by_id = {endpoint.id: endpoint for endpoint in vendor.endpoints}
+    validate = endpoint_key_badge(vendor, by_id["datadog.auth.validate"])
+    assert "DD_API_KEY" in validate
+    assert "DD_APPLICATION_KEY" not in validate
+    assert endpoint_key_badge(vendor, by_id["datadog.monitors.search"]) == ""
+
+
+def test_credentials_that_share_a_variable_name_it_once_and_add_no_endpoint_badge() -> None:
+    vendor = builtin_catalog().vendor("whoisxml-api")
+    assert key_badge(vendor).count("WHOISXML_API_KEY") == 1
+    assert all(endpoint_key_badge(vendor, endpoint) == "" for endpoint in vendor.endpoints)

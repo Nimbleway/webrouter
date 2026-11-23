@@ -1,0 +1,1 @@
+Docs: a Web Catalog tab with a page for every data API in the catalog: its endpoints, each endpoint's inputs, a Python and MCP example, and the key it needs, with a search box and a category filter. The Data APIs page moves under Methods and says how to find a data API: from a search, from an extracted page, by describing the job, or by listing the catalog.

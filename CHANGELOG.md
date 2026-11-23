@@ -12,7 +12,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ### Added
 
-- Docs: a Web Catalog tab with a page for every data API in the catalog: what it holds, its endpoints, each endpoint's inputs and a Python and MCP example, and the key it needs, with a search box and a category filter on the catalog page. The pages are generated from the vendor catalog by `scripts/data_api_docs.py` (`make docs-site`, `make docs-preview`) and published by the docs-site workflow to the `docs-site` branch, never committed. The Data APIs page moves under Methods and says how to find a data API: from a search, from an extracted page, by describing the job, or by listing the catalog.
 - `WebRouter(prefer="cheap")` or `prefer="fast"` (experimental): `auto` tries backends by estimated cost or p90 latency, unknowns last, and a router is shown the preference in `RouteRequest.prefer`. The decision record names it; a `Budget` still caps.
 - `judge_from()` picks an `evaluate()` judge by name: `openai[:<model>]`, `anthropic[:<model>]`, `litellm:<model>`, or `package.module:Class` for a `Judge` subclass of your own. The provider and answer benchmarks take the same string as `--judge`; the default stays `openai:gpt-4o`, so new figures compare with published ones. See [Benchmarks](https://docs.webrouter.net/benchmarks).
 - `LiteLLMJudge`, a judge on any model LiteLLM reaches (DeepInfra, Gemini, Bedrock, Ollama, ...), with the new `evals-litellm` extra. LiteLLM is pinned to one release, and its import reads no `.env` and fetches nothing.
