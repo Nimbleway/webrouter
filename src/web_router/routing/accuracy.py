@@ -19,6 +19,7 @@ import importlib
 import json
 import os
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 
 from web_router._chains import is_accuracy_share, measured_accuracy
@@ -34,7 +35,7 @@ from web_router.constants_prefer import (
     MSG_ACCURACY_SHAPE,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.routing.contract import Candidate, Prefer, ToolName
+from web_router.routing.contract import Candidate, Prefer, RouteRequest, ToolName
 from web_router.routing.route_tools import ALL_TOOLS
 
 AccuracyScores = Mapping[ToolName, Mapping[str, float]]
@@ -70,7 +71,27 @@ def router_scores(prefer: Prefer | None, accuracy: AccuracyLike | None) -> Accur
 def shipped_scores() -> AccuracyScores:
     """Search's and answer's backends, at their default mode, as the benchmark behind ``auto``'s order measured
     them (``data/chains.json``): the share of its questions each answered correctly. No vendor mode is scored."""
-    return {method: measured_accuracy(method) for method in SHIPPED_METHODS}
+    from web_router.registry import is_custom  # registry imports routing while loading
+
+    return {
+        method: {name: score for name, score in measured_accuracy(method).items() if not is_custom(method, name)}
+        for method in SHIPPED_METHODS
+    }
+
+
+def scored_request(req: RouteRequest, scores: AccuracyScores | None) -> RouteRequest:
+    """Mark custom candidates against this router's scores without changing keyless/options eligibility."""
+    from web_router.registry import is_custom  # registry imports routing while loading
+
+    if scores is None:
+        return req
+    return replace(
+        req,
+        candidates=tuple(
+            replace(c, measured=c.measured and score_of(scores, c) is not None) if is_custom(c.tool, c.provider) else c
+            for c in req.candidates
+        ),
+    )
 
 
 def accuracy_scores(accuracy: AccuracyLike | None) -> AccuracyScores | None:

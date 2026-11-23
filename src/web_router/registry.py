@@ -1,12 +1,6 @@
-"""Provider registry, one table per method.
-
-Providers are looked up by name and imported lazily, so installing web-router without a provider's optional
-dependency stays valid until that provider is actually requested.
-
-There is a table per method rather than per vendor, because a name does not imply a capability: ``brave``
-searches and cannot extract, ``oxylabs`` extracts and cannot search, and ``nimble`` searches, extracts, runs
-templates and researches through four different classes. Asking the wrong table for a name reports it as unknown
-and lists the ones that method does serve, which is the honest answer.
+"""Provider registry, one table per method, with lazy imports so optional SDKs are needed only on use.
+A name does not imply a capability: Brave searches, Oxylabs extracts, and Nimble has separate search,
+extract, live data and research classes. A wrong-method name reports the backends that method serves.
 """
 
 from __future__ import annotations
@@ -148,6 +142,23 @@ _CUSTOM_BROWSER_PROVIDERS: dict[str, type[BrowserProvider]] = {}
 _CUSTOM_BROWSE_PROVIDERS: dict[str, type[BrowseProvider]] = {}
 
 
+def is_custom(method: str, name: str) -> bool:
+    """Whether ``name`` currently has a caller-registered implementation for ``method``."""
+    if method == "answer":
+        from web_router.registry_answer import is_custom as answer_custom
+
+        return answer_custom(name)
+    tables: dict[str, Any] = {
+        "search": _CUSTOM_PROVIDERS,
+        "extract": _CUSTOM_EXTRACT_PROVIDERS,
+        "live_data": _CUSTOM_LIVE_DATA_PROVIDERS,
+        "research": _CUSTOM_RESEARCH_PROVIDERS,
+        "browse": _CUSTOM_BROWSE_PROVIDERS,
+        "open_browser": _CUSTOM_BROWSER_PROVIDERS,
+    }
+    return name in tables.get(method, {})
+
+
 def register_provider(name: str | Provider, provider_cls: type[SearchProvider]) -> None:
     """Register a search provider class under ``name``, overriding any builtin of that name."""
     _CUSTOM_PROVIDERS[provider_name(name)] = provider_cls
@@ -244,15 +255,10 @@ def _is_set(env_var: str) -> bool:
 
 
 def configured_providers() -> list[str]:
-    """Every builtin search provider you currently have a credential for, plus the keyless ones.
+    """Builtin search backends the environment makes worth trying, plus keyless ones.
 
-    Reports what the environment makes usable, which :func:`available_providers` deliberately does not: that
-    lists every name the router knows, key or no key.
-
-    This reads environment variables only. A key passed as ``provider_config`` is invisible here, and a key that is
-    present may still be rejected by the service -- so treat this as "worth trying", not as a guarantee, and let the
-    provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside its
-    credential -- a LiteLLM proxy's URL -- is reported only when it has both.
+    Unlike ``available_providers``, excludes missing credentials. Keys in ``provider_config`` are invisible here;
+    a present key may still be rejected, so the provider validates it. A LiteLLM proxy also needs its URL.
     """
     return sorted(
         name
@@ -262,10 +268,9 @@ def configured_providers() -> list[str]:
 
 
 def configured_extract_providers() -> list[str]:
-    """Every builtin extract provider you currently have credentials for, plus the keyless ones.
+    """Builtin extract backends with credentials, plus keyless ones, on ``configured_providers``' rules.
 
-    The same caveats as :func:`configured_providers`. A backend needing more than one variable -- Oxylabs its
-    username and password, Bright Data its token and zone -- is reported only when it has all of them.
+    Every required variable must be set: both Oxylabs credentials, or Bright Data's token and zone.
     """
     return sorted(
         name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -273,20 +278,17 @@ def configured_extract_providers() -> list[str]:
 
 
 def configured_live_data_providers() -> list[str]:
-    """Every builtin template provider you currently have credentials for.
+    """Builtin live data backends with credentials, on ``configured_providers``' environment-only rules.
 
-    The same caveats as :func:`configured_providers`. A template run fetches and parses on the backend's account,
-    so there is no keyless member and no ``auto``; with no key at all this is empty.
+    A run fetches and parses on the backend's account; no keyless tier or ``auto``. Without keys this is empty.
     """
     return sorted(name for name, sets in LIVE_DATA_CREDENTIAL_SETS.items() if any(all(map(_is_set, e)) for e in sets))
 
 
 def configured_research_providers() -> list[str]:
-    """Every builtin research provider you currently have credentials for.
+    """Builtin research backends with credentials, on ``configured_providers``' environment-only rules.
 
-    The same caveats as :func:`configured_providers`. Shorter than the other two in practice: every research backend
-    bills for the run, so there is no keyless member to pad it out, and with no key at all this is empty but for
-    ``auto`` -- which will then say which variables would fix it.
+    Every run bills; no keyless tier. Without keys only ``auto`` remains, which names the variables to set.
     """
     return sorted(
         name for name, env_vars in RESEARCH_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -294,10 +296,9 @@ def configured_research_providers() -> list[str]:
 
 
 def configured_browser_providers() -> list[str]:
-    """Every builtin browser provider you currently have credentials for.
+    """Builtin browser backends with credentials, on ``configured_providers``' environment-only rules.
 
-    The same caveats as :func:`configured_providers`. A cloud browser bills for every minute it is open; ``local`` needs
-    no key and is always listed, whether or not a browser is installed for it to launch.
+    Cloud sessions bill by the minute. Keyless ``local`` is listed even without a browser installed to launch.
     """
     return sorted(
         name for name, env_vars in BROWSER_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
@@ -305,10 +306,9 @@ def configured_browser_providers() -> list[str]:
 
 
 def configured_browse_providers() -> list[str]:
-    """Every builtin browse provider you currently have credentials for.
+    """Builtin browse backends with credentials, on ``configured_providers``' environment-only rules.
 
-    The same caveats as :func:`configured_providers`. No keyless tier: every task backend bills for the run, so
-    with no key at all this is empty but for ``auto`` -- which will then say which variables would fix it.
+    Every task bills; no keyless tier. Without keys only ``auto`` remains, which names the variables to set.
     """
     return sorted(
         name for name, env_vars in BROWSE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)

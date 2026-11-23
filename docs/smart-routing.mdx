@@ -179,7 +179,11 @@ default mode. Extract, research and browse have none, so their backends keep
 the default order, and so does any backend the benchmark did not measure.
 To rank by your own benchmark, pass `accuracy=` a mapping or the path of a
 JSON file of the same shape. Your scores replace the shipped ones whole,
-since scores from two benchmarks do not compare:
+since scores from two benchmarks do not compare. Shipped scores apply only to
+built-in implementations: registering a replacement excludes its name until
+unregistered, even on a router already built. Your own scores still apply to
+custom backends:
+
 
 ```json
 {"search": {"exa": 0.161, "exa:exa-deep": 0.224}, "answer": {"perplexity": 0.953}}

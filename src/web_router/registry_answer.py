@@ -44,6 +44,11 @@ _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
 _CUSTOM_ANSWER_PROVIDERS: dict[str, type[AnswerProvider]] = {}
 
 
+def is_custom(name: str) -> bool:
+    """Whether ``name`` currently has a caller-registered answer implementation."""
+    return name in _CUSTOM_ANSWER_PROVIDERS
+
+
 def register_answer_provider(name: str | Provider, provider_cls: type[AnswerProvider]) -> None:
     """Register an answer provider class under ``name``, overriding any builtin of that name."""
     _CUSTOM_ANSWER_PROVIDERS[provider_name(name)] = provider_cls

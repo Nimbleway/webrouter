@@ -1,21 +1,12 @@
-"""``DeciderRouter``: a router made of a decider, the glue every decision API needs written once.
+"""``DeciderRouter`` turns a decider's checked ranking into a route, without setting options, exclusions or URLs.
 
-Experimental. ``DeciderRouter(decider)`` is a router like any other: attach it
-with ``router=``, or register it by name::
-
-    register_router("mine", lambda **config: DeciderRouter(MyDecider(**config)))
-
-For each routed call it asks the decider one question -- the prompt, the
-instructions, and each candidate id with its method, backend, estimated cost
-and p90 latency (extract only when the prompt names a URL) -- checks the reply
-(:mod:`.decider_reply`) and answers a :class:`~web_router.RouteDecision` whose
-``tools`` and ``providers`` follow the ranking, or its ``attempts`` when it
-ranks a vendor mode (:mod:`.decider_modes`). It never sets options,
-exclusions or URLs, and its reason holds the decider's name, the first id and
-that id's score when the decider gives one, never the decider's own words.
-The decider's ``timeout_s``, ``name`` and ``route_tools`` are the router's. A
-sync decider runs on a worker thread from async code; an async one on
-web-router's private loop from sync code, as any router does.
+Experimental. Attach with ``router=DeciderRouter(MyDecider())``, or register a factory by name.
+Each call asks one question: prompt, instructions and candidate ids with method, backend, estimated cost and
+p90 latency; extract is offered only with URLs. The ranking becomes ``tools``/``providers``, or ``attempts``
+for vendor modes. The reason names the decider, first id and its score, never the decider's own words.
+The decider supplies ``timeout_s``, ``name`` and ``route_tools``. Sync code runs on a worker from async code;
+async code runs on the private loop from sync code, as any router does. See :mod:`.decider_reply` and
+:mod:`.decider_modes` for reply checking and mode rankings.
 """
 
 from __future__ import annotations
@@ -31,7 +22,7 @@ from web_router.constants_prefer import MSG_ACCURATE_NEEDS_SCORES
 from web_router.exceptions import ConfigurationError
 from web_router.routing._forms import _declared_timeout
 from web_router.routing._runner import _close, _close_late, _on_thread
-from web_router.routing.accuracy import AccuracyLike, AccuracyScores, router_scores
+from web_router.routing.accuracy import AccuracyLike, AccuracyScores, accuracy_scores, router_scores, scored_request
 from web_router.routing.contract import Prefer, RouteDecision, RouteRequest
 from web_router.routing.decider import Decider, DeciderQuestion
 from web_router.routing.decider_question import decision_for, question_for
@@ -109,12 +100,10 @@ class _Pending:
 
 
 class DeciderRouter:
-    """A router that asks a decider one choice question per call and routes by its checked ranking."""
+    """Ask a decider one choice question per call and route by its checked ranking."""
 
     route: Callable[[RouteRequest], RouteDecision | Awaitable[RouteDecision]]
-    """Set when the decider answers synchronously, so sync callers need no event loop. A ``decide()`` that
-    answers with an awaitable makes it answer with one too, which the router call awaits as it awaits any
-    router's, within the deadline, closed if it never runs."""
+    """Sync deciders run without a loop; awaitable replies are awaited within the deadline, closed if unrun."""
 
     def __init__(
         self,
@@ -137,7 +126,7 @@ class DeciderRouter:
                 number of seconds, an unknown ``prefer``, ``accurate`` with empty scores, or scores refused.
         """
         self.prefer = checked_prefer(prefer)
-        self.scores = router_scores(self.prefer, accuracy)
+        self._accuracy = accuracy_scores(accuracy)
         if self.prefer == "accurate" and not self.scores:
             raise ConfigurationError(MSG_ACCURATE_NEEDS_SCORES)
         self._decide = getattr(decider, "decide", None)
@@ -153,20 +142,24 @@ class DeciderRouter:
         if callable(self._decide) and not inspect.iscoroutinefunction(self._decide):
             self.route = self._route
 
+    @property
+    def scores(self) -> AccuracyScores | None:
+        return router_scores(self.prefer, None) if self._accuracy is None else self._accuracy
+
     def __repr__(self) -> str:
         return f"DeciderRouter({self.router_name!r}, timeout_s={self.timeout_s})"
 
     def _asked(self, req: RouteRequest) -> RouteRequest:
-        """``req`` with this router's ``prefer``; unset, the one it came with, never cleared."""
         return req if self.prefer is None else replace(req, prefer=self.prefer)
 
     def _scores(self, req: RouteRequest) -> AccuracyScores | None:
-        """This router's scores; with none, the shipped ones when ``req`` -- a router service's -- prefers accurate."""
         return self.scores if self.scores is not None else router_scores(req.prefer, None)
 
     def _route(self, req: RouteRequest) -> RouteDecision | Awaitable[RouteDecision]:
         req = self._asked(req)
-        question = question_for(req, self._scores(req))
+        scores = self._scores(req)
+        req = scored_request(req, scores)
+        question = question_for(req, scores)
         if not question.options:
             return RouteDecision()
         assert callable(self._decide)  # called only when the decider has decide()
@@ -180,7 +173,9 @@ class DeciderRouter:
         if not callable(self._adecide):
             return await _on_worker(self._route, req)
         req = self._asked(req)
-        question = question_for(req, self._scores(req))
+        scores = self._scores(req)
+        req = scored_request(req, scores)
+        question = question_for(req, scores)
         if not question.options:
             return RouteDecision()
         return self._decision(req, question, await self._adecide(question))
