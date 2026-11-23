@@ -71,15 +71,16 @@ class PreferredRouter:
 
     def route(self, req: RouteRequest) -> RouteDecision:
         """Each method's candidates by the preference: see :func:`ordered`."""
-        return ordered(req, self.prefer, self.scores, PREFERRED_REASON.format(prefer=self.prefer))
+        return ordered(req, self.prefer, self.scores)
 
 
-def ordered(req: RouteRequest, prefer: Prefer, scores: AccuracyScores | None, reason: str) -> RouteDecision:
+def ordered(req: RouteRequest, prefer: Prefer, scores: AccuracyScores | None) -> RouteDecision:
     """Each method's candidates by ``prefer``, unknowns last; ties as offered.
 
     Shown vendor modes for the method the call runs -- the caller's, else search -- it answers ``attempts``
     instead: that method's backends and modes, each at its own estimate, so the method stays the one it would be.
     """
+    reason = PREFERRED_REASON.format(prefer=prefer)
     by_tool: dict[ToolName, list[Candidate]] = defaultdict(list)
     for candidate in req.candidates:
         by_tool[candidate.tool].append(candidate)

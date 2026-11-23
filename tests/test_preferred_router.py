@@ -68,10 +68,11 @@ def test_accurate_needs_scores(accuracy: Any) -> None:
         PreferredRouter("accurate", accuracy=accuracy)
 
 
+@pytest.mark.parametrize("accuracy", [SCORES, {}])
 @pytest.mark.parametrize("prefer", ["cheap", "fast"])
-def test_scores_with_a_preference_that_never_reads_them_are_refused(prefer: Any) -> None:
+def test_scores_with_a_preference_that_never_reads_them_are_refused(prefer: Any, accuracy: Any) -> None:
     with pytest.raises(ConfigurationError, match="never reads accuracy scores"):
-        PreferredRouter(prefer, accuracy=SCORES)
+        PreferredRouter(prefer, accuracy=accuracy)
 
 
 def test_it_reads_scores_from_a_file_and_shows_modes_only_when_one_is_scored(tmp_path: Any) -> None:

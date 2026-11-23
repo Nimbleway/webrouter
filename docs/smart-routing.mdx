@@ -504,9 +504,10 @@ over a second, `gemini` and `systemone` up to their 1 s limit
 (`benchmarks/providers/router_latency.py` measures it). On a direct `search()`
 the method is already fixed, so the router could only reorder backends, a gain
 smaller than the wait. `plan()` and `run()` ask the router whatever its
-`route_tools`, so a model router still chooses search over the other methods
-there. To have it rank search's backends or modes too, add search to
-`route_tools`.
+`route_tools`, so there a model router still chooses between search and the
+other methods and orders search's backends. `llm`, the slowest, also leaves out
+answer and extract. To have a model router order the backends of direct
+`search()` calls too, add search to `route_tools`.
 
 Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
