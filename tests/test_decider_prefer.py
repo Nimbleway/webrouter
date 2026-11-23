@@ -111,8 +111,6 @@ def test_with_scores_each_option_carries_its_accuracy_and_without_them_reads_as_
 )
 def test_accurate_holds_the_shipped_scores_unless_given_its_own(build: Any) -> None:
     assert build(prefer="accurate").scores == shipped_scores()
-    assert build(prefer="accurate", accuracy=SCORES).scores == SCORES, "the caller's replace them whole"
-    assert build(prefer="fast").scores is None, "only accurate takes the shipped ones"
     with pytest.raises(ConfigurationError, match="holds none"):
         build(prefer="accurate", accuracy={})
 
@@ -123,3 +121,11 @@ async def test_built_by_name_the_llm_router_takes_its_preference_and_scores(monk
     await router.aroute(request())  # type: ignore[union-attr]
     system, user = (message["content"] for message in server.body()["messages"])
     assert DECIDER_PREFER["accurate"] in system and "accuracy 0.161" in user
+
+
+def test_unset_a_router_asked_accurate_by_a_service_shows_the_shipped_scores() -> None:
+    fixed = Fixed(reply())
+    DeciderRouter(fixed).route(replace(request(), prefer="accurate"))
+    assert "accuracy" in next(iter(fixed.asked[0].options.values()))
+    DeciderRouter(fixed).route(request())
+    assert not any("accuracy" in text for text in fixed.asked[1].options.values())

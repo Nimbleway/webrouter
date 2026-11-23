@@ -524,7 +524,8 @@ missing. Each call sends the server the prompt -- for an extract, its URLs
 whole, query strings included -- the budget (except `gemini`, which sends
 none), the router's `prefer`, if any, and the candidate ids, which name
 your configured backends, with their estimated cost and p90 latency, and the
-accuracy scores you gave the router, if any; never a provider key. The transport is the `remote` router's: `https` only (plain
+accuracy scores the router holds, if any -- yours, or the shipped ones at
+`accurate`; never a provider key. The transport is the `remote` router's: `https` only (plain
 `http` only to this machine), no credentials, query or fragment in the URL,
 one request, no retries, no redirects, no proxy read from the environment, and
 answers of `application/json` under 256 KiB. A failure leaves the static
@@ -542,8 +543,8 @@ asks every question with one sentence in its `instructions`, to rank lower
 cost, lower p90 latency, or higher measured accuracy first, and as
 `DeciderQuestion.prefer` for a decider of your own: `DeciderRouter(decider,
 prefer=..., accuracy=...)`. `llm` also lists it as a `Prefer:` line beside the
-budget, and `systemone` sends it in the `state`. Built with `accuracy=`, each
-option also reads `accuracy 0.161`, or `accuracy unknown`. Built with no
+budget, and `systemone` sends it in the `state`. At `accurate`, or built with
+`accuracy=`, each option also reads `accuracy 0.161`, or `accuracy unknown`. Built with no
 preference, a router passes on one a router service was sent; with neither,
 each router sends what it sent before.
 

@@ -21,7 +21,7 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
-from web_router._chains import chains
+from web_router._chains import measured_accuracy
 from web_router.constants_modes import PART_SEP
 from web_router.constants_prefer import (
     MSG_ACCURACY_FILE,
@@ -70,11 +70,7 @@ def router_scores(prefer: Prefer | None, accuracy: AccuracyLike | None) -> Accur
 def shipped_scores() -> AccuracyScores:
     """Search's and answer's backends, at their default mode, as the benchmark behind ``auto``'s order measured
     them (``data/chains.json``): the share of its questions each answered correctly. No vendor mode is scored."""
-    measured = {method: chains().get(method, {}).get("measured", {}) for method in SHIPPED_METHODS}
-    return {
-        method: {provider: float(row["accuracy"]) for provider, row in rows.items() if _share(row.get("accuracy"))}
-        for method, rows in measured.items()
-    }
+    return {method: measured_accuracy(method) for method in SHIPPED_METHODS}
 
 
 def _share(value: object) -> bool:

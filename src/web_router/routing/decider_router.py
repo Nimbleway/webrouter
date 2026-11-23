@@ -31,7 +31,7 @@ from web_router.constants_prefer import MSG_ACCURATE_NEEDS_SCORES
 from web_router.exceptions import ConfigurationError
 from web_router.routing._forms import _declared_timeout
 from web_router.routing._runner import _close, _close_late, _on_thread
-from web_router.routing.accuracy import AccuracyLike, router_scores
+from web_router.routing.accuracy import AccuracyLike, AccuracyScores, router_scores
 from web_router.routing.contract import Prefer, RouteDecision, RouteRequest
 from web_router.routing.decider import Decider, DeciderQuestion
 from web_router.routing.decider_question import decision_for, question_for
@@ -160,9 +160,13 @@ class DeciderRouter:
         """``req`` with this router's ``prefer``; unset, the one it came with, never cleared."""
         return req if self.prefer is None else replace(req, prefer=self.prefer)
 
+    def _scores(self, req: RouteRequest) -> AccuracyScores | None:
+        """This router's scores; with none, the shipped ones when ``req`` -- a router service's -- prefers accurate."""
+        return self.scores if self.scores is not None else router_scores(req.prefer, None)
+
     def _route(self, req: RouteRequest) -> RouteDecision | Awaitable[RouteDecision]:
         req = self._asked(req)
-        question = question_for(req, self.scores)
+        question = question_for(req, self._scores(req))
         if not question.options:
             return RouteDecision()
         assert callable(self._decide)  # called only when the decider has decide()
@@ -176,7 +180,7 @@ class DeciderRouter:
         if not callable(self._adecide):
             return await _on_worker(self._route, req)
         req = self._asked(req)
-        question = question_for(req, self.scores)
+        question = question_for(req, self._scores(req))
         if not question.options:
             return RouteDecision()
         return self._decision(req, question, await self._adecide(question))
