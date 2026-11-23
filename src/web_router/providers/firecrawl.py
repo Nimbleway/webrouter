@@ -26,6 +26,7 @@ from web_router.constants import (
     PROVIDER_FIRECRAWL,
 )
 from web_router.exceptions import ConfigurationError
+from web_router.providers._cost import keyless_cost
 from web_router.providers._http import HttpExtractProvider
 from web_router.providers._utils import build_payload
 from web_router.types import (
@@ -92,7 +93,7 @@ class FirecrawlExtractProvider(HttpExtractProvider):
         if not payload.get("success"):
             error = payload.get("error") or payload.get("warning") or metadata.get("error")
             failure = ExtractFailure(url=urls[0], error=str(error or MSG_EXTRACT_UNSUCCESSFUL))
-            return ExtractResponse(provider=self.name, failures=[failure], raw=[payload])
+            return ExtractResponse(provider=self.name, failures=[failure], raw=[payload], **keyless_cost(self))
 
         document = ExtractedDocument(
             url=metadata.get("sourceURL") or urls[0],
@@ -107,4 +108,4 @@ class FirecrawlExtractProvider(HttpExtractProvider):
                 **{k: v for k, v in data.items() if k not in {"metadata", *FIRECRAWL_EXTRACT_FORMATS.values()}},
             },
         )
-        return ExtractResponse(provider=self.name, documents=[document], raw=[payload])
+        return ExtractResponse(provider=self.name, documents=[document], raw=[payload], **keyless_cost(self))

@@ -14,10 +14,11 @@ from typing import Any, ClassVar, Literal
 from pydantic import ConfigDict
 
 from web_router._urls import shown
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
+from web_router.constants_routing import MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.routing.entry_names import entry_name
+from web_router.routing.entry_names import candidate_id as candidate_id  # re-exported: its callers import it here
 from web_router.types_decision import DecisionRecord
+from web_router.types_decision import Prefer as Prefer  # re-exported beside the contract types
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
 """The methods a router may choose between. ``live_data`` and ``open_browser`` are never routed."""
@@ -25,12 +26,6 @@ ToolName = Literal["search", "extract", "answer", "research", "browse"]
 
 _WIRE_CONFIG = ConfigDict(use_attribute_docstrings=True)
 """How pydantic reads these types for the wire format's JSON Schema: each field's docstring is its description."""
-
-
-def candidate_id(tool: str, provider: str, mode: str | None = None) -> str:
-    """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``, or with its vendor
-    mode, ``tool:provider:mode``, as ``search:exa:exa-instant``."""
-    return f"{tool}{CANDIDATE_ID_SEPARATOR}{entry_name(provider, mode)}"
 
 
 def _finite_cap(value: object) -> bool:
@@ -140,6 +135,10 @@ class RouteRequest:
 
     pinned_tool: ToolName | None = None
     """The method the caller called. Set, the router orders backends only and does not change the tool."""
+
+    prefer: Prefer | None = None
+    """What the caller prefers among the candidates: ``cheap``, the lowest estimated cost first, or ``fast``, the lowest
+    p90 latency first; ``None`` for no preference. A router may ignore it: it orders, and ``budget`` caps."""
 
 
 @dataclass(frozen=True, kw_only=True)

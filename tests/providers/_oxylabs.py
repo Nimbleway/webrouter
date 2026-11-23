@@ -13,7 +13,7 @@ import httpx
 import pytest
 
 from tests.providers._live_data_http import Api, wire
-from web_router.providers.oxylabs_live_data import OxylabsLiveDataProvider
+from web_router.providers.oxylabs_live_data import OxylabsWebApiLiveDataProvider
 
 BASE = "https://webapi.oxylabs.io"
 
@@ -75,17 +75,19 @@ def _answer(run: Any) -> Any:
     return respond
 
 
-def _provider(run: Any = lambda request: httpx.Response(500), **kwargs: Any) -> tuple[OxylabsLiveDataProvider, Api]:
+def _provider(
+    run: Any = lambda request: httpx.Response(500), **kwargs: Any
+) -> tuple[OxylabsWebApiLiveDataProvider, Api]:
     api = Api(_answer(run))
-    return wire(OxylabsLiveDataProvider(web_api_key="web-api-key", **kwargs), api), api  # type: ignore[return-value]
+    return wire(OxylabsWebApiLiveDataProvider(web_api_key="web-api-key", **kwargs), api), api  # type: ignore[return-value]
 
 
 def _sent(api: Api, method: str) -> list[httpx.Request]:
     return [request for request in api.requests if request.method == method]
 
 
-def _job(states: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch) -> tuple[OxylabsLiveDataProvider, Api]:
-    monkeypatch.setattr(OxylabsLiveDataProvider, "poll_seconds", 0.0)
+def _job(states: list[dict[str, Any]], monkeypatch: pytest.MonkeyPatch) -> tuple[OxylabsWebApiLiveDataProvider, Api]:
+    monkeypatch.setattr(OxylabsWebApiLiveDataProvider, "poll_seconds", 0.0)
     answers = iter(states)
     return _provider(lambda request: httpx.Response(202 if request.method == "POST" else 200, json=next(answers)))
 

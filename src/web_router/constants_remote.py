@@ -82,6 +82,9 @@ CANDIDATE_MODE_KEY = "mode"
 """A candidate's vendor mode on the wire: left out when it has none, as every candidate of a router shown backends
 only."""
 
+PREFER_KEY = "prefer"
+"""The request's ``prefer`` on the wire: left out when the caller set none."""
+
 WIRE_MAX_NAMES = 64
 """The most entries a decision may hold in one list or mapping: ``tools``, one method's ``providers``,
 ``exclude``, or one method's ``params``. Past it, the decision is refused."""

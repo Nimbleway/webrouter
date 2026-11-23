@@ -24,9 +24,9 @@ def _answer(body: bytes, content_type: str | None) -> Recorder:
 
 
 def _call(recorder: Recorder) -> Any:
-    with WebRouter(vendor_credentials=_DATADOG) as router:
+    with WebRouter(data_api_credentials=_DATADOG) as router:
         router._vendor_caller = VendorCaller(router.vendor_credential_source(), transport=httpx.MockTransport(recorder))
-        return router.call_vendor("datadog.monitors.list")
+        return router.call_data_api("datadog.monitors.list")
 
 
 def test_a_binary_body_is_kept_as_bytes() -> None:
@@ -44,7 +44,7 @@ def test_a_text_body_is_still_text(content_type: str | None) -> None:
 
 
 async def test_over_mcp_the_answer_names_the_size_and_fetch_raw_holds_the_bytes() -> None:
-    router = AsyncWebRouter(vendor_credentials=_DATADOG)
+    router = AsyncWebRouter(data_api_credentials=_DATADOG)
     transport = httpx.MockTransport(_answer(_PNG, "image/png"))
     router._vendor_caller = VendorCaller(router.vendor_credential_source(), async_transport=transport)
     tools = WebRouterTools(router)
@@ -58,8 +58,8 @@ async def test_over_mcp_the_answer_names_the_size_and_fetch_raw_holds_the_bytes(
 
 
 def test_a_key_sent_as_an_ordinary_input_is_masked_in_the_shown_url() -> None:
-    with WebRouter(vendor_credentials=_DATADOG) as router:
+    with WebRouter(data_api_credentials=_DATADOG) as router:
         transport = httpx.MockTransport(Recorder())
         router._vendor_caller = VendorCaller(router.vendor_credential_source(), transport=transport)
-        response = router.vendor_request("datadog", "GET", "/api/v1/validate", query={"echo": "dd-test-key-1"})
+        response = router.data_api_request("datadog", "GET", "/api/v1/validate", query={"echo": "dd-test-key-1"})
     assert "dd-test-key-1" not in response.url

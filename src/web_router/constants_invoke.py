@@ -39,6 +39,7 @@ MSG_ROUTE_TOOLS = "route_tools takes a collection of tool names from {known}; go
 MSG_ROUTER_ROUTE_TOOLS = "A router's route_tools attribute takes a collection of tool names from {known}; got {got!r}."
 MSG_ROUTE_MODES = "route_modes takes True, False or None; got {got!r}."
 MSG_ROUTER_ROUTE_MODES = "A router's route_modes attribute takes True or False; got {got!r}."
+MSG_PREFER = "prefer takes {known} or None; got {got!r}."
 MSG_ROUTER_FAILED = (
     "Router {router!r} failed ({code}); fail_on_router_error=True raises rather than use the static order."
 )

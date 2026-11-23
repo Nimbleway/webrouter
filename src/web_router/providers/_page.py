@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import re
 import threading
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -34,20 +33,15 @@ from web_router.constants import (
     BROWSER_HTML_SCRIPT,
     BROWSER_HTML_SELECTOR,
     BROWSER_MAIN_FRAME_EVENT,
-    BROWSER_REF_PATTERN,
     BROWSER_SCREENSHOT_TYPE,
     BROWSER_SECRET_PLACEHOLDER,
-    BROWSER_SNAPSHOT_INDENT,
     BROWSER_SNAPSHOT_MODE,
-    BROWSER_SNAPSHOT_URL_PREFIX,
-    BROWSER_SNAPSHOT_WRAPPER_PATTERN,
     BROWSER_SUBMIT_KEY,
     BROWSER_TEXT_SELECTOR,
     EXTRA_BROWSER,
     MS_PER_SECOND,
     MSG_BROWSER_ACTION_TIMEOUT,
     MSG_BROWSER_ACTIONS_NOT_INSTALLED,
-    MSG_BROWSER_BAD_MAX_CHARS,
     MSG_BROWSER_BAD_TIMEOUT,
     MSG_BROWSER_CONNECT_FAILED,
     MSG_BROWSER_HANDLE_RELEASED,
@@ -72,6 +66,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers._png import as_png, png_size
+from web_router.providers._snapshot import compact_snapshot, refs_in, truncate_tree
 from web_router.types import ExtractedDocument
 from web_router.types_page import PageFormat, PageLoadState, PageSnapshot, PageState, Screenshot
 
@@ -85,47 +80,7 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
-_REF = re.compile(BROWSER_REF_PATTERN)
-_WRAPPER = re.compile(BROWSER_SNAPSHOT_WRAPPER_PATTERN)
 _READ_FORMATS: tuple[PageFormat, ...] = ("text", "html")
-
-
-def compact_snapshot(tree: str) -> str:
-    """Drop unnamed wrapper containers and link-URL lines from a ``mode="ai"`` snapshot.
-
-    A dropped container's children move up a level, so the tree keeps its
-    shape. A line that introduced children and has none left loses its
-    trailing colon. Refs are left exactly as Playwright printed them.
-    """
-    lines = tree.splitlines()
-    kept: list[tuple[int, str, bool]] = []
-    open_wrappers: list[int] = []
-    for index, line in enumerate(lines):
-        text = line.lstrip()
-        indent = len(line) - len(text)
-        while open_wrappers and indent <= open_wrappers[-1]:
-            open_wrappers.pop()
-        if text.startswith(BROWSER_SNAPSHOT_URL_PREFIX):
-            continue
-        if _WRAPPER.match(line):
-            open_wrappers.append(indent)
-            continue
-        following = lines[index + 1] if index + 1 < len(lines) else ""
-        had_children = len(following) - len(following.lstrip()) > indent
-        kept.append((max(indent - BROWSER_SNAPSHOT_INDENT * len(open_wrappers), 0), text, had_children))
-
-    out = []
-    for index, (indent, text, had_children) in enumerate(kept):
-        has_children = index + 1 < len(kept) and kept[index + 1][0] > indent
-        if had_children and not has_children and text.endswith(":"):
-            text = text[:-1]
-        out.append(" " * indent + text)
-    return "\n".join(out)
-
-
-def refs_in(tree: str) -> frozenset[str]:
-    """Every ref a snapshot carries."""
-    return frozenset(_REF.findall(tree))
 
 
 def check_target(ref: str | None, selector: str | None) -> None:
@@ -149,18 +104,6 @@ def seconds_for(timeout: float | None) -> float:
     if timeout <= 0:
         raise ValueError(MSG_BROWSER_BAD_TIMEOUT.format(timeout=timeout))
     return timeout
-
-
-def truncate_tree(tree: str, max_chars: int | None) -> tuple[str, bool]:
-    """``tree`` cut at the last line boundary within ``max_chars``, and whether anything was cut."""
-    if max_chars is None:
-        return tree, False
-    if max_chars < 1:
-        raise ValueError(MSG_BROWSER_BAD_MAX_CHARS.format(max_chars=max_chars))
-    if len(tree) <= max_chars:
-        return tree, False
-    cut = tree.rfind("\n", 0, max_chars + 1)
-    return (tree[:cut] if cut > 0 else ""), True
 
 
 def _throw(failure: tuple[BrowserActionError, BaseException]) -> NoReturn:
@@ -309,12 +252,14 @@ class _PageCore:
     def _detached(self, action: str, ref: str) -> BrowserActionError:
         return self._error(StaleElementError, action, MSG_BROWSER_REF_DETACHED.format(ref=ref))
 
-    def _missing(self, action: str, ref: str | None, selector: str | None, seconds: float) -> BrowserActionError:
+    def _missing(
+        self, exc: BaseException, action: str, ref: str | None, selector: str | None, seconds: float
+    ) -> tuple[BrowserActionError, BaseException]:
+        """Our error for an element that never appeared, and ``exc`` scrubbed of the CDP URL to chain."""
         if ref is not None:
-            return self._detached(action, ref)
-        return self._error(
-            ElementNotFoundError, action, MSG_BROWSER_NOT_FOUND.format(selector=selector, timeout=seconds)
-        )
+            return self._detached(action, ref), self._scrubbed(exc)[1]
+        message = MSG_BROWSER_NOT_FOUND.format(selector=selector, timeout=seconds)
+        return self._error(ElementNotFoundError, action, message), self._scrubbed(exc)[1]
 
     def _failure(
         self,
@@ -565,10 +510,12 @@ class SyncPage(_PageCore):
             try:
                 act(locator)
             except Exception as exc:
-                if _is_timeout(exc) and self._count(locator) == 0:
-                    raise self._missing(action, ref, selector, seconds) from exc
-                raise
-            return self._state(page)
+                if not (_is_timeout(exc) and self._count(locator) == 0):
+                    raise
+                failure = self._missing(exc, action, ref, selector, seconds)
+            else:
+                return self._state(page)
+            _throw(failure)
 
         return self._run(action, seconds, run)
 
@@ -778,10 +725,12 @@ class AsyncPage(_PageCore):
             try:
                 await act(locator)
             except Exception as exc:
-                if _is_timeout(exc) and await self._count(locator) == 0:
-                    raise self._missing(action, ref, selector, seconds) from exc
-                raise
-            return await self._state(page)
+                if not (_is_timeout(exc) and await self._count(locator) == 0):
+                    raise
+                failure = self._missing(exc, action, ref, selector, seconds)
+            else:
+                return await self._state(page)
+            _throw(failure)
 
         return await self._run(action, seconds, run)
 

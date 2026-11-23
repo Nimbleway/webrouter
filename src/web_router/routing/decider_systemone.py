@@ -42,11 +42,14 @@ class SystemOneDecider(HttpDecider):
     default_route_tools = SYSTEMONE_ROUTE_TOOLS
 
     def body(self, question: DeciderQuestion) -> dict[str, Any]:
-        """The System One request: the prompt and the budget as the state, and one ``choice`` question."""
+        """The System One request: the prompt, the budget and a ``prefer`` the caller set as the state, and one
+        ``choice`` question."""
         choice = {"type": "choice", "instructions": question.instructions, "criteria": dict(question.options)}
         state: dict[str, Any] = {"query": question.prompt}
         if question.budget is not None:
             state["budget"] = {k: v for k, v in asdict(question.budget).items() if v is not None}
+        if question.prefer is not None:
+            state["prefer"] = question.prefer
         return {"state": state, "model": self.model, "questions": {SYSTEMONE_QUESTION: choice}}
 
     async def adecide(self, question: DeciderQuestion) -> DeciderReply:

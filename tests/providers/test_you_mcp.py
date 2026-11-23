@@ -224,3 +224,39 @@ def test_live_inline_operators_are_taken_out_of_the_query() -> None:
     assert response.results
     assert all("docs.python.org" in result.url for result in response.results)
     assert response.raw["metadata"]["query"] == "asyncio tutorial"
+
+
+_NO_RESULTS_HINT = 'No results for "{".\nIssue a new query - don\'t repeat this one. Widen with more common terms.'
+
+
+def _empty_search_reply() -> httpx.Response:
+    """What You.com sends for a search with no hits: the JSON object, then a plain-text hint in the same content."""
+    payload = {"results": {}, "metadata": {"search_uuid": "abc", "query": "{"}}
+    return _sse({"result": {"content": [{"type": "text", "text": json.dumps(payload) + _NO_RESULTS_HINT}]}})
+
+
+def test_a_search_with_no_hits_is_an_empty_response_not_a_parse_error(provider: YouMcpProvider) -> None:
+    """The hint after the JSON made ``json.loads`` raise "Extra data", so a query with no hits failed the call."""
+    request = SearchRequest(query="{")
+
+    response = provider._to_response(request, provider._payload(_empty_search_reply()))
+
+    assert response.results == []
+    assert response.request_id == "abc"
+
+
+def test_a_hit_list_followed_by_text_is_still_read(provider: YouMcpProvider) -> None:
+    payload = {"results": {"web": [{"url": "https://a.example", "title": "A"}]}}
+    reply = _sse({"result": {"content": [{"type": "text", "text": json.dumps(payload) + "\nnote"}]}})
+
+    response = provider._to_response(SearchRequest(query="a"), provider._payload(reply))
+
+    assert [r.url for r in response.results] == ["https://a.example"]
+
+
+@pytest.mark.parametrize("text", ["No results at all.", "[1, 2]", '"a string"'])
+def test_text_that_is_not_a_json_object_is_still_no_result(provider: YouMcpProvider, text: str) -> None:
+    reply = _sse({"result": {"content": [{"type": "text", "text": text}]}})
+
+    with pytest.raises(ProviderError, match="no result payload"):
+        provider._payload(reply)

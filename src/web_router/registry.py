@@ -58,7 +58,7 @@ from web_router.constants import (
 from web_router.constants_browse import BUILTIN_BROWSE_PROVIDERS, BUILTIN_BROWSER_PROVIDERS
 from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as _SEARCH_SETTINGS
 from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
-from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_ENV_BY_PROVIDER
+from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_CREDENTIAL_SETS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.providers._pinning import pinned_class
 from web_router.types import Provider, provider_name
@@ -278,9 +278,7 @@ def configured_live_data_providers() -> list[str]:
     The same caveats as :func:`configured_providers`. A template run fetches and parses on the backend's account,
     so there is no keyless member and no ``auto``; with no key at all this is empty.
     """
-    return sorted(
-        name for name, env_vars in LIVE_DATA_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
-    )
+    return sorted(name for name, sets in LIVE_DATA_CREDENTIAL_SETS.items() if any(all(map(_is_set, e)) for e in sets))
 
 
 def configured_research_providers() -> list[str]:

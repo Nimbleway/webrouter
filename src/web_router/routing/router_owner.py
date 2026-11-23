@@ -1,7 +1,7 @@
 """A router the routers built by name: held so closing them closes it, and never one the caller passed in.
 
 Experimental. :class:`RouterOwner` is the part of
-:class:`~web_router.routing.routed.RouterSetup` that keeps that router and
+:class:`~web_router.routing.router_setup.RouterSetup` that keeps that router and
 closes it, from sync or async code, or at once when attaching it fails.
 """
 

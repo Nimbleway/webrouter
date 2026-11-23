@@ -158,6 +158,7 @@ def _merged(
     tie-break (see :func:`~web_router.live_data_merge.by_score`).
 
     A backend that raised what a backend may raise is named in ``failures``,
+    as is each part of a backend its own page names there (oxylabs' Web API),
     and a refused key logged as ``auto`` logs one; anything else is a bug and
     propagates. When none answered, the page raises
     :class:`~web_router.AllProvidersFailedError` rather than coming back empty,
@@ -173,6 +174,8 @@ def _merged(
             warn_if_refused(name, answer)
         else:
             raise answer
+    for page in pages.values():
+        failures.update(page.failures)
     if not pages:
         message = MSG_LIVE_DATA_EVERY_BACKEND_FAILED.format(failures=failures)
         raise AllProvidersFailedError(LIVE_DATA_EVERY_BACKEND, message, errors)

@@ -69,8 +69,7 @@
         "RecallTitle": {
           "in": "query",
           "type": "string",
-          "description": "Substring of the recall title.",
-          "example": "stroller"
+          "description": "Substring of the recall title."
         },
         "RecallDescription": {
           "in": "query",
@@ -85,8 +84,7 @@
         "Hazard": {
           "in": "query",
           "type": "string",
-          "description": "Substring of a hazard.",
-          "example": "pinch"
+          "description": "Substring of a hazard."
         },
         "Injury": {
           "in": "query",
@@ -193,8 +191,7 @@
         "RecallTitle": {
           "in": "query",
           "type": "string",
-          "description": "Substring of the recall title.",
-          "example": "stroller"
+          "description": "Substring of the recall title."
         },
         "RecallDescription": {
           "in": "query",
@@ -209,8 +206,7 @@
         "Hazard": {
           "in": "query",
           "type": "string",
-          "description": "Substring of a hazard.",
-          "example": "pinch"
+          "description": "Substring of a hazard."
         },
         "Injury": {
           "in": "query",
