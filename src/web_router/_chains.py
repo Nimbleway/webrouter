@@ -49,11 +49,12 @@ def measured_accuracy(method: str) -> dict[str, float]:
     """Each backend's share of correct answers in the benchmark behind ``method``'s order, at its default mode;
     empty for a method the benchmark did not rank. A row with no accuracy from 0 to 1 is left out."""
     rows = chains().get(method, {}).get("measured", {})
-    return {
-        p: float(row["accuracy"])
-        for p, row in rows.items()
-        if _number(row.get("accuracy")) and 0 <= row["accuracy"] <= 1
-    }
+    return {p: float(row["accuracy"]) for p, row in rows.items() if is_accuracy_share(row.get("accuracy"))}
+
+
+def is_accuracy_share(value: object) -> TypeGuard[int | float]:
+    """Whether a score is a real number from zero to one, excluding booleans."""
+    return _number(value) and 0 <= value <= 1
 
 
 def _number(value: object) -> TypeGuard[int | float]:

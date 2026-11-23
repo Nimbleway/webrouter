@@ -21,7 +21,7 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
-from web_router._chains import measured_accuracy
+from web_router._chains import is_accuracy_share, measured_accuracy
 from web_router.constants_modes import PART_SEP
 from web_router.constants_prefer import (
     MSG_ACCURACY_FILE,
@@ -73,10 +73,6 @@ def shipped_scores() -> AccuracyScores:
     return {method: measured_accuracy(method) for method in SHIPPED_METHODS}
 
 
-def _share(value: object) -> bool:
-    return not isinstance(value, bool) and isinstance(value, int | float) and 0 <= value <= 1
-
-
 def accuracy_scores(accuracy: AccuracyLike | None) -> AccuracyScores | None:
     """``accuracy`` read and checked; ``None`` for none.
 
@@ -123,7 +119,7 @@ def _checked(method: ToolName, keys: object) -> dict[str, float]:
         if not isinstance(key, str):
             raise ConfigurationError(MSG_ACCURACY_SHAPE.format(got=key, where=method))
         _known(method, key)
-        if not _share(score):  # NaN fails too
+        if not is_accuracy_share(score):  # NaN fails too
             raise ConfigurationError(MSG_ACCURACY_SCORE.format(key=key, method=method, got=score))
         out[key] = float(score)
     return out
