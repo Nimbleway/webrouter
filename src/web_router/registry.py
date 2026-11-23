@@ -1,25 +1,26 @@
-"""Provider registry, one table per method, with lazy imports so optional SDKs are needed only on use.
-A name does not imply a capability: Brave searches, Oxylabs extracts, and Nimble has separate search,
-extract, live data and research classes. A wrong-method name reports the backends that method serves.
+"""Provider registry, one table per method.
+
+Providers are looked up by name and imported lazily, so installing web-router without a provider's optional
+dependency stays valid until that provider is actually requested.
+
+There is a table per method rather than per vendor, because a name does not imply a capability: ``brave``
+searches and cannot extract, ``oxylabs`` extracts and cannot search, and ``nimble`` searches, extracts, runs
+live data and researches through four different classes. Asking the wrong table for a name reports it as unknown
+and lists the ones that method does serve, which is the honest answer.
 """
 
 from __future__ import annotations
 
 import importlib
-import os
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from web_router.constants import (
     AUTO_EXTRA,
-    BROWSE_ENV_BY_PROVIDER,
-    BROWSER_ENV_BY_PROVIDER,
-    ENV_BY_PROVIDER,
     EXTRA_AWS,
     EXTRA_EXTRACT,
     EXTRA_RESEARCH,
     EXTRA_SEARCH,
-    EXTRACT_ENV_BY_PROVIDER,
     PROVIDER_AGENTCORE,
     PROVIDER_AUTO,
     PROVIDER_BRAVE,
@@ -47,14 +48,18 @@ from web_router.constants import (
     PROVIDER_WEBIQ,
     PROVIDER_YOU,
     PROVIDER_YOU_MCP,
-    RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.constants_browse import BUILTIN_BROWSE_PROVIDERS, BUILTIN_BROWSER_PROVIDERS
-from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as _SEARCH_SETTINGS
 from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
-from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_CREDENTIAL_SETS
+from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.providers._pinning import pinned_class
+from web_router.registry_configured import configured_browse_providers as configured_browse_providers
+from web_router.registry_configured import configured_browser_providers as configured_browser_providers
+from web_router.registry_configured import configured_extract_providers as configured_extract_providers
+from web_router.registry_configured import configured_live_data_providers as configured_live_data_providers
+from web_router.registry_configured import configured_providers as configured_providers
+from web_router.registry_configured import configured_research_providers as configured_research_providers
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:
@@ -247,72 +252,6 @@ def available_browser_providers() -> list[str]:
 def available_browse_providers() -> list[str]:
     """Every browse provider name the router knows, installed or not."""
     return sorted(set(_BUILTIN_BROWSE_PROVIDERS) | set(_CUSTOM_BROWSE_PROVIDERS))
-
-
-def _is_set(env_var: str) -> bool:
-    """Whether ``env_var`` holds a value, counting whitespace-only as unset, as the providers do."""
-    return bool((os.environ.get(env_var) or "").strip())
-
-
-def configured_providers() -> list[str]:
-    """Builtin search backends the environment makes worth trying, plus keyless ones.
-
-    Unlike ``available_providers``, excludes missing credentials. Keys in ``provider_config`` are invisible here;
-    a present key may still be rejected, so the provider validates it. A LiteLLM proxy also needs its URL.
-    """
-    return sorted(
-        name
-        for name, env_var in ENV_BY_PROVIDER.items()
-        if (env_var is None or _is_set(env_var)) and all(map(_is_set, _SEARCH_SETTINGS.get(name, ())))
-    )
-
-
-def configured_extract_providers() -> list[str]:
-    """Builtin extract backends with credentials, plus keyless ones, on ``configured_providers``' rules.
-
-    Every required variable must be set: both Oxylabs credentials, or Bright Data's token and zone.
-    """
-    return sorted(
-        name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
-    )
-
-
-def configured_live_data_providers() -> list[str]:
-    """Builtin live data backends with credentials, on ``configured_providers``' environment-only rules.
-
-    A run fetches and parses on the backend's account; no keyless tier or ``auto``. Without keys this is empty.
-    """
-    return sorted(name for name, sets in LIVE_DATA_CREDENTIAL_SETS.items() if any(all(map(_is_set, e)) for e in sets))
-
-
-def configured_research_providers() -> list[str]:
-    """Builtin research backends with credentials, on ``configured_providers``' environment-only rules.
-
-    Every run bills; no keyless tier. Without keys only ``auto`` remains, which names the variables to set.
-    """
-    return sorted(
-        name for name, env_vars in RESEARCH_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
-    )
-
-
-def configured_browser_providers() -> list[str]:
-    """Builtin browser backends with credentials, on ``configured_providers``' environment-only rules.
-
-    Cloud sessions bill by the minute. Keyless ``local`` is listed even without a browser installed to launch.
-    """
-    return sorted(
-        name for name, env_vars in BROWSER_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
-    )
-
-
-def configured_browse_providers() -> list[str]:
-    """Builtin browse backends with credentials, on ``configured_providers``' environment-only rules.
-
-    Every task bills; no keyless tier. Without keys only ``auto`` remains, which names the variables to set.
-    """
-    return sorted(
-        name for name, env_vars in BROWSE_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
-    )
 
 
 def _resolve(

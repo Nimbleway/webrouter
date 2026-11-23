@@ -9,7 +9,6 @@
   "src/web_router/providers/auto.py": 717,
   "src/web_router/providers/base.py": 1873,
   "src/web_router/providers/local.py": 600,
-  "src/web_router/registry.py": 424,
   "src/web_router/types.py": 739,
   "tests/benchmarks/test_agent_benchmark.py": 2053,
   "tests/conftest.py": 450,

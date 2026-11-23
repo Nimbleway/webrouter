@@ -1,12 +1,21 @@
-"""``DeciderRouter`` turns a decider's checked ranking into a route, without setting options, exclusions or URLs.
+"""``DeciderRouter``: a router made of a decider, the glue every decision API needs written once.
 
-Experimental. Attach with ``router=DeciderRouter(MyDecider())``, or register a factory by name.
-Each call asks one question: prompt, instructions and candidate ids with method, backend, estimated cost and
-p90 latency; extract is offered only with URLs. The ranking becomes ``tools``/``providers``, or ``attempts``
-for vendor modes. The reason names the decider, first id and its score, never the decider's own words.
-The decider supplies ``timeout_s``, ``name`` and ``route_tools``. Sync code runs on a worker from async code;
-async code runs on the private loop from sync code, as any router does. See :mod:`.decider_reply` and
-:mod:`.decider_modes` for reply checking and mode rankings.
+Experimental. ``DeciderRouter(decider)`` is a router like any other: attach it
+with ``router=``, or register it by name::
+
+    register_router("mine", lambda **config: DeciderRouter(MyDecider(**config)))
+
+For each routed call it asks the decider one question -- the prompt, the
+instructions, and each candidate id with its method, backend, estimated cost
+and p90 latency (extract only when the prompt names a URL) -- checks the reply
+(:mod:`.decider_reply`) and answers a :class:`~web_router.RouteDecision` whose
+``tools`` and ``providers`` follow the ranking, or its ``attempts`` when it
+ranks a vendor mode (:mod:`.decider_modes`). It never sets options,
+exclusions or URLs, and its reason holds the decider's name, the first id and
+that id's score when the decider gives one, never the decider's own words.
+The decider's ``timeout_s``, ``name`` and ``route_tools`` are the router's. A
+sync decider runs on a worker thread from async code; an async one on
+web-router's private loop from sync code, as any router does.
 """
 
 from __future__ import annotations
@@ -100,10 +109,12 @@ class _Pending:
 
 
 class DeciderRouter:
-    """Ask a decider one choice question per call and route by its checked ranking."""
+    """A router that asks a decider one choice question per call and routes by its checked ranking."""
 
     route: Callable[[RouteRequest], RouteDecision | Awaitable[RouteDecision]]
-    """Sync deciders run without a loop; awaitable replies are awaited within the deadline, closed if unrun."""
+    """Set when the decider answers synchronously, so sync callers need no event loop. A ``decide()`` that
+    answers with an awaitable makes it answer with one too, which the router call awaits as it awaits any
+    router's, within the deadline, closed if it never runs."""
 
     def __init__(
         self,
@@ -129,12 +140,10 @@ class DeciderRouter:
         self._accuracy = accuracy_scores(accuracy)
         if self.prefer == "accurate" and not self.scores:
             raise ConfigurationError(MSG_ACCURATE_NEEDS_SCORES)
-        self._decide = getattr(decider, "decide", None)
-        self._adecide = getattr(decider, "adecide", None)
+        self._decide, self._adecide = getattr(decider, "decide", None), getattr(decider, "adecide", None)
         if not callable(self._decide) and not callable(self._adecide):
             raise ConfigurationError(MSG_DECIDER_FORM.format(kind=type(decider).__name__))
-        self.decider = decider
-        self._owns = owns_decider
+        self.decider, self._owns = decider, owns_decider
         self.timeout_s = _declared_timeout(decider)
         self.router_name = _decider_name(decider)
         self.route_tools = getattr(decider, "route_tools", None)
@@ -150,6 +159,7 @@ class DeciderRouter:
         return f"DeciderRouter({self.router_name!r}, timeout_s={self.timeout_s})"
 
     def _asked(self, req: RouteRequest) -> RouteRequest:
+        """``req`` with this router's ``prefer``; unset, the one it came with, never cleared."""
         return req if self.prefer is None else replace(req, prefer=self.prefer)
 
     def _route(self, req: RouteRequest) -> RouteDecision | Awaitable[RouteDecision]:
