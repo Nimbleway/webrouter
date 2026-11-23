@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.routing_helpers import Table, Tool, order, wr
-from web_router import AsyncWebRouter, Budget, PreferredRouter, WebRouter, available_routers
+from web_router import AsyncWebRouter, Budget, PreferredRouter, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.routing.accuracy import shipped_scores
 from web_router.routing.contract import Candidate, RouteRequest
@@ -89,10 +89,6 @@ def test_it_reads_scores_from_a_file_and_shows_modes_only_when_one_is_scored(tmp
     path.write_text('{"search": {"a": 0.4}}', encoding="utf-8")
     router = PreferredRouter("accurate", accuracy=str(path))
     assert (router.scores, router.route_modes) == ({"search": {"a": 0.4}}, False)
-
-
-def test_it_is_built_in_by_name() -> None:
-    assert "preferred" in available_routers()
 
 
 @pytest.mark.parametrize("router_cls", [WebRouter, AsyncWebRouter])

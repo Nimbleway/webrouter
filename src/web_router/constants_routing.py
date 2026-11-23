@@ -47,3 +47,8 @@ PROMPT_PARAMS = frozenset({"query", "task"})
 """The options that carry a plan's prompt, left out of its ``repr`` with the prompt itself."""
 
 MSG_BUDGET_VALUE = "Budget({name}=...) takes a finite number of 0 or more, or None for no cap; got {value!r}."
+
+CHEAPEST_ROUTER_NAME = "cheapest_first"
+MSG_CHEAPEST_DEPRECATED = (
+    'cheapest_first is deprecated and will be removed in the following release; use PreferredRouter("cheap") instead.'
+)

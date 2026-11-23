@@ -1,1 +1,0 @@
-The `cheapest_first` router is removed, by name and as `web_router.cheapest_first`: it was the `preferred` router at `cheap`. Use `PreferredRouter("cheap")`, or `router="preferred"` with `router_config={"prefer": "cheap"}`.

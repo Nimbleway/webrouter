@@ -100,6 +100,7 @@ from web_router.routing import (
     RouterLike,
     ToolName,
 )
+from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider import Decider, DeciderQuestion, DeciderReply
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.pool_status import BudgetStatus
@@ -286,6 +287,7 @@ __all__ = [
     "WebRouterError",
     "__version__",
     "available_routers",
+    "cheapest_first",
     "register_router",
     "spend_report",
     "unregister_router",
