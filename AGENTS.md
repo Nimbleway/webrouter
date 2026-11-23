@@ -64,7 +64,7 @@ when there are none.
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and
 released when the block holding it ends. The handle can also drive the page
 itself — `goto`, `snapshot`, `click`, `type`, `press`, `screenshot`, `read` —
-installed by [browser]. Steel, Browserbase, Hyperbrowser, Anchor, Kernel, the keyless
+installed by `browser`. Steel, Browserbase, Hyperbrowser, Anchor, Kernel, the keyless
 `local`, which launches a Chromium on this machine, and `auto`, which tries the
 vendors you hold keys for and then `local`.
 
@@ -157,7 +157,7 @@ src/web_router/
 ├── client_requests.py  the routers' request builders: a method's arguments in, its
 │                       normalized request out; JsonSchema; the sync router's
 │                       async_client check
-├── evals/              accuracy: a question set, judged — installed by [evals]
+├── evals/              accuracy: a question set, judged — installed by `evals`
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
 │   │                   SealQA, or a CSV; seeded sampling; answer-key pages withheld
@@ -369,7 +369,7 @@ src/web_router/
 │                       stdout, a JSON error and an exit status on stderr
 │                       (output.py); its strings live in constants_cli.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
-│                       for an agent to call, installed by [mcp]
+│                       for an agent to call, installed by `mcp`
 │   ├── methods.py      the library method behind each provider-picking tool: its
 │   │                   registry, classes, options and env table, in one table
 │   ├── schema.py       a tool's schema narrowed to the backends serving it here,
@@ -398,7 +398,7 @@ src/web_router/
 │   ├── _tools.py       the Claude and OpenAI tools' shared half: names,
 │   │                   schemas, input checks, the executor, routing_guide()
 │   ├── langchain.py    WebRouterSearch / WebRouterExtract tools — installed by
-│   │                   [langchain]
+│   │                   `langchain`
 │   ├── anthropic.py    WebRouterTools (Claude custom tools + local executor)
 │   │                   and routing_guide() — no SDK, no extra
 │   └── openai.py       WebRouterTools (OpenAI function tools, Responses and
