@@ -38,7 +38,8 @@ jobs:
 
           how = (
               "add changelog.d/<name>.<type>.md with your entry (see changelog.d/README.md), "
-              "or label the PR skip-changelog if users would not notice the change."
+              "or, if users would not notice the change, the skip-changelog label "
+              "(on a fork PR, ask a maintainer to add it)."
           )
           with open("files.jsonl") as files:
               rows = [json.loads(line) for line in files if line.strip()]

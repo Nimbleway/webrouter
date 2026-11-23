@@ -16,6 +16,9 @@
 ## Checklist
 
 - [ ] Tests added or updated
+- [ ] A changelog fragment in `changelog.d/` if users would notice the change
+      (format in `changelog.d/README.md`); otherwise the `skip-changelog` label,
+      which a maintainer adds on a fork PR
 - [ ] Provider tables in `docs/providers.mdx` and docs updated if provider capabilities or the public API changed
 - [ ] Opened as a draft, marked ready only after Qodo (the AI review bot on this repo)
       posted its review for the latest commit, and every finding has a reply starting with `@qodo`:
