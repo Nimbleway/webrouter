@@ -135,7 +135,7 @@ evals = [
 # apart from `evals`, and pinned exactly: an upgrade is a reviewed change.
 evals-litellm = [
     "webrouter[evals]",
-    "litellm==1.108.0",
+    "litellm==1.110.2",
 ]
 # Not a method either: LangChain tools over search and extract, for an agent
 # built on LangChain rather than one that speaks MCP. langchain-core is all the
