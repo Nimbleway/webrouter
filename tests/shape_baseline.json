@@ -2,7 +2,7 @@
   "benchmarks/agent/page.py": 732,
   "benchmarks/agent/report.py": 1474,
   "benchmarks/agent/run.py": 1637,
-  "src/web_router/client.py": 761,
+  "src/web_router/client.py": 757,
   "src/web_router/constants.py": 4142,
   "src/web_router/mcp/tools.py": 561,
   "src/web_router/providers/_page.py": 750,

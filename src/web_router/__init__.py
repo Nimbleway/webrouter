@@ -100,10 +100,10 @@ from web_router.routing import (
     RouterLike,
     ToolName,
 )
-from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider import Decider, DeciderQuestion, DeciderReply
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.pool_status import BudgetStatus
+from web_router.routing.preferred import PreferredRouter, cheapest_first
 from web_router.routing.registry import available_routers, register_router, unregister_router
 from web_router.spend import SpendEntry, SpendLog, SpendRow, SpendSink, spend_report
 from web_router.types import (
@@ -241,6 +241,7 @@ __all__ = [
     "PageSnapshot",
     "PageState",
     "Plan",
+    "PreferredRouter",
     "Provider",
     "ProviderError",
     "ProviderNotFoundError",

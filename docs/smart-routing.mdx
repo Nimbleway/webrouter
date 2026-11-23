@@ -38,10 +38,13 @@ method, `functools.partial` or coroutine function, or an object with
 A string names a registered router, such as the built-in `remote`: see
 [A router service](/smart-routing#a-router-service).
 A router is shown a `RouteRequest` and nothing else: the `prompt`, the `urls`
-found in it, the `budget`, the method you pinned (`pinned_tool`), what you
-prefer (`prefer`), its own time to answer (`deadline_s`) and the `candidates`,
-each a `Candidate` named `tool:provider` (`search:exa`) with `est_cost_usd` and
-`est_latency_s` (p90), `None` when unknown. It holds no key values. The router runs in your process;
+found in it, the `budget`, the method you pinned (`pinned_tool`), a
+preference a router service was sent (`prefer`), its own time to answer
+(`deadline_s`) and the `candidates`, each a `Candidate` named `tool:provider`
+(`search:exa`) with `est_cost_usd` and `est_latency_s` (p90), `None` when
+unknown, and `measured`, `False` for a keyless tier or a call with
+`provider_options`, which a backend's benchmark score does not describe. It
+holds no key values. The router runs in your process;
 what it sends elsewhere is up to your code. With no router attached, nothing
 extra leaves the process. Every
 `RouteDecision` field is optional: `tools` and `providers`, best first,
@@ -137,41 +140,58 @@ A URL with no host is refused even with no policy.
 It is off by default, and leaves the URLs you pass to `extract` yourself
 alone; on the MCP server it holds for `web_run`'s plans only.
 
-## Preferring cheap or fast
+## Preferring cheap, fast or accurate
 
-`WebRouter(prefer="cheap")` or `prefer="fast"` says what you prefer among the
-backends your budget allows: `cheap`, the lowest estimated cost first ($0
-first), or `fast`, the lowest p90 latency first. A backend with no estimate
-goes last, and ties keep the default order, which is accuracy first. It is a
-preference, not a cap: a `Budget` still caps, and a backend with no known price
-never runs under a cost cap. `None`, the default, prefers nothing; any other
-value raises `ConfigurationError`.
+A preference belongs to the router: you build the router with it. `cheap` puts
+the lowest estimated cost first ($0 first), `fast` the lowest p90 latency, and
+`accurate` the highest accuracy score the router holds. A backend with no
+estimate or score goes last, and ties keep the default order. It orders and
+never caps: a `Budget` still caps, and a backend with no known price never runs
+under a cost cap. The default `rules` router takes no preference.
 
-It orders `auto`'s backends on every call and plan, with or without a router:
-it replaces the cost-cap order of [Cost and budgets](/budgets#cheapest-first-under-a-cost-cap)
-for search and answer, and orders extract, research and browse too. A router
-that ranks a method's backends still decides that method; every router is
-shown the preference in `RouteRequest.prefer`, a remote one in the wire format
-when it is set, and the decision record names it. A `chain` you set or a
-backend you name runs as given.
+The built-in `preferred` router sorts each method's backends by its
+preference, with no model and no key:
 
 ```python
-wr = WebRouter(prefer="cheap")
-wr.search("who won the 2022 world cup final").decision.merged  # $0 backends first, then the cheapest
+from web_router import PreferredRouter, WebRouter
+
+wr = WebRouter(router=PreferredRouter("fast"))
+wr = WebRouter(router="preferred", router_config={"prefer": "cheap"})  # the same, by name
 ```
 
-A router of your own reads it too:
+`cheapest_first` is `preferred` at `cheap`. The model routers take one too --
+`llm_router(..., prefer="cheap")`, or `prefer` in their `router_config` -- and
+so does `remote`, which sends it as `RouteRequest.prefer`. Each member of a
+`fallback` keeps its own. The record names the preference of the router whose
+ranking the call used: `None` when that router has none, failed or decided
+nothing.
+
+**Accurate needs your scores (experimental).** web-router ships no accuracy
+scores for routers: `accurate` ranks by scores you bring, from your own
+benchmark, passed as `accuracy=` a mapping or the path of a JSON file of the
+same shape:
+
+```json
+{"search": {"exa": 0.161, "exa:exa-deep": 0.224}, "answer": {"perplexity": 0.953}}
+```
+
+A score is the share of questions answered correctly, from 0 to 1, and
+compares only within its method. `exa` scores the backend as the request
+sends it, `exa:exa-deep` that vendor mode; anything not listed, and a candidate
+whose `measured` is `False`, is unknown. A method, backend or mode that is not
+real, a mode not spelled the way the backend spells it, or a score outside 0
+to 1 raises `ConfigurationError`, and so does `accurate` with no scores. A
+router with mode scores is shown vendor modes.
 
 ```python
-def route(req: RouteRequest) -> RouteDecision:
-    if req.prefer == "fast" and req.pinned_tool:
-        timed = [c for c in req.candidates if c.tool == req.pinned_tool and c.est_latency_s is not None]
-        return RouteDecision(providers={req.pinned_tool: [c.provider for c in sorted(timed, key=lambda c: c.est_latency_s)]})
-    return RouteDecision()
+wr = WebRouter(router=PreferredRouter("accurate", accuracy="scores.json"))
 ```
 
-The built-in `cheapest_first` router is `prefer="cheap"`'s order whatever
-`prefer` says.
+With no preference, `auto`'s order is already accuracy-first: the backends the
+shipped benchmark cannot tell apart form one tier, cheapest first under a cost
+cap. `accurate` sorts by your raw scores instead, so of two backends 0.003
+apart it runs the higher one first even when the gap is within a rerun's
+noise and the other is cheaper. Most callers want the default.
 
 ## The decision record
 
@@ -179,7 +199,7 @@ The built-in `cheapest_first` router is `prefer="cheap"`'s order whatever
 web_router import DecisionRecord`) on every routed or budgeted call, and
 `None` on any other. Every field may be `None`:
 
-- `decision_id`, `router`, `prefer` (when a router was shown it), `router_ms`,
+- `decision_id`, `router`, `prefer` (the preference its ranking used), `router_ms`,
   `router_timeout`, `reason`;
 - `offered`, the candidates the router saw; `dropped`, those left out before
   it, with why; `ranked`, its picks that survived the budget; `excluded` and
@@ -472,9 +492,9 @@ when the router is built, and is sent only to that vendor's host: naming one
 for another `base_url` raises `ConfigurationError`, as does a key that is
 missing. Each call sends the server the prompt -- for an extract, its URLs
 whole, query strings included -- the budget (except `gemini`, which sends
-none), the `prefer` you set, if any, and the candidate ids, which name
-your configured backends, with their estimated cost and p90 latency; never a
-provider key. The transport is the `remote` router's: `https` only (plain
+none), the router's `prefer`, if any, and the candidate ids, which name
+your configured backends, with their estimated cost and p90 latency, and the
+accuracy scores you gave the router, if any; never a provider key. The transport is the `remote` router's: `https` only (plain
 `http` only to this machine), no credentials, query or fragment in the URL,
 one request, no retries, no redirects, no proxy read from the environment, and
 answers of `application/json` under 256 KiB. A failure leaves the static
@@ -487,12 +507,15 @@ httpx, which the `remote` extra installs. Each call bills on that server: the
 router's own call is billed by its vendor and is not counted in a `Budget`'s
 cost or the record's `estimated_cost_usd`.
 
-A `prefer` you set (see [Preferring cheap or fast](/smart-routing#preferring-cheap-or-fast))
-reaches every decider as one sentence in the question's `instructions`, asking
-it to rank lower cost, or lower p90 latency, first among options that serve the
-request alike, and as `DeciderQuestion.prefer` for a decider of your own. `llm`
-also lists it as a `Prefer:` line beside the budget, and `systemone` sends it in
-the `state`. Unset, each router sends what it sent before.
+A decider router built with `prefer` (see [Preferring cheap, fast or accurate](/smart-routing#preferring-cheap-fast-or-accurate))
+asks every question with one sentence in its `instructions`, to rank lower
+cost, lower p90 latency, or higher measured accuracy first, and as
+`DeciderQuestion.prefer` for a decider of your own: `DeciderRouter(decider,
+prefer=..., accuracy=...)`. `llm` also lists it as a `Prefer:` line beside the
+budget, and `systemone` sends it in the `state`. Built with `accuracy=`, each
+option also reads `accuracy 0.161`, or `accuracy unknown`. Built with no
+preference, a router passes on one a router service was sent; with neither,
+each router sends what it sent before.
 
 ## Chaining routers
 

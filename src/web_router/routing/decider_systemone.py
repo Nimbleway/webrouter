@@ -29,7 +29,7 @@ from web_router.constants_decider import (
 from web_router.routing.decider import DeciderQuestion, DeciderReply
 from web_router.routing.decider_http import choice_answer, post_json
 from web_router.routing.decider_reply import rank
-from web_router.routing.decider_router import DeciderRouter, takes_config_of
+from web_router.routing.decider_router import DeciderRouter, decider_router, takes_config_of
 from web_router.routing.http_decider import HttpDecider
 
 
@@ -42,7 +42,7 @@ class SystemOneDecider(HttpDecider):
     default_route_tools = SYSTEMONE_ROUTE_TOOLS
 
     def body(self, question: DeciderQuestion) -> dict[str, Any]:
-        """The System One request: the prompt, the budget and a ``prefer`` the caller set as the state, and one
+        """The System One request: the prompt, the budget and the router's ``prefer`` as the state, and one
         ``choice`` question."""
         choice = {"type": "choice", "instructions": question.instructions, "criteria": dict(question.options)}
         state: dict[str, Any] = {"query": question.prompt}
@@ -63,6 +63,7 @@ class SystemOneDecider(HttpDecider):
 def systemone_router(**config: Any) -> DeciderRouter:
     """What ``router="systemone"`` builds from ``router_config``: a :class:`DeciderRouter` on a System One API.
 
-    ``config`` is :class:`SystemOneDecider`'s keyword arguments, checked against its signature when built by name.
+    ``config`` is :class:`SystemOneDecider`'s keyword arguments, checked against its signature when built by name,
+    and the router's own ``prefer`` and ``accuracy`` (:class:`DeciderRouter`).
     """
-    return DeciderRouter(SystemOneDecider(**config))
+    return decider_router(SystemOneDecider, config)

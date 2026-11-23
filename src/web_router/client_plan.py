@@ -34,11 +34,12 @@ from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, base_params, build_candidates, default_requests
-from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
+from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.decide import decided, router_set
 from web_router.routing.eligible import budget_dropped
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.metered import metered
+from web_router.routing.plan_type import Plan
 from web_router.routing.pool import limited
 from web_router.routing.record import stamp
 from web_router.routing.request_modes import runnable
@@ -75,7 +76,7 @@ class _Planner(RouterSetup):
             requests["extract"] = ExtractRequest(urls=[ONE_PAGE_URL])
         if tool is not None:
             requests = {tool: requests[tool]} if tool in requests else {}
-        found = build_candidates(self, requests, budget=budget, modes=self._route_modes, prefer=self._prefer)
+        found = build_candidates(self, requests, budget=budget, modes=self._route_modes)
         req = RouteRequest(
             prompt=prompt,
             candidates=found.candidates,
@@ -83,7 +84,6 @@ class _Planner(RouterSetup):
             urls=tuple(kept),
             budget=budget,
             pinned_tool=tool,
-            prefer=self._prefer,
         )
         return req, found, kept, refused
 

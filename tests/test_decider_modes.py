@@ -14,10 +14,10 @@ from tests.candidates_helpers import exa_tavily_fixture  # noqa: F401  (fixture)
 from tests.decider_helpers import chat, serve, systemone
 from web_router import Candidate, RouteDecision, RouteRequest, WebRouter
 from web_router.constants_mode_parts import EXA_TIERS
-from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider_llm import llm_router
 from web_router.routing.decider_question import decision_for, describe
 from web_router.routing.decider_systemone import systemone_router
+from web_router.routing.preferred import cheapest_first
 
 INSTANT, DEEP, TAVILY, EXA = "search:exa:exa-instant", "search:exa:exa-deep", "search:tavily", "search:exa"
 CANDIDATES = (

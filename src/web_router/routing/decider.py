@@ -42,7 +42,7 @@ class DeciderQuestion:
     """Seconds the decider has to answer."""
 
     prefer: Prefer | None = None
-    """What the caller prefers, ``cheap`` or ``fast``; the instructions say so too. ``None`` for no preference."""
+    """What the router prefers, ``cheap``, ``fast`` or ``accurate``; the instructions say so too. ``None`` for none."""
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -34,10 +34,11 @@ and :mod:`.fallback` the built-in router that asks others in turn, answering a
 """
 
 from web_router.routing.composite import CompositeDecision
-from web_router.routing.contract import Budget, Candidate, Plan, Prefer, RouteDecision, RouteRequest, ToolName
+from web_router.routing.contract import Budget, Candidate, Prefer, RouteDecision, RouteRequest, ToolName
 from web_router.routing.decider import AsyncDecider, Decider, DeciderQuestion, DeciderReply, SyncDecider
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.invoke import RouterLike
+from web_router.routing.plan_type import Plan
 from web_router.routing.url_policy import UrlPolicy
 
 __all__ = [

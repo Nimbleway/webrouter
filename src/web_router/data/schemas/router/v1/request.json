@@ -101,6 +101,12 @@
           "description": "Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured.",
           "title": "Est Latency S"
         },
+        "measured": {
+          "default": true,
+          "description": "``False`` for a keyless tier or a member with its own ``provider_options``: a backend's measured score does\nnot describe it, so a router's accuracy scores leave it unknown. Sent on the wire only when ``False``.",
+          "title": "Measured",
+          "type": "boolean"
+        },
         "id": {
           "default": "",
           "description": "``tool:provider``, or ``tool:provider:mode`` with a mode: the name every decision field uses. Filled in when\nleft empty, refused when it differs.",
@@ -187,7 +193,8 @@
         {
           "enum": [
             "cheap",
-            "fast"
+            "fast",
+            "accurate"
           ],
           "type": "string"
         },
@@ -196,7 +203,7 @@
         }
       ],
       "default": null,
-      "description": "What the caller prefers among the candidates: ``cheap``, the lowest estimated cost first, or ``fast``, the lowest\np90 latency first; ``None`` for no preference. A router may ignore it: it orders, and ``budget`` caps.",
+      "description": "What the router is asked to prefer among the candidates: ``cheap``, ``fast`` or ``accurate``; ``None`` for no\npreference. A router built with one sets it on the request it asks or sends; it orders, and ``budget`` caps.",
       "title": "Prefer"
     }
   },

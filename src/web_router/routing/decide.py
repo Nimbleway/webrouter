@@ -13,14 +13,14 @@ from __future__ import annotations
 
 from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any, cast, get_args
 
 from web_router._urls import shown
 from web_router.constants_merge import ROUTER_TIMEOUT
 from web_router.constants_params import PARAMS_SOURCE_ROUTER
 from web_router.routing.candidates import CandidateSet
-from web_router.routing.composite import members_of, none_answered
-from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
+from web_router.routing.composite import decides_nothing, members_of, none_answered
+from web_router.routing.contract import Prefer, RouteDecision, RouteRequest, ToolName
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.merge import FallbackReason, UrlCheck, merge
 from web_router.routing.merge_attempts import ranks, reasoned
@@ -107,7 +107,7 @@ def decided(
         fields["reason"] = None  # no router: the static order is no router's empty answer
     out = DecisionRecord(
         router=router,
-        prefer=req.prefer,
+        prefer=_ranked_by(decision),
         offered=[candidate.id for candidate in req.candidates],
         dropped={**(refused or {}), **found.dropped} or None,
         unmeasured=list(found.unmeasured) or None,
@@ -117,6 +117,13 @@ def decided(
         **fields,
     )
     return Decided(tool=merged.tool, providers=merged.providers, params=params, record=out)
+
+
+def _ranked_by(decision: object) -> Prefer | None:
+    """The preference a decision that decided something says it ranked by; ``None`` for none, or one unknown."""
+    if not well_formed(decision) or decides_nothing(decision) or decision.prefer not in get_args(Prefer):
+        return None
+    return decision.prefer
 
 
 def _with_effort(found: CandidateSet, merged: Merged, params: dict[str, Any], fields: dict[str, Any]) -> None:

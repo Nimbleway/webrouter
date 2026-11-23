@@ -15,10 +15,12 @@ import pytest
 from tests.decider_helpers import Fixed, chat, gemini, reply, request, serve, systemone
 from web_router import Candidate, DeciderRouter
 from web_router.constants_decider import DECIDER_INSTRUCTIONS, DECIDER_PREFER
+from web_router.exceptions import ConfigurationError
 from web_router.routing.decider_gemini import gemini_router
 from web_router.routing.decider_llm import llm_router
 from web_router.routing.decider_question import question_for
 from web_router.routing.decider_systemone import systemone_router
+from web_router.routing.registry import resolve_router
 
 LOCAL = {"base_url": "http://localhost:9000", "model": "m"}
 RANKED = {"ranked": ["search:exa"], "scores": [{"id": "search:exa", "p": 0.9}], "confidence": 0.7}
@@ -74,3 +76,46 @@ async def test_the_gemini_router_states_the_preference_in_both_questions(monkeyp
     await gemini_router(**LOCAL).aroute(replace(request(candidates=MODES), prefer="cheap"))
     questions = server.body()["questions"]
     assert all(DECIDER_PREFER["cheap"] in questions[key]["instructions"] for key in ("backend", "mode"))
+
+
+SCORES = {"search": {"exa": 0.161}, "answer": {"perplexity": 0.953}}
+
+
+def test_a_router_built_with_a_preference_asks_it_and_answers_with_it() -> None:
+    decider = Fixed(reply("search:exa"))
+    decision = DeciderRouter(decider, prefer="fast").route(replace(request(), prefer="cheap"))
+    assert [question.prefer for question in decider.asked] == ["fast"], "the router's own wins over the request's"
+    assert decision.prefer == "fast"
+
+
+def test_with_scores_each_option_carries_its_accuracy_and_without_them_reads_as_before() -> None:
+    plain = Fixed(reply("search:exa"))
+    DeciderRouter(plain).route(request())
+    scored = Fixed(reply("search:exa"))
+    DeciderRouter(scored, prefer="accurate", accuracy=SCORES).route(request())
+    before, after = plain.asked[0].options, scored.asked[0].options
+    assert after["search:exa"] == before["search:exa"] + ", accuracy 0.161"
+    assert after["search:tavily"] == before["search:tavily"] + ", accuracy unknown"
+    assert not any("accuracy" in text for text in before.values())
+    assert (
+        "prefers accurate" in scored.asked[0].instructions
+        and "higher measured accuracy first" in scored.asked[0].instructions
+    )
+
+
+@pytest.mark.parametrize(
+    "build",
+    [lambda: DeciderRouter(Fixed(reply()), prefer="accurate"), lambda: llm_router(**LOCAL, prefer="accurate")],
+    ids=["decider", "llm"],
+)
+def test_accurate_with_no_scores_is_refused(build: Any) -> None:
+    with pytest.raises(ConfigurationError, match="holds none"):
+        build()
+
+
+async def test_built_by_name_the_llm_router_takes_its_preference_and_scores(monkeypatch: pytest.MonkeyPatch) -> None:
+    server = serve(monkeypatch, chat(RANKED))
+    router, _ = resolve_router("llm", {**LOCAL, "prefer": "accurate", "accuracy": SCORES})
+    await router.aroute(request())  # type: ignore[union-attr]
+    system, user = (message["content"] for message in server.body()["messages"])
+    assert DECIDER_PREFER["accurate"] in system and "accuracy 0.161" in user

@@ -38,7 +38,7 @@ from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS, MSG_DROPPED_REFUSES_EFFORT
 from web_router.routing.candidate_modes import mode_requests
 from web_router.routing.candidates_priced import Found, price_members
-from web_router.routing.contract import Budget, Candidate, Prefer, ToolName
+from web_router.routing.contract import Budget, Candidate, ToolName
 from web_router.routing.cost_order import cost_route
 from web_router.routing.effort_call import choose_effort
 from web_router.routing.eligible import eligible_members
@@ -75,9 +75,8 @@ class CandidateSet:
     """Per method, the request its candidates were priced at: the router's options are priced on it."""
 
     cost_order: Mapping[ToolName, Sequence[str]] = field(default_factory=dict)
-    """Per method, ``auto``'s order by the caller's ``prefer``, else cheapest first under the budget's cost cap
-    (:mod:`.cost_order`), where it is not the static one: the order a method runs in when the router ranks none of
-    its backends."""
+    """Per method, ``auto``'s cheapest-first order under the budget's cost cap (:mod:`.cost_order`), where it is
+    not the static one: the order a method runs in when the router ranks none of its backends."""
 
 
 REQUEST_OF: dict[ToolName, type[NormalizedRequest]] = {
@@ -117,19 +116,21 @@ def build_candidates(
     budget: Budget | None = None,
     provider: str | Provider | None = None,
     modes: bool = False,
-    prefer: Prefer | None = None,
 ) -> CandidateSet:
     """Every (tool, provider) ``router`` can serve ``requests`` with, within ``budget``.
 
     Args:
-        router: The router making the call; each method's ``auto`` supplies
-            its backends, configured ``chain`` and keys included.
-        requests: Each method's request; a single-method call includes only its own.
+        router: The :class:`~web_router.WebRouter` or
+            :class:`~web_router.AsyncWebRouter` making the call; its ``auto``
+            for each method, configured ``chain`` and keys included, says which
+            backends there are.
+        requests: The request each method would be sent, by method. A call to
+            one method passes only its own: the router then orders that
+            method's backends and no other.
         budget: What is left of the call's budget. ``None`` caps nothing.
         provider: The backend the caller named. One other than ``auto``
             leaves nothing for a router to choose, so there are no candidates.
         modes: Follow each backend with a candidate per vendor mode it offers (:mod:`.candidate_modes`).
-        prefer: The caller's preference, which orders each method a router does not rank (:mod:`.cost_order`).
     """
     if provider is not None and provider_name(provider) != PROVIDER_AUTO:
         return CandidateSet()
@@ -145,9 +146,7 @@ def build_candidates(
         found.priced[tool] = request
         expand = partial(mode_requests, router, tool, request) if modes else None
         price_members(tool, request, eligible, budget, found, expand)
-        costed, _ = cost_route(
-            getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget, prefer, eligible=eligible
-        )
+        costed, _ = cost_route(getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget)
         if costed is not None:
             found.cost_order[tool] = list(costed.order[tool])
         found.unbuilt(tool, unbuilt)

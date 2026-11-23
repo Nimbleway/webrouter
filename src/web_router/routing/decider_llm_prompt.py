@@ -11,7 +11,7 @@ from web_router.routing.decider import DeciderQuestion
 
 
 def menu(question: DeciderQuestion) -> str:
-    """The request as the model reads it: the prompt, the budget, the caller's preference when set, and each option."""
+    """The request as the model reads it: the prompt, the budget, the router's preference when set, and each option."""
     lines = [f"Request: {question.prompt}", f"Budget: {question.budget or 'none'}"]
     lines += [f"Prefer: {question.prefer}"] if question.prefer else []
     lines.append("Options:")

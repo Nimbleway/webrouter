@@ -21,11 +21,12 @@ import json
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 from functools import cache
-from typing import Any
+from typing import Any, get_args
 
 from pydantic import TypeAdapter, ValidationError
 
 from web_router.constants_remote import (
+    CANDIDATE_MEASURED_KEY,
     CANDIDATE_MODE_KEY,
     PREFER_KEY,
     REMOTE_WHY_DECISION,
@@ -40,7 +41,7 @@ from web_router.constants_remote import (
     WIRE_SCHEMA_VERSION,
 )
 from web_router.routing._runner import InvalidAnswer
-from web_router.routing.contract import RouteDecision, RouteRequest
+from web_router.routing.contract import Prefer, RouteDecision, RouteRequest
 from web_router.routing.request_modes import within
 
 
@@ -67,7 +68,8 @@ def _versioned(body: dict[str, Any]) -> dict[str, Any]:
 
 
 def _payload(data: object) -> dict[str, Any]:
-    """``data`` as an object of this major version, the version key and unset (``null``) fields left out.
+    """``data`` as an object of this major version, the version key, unset (``null``) fields and a ``prefer`` this
+    version does not know left out.
 
     Raises:
         WireError: for anything but an object whose ``schema`` is a number.
@@ -80,7 +82,10 @@ def _payload(data: object) -> dict[str, Any]:
         raise WireError(REMOTE_WHY_SCHEMA)
     if version != WIRE_SCHEMA_VERSION:
         raise WireVersionError(REMOTE_WHY_VERSION.format(expected=WIRE_SCHEMA_VERSION))
-    return {key: value for key, value in data.items() if key != WIRE_SCHEMA_KEY and value is not None}
+    out = {key: value for key, value in data.items() if key != WIRE_SCHEMA_KEY and value is not None}
+    if out.get(PREFER_KEY) not in (None, *get_args(Prefer)):
+        del out[PREFER_KEY]  # a later version's preference: this one has no opinion on it
+    return out
 
 
 def request_to_wire(req: RouteRequest) -> dict[str, Any]:
@@ -88,16 +93,23 @@ def request_to_wire(req: RouteRequest) -> dict[str, Any]:
 
     It carries at most :data:`WIRE_MAX_NAMES` candidates in all, as a decision may name at most that many: past
     it, the vendor mode candidates lowest in their method's static order are left out (:func:`.request_modes.within`).
-    A candidate's ``mode`` is sent only when it has one, so a router shown backends only reads what it always has,
-    and ``prefer`` only when the caller set one.
+    A candidate's ``mode`` is sent only when it has one, so a router shown backends only reads what it always has;
+    its ``measured`` only when ``False``, and ``prefer`` only when set.
     """
     body = _request_adapter().dump_python(within(req, WIRE_MAX_NAMES), mode="json")
     for candidate in body["candidates"]:
         if candidate.get(CANDIDATE_MODE_KEY, "") is None:
             del candidate[CANDIDATE_MODE_KEY]
+        if candidate.get(CANDIDATE_MEASURED_KEY) is True:
+            del candidate[CANDIDATE_MEASURED_KEY]
+    return _versioned(_unset_prefer(body))
+
+
+def _unset_prefer(body: dict[str, Any]) -> dict[str, Any]:
+    """``body`` without ``prefer`` when it is unset: the payload a peer got before ``prefer`` existed."""
     if body.get(PREFER_KEY, "") is None:
-        del body[PREFER_KEY]  # unset, the request is the one a service got before prefer existed
-    return _versioned(body)
+        del body[PREFER_KEY]
+    return body
 
 
 def request_from_wire(data: object) -> RouteRequest:
@@ -120,7 +132,7 @@ def decision_to_wire(decision: RouteDecision) -> dict[str, Any]:
     Raises:
         WireError: for a decision a client would refuse, such as a list of more than :data:`WIRE_MAX_NAMES` entries.
     """
-    return _versioned(_decision_adapter().dump_python(_bounded(decision), mode="json"))
+    return _versioned(_unset_prefer(_decision_adapter().dump_python(_bounded(decision), mode="json")))
 
 
 def decision_from_wire(data: object) -> RouteDecision:

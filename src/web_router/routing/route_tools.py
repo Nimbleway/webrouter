@@ -1,5 +1,5 @@
 """Which tools ask the attached router, whether it is shown vendor modes -- the caller's choice, else the router's --
-and what the caller prefers."""
+and what a router prefers."""
 
 from __future__ import annotations
 
@@ -66,7 +66,7 @@ def checked_route_modes(route_modes: object, router: object = None) -> bool:
 
 
 def checked_prefer(prefer: object) -> Prefer | None:
-    """The caller's ``prefer``, shown to the router on every call it is asked about.
+    """A router's ``prefer``: what it ranks by, and asks or sends as the request's ``prefer``.
 
     Raises:
         ConfigurationError: for anything but ``None`` or one of :data:`Prefer`'s values, such as ``"cheapest"``.

@@ -82,7 +82,7 @@ from web_router.registry import (
     create_research_provider,
 )
 from web_router.registry_answer import every_provider_name
-from web_router.routing import Budget, Prefer, RouterLike, ToolName
+from web_router.routing import Budget, RouterLike, ToolName
 from web_router.routing.router_setup import RouterSetup
 from web_router.routing.submitted import asubmitted, submitted
 from web_router.routing.url_policy import UrlPolicy
@@ -114,7 +114,6 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         route_modes: bool | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
-        prefer: Prefer | None = None,
         data_api_credentials: DataApiCredentials = None,
         vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
@@ -132,7 +131,6 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 router from ``router_config``, closed with this one -- see :mod:`web_router.routing.registry`.
                 ``route_modes=True`` shows it a candidate per vendor mode too (the router's own, else no).
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
-                ``prefer="cheap"`` or ``"fast"`` is shown to the router on every call it is asked about, and recorded.
             data_api_credentials: for :meth:`call_data_api`, read before the environment; once ``vendor_credentials``.
             max_concurrency: the most vendor calls this router has in flight at once, across every search,
                 extract and answer it serves (per event loop on the async router); ``None`` caps nothing. A call
@@ -170,7 +168,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         self._providers_lock = threading.Lock()
         # Rows the sync benchmark() gave up on whose calls still run; close() waits for them, never shutting one.
         self._stragglers = Stragglers()
-        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config, route_modes, prefer)
+        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config, route_modes)
 
     def _config_for(self, key: str) -> dict[str, Any]:
         """Constructor kwargs for one backend: see :func:`~web_router.client_config.config_for`."""
@@ -295,7 +293,6 @@ class WebRouter(
         route_modes: bool | None = None,
         fail_on_router_error: bool = False,
         url_policy: UrlPolicy | None = None,
-        prefer: Prefer | None = None,
         data_api_credentials: DataApiCredentials = None,
         vendor_credentials: VendorCredentials = None,
         max_concurrency: int | None = None,
@@ -316,7 +313,6 @@ class WebRouter(
             route_modes=route_modes,
             fail_on_router_error=fail_on_router_error,
             url_policy=url_policy,
-            prefer=prefer,
             data_api_credentials=renamed_credentials(data_api_credentials, vendor_credentials),
             max_concurrency=max_concurrency,
             hop_timeout=hop_timeout,

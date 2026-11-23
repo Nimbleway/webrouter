@@ -44,7 +44,8 @@ from web_router.mcp.shaping import (
 from web_router.mcp.shaping_answer import shape_answer
 from web_router.providers._deadline import call_deadline
 from web_router.providers.base import BrowseJob, ResearchJob
-from web_router.routing.contract import Budget, Plan
+from web_router.routing.contract import Budget
+from web_router.routing.plan_type import Plan
 from web_router.types import (
     BrowseRequest,
     BrowseResponse,

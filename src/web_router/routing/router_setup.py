@@ -1,9 +1,9 @@
 """What a router is shown for a routed call, and how its answer orders the call: the attached router's setup.
 
 Experimental. :class:`RouterSetup` holds the attached router, the tools it is
-asked about, whether it is shown vendor modes, what the caller prefers and the
-URL checks; both routers mix it in through :mod:`web_router.routing.routed`,
-which runs every routable call through it.
+asked about, whether it is shown vendor modes, and the URL checks; both
+routers mix it in through :mod:`web_router.routing.routed`, which runs every
+routable call through it.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from web_router.constants_invoke import ROUTER_URL_POLICY_ATTR
 from web_router.providers._runtime import Runtime
 from web_router.routing.attempts import CallRoute
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, build_candidates
-from web_router.routing.contract import Budget, Prefer, RouteRequest, ToolName
+from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.cost_order import cost_route
 from web_router.routing.decide import decided
 from web_router.routing.effort_call import Only, unrouted
@@ -26,7 +26,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.record import prompt_of
 from web_router.routing.request_modes import runnable
-from web_router.routing.route_tools import ALL_TOOLS, checked_prefer, checked_route_modes, checked_route_tools
+from web_router.routing.route_tools import ALL_TOOLS, checked_route_modes, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.spend_record import SpendSinkHolder
@@ -46,8 +46,6 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
     _router: AttachedRouter | None = None
     _route_tools: frozenset[ToolName] = ALL_TOOLS
     _route_modes: bool = False
-    _prefer: Prefer | None = None
-    """What the caller prefers, shown to the router on every call it is asked about."""
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
     """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
@@ -62,17 +60,15 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         url_policy: UrlPolicy | None = None,
         router_config: Mapping[str, Any] | None = None,
         route_modes: bool | None = None,
-        prefer: Prefer | None = None,
     ) -> None:
         """Attach the router, last in a constructor: a refusal after it must close a router built by name.
 
         Raises:
             ConfigurationError: for a ``router`` in neither form nor a registered name, ``router_config`` without a
                 name, a ``route_tools`` -- the caller's, or the one the router declares -- naming something else,
-                a ``route_modes`` that is not a bool, an unknown ``url_policy``, or an unknown ``prefer``.
+                a ``route_modes`` that is not a bool, or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
-        self._prefer = checked_prefer(prefer)
         # Checked once, before a router is built by name, and that result kept: the caller's value is not read again.
         callers = None if route_tools is None else checked_route_tools(route_tools)
         modes = None if route_modes is None else checked_route_modes(route_modes)
@@ -92,9 +88,7 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
             return None
         if getattr(chain, "name", None) != PROVIDER_AUTO:
             return None  # a named backend: nothing to order
-        found = build_candidates(
-            Only(tool, chain), {tool: request}, budget=budget, modes=self._route_modes, prefer=self._prefer
-        )
+        found = build_candidates(Only(tool, chain), {tool: request}, budget=budget, modes=self._route_modes)
         if not runnable(found.candidates):
             return None
         prompt, urls = prompt_of(tool, request)
@@ -105,7 +99,6 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
             urls=urls,
             budget=budget,
             pinned_tool=tool,
-            prefer=self._prefer,
         )
         return req, found
 
@@ -126,9 +119,9 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         if merged is not None and any(merged[0].order.values()):  # else nothing to run: the budget says why, below
             return merged
         request, mapped = unrouted(chain, request, budget)
-        route, ordered = cost_route(chain, TOOL_OF[type(request)], request, budget, self._prefer)
-        if ordered is not None:  # the order's fields -- merged, and prefer when set -- over the budget's effort
-            mapped = ordered if mapped is None else mapped.model_copy(update=ordered.model_dump(exclude_unset=True))
+        route, ordered = cost_route(chain, TOOL_OF[type(request)], request, budget)
+        if ordered is not None:
+            mapped = ordered if mapped is None else mapped.model_copy(update={"merged": ordered.merged})
         return route, request, mapped
 
     def _merged(
