@@ -1,0 +1,1 @@
+A backend whose throttle reports a nan wait no longer stays out of `auto` for the rest of the process: the cooldown falls back to the status's default (10 s for a 429). An infinite wait is still capped at 600 s.
