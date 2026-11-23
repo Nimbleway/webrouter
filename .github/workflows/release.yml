@@ -66,7 +66,7 @@ jobs:
         # `make changelog` moves them under the release's heading; one left here
         # would be missing from this version's notes.
         run: |
-          left=$(find changelog.d -mindepth 1 -maxdepth 1 ! -type d ! -name README.md 2>/dev/null || true)
+          left=$(find changelog.d -mindepth 1 -maxdepth 1 ! -type d ! -name README.md)
           if [ -n "$left" ]; then
             echo "::error::Run make changelog before tagging; these fragments were not collected: $left"
             exit 1
