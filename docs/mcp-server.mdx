@@ -922,3 +922,24 @@ the cloud browsers are.
 | `WEB_ROUTER_VENDOR_CATALOG` | unset | A directory of extra vendor files, read after the shipped ones; one named for a shipped vendor replaces it. |
 
 Everything else it reads is a provider or vendor credential, and belongs to the provider or vendor. `load_env` takes every variable a vendor's catalog file lists, settings such as `DD_SITE` included.
+
+## Remove it
+
+Removing the server takes one command or one edit, and touches nothing else in
+your client's configuration:
+
+| Client | Remove it with |
+| --- | --- |
+| Claude Code | `claude mcp remove web-router`, with `--scope user` if you added it at user scope |
+| Codex | `codex mcp remove web-router`, or delete the `[mcp_servers.web-router]` table from `~/.codex/config.toml` |
+| Cursor, Claude Desktop and other clients configured by file | delete the `web-router` entry under `mcpServers`, then restart the client |
+
+The server keeps nothing else, with two exceptions you may want to remove too:
+
+- **Your keys file and remembered path.** The user config directory (on macOS
+  `~/Library/Application Support/web-router`, on Linux `~/.config/web-router`,
+  on Windows `%APPDATA%\web-router`) holds the `.env` you created and the
+  `env-path` that `load_env` records with `remember: true`. Delete the
+  directory to forget both.
+- **The package.** `uvx` keeps a cached copy: `uv cache clean webrouter`
+  removes it. A `pip install` is removed with `pip uninstall webrouter`.
