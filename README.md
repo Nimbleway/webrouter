@@ -157,9 +157,9 @@ lists each method's order and how it is generated.
 ## Budgets and cost control
 
 ```python
-from web_router import Budget, WebRouter, prices
+from web_router import Budget, PreferredRouter, WebRouter, prices
 
-router = WebRouter(router="cheapest_first")  # free backends first, then the cheapest paid ones
+router = WebRouter(router=PreferredRouter("cheap"))  # free backends first, then the cheapest paid ones
 log = router.log_spend("spend.jsonl")  # from here on, every answered call is logged
 response = router.answer("...", budget=Budget(max_cost_usd=0.01, time_limit_s=10))
 response.provider, response.cost_usd, response.cost_source, response.elapsed_s

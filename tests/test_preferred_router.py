@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.routing_helpers import Table, Tool, order, wr
-from web_router import Budget, PreferredRouter, cheapest_first
+from web_router import AsyncWebRouter, Budget, PreferredRouter, WebRouter, available_routers
 from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import Candidate, RouteRequest
 
@@ -35,14 +35,19 @@ def _known(monkeypatch: pytest.MonkeyPatch) -> None:
 )
 def test_it_orders_by_its_preference_unknowns_last(prefer: Any, expected: list[str]) -> None:
     offered = (_c("u"), _c("a", 0.01, 2.0), _c("b", 0.0, 3.0), _c("c", 0.02, 1.0))
-    decision = PreferredRouter(prefer, accuracy=SCORES).route(_req(*offered))
-    assert decision.providers == {"search": expected}
+    decision = PreferredRouter(prefer, accuracy=SCORES if prefer == "accurate" else None).route(_req(*offered))
+    assert (decision.providers, decision.tools) == ({"search": expected}, None), "it never changes the method"
     assert (decision.prefer, decision.reason) == (prefer, f"{prefer} first")
 
 
 def test_ties_keep_the_order_offered() -> None:
     offered = (_c("b", 0.01), _c("a", 0.01), _c("c", 0.01))
     assert PreferredRouter("cheap").route(_req(*offered)).providers == {"search": ["b", "a", "c"]}
+
+
+def test_each_method_is_ordered_on_its_own() -> None:
+    offered = (_c("a", 0.5), Candidate(tool="extract", provider="b", est_cost_usd=0.1), _c("c", 0.0))
+    assert PreferredRouter("cheap").route(_req(*offered)).providers == {"search": ["c", "a"], "extract": ["b"]}
 
 
 def test_a_mode_is_scored_on_its_own_and_a_member_that_is_not_the_measured_backend_is_unknown() -> None:
@@ -63,6 +68,12 @@ def test_accurate_needs_scores(accuracy: Any) -> None:
         PreferredRouter("accurate", accuracy=accuracy)
 
 
+@pytest.mark.parametrize("prefer", ["cheap", "fast"])
+def test_scores_with_a_preference_that_never_reads_them_are_refused(prefer: Any) -> None:
+    with pytest.raises(ConfigurationError, match="never reads accuracy scores"):
+        PreferredRouter(prefer, accuracy=SCORES)
+
+
 def test_it_reads_scores_from_a_file_and_shows_modes_only_when_one_is_scored(tmp_path: Any) -> None:
     path = tmp_path / "scores.json"
     path.write_text('{"search": {"a": 0.4}}', encoding="utf-8")
@@ -70,17 +81,19 @@ def test_it_reads_scores_from_a_file_and_shows_modes_only_when_one_is_scored(tmp
     assert (router.scores, router.route_modes) == ({"search": {"a": 0.4}}, False)
 
 
-def test_cheapest_first_is_preferred_at_cheap() -> None:
-    offered = (_c("a", 0.01), _c("b", 0.0))
-    decision = cheapest_first(_req(*offered))
-    assert (decision.providers, decision.prefer) == ({"search": ["b", "a"]}, "cheap")
+def test_it_is_built_in_by_name() -> None:
+    assert "preferred" in available_routers()
 
 
-def test_built_by_name_it_runs_the_fastest_member_first(tool: Tool, called: list[str], priced: Table) -> None:
+@pytest.mark.parametrize("router_cls", [WebRouter, AsyncWebRouter])
+async def test_built_by_name_it_runs_the_fastest_member_first(
+    router_cls: type, tool: Tool, called: list[str], priced: Table
+) -> None:
     priced.update(first=(0.001, 3.0), second=(0.003, 1.0), third=(0.002, 2.0))
-    router = wr(router="preferred", router_config={"prefer": "fast"})
+    router = wr(router_cls, router="preferred", router_config={"prefer": "fast"})
     arg = "https://a.test" if tool.name == "extract" else "q"
-    response = getattr(router, tool.name)(arg, budget=Budget(max_cost_usd=1.0))
+    result = getattr(router, tool.name)(arg, budget=Budget(max_cost_usd=1.0))
+    response = await result if router_cls is AsyncWebRouter else result
     assert order(called)[0] == "second"
     assert response.decision.merged == [f"{tool.name}:{name}" for name in ("second", "third", "first")]
     assert (response.decision.router, response.decision.prefer) == ("preferred", "fast")

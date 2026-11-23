@@ -6,8 +6,8 @@ icon: "coins"
 
 Every response says what the call cost and how long it took. A budget caps
 what one call, or a block of calls, may spend and wait. Under a cost cap `auto`
-tries the cheaper of the backends that score alike, the `cheapest_first` router
-tries the free ones first, and a spend log keeps what you spent across runs.
+tries the cheaper of the backends that score alike, the `preferred` router at
+`cheap` tries the free ones first, and a spend log keeps what you spent across runs.
 
 ```python
 from web_router import Budget, WebRouter
@@ -185,22 +185,22 @@ A router built with a preference replaces this order, capped or not: see
 Without a router ranking them, extract, research and browse keep their order:
 no benchmark ranks their backends' quality, so there is nothing to trade cost
 against. The same holds for the keyless tier, which the benchmark does not
-rank; attach `cheapest_first` (below) to run its `$0` backends first. A `chain` you set
+rank; attach `preferred` at `cheap` (below) to run its `$0` backends first. A `chain` you set
 or a backend you name runs as given.
 
 ## Free backends first
 
 When price matters more than the accuracy gap, attach the built-in
-`cheapest_first` router, the `preferred` router at `cheap`. It orders the backends of every routed call -- search,
+`preferred` router at `cheap`. It orders the backends of every routed call -- search,
 extract, answer, research and browse -- by estimated cost, $0 first, then the
 cheapest paid ones, an unknown price last; ties keep the default order. It
 needs no key and calls nothing. `open_browser` is never routed: name
 `provider="local"` for a free browser.
 
 ```python
-from web_router import Budget, WebRouter
+from web_router import Budget, PreferredRouter, WebRouter
 
-router = WebRouter(router="cheapest_first")  # or router=cheapest_first, the function
+router = WebRouter(router=PreferredRouter("cheap"))  # or router="preferred", router_config={"prefer": "cheap"}
 with router.budget(Budget(max_cost_usd=0.05, time_limit_s=90)) as b:
     for question in questions:
         response = b.search(question)  # you-mcp, exa-mcp, parallel-mcp before any paid backend

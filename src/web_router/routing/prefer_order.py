@@ -1,7 +1,7 @@
 """A preference's order: candidates by estimated cost (``cheap``), p90 latency (``fast``) or score (``accurate``).
 
-Experimental. The one sort the ``preferred`` and ``cheapest_first`` routers
-use. ``cheap`` puts a $0 backend first, then the cheapest; ``fast`` the lowest
+Experimental. The one sort the ``preferred`` router
+uses. ``cheap`` puts a $0 backend first, then the cheapest; ``fast`` the lowest
 p90 first; ``accurate`` the highest score in the router's own scores first
 (:mod:`.accuracy`). A candidate with no estimate or score goes last, and ties
 keep the order the candidates were offered in, which is the static order.

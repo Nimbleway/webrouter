@@ -142,7 +142,10 @@ alone; on the MCP server it holds for `web_run`'s plans only.
 
 ## Preferring cheap, fast or accurate
 
-A preference belongs to the router: you build the router with it. `cheap` puts
+A preference belongs to the router: you build the router with it. `prefer` is
+the goal; `accuracy=` (below) is the data for one goal. `cheap` and `fast` rank
+by the prices and p90 latencies web-router ships; `accurate` ranks by scores
+you bring. `cheap` puts
 the lowest estimated cost first ($0 first), `fast` the lowest p90 latency, and
 `accurate` the highest accuracy score the router holds. A backend with no
 estimate or score goes last, and ties keep the default order. It orders and
@@ -162,7 +165,7 @@ wr = WebRouter(router=PreferredRouter("fast"))
 wr = WebRouter(router="preferred", router_config={"prefer": "cheap"})  # the same, by name
 ```
 
-`cheapest_first` is `preferred` at `cheap`. The model routers take one too --
+The model routers take one too --
 `llm_router(..., prefer="cheap")`, or `prefer` in their `router_config` -- and
 so does `remote`, which sends it as `RouteRequest.prefer`. Each member of a
 `fallback` keeps its own. The record names the preference of the router whose
@@ -183,7 +186,10 @@ compares only within its method. `exa` scores the backend as the request
 sends it, `exa:exa-deep` that vendor mode; anything not listed, and a candidate
 whose `measured` is `False`, is unknown. A method, backend or mode that is not
 real, a mode not spelled the way the backend spells it, or a score outside 0
-to 1 raises `ConfigurationError`, and so does `accurate` with no scores. A
+to 1 raises `ConfigurationError`, and so does `accurate` with no scores, or a
+`preferred` router given scores at `cheap` or `fast`, which never reads them.
+A model router given scores with no `prefer` shows them to the model as one
+more fact about each option, without asking it to favour them. A
 `preferred` router with mode scores is shown vendor modes by default. For a
 model router, set `WebRouter(..., route_modes=True)` to offer those modes;
 without it, `llm` and `systemone` see only backends, so mode-specific scores
@@ -491,6 +497,16 @@ httpx, so install the `remote` extra (`pip install "webrouter[remote]"`, or
   ```python
   WebRouter(router="gemini")
   ```
+
+**Why the model routers skip search by default.** A search answers in a second
+or two, and a model router adds its own round trip before it: `llm` at a p50
+over a second, `gemini` and `systemone` up to their 1 s limit
+(`benchmarks/providers/router_latency.py` measures it). On a direct `search()`
+the method is already fixed, so the router could only reorder backends, a gain
+smaller than the wait. `plan()` and `run()` ask the router whatever its
+`route_tools`, so a model router still chooses search over the other methods
+there. To have it rank search's backends or modes too, add search to
+`route_tools`.
 
 Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,

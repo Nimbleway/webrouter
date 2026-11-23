@@ -320,7 +320,7 @@ src/web_router/
 │   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
 │   │                   check before dispatch (no DNS, no redirects)
 │   ├── rules.py        rules(): the built-in keyless router, URL to extract, else search
-│   ├── cheapest.py     cheapest_first(): the built-in router ordering every call by estimated cost, $0 first
+│   ├── preferred.py    PreferredRouter: the built-in router ordering every call by cost, p90 or scores
 │   └── cost_order.py   auto's order under a cost cap with no router: cheapest first within each
 │                       accuracy tier of the default order (search and answer)
 ├── constants_params.py the effort mapping's data path, rule and reasons

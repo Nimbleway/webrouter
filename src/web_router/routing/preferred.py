@@ -1,4 +1,4 @@
-"""The built-in ``preferred`` and ``cheapest_first`` routers: every call's backends by a preference, no model asked.
+"""The built-in ``preferred`` router: every call's backends by a preference, no model asked.
 
 Experimental. ``PreferredRouter(prefer)`` -- ``router="preferred"`` with
 ``router_config={"prefer": ...}`` -- orders the candidates of each method by
@@ -8,10 +8,10 @@ holds (:mod:`.accuracy`), which it needs. An unknown estimate or score goes
 last, ties keep the static order, and under a cost cap a backend with no known
 price never runs at all. It needs no key and calls nothing.
 
-``cheapest_first`` is the same order at ``cheap``. Beside a cost cap it suits a
-batch where every cent counts: unlike ``auto``'s default order under a budget,
-which orders by cost only among backends whose measured accuracy is within the
-noise floor of each other, it puts price first whatever the backends score.
+At ``cheap``, beside a cost cap, it suits a batch where every cent counts:
+unlike ``auto``'s default order under a budget, which orders by cost only among
+backends whose measured accuracy is within the noise floor of each other, it
+puts price first whatever the backends score.
 """
 
 from __future__ import annotations
@@ -19,19 +19,17 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import get_args
 
-from web_router.constants_invoke import ROUTER_ROUTE_MODES_ATTR
 from web_router.constants_merge import LAST_RESORT_TOOL
 from web_router.constants_prefer import (
     MSG_ACCURATE_NEEDS_SCORES,
     MSG_PREFER_NEEDED,
+    MSG_SCORES_UNUSED,
     PREFERRED_REASON,
     PREFERRED_ROUTER_NAME,
 )
-from web_router.constants_routing import CHEAPEST_REASON
 from web_router.exceptions import ConfigurationError
 from web_router.routing.accuracy import AccuracyLike, AccuracyScores, accuracy_scores
 from web_router.routing.contract import Candidate, Prefer, RouteDecision, RouteRequest, ToolName
-from web_router.routing.invoke import RouterLike
 from web_router.routing.prefer_order import preferred_candidates
 from web_router.routing.request_modes import backends
 from web_router.routing.route_tools import checked_route_modes
@@ -52,11 +50,14 @@ class PreferredRouter:
             route_modes: Whether it is shown vendor modes; by default, when ``accuracy`` scores one.
 
         Raises:
-            ConfigurationError: for another ``prefer``, ``accurate`` with no scores, scores
+            ConfigurationError: for another ``prefer``, ``accurate`` with no scores, scores with another
+                ``prefer``, which never reads them, scores
                 :func:`~.accuracy.accuracy_scores` refuses, or a ``route_modes`` that is not a bool.
         """
         if prefer not in get_args(Prefer):
             raise ConfigurationError(MSG_PREFER_NEEDED.format(got=prefer))
+        if accuracy is not None and prefer != "accurate":
+            raise ConfigurationError(MSG_SCORES_UNUSED.format(prefer=prefer))
         self.prefer: Prefer = prefer
         self.router_name = PREFERRED_ROUTER_NAME
         self.scores = accuracy_scores(accuracy)
@@ -89,16 +90,3 @@ def ordered(req: RouteRequest, prefer: Prefer, scores: AccuracyScores | None, re
         return RouteDecision(attempts=[c.id for c in by_tool[tool]], reason=reason, prefer=prefer)
     providers = {tool: [c.provider for c in backends(candidates)] for tool, candidates in by_tool.items()}
     return RouteDecision(providers=providers, reason=reason, prefer=prefer)
-
-
-def cheapest_first(req: RouteRequest) -> RouteDecision:
-    """Each method's candidates by estimated cost, $0 first and unknown prices last: ``preferred`` at ``cheap``."""
-    return ordered(req, "cheap", None, CHEAPEST_REASON)
-
-
-setattr(cheapest_first, ROUTER_ROUTE_MODES_ATTR, False)  # backends only unless the caller shows it modes
-
-
-def cheapest_router() -> RouterLike:
-    """``router="cheapest_first"``: the function itself, which takes no ``router_config``."""
-    return cheapest_first

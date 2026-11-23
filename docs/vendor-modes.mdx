@@ -258,8 +258,8 @@ them in is kept, so splitting a backend's score over its modes never moves the
 call to another method. A backend whose modes are scored runs in those modes. Without a score for every ranked id, or for a ranked mode's backend,
 the attempts keep the decider's order.
 
-`cheapest_first` shown modes answers `attempts` for the method the call runs:
-each backend and mode by its own estimated cost. `rules` picks the method
+`preferred` shown modes answers `attempts` for the method the call runs:
+each backend and mode by its own estimate. `rules` picks the method
 only, so it never names one.
 
 ## Not yet

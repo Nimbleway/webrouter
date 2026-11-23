@@ -15,6 +15,10 @@ MSG_ACCURATE_NEEDS_SCORES = (
     "{{provider: score}}, or a path to that JSON."
 )
 
+MSG_SCORES_UNUSED = (
+    "the preferred router at prefer={prefer!r} never reads accuracy scores: pass accuracy= only with prefer='accurate'."
+)
+
 MSG_ACCURACY_FILE = "accuracy= could not read {path!r} as JSON: {why}."
 
 MSG_ACCURACY_SHAPE = "accuracy= takes {{method: {{provider or provider:mode: score}}}}; got {got!r} at {where}."

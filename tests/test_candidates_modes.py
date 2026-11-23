@@ -13,7 +13,7 @@ import pytest
 
 from tests.candidates_helpers import Shown, clear_keys, exa_tavily_fixture, ids, set_keys  # noqa: F401  (fixture)
 from tests.conftest import FakeProvider
-from web_router import Budget, RouteDecision, RouteRequest, WebRouter
+from web_router import Budget, PreferredRouter, RouteDecision, RouteRequest, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.providers._modes import offers
 from web_router.providers._pinning import pinned_request
@@ -63,8 +63,8 @@ def test_the_caller_wins_over_the_router_and_a_router_may_opt_in_itself(keys: An
     assert shown(Shown(route_modes=True), route_modes=False) == ["search:exa", "search:tavily"]
 
 
-@pytest.mark.parametrize("router", ["rules", "cheapest_first"])
-def test_a_built_in_router_is_shown_backends_only_unless_the_caller_asks(keys: Any, router: str) -> None:
+@pytest.mark.parametrize("router", ["rules", PreferredRouter("cheap")], ids=["rules", "preferred"])
+def test_a_built_in_router_is_shown_backends_only_unless_the_caller_asks(keys: Any, router: Any) -> None:
     assert WebRouter(router=router)._route_modes is False
     assert WebRouter(router=router, route_modes=True)._route_modes is True
 
