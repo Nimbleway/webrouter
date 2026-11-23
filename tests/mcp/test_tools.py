@@ -81,7 +81,7 @@ def _payload(result: Any) -> dict[str, Any]:
     return dict(json.loads(result.content[0].text))
 
 
-def test_serves_every_tool_in_order(tools: WebRouterTools) -> None:
+def test_serves_every_tool_in_order(tools: WebRouterTools, all_runnable: None) -> None:
     assert [tool.name for tool in list_tools(tools).tools] == [
         MCP_TOOL_SEARCH,
         MCP_TOOL_EXTRACT,
@@ -160,7 +160,9 @@ def test_a_key_appears_in_the_enum_for_every_method_it_serves(
         assert PROVIDER_LINKUP in _tool(tools, name).input_schema["properties"]["provider"]["enum"]
 
 
-def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_an_option_no_configured_route_maps_is_not_advertised(
+    no_keys: None, monkeypatch: pytest.MonkeyPatch, all_runnable: None
+) -> None:
     # Search `auto` is read as the chain it would try: keyless, its members' options and no other.
     tools = WebRouterTools(AsyncWebRouter(), research_wait=0.0, browse_wait=0.0)
     search = set(_tool(tools, MCP_TOOL_SEARCH).input_schema["properties"])
@@ -178,9 +180,8 @@ def test_an_option_no_configured_route_maps_is_not_advertised(no_keys: None, mon
 def test_browser_open_offers_only_the_options_and_levels_its_members_serve(
     no_keys: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Browser `auto` declares every option, since it routes each request to a
-    # member that serves it, so it is read as the chain it would try: keyless,
-    # that is `local` alone, with no stealth, proxy or CAPTCHA solving.
+    # Browser `auto` declares every option, since it routes each request to a member that serves it, so it is
+    # read as the chain it would try: keyless, that is `local` alone, with no stealth, proxy or CAPTCHA solving.
     tools = WebRouterTools(AsyncWebRouter(), research_wait=0.0, browse_wait=0.0)
     offered = set(_tool(tools, MCP_TOOL_BROWSER_OPEN).input_schema["properties"])
 
@@ -215,10 +216,9 @@ def test_browser_open_reads_the_auto_chain_the_router_was_given(no_keys: None) -
 
 
 def test_research_says_so_when_nothing_can_serve_it(
-    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
+    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch, every_tool_named: None
 ) -> None:
-    # Every research backend bills for the run, so with no key at all the tool
-    # is dead and its description has to admit it.
+    # Every research backend bills, so with no key the tool is dead; named by an allowlist, its description says so.
     assert "NOTHING IS CONFIGURED" in _tool(tools, MCP_TOOL_RESEARCH).description
     assert ENV_LINKUP_API_KEY in _tool(tools, MCP_TOOL_RESEARCH).description
 
@@ -228,7 +228,7 @@ def test_research_says_so_when_nothing_can_serve_it(
     assert "NOTHING IS CONFIGURED" not in _tool(tools, MCP_TOOL_SEARCH).description
 
 
-def test_the_wait_budget_is_in_the_research_description(tools: WebRouterTools) -> None:
+def test_the_wait_budget_is_in_the_research_description(tools: WebRouterTools, all_runnable: None) -> None:
     assert "After 0s" in _tool(tools, MCP_TOOL_RESEARCH).description
 
 
@@ -498,7 +498,7 @@ class LeakyBrowseProvider(FakeBrowseProvider):
         return progress.model_copy(update={"response": response})
 
 
-def test_browse_takes_exactly_the_routers_arguments(tools: WebRouterTools, no_keys: None) -> None:
+def test_browse_takes_exactly_the_routers_arguments(tools: WebRouterTools, no_keys: None, all_runnable: None) -> None:
     schema = _tool(tools, MCP_TOOL_BROWSE).input_schema
 
     # No `provider` with no key at all: `auto` would have nothing to run, as for research.
@@ -514,7 +514,7 @@ def test_browse_takes_exactly_the_routers_arguments(tools: WebRouterTools, no_ke
 
 
 def test_browse_says_so_when_nothing_can_serve_it(
-    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
+    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch, every_tool_named: None
 ) -> None:
     # Every browse backend bills, so with no key the tool is dead, as research is.
     assert "NOTHING IS CONFIGURED" in _tool(tools, MCP_TOOL_BROWSE).description
@@ -724,7 +724,7 @@ def test_the_server_steers_an_interactive_page_to_a_browser_the_user_agrees_to(t
     instructions = tools.instructions()
     assert "ask before opening one" in instructions
     assert "provider='local' and headless=false" in instructions
-    assert "never ask for a password" in instructions
+    assert "never ask for a password" in instructions.lower()
     described = {tool.name: tool.description for tool in tools.list_tools()}
     assert "browser_open" in described["extract"]
     opener = described.get("browser_open")
@@ -786,7 +786,7 @@ async def test_answer_needs_no_provider_argument(no_keys: None, monkeypatch: pyt
 
 
 def test_answer_says_so_when_nothing_can_serve_it(
-    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
+    tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch, every_tool_named: None
 ) -> None:
     described = _tool(tools, MCP_TOOL_ANSWER).description
     assert "NOTHING IS CONFIGURED" in described

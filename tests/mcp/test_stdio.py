@@ -28,6 +28,7 @@ from mcp.client.stdio import stdio_client
 
 from mcp import ClientSession, StdioServerParameters
 from tests.mcp.conftest import isolated_environment
+from tests.mcp.env_helpers import OPENED_UP
 from web_router.constants import (
     MCP_BROWSER_TOOLS,
     MCP_RESOURCE_URI,
@@ -79,23 +80,24 @@ EVERY_TOOL = [
 
 
 @asynccontextmanager
-async def _session(env: dict[str, str] | None = None) -> AsyncIterator[ClientSession]:
+async def _session(env: dict[str, str] | None = None, *, defaults: bool = False) -> AsyncIterator[ClientSession]:
     """A client talking to the installed server over its own stdio pipe.
 
     Launched as ``python -m web_router.mcp`` rather than through the console
     script, so the test exercises this checkout instead of whatever happens to
     be on PATH -- and from an empty working directory with a home directory of
     its own, so the entry point's ``.env`` lookup cannot hand the child this
-    machine's keys back after the environment stripped them.
+    machine's keys back after the environment stripped them. ``defaults`` drops the switches the tests open up.
     """
     with tempfile.TemporaryDirectory() as scratch:
         cwd, home = Path(scratch) / "work", Path(scratch) / "home"
         cwd.mkdir()
         home.mkdir()
+        env = env if env is not None else isolated_environment(home)
         parameters = StdioServerParameters(
             command=sys.executable,
             args=["-m", "web_router.mcp"],
-            env=env if env is not None else isolated_environment(home),
+            env={name: value for name, value in env.items() if not (defaults and name in OPENED_UP)},
             cwd=str(cwd),
         )
         async with stdio_client(parameters) as (read, write), ClientSession(read, write) as session:
@@ -107,13 +109,24 @@ def _provider_enum(schema: dict[str, Any]) -> list[str] | None:
     return (schema.get("properties", {}).get("provider") or {}).get("enum")
 
 
-async def test_the_server_starts_and_offers_every_tool() -> None:
-    """The handshake itself -- the one thing no in-process test can prove."""
+async def test_the_server_starts_and_offers_every_tool_that_can_run() -> None:
+    """The handshake itself -- the one thing no in-process test can prove -- under the full profile."""
     async with _session() as session:
         listed = await session.list_tools()
 
-    assert [tool.name for tool in listed.tools] == EVERY_TOOL
+    names = [tool.name for tool in listed.tools]
+    assert names == [name for name in EVERY_TOOL if name in names]
+    assert {MCP_TOOL_CALL_VENDOR, MCP_TOOL_LOAD_ENV, *MCP_BROWSER_TOOLS} < set(names)
     assert all(tool.description for tool in listed.tools), "a tool with no description cannot be chosen well"
+
+
+async def test_a_fresh_keyless_server_offers_only_the_slim_tools_that_can_run() -> None:
+    """No browser, no vendor API, no ``load_env``, and nothing that needs a key: what a new install serves."""
+    async with _session(defaults=True) as session:
+        listed = await session.list_tools()
+
+    slim = [MCP_TOOL_SEARCH, MCP_TOOL_EXTRACT, MCP_TOOL_FETCH_RAW, MCP_TOOL_WEB_RUN]
+    assert [tool.name for tool in listed.tools] == [*slim, MCP_TOOL_BUDGET_START, MCP_TOOL_BUDGET_STATUS]
 
 
 async def test_the_schemas_describe_an_install_with_no_credentials() -> None:
@@ -134,10 +147,8 @@ async def test_the_schemas_describe_an_install_with_no_credentials() -> None:
         PROVIDER_YOU_MCP,
     ]
     assert _provider_enum(schemas[MCP_TOOL_EXTRACT]) == [PROVIDER_AUTO, PROVIDER_JINA, PROVIDER_MAX]
-    # Every research backend bills, so with no key there is nothing but the
-    # chooser -- and its description has to say so rather than offering a tool
-    # that can only fail.
-    assert _provider_enum(schemas[MCP_TOOL_RESEARCH]) is None
+    # Every research backend bills, so with no key the tool is not offered at all rather than offered to fail.
+    assert MCP_TOOL_RESEARCH not in schemas
 
 
 async def test_a_failure_arrives_as_a_tool_error_and_not_a_broken_pipe() -> None:

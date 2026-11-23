@@ -99,7 +99,7 @@ def test_load_env_is_off_under_http_unless_the_operator_set_it(
 
 
 def test_an_http_session_does_not_list_load_env(stdio_switches: None, tools: WebRouterTools) -> None:
-    assert MCP_TOOL_LOAD_ENV in {tool.name for tool in tools.list_tools()}
+    assert MCP_TOOL_LOAD_ENV not in {tool.name for tool in tools.list_tools()}  # off under stdio too, by default
 
     http_env_defaults()  # before the session is built, as the command runs it
 
