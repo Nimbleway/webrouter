@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from tests.decider_helpers import Fixed, chat, gemini, reply, request, serve, systemone
+from tests.decider_helpers import AFixed, Fixed, chat, gemini, reply, request, serve, systemone
 from web_router import Candidate, DeciderRouter
 from web_router.constants_decider import DECIDER_INSTRUCTIONS, DECIDER_PREFER
 from web_router.exceptions import ConfigurationError
@@ -123,9 +123,17 @@ async def test_built_by_name_the_llm_router_takes_its_preference_and_scores(monk
     assert DECIDER_PREFER["accurate"] in system and "accuracy 0.161" in user
 
 
-def test_unset_a_router_asked_accurate_by_a_service_shows_the_shipped_scores() -> None:
-    fixed = Fixed(reply())
-    DeciderRouter(fixed).route(replace(request(), prefer="accurate"))
-    assert "accuracy" in next(iter(fixed.asked[0].options.values()))
-    DeciderRouter(fixed).route(request())
+@pytest.mark.parametrize("decider", [Fixed, AFixed], ids=["sync", "async"])
+async def test_unset_a_router_asked_accurate_by_a_service_shows_the_shipped_scores(decider: Any) -> None:
+    fixed = decider(reply())
+    router = DeciderRouter(fixed)
+    if isinstance(fixed, AFixed):
+        await router.aroute(replace(request(), prefer="accurate"))
+        await router.aroute(request())
+    else:
+        router.route(replace(request(), prefer="accurate"))
+        router.route(request())
+    shipped = shipped_scores()
+    for tool, provider in [("search", "tavily"), ("search", "exa"), ("answer", "perplexity")]:
+        assert fixed.asked[0].options[f"{tool}:{provider}"].endswith(f", accuracy {shipped[tool][provider]:g}")
     assert not any("accuracy" in text for text in fixed.asked[1].options.values())
