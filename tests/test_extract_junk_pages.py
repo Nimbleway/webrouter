@@ -1,4 +1,4 @@
-"""A near-empty page, a tracking pixel or another site's page: flagged on every backend, failed over under ``auto``."""
+"""A near-empty page, a tracking pixel or another site's page: flagged everywhere; `auto` fails over the last two."""
 
 from __future__ import annotations
 
@@ -62,6 +62,7 @@ def _serving(
 ) -> type[ExtractProvider]:
     class Serving(_member(name)):  # type: ignore[misc]
         def _respond(self, urls: list[str]) -> ExtractResponse:
+            type(self).calls.append(list(urls))
             if raises:
                 raise ProviderError(name, "unavailable")
             return ExtractResponse(
@@ -80,32 +81,23 @@ def _extract(registered: list[str], *members: type[ExtractProvider]) -> ExtractR
         auto.close()
 
 
-def test_auto_reads_a_near_empty_page_again_on_the_next_backend(registered: list[str]) -> None:
-    response = _extract(registered, _serving("first", SHORT), _serving("second", TEXT))
-
-    assert [document.content for document in response.documents] == [TEXT]
-    assert response.failures == []
-
-
-@pytest.mark.parametrize("last", [_serving("second", "Hi."), _serving("second", "", raises=True)])
-def test_a_near_empty_page_no_later_backend_beats_comes_back_with_its_warning(
-    registered: list[str], last: type[ExtractProvider]
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync", "async"])
+def test_auto_keeps_a_near_empty_page_without_asking_the_next_backend(
+    registered: list[str], asynchronous: bool
 ) -> None:
-    response = _extract(registered, _serving("first", SHORT), last)
+    second = _serving("second", TEXT)
+    auto = _chain(registered, _serving("first", SHORT), second)
+    request = ExtractRequest(urls=[ROOMS])
+    try:
+        response = asyncio.run(auto.aextract(request)) if asynchronous else auto.extract(request)
+    finally:
+        auto.close()
 
-    assert [document.warnings for document in response.documents] == [[MSG_EXTRACT_NEAR_EMPTY]]
+    assert [(document.content, document.warnings) for document in response.documents] == [
+        (SHORT, [MSG_EXTRACT_NEAR_EMPTY])
+    ]
     assert response.failures == []
-
-
-def test_a_later_backends_404_is_not_hidden_behind_a_near_empty_page(registered: list[str]) -> None:
-    with pytest.raises(ExtractFailedError, match="404"):
-        _extract(registered, _serving("first", SHORT), _serving("second", "", status_code=404))
-
-
-def test_a_near_empty_page_from_the_only_backend_is_kept(registered: list[str]) -> None:
-    response = _extract(registered, _serving("first", SHORT))
-
-    assert [document.content for document in response.documents] == [SHORT]
+    assert second.calls == [], "a near-empty page is not sent on down the chain"
 
 
 def test_a_tracking_pixel_fails_over_and_stays_failed_at_the_end_of_the_chain(registered: list[str]) -> None:

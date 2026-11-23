@@ -34,8 +34,8 @@ EXTRACT_NEAR_EMPTY_CHARS: Final = 64
 
 A script-rendered shell comes back as a few dozen characters. Some real
 answers are that short too -- a plain-text endpoint, a one-line JSON reply --
-so ``auto`` tries the next backend for it while one is left, and otherwise
-the page stays a document.
+which is why such a page stays a document rather than a failure, and ``auto``
+does not try another backend for it.
 """
 
 MSG_EXTRACT_TRACKER_PIXEL: Final = "the backend got a tracking pixel instead of the page"
