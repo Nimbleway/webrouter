@@ -163,8 +163,12 @@ src/web_router/
 │   │                   SealQA, or a CSV; seeded sampling; answer-key pages withheld
 │   ├── judge.py        Judge ABC, OpenAIJudge and AnthropicJudge: synthesize,
 │   │                   then grade
+│   ├── judge_litellm.py LiteLLMJudge: any model LiteLLM reaches — [evals-litellm]
+│   ├── judges.py       judge_from(): a judge by name, a --judge flag's value
+│   ├── labels.py       judge_label() / EndpointLabel: a model judge's label, its host off the vendor's
 │   ├── run.py          the loop: benchmark per question, judge per row, score
 │   └── prompts/        the SimpleQA grader prompt, vendored verbatim
+├── constants_evals.py  the default judge's name, --judge's help, judge_from()'s and the scorer's messages
 ├── constants.py        shared env var registries, timeouts and message templates;
 │                       a provider's own go in constants_<provider>.py (older
 │                       providers' are still here)
@@ -275,8 +279,11 @@ src/web_router/
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
 │   ├── route_tools.py  the tools that ask the router: the caller's route_tools, else
-│   │                   the router's own, else all five; read once; route_modes likewise
+│   │                   the router's own, else all five; read once; route_modes likewise;
+│   │                   prefer checked
 │   ├── router_owner.py a router built by name: kept to close with the routers, or closed if refused
+│   ├── router_setup.py RouterSetup: the attached router, the tools it is asked about, its
+│   │                   modes, the caller's prefer, and the RouteRequest a routed call shows it
 │   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
 │   │                   held to the shared budget in force, at the effort it maps
 │   ├── decide.py       decided(): candidates and a router's outcome merged into the
@@ -670,6 +677,10 @@ a comparison of vendor tiers is one `evaluate()` per depth on the same dataset,
 never a per-provider override.
 A `Dataset` is a pydantic model and iterates as its fields: loop over
 `.questions`.
+The judge is one per run but not one forever: `judge_from()` names it
+(`openai:gpt-4o` by default, `anthropic`, `litellm:<model>`, or a caller's
+`package.module:Class`), every benchmark's `--judge` takes that string, and a
+judge on another endpoint puts the host in its label.
 
 **An integration fixes the router's options when the tool is built.** The
 LangChain, Claude and OpenAI tools take the query or the URLs from the model
@@ -1603,6 +1614,19 @@ the code owners' review yet. Mark ready only after Qodo's "Code Review by Qodo" 
 latest commit and every finding has a reply in its thread, starting with `@qodo`:
 `Fixed in <sha>: <what>` or `Not fixing: <reason>`. Qodo does not review drafts on its own, so a
 `/agentic_review` comment on the draft is a good way to ask for one.
+
+### Merging
+
+Squash every pull request into `main`. An integration branch collects a stack of dependent pull
+requests before its final pull request into `main`. The only stack exception is a parent with open
+child pull requests: merge that parent into the integration branch with a merge commit so the stack
+keeps its ancestry, then squash only the final integration pull request into `main`.
+
+A required code-owner approval is valid only for the head commit it covers; Qodo's review is a
+separate gate. After any new commit, wait for fresh code-owner approval of the latest head.
+Immediately before enabling auto-merge, read the current head again and verify that every merge
+requirement is already satisfied, including green required checks, approval of that exact head, and
+the correct merge method. Do not enable auto-merge to wait for unfinished checks or approval.
 
 A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md`; anything else
 (CI, docs, tests, refactors) takes the `skip-changelog` label. The Changelog check fails the PR otherwise.

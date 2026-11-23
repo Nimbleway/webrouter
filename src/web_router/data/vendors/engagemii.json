@@ -1,0 +1,153 @@
+{
+  "vendor": "engagemii",
+  "name": "Engagemii",
+  "category": "company-data",
+  "summary": "Company records with AI visibility scores, AI engine reads, category, location, tech stack and social profiles from the Engagemii index.",
+  "docs_url": "https://engagemii.com/aeo/data/api",
+  "pricing_url": "https://engagemii.com/aeo/data/api#pricing",
+  "base_url": "https://api.engagemii.com/api/v1/data",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "ENGAGEMII_DATA_KEY"
+        ],
+        "description": "an Engagemii data API key (starts with edk_) from the API access page of a free data account (https://engagemii.com/portal/data/api)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "X-Engagemii-Data-Key",
+        "value": "{api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Unit-based: every company record returned costs 1 unit; units are bought 5,000 for $250 (5 cents a unit) and never expire; /info and /orders are free, and nothing is charged on an error. Free lookups are used first: a data account gets 20, one time; an agency account gets 1 as a sample, then 2 a month while the Agency plan is paid; a brand account gets none.",
+    "60 requests a minute per key across all endpoints. Every answer carries X-RateLimit-Remaining and X-RateLimit-Reset; past the limit the answer is 429 rate_limited with Retry-After.",
+    "A record has the same columns as an Engagemii data file: the 0 to 10 AI visibility score with its on-page and off-page parts, AI engine reads, AI naming, the agent readiness and AI adoption indexes, category, location, tech stack and social profiles. Column meanings: https://engagemii.com/aeo/data/dictionary."
+  ],
+  "sources": [
+    "https://engagemii.com/aeo/data/api",
+    "https://engagemii.com/openapi/data-api.json",
+    "https://engagemii.com/aeo/data/dictionary"
+  ],
+  "curated": "2026-11-17",
+  "endpoints": [
+    {
+      "id": "engagemii.account.info",
+      "name": "Get account units and limits",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/info",
+      "notes": [
+        "Costs nothing; call it to check units left before a large pull."
+      ],
+      "job": "account.usage",
+      "docs_url": "https://engagemii.com/aeo/data/api#info",
+      "verified": {
+        "docs": "https://engagemii.com/aeo/data/api#info"
+      }
+    },
+    {
+      "id": "engagemii.company.lookup",
+      "name": "Look up a company by website",
+      "summary": "1 unit when a record is returned, 0 otherwise.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/lookup",
+      "params": {
+        "domain": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The company's website. Scheme, www and path are ignored.",
+          "example": "patagonia.com"
+        }
+      },
+      "notes": [
+        "Starts a billed job when the website is not in the index yet: a paid lookup scans and scores it. If the scan finishes within about 20 seconds the record comes back in the same call; otherwise the answer is 202 scanning or queued with retryAfterSec, and the next call returns the record. A free lookup on such a website answers 404 not_found with reason not_indexed and starts nothing.",
+        "Returns record (the full data-file columns), company (standard field names such as name, website, industry, companyType, country, city, phone, linkedin) and sources (where each value came from). A field not held is left out.",
+        "A 202 filling answer means the record check is still running; call again after retryAfter seconds. completion.pending true means some cells finish in the background and a later call reads them. Every 202 costs nothing.",
+        "Scans of websites not yet in the index are limited to 30 an hour and 100 a day per key (429 scan_limit_key); websites already in the index still answer."
+      ],
+      "job": "company.enrich",
+      "docs_url": "https://engagemii.com/aeo/data/api#lookup",
+      "verified": {
+        "docs": "https://engagemii.com/aeo/data/api#lookup"
+      }
+    },
+    {
+      "id": "engagemii.company.search",
+      "name": "Search company records by filter",
+      "summary": "1 unit per record returned; up to 5,000 records a call.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/records",
+      "params": {
+        "filters": {
+          "in": "body",
+          "type": "object",
+          "description": "Any of: industries (Technology, E-commerce, Food & Beverage, Health & Wellness, Healthcare, Beauty & Personal Care, Fashion & Apparel, Finance & Insurance, Legal, Real Estate, Travel & Hospitality, Education, Media & Entertainment, Home & Living, Pet Care, Automotive, Sports & Recreation, Professional Services, Nonprofits, Government & Public Sector, Membership Organizations, Manufacturing & Industrial, Other), states (US state names or codes), countries (names or 2-letter ISO codes), scope ('us', the default, or 'all' for worldwide), audienceTypes (B2B, B2C, Mixed, Other), scoreMin and scoreMax (AI visibility score, 0 to 10, inclusive), hasSocials, hasEmails, platforms, paymentProcessors, analytics, emailMarketing, reviews (lower-case names such as shopify, stripe, klaviyo, trustpilot) and publicCompanies ('only').",
+          "example": {
+            "industries": [
+              "Technology"
+            ],
+            "states": [
+              "California"
+            ],
+            "scoreMin": 6
+          }
+        },
+        "limit": {
+          "in": "body",
+          "type": "integer",
+          "description": "Records per call, 1 to 5,000 (default 1,000)."
+        },
+        "offset": {
+          "in": "body",
+          "type": "integer",
+          "description": "0 for the first page, then the nextOffset of the previous answer."
+        },
+        "acceptUnitsPerRow": {
+          "in": "body",
+          "type": "integer",
+          "enum": [
+            10
+          ],
+          "description": "Confirms the 10-unit rate; required when filters.publicCompanies is 'only'."
+        }
+      },
+      "notes": [
+        "A read over POST: it only queries records.",
+        "Metered: 1 unit per record returned. filters.publicCompanies 'only' (US public companies, SEC ticker and CIK on every row) costs 10 units a record and runs only with acceptUnitsPerRow 10.",
+        "filters.scope defaults to 'us' (United States); send 'all' for worldwide.",
+        "Results come best AI visibility score first. Paging: send offset 0, then the nextOffset of each answer until hasMore is false; never add the count to offset.",
+        "A page with no record ready yet carries Retry-After (3, 5, then 8 seconds) and says how many records are still being completed. A filter or value that does not exist is refused with 400 before anything is read."
+      ],
+      "job": "company.search",
+      "docs_url": "https://engagemii.com/aeo/data/api#records",
+      "verified": {
+        "docs": "https://engagemii.com/aeo/data/api#records"
+      }
+    },
+    {
+      "id": "engagemii.orders.list",
+      "name": "List the account's data files",
+      "summary": "Free.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/orders",
+      "notes": [
+        "The account's data orders, each ready file with a freshly signed download link. Costs nothing."
+      ],
+      "job": "account.history",
+      "docs_url": "https://engagemii.com/aeo/data/api#orders",
+      "verified": {
+        "docs": "https://engagemii.com/aeo/data/api#orders"
+      }
+    }
+  ]
+}

@@ -24,6 +24,12 @@ DECIDER_INSTRUCTIONS = (
 DECIDER_PINNED = " The method is fixed to {tool}: rank its backends only."
 """Added to the instructions when the caller pinned the method."""
 
+DECIDER_PREFER = {
+    "cheap": " The caller prefers cheap: among options that serve the request alike, rank lower cost first.",
+    "fast": " The caller prefers fast: among options that serve the request alike, rank lower p90 latency first.",
+}
+"""Added to the instructions when the caller set ``prefer``, by its value."""
+
 DECIDER_OPTION = "{tool} on {provider}, {cost}, {latency}"
 DECIDER_MODE_OPTION = "{tool} on {provider} in mode {mode} ({does}), {cost}, {latency}"
 """A vendor mode's option: named, so two modes of one backend never read the same, and what its parts do."""

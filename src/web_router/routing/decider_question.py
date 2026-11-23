@@ -16,6 +16,7 @@ from web_router.constants_decider import (
     DECIDER_MODE_OPTION,
     DECIDER_OPTION,
     DECIDER_PINNED,
+    DECIDER_PREFER,
     DECIDER_REASON,
     DECIDER_REASON_SCORE,
 )
@@ -40,16 +41,18 @@ def describe(candidate: Candidate) -> str:
 
 def question_for(req: RouteRequest) -> DeciderQuestion:
     """The question for ``req``: every candidate but extract when the prompt names no URL, since a decider
-    sets no URL for it to read."""
+    sets no URL for it to read; a ``prefer`` the caller set is in the instructions, which every decider reads."""
     options = {c.id: describe(c) for c in req.candidates if c.tool != "extract" or req.urls}
     pinned = DECIDER_PINNED.format(tool=req.pinned_tool) if req.pinned_tool else ""
+    prefer = DECIDER_PREFER[req.prefer] if req.prefer else ""
     return DeciderQuestion(
         prompt=req.prompt,
-        instructions=DECIDER_INSTRUCTIONS + pinned,
+        instructions=DECIDER_INSTRUCTIONS + pinned + prefer,
         options=options,
         budget=req.budget,
         pinned_tool=req.pinned_tool,
         deadline_s=req.deadline_s,
+        prefer=req.prefer,
     )
 
 

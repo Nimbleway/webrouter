@@ -42,7 +42,8 @@ from web_router.routing.metered import metered
 from web_router.routing.pool import limited
 from web_router.routing.record import stamp
 from web_router.routing.request_modes import runnable
-from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
+from web_router.routing.routed import AsyncRouted, SyncRouted
+from web_router.routing.router_setup import RouterSetup
 from web_router.routing.url_policy import screened
 from web_router.types import (
     BrowseResponse,
@@ -75,14 +76,14 @@ class _Planner(RouterSetup):
         if tool is not None:
             requests = {tool: requests[tool]} if tool in requests else {}
         found = build_candidates(self, requests, budget=budget, modes=self._route_modes)
-        deadline = 0.0 if self._router is None else self._router.deadline(budget)
         req = RouteRequest(
             prompt=prompt,
             candidates=found.candidates,
-            deadline_s=deadline,
+            deadline_s=0.0 if self._router is None else self._router.deadline(budget),
             urls=tuple(kept),
             budget=budget,
             pinned_tool=tool,
+            prefer=self._prefer,
         )
         return req, found, kept, refused
 
@@ -157,8 +158,7 @@ class SyncPlan(_Planner, SyncRouted):
                 supplied one: a plan ``run`` could not execute.
         """
         parts = self._plan_request(prompt, budget, tool)
-        req = parts[0]
-        outcome = self._router.call(req) if self._router is not None and self._asks(req) else None
+        outcome = self._router.call(parts[0]) if self._router is not None and self._asks(parts[0]) else None
         return self._planned(parts, outcome)
 
     def run(self, plan: Plan | str, *, budget: Budget | None = None, tool: ToolName | None = None) -> RunResponse:
@@ -181,8 +181,7 @@ class AsyncPlan(_Planner, AsyncRouted):
     async def plan(self, prompt: str, *, budget: Budget | None = None, tool: ToolName | None = None) -> Plan:
         """As :meth:`SyncPlan.plan`, asking the router without blocking the event loop."""
         parts = self._plan_request(prompt, budget, tool)
-        req = parts[0]
-        outcome = await self._router.acall(req) if self._router is not None and self._asks(req) else None
+        outcome = await self._router.acall(parts[0]) if self._router is not None and self._asks(parts[0]) else None
         return self._planned(parts, outcome)
 
     async def run(self, plan: Plan | str, *, budget: Budget | None = None, tool: ToolName | None = None) -> RunResponse:
