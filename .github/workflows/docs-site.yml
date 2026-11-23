@@ -14,8 +14,7 @@ on:
       - "src/web_router/data/vendors/**"
       - "src/web_router/constants_vendors.py"
       - "src/web_router/vendors/**"
-      - "scripts/data_api_docs.py"
-      - "scripts/data_api_page.py"
+      - "scripts/data_api_*.py"
       - "scripts/vendors.py"
       - ".github/workflows/docs-site.yml"
   workflow_dispatch:
