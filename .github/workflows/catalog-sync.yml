@@ -1,0 +1,59 @@
+name: Web Catalog sync
+
+# Keeps the public Web Catalog's Webflow CMS in step with the data API catalog:
+# exports src/web_router/data/vendors to build/catalog.json and writes it into
+# the Webflow collections. New items are drafts and nothing is published here;
+# marketing publishes from Webflow after review.
+#
+# Needs the WEBFLOW_TOKEN secret (CMS read and write) and the
+# WEBFLOW_CATEGORIES_COLLECTION and WEBFLOW_VENDORS_COLLECTION variables.
+# Without them the job skips, so forks never fail on it.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/web_router/data/vendors/**"
+      - "src/web_router/constants_vendors.py"
+      - "scripts/catalog_export.py"
+      - "scripts/webflow_sync.py"
+      - ".github/workflows/catalog-sync.yml"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the planned writes without sending them"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-sync
+  cancel-in-progress: false
+
+env:
+  UV_FROZEN: "1"
+
+jobs:
+  sync:
+    name: Export and sync
+    if: github.ref == 'refs/heads/main' && vars.WEBFLOW_VENDORS_COLLECTION != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+      - run: uv sync --all-extras --dev
+
+      - name: Export the catalog
+        run: uv run python -m scripts.catalog_export
+
+      - name: Sync to Webflow as drafts
+        env:
+          WEBFLOW_TOKEN: ${{ secrets.WEBFLOW_TOKEN }}
+          WEBFLOW_CATEGORIES_COLLECTION: ${{ vars.WEBFLOW_CATEGORIES_COLLECTION }}
+          WEBFLOW_VENDORS_COLLECTION: ${{ vars.WEBFLOW_VENDORS_COLLECTION }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: uv run python -m scripts.webflow_sync $DRY_RUN
