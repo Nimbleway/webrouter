@@ -22,7 +22,7 @@ from web_router.constants_prefer import MSG_ACCURATE_NEEDS_SCORES
 from web_router.exceptions import ConfigurationError
 from web_router.routing._forms import _declared_timeout
 from web_router.routing._runner import _close, _close_late, _on_thread
-from web_router.routing.accuracy import AccuracyLike, AccuracyScores, accuracy_scores, router_scores, scored_request
+from web_router.routing.accuracy import AccuracyLike, AccuracyScores, accuracy_scores, live_scores, scoped
 from web_router.routing.contract import Prefer, RouteDecision, RouteRequest
 from web_router.routing.decider import Decider, DeciderQuestion
 from web_router.routing.decider_question import decision_for, question_for
@@ -144,7 +144,7 @@ class DeciderRouter:
 
     @property
     def scores(self) -> AccuracyScores | None:
-        return router_scores(self.prefer, None) if self._accuracy is None else self._accuracy
+        return live_scores(self.prefer, self._accuracy)
 
     def __repr__(self) -> str:
         return f"DeciderRouter({self.router_name!r}, timeout_s={self.timeout_s})"
@@ -152,13 +152,9 @@ class DeciderRouter:
     def _asked(self, req: RouteRequest) -> RouteRequest:
         return req if self.prefer is None else replace(req, prefer=self.prefer)
 
-    def _scores(self, req: RouteRequest) -> AccuracyScores | None:
-        return self.scores if self.scores is not None else router_scores(req.prefer, None)
-
     def _route(self, req: RouteRequest) -> RouteDecision | Awaitable[RouteDecision]:
         req = self._asked(req)
-        scores = self._scores(req)
-        req = scored_request(req, scores)
+        req, scores = scoped(req, req.prefer, self._accuracy)
         question = question_for(req, scores)
         if not question.options:
             return RouteDecision()
@@ -173,8 +169,7 @@ class DeciderRouter:
         if not callable(self._adecide):
             return await _on_worker(self._route, req)
         req = self._asked(req)
-        scores = self._scores(req)
-        req = scored_request(req, scores)
+        req, scores = scoped(req, req.prefer, self._accuracy)
         question = question_for(req, scores)
         if not question.options:
             return RouteDecision()

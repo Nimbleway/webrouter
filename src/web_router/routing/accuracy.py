@@ -68,6 +68,19 @@ def router_scores(prefer: Prefer | None, accuracy: AccuracyLike | None) -> Accur
     return accuracy_scores(accuracy)
 
 
+def live_scores(prefer: Prefer | None, caller: AccuracyScores | None) -> AccuracyScores | None:
+    """The caller's parsed scores, else the live shipped scores when accuracy is preferred."""
+    return router_scores(prefer, None) if caller is None else caller
+
+
+def scoped(
+    req: RouteRequest, prefer: Prefer | None, caller: AccuracyScores | None
+) -> tuple[RouteRequest, AccuracyScores | None]:
+    """This call's live scores and custom-candidate eligibility, on a request of its own."""
+    scores = live_scores(prefer, caller)
+    return scored_request(req, scores), scores
+
+
 def shipped_scores() -> AccuracyScores:
     """Search's and answer's backends, at their default mode, as the benchmark behind ``auto``'s order measured
     them (``data/chains.json``): the share of its questions each answered correctly. No vendor mode is scored."""

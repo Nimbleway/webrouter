@@ -29,7 +29,7 @@ from web_router.constants_prefer import (
     PREFERRED_ROUTER_NAME,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.routing.accuracy import AccuracyLike, AccuracyScores, accuracy_scores, router_scores, scored_request
+from web_router.routing.accuracy import AccuracyLike, AccuracyScores, accuracy_scores, live_scores, scoped
 from web_router.routing.contract import Candidate, Prefer, RouteDecision, RouteRequest, ToolName
 from web_router.routing.prefer_order import preferred_candidates
 from web_router.routing.request_modes import backends
@@ -71,15 +71,15 @@ class PreferredRouter:
     @property
     def scores(self) -> AccuracyScores | None:
         """Caller scores, else the shipped scores for the implementations currently registered."""
-        return router_scores(self.prefer, None) if self._accuracy is None else self._accuracy
+        return live_scores(self.prefer, self._accuracy)
 
     def __repr__(self) -> str:
         return f"PreferredRouter({self.prefer!r})"
 
     def route(self, req: RouteRequest) -> RouteDecision:
         """Each method's candidates by the preference: see :func:`ordered`."""
-        scores = self.scores
-        return ordered(scored_request(req, scores), self.prefer, scores)
+        req, scores = scoped(req, self.prefer, self._accuracy)
+        return ordered(req, self.prefer, scores)
 
 
 def ordered(req: RouteRequest, prefer: Prefer, scores: AccuracyScores | None) -> RouteDecision:
