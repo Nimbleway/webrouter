@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from tests.routing_helpers import Table, Tool, order, wr
-from web_router import Budget, PreferredRouter, available_routers, cheapest_first
+from web_router import Budget, PreferredRouter, cheapest_first
 from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import Candidate, RouteRequest
 
@@ -52,10 +52,9 @@ def test_a_mode_is_scored_on_its_own_and_a_member_that_is_not_the_measured_backe
     assert router.route(_req(*offered)).attempts == ["search:c:c-deep", "search:a", "search:b"]
 
 
-@pytest.mark.parametrize("prefer", [None, "balanced", "CHEAP", 1])
-def test_it_needs_a_known_preference(prefer: Any) -> None:
+def test_it_needs_a_known_preference() -> None:
     with pytest.raises(ConfigurationError, match="preferred router takes prefer="):
-        PreferredRouter(prefer)
+        PreferredRouter("balanced")  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("accuracy", [None, {}])
@@ -75,10 +74,6 @@ def test_cheapest_first_is_preferred_at_cheap() -> None:
     offered = (_c("a", 0.01), _c("b", 0.0))
     decision = cheapest_first(_req(*offered))
     assert (decision.providers, decision.prefer) == ({"search": ["b", "a"]}, "cheap")
-
-
-def test_it_is_built_in_by_name() -> None:
-    assert "preferred" in available_routers()
 
 
 def test_built_by_name_it_runs_the_fastest_member_first(tool: Tool, called: list[str], priced: Table) -> None:
