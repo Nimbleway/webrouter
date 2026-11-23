@@ -9,6 +9,7 @@ import pytest
 from tests.routing_helpers import Table, Tool, order, wr
 from web_router import AsyncWebRouter, Budget, PreferredRouter, WebRouter, available_routers
 from web_router.exceptions import ConfigurationError
+from web_router.routing.accuracy import shipped_scores
 from web_router.routing.contract import Candidate, RouteRequest
 
 SCORES = {"search": {"a": 0.2, "b": 0.5, "c:c-deep": 0.9}}
@@ -62,10 +63,18 @@ def test_it_needs_a_known_preference() -> None:
         PreferredRouter("balanced")  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("accuracy", [None, {}])
-def test_accurate_needs_scores(accuracy: Any) -> None:
+def test_accurate_with_empty_scores_is_refused() -> None:
     with pytest.raises(ConfigurationError, match="holds none"):
-        PreferredRouter("accurate", accuracy=accuracy)
+        PreferredRouter("accurate", accuracy={})
+
+
+def test_accurate_with_no_scores_ranks_by_the_shipped_ones() -> None:
+    router = PreferredRouter("accurate")
+    assert (router.scores, router.route_modes) == (shipped_scores(), False)
+    shipped = router.scores["search"]
+    low, high = sorted(shipped, key=shipped.__getitem__)[:: len(shipped) - 1]
+    offered = (_c("u"), _c(low), _c(high), _c(high, measured=False))
+    assert router.route(_req(*offered)).providers == {"search": [high, low, "u", high]}
 
 
 @pytest.mark.parametrize("accuracy", [SCORES, {}])

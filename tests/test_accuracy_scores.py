@@ -9,7 +9,7 @@ import pytest
 from tests.candidates_helpers import clear_keys, one
 from web_router import WebRouter
 from web_router.exceptions import ConfigurationError
-from web_router.routing.accuracy import accuracy_scores, score_of
+from web_router.routing.accuracy import accuracy_scores, router_scores, score_of, shipped_scores
 from web_router.routing.candidates import build_candidates
 from web_router.routing.contract import Candidate
 from web_router.types import SearchRequest
@@ -74,3 +74,17 @@ def test_a_keyless_tier_or_a_call_with_provider_options_is_not_the_measured_back
     assert (one(found, "search:tavily").measured, one(found, "search:exa").measured) == (False, True)
     optioned = build_candidates(router, {"search": SearchRequest(query="q", provider_options={"type": "fast"})})
     assert one(optioned, "search:exa").measured is False, "options the benchmark never sent"
+
+
+def test_the_shipped_scores_are_search_and_answer_backends_as_the_benchmark_measured_them() -> None:
+    shipped = shipped_scores()
+    assert set(shipped) == {"search", "answer"} and all(shipped.values())
+    assert accuracy_scores(shipped) == shipped, "every key a real backend, every score a share"
+    assert not any(":" in key for keys in shipped.values() for key in keys), "no vendor mode is measured"
+    assert shipped["answer"]["perplexity"] == pytest.approx(0.953333)
+
+
+def test_a_router_holds_the_shipped_scores_only_at_accurate_with_none_of_its_own() -> None:
+    assert router_scores("accurate", None) == shipped_scores()
+    assert router_scores("accurate", {"search": {"exa": 0.5}}) == {"search": {"exa": 0.5}}
+    assert router_scores(None, None) is None and router_scores("cheap", None) is None

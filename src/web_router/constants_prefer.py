@@ -11,8 +11,8 @@ PREFERRED_REASON = "{prefer} first"
 MSG_PREFER_NEEDED = "the preferred router takes prefer='cheap', 'fast' or 'accurate'; got {got!r}."
 
 MSG_ACCURATE_NEEDS_SCORES = (
-    "prefer='accurate' ranks by accuracy scores, and this router holds none: pass accuracy= a mapping of method to "
-    "{provider: score}, or a path to that JSON."
+    "prefer='accurate' ranks by accuracy scores, and accuracy= holds none: pass a mapping of method to "
+    "{provider: score}, or a path to that JSON, or leave accuracy= unset for the shipped scores."
 )
 
 MSG_SCORES_UNUSED = (

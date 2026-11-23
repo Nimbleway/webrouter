@@ -4,7 +4,8 @@ Experimental. ``PreferredRouter(prefer)`` -- ``router="preferred"`` with
 ``router_config={"prefer": ...}`` -- orders the candidates of each method by
 its preference (:mod:`.prefer_order`): ``cheap`` by estimated cost, a $0
 backend first; ``fast`` by measured p90 latency; ``accurate`` by the scores it
-holds (:mod:`.accuracy`), which it needs. An unknown estimate or score goes
+holds (:mod:`.accuracy`): yours, or by default the shipped ones for search
+and answer. An unknown estimate or score goes
 last, ties keep the static order, and under a cost cap a backend with no known
 price never runs at all. It needs no key and calls nothing.
 
@@ -28,7 +29,7 @@ from web_router.constants_prefer import (
     PREFERRED_ROUTER_NAME,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.routing.accuracy import AccuracyLike, AccuracyScores, accuracy_scores
+from web_router.routing.accuracy import AccuracyLike, AccuracyScores, router_scores
 from web_router.routing.contract import Candidate, Prefer, RouteDecision, RouteRequest, ToolName
 from web_router.routing.prefer_order import preferred_candidates
 from web_router.routing.request_modes import backends
@@ -46,11 +47,12 @@ class PreferredRouter:
         """
         Args:
             prefer: ``"cheap"``, ``"fast"`` or ``"accurate"``.
-            accuracy: The scores ``accurate`` ranks by, or the path of a JSON file of them (:mod:`.accuracy`).
+            accuracy: The scores ``accurate`` ranks by, or the path of a JSON file of them (:mod:`.accuracy`);
+                unset, the shipped scores for search and answer.
             route_modes: Whether it is shown vendor modes; by default, when ``accuracy`` scores one.
 
         Raises:
-            ConfigurationError: for another ``prefer``, ``accurate`` with no scores, scores with another
+            ConfigurationError: for another ``prefer``, ``accurate`` with empty scores, scores with another
                 ``prefer``, which never reads them, scores
                 :func:`~.accuracy.accuracy_scores` refuses, or a ``route_modes`` that is not a bool.
         """
@@ -60,7 +62,7 @@ class PreferredRouter:
             raise ConfigurationError(MSG_SCORES_UNUSED.format(prefer=prefer))
         self.prefer: Prefer = prefer
         self.router_name = PREFERRED_ROUTER_NAME
-        self.scores = accuracy_scores(accuracy)
+        self.scores = router_scores(prefer, accuracy)
         if prefer == "accurate" and not self.scores:
             raise ConfigurationError(MSG_ACCURATE_NEEDS_SCORES)
         moded = any(":" in key for keys in (self.scores or {}).values() for key in keys)

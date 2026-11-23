@@ -144,8 +144,8 @@ alone; on the MCP server it holds for `web_run`'s plans only.
 
 A preference belongs to the router: you build the router with it. `prefer` is
 the goal; `accuracy=` (below) is the data for one goal. `cheap` and `fast` rank
-by the prices and p90 latencies web-router ships; `accurate` ranks by scores
-you bring. `cheap` puts
+by the prices and p90 latencies web-router ships, and `accurate` by the
+accuracy scores it ships for search and answer, or by scores you bring. `cheap` puts
 the lowest estimated cost first ($0 first), `fast` the lowest p90 latency, and
 `accurate` the highest accuracy score the router holds. A backend with no
 estimate or score goes last, and ties keep the default order. It orders and
@@ -172,10 +172,14 @@ so does `remote`, which sends it as `RouteRequest.prefer`. Each member of a
 ranking the call used: `None` when that router has none, failed or decided
 nothing.
 
-**Accurate needs your scores (experimental).** web-router ships no accuracy
-scores for routers: `accurate` ranks by scores you bring, from your own
-benchmark, passed as `accuracy=` a mapping or the path of a JSON file of the
-same shape:
+**Accuracy scores (experimental).** With no `accuracy=`, `accurate` ranks by
+the scores web-router ships: each search and answer backend's share of correct
+answers in the benchmark behind `auto`'s order (`data/chains.json`), at its
+default mode. Extract, research and browse have none, so their backends keep
+the default order, and so does any backend the benchmark did not measure.
+To rank by your own benchmark, pass `accuracy=` a mapping or the path of a
+JSON file of the same shape. Your scores replace the shipped ones whole,
+since scores from two benchmarks do not compare:
 
 ```json
 {"search": {"exa": 0.161, "exa:exa-deep": 0.224}, "answer": {"perplexity": 0.953}}
@@ -186,9 +190,10 @@ compares only within its method. `exa` scores the backend as the request
 sends it, `exa:exa-deep` that vendor mode; anything not listed, and a candidate
 whose `measured` is `False`, is unknown. A method, backend or mode that is not
 real, a mode not spelled the way the backend spells it, or a score outside 0
-to 1 raises `ConfigurationError`, and so does `accurate` with no scores, or a
+to 1 raises `ConfigurationError`, and so does `accurate` with `accuracy={}`, or a
 `preferred` router given scores at `cheap` or `fast`, which never reads them.
-A model router given scores with no `prefer` shows them to the model as one
+A model router at `accurate` shows the shipped scores, or yours, beside each
+option; given scores with no `prefer`, it shows them to the model as one
 more fact about each option, without asking it to favour them. A
 `preferred` router with mode scores is shown vendor modes by default. For a
 model router, set `WebRouter(..., route_modes=True)` to offer those modes;
@@ -197,12 +202,13 @@ are unused. An explicit `route_modes=False` keeps every router on backends
 only.
 
 ```python
-wr = WebRouter(router=PreferredRouter("accurate", accuracy="scores.json"))
+wr = WebRouter(router=PreferredRouter("accurate"))  # the shipped scores
+wr = WebRouter(router=PreferredRouter("accurate", accuracy="scores.json"))  # yours
 ```
 
 With no preference, `auto`'s order is already accuracy-first: the backends the
 shipped benchmark cannot tell apart form one tier, cheapest first under a cost
-cap. `accurate` sorts by your raw scores instead, so of two backends 0.003
+cap. `accurate` sorts by raw scores instead, so of two backends 0.003
 apart it runs the higher one first even when the gap is within a rerun's
 noise and the other is cheaper. Most callers want the default.
 

@@ -31,7 +31,7 @@ from web_router.constants_prefer import MSG_ACCURATE_NEEDS_SCORES
 from web_router.exceptions import ConfigurationError
 from web_router.routing._forms import _declared_timeout
 from web_router.routing._runner import _close, _close_late, _on_thread
-from web_router.routing.accuracy import AccuracyLike, accuracy_scores
+from web_router.routing.accuracy import AccuracyLike, router_scores
 from web_router.routing.contract import Prefer, RouteDecision, RouteRequest
 from web_router.routing.decider import Decider, DeciderQuestion
 from web_router.routing.decider_question import decision_for, question_for
@@ -130,14 +130,14 @@ class DeciderRouter:
             owns_decider: Whether ``close()`` and ``aclose()`` close the decider too. True unless set.
             prefer: What every question asks the decider to prefer: ``cheap``, ``fast`` or ``accurate``. Unset,
                 a request's own ``prefer`` -- one a router service was sent -- is asked.
-            accuracy: Scores shown beside each option (:mod:`.accuracy`); ``accurate`` needs them.
+            accuracy: Scores shown beside each option (:mod:`.accuracy`); at ``accurate``, the shipped ones unless set.
 
         Raises:
             ConfigurationError: for a decider with neither method, a ``timeout_s`` that is not a positive
-                number of seconds, an unknown ``prefer``, ``accurate`` with no scores, or scores refused.
+                number of seconds, an unknown ``prefer``, ``accurate`` with empty scores, or scores refused.
         """
         self.prefer = checked_prefer(prefer)
-        self.scores = accuracy_scores(accuracy)
+        self.scores = router_scores(self.prefer, accuracy)
         if self.prefer == "accurate" and not self.scores:
             raise ConfigurationError(MSG_ACCURATE_NEEDS_SCORES)
         self._decide = getattr(decider, "decide", None)

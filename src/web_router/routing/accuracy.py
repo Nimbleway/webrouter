@@ -1,8 +1,8 @@
 """A router's own accuracy scores: what ``accuracy=`` takes, checked once, and each candidate's score.
 
-Experimental. web-router ships no scores for routers: a router that ranks by
-accuracy holds the caller's, read from a mapping or a JSON file of the same
-shape -- per method, a backend's score, or one vendor mode's::
+Experimental. A router at ``accurate`` holds the caller's scores, read from a
+mapping or a JSON file of the same shape -- per method, a backend's score, or
+one vendor mode's -- or, given none, the shipped ones (:func:`shipped_scores`)::
 
     {"search": {"exa": 0.161, "exa:exa-deep": 0.224}, "answer": {"perplexity": 0.953}}
 
@@ -21,6 +21,7 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
+from web_router._chains import chains
 from web_router.constants_modes import PART_SEP
 from web_router.constants_prefer import (
     MSG_ACCURACY_FILE,
@@ -33,7 +34,7 @@ from web_router.constants_prefer import (
     MSG_ACCURACY_SHAPE,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.routing.contract import Candidate, ToolName
+from web_router.routing.contract import Candidate, Prefer, ToolName
 from web_router.routing.route_tools import ALL_TOOLS
 
 AccuracyScores = Mapping[ToolName, Mapping[str, float]]
@@ -50,6 +51,34 @@ _BACKENDS: dict[ToolName, tuple[str, str]] = {
     "browse": ("web_router.registry", "available_browse_providers"),
 }
 """Where each method's registered backends are listed, read when scores are checked: the registry imports routing."""
+
+
+SHIPPED_METHODS: tuple[ToolName, ...] = ("search", "answer")
+"""The methods whose backends the benchmark behind ``auto``'s order measured."""
+
+
+def router_scores(prefer: Prefer | None, accuracy: AccuracyLike | None) -> AccuracyScores | None:
+    """The scores a router holds: ``accuracy`` read and checked when given; else, at ``accurate``, the shipped ones.
+
+    The caller's scores replace the shipped ones whole: scores from two benchmarks do not compare.
+    """
+    if accuracy is None and prefer == "accurate":
+        return shipped_scores()
+    return accuracy_scores(accuracy)
+
+
+def shipped_scores() -> AccuracyScores:
+    """Search's and answer's backends, at their default mode, as the benchmark behind ``auto``'s order measured
+    them (``data/chains.json``): the share of its questions each answered correctly. No vendor mode is scored."""
+    measured = {method: chains().get(method, {}).get("measured", {}) for method in SHIPPED_METHODS}
+    return {
+        method: {provider: float(row["accuracy"]) for provider, row in rows.items() if _share(row.get("accuracy"))}
+        for method, rows in measured.items()
+    }
+
+
+def _share(value: object) -> bool:
+    return not isinstance(value, bool) and isinstance(value, int | float) and 0 <= value <= 1
 
 
 def accuracy_scores(accuracy: AccuracyLike | None) -> AccuracyScores | None:
@@ -98,7 +127,7 @@ def _checked(method: ToolName, keys: object) -> dict[str, float]:
         if not isinstance(key, str):
             raise ConfigurationError(MSG_ACCURACY_SHAPE.format(got=key, where=method))
         _known(method, key)
-        if isinstance(score, bool) or not isinstance(score, int | float) or not 0 <= score <= 1:  # NaN fails too
+        if not _share(score):  # NaN fails too
             raise ConfigurationError(MSG_ACCURACY_SCORE.format(key=key, method=method, got=score))
         out[key] = float(score)
     return out

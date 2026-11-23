@@ -16,6 +16,7 @@ from tests.decider_helpers import Fixed, chat, gemini, reply, request, serve, sy
 from web_router import Candidate, DeciderRouter
 from web_router.constants_decider import DECIDER_INSTRUCTIONS, DECIDER_PREFER
 from web_router.exceptions import ConfigurationError
+from web_router.routing.accuracy import shipped_scores
 from web_router.routing.decider_gemini import gemini_router
 from web_router.routing.decider_llm import llm_router
 from web_router.routing.decider_question import question_for
@@ -105,12 +106,15 @@ def test_with_scores_each_option_carries_its_accuracy_and_without_them_reads_as_
 
 @pytest.mark.parametrize(
     "build",
-    [lambda: DeciderRouter(Fixed(reply()), prefer="accurate"), lambda: llm_router(**LOCAL, prefer="accurate")],
+    [lambda **kw: DeciderRouter(Fixed(reply()), **kw), lambda **kw: llm_router(**LOCAL, **kw)],
     ids=["decider", "llm"],
 )
-def test_accurate_with_no_scores_is_refused(build: Any) -> None:
+def test_accurate_holds_the_shipped_scores_unless_given_its_own(build: Any) -> None:
+    assert build(prefer="accurate").scores == shipped_scores()
+    assert build(prefer="accurate", accuracy=SCORES).scores == SCORES, "the caller's replace them whole"
+    assert build(prefer="fast").scores is None, "only accurate takes the shipped ones"
     with pytest.raises(ConfigurationError, match="holds none"):
-        build()
+        build(prefer="accurate", accuracy={})
 
 
 async def test_built_by_name_the_llm_router_takes_its_preference_and_scores(monkeypatch: pytest.MonkeyPatch) -> None:
