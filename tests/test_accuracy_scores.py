@@ -31,6 +31,7 @@ def test_scores_are_kept_per_method_by_backend_or_mode() -> None:
         ({"search": {"nope": 0.5}}, "'nope' for search, not one of its backends"),
         ({"extract": {"exa-mcp": 0.5}}, "'exa-mcp' for extract"),
         ({"search": {"exa:exa-depp": 0.5}}, "'exa-depp' for exa, which it does not offer"),
+        ({"search": {"exa:": 0.5}}, "mode '' for exa, which it does not offer"),
         ({"search": {"exa:lite+exa-instant": 0.5}}, "is spelled 'exa-instant+lite'"),
         ({"search": {"exa": 1.5}}, "at 1.5"),
         ({"search": {"exa": -0.1}}, "at -0.1"),

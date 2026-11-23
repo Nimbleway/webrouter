@@ -109,10 +109,10 @@ def _known(method: ToolName, key: str) -> None:
     from web_router.prices_modes import canonical_parts  # here: both load the package, which imports routing
 
     module, listing = _BACKENDS[method]
-    provider, _, mode = key.partition(":")
+    provider, colon, mode = key.partition(":")
     if provider not in getattr(importlib.import_module(module), listing)():
         raise ConfigurationError(MSG_ACCURACY_PROVIDER.format(got=provider, method=method))
-    if not mode:
+    if not colon:
         return
     canonical = canonical_parts(provider, method, mode.split(PART_SEP))
     if canonical != mode:
