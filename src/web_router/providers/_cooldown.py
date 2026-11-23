@@ -16,6 +16,7 @@ cooldown never passes over the last backend a call has left, and an answer ends 
 from __future__ import annotations
 
 import logging
+import math
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -167,7 +168,9 @@ def _cooldown_of(exc: BaseException) -> tuple[float | None, int | None]:
     if status not in COOLDOWN_STATUSES and exc.kind != _RATE_LIMIT:
         return None, None
     wait = exc.retry_after
-    if wait is None:
+    # A nan wait cannot be compared, so it escapes the clamp and pins the entry forever: use the default.
+    # Infinity still means "leave it alone", and stays clamped to the cap as before.
+    if wait is None or math.isnan(wait):
         wait = COOLDOWN_DEFAULT_S.get(status, COOLDOWN_FALLBACK_S) if status is not None else COOLDOWN_FALLBACK_S
     return min(max(wait, 0.0), COOLDOWN_MAX_S), status
 

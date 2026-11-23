@@ -1341,7 +1341,7 @@ earlier belongs in the vendor catalogue for `call_data_api`, not here.
    parse), the catalogue mapping, and a skipping `@pytest.mark.integration`
    live test that lists, describes and runs one source.
 5. A price row in `prices.json` (`make prices`), a contract (`make contracts
-   PROVIDER=live_data/<name>`), the `docs/providers.mdx` support table and `CHANGELOG.md`.
+   PROVIDER=live_data/<name>`), the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 ## Adding a vendor
 
@@ -1399,7 +1399,7 @@ method covering it.
    credits per call, async job flows.
 8. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
    section) and `uv run pytest tests/vendors`, which loads every shipped
-   file. Add a line to `CHANGELOG.md`.
+   file. Add a changelog fragment (`changelog.d/`).
 
 ## Adding a research provider
 
@@ -1422,7 +1422,7 @@ The same shape as the two below, against `ResearchProvider` or
 4. Add `tests/providers/test_<name>_research.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 ## Adding an answer provider
 
@@ -1448,7 +1448,7 @@ Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
    `@pytest.mark.integration` live test. `tests/test_answer_contract.py`
    already holds every unmapped option to a refusal before anything is sent.
 5. Start its contract with `make contracts PROVIDER=answer/<name>`, and update
-   the `docs/providers.mdx` support table and `CHANGELOG.md`.
+   the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 ## Adding a browser provider
 
@@ -1483,7 +1483,7 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    open-release sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test that opens, asks and releases, and
    asks the backend afterwards through `tests/providers/_browser_live.py`.
-5. Update the browser support tables in `docs/browser.mdx` and `CHANGELOG.md`.
+5. Update the browser support tables in `docs/browser.mdx` and a changelog fragment (`changelog.d/`).
 
 ## Adding a browse provider
 
@@ -1523,7 +1523,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>_browse.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the browse support table in `docs/browser.mdx` and `CHANGELOG.md`.
+5. Update the browse support table in `docs/browser.mdx` and a changelog fragment (`changelog.d/`).
 
 ## Adding a search provider
 
@@ -1546,7 +1546,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>.py` covering parameter mapping and response
    normalization against a recorded payload, plus one `@pytest.mark.integration`
    live test that skips without credentials.
-5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 ## Adding an extract provider
 
@@ -1571,7 +1571,7 @@ searches gets a second class in its existing module rather than a new one.
 4. Add `tests/providers/test_<name>.py` and the live checks in
    `tests/test_integration_surface.py`, which run only against providers that
    declare the format under test.
-5. Update the `docs/providers.mdx` support tables and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support tables and a changelog fragment (`changelog.d/`).
 
 ## Testing
 
@@ -1628,8 +1628,10 @@ Immediately before enabling auto-merge, read the current head again and verify t
 requirement is already satisfied, including green required checks, approval of that exact head, and
 the correct merge method. Do not enable auto-merge to wait for unfinished checks or approval.
 
-A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md`; anything else
-(CI, docs, tests, refactors) takes the `skip-changelog` label. The Changelog check fails the PR otherwise.
+A change users would notice adds a fragment, `changelog.d/<name>.<type>.md`, holding one entry of at
+most 400 characters (format in `changelog.d/README.md`); never edit `CHANGELOG.md`, which `make changelog`
+writes at release. Anything else (CI, docs, tests, refactors) takes the `skip-changelog` label. The
+Changelog check fails the PR otherwise, on every base branch.
 
 ## Files for feedback
 

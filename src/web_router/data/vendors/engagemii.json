@@ -33,7 +33,7 @@
     "https://engagemii.com/openapi/data-api.json",
     "https://engagemii.com/aeo/data/dictionary"
   ],
-  "curated": "2026-11-17",
+  "curated": "2026-11-22",
   "endpoints": [
     {
       "id": "engagemii.account.info",
@@ -71,7 +71,8 @@
         "Starts a billed job when the website is not in the index yet: a paid lookup scans and scores it. If the scan finishes within about 20 seconds the record comes back in the same call; otherwise the answer is 202 scanning or queued with retryAfterSec, and the next call returns the record. A free lookup on such a website answers 404 not_found with reason not_indexed and starts nothing.",
         "Returns record (the full data-file columns), company (standard field names such as name, website, industry, companyType, country, city, phone, linkedin) and sources (where each value came from). A field not held is left out.",
         "A 202 filling answer means the record check is still running; call again after retryAfter seconds. completion.pending true means some cells finish in the background and a later call reads them. Every 202 costs nothing.",
-        "Scans of websites not yet in the index are limited to 30 an hour and 100 a day per key (429 scan_limit_key); websites already in the index still answer."
+        "Scans of websites not yet in the index are limited to 30 an hour and 100 a day per key (429 scan_limit_key); websites already in the index still answer.",
+        "A second lookup of the same website within 24 hours of a charged one is free (allowance reread, unitsSpent 0)."
       ],
       "job": "company.enrich",
       "docs_url": "https://engagemii.com/aeo/data/api#lookup",
@@ -104,7 +105,8 @@
         "limit": {
           "in": "body",
           "type": "integer",
-          "description": "Records per call, 1 to 5,000 (default 1,000)."
+          "required": true,
+          "description": "Records per call, 1 to 5,000. Required here because the API's default is 1,000 records: 1,000 units ($50) at the standard rate, 10,000 units ($500) with filters.publicCompanies 'only'."
         },
         "offset": {
           "in": "body",

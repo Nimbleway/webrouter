@@ -91,7 +91,7 @@ class DecisionRecord(BaseModel):
     decision_id: str | None = Field(default=None, description="A unique id for this decision.")
     router: str | None = Field(default=None, description="The router that ranked the candidates.")
     prefer: Prefer | None = Field(
-        default=None, description="What the caller preferred, as the router was shown it: cheap or fast."
+        default=None, description="What the caller preferred, cheap or fast, which ordered auto and any router saw."
     )
     offered: list[str] | None = Field(default=None, description="Every candidate the router saw, in that order.")
     ranked: list[str] | None = Field(default=None, description="The router's own ranking.")

@@ -1,10 +1,12 @@
 name: Changelog
 
-# Every pull request notes its user-visible change under `## [Unreleased]` in
-# CHANGELOG.md (see CONTRIBUTING.md). A PR with nothing to note (CI, docs,
-# tests, refactors, release bumps) carries the `skip-changelog` label instead.
-# Reads the PR's file list and CHANGELOG.md through the API; nothing from the
-# PR is checked out or run.
+# Every pull request with a change users would notice adds a fragment,
+# changelog.d/<name>.<type>.md (see changelog.d/README.md), whatever branch it
+# targets. A PR with nothing to note (CI, docs, tests, refactors, release bumps)
+# carries the `skip-changelog` label instead. CHANGELOG.md itself is written at
+# release by `make changelog`, so a PR that edits it is pointed at a fragment.
+# The fragments' format is checked by tests/test_changelog_fragments.py in CI.
+# Reads the PR's file list through the API; nothing from the PR is checked out or run.
 
 on:
   pull_request:
@@ -17,64 +19,42 @@ permissions:
 jobs:
   changelog:
     name: CHANGELOG updated
-    # Only pull requests into main; an integration branch's PRs reach main through one PR that runs this.
-    if: ${{ github.base_ref == 'main' && !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
     runs-on: ubuntu-latest
     steps:
-      - name: New CHANGELOG lines must sit under ## [Unreleased]
+      - name: The PR adds a changelog fragment and leaves CHANGELOG.md alone
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_FILES: ${{ github.event.pull_request.changed_files }}
         run: |
-          gh api "repos/$REPO/pulls/$PR/files" --paginate \
-            --jq '.[] | select(.filename == "CHANGELOG.md") | {changed: true, patch: (.patch // "")}' > file.json
-          gh api "repos/$REPO/contents/CHANGELOG.md?ref=$HEAD_SHA" -H "Accept: application/vnd.github.raw" > CHANGELOG.md
+          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | {status, filename, previous_filename} | @json' > files.jsonl
           python3 - <<'PY'
-          import json, re, sys
+          import json
+          import os
+          import re
+          import sys
 
-          hint = "or label the PR skip-changelog if there is nothing to note."
-          raw = open("file.json").read().strip()
-          if not raw:
-              sys.exit(f"::error::Add your change under ## [Unreleased] in CHANGELOG.md, {hint}")
-          patch = json.loads(raw.splitlines()[0])["patch"]
-          if not patch:
-              print("::warning::CHANGELOG.md changed, but GitHub sent no diff (too large); not checked.")
-              sys.exit(0)
-          lines = open("CHANGELOG.md").read().splitlines()
-          start = next((i for i, l in enumerate(lines, 1) if l.strip() == "## [Unreleased]"), None)
-          if start is None:
-              sys.exit("::error::CHANGELOG.md has no ## [Unreleased] heading.")
-          end = next((i for i, l in enumerate(lines, 1) if i > start and l.startswith("## ")), len(lines) + 1)
-
-          # A "+" line that replaces a non-blank "-" line just above it is an edit (a typo
-          # fix in an old entry), not a new entry, so it may sit under a released version.
-          inside, outside, line, removed = 0, [], 0, 0
-          for row in patch.splitlines():
-              hunk = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)", row)
-              if hunk:
-                  line, removed = int(hunk.group(1)), 0
-                  continue
-              if row.startswith("\\"):
-                  continue
-              if row.startswith("-"):
-                  removed += 1 if row[1:].strip() else 0
-                  continue
-              text = row[1:].strip()
-              if row.startswith("+"):
-                  edit = removed > 0
-                  removed = max(removed - 1, 0)
-                  if text and not start < line < end and not edit:
-                      outside.append(line)
-                  elif text.startswith("- ") and start < line < end:
-                      inside += 1
-              else:
-                  removed = 0
-              line += 1
-          if outside:
-              sys.exit(f"::error::CHANGELOG.md lines {outside} were added under a released version; move them under ## [Unreleased].")
-          if not inside:
-              sys.exit(f"::error::Add your change as a '- ' entry under ## [Unreleased] in CHANGELOG.md, {hint}")
-          print(f"{inside} new line(s) under ## [Unreleased]")
+          how = (
+              "add changelog.d/<name>.<type>.md with your entry (see changelog.d/README.md), "
+              "or, if users would not notice the change, the skip-changelog label "
+              "(on a fork PR, ask a maintainer to add it)."
+          )
+          with open("files.jsonl") as files:
+              rows = [json.loads(line) for line in files if line.strip()]
+          # GitHub caps this endpoint at 3,000 files, even with pagination.
+          if len(rows) != int(os.environ["EXPECTED_FILES"]):
+              sys.exit("::error::Incomplete PR file list; cannot verify changelog changes.")
+          if any("CHANGELOG.md" in (row["filename"], row.get("previous_filename")) for row in rows):
+              sys.exit(f"::error::CHANGELOG.md is written at release from fragments. Undo your edit to it and {how}")
+          # The name only; tests/test_changelog_fragments.py checks the type and the text.
+          fragment = re.compile(r"changelog\.d/[a-z0-9][a-z0-9_-]*\.[a-z]+\.md")
+          fragments = [
+              row["filename"] for row in rows
+              if row["status"] in ("added", "renamed", "copied") and fragment.fullmatch(row["filename"])
+          ]
+          if not fragments:
+              sys.exit(f"::error::No changelog fragment: {how}")
+          print("Fragments:", ", ".join(fragments))
           PY

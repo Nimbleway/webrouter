@@ -179,8 +179,12 @@ count and URLs, a $0 backend first, an unknown price last. A measurably better
 backend still runs before a cheaper, worse one. The order is on
 `response.decision.merged`.
 
-Extract, research and browse keep their order: no benchmark ranks their
-backends' quality, so there is nothing to trade cost against. Nor does the
+`prefer="cheap"` or `prefer="fast"` on the router replaces this order, capped or
+not: every backend by estimated cost or by p90 latency, whatever the accuracy
+gap. See [Preferring cheap or fast](/smart-routing#preferring-cheap-or-fast).
+
+With no `prefer`, extract, research and browse keep their order: no benchmark
+ranks their backends' quality, so there is nothing to trade cost against. Nor does the
 benchmark rank a keyless backend, so with no key the keyless tier keeps its
 order, `$0` backends included; attach `cheapest_first` (below) to run those
 first. A `chain` you set
@@ -189,7 +193,8 @@ or a backend you name runs as given.
 ## Free backends first
 
 When price matters more than the accuracy gap, attach the built-in
-`cheapest_first` router. It orders the backends of every routed call -- search,
+`cheapest_first` router, or set `prefer="cheap"`, which orders the same way
+with no router. The router orders the backends of every routed call -- search,
 extract, answer, research and browse -- by estimated cost, $0 first, then the
 cheapest paid ones, an unknown price last; ties keep the default order. It
 needs no key and calls nothing. `open_browser` is never routed: name

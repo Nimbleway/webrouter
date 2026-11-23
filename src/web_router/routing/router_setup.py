@@ -92,7 +92,9 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
             return None
         if getattr(chain, "name", None) != PROVIDER_AUTO:
             return None  # a named backend: nothing to order
-        found = build_candidates(Only(tool, chain), {tool: request}, budget=budget, modes=self._route_modes)
+        found = build_candidates(
+            Only(tool, chain), {tool: request}, budget=budget, modes=self._route_modes, prefer=self._prefer
+        )
         if not runnable(found.candidates):
             return None
         prompt, urls = prompt_of(tool, request)
@@ -124,9 +126,9 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         if merged is not None and any(merged[0].order.values()):  # else nothing to run: the budget says why, below
             return merged
         request, mapped = unrouted(chain, request, budget)
-        route, ordered = cost_route(chain, TOOL_OF[type(request)], request, budget)
-        if ordered is not None:
-            mapped = ordered if mapped is None else mapped.model_copy(update={"merged": ordered.merged})
+        route, ordered = cost_route(chain, TOOL_OF[type(request)], request, budget, self._prefer)
+        if ordered is not None:  # the order's fields -- merged, and prefer when set -- over the budget's effort
+            mapped = ordered if mapped is None else mapped.model_copy(update=ordered.model_dump(exclude_unset=True))
         return route, request, mapped
 
     def _merged(

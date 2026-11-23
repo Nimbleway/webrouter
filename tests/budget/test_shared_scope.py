@@ -17,6 +17,7 @@ from web_router.providers._deadline import call_deadline, current_deadline
 from web_router.routing import ledger
 from web_router.routing.pool import PoolChain
 from web_router.types import SearchResponse
+from web_router.vendors.catalog import get_catalog
 
 WAIT_S = 5.0
 
@@ -170,6 +171,9 @@ def test_a_member_after_an_enclosing_deadline_has_passed_is_not_reserved(chain: 
     chain.raises["first"] = ProviderError("first", "read timed out")
     chain.sleeps["first"] = 0.15  # outlasts the enclosing deadline, then fails
     priced.update(first=(0.01, None), second=(0.02, None))
+    # A process's first search reads the vendor catalog inside its deadline, before any member runs (about 80 ms
+    # for 470 files, and growing). Read it first, or on a slow runner the 0.1 s is gone before `first` is called.
+    get_catalog()
     with WebRouter().budget(Budget(max_cost_usd=1.0)) as scope, call_deadline(0.1), pytest.raises(WebRouterError):
         scope.search("q", provider=chain.auto())
     assert chain.called == ["first"]

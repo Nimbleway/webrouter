@@ -249,7 +249,7 @@ providers map most of them. To add one:
    rejection test so the option is no longer listed as unmapped.
 4. Run `make contracts`, and move the option out of the contract's
    `vendor_options` — the test fails while a mapped field is still listed there.
-5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 Watch for options that mean the same thing but take a different form. Tavily's
 `country`, for instance, wants a lowercase country name and rejects the ISO
@@ -303,10 +303,12 @@ time.
 - One logical change per PR, with tests.
 - `make check` passes before you ask for review; if you touched
   `pyproject.toml`, `make lock && make requirements` too.
-- Note user-visible changes under `## [Unreleased]` in `CHANGELOG.md`. A check fails the PR
-  without one; a PR with nothing to note (CI, docs, tests, refactors) takes the
-  `skip-changelog` label instead (release bumps too). New lines must sit under
-  `## [Unreleased]`, not under a released version.
+- Note a user-visible change in a new file, `changelog.d/<name>.<type>.md`, with one entry of
+  at most 400 characters; [changelog.d/README.md](changelog.d/README.md) has the format. Don't
+  edit `CHANGELOG.md`: `make changelog` collects the fragments into it at release, so parallel
+  PRs never conflict on it. A check fails the PR without a fragment; a PR with nothing to note
+  (CI, docs, tests, refactors) takes the `skip-changelog` label instead (release bumps too, and a
+  typo fix in an entry already in `CHANGELOG.md`).
 - Direct commits to `main` are blocked; work on a branch and open a PR.
 - Open the PR as a draft. Mark it ready once Qodo's review covers the latest commit and each
   finding has a reply starting with `@qodo` (`Fixed in <sha>: <what>` or
@@ -337,7 +339,10 @@ The maintainers cut each release. A pull request merged here is carried into
 the next one.
 
 A release is a `vX.Y.Z` tag on `main` whose `_version.py` says `X.Y.Z`, and
-whose `server.json` names `X.Y.Z` in its three places (a test checks it). A
+whose `server.json` names `X.Y.Z` in its three places (a test checks it). The
+release pull request runs `make changelog`, which moves every `changelog.d/`
+fragment under `## [Unreleased]` in `CHANGELOG.md`, and then renames that heading
+to the version; the Release workflow refuses a tag that still has fragments. A
 maintainer runs the [Release](.github/workflows/release.yml) workflow on that
 tag (`gh workflow run release.yml --ref vX.Y.Z -f tag=vX.Y.Z`): it builds the sdist and wheel from the tag, and after a maintainer
 approves the `pypi` environment, publishes them to
