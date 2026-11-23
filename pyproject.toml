@@ -167,6 +167,8 @@ webrouter = "web_router.cli:main"
 web-router-mcp = "web_router.mcp_cli:main"
 
 [project.urls]
+Homepage = "https://webrouter.net"
+Documentation = "https://docs.webrouter.net"
 Repository = "https://github.com/Nimbleway/webrouter"
 Issues = "https://github.com/Nimbleway/webrouter/issues"
 Changelog = "https://github.com/Nimbleway/webrouter/blob/main/CHANGELOG.md"

@@ -38,6 +38,10 @@
   "navbar": {
     "links": [
       {
+        "label": "WebBench",
+        "href": "https://webench.net"
+      },
+      {
         "type": "discord",
         "href": "https://discord.gg/MGztFWSjZh"
       }
