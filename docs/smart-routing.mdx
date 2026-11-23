@@ -181,7 +181,11 @@ sends it, `exa:exa-deep` that vendor mode; anything not listed, and a candidate
 whose `measured` is `False`, is unknown. A method, backend or mode that is not
 real, a mode not spelled the way the backend spells it, or a score outside 0
 to 1 raises `ConfigurationError`, and so does `accurate` with no scores. A
-router with mode scores is shown vendor modes.
+`preferred` router with mode scores is shown vendor modes by default. For a
+model router, set `WebRouter(..., route_modes=True)` to offer those modes;
+without it, `llm` and `systemone` see only backends, so mode-specific scores
+are unused. An explicit `route_modes=False` keeps every router on backends
+only.
 
 ```python
 wr = WebRouter(router=PreferredRouter("accurate", accuracy="scores.json"))
