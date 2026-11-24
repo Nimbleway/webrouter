@@ -35,3 +35,5 @@ MSG_TRAINED_BROWSE = "the trained router takes browse=True or browse=False; got 
 MSG_TRAINED_SCHEMA = "the trained router's manifest has schema {got!r}; this version of web-router reads schema {want}."
 
 MSG_TRAINED_TABLE = "the trained router's tool table is not usable: {why}."
+
+MSG_TRAINED_ROW_TOTAL = "a row's total must equal the sum of its method counts"

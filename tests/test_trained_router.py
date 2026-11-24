@@ -10,6 +10,7 @@ import pytest
 from tests.plan_helpers import called_fixture  # noqa: F401  (fixture)
 from tests.routing_helpers import wr
 from web_router import RouteRequest
+from web_router.constants_trained import MSG_TRAINED_ROW_TOTAL
 from web_router.exceptions import ConfigurationError
 from web_router.routing.registry import available_routers
 from web_router.routing.trained import TrainedRouter
@@ -108,6 +109,7 @@ def test_a_request_matching_no_frequent_row_gets_the_overall_reason(monkeypatch:
         ({"tables": [{"": [1, 1]}, {"other": [1]}]}, "one count per method and their total"),
         ({"tables": [{}, {}]}, "no row for every request"),
         ({"tables": [{"": [0, 0]}, {}]}, "no row for every request"),
+        ({"tables": [{"": [1, 1]}, {"question": [1, 20]}]}, MSG_TRAINED_ROW_TOTAL),
     ],
 )
 def test_a_table_this_version_cannot_use_is_refused(change: dict[str, Any], why: str) -> None:

@@ -16,6 +16,7 @@ from importlib import resources
 from typing import Any, get_args
 
 from web_router.constants_trained import (
+    MSG_TRAINED_ROW_TOTAL,
     MSG_TRAINED_SCHEMA,
     MSG_TRAINED_TABLE,
     TRAINED_DATA_DIR,
@@ -82,6 +83,8 @@ def checked_table(version: str, data: Mapping[str, Any]) -> ToolTable:
     for problem, why in checks:
         if problem:
             raise ConfigurationError(MSG_TRAINED_TABLE.format(why=why))
+    if any(row[-1] != sum(row[:-1]) for row in rows):
+        raise ConfigurationError(MSG_TRAINED_TABLE.format(why=MSG_TRAINED_ROW_TOTAL))
     return ToolTable(version, tuple(features), tuple(labels), min_count, tuple(tables))
 
 
