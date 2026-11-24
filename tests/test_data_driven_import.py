@@ -157,3 +157,32 @@ def test_a_failed_replacement_rolls_back_publication(
         assert provider_table.read_bytes() == b"existing providers"
     else:
         assert not any(path.exists() for path in (*files, provider_table))
+
+
+@pytest.mark.parametrize("entry", ["provider_table.json", {}])
+def test_a_malformed_named_provider_table_cannot_drop_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entry: Any
+) -> None:
+    source, _ = _delivery(tmp_path, [1, 2])
+    files = _installed(tmp_path, monkeypatch)
+    files[1].write_text(json.dumps({"provider_table": entry}), encoding="utf-8")
+    before = tuple(path.read_bytes() for path in files)
+    with pytest.raises(ValueError, match="names the provider table"):
+        importer.import_release(source, "0.1.0", [])
+    assert tuple(path.read_bytes() for path in files) == before
+
+
+def test_changed_tool_bytes_need_a_higher_version(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source, data = _delivery(tmp_path, [1, 2])
+    files = _installed(tmp_path, monkeypatch)
+    importer.import_release(source, "0.1.0", [])
+    before = tuple(path.read_bytes() for path in files)
+    data["trained_at"] = "2030-01-01"
+    (source / importer.SOURCE_TABLE).write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="tool table differs from the shipped one"):
+        importer.import_release(source, "0.1.0", [])
+    assert tuple(path.read_bytes() for path in files) == before
+    data["version"] = "0.1.1"
+    (source / importer.SOURCE_TABLE).write_text(json.dumps(data), encoding="utf-8")
+    importer.import_release(source, "0.1.1", [])
+    assert json.loads(files[1].read_bytes())["version"] == "0.1.1"

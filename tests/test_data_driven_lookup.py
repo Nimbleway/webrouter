@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from scripts import data_driven_router as importer
+from scripts.data_driven_manifest import PROVIDER_FILE, left_out
 from scripts.data_driven_providers import (
     WHY_ID_DIFFERS,
     WHY_ID_NOT_SHOWN,
@@ -107,3 +110,15 @@ def test_a_backend_this_environment_cannot_build_stops_the_import(monkeypatch: p
     monkeypatch.setattr("scripts.data_driven_providers.get_provider_class", missing)
     with pytest.raises(ProviderNotInstalledError):
         provider_table(lookup(row("brave")))
+
+
+@pytest.mark.parametrize(
+    ("content", "error"), [(None, FileNotFoundError), (b"{", json.JSONDecodeError), (b"{}", KeyError)]
+)
+def test_an_unreadable_left_out_report_is_not_reported_as_empty(
+    tmp_path: Path, content: bytes | None, error: type[Exception]
+) -> None:
+    if content is not None:
+        (tmp_path / PROVIDER_FILE).write_bytes(content)
+    with pytest.raises(error):
+        left_out(tmp_path)

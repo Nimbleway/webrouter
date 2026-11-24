@@ -1,5 +1,3 @@
-"""The provider table's import: what a release publishes from a lookup table, and which version it may take."""
-
 from __future__ import annotations
 
 import hashlib
@@ -66,14 +64,25 @@ def test_main_with_a_lookup_publishes_it_and_lists_what_it_left_out(
 def test_an_import_with_no_lookup_keeps_the_shipped_provider_table(release: tuple[Path, Path, Path]) -> None:
     source, output, table = release
     assert "provider_table" not in (importer.import_release(source, "0.1.1", []) or _manifest(output))
-    importer.import_release(source, "0.1.1", [], table)
+    importer.import_release(source, "0.1.2", [], table)
     before, before_entry = _published(output), _manifest(output)["provider_table"]
-    importer.import_release(source, "0.1.1", [])
+    importer.import_release(source, "0.1.2", [])
     assert _published(output) == before
     (output / PROVIDER_FILE).unlink()
     with pytest.raises(ValueError, match=r"names the provider table 'provider_table\.json', which is missing"):
-        importer.import_release(source, "0.1.1", [])
+        importer.import_release(source, "0.1.2", [])
     assert _manifest(output)["provider_table"] == before_entry, "a refused import leaves the release as it was"
+
+
+def test_adding_a_provider_table_needs_a_higher_release_version(release: tuple[Path, Path, Path]) -> None:
+    source, output, table = release
+    importer.import_release(source, "0.1.1", [])
+    before = {path.name: path.read_bytes() for path in output.iterdir()}
+    with pytest.raises(ValueError, match=r"differs from the shipped one.*higher than '0\.1\.1'"):
+        importer.import_release(source, "0.1.1", [], table)
+    assert {path.name: path.read_bytes() for path in output.iterdir()} == before
+    importer.import_release(source, "0.1.2", [], table)
+    assert (_manifest(output)["version"], _published(output)[0]["measured"]) == ("0.1.2", "v")
 
 
 def test_a_shipped_manifest_that_cannot_be_read_stops_the_import(release: tuple[Path, Path, Path]) -> None:
@@ -156,8 +165,6 @@ def test_with_no_lookup_the_shipped_release_version_is_kept(release: tuple[Path,
     with pytest.raises(ValueError, match=r"never moves back: '0\.1\.2' has shipped"):
         importer.import_release(source, "0.1.1", [])  # the table's own version, but below the shipped release
     assert _manifest(output)["version"] == "0.1.2"
-    with pytest.raises(ValueError, match="three numbers"):
-        importer.import_release(source, "0.1.02", [])
 
 
 @pytest.mark.parametrize("version", ["0.1.2", "0.1.1", "0.0.9", "0.1.10"])
@@ -178,7 +185,10 @@ def test_a_lookup_alone_takes_only_a_higher_version_than_the_shipped_release(
     assert _manifest(output)["version"] == "0.1.2"
 
 
-@pytest.mark.parametrize("version", ["next", "0.2", "0.1.2rc1", "v0.1.2", "0.1.2.0", ""])
+@pytest.mark.parametrize(
+    "version",
+    ["next", "0.2", "0.1.2rc1", "v0.1.2", "0.1.2.0", "", "01.1.2", "0.01.2", "0.1.02", "1٢.0.0", "0.1٢.0", "0.1.1٢"],
+)
 def test_a_version_that_is_not_three_numbers_is_refused(version: str, release: tuple[Path, Path, Path]) -> None:
     source, output, table = release
     importer.import_release(source, "0.1.1", [])

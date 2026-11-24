@@ -36,8 +36,10 @@ MSG_PROVIDER_GONE = (
 MSG_PROVIDER_CHANGED = (
     "the provider table differs from the shipped one, so the release needs a version higher than {shipped!r}"
 )
+MSG_PROVIDER_CHECKSUM = "the shipped provider table does not match its manifest checksum; restore it, or pass LOOKUP"
+MSG_TOOL_CHANGED = "the tool table differs from the shipped one, so the release needs a version higher than {shipped!r}"
 MSG_VERSION_BACK = "a release never moves back: {shipped!r} has shipped, and the import asks for {got!r}"
-VERSION_FORM = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
+VERSION_FORM = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 
 
 def shipped(folder: Path) -> dict[str, Any]:
@@ -89,9 +91,11 @@ def check_version(entry: dict[str, Any], version: str, before: dict[str, Any], l
     if released is not None and asked < released:
         raise ValueError(MSG_VERSION_BACK.format(got=version, shipped=before.get("version")))
     unchanged = (before.get("tool_table") or {}).get("sha256") == entry["sha256"]
+    if before.get("version") == version and not unchanged:
+        raise ValueError(MSG_TOOL_CHANGED.format(shipped=version))
     own = entry["version"] == version
     higher = released is not None and asked > released
-    if lookup and unchanged and not higher and (not own or (released is not None and asked < released)):
+    if lookup and unchanged and not higher and not own:
         raise ValueError(MSG_VERSION_HIGHER.format(got=version, shipped=before.get("version")))
     if not own and (not unchanged or (not lookup and before.get("version") != version)):
         raise ValueError(MSG_VERSION)
@@ -113,7 +117,7 @@ def carried(before: dict[str, Any], folder: Path) -> dict[str, Any] | None:
     """The shipped provider table's entry, kept when an import brings no lookup table; ``None`` when none shipped.
 
     Raises:
-        ValueError: when the manifest names a provider table whose file is gone: the import would drop it silently.
+        ValueError: when a named provider table is missing or differs from its recorded checksum.
     """
     entry = before.get(PROVIDER_ENTRY)
     if entry is None:
@@ -121,21 +125,19 @@ def carried(before: dict[str, Any], folder: Path) -> dict[str, Any] | None:
     name = entry.get("file") if isinstance(entry, dict) else None
     if not isinstance(name, str) or not (folder / name).is_file():
         raise ValueError(MSG_PROVIDER_GONE.format(file=name))
+    if hashlib.sha256((folder / name).read_bytes()).hexdigest() != entry.get("sha256"):
+        raise ValueError(MSG_PROVIDER_CHECKSUM)
     return dict(entry)
 
 
 def check_provider_version(before: dict[str, Any], providers: dict[str, Any], version: str) -> None:
     """Refuse a new provider table under the shipped release's version: one version names one set of tables."""
     was = before.get(PROVIDER_ENTRY)
-    changed = isinstance(was, dict) and was.get("sha256") != providers["sha256"]
+    changed = not isinstance(was, dict) or was.get("sha256") != providers["sha256"]
     if changed and before.get("version") == version:
         raise ValueError(MSG_PROVIDER_CHANGED.format(shipped=version))
 
 
 def left_out(folder: Path) -> list[dict[str, str]]:
     """The lookup rows the published provider table left out, each with why."""
-    try:
-        rows = json.loads((folder / PROVIDER_FILE).read_bytes())["left_out"]
-    except (OSError, ValueError, KeyError):
-        return []
-    return list(rows)
+    return list(json.loads((folder / PROVIDER_FILE).read_bytes())["left_out"])
