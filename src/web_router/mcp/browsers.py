@@ -254,7 +254,7 @@ class BrowserSessions:
                 return self._ended[session_id]
             raise ValueError(self._unknown_message(session_id))
         async with session.lock:
-            extra = frozenset(self._open_secrets)  # snapshot: release error still names the ending session
+            extra = frozenset(self._open_secrets | self._handle_secrets(session.handle))  # survives _end() for waiters
             self._end(session_id, reason)
             try:
                 await session.handle.release()
