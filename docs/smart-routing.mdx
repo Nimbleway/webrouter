@@ -285,6 +285,12 @@ labelled requests in public web-agent benchmarks. It is experimental, needs no
 key, calls nothing and answers in microseconds. Like `rules`, only `plan()`
 and `run()` ask it, and it ranks no backends.
 
+Try `trained` when you want method rankings from training counts, including
+`browse` when you opt in. `rules` chooses extract for a URL, research for a
+research request, and search otherwise. The trained router has not yet been
+measured against `rules` on held-out labelled requests; there is no measured
+accuracy advantage to recommend switching for.
+
 ```python
 from web_router import WebRouter
 
