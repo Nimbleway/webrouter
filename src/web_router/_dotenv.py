@@ -46,7 +46,7 @@ def _set_in(path: Path) -> set[str]:
     try:
         if path.stat().st_size > MCP_ENV_FILE_MAX_BYTES:
             return set()
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
     except OSError:
         return set()
     found = (_ASSIGNMENT.match(line) for line in lines)

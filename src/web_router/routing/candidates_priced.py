@@ -89,8 +89,11 @@ def _place(
     if (why := over_budget(cost, p90, budget)) is not None:
         found.dropped[cid] = why
         return
-    found.kept.append(Candidate(tool=tool, provider=name, mode=mode, est_cost_usd=cost, est_latency_s=p90))
-    if cost is None or p90 is None or keyless or at.provider_options or mode or name not in _ranked(tool):
+    own = keyless or bool(at.provider_options)  # not the backend a measured score describes
+    found.kept.append(
+        Candidate(tool=tool, provider=name, mode=mode, est_cost_usd=cost, est_latency_s=p90, measured=not own)
+    )
+    if cost is None or p90 is None or own or mode or name not in _ranked(tool):
         found.unmeasured.append(cid)
 
 

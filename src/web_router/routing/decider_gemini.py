@@ -45,7 +45,7 @@ from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.routing.decider import DeciderQuestion, DeciderReply
 from web_router.routing.decider_http import choice_answer, post_json
 from web_router.routing.decider_reply import rank, unit_number
-from web_router.routing.decider_router import DeciderRouter, takes_config_of
+from web_router.routing.decider_router import DeciderRouter, decider_router, takes_config_of
 from web_router.routing.http_decider import HttpDecider
 from web_router.routing.remote_errors import RemoteRouterInvalid
 
@@ -133,6 +133,7 @@ class GeminiDecider(HttpDecider):
 def gemini_router(**config: Any) -> DeciderRouter:
     """What ``router="gemini"`` builds from ``router_config``: a :class:`DeciderRouter` on the Gemini Decisions API.
 
-    ``config`` is :class:`GeminiDecider`'s keyword arguments, checked against its signature when built by name.
+    ``config`` is :class:`GeminiDecider`'s keyword arguments, checked against its signature when built by name, and the
+    router's own ``prefer`` and ``accuracy`` (:class:`DeciderRouter`).
     """
-    return DeciderRouter(GeminiDecider(**config))
+    return decider_router(GeminiDecider, config)

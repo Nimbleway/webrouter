@@ -24,6 +24,15 @@ DECIDER_INSTRUCTIONS = (
 DECIDER_PINNED = " The method is fixed to {tool}: rank its backends only."
 """Added to the instructions when the caller pinned the method."""
 
+DECIDER_PREFER = {
+    "cheap": " The caller prefers cheap: among options that serve the request alike, rank lower cost first.",
+    "fast": " The caller prefers fast: among options that serve the request alike, rank lower p90 latency first.",
+    "accurate": (
+        " The caller prefers accurate: rank higher measured accuracy first; a score compares only within one method."
+    ),
+}
+"""Added to the instructions when the router has a ``prefer``, by its value."""
+
 DECIDER_OPTION = "{tool} on {provider}, {cost}, {latency}"
 DECIDER_MODE_OPTION = "{tool} on {provider} in mode {mode} ({does}), {cost}, {latency}"
 """A vendor mode's option: named, so two modes of one backend never read the same, and what its parts do."""
@@ -33,6 +42,9 @@ DECIDER_COST = "${cost:g}"
 DECIDER_COST_UNKNOWN = "unknown cost"
 DECIDER_LATENCY = "p90 {latency:g}s"
 DECIDER_LATENCY_UNKNOWN = "unknown latency"
+DECIDER_ACCURACY = ", accuracy {score:g}"
+DECIDER_ACCURACY_UNKNOWN = ", accuracy unknown"
+"""Added to each option when the router holds accuracy scores; with none, the options read as they always have."""
 
 DECIDER_REASON = "{name}: {top}"
 DECIDER_REASON_SCORE = ", p={score:.2f}"

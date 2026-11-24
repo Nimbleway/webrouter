@@ -46,7 +46,7 @@ every key you add unlocks more backends and fallbacks. Spend caps
 `search`, `extract`, `answer`, `research`, `research_status`,
 `live_data_sources`, `live_data_source`, `live_data`, `browse`,
 `browse_status`, `web_run`, `budget_start`, `budget_status`, `fetch_raw`,
-`vendors`, `vendor_endpoint`, `call_vendor`, `load_env`, and the browser tools
+`data_apis`, `data_api_endpoint`, `call_data_api`, `load_env`, and the browser tools
 `browser_open`, `browser_goto`, `browser_snapshot`, `browser_click`,
 `browser_type`, `browser_press`, `browser_screenshot`, `browser_read`,
 `browser_close`.

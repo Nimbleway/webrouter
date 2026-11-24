@@ -106,9 +106,10 @@ You can install fewer extras by naming them in place of `all`. Extras are named 
 | `browser` | Playwright, so a browser handle can drive the page |
 | `mcp` | The MCP server, which exposes the methods as tools, the `browser_*` ones included |
 | `evals` | The OpenAI and Anthropic SDKs behind the built-in judges of `evaluate()` |
+| `evals-litellm` | `evals` and LiteLLM, for a judge on any model LiteLLM reaches (`LiteLLMJudge`) |
 | `langchain` | `langchain-core` for the LangChain tools |
 | `remote` | httpx for the built-in `remote` router |
-| `vendors` | httpx for `call_vendor()` and the vendor catalog |
+| `vendors` | httpx for `call_data_api()` and the data API catalog |
 | `aws` | `botocore`, for AWS AgentCore Web Search |
 | `all` | Every method's providers, the MCP server, `browser`, `vendors`, `aws` and `remote`. Not `evals` or `langchain`: add those by name, as in `webrouter[all,evals]` |
 

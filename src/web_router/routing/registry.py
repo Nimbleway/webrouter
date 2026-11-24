@@ -4,7 +4,7 @@ Experimental. A name maps to a factory, called with ``router_config``'s
 entries as keyword arguments when a router is built; what it returns is
 attached as any ``router=`` object is. ``rules``, the routers' default,
 ``remote``, ``llm``, ``systemone``, ``gemini``, ``fallback``, which asks a list of
-routers in turn, and ``cheapest_first`` are built in and imported only when
+routers in turn, ``preferred`` and its deprecated ``cheapest_first`` alias are built in and imported only when
 used; registering a name overrides a built-in one of that name, and
 unregistering it brings the built-in back.
 
@@ -33,6 +33,7 @@ from web_router.constants_invoke import (
     MSG_ROUTER_NAME,
     MSG_ROUTER_UNKNOWN,
 )
+from web_router.constants_prefer import PREFERRED_ROUTER_NAME
 from web_router.constants_remote import REMOTE_ROUTER_NAME
 from web_router.constants_routing import CHEAPEST_ROUTER_NAME, RULES_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
@@ -50,6 +51,7 @@ _BUILTIN_ROUTERS: dict[str, tuple[str, str]] = {
     GEMINI_ROUTER_NAME: ("web_router.routing.decider_gemini", "gemini_router"),
     FALLBACK_ROUTER_NAME: ("web_router.routing.fallback", "FallbackRouter"),
     CHEAPEST_ROUTER_NAME: ("web_router.routing.cheapest", "cheapest_router"),
+    PREFERRED_ROUTER_NAME: ("web_router.routing.preferred", "PreferredRouter"),
 }
 """Built-in name -> (module, factory), imported on first use so ``import web_router`` pulls in none of them."""
 

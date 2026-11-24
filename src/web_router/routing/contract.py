@@ -1,7 +1,7 @@
 """The router contract's types: what a router is shown, and what it may answer.
 
 :class:`Budget` is stable; the router's types -- :class:`Candidate`, :class:`RouteRequest`,
-:class:`RouteDecision` and :class:`Plan` -- are experimental and may change before 1.0.
+:class:`RouteDecision` and :class:`.plan_type.Plan` -- are experimental and may change before 1.0.
 """
 
 from __future__ import annotations
@@ -13,11 +13,10 @@ from typing import Any, ClassVar, Literal
 
 from pydantic import ConfigDict
 
-from web_router._urls import shown
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR, MSG_BUDGET_VALUE, MSG_CANDIDATE_ID, PROMPT_PARAMS
+from web_router.constants_routing import MSG_BUDGET_VALUE, MSG_CANDIDATE_ID
 from web_router.exceptions_typed import InvalidParameterError
-from web_router.routing.entry_names import entry_name
-from web_router.types_decision import DecisionRecord
+from web_router.routing.entry_names import candidate_id as candidate_id  # re-exported: its callers import it here
+from web_router.types_decision import Prefer as Prefer  # re-exported beside the contract types
 
 ToolName = Literal["search", "extract", "answer", "research", "browse"]
 """The methods a router may choose between. ``live_data`` and ``open_browser`` are never routed."""
@@ -25,12 +24,6 @@ ToolName = Literal["search", "extract", "answer", "research", "browse"]
 
 _WIRE_CONFIG = ConfigDict(use_attribute_docstrings=True)
 """How pydantic reads these types for the wire format's JSON Schema: each field's docstring is its description."""
-
-
-def candidate_id(tool: str, provider: str, mode: str | None = None) -> str:
-    """The id every decision field names a candidate by: ``tool:provider``, as ``search:exa``, or with its vendor
-    mode, ``tool:provider:mode``, as ``search:exa:exa-instant``."""
-    return f"{tool}{CANDIDATE_ID_SEPARATOR}{entry_name(provider, mode)}"
 
 
 def _finite_cap(value: object) -> bool:
@@ -99,6 +92,10 @@ class Candidate:
     est_latency_s: float | None = None
     """Its p90 latency in seconds, as measured by the provider scans. ``None`` when unmeasured."""
 
+    measured: bool = True
+    """``False`` for a keyless tier or a member with its own ``provider_options``: a backend's measured score does
+    not describe it, so a router's accuracy scores leave it unknown. Sent on the wire only when ``False``."""
+
     id: str = ""
     """``tool:provider``, or ``tool:provider:mode`` with a mode: the name every decision field uses. Filled in when
     left empty, refused when it differs."""
@@ -141,6 +138,10 @@ class RouteRequest:
     pinned_tool: ToolName | None = None
     """The method the caller called. Set, the router orders backends only and does not change the tool."""
 
+    prefer: Prefer | None = None
+    """What the router is asked to prefer among the candidates: ``cheap``, ``fast`` or ``accurate``; ``None`` for no
+    preference. A router built with one sets it on the request it asks or sends; it orders, and ``budget`` caps."""
+
 
 @dataclass(frozen=True, kw_only=True)
 class RouteDecision:
@@ -173,27 +174,5 @@ class RouteDecision:
     reason: str | None = None
     """Why, in a few words, for the decision record."""
 
-
-@dataclass(frozen=True, kw_only=True)
-class Plan:
-    """A routed call, worked out and not yet run: the method, its options and the backends to try."""
-
-    prompt: str
-    """The prompt the plan was made for."""
-
-    tool: ToolName
-    """The method the call runs."""
-
-    params: Mapping[str, Any] = field(default_factory=dict)
-    """The options it runs with."""
-
-    providers: Mapping[ToolName, Sequence[str]] = field(default_factory=dict)
-    """Per method, the merged order of backends to try."""
-
-    decision: DecisionRecord = field(default_factory=DecisionRecord)
-    """How the plan was made: the same record a routed call's response carries."""
-
-    def __repr__(self) -> str:
-        """The plan without its prompt -- nor the query or task that repeat it -- and each URL as scheme and host."""
-        params = {k: v for k, v in shown(self.params).items() if k not in PROMPT_PARAMS}
-        return f"Plan(tool={self.tool!r}, params={params!r}, providers={dict(self.providers)!r})"
+    prefer: Prefer | None = None
+    """The preference the router ranked by, for the decision record; ``None`` for none. Sent only when set."""

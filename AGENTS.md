@@ -22,7 +22,7 @@ session logged into, whose cookies ride along; only Browserbase maps it.
 
 **`live_data`** — a vendor's ready-made scraper for one site (Nimble's
 Extract Templates, Apify's Store Actors, Bright Data's scrapers, Oxylabs'
-Web API scrapers), run for this call and answering with structured
+Web Scraper API sources and Web API scrapers), run for this call and answering with structured
 `records` shaped by the source's own output schema rather than page text. Its
 inputs are the source's own -- a URL for some, an id, a slug or a search term
 for others -- which is why it is a method and not an option on `extract`.
@@ -39,7 +39,7 @@ own backend, and `live_data`/`live_data_source` take that `LiveDataSource`
 whole; a bare name needs `provider` unless one backend is configured.
 **A backend joins only
 if it fetches on request**: data a vendor collected earlier and serves from
-storage is that vendor's own API, reached through `call_vendor`, never here.
+storage is that vendor's own API, reached through `call_data_api`, never here.
 These were `run_template`, `templates` and `template`; the old names, and the
 `Template*` types, are deprecated aliases in `client_live_data.py` and
 `live_data_compat.py` until a release removes them.
@@ -74,13 +74,13 @@ later. It is research's shape on the same job core, with `submit_browse` for
 the job handle. Browser Use, Skyvern, Browserbase, and `auto`. Like research, it
 has no keyless tier, because every task bills.
 
-**Vendor data** (`call_vendor`, `vendor_request`, and `vendors`,
-`vendor`, `vendor_endpoint`, `find_vendor_endpoints` to find what to call) is
-not an eighth method of interchangeable backends. It reaches one vendor's own
+**Data APIs** (`call_data_api`, `data_api_request`, and `data_apis`,
+`data_api`, `data_api_endpoint`, `find_data_api_endpoints` to find what to call; the old
+vendor names still work, with a `DeprecationWarning`) are not an eighth method of interchangeable backends. It reaches one vendor's own
 API with the user's credentials -- their Google Ads, their Datadog -- and
 returns the vendor's answer untouched. `search` lists the read endpoints that
 match its query in `data_apis` -- locally, never calling one -- and only
-`call_vendor` runs one. The vendors are data, not classes: one
+`call_data_api` runs one. The vendors are data, not classes: one
 JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
 `web_router/vendors/`. See "Adding a vendor" below.
 
@@ -139,7 +139,7 @@ src/web_router/
 │                       country live_data_rank_site.py
 ├── live_data_merge.py  several backends' answers as one order: in turn, or merged by score
 ├── live_data_compat.py the old Template* names, importable from web_router with a warning
-├── client_vendors.py   call_vendor(), vendor_request() and the catalog lookups, mixed into
+├── client_vendors.py   call_data_api(), data_api_request() and the catalog lookups, mixed into
 │                       both routers
 ├── client_handles.py   the browser sessions a router hands out, tracked for close()
 
@@ -163,14 +163,19 @@ src/web_router/
 │   │                   SealQA, or a CSV; seeded sampling; answer-key pages withheld
 │   ├── judge.py        Judge ABC, OpenAIJudge and AnthropicJudge: synthesize,
 │   │                   then grade
+│   ├── judge_litellm.py LiteLLMJudge: any model LiteLLM reaches — [evals-litellm]
+│   ├── judges.py       judge_from(): a judge by name, a --judge flag's value
+│   ├── labels.py       judge_label() / EndpointLabel: a model judge's label, its host off the vendor's
 │   ├── run.py          the loop: benchmark per question, judge per row, score
 │   └── prompts/        the SimpleQA grader prompt, vendored verbatim
+├── constants_evals.py  the default judge's name, --judge's help, judge_from()'s and the scorer's messages
 ├── constants.py        shared env var registries, timeouts and message templates;
 │                       a provider's own go in constants_<provider>.py (older
 │                       providers' are still here)
 ├── constants_answer.py answer()'s messages and MCP tool text, imported from here by name
 ├── constants_live_data.py live data's messages, MCP tools, builtin providers and env table
 ├── constants_apify.py  Apify's paths; constants_live_data_vendors.py Bright Data's and Oxylabs'
+├── constants_oxylabs_classic.py Oxylabs' Web Scraper API as live data: its data file, parse statuses, messages
 ├── constants_you.py    You.com research's endpoints, efforts and status table,
 │                       kept apart so constants.py stops growing
 ├── constants_deepseek.py DeepSeek's endpoints, limits and query operators,
@@ -274,8 +279,11 @@ src/web_router/
 │   │                   to ask the router (route_tools, auto only), its candidates, and
 │   │                   the budget's scope around it
 │   ├── route_tools.py  the tools that ask the router: the caller's route_tools, else
-│   │                   the router's own, else all five; read once; route_modes likewise
+│   │                   the router's own, else all five; read once; route_modes likewise;
+│   │                   prefer checked
 │   ├── router_owner.py a router built by name: kept to close with the routers, or closed if refused
+│   ├── router_setup.py RouterSetup: the attached router, the tools it is asked about, its
+│   │                   modes, the caller's prefer, and the RouteRequest a routed call shows it
 │   ├── submitted.py    submitted(): a job's start (submit_research, submit_browse)
 │   │                   held to the shared budget in force, at the effort it maps
 │   ├── decide.py       decided(): candidates and a router's outcome merged into the
@@ -312,7 +320,7 @@ src/web_router/
 │   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
 │   │                   check before dispatch (no DNS, no redirects)
 │   ├── rules.py        rules(): the built-in keyless router, URL to extract, else search
-│   ├── cheapest.py     cheapest_first(): the built-in router ordering every call by estimated cost, $0 first
+│   ├── preferred.py    PreferredRouter: the built-in router ordering every call by cost, p90 or scores
 │   └── cost_order.py   auto's order under a cost cap with no router: cheapest first within each
 │                       accuracy tier of the default order (search and answer)
 ├── constants_params.py the effort mapping's data path, rule and reasons
@@ -348,7 +356,7 @@ src/web_router/
 ├── exceptions.py       WebRouterError and subclasses
 ├── exceptions_vendors.py VendorNotFoundError and VendorWriteRefusedError, apart on the
 │                       terms exceptions_budget.py is
-├── vendors/            call_vendor's vendor-blind code: schema.py (the catalog file's
+├── vendors/            call_data_api's vendor-blind code: schema.py (the catalog file's
 │                       models, with schema_base.py, schema_auth.py and
 │                       schema_endpoint.py), catalog.py, credentials.py, tokens.py
 │                       (OAuth tokens), masking.py, plan.py (inputs placed),
@@ -377,7 +385,7 @@ src/web_router/
 │   ├── routing_keys.py where such a router posts, a preset's host included, and its key,
 │   │                   read from the process environment before any .env file
 │   ├── routing.py      web_run: plan a prompt with that router, run it, a job as a handle
-│   ├── vendor_tools.py vendors, vendor_endpoint and call_vendor
+│   ├── vendor_tools.py data_apis, data_api_endpoint and call_data_api
 │   ├── session_tools.py the routing and vendor tools, registered after the methods' own
 │   ├── budget.py       one connection's budget: the ceiling, budget_start's task, and
 │   │                   the charge for live_data and browser_open
@@ -433,11 +441,17 @@ src/web_router/
     ├── apify.py        live data: Apify Store Actors, run synchronously
     ├── brightdata_live_data.py  live data: Bright Data's scrapers, one input per run
     ├── brightdata_snapshots.py  waiting on the snapshot of a scrape that outlasted the synchronous window
+    ├── merchant_live_data.py    live data: a store's own agent interface, one source per store domain
+    ├── merchant_registry.py     the registry reads it routes by, cached (pointer for 60 s, records per snapshot)
+    ├── merchant_record.py       what a registry record decides, no network: the route, its host, the option gates
+    ├── merchant_mcp.py          the MCP envelopes to a store and the product list back
+    ├── oxylabs_live_data_any.py live data: `oxylabs`, over whichever of the two APIs below has a credential
+    ├── oxylabs_classic.py       live data: the Web Scraper API's parsed sources, listed in data/oxylabs_classic_sources.json
     ├── oxylabs_live_data.py     live data: the Oxylabs Web API's dedicated scrapers
     ├── oxylabs_options.py       Oxylabs' OPTIONS parameter lines, read into a JSON Schema
     ├── oxylabs_scrapers.py      the Web API's scraper list, how each is run, each as a source
     ├── oxylabs_jobs.py          an Oxylabs job: its id, where it is read, and when it is done
-    ├── oxylabs_response.py      a scrape's answer as a live data response
+    ├── oxylabs_response.py      a scrape's answer, from either API, as a live data response
     ├── tavily.py       search, via the tavily-python SDK; re-exports tavily_extract.py
     ├── tavily_extract.py  extract, and the key and timeout both classes share
     ├── tavily_clients.py  the SDK clients both classes hold, each built on first use
@@ -663,6 +677,10 @@ a comparison of vendor tiers is one `evaluate()` per depth on the same dataset,
 never a per-provider override.
 A `Dataset` is a pydantic model and iterates as its fields: loop over
 `.questions`.
+The judge is one per run but not one forever: `judge_from()` names it
+(`openai:gpt-4o` by default, `anthropic`, `litellm:<model>`, or a caller's
+`package.module:Class`), every benchmark's `--judge` takes that string, and a
+judge on another endpoint puts the host in its label.
 
 **An integration fixes the router's options when the tool is built.** The
 LangChain, Claude and OpenAI tools take the query or the URLs from the model
@@ -1297,7 +1315,7 @@ stale. New frozen results mean running it again.
 Against `LiveDataProvider`, or `HttpLiveDataProvider`
 (`providers/_http_live_data.py`) for a REST API. First check the rule: the
 vendor's sources fetch the site on request. A catalogue of data collected
-earlier belongs in the vendor catalogue for `call_vendor`, not here.
+earlier belongs in the vendor catalogue for `call_data_api`, not here.
 
 1. Implement `_run`/`_arun` -- one request in, one `LiveDataResponse` out,
    every record in `records` -- `_list`/`_alist`, returning one
@@ -1323,7 +1341,7 @@ earlier belongs in the vendor catalogue for `call_vendor`, not here.
    parse), the catalogue mapping, and a skipping `@pytest.mark.integration`
    live test that lists, describes and runs one source.
 5. A price row in `prices.json` (`make prices`), a contract (`make contracts
-   PROVIDER=live_data/<name>`), the `docs/providers.mdx` support table and `CHANGELOG.md`.
+   PROVIDER=live_data/<name>`), the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 ## Adding a vendor
 
@@ -1355,7 +1373,7 @@ method covering it.
    4. a write: anything that changes the user's data or account, sends
       something to other people, or deletes; every DELETE, PUT and PATCH.
 
-   The shipped catalog holds kinds 1 and 2 only; `vendor_request` and a
+   The shipped catalog holds kinds 1 and 2 only; `data_api_request` and a
    user's own catalog directory carry writes. A read over POST says so in
    its notes. A write is what `allow_writes` gates, so a write marked
    `read` is a safety bug. A callback or webhook URL input is left out
@@ -1381,7 +1399,7 @@ method covering it.
    credits per call, async job flows.
 8. Run `make vendors` (regenerates `VENDORS.md` and `.env.example`'s vendor
    section) and `uv run pytest tests/vendors`, which loads every shipped
-   file. Add a line to `CHANGELOG.md`.
+   file. Add a changelog fragment (`changelog.d/`).
 
 ## Adding a research provider
 
@@ -1404,7 +1422,7 @@ The same shape as the two below, against `ResearchProvider` or
 4. Add `tests/providers/test_<name>_research.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 ## Adding an answer provider
 
@@ -1430,7 +1448,7 @@ Search's shape, against `HttpAnswerProvider` — one POST, one answer — or
    `@pytest.mark.integration` live test. `tests/test_answer_contract.py`
    already holds every unmapped option to a refusal before anything is sent.
 5. Start its contract with `make contracts PROVIDER=answer/<name>`, and update
-   the `docs/providers.mdx` support table and `CHANGELOG.md`.
+   the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 ## Adding a browser provider
 
@@ -1465,7 +1483,7 @@ The same shape again, against `BrowserProvider` or `HttpBrowserProvider`.
    open-release sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test that opens, asks and releases, and
    asks the backend afterwards through `tests/providers/_browser_live.py`.
-5. Update the browser support tables in `docs/browser.mdx` and `CHANGELOG.md`.
+5. Update the browser support tables in `docs/browser.mdx` and a changelog fragment (`changelog.d/`).
 
 ## Adding a browse provider
 
@@ -1505,7 +1523,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>_browse.py` covering the mapping, the
    submit-poll-result sequence and an unrecognized status, plus a skipping
    `@pytest.mark.integration` live test.
-5. Update the browse support table in `docs/browser.mdx` and `CHANGELOG.md`.
+5. Update the browse support table in `docs/browser.mdx` and a changelog fragment (`changelog.d/`).
 
 ## Adding a search provider
 
@@ -1528,7 +1546,7 @@ plain httpx — or `BrowseProvider` for an SDK.
 4. Add `tests/providers/test_<name>.py` covering parameter mapping and response
    normalization against a recorded payload, plus one `@pytest.mark.integration`
    live test that skips without credentials.
-5. Update the `docs/providers.mdx` support table and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support table and a changelog fragment (`changelog.d/`).
 
 ## Adding an extract provider
 
@@ -1553,7 +1571,7 @@ searches gets a second class in its existing module rather than a new one.
 4. Add `tests/providers/test_<name>.py` and the live checks in
    `tests/test_integration_surface.py`, which run only against providers that
    declare the format under test.
-5. Update the `docs/providers.mdx` support tables and `CHANGELOG.md`.
+5. Update the `docs/providers.mdx` support tables and a changelog fragment (`changelog.d/`).
 
 ## Testing
 
@@ -1597,8 +1615,23 @@ latest commit and every finding has a reply in its thread, starting with `@qodo`
 `Fixed in <sha>: <what>` or `Not fixing: <reason>`. Qodo does not review drafts on its own, so a
 `/agentic_review` comment on the draft is a good way to ask for one.
 
-A change users would notice adds a line under `## [Unreleased]` in `CHANGELOG.md`; anything else
-(CI, docs, tests, refactors) takes the `skip-changelog` label. The Changelog check fails the PR otherwise.
+### Merging
+
+Squash every pull request into `main`. An integration branch collects a stack of dependent pull
+requests before its final pull request into `main`. The only stack exception is a parent with open
+child pull requests: merge that parent into the integration branch with a merge commit so the stack
+keeps its ancestry, then squash only the final integration pull request into `main`.
+
+A required code-owner approval is valid only for the head commit it covers; Qodo's review is a
+separate gate. After any new commit, wait for fresh code-owner approval of the latest head.
+Immediately before enabling auto-merge, read the current head again and verify that every merge
+requirement is already satisfied, including green required checks, approval of that exact head, and
+the correct merge method. Do not enable auto-merge to wait for unfinished checks or approval.
+
+A change users would notice adds a fragment, `changelog.d/<name>.<type>.md`, holding one entry of at
+most 400 characters (format in `changelog.d/README.md`); never edit `CHANGELOG.md`, which `make changelog`
+writes at release. Anything else (CI, docs, tests, refactors) takes the `skip-changelog` label. The
+Changelog check fails the PR otherwise, on every base branch.
 
 ## Files for feedback
 
@@ -1637,8 +1670,10 @@ when a caller names them: a preset's variable (`OPENAI_API_KEY`, `ANTHROPIC_API_
 `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `GEMINI_API_KEY`), or the one `api_key_env`
 names, once, when the router is built; `KEY_HOMES` in `constants_decider.py` sends each preset variable
 only to its vendor's host. `.env` is gitignored — keep it that way. `LIVE_DATA_ENV_BY_PROVIDER`, in
-`constants_live_data.py`, is live data's table: Apify's token, Oxylabs' Web API key
-(not its extract credentials), and Nimble's and Bright Data's keys again: one key, several classes.
+`constants_live_data.py`, is live data's table: Apify's token, Oxylabs' Web API key, and Nimble's and
+Bright Data's keys again: one key, several classes. `LIVE_DATA_ALT_ENV_BY_PROVIDER` beside it holds a
+second set that configures a backend alone -- Oxylabs' extract username and password, which run its
+Web Scraper API's sources -- and `LIVE_DATA_CREDENTIAL_SETS` is the two read together.
 
 **The library never loads `.env` itself.** Only these entry points do:
 `tests/conftest.py`, for the live tests, `benchmarks/agent/run.py`,

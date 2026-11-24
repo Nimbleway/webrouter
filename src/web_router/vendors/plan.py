@@ -157,7 +157,7 @@ def plan_raw(
 
 
 def endpoint_plan(endpoint: str, params: Mapping[str, Any] | None) -> _Plan:
-    """The request ``call_vendor`` sends, built once for both routers: ``endpoint`` looked up in the catalog."""
+    """The request ``call_data_api`` sends, built once for both routers: ``endpoint`` looked up in the catalog."""
     found = get_catalog().endpoint(endpoint)
     return plan_endpoint(get_catalog().vendor(found.vendor), found, dict(params or {}))
 
@@ -172,5 +172,5 @@ def raw_plan(
     headers: Mapping[str, str] | None,
     host: str | None,
 ) -> _Plan:
-    """The request ``vendor_request`` sends, built once for both routers: ``vendor`` looked up in the catalog."""
+    """The request ``data_api_request`` sends, built once for both routers: ``vendor`` looked up in the catalog."""
     return plan_raw(get_catalog().vendor(vendor), method, path, query=query, body=body, headers=headers, host=host)

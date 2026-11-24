@@ -73,6 +73,7 @@ from web_router.exceptions import (
 )
 from web_router.exceptions_budget import BudgetExceededError
 from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotFoundError
+from web_router.exceptions_merchant import MerchantNotValidatedError, MerchantRouteError
 from web_router.exceptions_typed import AllProvidersFailedError, ExtractFailedError, InvalidParameterError
 from web_router.exceptions_vendors import VendorNotFoundError, VendorWriteRefusedError
 from web_router.live_data_search import NativeSourceSearch
@@ -103,6 +104,7 @@ from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider import Decider, DeciderQuestion, DeciderReply
 from web_router.routing.decider_router import DeciderRouter
 from web_router.routing.pool_status import BudgetStatus
+from web_router.routing.preferred import PreferredRouter
 from web_router.routing.registry import available_routers, register_router, unregister_router
 from web_router.spend import SpendEntry, SpendLog, SpendRow, SpendSink, spend_report
 from web_router.types import (
@@ -228,6 +230,8 @@ __all__ = [
     "LiveDataSource",
     "LiveDataSourceNotFoundError",
     "LiveDataSourcePage",
+    "MerchantNotValidatedError",
+    "MerchantRouteError",
     "MissingParameterError",
     "NativeSourceSearch",
     "NavigationError",
@@ -238,6 +242,7 @@ __all__ = [
     "PageSnapshot",
     "PageState",
     "Plan",
+    "PreferredRouter",
     "Provider",
     "ProviderError",
     "ProviderNotFoundError",

@@ -23,6 +23,7 @@ import threading
 import weakref
 from collections.abc import Collection
 from contextlib import AbstractAsyncContextManager, nullcontext
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from web_router._urls import host_of
@@ -36,7 +37,7 @@ from web_router.constants_remote import (
     REMOTE_WHY_NOT_JSON,
     REMOTE_WHY_TRANSPORT,
 )
-from web_router.routing.contract import RouteDecision, RouteRequest
+from web_router.routing.contract import Prefer, RouteDecision, RouteRequest
 from web_router.routing.remote_close import PoolCloser, close_failed
 from web_router.routing.remote_config import bearer_key, checked_timeout, load_httpx, request_headers
 from web_router.routing.remote_errors import RemoteRouterError, RemoteRouterInvalid, RemoteRouterTimeout
@@ -44,7 +45,7 @@ from web_router.routing.remote_redact import unechoed_decision
 from web_router.routing.remote_reply import check_head, read_capped
 from web_router.routing.remote_url import checked_url
 from web_router.routing.request_modes import shown
-from web_router.routing.route_tools import checked_route_modes
+from web_router.routing.route_tools import checked_prefer, checked_route_modes
 from web_router.routing.wire import WireError, WireVersionError, decision_from_wire, request_to_wire
 
 if TYPE_CHECKING:
@@ -65,6 +66,7 @@ class RemoteRouter(PoolCloser):
         timeout_s: float = REMOTE_TIMEOUT_S,
         route_tools: Collection[str] | None = None,
         route_modes: bool = False,
+        prefer: Prefer | None = None,
     ) -> None:
         """
         Args:
@@ -77,11 +79,13 @@ class RemoteRouter(PoolCloser):
                 five unless set. Checked when it is attached.
             route_modes: Whether the service is sent a candidate per vendor mode, ``search:exa:exa-instant``; only
                 backends unless set, whatever the caller's ``route_modes``.
+            prefer: Sent as the request's ``prefer``, ``cheap``, ``fast`` or ``accurate``; the service ranks by
+                its own data. The decision record names it unless the service answers with its own.
 
         Raises:
             ConfigurationError: for httpx not installed, a URL :func:`~.remote_url.checked_url` refuses, a
-                ``timeout_s`` that is not a positive number, a key that is not visible ASCII, or a ``route_modes``
-                that is not a bool.
+                ``timeout_s`` that is not a positive number, a key that is not visible ASCII, a ``route_modes``
+                that is not a bool, or an unknown ``prefer``.
         """
         self._httpx = load_httpx()
         self._url = checked_url(url, self._httpx)
@@ -90,6 +94,7 @@ class RemoteRouter(PoolCloser):
         self.timeout_s = checked_timeout(timeout_s)
         self.route_tools = route_tools
         self.route_modes = checked_route_modes(route_modes)
+        self.prefer = checked_prefer(prefer)
         key = bearer_key(api_key)
         self._request_headers = request_headers(key)
         self._key = key
@@ -105,6 +110,7 @@ class RemoteRouter(PoolCloser):
     async def aroute(self, req: RouteRequest) -> RouteDecision:
         """Ask the service: one POST, cancelled by the caller at ``req.deadline_s``."""
         body, failed, timed_out = b"", None, False
+        req = req if self.prefer is None else replace(req, prefer=self.prefer)  # unset, never cleared
         try:
             async with (
                 self._client() as client,
@@ -122,7 +128,8 @@ class RemoteRouter(PoolCloser):
             timed_out = isinstance(exc, self._httpx.TimeoutException)
         if timed_out:
             raise RemoteRouterTimeout(self.host, REMOTE_WHY_TRANSPORT.format(kind=failed))
-        return self._decision(body, failed)
+        decision = self._decision(body, failed)
+        return decision if decision.prefer or not req.prefer else replace(decision, prefer=req.prefer)
 
     def _client(self) -> AbstractAsyncContextManager[httpx.AsyncClient]:
         """The pool, on the loop it belongs to; on another loop, a client for this call alone, closed after it.

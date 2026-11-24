@@ -38,10 +38,13 @@ method, `functools.partial` or coroutine function, or an object with
 A string names a registered router, such as the built-in `remote`: see
 [A router service](/smart-routing#a-router-service).
 A router is shown a `RouteRequest` and nothing else: the `prompt`, the `urls`
-found in it, the `budget`, the method you pinned (`pinned_tool`), its own
-time to answer (`deadline_s`) and the `candidates`, each a `Candidate` named
-`tool:provider` (`search:exa`) with `est_cost_usd` and `est_latency_s` (p90),
-`None` when unknown. It holds no key values. The router runs in your process;
+found in it, the `budget`, the method you pinned (`pinned_tool`), a
+preference a router service was sent (`prefer`), its own time to answer
+(`deadline_s`) and the `candidates`, each a `Candidate` named `tool:provider`
+(`search:exa`) with `est_cost_usd` and `est_latency_s` (p90), `None` when
+unknown, and `measured`, `False` for a keyless tier or a call with
+`provider_options`, which a backend's benchmark score does not describe. It
+holds no key values. The router runs in your process;
 what it sends elsewhere is up to your code. With no router attached, nothing
 extra leaves the process. Every
 `RouteDecision` field is optional: `tools` and `providers`, best first,
@@ -137,13 +140,90 @@ A URL with no host is refused even with no policy.
 It is off by default, and leaves the URLs you pass to `extract` yourself
 alone; on the MCP server it holds for `web_run`'s plans only.
 
+## Preferring cheap, fast or accurate
+
+A preference belongs to the router: you build the router with it. `prefer` is
+the goal; `accuracy=` (below) is the data for one goal. `cheap` and `fast` rank
+by the prices and p90 latencies web-router ships, and `accurate` by the
+accuracy scores it ships for search and answer, or by scores you bring. `cheap` puts
+the lowest estimated cost first ($0 first), `fast` the lowest p90 latency, and
+`accurate` the highest accuracy score the router holds. A backend with no
+estimate or score goes last, and ties keep the default order. It orders and
+never caps: a `Budget` still caps, and a backend with no known price never runs
+under a cost cap. The default `rules` router takes no preference.
+
+The built-in `preferred` router sorts each method's backends by its
+preference, with no model and no key. It orders backends without choosing a
+method: `plan()` and `run()` default to search even when the prompt contains a
+URL. Set `tool="extract"` to read that URL, or call `extract()` directly; a
+method you name is kept. The `rules` router chooses extract for a URL instead.
+
+```python
+from web_router import PreferredRouter, WebRouter
+
+wr = WebRouter(router=PreferredRouter("fast"))
+wr = WebRouter(router="preferred", router_config={"prefer": "cheap"})  # the same, by name
+```
+
+The model routers take one too --
+`llm_router(..., prefer="cheap")`, or `prefer` in their `router_config` -- and
+so does `remote`, which sends it as `RouteRequest.prefer`. Each member of a
+`fallback` keeps its own. The record names the preference of the router whose
+ranking the call used: `None` when that router has none, failed or decided
+nothing.
+
+**Accuracy scores (experimental).** With no `accuracy=`, `accurate` ranks by
+the scores web-router ships: each search and answer backend's share of correct
+answers in the benchmark behind `auto`'s order (`data/chains.json`), at its
+default mode. Extract, research and browse have none, so their backends keep
+the default order, and so does any backend the benchmark did not measure.
+To rank by your own benchmark, pass `accuracy=` a mapping or the path of a
+JSON file of the same shape. Your scores replace the shipped ones whole,
+since scores from two benchmarks do not compare. Shipped scores apply only to
+built-in implementations: registering a replacement excludes its name until
+unregistered, even on a router already built. Your own scores still apply to
+custom backends:
+
+
+```json
+{"search": {"exa": 0.161, "exa:exa-deep": 0.224}, "answer": {"perplexity": 0.953}}
+```
+
+A score is the share of questions answered correctly, from 0 to 1, and
+compares only within its method. `exa` scores the backend as the request
+sends it, `exa:exa-deep` that vendor mode; anything not listed, and a candidate
+whose `measured` is `False`, is unknown. A method, backend or mode that is not
+real, a mode not spelled the way the backend spells it, or a score outside 0
+to 1 raises `ConfigurationError`, and so does `accurate` with `accuracy={}`, or a
+`preferred` router given scores at `cheap` or `fast`, which never reads them.
+A model router at `accurate` shows the shipped scores, or yours, beside each
+option; given scores with no `prefer`, it shows them to the model as one
+more fact about each option, without asking it to favour them. A
+`preferred` router with mode scores is shown vendor modes by default. For a
+model router, set `WebRouter(..., route_modes=True)` to offer those modes;
+without it, `llm` and `systemone` see only backends, so mode-specific scores
+are unused. An explicit `route_modes=False` keeps every router on backends
+only.
+
+```python
+wr = WebRouter(router=PreferredRouter("accurate"))  # the shipped scores
+wr = WebRouter(router=PreferredRouter("accurate", accuracy="scores.json"))  # yours
+```
+
+With no preference, `auto`'s order is already accuracy-first: the backends the
+shipped benchmark cannot tell apart form one tier, cheapest first under a cost
+cap. `accurate` sorts by raw scores instead, so of two backends 0.003
+apart it runs the higher one first even when the gap is within a rerun's
+noise and the other is cheaper. Most callers want the default.
+
 ## The decision record
 
 `response.decision` and `plan.decision` hold a `DecisionRecord` (`from
 web_router import DecisionRecord`) on every routed or budgeted call, and
 `None` on any other. Every field may be `None`:
 
-- `decision_id`, `router`, `router_ms`, `router_timeout`, `reason`;
+- `decision_id`, `router`, `prefer` (the preference its ranking used), `router_ms`,
+  `router_timeout`, `reason`;
 - `offered`, the candidates the router saw; `dropped`, those left out before
   it, with why; `ranked`, its picks that survived the budget; `excluded` and
   `ignored`, what it excluded and what of its answer was set aside, including
@@ -428,6 +508,17 @@ httpx, so install the `remote` extra (`pip install "webrouter[remote]"`, or
   WebRouter(router="gemini")
   ```
 
+**Why the model routers skip search by default.** A search answers in a second
+or two, and a model router adds its own round trip before it: `llm` at a p50
+over a second, `gemini` and `systemone` up to their 1 s limit
+(`benchmarks/providers/router_latency.py` measures it). On a direct `search()`
+the method is already fixed, so the router could only reorder backends, a gain
+smaller than the wait. `plan()` and `run()` ask the router whatever its
+`route_tools`, so there a model router still chooses between search and the
+other methods and orders search's backends. `llm`, the slowest, also leaves out
+answer and extract. To have a model router order the backends of direct
+`search()` calls too, add search to `route_tools`.
+
 Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
 `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `GEMINI_API_KEY`), read once
@@ -435,9 +526,10 @@ when the router is built, and is sent only to that vendor's host: naming one
 for another `base_url` raises `ConfigurationError`, as does a key that is
 missing. Each call sends the server the prompt -- for an extract, its URLs
 whole, query strings included -- the budget (except `gemini`, which sends
-none), and the candidate ids, which name
-your configured backends, with their estimated cost and p90 latency; never a
-provider key. The transport is the `remote` router's: `https` only (plain
+none), the router's `prefer`, if any, and the candidate ids, which name
+your configured backends, with their estimated cost and p90 latency, and the
+accuracy scores the router holds, if any -- yours, or the shipped ones at
+`accurate`; never a provider key. The transport is the `remote` router's: `https` only (plain
 `http` only to this machine), no credentials, query or fragment in the URL,
 one request, no retries, no redirects, no proxy read from the environment, and
 answers of `application/json` under 256 KiB. A failure leaves the static
@@ -449,6 +541,16 @@ raises carries the error class or HTTP status and the scheme and host on its
 httpx, which the `remote` extra installs. Each call bills on that server: the
 router's own call is billed by its vendor and is not counted in a `Budget`'s
 cost or the record's `estimated_cost_usd`.
+
+A decider router built with `prefer` (see [Preferring cheap, fast or accurate](/smart-routing#preferring-cheap-fast-or-accurate))
+asks every question with one sentence in its `instructions`, to rank lower
+cost, lower p90 latency, or higher measured accuracy first, and as
+`DeciderQuestion.prefer` for a decider of your own: `DeciderRouter(decider,
+prefer=..., accuracy=...)`. `llm` also lists it as a `Prefer:` line beside the
+budget, and `systemone` sends it in the `state`. At `accurate`, or built with
+`accuracy=`, each option also reads `accuracy 0.161`, or `accuracy unknown`. Built with no
+preference, a router passes on one a router service was sent; with neither,
+each router sends what it sent before.
 
 ## Chaining routers
 

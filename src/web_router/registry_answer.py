@@ -25,7 +25,8 @@ from web_router.constants import (
 )
 from web_router.exceptions import NoAnswerProviderError
 from web_router.providers._pinning import pinned_class
-from web_router.registry import _is_set, _resolve
+from web_router.registry import _resolve
+from web_router.registry_configured import is_set
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:
@@ -42,6 +43,11 @@ _BUILTIN_ANSWER_PROVIDERS: dict[str, tuple[str, str, str]] = {
 }
 
 _CUSTOM_ANSWER_PROVIDERS: dict[str, type[AnswerProvider]] = {}
+
+
+def is_custom(name: str) -> bool:
+    """Whether ``name`` currently has a caller-registered answer implementation."""
+    return name in _CUSTOM_ANSWER_PROVIDERS
 
 
 def register_answer_provider(name: str | Provider, provider_cls: type[AnswerProvider]) -> None:
@@ -80,7 +86,7 @@ def configured_answer_providers() -> list[str]:
     listed, since it is these backends in turn.
     """
     return sorted(
-        name for name, env_vars in ANSWER_ENV_BY_PROVIDER.items() if all(_is_set(env_var) for env_var in env_vars)
+        name for name, env_vars in ANSWER_ENV_BY_PROVIDER.items() if all(is_set(env_var) for env_var in env_vars)
     )
 
 

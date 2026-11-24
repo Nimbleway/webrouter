@@ -15,6 +15,7 @@ from web_router import (
     InvalidParameterError,
     WebRouter,
 )
+from web_router.constants_production import TIMEOUT_COOLDOWN_AFTER
 from web_router.types_errors import ERROR_KIND_TIMEOUT
 
 pytestmark = pytest.mark.usefixtures(hop_members.__name__)
@@ -64,6 +65,14 @@ def test_the_call_deadline_still_wins_when_it_comes_first() -> None:
     with pytest.raises(DeadlineExceededError) as caught:
         hop_router(hop_timeout=5).search("q", timeout=0.3)
     assert "hop timeout" not in str(caught.value), "the call's deadline, not a hop cut off with time to move on"
+
+
+def test_a_call_deadline_beating_a_fixed_hop_timeout_never_counts_towards_a_cooldown() -> None:
+    router = hop_router(hop_timeout=5)
+    for _ in range(TIMEOUT_COOLDOWN_AFTER):
+        with pytest.raises(DeadlineExceededError):
+            router.search("q", timeout=0.2)
+    assert router._runtime.cooldowns.remaining("hangs") is None
 
 
 def test_a_hop_cut_off_is_a_timeout_failure_naming_the_cap() -> None:

@@ -15,7 +15,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from web_router.routing.contract import Budget, ToolName
+from web_router.routing.contract import Budget, Prefer, ToolName
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -40,6 +40,9 @@ class DeciderQuestion:
 
     deadline_s: float = 0.0
     """Seconds the decider has to answer."""
+
+    prefer: Prefer | None = None
+    """What the router prefers, ``cheap``, ``fast`` or ``accurate``; the instructions say so too. ``None`` for none."""
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -1,2 +1,2 @@
-# Parallel pull requests each add a CHANGELOG line; union-merge them instead of conflicting.
+# Pull requests add changelog.d/ fragments instead; this still union-merges any branch that edits CHANGELOG.md.
 CHANGELOG.md merge=union

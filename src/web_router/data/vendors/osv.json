@@ -45,8 +45,7 @@
         "commit": {
           "in": "body",
           "type": "string",
-          "description": "Commit hash to query instead of a version.",
-          "example": "6879efc2c1596d11a6a6ad296f80063b558d5e0f"
+          "description": "Commit hash to query instead of a version."
         },
         "page_token": {
           "in": "body",

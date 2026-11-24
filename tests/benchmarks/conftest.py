@@ -16,7 +16,7 @@ from scripts.benchmark_loader import FROZEN_SCRIPT, FROZEN_SIBLINGS, load_script
 
 EXTRACT_SCRIPT = Path(__file__).resolve().parents[2] / "benchmarks" / "providers" / "extract.py"
 ANSWER_SCRIPT = EXTRACT_SCRIPT.with_name("answer.py")
-ANSWER_SIBLINGS = ("_common", "_questions", "_report_tables", "answer_report")
+ANSWER_SIBLINGS = ("_common", "_judge_check", "_questions", "_report_tables", "answer_report")
 """What the answer scan imports from its folder, under plain names, so they are forgotten once it is."""
 EXTRACT_SIBLINGS = ("_common", "cli", "extract_report", "urls")
 """What the extract scan imports from its folder, under plain names, so they are forgotten once it is."""
@@ -231,6 +231,7 @@ def route_stats(accuracy: float, cost: float | None, latency: float = 1.0) -> di
 SCAN_SCRIPT = EXTRACT_SCRIPT.with_name("run.py")
 SCAN_SIBLINGS = (
     "_common",
+    "_judge_check",
     "_questions",
     "_report_tables",
     "_recommended",
