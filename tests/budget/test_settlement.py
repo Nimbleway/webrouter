@@ -95,6 +95,17 @@ def test_a_member_refusing_an_option_is_charged_nothing_so_the_next_fits(
     assert [attempt.est_cost_usd for attempt in response.decision.attempts] == [0.0, 0.04]
 
 
+@pytest.mark.parametrize("tool", ["answer"], indirect=True)
+def test_a_refusal_raised_again_in_a_later_call_is_charged_nothing_there(chain: Chain, priced: Table) -> None:
+    chain.raises["first"] = UnsupportedParameterError("first", ["recency"])  # one instance, kept and raised again
+    priced.update(first=(0.04, None), second=(0.04, None))
+    with pytest.raises(UnsupportedParameterError):
+        call(chain, Budget(max_cost_usd=0.06), provider="first")  # the refusal leaves this call
+    chain.called.clear()
+    call(chain, Budget(max_cost_usd=0.06))
+    assert chain.called == ["first", "second"], "an earlier call's note does not make it a nested refusal here"
+
+
 def test_a_refusal_passed_on_from_a_nested_call_leaves_the_provider_charged(priced: Table) -> None:
     router, depth = WebRouter(), []
 

@@ -40,8 +40,8 @@ from web_router.types_errors import TARGET_GONE_STATUSES
 _REFUSED_BEFORE_SENDING = (UnsupportedParameterError, InvalidParameterError)
 """An option the backend does not map, and a value it cannot take (a mode clash on ``auto`` search)."""
 
-_LEFT: WeakKeyDictionary[BaseException, Ledger] = WeakKeyDictionary()
-"""The ledger of the first call each error left: the innermost, as it leaves calls inside out."""
+_LEFT: WeakKeyDictionary[BaseException, tuple[Ledger, ...]] = WeakKeyDictionary()
+"""The ledgers in force, outermost first, when each error last left a call that was not one of them."""
 
 
 def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> None:
@@ -77,8 +77,23 @@ def _match_enclosing(ledger: Ledger, attempt: Attempt, cost: float, *, refunded:
 
 
 def left_call(ledger: Ledger, exc: BaseException) -> None:
-    """Note that ``exc`` is leaving the call ``ledger`` holds, unless it already left a call nested in it."""
-    _LEFT.setdefault(exc, ledger)
+    """Note that ``exc`` is leaving the call ``ledger`` holds, unless it already left a call nested in it.
+
+    A provider may keep one error and raise it again in a later call: there the old note names other calls, so it
+    is replaced rather than kept.
+    """
+    if not _among(ledger, _LEFT.get(exc, ())):
+        _LEFT[exc] = LEDGERS.get()
+
+
+def _from_nested(exc: BaseException, ledger: Ledger) -> bool:
+    """Whether ``exc`` already left a call nested in the one ``ledger`` holds."""
+    chain = _LEFT.get(exc, ())
+    return _among(ledger, chain) and chain[-1] is not ledger
+
+
+def _among(ledger: Ledger, chain: tuple[Ledger, ...]) -> bool:
+    return any(held is ledger for held in chain)
 
 
 def _never_started(exc: WebRouterError, ledger: Ledger) -> bool:
@@ -92,7 +107,7 @@ def _never_started(exc: WebRouterError, ledger: Ledger) -> bool:
     if isinstance(exc, CoolingDownError):
         return True
     if isinstance(exc, _REFUSED_BEFORE_SENDING):
-        return _LEFT.get(exc, ledger) is ledger
+        return not _from_nested(exc, ledger)
     return nothing_started(exc) and getattr(exc, "status_code", None) not in TARGET_GONE_STATUSES
 
 
