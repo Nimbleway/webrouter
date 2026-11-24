@@ -283,11 +283,16 @@ in `provider_options`. Open an issue first if you are unsure.
 
 1. Add the field to `SearchRequest` in `types.py`. `NORMALIZED_PARAMETERS` is
    derived from the model, so it updates itself.
-2. Add the matching keyword to `WebRouter.search` and `AsyncWebRouter.search`
-   in `client.py`, and to `_BaseRouter._build_request`. `tests/test_contract.py`
-   fails if you miss one.
+2. Add the matching keyword to `search` on both `SyncSearch` and `AsyncSearch`
+   in `client_search.py`, and pass it on in that module's `_options`. Add it to
+   `SearchOptions` in `types_options.py` and to `MCP_SEARCH_PROPERTIES` in
+   `constants_search.py`. `tests/test_contract.py` and
+   `tests/test_search_options.py` fail if a signature, `SearchOptions` or the MCP
+   schema misses it, but no test fails if `_options` does: the keyword is then
+   accepted and never reaches the provider.
 3. Map it for each provider that supports it, as above.
 4. Leave it unmapped elsewhere; those providers will raise, which is correct.
+   `make contracts` then lists it under each one's `not_mapped`.
 5. Add a live check to `tests/test_integration_surface.py`.
 
 ### The one hard requirement
