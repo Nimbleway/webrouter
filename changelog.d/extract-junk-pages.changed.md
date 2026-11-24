@@ -1,0 +1,1 @@
+Under `auto`, extract now tries the next backend when a page is a tracking pixel or a redirect to another site; an off-site page comes back with its warning when no later backend reads the URL. A named provider keeps both as documents with warnings, and a near-empty page stays a document with its warning.

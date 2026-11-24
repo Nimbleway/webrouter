@@ -6,10 +6,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
-### Changed
-
-- **Breaking (MCP):** new servers use a slim tool profile, hide tools without a configured backend, leave `load_env` off, and refuse private browser destinations. To restore the previous configuration, set `WEB_ROUTER_MCP_PROFILE=full`, `WEB_ROUTER_MCP_LOAD_ENV=remember` and `WEB_ROUTER_MCP_PRIVATE_URLS=on`.
-
 ## [0.15.0] - 2026-11-24
 
 ### Added
