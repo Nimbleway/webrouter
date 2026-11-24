@@ -28,16 +28,33 @@ MSG_VERSION = (
 )
 MSG_VERSION_FORM = "a release version is three numbers, x.y.z; got {got!r}"
 MSG_VERSION_HIGHER = "a lookup table alone takes a version higher than the shipped release's {shipped!r}; got {got!r}"
+MSG_SHIPPED_MANIFEST = "the shipped manifest could not be read ({error}); fix or remove it before importing"
+MSG_PROVIDER_GONE = (
+    "the shipped manifest names the provider table {file!r}, which is missing; restore it, or pass LOOKUP to "
+    "build a new one"
+)
+MSG_PROVIDER_CHANGED = (
+    "the provider table differs from the shipped one, so the release needs a version higher than {shipped!r}"
+)
 VERSION_FORM = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 
 
 def shipped(folder: Path) -> dict[str, Any]:
-    """The manifest of the release in ``folder``; empty when there is none to read."""
-    try:
-        manifest = json.loads((folder / DATA_DRIVEN_MANIFEST_FILE).read_bytes())
-    except (OSError, ValueError):
+    """The manifest of the release in ``folder``; empty when no release is there yet.
+
+    Raises:
+        ValueError: for a manifest that is there and cannot be read: treating it as no release would drop what it names.
+    """
+    path = folder / DATA_DRIVEN_MANIFEST_FILE
+    if not path.exists():
         return {}
-    return manifest if isinstance(manifest, dict) else {}
+    try:
+        manifest = json.loads(path.read_bytes())
+    except (OSError, ValueError) as exc:
+        raise ValueError(MSG_SHIPPED_MANIFEST.format(error=type(exc).__name__)) from exc
+    if not isinstance(manifest, dict):
+        raise ValueError(MSG_SHIPPED_MANIFEST.format(error="not an object"))
+    return manifest
 
 
 def tool_entry(table: bytes) -> dict[str, Any]:
@@ -90,9 +107,26 @@ def provider_entry(lookup: Path, destination: Path) -> dict[str, Any]:
 
 
 def carried(before: dict[str, Any], folder: Path) -> dict[str, Any] | None:
-    """The shipped provider table's entry, kept when an import brings no lookup table and its file is still there."""
+    """The shipped provider table's entry, kept when an import brings no lookup table; ``None`` when none shipped.
+
+    Raises:
+        ValueError: when the manifest names a provider table whose file is gone: the import would drop it silently.
+    """
     entry = before.get(PROVIDER_ENTRY)
-    return entry if isinstance(entry, dict) and (folder / str(entry.get("file"))).is_file() else None
+    if entry is None:
+        return None
+    name = entry.get("file") if isinstance(entry, dict) else None
+    if not isinstance(name, str) or not (folder / name).is_file():
+        raise ValueError(MSG_PROVIDER_GONE.format(file=name))
+    return dict(entry)
+
+
+def check_provider_version(before: dict[str, Any], providers: dict[str, Any], version: str) -> None:
+    """Refuse a new provider table under the shipped release's version: one version names one set of tables."""
+    was = before.get(PROVIDER_ENTRY)
+    changed = isinstance(was, dict) and was.get("sha256") != providers["sha256"]
+    if changed and before.get("version") == version:
+        raise ValueError(MSG_PROVIDER_CHANGED.format(shipped=version))
 
 
 def left_out(folder: Path) -> list[dict[str, str]]:

@@ -37,6 +37,7 @@ def release(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         {"ci95": -1},
         {"usd_per_1k": True},
         {"p50_s": float("inf")},
+        {"quality": 10**400},  # too large for a float: refused, not an OverflowError
         {"quality": float("nan")},
     ],
 )

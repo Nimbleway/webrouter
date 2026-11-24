@@ -61,7 +61,12 @@ class ProviderTable:
 
 def _measure(value: object) -> bool:
     """Whether ``value`` is a measure: a finite number of 0 or more, never a bool."""
-    return type(value) in (int, float) and math.isfinite(value) and value >= 0  # type: ignore[arg-type, operator]
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value) and value >= 0  # type: ignore[arg-type, operator]
+    except OverflowError:  # an integer too large for a float: json reads 10**400 as one
+        return False
 
 
 def checked_point(row: Mapping[str, Any]) -> Point:

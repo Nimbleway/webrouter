@@ -35,6 +35,7 @@ from scripts.data_driven_manifest import (
     PROVIDER_FILE,
     TABLE_FILE,
     carried,
+    check_provider_version,
     check_version,
     left_out,
     provider_entry,
@@ -91,6 +92,7 @@ def write_release(source: Path, version: str, *, destination: Path | None = None
     }
     providers = provider_entry(lookup, destination) if lookup is not None else carried(before, DATA)
     if providers is not None:
+        check_provider_version(before, providers, version)
         manifest[PROVIDER_ENTRY] = providers
     (destination / DATA_DRIVEN_MANIFEST_FILE).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 

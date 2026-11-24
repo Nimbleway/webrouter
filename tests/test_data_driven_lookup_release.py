@@ -67,12 +67,38 @@ def test_an_import_with_no_lookup_keeps_the_shipped_provider_table(release: tupl
     source, output, table = release
     assert "provider_table" not in (importer.import_release(source, "0.1.1", []) or _manifest(output))
     importer.import_release(source, "0.1.1", [], table)
-    before = _published(output)
+    before, before_entry = _published(output), _manifest(output)["provider_table"]
     importer.import_release(source, "0.1.1", [])
     assert _published(output) == before
     (output / PROVIDER_FILE).unlink()
-    importer.import_release(source, "0.1.1", [])
-    assert "provider_table" not in _manifest(output), "an entry whose file is gone is not carried"
+    with pytest.raises(ValueError, match=r"names the provider table 'provider_table\.json', which is missing"):
+        importer.import_release(source, "0.1.1", [])
+    assert _manifest(output)["provider_table"] == before_entry, "a refused import leaves the release as it was"
+
+
+def test_a_shipped_manifest_that_cannot_be_read_stops_the_import(release: tuple[Path, Path, Path]) -> None:
+    source, output, _ = release
+    output.mkdir(parents=True, exist_ok=True)
+    (output / importer.DATA_DRIVEN_MANIFEST_FILE).write_bytes(b"not json")
+    with pytest.raises(ValueError, match="shipped manifest could not be read"):
+        importer.import_release(source, "0.1.1", [])
+    (output / importer.DATA_DRIVEN_MANIFEST_FILE).write_bytes(b"[]")
+    with pytest.raises(ValueError, match="not an object"):
+        importer.import_release(source, "0.1.1", [])
+
+
+def test_a_changed_provider_table_needs_a_higher_release_version(release: tuple[Path, Path, Path]) -> None:
+    source, output, table = release
+    importer.import_release(source, "0.1.1", [], table)
+    importer.import_release(source, "0.1.1", [], table)  # the same lookup again: the same table, the same version
+    other = table.with_name("other.json")
+    changed = json.loads(table.read_text(encoding="utf-8"))
+    changed["version"] = "later"
+    other.write_text(json.dumps(changed), encoding="utf-8")
+    with pytest.raises(ValueError, match=r"differs from the shipped one.*higher than '0\.1\.1'"):
+        importer.import_release(source, "0.1.1", [], other)
+    importer.import_release(source, "0.1.2", [], other)
+    assert (_manifest(output)["version"], _published(output)[0]["measured"]) == ("0.1.2", "later")
 
 
 @pytest.mark.parametrize(

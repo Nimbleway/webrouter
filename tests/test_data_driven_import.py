@@ -59,7 +59,7 @@ def _installed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, P
     output.mkdir()
     table, manifest = output / importer.TABLE_FILE, output / importer.DATA_DRIVEN_MANIFEST_FILE
     table.write_bytes(b"existing table")
-    manifest.write_bytes(b"existing manifest")
+    manifest.write_bytes(b'{"existing": "manifest"}')
     golden = tmp_path / "golden.gz"
     golden.write_bytes(b"existing golden")
     monkeypatch.setattr(importer, "DATA", output)
@@ -68,7 +68,11 @@ def _installed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, P
 
 
 def _assert_unchanged(files: tuple[Path, Path, Path]) -> None:
-    assert tuple(path.read_bytes() for path in files) == (b"existing table", b"existing manifest", b"existing golden")
+    assert tuple(path.read_bytes() for path in files) == (
+        b"existing table",
+        b'{"existing": "manifest"}',
+        b"existing golden",
+    )
 
 
 @pytest.mark.parametrize("counts", [[1, 1], [True, 2], [-1, 4], [1.5, 1.5], ["1", 2]])
