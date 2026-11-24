@@ -280,7 +280,7 @@ sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-b
 
 ## The trained router
 
-`router="trained"` picks a request's method from a table built from 1,920
+`router="trained"` picks a request's method from a table built from 1,600
 requests from public benchmarks and 1,078 synthetic requests, all labelled by
 the trainers. It is experimental, needs no key, calls nothing and answers in
 microseconds. Like `rules`, only `plan()` and `run()` ask it, and it ranks no backends.
@@ -297,7 +297,7 @@ from web_router import WebRouter
 router = WebRouter(router="trained")
 plan = router.plan("compare the pricing plans of the top 5 CRM tools")
 plan.tool             # "research", with a research backend configured
-plan.decision.reason  # "trained 0.1.0: research for verb=analyze, url_target=none"
+plan.decision.reason  # "trained 0.1.1: research for verb=analyze, url_target=none"
 ```
 
 It reads five things in the prompt, each with a regular expression:
@@ -336,10 +336,11 @@ trained with.
 
 ### Trained on
 
-The training owner reports these sources for release `0.1.0`. Counts describe
-requests used, not each dataset's size. The trainers assigned the method labels;
-the source datasets do not supply those labels. The shipped table contains
-aggregate counts, and the golden requests are synthetic.
+The training owner reports these sources for release `0.1.1`, and the release's
+manifest lists them under `tool_table.sources`. Counts describe requests used,
+not each dataset's size. The trainers assigned the method labels; the source
+datasets do not supply those labels. The shipped table contains aggregate
+counts, and the golden requests are synthetic.
 
 | Source | Requests | Version or snapshot reported | Licence reported |
 |---|---:|---|---|
@@ -347,27 +348,32 @@ aggregate counts, and the golden requests are synthetic.
 | [WebBench](https://huggingface.co/datasets/Halluminate/WebBench) | 240 | `webbenchfinal.csv` | MIT |
 | [DeepSearchQA](https://huggingface.co/datasets/google/deepsearchqa) | 200 | `DSQA-full.csv` | Apache-2.0 |
 | [Bananalyzer](https://github.com/reworkd/bananalyzer/tree/d1b1ae52) | 154 | `d1b1ae52` | MIT |
-| [FreshQA mirror](https://huggingface.co/datasets/bojanbabic/freshqa_09302025) | 120 | 2025-09-30 | No licence stated by the mirror; [upstream](https://github.com/freshllms/freshqa/blob/main/LICENSE) Apache-2.0 |
-| [NQ-Open](https://huggingface.co/datasets/google-research-datasets/nq_open) | 120 | validation split | CC-BY-SA-3.0 |
-| [SimpleQA Verified](https://huggingface.co/datasets/google/simpleqa-verified) | 120 | `main` | MIT |
+| [SimpleQA Verified](https://huggingface.co/datasets/google/simpleqa-verified) | 120 | `simpleqa_verified.csv` | MIT |
 | [WebWalkerQA](https://huggingface.co/datasets/callanwu/WebWalkerQA) | 188 | main + silver, 94 each | Apache-2.0 |
 | [Exa benchmarks](https://github.com/exa-labs/benchmarks/tree/a6a9590b) | 240 | `a6a9590b`: WebCode highlights 80, RAG 80, Company RAG 40, contents 40 | MIT |
 | [ResearchQA](https://huggingface.co/datasets/realliyifei/ResearchQA) | 80 | test split | MIT |
 | [Researchy Questions](https://huggingface.co/datasets/corbyrosset/researchy_questions) | 80 | test split | CDLA-Permissive-2.0 |
-| [WideSearch](https://huggingface.co/datasets/ByteDance-Seed/WideSearch) | 80 | `main` | Listed as `other`; no licence text reported |
 | [DeepResearch Bench](https://github.com/Ayanami0730/deep_research_bench) | 40 | `main` | Apache-2.0 |
 | [Stagehand extract evals](https://github.com/browserbase/stagehand/tree/9afa0952) | 18 | `9afa0952` | MIT |
 | Synthetic requests generated for this router | 1,078 | 790 matched-style + 288 fan-out | Not a third-party benchmark |
 
-The unpinned Hugging Face and DeepResearch Bench inputs were fetched from
-`main` and frozen on 2026-11-08 as training dataset v3. That date is a reported
-snapshot date, not an immutable revision.
+The GitHub sources are pinned to the commits shown. The Hugging Face files and
+DeepResearch Bench's were fetched from `main` on 2026-11-03, as the manifest
+records with a SHA-256 for each file: a fetch date and a checksum, not a
+dataset revision.
 
-Licence review for distributing the derived counts is pending. In particular,
-NQ-Open's share-alike terms, Mind2Web-Live's attribution requirements,
-WideSearch's unspecified licence and the FreshQA mirror's missing licence need
-a maintainer decision. This inventory does not establish that every source
-permits redistribution of derived statistics under Apache-2.0.
+Release `0.1.1` was retrained without three sources an earlier, unreleased
+table used, because their terms for derived data were unclear: NQ-Open
+(CC-BY-SA-3.0, share-alike), WideSearch (no licence text) and a FreshQA mirror
+that states no licence. The trainers report the same score and the same
+decision on every request they hold.
+
+Mind2Web-Live is licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), which asks for
+attribution: the table's counts are derived in part from Mind2Web-Live by
+iMean AI, relabelled by method and reduced to counts. The repository's `NOTICE`
+file carries the same line. The licences above are as the sources state them;
+this list is not legal advice.
 
 ## A router service
 

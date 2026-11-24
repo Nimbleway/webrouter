@@ -65,7 +65,7 @@ def test_the_decision_names_the_release_the_row_and_its_share() -> None:
     router = TrainedRouter()
     decision = router.route(_req("compare the pricing plans of the top 5 CRM tools"))
     assert decision.reason == f"trained {router.version}: research for verb=analyze, url_target=none"
-    assert decision.confidence == pytest.approx(38 / 40)
+    assert decision.confidence == pytest.approx(34 / 36)
 
 
 def _table(**changes: Any) -> ToolTable:
