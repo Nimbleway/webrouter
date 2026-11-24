@@ -30,6 +30,7 @@ def _req(prompt: str, urls: tuple[str, ...] = ()) -> RouteRequest:
         ("compare the pricing plans of the top 5 CRM tools", (), ["research", "search"]),
         (f"extract the table from {URL}", (URL,), ["extract", "search"]),
         (f"extract the table from {URL}", (), ["search"]),
+        ("fill the top 10 CRM tools then check out", (), ["search", "research"]),  # an action row, browse held back
     ],
 )
 def test_it_ranks_the_rows_methods_and_holds_back_browse_and_an_extract_with_no_url(
