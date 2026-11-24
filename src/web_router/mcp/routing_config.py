@@ -65,6 +65,7 @@ from web_router.constants_remote import (
     REMOTE_ROUTER_NAME,
 )
 from web_router.constants_routing import RULES_ROUTER_NAME
+from web_router.constants_trained import TRAINED_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
 from web_router.mcp.routing_named import display_name, hosts_in, read_config
 from web_router.routing.contract import Budget
@@ -160,7 +161,7 @@ class McpRouting:
 
     def _runs(self) -> dict[str, str]:
         """Where the router runs, and for one that is not the library's own, a note on what it may send."""
-        if self.router_name in (RULES_ROUTER_NAME, MCP_ROUTER_OFF):
+        if self.router_name in (RULES_ROUTER_NAME, TRAINED_ROUTER_NAME, MCP_ROUTER_OFF):
             return {"router_runs": MCP_ROUTER_IN_PROCESS}
         if not isinstance(self.router, str):
             return {"router_runs": MCP_ROUTER_OPERATOR, "router_note": MCP_ROUTER_OPERATOR_NOTE}

@@ -14,11 +14,14 @@ is slow and billed, so a caller opts in. ``extract`` is ranked only when the cal
 from __future__ import annotations
 
 from web_router.constants_trained import (
+    MSG_TRAINED_BROWSE,
     TRAINED_LAST_RESORT,
     TRAINED_REASON,
+    TRAINED_REASON_LAST_RESORT,
     TRAINED_REASON_OVERALL,
     TRAINED_ROUTER_NAME,
 )
+from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
 from web_router.routing.trained.table import Row, ToolTable, shipped_table
 
@@ -31,6 +34,8 @@ class TrainedRouter:
     router_name = TRAINED_ROUTER_NAME
 
     def __init__(self, *, browse: bool = False) -> None:
+        if not isinstance(browse, bool):
+            raise ConfigurationError(MSG_TRAINED_BROWSE.format(got=browse))
         self.browse = browse
         self.table: ToolTable = shipped_table()
 
@@ -43,12 +48,8 @@ class TrainedRouter:
         """The methods of the prompt's row, most common in training first, then ``search``."""
         row = self.table.row(req.prompt)
         tools = self._ranked(row, req)
-        seen = sum(row.counts.values())
-        return RouteDecision(
-            tools=tools,
-            confidence=row.counts.get(tools[0], 0) / seen if seen else None,
-            reason=self._reason(row, tools[0]),
-        )
+        share = row.counts.get(tools[0], 0) / sum(row.counts.values())
+        return RouteDecision(tools=tools, confidence=share, reason=self._reason(row, tools[0]))
 
     def _ranked(self, row: Row, req: RouteRequest) -> list[ToolName]:
         held_back = {"browse": not self.browse, "extract": not req.urls}
@@ -60,4 +61,6 @@ class TrainedRouter:
         if not row.values:
             return TRAINED_REASON_OVERALL.format(version=self.version, tool=tool)
         features = ", ".join(f"{name}={value}" for name, value in zip(self.table.features, row.values, strict=False))
+        if not row.counts.get(tool):
+            return TRAINED_REASON_LAST_RESORT.format(version=self.version, features=features)
         return TRAINED_REASON.format(version=self.version, tool=tool, features=features)

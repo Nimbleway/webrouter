@@ -290,7 +290,7 @@ from web_router import WebRouter
 
 router = WebRouter(router="trained")
 plan = router.plan("compare the pricing plans of the top 5 CRM tools")
-plan.tool             # "research"
+plan.tool             # "research", with a research backend configured
 plan.decision.reason  # "trained 0.1.0: research for verb=analyze, url_target=none"
 ```
 
@@ -320,7 +320,7 @@ Three methods are treated apart:
   [URL policy](/smart-routing#url-policy).
 - `answer` is not a method the table was trained on, so it is never picked.
 
-The table and the expressions ship as one versioned release, apart from the
+The table ships as a versioned release, apart from the
 library's own version: `src/web_router/data/trained/manifest.json` names the
 version, and every decision's `reason` starts with it. The version changes only
 when a newly trained table ships. A golden file of two thousand requests, with

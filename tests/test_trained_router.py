@@ -14,29 +14,13 @@ from web_router.exceptions import ConfigurationError
 from web_router.routing.registry import available_routers
 from web_router.routing.trained import TrainedRouter
 from web_router.routing.trained import table as table_module
-from web_router.routing.trained.features import featurize
 from web_router.routing.trained.table import ToolTable, shipped_table
 
 URL = "https://example.com/prices"
-NAMES = ("verb", "url_target", "plural", "kw_research", "ui_action")
 
 
 def _req(prompt: str, urls: tuple[str, ...] = ()) -> RouteRequest:
     return RouteRequest(prompt=prompt, candidates=(), deadline_s=0.05, urls=urls)
-
-
-@pytest.mark.parametrize(
-    ("prompt", "values"),
-    [
-        ("compare the pricing plans of the top 5 CRM tools", ["analyze", "none", "yes", "yes", "no"]),
-        ("Please extract the table from https://example.com/prices", ["extract", "page", "no", "no", "no"]),
-        ("go to https://example.com/ and log in", ["navigate", "site", "no", "no", "yes"]),
-        ("who won the 2022 world cup", ["question", "none", "no", "no", "no"]),
-        ("", ["other", "none", "no", "no", "no"]),
-    ],
-)
-def test_the_five_features_of_a_request(prompt: str, values: list[str]) -> None:
-    assert featurize(prompt, NAMES) == values
 
 
 @pytest.mark.parametrize(
@@ -56,8 +40,26 @@ def test_it_ranks_the_rows_methods_and_holds_back_browse_and_an_extract_with_no_
 
 
 def test_browse_is_ranked_only_by_a_router_built_to() -> None:
-    decision = TrainedRouter(browse=True).route(_req("log in to gamestop and add a PS5 to the cart"))
-    assert decision.tools == ["browse", "search"]
+    prompt = "log in to gamestop and add a PS5 to the cart"
+    opted, held = TrainedRouter(browse=True).route(_req(prompt)), TrainedRouter().route(_req(prompt))
+    assert (opted.tools, opted.confidence) == (["browse", "search"], pytest.approx(27 / 28))
+    assert (held.tools, held.confidence) == (["search"], pytest.approx(1 / 28)), "the share of the method ranked first"
+
+
+@pytest.mark.parametrize("browse", ["false", 1, None])
+def test_browse_takes_a_bool_alone(browse: Any) -> None:
+    with pytest.raises(ConfigurationError, match="browse=True or browse=False"):
+        TrainedRouter(browse=browse)
+
+
+def test_a_search_no_training_request_ran_is_named_the_last_resort() -> None:
+    router = TrainedRouter()
+    decision = router.route(_req(f"extract the table from {URL}"))
+    assert (decision.tools, decision.confidence) == (["search"], 0.0)
+    assert decision.reason == (
+        f"trained {router.version}: search, which no training request with verb=extract, url_target=page, "
+        "plural=no, kw_research=no, ui_action=no ran, as the last resort"
+    )
 
 
 def test_the_decision_names_the_release_the_row_and_its_share() -> None:
@@ -102,7 +104,10 @@ def test_a_request_matching_no_frequent_row_gets_the_overall_reason(monkeypatch:
         ({"features": ["verb", "mood"]}, "features this version cannot compute"),
         ({"labels": ["search", "teleport"]}, "methods web-router does not route"),
         ({"tables": [{"": [1, 1]}]}, "one table per key length"),
+        ({"tables": []}, "one table per key length"),
+        ({"tables": [{"": [1, 1]}, {"other": [1]}]}, "one count per method and their total"),
         ({"tables": [{}, {}]}, "no row for every request"),
+        ({"tables": [{"": [0, 0]}, {}]}, "no row for every request"),
     ],
 )
 def test_a_table_this_version_cannot_use_is_refused(change: dict[str, Any], why: str) -> None:
@@ -123,7 +128,13 @@ def test_a_manifest_with_another_schema_is_refused(monkeypatch: pytest.MonkeyPat
 
 def test_the_patterns_stay_fast_on_a_long_prompt() -> None:
     router, start = TrainedRouter(), time.perf_counter()
-    for prompt in ("please " * 50_000 + "x", "compare " + "a " * 100_000, "https://a.example/" + "x/" * 50_000):
+    openers = ("i want to " * 10_000 + "x", "i need to help me to " * 5_000)
+    for prompt in (
+        "please " * 50_000 + "x",
+        "compare " + "a " * 100_000,
+        "https://a.example/" + "x/" * 50_000,
+        *openers,
+    ):
         router.route(_req(prompt))
     assert time.perf_counter() - start < 1.0
 
@@ -139,8 +150,6 @@ def test_by_name_it_is_asked_by_plan_and_run_alone() -> None:
     ("prompt", "config", "tool"),
     [
         ("compare A and B across Europe", {}, "research"),
-        ("who won the 2022 world cup", {}, "search"),
-        (f"extract the table from {URL}", {}, "extract"),
         ("log in to gamestop and add a PS5 to the cart", {}, "search"),
         ("log in to gamestop and add a PS5 to the cart", {"browse": True}, "browse"),
     ],

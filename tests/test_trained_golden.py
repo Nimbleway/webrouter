@@ -10,11 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from scripts.trained_prompts import prompts
+from web_router.constants_trained import TRAINED_DATA_DIR, TRAINED_MANIFEST_FILE
 from web_router.routing.trained.features import featurize
 from web_router.routing.trained.table import shipped_table
 
 GOLDEN = Path(__file__).parent / "data" / "trained" / "golden.jsonl.gz"
-DATA = resources.files("web_router") / "data" / "trained"
+DATA = resources.files("web_router").joinpath(*TRAINED_DATA_DIR)
 
 
 def _golden() -> list[list[Any]]:
@@ -46,7 +47,7 @@ def test_the_golden_file_was_built_from_the_current_request_list() -> None:
 
 
 def test_the_manifest_names_the_shipped_table_by_its_checksum() -> None:
-    manifest = json.loads((DATA / "manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads((DATA / TRAINED_MANIFEST_FILE).read_text(encoding="utf-8"))
     table = (DATA / manifest["tool_table"]["file"]).read_bytes()
     assert manifest["tool_table"]["sha256"] == hashlib.sha256(table).hexdigest()
     assert manifest["tool_table"]["requests"] == json.loads(table)["tables"][0][""][-1]

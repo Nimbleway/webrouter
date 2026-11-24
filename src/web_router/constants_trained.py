@@ -25,6 +25,13 @@ TRAINED_REASON = "trained {version}: {tool} for {features}"
 TRAINED_REASON_OVERALL = "trained {version}: {tool}, the most common method overall"
 """The reason when no feature narrowed the row: the request matched nothing the table saw often enough."""
 
+TRAINED_REASON_LAST_RESORT = (
+    "trained {version}: search, which no training request with {features} ran, as the last resort"
+)
+"""The reason when every method of the row is held back: a browse not opted into, an extract with no URL."""
+
+MSG_TRAINED_BROWSE = "the trained router takes browse=True or browse=False; got {got!r}."
+
 MSG_TRAINED_SCHEMA = "the trained router's manifest has schema {got!r}; this version of web-router reads schema {want}."
 
 MSG_TRAINED_TABLE = "the trained router's tool table is not usable: {why}."

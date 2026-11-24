@@ -28,9 +28,10 @@ from pathlib import Path
 from typing import Any
 
 from scripts.trained_prompts import prompts
+from web_router.constants_trained import TRAINED_DATA_DIR, TRAINED_MANIFEST_FILE, TRAINED_ROUTER_NAME, TRAINED_SCHEMA
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA = ROOT / "src" / "web_router" / "data" / "trained"
+DATA = ROOT.joinpath("src", "web_router", *TRAINED_DATA_DIR)
 GOLDEN = ROOT / "tests" / "data" / "trained" / "golden.jsonl.gz"
 TABLE_FILE = "tool_table.json"
 SOURCE_TABLE = Path("webrouter") / "artifacts" / "router1.json"
@@ -57,9 +58,9 @@ def write_release(source: Path, version: str) -> None:
     manifest = {
         "_about": "The trained router's release: one version for its data files and the features they were "
         "trained with. Written by `make trained-router`; do not edit by hand.",
-        "router": "trained",
+        "router": TRAINED_ROUTER_NAME,
         "version": version,
-        "schema": 1,
+        "schema": TRAINED_SCHEMA,
         "built": datetime.now(UTC).date().isoformat(),
         "tool_table": {
             "file": TABLE_FILE,
@@ -67,7 +68,7 @@ def write_release(source: Path, version: str) -> None:
             "requests": json.loads(table)["tables"][0][""][-1],
         },
     }
-    (DATA / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    (DATA / TRAINED_MANIFEST_FILE).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
 def differences(rows: list[list[Any]]) -> list[str]:

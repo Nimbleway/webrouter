@@ -64,12 +64,15 @@ def _read(name: str) -> Any:
 
 def _checked(version: str, data: Mapping[str, Any]) -> ToolTable:
     features, labels, tables = data["features"], data["labels"], data["tables"]
-    for problem, why in (
+    rows = [row for table in tables for row in table.values()]
+    checks = (
         (set(features) - set(FEATURES), "it names features this version cannot compute"),
         (set(labels) - set(get_args(ToolName)), "it names methods web-router does not route"),
         (len(tables) != len(features) + 1, "it needs one table per key length"),
-        ("" not in tables[0], "it has no row for every request"),
-    ):
+        (any(len(row) != len(labels) + 1 for row in rows), "a row needs one count per method and their total"),
+        (not tables or not sum(tables[0].get("", [0])[:-1]), "it has no row for every request"),
+    )
+    for problem, why in checks:
         if problem:
             raise ConfigurationError(MSG_TRAINED_TABLE.format(why=why))
     return ToolTable(version, tuple(features), tuple(labels), int(data["min_count"]), tuple(tables))
