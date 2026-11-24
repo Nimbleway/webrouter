@@ -88,8 +88,9 @@ to both.
 | `direct:<vendor>` | the vendor's own REST API as two plain tools, search and page read, its JSON returned as it comes back, no routing guide, run here | The control for a vendor with no hosted MCP server: what web-router adds over calling the vendor yourself |
 | `no-search` | no web tool at all: the same agent and prompt | The baseline that shows how much search does the work |
 | `web-router:auto-shipped` / `web-router:auto-tuned` | web-router's tools on `auto` over the same five vendors, in the order `auto` ships with / the order the benchmarks favour (`WEB_ROUTER_PRESETS`) | The web-router side of it: as a user gets it, and configured |
+| `web-router:data-driven` | web-router's tools on `auto`, with the default data-driven router asked on every search (`route_tools=("search",)`): the search backends its provider table measured go first, in the order its `prefer` sets, and the rest after in `auto`'s order | What the router's backend order adds: against `web-router:auto`, which never asks it, that order is the one difference |
 
-`<provider>` is any search backend, or `auto`. The tools expose search and
+`<provider>` is any search backend, or `auto`. `web-router:data-driven` records its router and the data release it decided with in `run.json`. A measured backend whose account is out of credit still has its key set, so the router tries it first and it fails on every call: leave its key blank for the run (`EXA_API_KEY= uv run ...`) to take it out. The tools expose search and
 extract today; research and browse join once the routing guide can say when
 each is worth its bill.
 

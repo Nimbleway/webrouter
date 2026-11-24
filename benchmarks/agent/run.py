@@ -89,6 +89,7 @@ import httpx
 from direct import DIRECT_PREFIX, WITHHELD_SIGNATURE, DirectResult, DirectTools  # benchmarks/agent/direct.py
 from dotenv import load_dotenv
 from report import write as write_report  # benchmarks/agent/report.py, beside this script
+from routed import ROUTED_ARMS, routed_record, routed_routers  # benchmarks/agent/routed.py
 
 from web_router import AsyncWebRouter
 from web_router.constants import EVALS_CSV_SET
@@ -489,8 +490,7 @@ def build_arm(
     backend = spec.removeprefix(WEB_ROUTER_PREFIX)
     guided = not backend.endswith(NO_GUIDE_SUFFIX)
     provider = backend.removesuffix(NO_GUIDE_SUFFIX)
-    # A preset is auto on a router built with its chain (run() hands each preset's arms that router).
-    provider = "auto" if provider in WEB_ROUTER_PRESETS else provider
+    provider = "auto" if provider in {**WEB_ROUTER_PRESETS, **ROUTED_ARMS} else provider
     kind = OpenAITools if platform == OPENAI else ClaudeTools
     tools = kind(router, provider=provider, max_results=max_results)
     system = f"{TASK_PROMPT}\n\n{tools.guide()}" if guided else TASK_PROMPT
@@ -1238,12 +1238,12 @@ async def run(args: argparse.Namespace, arm_specs: list[tuple[str, str, str]]) -
     failing = apply_outage(args.outage) if args.outage else {}
     withholds = dataset.withholds if dataset.withheld_markers else None
     _WITHHOLDS.set(withholds)
-    presets = {
+    plain = {**failing, "auto": {"chain": default_outage_chain(failing)}} if failing else None
+    presets = routed_routers(WithholdingRouter, dataset, asked := {_preset(s) for _, _, s in arm_specs}, plain) | {
         preset: WithholdingRouter(dataset, provider_config={"auto": {"chain": outage_chain(chain, failing)}})
         for preset, chain in WEB_ROUTER_PRESETS.items()
-        if any(_preset(spec) == preset for _, _, spec in arm_specs)
+        if preset in asked
     }
-    plain = {**failing, "auto": {"chain": default_outage_chain(failing)}} if failing else None
     async with WithholdingRouter(dataset, provider_config=plain) as router, contextlib.AsyncExitStack() as stack:
         for preset_router in presets.values():
             await stack.enter_async_context(preset_router)
@@ -1260,7 +1260,7 @@ async def run(args: argparse.Namespace, arm_specs: list[tuple[str, str, str]]) -
             if arm.spec in backends:
                 continue
             if arm.executor is not None:
-                backends[arm.spec] = backend_config(arm.executor)
+                backends[arm.spec] = backend_config(arm.executor) | routed_record(_preset(arm.spec))
             elif arm.mcp_vendors:
                 backends[arm.spec] = mcp_config(arm)
         setup_file = args.out / "run.json"
@@ -1435,9 +1435,9 @@ def _recordable(options: dict[str, Any]) -> dict[str, Any]:
 
 
 def _preset(spec: str) -> str | None:
-    """The :data:`WEB_ROUTER_PRESETS` entry a ``web-router:`` arm runs on, if any."""
+    """The :data:`WEB_ROUTER_PRESETS` or :data:`ROUTED_ARMS` entry of a ``web-router:`` arm: auto on its own router."""
     backend = spec.removeprefix(WEB_ROUTER_PREFIX).removesuffix(NO_GUIDE_SUFFIX)
-    return backend if spec.startswith(WEB_ROUTER_PREFIX) and backend in WEB_ROUTER_PRESETS else None
+    return backend if spec.startswith(WEB_ROUTER_PREFIX) and backend in {**WEB_ROUTER_PRESETS, **ROUTED_ARMS} else None
 
 
 def _positive_int(value: str) -> int:
