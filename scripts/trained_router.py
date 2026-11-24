@@ -99,6 +99,31 @@ def differences(rows: list[list[Any]], *, table: ToolTable | None = None) -> lis
     return out
 
 
+def _backup(outputs: list[tuple[Path, Path]], staged: Path) -> dict[Path, Path]:
+    backups = {}
+    for index, (_, destination) in enumerate(outputs):
+        if destination.exists():
+            backup = staged / f"previous-{index}"
+            backup.write_bytes(destination.read_bytes())
+            backups[destination] = backup
+    return backups
+
+
+def _publish(outputs: list[tuple[Path, Path]], backups: dict[Path, Path]) -> None:
+    published = []
+    try:
+        for artifact, destination in outputs:
+            artifact.replace(destination)
+            published.append(destination)
+    except OSError:
+        for destination in reversed(published):
+            if backup := backups.get(destination):
+                backup.replace(destination)
+            else:
+                destination.unlink()
+        raise
+
+
 def import_release(source: Path, version: str, rows: list[list[Any]]) -> list[str]:
     """Stage and compare every output before replacing any file in the existing release."""
     with TemporaryDirectory(dir=DATA.parent) as temporary:
@@ -115,24 +140,7 @@ def import_release(source: Path, version: str, rows: list[list[Any]]) -> list[st
         GOLDEN.parent.mkdir(parents=True, exist_ok=True)
         outputs = [(staged / name, DATA / name) for name in (TABLE_FILE, TRAINED_MANIFEST_FILE)]
         outputs.append((golden, GOLDEN))
-        backups = {}
-        for index, (_, destination) in enumerate(outputs):
-            if destination.exists():
-                backup = staged / f"previous-{index}"
-                backup.write_bytes(destination.read_bytes())
-                backups[destination] = backup
-        published = []
-        try:
-            for artifact, destination in outputs:
-                artifact.replace(destination)
-                published.append(destination)
-        except OSError:
-            for destination in reversed(published):
-                if backup := backups.get(destination):
-                    backup.replace(destination)
-                else:
-                    destination.unlink()
-            raise
+        _publish(outputs, _backup(outputs, staged))
     return []
 
 
