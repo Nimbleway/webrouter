@@ -17,7 +17,7 @@ from eight vendors at once.
 - **When one runs out, the next answers.** A vendor that is rate-limited, down
   or returns nothing passes the call to the next free one. One vendor's limit
   doesn't stop your agent, and you write no fallback code.
-- **Free first, paid when you choose.** Add a key for any vendor and the same
+- **Free to start, paid when you choose.** Add a key for any vendor and the same
   code uses it first, with the free vendors still behind it as the fallback.
 
 ## Try it in a minute
@@ -44,7 +44,8 @@ The one prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installat
 
     with WebRouter() as router:  # no key anywhere
         results = router.search("what is retrieval augmented generation", max_results=5, timeout=10)
-        page = router.extract(results.urls[0], timeout=15)
+        if results.urls:
+            page = router.extract(results.urls[0], timeout=15)
 
     print(results.provider, results.cost_usd)  # e.g. nimble 0.0
     ```
