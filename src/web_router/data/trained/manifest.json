@@ -1,0 +1,12 @@
+{
+  "_about": "The trained router's release: one version for its data files and the features they were trained with. Written by `make trained-router`; do not edit by hand.",
+  "router": "trained",
+  "version": "0.1.0",
+  "schema": 1,
+  "built": "2026-11-24",
+  "tool_table": {
+    "file": "tool_table.json",
+    "sha256": "40e094a8cd3251acc6380432d1aac13d91c783bf9dc3902c4b65bad3db273e1a",
+    "requests": 2998
+  }
+}

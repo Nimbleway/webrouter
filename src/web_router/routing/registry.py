@@ -3,7 +3,7 @@
 Experimental. A name maps to a factory, called with ``router_config``'s
 entries as keyword arguments when a router is built; what it returns is
 attached as any ``router=`` object is. ``rules``, the routers' default,
-``remote``, ``llm``, ``systemone``, ``gemini``, ``fallback``, which asks a list of
+``trained``, ``remote``, ``llm``, ``systemone``, ``gemini``, ``fallback``, which asks a list of
 routers in turn, ``preferred`` and its deprecated ``cheapest_first`` alias are built in and imported only when
 used; registering a name overrides a built-in one of that name, and
 unregistering it brings the built-in back.
@@ -36,6 +36,7 @@ from web_router.constants_invoke import (
 from web_router.constants_prefer import PREFERRED_ROUTER_NAME
 from web_router.constants_remote import REMOTE_ROUTER_NAME
 from web_router.constants_routing import CHEAPEST_ROUTER_NAME, RULES_ROUTER_NAME
+from web_router.constants_trained import TRAINED_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
 from web_router.routing._runner import _on_private_loop
 from web_router.routing.invoke import RouterLike
@@ -45,6 +46,7 @@ RouterFactory = Callable[..., RouterLike]
 
 _BUILTIN_ROUTERS: dict[str, tuple[str, str]] = {
     RULES_ROUTER_NAME: ("web_router.routing.rules", "RulesRouter"),
+    TRAINED_ROUTER_NAME: ("web_router.routing.trained", "TrainedRouter"),
     REMOTE_ROUTER_NAME: ("web_router.routing.remote", "RemoteRouter"),
     LLM_ROUTER_NAME: ("web_router.routing.decider_llm", "llm_router"),
     SYSTEMONE_ROUTER_NAME: ("web_router.routing.decider_systemone", "systemone_router"),

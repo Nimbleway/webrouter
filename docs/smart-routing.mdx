@@ -254,7 +254,9 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships one keyless router, `rules`, attached unless you pass
+The library ships two keyless routers. `router="trained"` picks the method
+from a table trained on labelled requests: see
+[The trained router](/smart-routing#the-trained-router). The other, `rules`, is attached unless you pass
 `router=` (`router="rules"` names it, `router=None` attaches none): a prompt
 with a URL is extracted; one asking in so many words for a report, a comparison
 or an in-depth analysis is researched, or searched when no research backend is
@@ -275,6 +277,56 @@ server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-budget_status).
+
+## The trained router
+
+`router="trained"` picks a request's method from a table built from 2,998
+labelled requests in public web-agent benchmarks. It is experimental, needs no
+key, calls nothing and answers in microseconds. Like `rules`, only `plan()`
+and `run()` ask it, and it ranks no backends.
+
+```python
+from web_router import WebRouter
+
+router = WebRouter(router="trained")
+plan = router.plan("compare the pricing plans of the top 5 CRM tools")
+plan.tool             # "research"
+plan.decision.reason  # "trained 0.1.0: research for verb=analyze, url_target=none"
+```
+
+It reads five things in the prompt, each with a regular expression:
+
+| Feature | Values | What it reads |
+|---|---|---|
+| `verb` | `extract`, `act`, `navigate`, `compile`, `analyze`, `question`, `other` | the leading verb after openers like "please" or "can you", or a question word |
+| `url_target` | `none`, `site`, `page` | no URL, a URL to a site's root, or a URL to one page |
+| `plural` | `yes`, `no` | an ask for many items: all, every, list, top 10 |
+| `kw_research` | `yes`, `no` | a research word: report, compare, in-depth, overview |
+| `ui_action` | `yes`, `no` | an action on a page: click, log in, add to cart |
+
+The table counts, for each combination of values, how many training requests
+each method served. The router looks up the prompt's five values; a
+combination training saw fewer than 20 times backs off to the first four
+values, then three, down to the counts of every request. It ranks that row's
+methods, most common first, and puts `search` last when the row does not name
+it. The expressions read English.
+
+Three methods are treated apart:
+
+- `browse` is ranked only when you opt in, since a browser agent is slow and
+  billed: `router_config={"browse": True}`. Without it, the row's next method
+  runs.
+- `extract` is ranked only when the call names a URL that passed your
+  [URL policy](/smart-routing#url-policy).
+- `answer` is not a method the table was trained on, so it is never picked.
+
+The table and the expressions ship as one versioned release, apart from the
+library's own version: `src/web_router/data/trained/manifest.json` names the
+version, and every decision's `reason` starts with it. The version changes only
+when a newly trained table ships. A golden file of two thousand requests, with
+the features and method the training code gave each one, is replayed in the
+tests, so the shipped expressions cannot drift from the ones the table was
+trained with.
 
 ## A router service
 
