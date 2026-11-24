@@ -73,10 +73,10 @@ class DataDrivenRouter:
         reason, prefer = self._reason(row, tools[0]), self.prefer or req.prefer
         runs = req.pinned_tool or next((t for t in tools if any(c.tool == t for c in req.candidates)), None)
         attempts = search_attempts(req, self.providers.search, prefer) if runs == "search" else None
+        if runs == "search" and req.pinned_tool is None and tools[0] != runs:  # the first method has no backend
+            reason = DATA_DRIVEN_REASON_NO_BACKEND.format(reason=reason, tool=tools[0])
         if attempts is None:
             return RouteDecision(tools=tools, confidence=share, reason=reason)
-        if req.pinned_tool is None and tools[0] != runs:  # the row's first method has nothing to run on
-            reason = DATA_DRIVEN_REASON_NO_BACKEND.format(reason=reason, tool=tools[0])
         order = DATA_DRIVEN_ORDERS.get(prefer, DATA_DRIVEN_ORDERS[None])
         reason = DATA_DRIVEN_REASON_BACKENDS.format(reason=reason, order=order, measured=self.providers.measured)
         return RouteDecision(tools=tools, attempts=attempts, confidence=share, reason=reason, prefer=prefer)

@@ -101,6 +101,8 @@ def test_the_reason_says_when_search_runs_because_the_first_method_has_no_backen
     row = "data-driven 0.1.1: research for verb=analyze, url_target=none"
     decision = router.route(RouteRequest(prompt=RESEARCHY, candidates=MEASURED, deadline_s=1))
     assert decision.reason == f"{row}; research has no backend here, so search runs; {tail}"
+    one = router.route(RouteRequest(prompt=RESEARCHY, candidates=MEASURED[:1], deadline_s=1))
+    assert (one.attempts, one.reason) == (None, f"{row}; research has no backend here, so search runs")
     pinned = RouteRequest(prompt=RESEARCHY, candidates=MEASURED, deadline_s=1, pinned_tool="search")
     assert router.route(pinned).reason == f"{row}; {tail}", "a pinned search is the caller's choice, not a fallback"
 

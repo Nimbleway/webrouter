@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -98,5 +99,21 @@ def test_a_provider_table_that_is_not_the_one_the_manifest_names_is_refused(monk
         with pytest.raises(ConfigurationError) as refused:
             shipped_providers()
         assert str(refused.value) == NOT_USABLE + "its checksum does not match the manifest."
+    finally:
+        shipped_providers.cache_clear()
+
+
+@pytest.mark.parametrize("error", [json.JSONDecodeError("bad", "{", 0), FileNotFoundError("gone")])
+def test_a_release_file_that_cannot_be_read_is_a_provider_table_error(
+    error: Exception, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unreadable(name: str, **kwargs: Any) -> Any:
+        raise error
+
+    monkeypatch.setattr(providers_module, "read_release", unreadable)
+    shipped_providers.cache_clear()
+    try:
+        with pytest.raises(ConfigurationError, match="provider table is not usable"):
+            shipped_providers()
     finally:
         shipped_providers.cache_clear()

@@ -19,6 +19,7 @@ from typing import Any
 from web_router.exceptions import ProviderNotInstalledError, WebRouterError
 from web_router.providers._pinning import pinned_request, split_pin
 from web_router.registry import available_providers, get_provider_class
+from web_router.routing.data_driven.providers import MEASURES
 from web_router.routing.entry_names import candidate_id
 from web_router.types import SearchRequest
 
@@ -35,7 +36,6 @@ WHY_NO_BACKEND = "web-router has no search backend of this name"
 WHY_NO_MODE = "no mode of this backend sends the request the row was measured with"
 WHY_ID_DIFFERS = "the candidate {id} does not send the request the row was measured with"
 WHY_ID_NOT_SHOWN = "the id {id} is not one a router is shown: it is not the candidate's own spelling"
-FIELDS = ("quality", "ci95", "usd_per_1k", "p50_s")
 
 
 def _wanted(provider: Any, depth: str, effort: str | None) -> Any:
@@ -109,7 +109,7 @@ def provider_table(lookup: dict[str, Any]) -> dict[str, Any]:
         if cid is None:
             left_out.append({"arm": row["arm"], "why": why})
         else:
-            kept.append({"id": cid, "arm": row["arm"], **{field: row.get(field) for field in FIELDS}})
+            kept.append({"id": cid, "arm": row["arm"], **{field: row.get(field) for field in MEASURES}})
     about = "Written by `make data-driven-router`; do not edit by hand."
     head = {"_about": about, "source": lookup["source"], "judge": lookup["judge"], "measured": lookup["version"]}
     return {**head, "search": kept, "left_out": left_out}

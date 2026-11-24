@@ -153,7 +153,11 @@ def test_with_no_lookup_the_shipped_release_version_is_kept(release: tuple[Path,
     assert (_manifest(output)["version"], _published(output)) == ("0.1.2", before)
     with pytest.raises(ValueError, match="version must match"):
         importer.import_release(source, "0.1.3", [])
-    assert importer.import_release(source, "0.1.1", []) == [], "the table's own version is always taken"
+    with pytest.raises(ValueError, match=r"never moves back: '0\.1\.2' has shipped"):
+        importer.import_release(source, "0.1.1", [])  # the table's own version, but below the shipped release
+    assert _manifest(output)["version"] == "0.1.2"
+    with pytest.raises(ValueError, match="three numbers"):
+        importer.import_release(source, "0.1.02", [])
 
 
 @pytest.mark.parametrize("version", ["0.1.2", "0.1.1", "0.0.9", "0.1.10"])
@@ -168,9 +172,9 @@ def test_a_lookup_alone_takes_only_a_higher_version_than_the_shipped_release(
         return
     with pytest.raises(ValueError) as refused:
         importer.import_release(source, version, [], table)
-    assert str(refused.value) == (
-        f"a lookup table alone takes a version higher than the shipped release's '0.1.2'; got {version!r}"
-    )
+    same = f"a lookup table alone takes a version higher than the shipped release's '0.1.2'; got {version!r}"
+    back = f"a release never moves back: '0.1.2' has shipped, and the import asks for {version!r}"
+    assert str(refused.value) == (same if version == "0.1.2" else back)
     assert _manifest(output)["version"] == "0.1.2"
 
 

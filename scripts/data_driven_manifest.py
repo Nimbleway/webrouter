@@ -36,7 +36,8 @@ MSG_PROVIDER_GONE = (
 MSG_PROVIDER_CHANGED = (
     "the provider table differs from the shipped one, so the release needs a version higher than {shipped!r}"
 )
-VERSION_FORM = re.compile(r"(\d+)\.(\d+)\.(\d+)")
+MSG_VERSION_BACK = "a release never moves back: {shipped!r} has shipped, and the import asks for {got!r}"
+VERSION_FORM = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
 
 
 def shipped(folder: Path) -> dict[str, Any]:
@@ -85,6 +86,8 @@ def check_version(entry: dict[str, Any], version: str, before: dict[str, Any], l
     asked, released = _numbers(version), _numbers(before.get("version"))
     if asked is None:
         raise ValueError(MSG_VERSION_FORM.format(got=version))
+    if released is not None and asked < released:
+        raise ValueError(MSG_VERSION_BACK.format(got=version, shipped=before.get("version")))
     unchanged = (before.get("tool_table") or {}).get("sha256") == entry["sha256"]
     own = entry["version"] == version
     higher = released is not None and asked > released
