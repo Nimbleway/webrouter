@@ -216,7 +216,8 @@ router still needs its own `route_modes=True` to receive any modes, extras
 included; your own `route_modes=False` turns them off with the rest. One the backend refuses is
 left out and recorded with why; one that sends what the call already sends is
 the backend's own candidate, so it is not shown again. A model router passes
-its decider's `extra_modes` on. A combination has an estimated price only when the
+its decider's `extra_modes` on, and the built-in `data-driven` router names the
+modes its benchmark measured this way. A combination has an estimated price only when the
 price list has a row for it, and one without a price never fits under a cost
 cap. A `fallback` router does not pass its members' `extra_modes` on.
 

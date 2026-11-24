@@ -30,6 +30,18 @@ DATA_DRIVEN_REASON_LAST_RESORT = (
 )
 """The reason when every method of the row is held back: a browse not opted into, an extract with no URL."""
 
+DATA_DRIVEN_REASON_BACKENDS = "{reason}; search backends {order}, by the {measured} measures"
+"""The reason's tail when the router ranks search's backends from its provider table."""
+
+DATA_DRIVEN_ORDERS = {
+    "cheap": "cheapest first",
+    "fast": "fastest first",
+    None: "by measured quality, the cheapest of the best first",
+}
+"""How the search backends are ranked, by the preference: what :data:`DATA_DRIVEN_REASON_BACKENDS` says."""
+
+MSG_DATA_DRIVEN_PROVIDERS = "the data-driven router's provider table is not usable: {why}."
+
 MSG_DATA_DRIVEN_BROWSE = "the data-driven router takes browse=True or browse=False; got {got!r}."
 
 MSG_DATA_DRIVEN_SCHEMA = (
