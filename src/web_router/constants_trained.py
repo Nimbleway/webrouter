@@ -37,3 +37,10 @@ MSG_TRAINED_SCHEMA = "the trained router's manifest has schema {got!r}; this ver
 MSG_TRAINED_TABLE = "the trained router's tool table is not usable: {why}."
 
 MSG_TRAINED_ROW_TOTAL = "a row's total must equal the sum of its method counts"
+MSG_TRAINED_CHECKSUM = "its checksum does not match the manifest"
+MSG_TRAINED_MIN_COUNT = "min_count must be a positive integer"
+MSG_TRAINED_FEATURES = "it names features this version cannot compute"
+MSG_TRAINED_METHODS = "it names methods web-router does not route"
+MSG_TRAINED_TABLE_DEPTH = "it needs one table per key length"
+MSG_TRAINED_ROW_WIDTH = "a row needs one count per method and their total"
+MSG_TRAINED_ROOT = "it has no row for every request"

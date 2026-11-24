@@ -10,7 +10,14 @@ import pytest
 from tests.plan_helpers import called_fixture  # noqa: F401  (fixture)
 from tests.routing_helpers import wr
 from web_router import RouteRequest
-from web_router.constants_trained import MSG_TRAINED_ROW_TOTAL
+from web_router.constants_trained import (
+    MSG_TRAINED_FEATURES,
+    MSG_TRAINED_METHODS,
+    MSG_TRAINED_ROOT,
+    MSG_TRAINED_ROW_TOTAL,
+    MSG_TRAINED_ROW_WIDTH,
+    MSG_TRAINED_TABLE_DEPTH,
+)
 from web_router.exceptions import ConfigurationError
 from web_router.routing.registry import available_routers
 from web_router.routing.trained import TrainedRouter
@@ -102,13 +109,13 @@ def test_a_request_matching_no_frequent_row_gets_the_overall_reason(monkeypatch:
 @pytest.mark.parametrize(
     ("change", "why"),
     [
-        ({"features": ["verb", "mood"]}, "features this version cannot compute"),
-        ({"labels": ["search", "teleport"]}, "methods web-router does not route"),
-        ({"tables": [{"": [1, 1]}]}, "one table per key length"),
-        ({"tables": []}, "one table per key length"),
-        ({"tables": [{"": [1, 1]}, {"other": [1]}]}, "one count per method and their total"),
-        ({"tables": [{}, {}]}, "no row for every request"),
-        ({"tables": [{"": [0, 0]}, {}]}, "no row for every request"),
+        ({"features": ["verb", "mood"]}, MSG_TRAINED_FEATURES),
+        ({"labels": ["search", "teleport"]}, MSG_TRAINED_METHODS),
+        ({"tables": [{"": [1, 1]}]}, MSG_TRAINED_TABLE_DEPTH),
+        ({"tables": []}, MSG_TRAINED_TABLE_DEPTH),
+        ({"tables": [{"": [1, 1]}, {"other": [1]}]}, MSG_TRAINED_ROW_WIDTH),
+        ({"tables": [{}, {}]}, MSG_TRAINED_ROOT),
+        ({"tables": [{"": [0, 0]}, {}]}, MSG_TRAINED_ROOT),
         ({"tables": [{"": [1, 1]}, {"question": [1, 20]}]}, MSG_TRAINED_ROW_TOTAL),
     ],
 )

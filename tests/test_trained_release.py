@@ -10,7 +10,12 @@ from typing import Any
 
 import pytest
 
-from web_router.constants_trained import TRAINED_DATA_DIR, TRAINED_MANIFEST_FILE
+from web_router.constants_trained import (
+    MSG_TRAINED_CHECKSUM,
+    MSG_TRAINED_MIN_COUNT,
+    TRAINED_DATA_DIR,
+    TRAINED_MANIFEST_FILE,
+)
 from web_router.exceptions import ConfigurationError
 from web_router.routing.trained import table as table_module
 from web_router.routing.trained.table import shipped_table
@@ -50,14 +55,14 @@ def _write_release(folder: Path, min_count: Any = 20) -> Path:
 def test_loading_a_release_checks_the_table_bytes(release: Path) -> None:
     table = _write_release(release)
     table.write_text(table.read_text().replace("[1, 1]", "[2, 2]"), encoding="utf-8")
-    with pytest.raises(ConfigurationError, match="checksum does not match the manifest"):
+    with pytest.raises(ConfigurationError, match=MSG_TRAINED_CHECKSUM):
         shipped_table()
 
 
 @pytest.mark.parametrize("min_count", [0, -1, True, 1.5, "20", None, float("nan"), float("inf")])
 def test_loading_a_release_refuses_invalid_thresholds(release: Path, min_count: Any) -> None:
     _write_release(release, min_count)
-    with pytest.raises(ConfigurationError, match="min_count must be a positive integer"):
+    with pytest.raises(ConfigurationError, match=MSG_TRAINED_MIN_COUNT):
         shipped_table()
 
 

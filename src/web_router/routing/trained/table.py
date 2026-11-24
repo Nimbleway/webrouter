@@ -16,9 +16,16 @@ from importlib import resources
 from typing import Any, get_args
 
 from web_router.constants_trained import (
+    MSG_TRAINED_CHECKSUM,
+    MSG_TRAINED_FEATURES,
+    MSG_TRAINED_METHODS,
+    MSG_TRAINED_MIN_COUNT,
+    MSG_TRAINED_ROOT,
     MSG_TRAINED_ROW_TOTAL,
+    MSG_TRAINED_ROW_WIDTH,
     MSG_TRAINED_SCHEMA,
     MSG_TRAINED_TABLE,
+    MSG_TRAINED_TABLE_DEPTH,
     TRAINED_DATA_DIR,
     TRAINED_MANIFEST_FILE,
     TRAINED_SCHEMA,
@@ -63,7 +70,7 @@ def _read(name: str, *, sha256: str | None = None) -> Any:
     folder = resources.files("web_router").joinpath(*TRAINED_DATA_DIR)
     content = (folder / name).read_bytes()
     if sha256 is not None and hashlib.sha256(content).hexdigest() != sha256:
-        raise ConfigurationError(MSG_TRAINED_TABLE.format(why="its checksum does not match the manifest"))
+        raise ConfigurationError(MSG_TRAINED_TABLE.format(why=MSG_TRAINED_CHECKSUM))
     return json.loads(content)
 
 
@@ -73,12 +80,12 @@ def checked_table(version: str, data: Mapping[str, Any]) -> ToolTable:
     min_count = data["min_count"]
     rows = [row for table in tables for row in table.values()]
     checks = (
-        (type(min_count) is not int or min_count <= 0, "min_count must be a positive integer"),
-        (set(features) - set(FEATURES), "it names features this version cannot compute"),
-        (set(labels) - set(get_args(ToolName)), "it names methods web-router does not route"),
-        (len(tables) != len(features) + 1, "it needs one table per key length"),
-        (any(len(row) != len(labels) + 1 for row in rows), "a row needs one count per method and their total"),
-        (not tables or not sum(tables[0].get("", [0])[:-1]), "it has no row for every request"),
+        (type(min_count) is not int or min_count <= 0, MSG_TRAINED_MIN_COUNT),
+        (set(features) - set(FEATURES), MSG_TRAINED_FEATURES),
+        (set(labels) - set(get_args(ToolName)), MSG_TRAINED_METHODS),
+        (len(tables) != len(features) + 1, MSG_TRAINED_TABLE_DEPTH),
+        (any(len(row) != len(labels) + 1 for row in rows), MSG_TRAINED_ROW_WIDTH),
+        (not tables or not sum(tables[0].get("", [0])[:-1]), MSG_TRAINED_ROOT),
     )
     for problem, why in checks:
         if problem:
