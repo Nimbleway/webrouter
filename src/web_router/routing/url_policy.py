@@ -133,6 +133,7 @@ def public_only(url: str) -> str | None:
         return _resolved_refusal(host)
     return None
 
+
 def _answers(host: str) -> frozenset[str] | None:
     """The addresses ``host`` resolves to now, or ``None`` when the name does not resolve here."""
     try:

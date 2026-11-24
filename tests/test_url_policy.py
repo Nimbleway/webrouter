@@ -218,7 +218,9 @@ def test_the_browser_navigation_guard_reads_a_bare_0x_octet_as_zero_too() -> Non
     reason = policy.refusal("http://127.0x.0x.1:9333/json")
     assert reason is not None and "debugging endpoint" in reason
 
+
 # -- public_only: a name is judged by the addresses it resolves to -------------
+
 
 def _lookups(monkeypatch: pytest.MonkeyPatch, table: dict[str, list[str]]) -> None:
     """``socket.getaddrinfo`` answering from ``table``, a public IPv4 for any other name."""
@@ -231,6 +233,7 @@ def _lookups(monkeypatch: pytest.MonkeyPatch, table: dict[str, list[str]]) -> No
         ]
 
     monkeypatch.setattr(socket, "getaddrinfo", fake)
+
 
 @pytest.mark.parametrize(
     ("host", "addresses", "why"),
@@ -248,9 +251,11 @@ def test_public_only_refuses_a_name_that_resolves_to_a_non_public_address(
     _lookups(monkeypatch, {host: addresses})
     assert public_only(f"http://{host}:8080/x") == why
 
+
 def test_public_only_admits_a_name_that_resolves_only_to_public_addresses(monkeypatch: pytest.MonkeyPatch) -> None:
     _lookups(monkeypatch, {"public.example": ["93.184.215.14", "2606:4700::1111"]})
     assert public_only("https://public.example/x") is None
+
 
 def test_public_only_admits_a_name_whose_answer_changes_between_lookups(monkeypatch: pytest.MonkeyPatch) -> None:
     # A public name may answer differently on the next lookup; every answer here is public.
@@ -262,6 +267,7 @@ def test_public_only_admits_a_name_whose_answer_changes_between_lookups(monkeypa
 
     monkeypatch.setattr(socket, "getaddrinfo", fake)
     assert public_only("http://rebind.example/x") is None
+
 
 def test_public_only_judges_a_literal_address_without_a_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     def fail(*args: object, **kwargs: object) -> None:

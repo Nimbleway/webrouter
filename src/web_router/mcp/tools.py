@@ -19,7 +19,6 @@ there.
 
 from __future__ import annotations
 
-import asyncio
 import functools
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import AsyncExitStack
@@ -113,7 +112,7 @@ from web_router.mcp.shaping import (
     shape_research,
     shape_search,
 )
-from web_router.mcp.urls import screen
+from web_router.mcp.urls import ascreen
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
     ExtractResponse,
@@ -290,8 +289,7 @@ class WebRouterTools:
 
     async def _extract(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_EXTRACT, arguments)
-        # Screening resolves names, so keep that lookup off the event loop.
-        kwargs["urls"] = await asyncio.to_thread(screen, MCP_TOOL_EXTRACT, kwargs["urls"])
+        kwargs["urls"] = await ascreen(MCP_TOOL_EXTRACT, kwargs["urls"])
         response = await self.router.extract(**kwargs)
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
         return shape_extract(response, record.handle, budget=max_response_chars())
@@ -320,8 +318,7 @@ class WebRouterTools:
 
     async def _browse(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_BROWSE, arguments)
-        # Screening resolves names, so keep that lookup off the event loop.
-        await asyncio.to_thread(screen, MCP_TOOL_BROWSE, [kwargs["start_url"]] if "start_url" in kwargs else [])
+        await ascreen(MCP_TOOL_BROWSE, [kwargs["start_url"]] if "start_url" in kwargs else [])
         job = await self.router.submit_browse(**kwargs)
         try:
             response = await job.aresult(timeout=(waited := wait_left(self.browse_wait)))

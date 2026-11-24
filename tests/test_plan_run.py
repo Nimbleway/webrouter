@@ -120,6 +120,7 @@ async def test_async_plan_resolves_urls_off_the_event_loop(monkeypatch: pytest.M
     await _wr(AsyncWebRouter, router=chooser("answer"), url_policy="public_only").plan(PROMPT)
     assert seen and all(thread is not loop_thread for thread in seen)
 
+
 async def test_async_plan_and_run_route_as_the_sync_ones_do(called: list[str]) -> None:
     wr = _wr(AsyncWebRouter, router=chooser("answer"))
     plan = await wr.plan(PROMPT)
