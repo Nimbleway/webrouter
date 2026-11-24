@@ -254,8 +254,8 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships two keyless routers. `router="data-driven"` picks the method
-from a table trained on labelled requests: see
+The library ships two keyless routers. `router="data-driven"` ranks web
+methods from bundled data without a routing model call: see
 [The data-driven router](/smart-routing#the-data-driven-router). The other, `rules`, is attached unless you pass
 `router=` (`router="rules"` names it, `router=None` attaches none): a prompt
 with a URL is extracted; one asking in so many words for a report, a comparison
@@ -280,9 +280,9 @@ sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-b
 
 ## The data-driven router
 
-`router="data-driven"` picks a request's method from a table built from 1,600
-requests from public benchmarks and 1,078 synthetic requests, all labelled by
-the trainers. It is experimental, needs no key, calls nothing and answers in
+`router="data-driven"` ranks web methods from bundled data without a routing
+model call. The data is a table built from 1,600 requests from public
+benchmarks and 1,078 synthetic requests, all labelled by the trainers. It is experimental, needs no key, calls nothing and answers in
 microseconds. Like `rules`, only `plan()` and `run()` ask it, and it ranks no backends.
 
 Try `data-driven` when you want method rankings from training counts, including
