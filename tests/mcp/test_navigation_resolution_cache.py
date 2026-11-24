@@ -18,8 +18,8 @@ from typing import Any
 import pytest
 
 from tests.mcp.test_navigation import FakeRequest, FakeRoute, _installed
-from web_router.constants_mcp_navigation import MCP_BROWSER_DNS_CACHE_MAX
-from web_router.mcp import navigation
+from web_router.mcp import navigation, navigation_dns
+from web_router.mcp.navigation_dns import MCP_BROWSER_DNS_CACHE_MAX
 
 
 def _counted(monkeypatch: pytest.MonkeyPatch, answers: dict[str, list[str]]) -> list[tuple[str, Any]]:
@@ -84,7 +84,7 @@ async def test_a_page_with_many_subresources_resolves_its_host_once(monkeypatch:
 
 async def test_a_rebound_name_is_not_served_a_stale_allow(monkeypatch: pytest.MonkeyPatch) -> None:
     guard, _ = await _installed()
-    monkeypatch.setattr(navigation, "MCP_BROWSER_DNS_CACHE_TTL_S", 0)
+    monkeypatch.setattr(navigation_dns, "MCP_BROWSER_DNS_CACHE_TTL_S", 0)
     answers = {"example.com": ["93.184.215.14"]}
     asked = _counted(monkeypatch, answers)
 
@@ -124,4 +124,4 @@ async def test_the_answer_cache_is_bounded(monkeypatch: pytest.MonkeyPatch) -> N
     for index in range(MCP_BROWSER_DNS_CACHE_MAX + 10):
         await guard._resolved_refusal(f"https://host{index}.example/")
 
-    assert len(guard._resolved) == MCP_BROWSER_DNS_CACHE_MAX
+    assert len(guard._dns._answers) == MCP_BROWSER_DNS_CACHE_MAX

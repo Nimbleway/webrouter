@@ -35,7 +35,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import socket
-import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -64,7 +63,7 @@ from web_router.constants import (
     MCP_MSG_BROWSER_REFUSED_UNVERIFIED,
     MS_PER_SECOND,
 )
-from web_router.constants_mcp_navigation import MCP_BROWSER_DNS_CACHE_MAX, MCP_BROWSER_DNS_CACHE_TTL_S
+from web_router.mcp.navigation_dns import ResolutionCache
 from web_router.mcp.navigation_rules import files_allowed, private_allowed, private_refusal
 
 if TYPE_CHECKING:
@@ -152,11 +151,7 @@ class NavigationGuard:
         self._page: Page | None = None
         self._blocked: str | None = None
         self._named: dict[tuple[str, int | None], str] = {}
-        # Answers expire on a short timer: a name can be rebound after the
-        # browser has made its own lookup, so a stale allow is unsafe.
-        self._resolved: dict[tuple[str, int | None], tuple[float, str | None]] = {}
-        # One lookup in flight per name, so a page's burst shares the work.
-        self._pending: dict[tuple[str, int | None], asyncio.Task[str | None]] = {}
+        self._dns = ResolutionCache()
         self._overflowed = False
 
     async def install(self, page: Page) -> None:
@@ -263,35 +258,17 @@ class NavigationGuard:
         if host is None or host_address(host) is not None:
             # No name to look up: a literal address was judged as it stands.
             return None
-        key = (host, port)
-        cached = self._resolved.get(key)
-        if cached is not None and cached[0] > time.monotonic():
-            # A short-lived answer is safe to reuse and saves a slow lookup.
-            return cached[1]
-        lookup = self._pending.get(key)
-        if lookup is None:
-            lookup = asyncio.ensure_future(self._lookup(url, host, port, key))
-            self._pending[key] = lookup
-        return await lookup
+        return await self._dns.get((host, port), lambda: self._resolve(url, host, port))
 
-    async def _lookup(self, url: str, host: str, port: int | None, key: tuple[str, int | None]) -> str | None:
+    async def _resolve(self, url: str, host: str, port: int | None) -> str | None:
         try:
-            try:
-                # On a worker thread: a lookup can take seconds, and every other
-                # request of every session waits on this event loop meanwhile.
-                answers = await asyncio.to_thread(socket.getaddrinfo, host, port, type=socket.SOCK_STREAM)
-            except (OSError, UnicodeError):
-                # A name that does not resolve here reaches nothing through the browser either.
-                reason = None
-            else:
-                reason = self.policy.resolved_refusal(url, (str(answer[4][0]) for answer in answers))
-            self._resolved[key] = (time.monotonic() + MCP_BROWSER_DNS_CACHE_TTL_S, reason)
-            if len(self._resolved) > MCP_BROWSER_DNS_CACHE_MAX:
-                # Drop the oldest name: a busy page must not grow the cache forever.
-                del self._resolved[next(iter(self._resolved))]
-            return reason
-        finally:
-            self._pending.pop(key, None)
+            # On a worker thread: a lookup can take seconds, and every other
+            # request of every session waits on this event loop meanwhile.
+            answers = await asyncio.to_thread(socket.getaddrinfo, host, port, type=socket.SOCK_STREAM)
+        except (OSError, UnicodeError):
+            # A name that does not resolve here reaches nothing through the browser either.
+            return None
+        return self.policy.resolved_refusal(url, (str(answer[4][0]) for answer in answers))
 
 
 def _is_subframe(request: Request) -> bool:
