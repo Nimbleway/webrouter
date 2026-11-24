@@ -280,10 +280,10 @@ sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-b
 
 ## The trained router
 
-`router="trained"` picks a request's method from a table built from 2,998
-labelled requests in public web-agent benchmarks. It is experimental, needs no
-key, calls nothing and answers in microseconds. Like `rules`, only `plan()`
-and `run()` ask it, and it ranks no backends.
+`router="trained"` picks a request's method from a table built from 1,920
+requests from public benchmarks and 1,078 synthetic requests, all labelled by
+the trainers. It is experimental, needs no key, calls nothing and answers in
+microseconds. Like `rules`, only `plan()` and `run()` ask it, and it ranks no backends.
 
 Try `trained` when you want method rankings from training counts, including
 `browse` when you opt in. `rules` chooses extract for a URL, research for a
@@ -333,6 +333,41 @@ when a newly trained table ships. A golden file of two thousand requests, with
 the features and method the training code gave each one, is replayed in the
 tests, so the shipped expressions cannot drift from the ones the table was
 trained with.
+
+### Trained on
+
+The training owner reports these sources for release `0.1.0`. Counts describe
+requests used, not each dataset's size. The trainers assigned the method labels;
+the source datasets do not supply those labels. The shipped table contains
+aggregate counts, and the golden requests are synthetic.
+
+| Source | Requests | Version or snapshot reported | Licence reported |
+|---|---:|---|---|
+| [Mind2Web-Live](https://huggingface.co/datasets/iMeanAI/Mind2Web-Live) | 240 | `train_20240528` / `test_20241024` | CC-BY-4.0 |
+| [WebBench](https://huggingface.co/datasets/Halluminate/WebBench) | 240 | `webbenchfinal.csv` | MIT |
+| [DeepSearchQA](https://huggingface.co/datasets/google/deepsearchqa) | 200 | `DSQA-full.csv` | Apache-2.0 |
+| [Bananalyzer](https://github.com/reworkd/bananalyzer/tree/d1b1ae52) | 154 | `d1b1ae52` | MIT |
+| [FreshQA mirror](https://huggingface.co/datasets/bojanbabic/freshqa_09302025) | 120 | 2025-09-30 | No licence stated by the mirror; [upstream](https://github.com/freshllms/freshqa/blob/main/LICENSE) Apache-2.0 |
+| [NQ-Open](https://huggingface.co/datasets/google-research-datasets/nq_open) | 120 | validation split | CC-BY-SA-3.0 |
+| [SimpleQA Verified](https://huggingface.co/datasets/google/simpleqa-verified) | 120 | `main` | MIT |
+| [WebWalkerQA](https://huggingface.co/datasets/callanwu/WebWalkerQA) | 188 | main + silver, 94 each | Apache-2.0 |
+| [Exa benchmarks](https://github.com/exa-labs/benchmarks/tree/a6a9590b) | 240 | `a6a9590b`: WebCode highlights 80, RAG 80, Company RAG 40, contents 40 | MIT |
+| [ResearchQA](https://huggingface.co/datasets/realliyifei/ResearchQA) | 80 | test split | MIT |
+| [Researchy Questions](https://huggingface.co/datasets/corbyrosset/researchy_questions) | 80 | test split | CDLA-Permissive-2.0 |
+| [WideSearch](https://huggingface.co/datasets/ByteDance-Seed/WideSearch) | 80 | `main` | Listed as `other`; no licence text reported |
+| [DeepResearch Bench](https://github.com/Ayanami0730/deep_research_bench) | 40 | `main` | Apache-2.0 |
+| [Stagehand extract evals](https://github.com/browserbase/stagehand/tree/9afa0952) | 18 | `9afa0952` | MIT |
+| Synthetic requests generated for this router | 1,078 | 790 matched-style + 288 fan-out | Not a third-party benchmark |
+
+The unpinned Hugging Face and DeepResearch Bench inputs were fetched from
+`main` and frozen on 2026-11-08 as training dataset v3. That date is a reported
+snapshot date, not an immutable revision.
+
+Licence review for distributing the derived counts is pending. In particular,
+NQ-Open's share-alike terms, Mind2Web-Live's attribution requirements,
+WideSearch's unspecified licence and the FreshQA mirror's missing licence need
+a maintainer decision. This inventory does not establish that every source
+permits redistribution of derived statistics under Apache-2.0.
 
 ## A router service
 

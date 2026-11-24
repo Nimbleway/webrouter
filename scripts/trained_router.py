@@ -6,7 +6,7 @@ and ``artifacts/router1.json``. This script
 1. runs that code on the fixed requests of :mod:`scripts.trained_prompts` and writes what it returned to
    ``tests/data/trained/golden.jsonl.gz``;
 2. copies the table to ``src/web_router/data/trained/tool_table.json`` and writes ``manifest.json`` beside it,
-   with the version and the table's checksum;
+   with the version, table checksum and delivered training-source metadata;
 3. replays the golden file against web-router's own features and table, and exits non-zero with the first
    differences when they disagree: then ``routing/trained/patterns.py`` no longer matches the training code
    and has to be updated from it.
@@ -21,7 +21,6 @@ import gzip
 import hashlib
 import importlib
 import json
-import shutil
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -52,9 +51,15 @@ def golden_rows(source: Path) -> list[list[Any]]:
 
 def write_release(source: Path, version: str) -> None:
     """Copy the table and write the manifest that names it."""
+    table = (source / SOURCE_TABLE).read_bytes()
+    data = json.loads(table)
+    requests = data["tables"][0][""][-1]
+    provenance = {name: data[name] for name in ("version", "trained_at", "sources")}
+    counts = [entry["examples"] for entry in provenance["sources"]]
+    if any(type(count) is not int or count < 0 for count in counts) or sum(counts) != requests:
+        raise ValueError("source examples must be non-negative integers summing to the table's request count")
     DATA.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source / SOURCE_TABLE, DATA / TABLE_FILE)
-    table = (DATA / TABLE_FILE).read_bytes()
+    (DATA / TABLE_FILE).write_bytes(table)
     manifest = {
         "_about": "The trained router's release: one version for its data files and the features they were "
         "trained with. Written by `make trained-router`; do not edit by hand.",
@@ -65,7 +70,8 @@ def write_release(source: Path, version: str) -> None:
         "tool_table": {
             "file": TABLE_FILE,
             "sha256": hashlib.sha256(table).hexdigest(),
-            "requests": json.loads(table)["tables"][0][""][-1],
+            "requests": requests,
+            **provenance,
         },
     }
     (DATA / TRAINED_MANIFEST_FILE).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -93,10 +99,10 @@ def main() -> int:
     parser.add_argument("--version", required=True, help="the release's version, such as 0.2.0")
     args = parser.parse_args()
     rows = golden_rows(args.source.resolve())
+    write_release(args.source.resolve(), args.version)
     GOLDEN.parent.mkdir(parents=True, exist_ok=True)
     lines = "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
     GOLDEN.write_bytes(gzip.compress(lines.encode("utf-8"), mtime=0))
-    write_release(args.source.resolve(), args.version)
     wrong = differences(rows)
     for line in wrong[:SHOWN]:
         print(line, file=sys.stderr)

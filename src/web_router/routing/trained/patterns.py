@@ -1,10 +1,9 @@
-"""The trained router's regular expressions, copied from the code it was trained with, with one change.
+"""The trained router's regular expressions, copied from the code it was trained with.
 
-The change: ``OPENER``'s loop is possessive (``)*+``). As trained (``)*``) it backtracks without bound on a
-prompt that repeats an opener, such as "i want to " twenty times, and takes seconds; possessive, it gives the
-same value on every golden request and reads a 100,000-character prompt in milliseconds.
+``OPENER``'s possessive loop (``)*+``) prevents repeated openers from backtracking exponentially.
+The training code includes the same fix; every golden request keeps the same feature values.
 
-Never edit one otherwise: the tool table holds counts of requests keyed by what these match, so a changed pattern
+Never edit one: the tool table holds counts of requests keyed by what these match, so a changed pattern
 moves a request to another row with no error. ``tests/data/trained/golden.jsonl.gz`` holds what the training code
 returned for two thousand requests, and ``tests/test_trained_golden.py`` replays it against these.
 ``make trained-router`` imports a new trained version and fails when these no longer match its code: only
