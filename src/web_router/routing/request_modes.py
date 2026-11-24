@@ -1,6 +1,7 @@
 """What a router that did not opt in to vendor modes is shown, and how many candidates a remote request carries.
 
-Experimental. A router is shown a candidate per vendor mode only when it opts in (``route_modes``). The
+Experimental. A router is shown a candidate per vendor mode only when it opts in (``route_modes``),
+and the modes it names itself (``extra_modes``). The
 ``fallback`` router shows each member the request it would see alone, so :func:`backends_only` strips the mode
 candidates for a member that did not; the ``remote`` router strips them unless its ``router_config`` opts in.
 :func:`within` holds a request to the wire's limit of entries in one list, across every method: the mode

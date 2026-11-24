@@ -1,0 +1,1 @@
+Experimental: a router's `extra_modes` maps search backends to extra candidate mode ids, including tier-at-depth combinations such as `parallel-turbo+fast`. Local routers can request extras without `route_modes`; remote routers still need their own `route_modes=True`. A caller's `route_modes=False` turns all modes off.

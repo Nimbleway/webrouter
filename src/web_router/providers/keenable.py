@@ -62,6 +62,7 @@ class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
 
     name: ClassVar[str] = PROVIDER_KEENABLE
     tiers = KEENABLE_TIERS
+    default_tier = "keenable-pro"
     supported_parameters: ClassVar[frozenset[str]] = KEENABLE_SEARCH_PARAMETERS
     depth_levels = frozenset(KEENABLE_SNIPPET_CHARS)
     refusal_reasons: ClassVar[dict[str, str]] = {"include_domains": MSG_KEENABLE_ONE_SITE}

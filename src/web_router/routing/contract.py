@@ -84,7 +84,7 @@ class Candidate:
 
     mode: str | None = None
     """The backend's vendor mode, canonical (``exa-instant+lite``); ``None`` for its default. Offered only to a router
-    that opts in with ``route_modes``."""
+    that opts in with ``route_modes`` or names the mode in its ``extra_modes``."""
 
     est_cost_usd: float | None = None
     """Its estimated cost in US dollars, at list price, or a token-billed backend's measured mean; ``None`` unknown."""

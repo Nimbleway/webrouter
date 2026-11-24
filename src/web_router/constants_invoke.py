@@ -26,6 +26,12 @@ ROUTER_ROUTE_MODES_ATTR = "route_modes"
 caller passes ``route_modes=None``: a bool. A caller's ``route_modes`` always wins; a router that declares none is
 shown backends only."""
 
+ROUTER_EXTRA_MODES_ATTR = "extra_modes"
+"""The attribute, on a router function or object, that names vendor modes it is shown beyond the ones a backend
+offers: per search backend, mode ids such as ``parallel-turbo+fast``, a tier at a depth. Each becomes a candidate
+when the backend accepts it for the call, whatever the router's own ``route_modes`` says; a caller's
+``route_modes=False`` turns them off too."""
+
 ROUTER_THREAD_NAME = "web-router-router"
 """The name of the worker thread a sync router runs on, and of the loop thread an async one runs on from sync code."""
 
@@ -39,6 +45,10 @@ MSG_ROUTE_TOOLS = "route_tools takes a collection of tool names from {known}; go
 MSG_ROUTER_ROUTE_TOOLS = "A router's route_tools attribute takes a collection of tool names from {known}; got {got!r}."
 MSG_ROUTE_MODES = "route_modes takes True, False or None; got {got!r}."
 MSG_ROUTER_ROUTE_MODES = "A router's route_modes attribute takes True or False; got {got!r}."
+MSG_ROUTER_EXTRA_MODES = (
+    "A router's extra_modes attribute takes a mapping of search backend to a list of mode ids, "
+    "such as {{'parallel': ['parallel-turbo+fast']}}; got {got!r}."
+)
 MSG_PREFER = "prefer takes {known} or None; got {got!r}."
 MSG_ROUTER_FAILED = (
     "Router {router!r} failed ({code}); fail_on_router_error=True raises rather than use the static order."

@@ -9,6 +9,7 @@ routable call through it.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
+from types import MappingProxyType
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
@@ -26,7 +27,7 @@ from web_router.routing.invoke import AttachedRouter, RouterLike, RouterOutcome
 from web_router.routing.merge_urls import UrlCheck
 from web_router.routing.record import prompt_of
 from web_router.routing.request_modes import runnable
-from web_router.routing.route_tools import ALL_TOOLS, checked_route_modes, checked_route_tools
+from web_router.routing.route_tools import ALL_TOOLS, checked_extra_modes, checked_route_modes, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
 from web_router.routing.url_policy import UrlPolicy, url_check
 from web_router.spend_record import SpendSinkHolder
@@ -46,6 +47,8 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
     _router: AttachedRouter | None = None
     _route_tools: frozenset[ToolName] = ALL_TOOLS
     _route_modes: bool = False
+    _extra_modes: Mapping[str, tuple[str, ...]] = MappingProxyType({})
+    """The vendor modes the router asks to be shown beyond a backend's offers: its ``extra_modes``."""
     _url_check: UrlCheck | None = None
     _router_url_check: UrlCheck | None = None
     """The check on the URLs a router sets: the caller's ``url_policy``, else the router's ``min_url_policy``."""
@@ -66,7 +69,8 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         Raises:
             ConfigurationError: for a ``router`` in neither form nor a registered name, ``router_config`` without a
                 name, a ``route_tools`` -- the caller's, or the one the router declares -- naming something else,
-                a ``route_modes`` that is not a bool, or an unknown ``url_policy``.
+                a ``route_modes`` that is not a bool, a router's ``extra_modes`` that is no mapping of backend to mode
+                ids, or an unknown ``url_policy``.
         """
         self._url_check = url_check(url_policy)
         # Checked once, before a router is built by name, and that result kept: the caller's value is not read again.
@@ -75,6 +79,7 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         with self._built(router, router_config) as attached:
             self._route_tools = checked_route_tools(None, attached) if callers is None else callers
             self._route_modes = checked_route_modes(None, attached) if modes is None else modes
+            self._extra_modes = {} if modes is False else checked_extra_modes(attached)
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
             floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
             self._router_url_check = url_check(floor)
@@ -88,7 +93,8 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
             return None
         if getattr(chain, "name", None) != PROVIDER_AUTO:
             return None  # a named backend: nothing to order
-        found = build_candidates(Only(tool, chain), {tool: request}, budget=budget, modes=self._route_modes)
+        only, modes, extra = Only(tool, chain), self._route_modes, self._extra_modes
+        found = build_candidates(only, {tool: request}, budget=budget, modes=modes, extra_modes=extra)
         if not runnable(found.candidates):
             return None
         prompt, urls = prompt_of(tool, request)

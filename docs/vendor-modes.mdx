@@ -59,12 +59,12 @@ twice, raises `InvalidParameterError`.
 
 | Backend | Tiers | Contents | Flags |
 |---|---|---|---|
-| Exa | `exa-instant`, `exa-fast`, `exa-deep-lite`, `exa-deep`, `exa-deep-reasoning` | `exa-highlights` (as `lite`) | |
+| Exa | `exa-instant`, `exa-lite`, `exa-fast`, `exa-deep-lite`, `exa-deep`, `exa-deep-reasoning` | `exa-highlights` (as `lite`) | |
 | Tavily | `tavily-fast`, `tavily-ultra-fast` | | |
 | Parallel | `parallel-turbo`, `parallel-basic`, `parallel-advanced` | | |
 | Linkup | `linkup-flash`, `linkup-standard`, `linkup-deep` | | |
 | Perplexity | `perplexity-fast` | | |
-| Keenable | `keenable-realtime` | | |
+| Keenable | `keenable-realtime`, `keenable-pro` | | |
 | You.com | | `you-full-page-cache` (as `deep`) | |
 | Brave | | | `brave-extra-snippets` |
 | DeepSeek | | | `deepseek-content` |
@@ -197,6 +197,28 @@ opt it in, and your `False` turns modes off for it too. A `fallback` member
 that does not opt in is shown backends only. A remote
 request carries at most 64 candidates in all: past that, the modes lowest in
 their method's order are left out.
+
+A backend offers each tier at its default depth and each depth at its default
+tier, never the two together. A router that wants such a combination, or only
+a few modes and not all of them, names them in an `extra_modes` attribute: a
+mapping of search backend to mode ids.
+
+```python
+class MyRouter:
+    extra_modes = {"parallel": ["parallel-turbo+fast"], "exa": ["exa-deep-lite+fast"]}
+
+    def route(self, req): ...
+```
+
+Each id the backend accepts for the call becomes a candidate after the
+backend's own, whether or not a local router's `route_modes` is on. A remote
+router still needs its own `route_modes=True` to receive any modes, extras
+included; your own `route_modes=False` turns them off with the rest. One the backend refuses is
+left out and recorded with why; one that sends what the call already sends is
+the backend's own candidate, so it is not shown again. A model router passes
+its decider's `extra_modes` on. A combination has an estimated price only when the
+price list has a row for it, and one without a price never fits under a cost
+cap. A `fallback` router does not pass its members' `extra_modes` on.
 
 ## A router picks modes
 

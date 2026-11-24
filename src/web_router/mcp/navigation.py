@@ -63,7 +63,10 @@ from web_router.constants import (
     MCP_MSG_BROWSER_REFUSED_UNVERIFIED,
     MS_PER_SECOND,
 )
+from web_router.constants_urls import MSG_URL_AMBIGUOUS
+from web_router.mcp.navigation_dns import ResolutionCache
 from web_router.mcp.navigation_rules import files_allowed, private_allowed, private_refusal
+from web_router.routing.url_policy import _ambiguous
 
 if TYPE_CHECKING:
     from playwright.async_api import Frame, Page, Request, Route, WebSocketRoute
@@ -116,6 +119,9 @@ class NavigationPolicy:
         allowed = MCP_BROWSER_ALLOWED_SCHEMES | (MCP_BROWSER_WEBSOCKET_SCHEMES if websocket else frozenset())
         if scheme not in allowed:
             return MCP_MSG_BROWSER_REFUSED_SCHEME.format(scheme=scheme or "scheme-less")
+        if _ambiguous(url):
+            # A browser may read this authority's host differently (url_policy refuses it too).
+            return MSG_URL_AMBIGUOUS
         return self._host_refusal(host, port)
 
     def resolved_refusal(self, url: str, addresses: Iterable[str]) -> str | None:
@@ -150,6 +156,7 @@ class NavigationGuard:
         self._page: Page | None = None
         self._blocked: str | None = None
         self._named: dict[tuple[str, int | None], str] = {}
+        self._dns = ResolutionCache()
         self._overflowed = False
 
     async def install(self, page: Page) -> None:
@@ -256,6 +263,9 @@ class NavigationGuard:
         if host is None or host_address(host) is not None:
             # No name to look up: a literal address was judged as it stands.
             return None
+        return await self._dns.get((host, port), lambda: self._resolve(url, host, port))
+
+    async def _resolve(self, url: str, host: str, port: int | None) -> str | None:
         try:
             # On a worker thread: a lookup can take seconds, and every other
             # request of every session waits on this event loop meanwhile.
