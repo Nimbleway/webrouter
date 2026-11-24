@@ -30,7 +30,7 @@ from web_router.constants import (
 )
 from web_router.constants_mode_parts import YOU_CONTENTS
 from web_router.constants_you import (
-    MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE,
+    MSG_YOU_SEARCH_DOMAINS,
     MSG_YOU_SEARCH_VALUES,
     YOU_COUNTRIES,
     YOU_FRESHNESS_FIELD,
@@ -40,7 +40,7 @@ from web_router.constants_you import (
 )
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._language import language_tag, off_the_lists
-from web_router.providers._search_text import lite_body, refused_domains
+from web_router.providers._search_text import DOMAIN_LISTS, lite_body, refused_domains
 from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.you_answer import YouAnswerProvider as YouAnswerProvider
 from web_router.providers.you_research import YouResearchProvider as YouResearchProvider
@@ -54,6 +54,12 @@ from web_router.types import (
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "contents", "page_age"})
 
 
+def _has_path(domain: str) -> bool:
+    """Whether a domain filter names a path past its host: a scheme or a trailing slash alone does not."""
+    host_and_path = domain.split("://", 1)[-1]
+    return "/" in host_and_path.rstrip("/")
+
+
 class YouProvider(HttpSearchProvider):
     """Routes searches to the You.com Search API."""
 
@@ -62,7 +68,7 @@ class YouProvider(HttpSearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = YOU_SEARCH_PARAMETERS
     refusal_reasons: ClassVar[dict[str, str]] = {
         **dict.fromkeys(("country", "locale"), MSG_YOU_SEARCH_VALUES),
-        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE),
+        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_YOU_SEARCH_DOMAINS),
     }
 
     base_url: ClassVar[str] = YOU_BASE_URL
@@ -74,8 +80,10 @@ class YouProvider(HttpSearchProvider):
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
-        """Both domain lists at once, or a ``country`` or ``locale`` off its lists; the MCP tool is held to them too."""
-        return {**refused_domains(request), **off_the_lists(request, YOU_COUNTRIES)}
+        """Both domain lists, a path in one, or a ``country`` or ``locale`` off its lists; MCP is held to them too."""
+        lists = {name: getattr(request, name) or [] for name in DOMAIN_LISTS}
+        with_path = {name: domains for name, domains in lists.items() if any(map(_has_path, domains))}
+        return {**refused_domains(request), **with_path, **off_the_lists(request, YOU_COUNTRIES)}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         # A depth of None, or "lite" which needs no extraction, both map to None

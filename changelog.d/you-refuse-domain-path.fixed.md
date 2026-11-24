@@ -1,0 +1,1 @@
+You.com search refuses an `include_domains` or `exclude_domains` entry with a path (`github.com/python`), as You.com MCP already did. You.com matches either list on the host alone, so the path was ignored: an include searched the whole host and an exclude dropped it. `auto` passes You.com over for such a call.

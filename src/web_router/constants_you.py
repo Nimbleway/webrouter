@@ -126,9 +126,14 @@ MSG_YOU_SEARCH_VALUES = (
     "those, leave it unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )
 
-MSG_YOU_SEARCH_DOMAINS_EXCLUSIVE = (
-    "You.com searches with one domain list, not both: send include_domains or exclude_domains."
+# Checked live on 2026-11-24 against the REST API: include_domains=["github.com/python"] returned the same 10
+# results as github.com, 2 of them under /python, and exclude_domains=["github.com/python"] dropped every
+# github.com result.
+MSG_YOU_SEARCH_DOMAINS = (
+    "You.com matches a domain filter on the host alone and ignores a path, so each entry must be a host name with no"
+    " path (github.com, not github.com/python); it also searches with one domain list, not both."
 )
+"""Why ``you`` refuses a domain with a path, or both domain lists at once; ``you-mcp`` refuses them too."""
 
 # The MCP tool `you-search` (tools/list on api.you.com/mcp?profile=free, and
 # keyless calls on 2026-11-09): it has no country, language or include_domains
@@ -145,12 +150,6 @@ MSG_YOU_MCP_SITE_HOST = (
     " so each must be a host name with no path (github.com, not github.com/python)."
 )
 """Why ``you-mcp`` refuses an ``include_domains`` value with a path, or one that is not a host name."""
-
-MSG_YOU_MCP_EXCLUDE_DOMAINS = (
-    "You.com's exclude_domains drops a whole host and ignores a path, so each entry must be a host name with no"
-    " path (github.com, not github.com/python); You.com also takes only one of the two domain lists, not both."
-)
-"""Why ``you-mcp`` refuses an ``exclude_domains`` beside ``include_domains``, or one with a path."""
 
 YOU_MCP_PARAM_NAMES: dict[str, str] = {"max_results": "count", "exclude_domains": "exclude_domains"}
 """Normalized parameter -> argument of ``you-search``; the other filters go into the query, below."""
