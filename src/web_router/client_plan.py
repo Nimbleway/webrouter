@@ -148,7 +148,8 @@ class SyncPlan(_Planner, SyncRouted):
         """Work out, without running it, the method, options and backends ``prompt`` would run with (experimental).
 
         Args:
-            prompt: What the caller asks, in words; any ``http(s)`` URL in it is read as one to fetch.
+            prompt: What the caller asks, in words. The router chooses the method; a URL can lead to billed
+                research. Set ``tool="extract"`` to require extraction.
             budget: Caps the plan's candidates and maps research's effort, as on any routed call.
             tool: Pins the method; the router then orders its backends only.
 

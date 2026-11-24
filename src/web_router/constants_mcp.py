@@ -92,7 +92,10 @@ _MCP_TIME_PROPERTY: dict[str, Any] = {
 }
 
 MCP_WEB_RUN_PROPERTIES: dict[str, dict[str, Any]] = {
-    "prompt": {"type": "string", "description": "What to find or read, in words; a URL in it is read as one to fetch."},
+    "prompt": {
+        "type": "string",
+        "description": "What to find or read; URL requests can select billed research.",
+    },
     "max_cost_usd": {
         **_MCP_COST_PROPERTY,
         "description": "Caps this call, within the session's budget, in US dollars.",
