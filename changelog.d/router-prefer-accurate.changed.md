@@ -1,1 +1,0 @@
-Routing preference moves from `WebRouter(prefer=)` to the router (experimental): the new `preferred` router, the model routers and `remote` take `prefer` (`cheap` for cost, `fast` for p90 latency or new `accurate`), and `accurate` ranks by shipped search/answer scores or the scores you pass as `accuracy=`. The record names the preference used.
