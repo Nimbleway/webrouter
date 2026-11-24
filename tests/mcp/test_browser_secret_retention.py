@@ -50,17 +50,17 @@ async def test_a_closed_sessions_secrets_are_not_kept() -> None:
         ended = await sessions.open(_opener(index))
         await sessions.close(ended, MCP_BROWSER_END_CLOSED)
 
-    assert sessions._secrets == {
+    assert sessions._open_secrets == {
         handle.cdp_url,
         SHARED_QUERY,
         handle.session_id,
         handle.live_view_url,
         handle.session.control_url.get_secret_value(),
     }
-    assert "backend-session-199" not in sessions._secrets
+    assert "backend-session-199" not in sessions._open_secrets
     assert MCP_REDACTED in sessions.scrub_text(handle.cdp_url)
     assert MCP_REDACTED in sessions.scrub_text(SHARED_QUERY)
-    assert len(sessions._secrets) <= 10
+    assert len(sessions._open_secrets) <= 10
 
 
 async def test_ending_session_values_still_scrub_that_operations_error() -> None:
@@ -87,7 +87,7 @@ async def test_ending_session_values_still_scrub_that_operations_error() -> None
     assert lost_id not in sessions._sessions
     for value in (lost.session_id, lost.cdp_url, lost.live_view_url):
         assert value not in message
-        assert value not in sessions._secrets
+        assert value not in sessions._open_secrets
 
     class _FailingRelease(_Handle):
         async def release(self) -> None:
@@ -109,4 +109,4 @@ async def test_ending_session_values_still_scrub_that_operations_error() -> None
     assert closing_id not in sessions._sessions
     for value in (closing.session_id, closing.cdp_url, closing.live_view_url):
         assert value not in message
-        assert value not in sessions._secrets
+        assert value not in sessions._open_secrets

@@ -253,13 +253,13 @@ class BrowserSessions:
             if session_id in self._ended:
                 return self._ended[session_id]
             raise ValueError(self._unknown_message(session_id))
-        secrets = frozenset(self._secrets)  # snapshot: release error still names the ending session
+        extra = frozenset(self._open_secrets)  # snapshot: release error still names the ending session
         self._end(session_id, reason)
         async with session.lock:
             try:
                 await session.handle.release()
             except WebRouterError as exc:
-                raise BrowserToolError(self.scrub_text(str(exc), secrets)) from None
+                raise BrowserToolError(self.scrub_text(str(exc), extra)) from None
         return None
 
     async def reap(self) -> list[str]:
@@ -301,23 +301,23 @@ class BrowserSessions:
                 group.start_soon(_release_quietly, session.handle)
 
     @property
-    def _secrets(self) -> set[str]:
+    def _open_secrets(self) -> set[str]:
         # Gathered from the open sessions, so a session's own values leave with it.
-        return {value for session in self._sessions.values() for value in self._remember_secrets(session.handle)}
+        return {value for session in self._sessions.values() for value in self._handle_secrets(session.handle)}
 
-    def scrub(self, value: Any, secrets: frozenset[str] = frozenset()) -> tuple[Any, int]:
+    def scrub(self, value: Any, extra: frozenset[str] = frozenset()) -> tuple[Any, int]:
         """``value`` with every session value this server holds, and every browser-session URL, redacted.
 
         Literal first -- the CDP URL, its query, backend id and live-view URL, wherever they
         appear -- then :func:`~web_router.mcp.shaping.redact` for the ones only a pattern finds.
         """
-        literal, literal_count = _replace_literals(value, sorted(self._secrets | secrets, key=len, reverse=True))
+        literal, literal_count = _replace_literals(value, sorted(self._open_secrets | extra, key=len, reverse=True))
         redacted, count = redact(literal)
         return redacted, literal_count + count
 
-    def scrub_text(self, text: str, secrets: frozenset[str] = frozenset()) -> str:
+    def scrub_text(self, text: str, extra: frozenset[str] = frozenset()) -> str:
         """A message, scrubbed, with a note saying so when anything was taken out."""
-        cleaned, count = self.scrub(text, secrets)
+        cleaned, count = self.scrub(text, extra)
         return str(cleaned) + redaction_note(count)
 
     def _get(self, session_id: str) -> _Session:
@@ -342,7 +342,7 @@ class BrowserSessions:
             return None
         return BrowserToolError(self.scrub_text(MCP_MSG_BROWSER_URL_REFUSED.format(tool=tool, reason=reason)))
 
-    def _remember_secrets(self, handle: AsyncBrowserHandle) -> set[str]:
+    def _handle_secrets(self, handle: AsyncBrowserHandle) -> set[str]:
         cdp_url = handle.cdp_url
         # The control URL is read from the session: only a backend returning it on open puts it here.
         control_url = handle.session.control_url.get_secret_value() if handle.session.control_url else ""
