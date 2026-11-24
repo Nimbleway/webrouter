@@ -240,10 +240,7 @@ class BrowserSessions:
             session.last_used = self._clock()
 
     async def close(self, session_id: str, reason: str) -> str | None:
-        """Release ``session_id``. Returns ``None``, or why it had already ended if it had.
-
-        Waits for an action in flight on the session to finish first, so a
-        release never pulls the page out from under a click.
+        """Release ``session_id`` once any action in flight on it finishes; ``None``, or why it had already ended.
 
         Raises:
             ValueError: for an id this server never handed out.
@@ -254,6 +251,8 @@ class BrowserSessions:
                 return self._ended[session_id]
             raise ValueError(self._unknown_message(session_id))
         async with session.lock:
+            if self._sessions.get(session_id) is not session:  # another close ended it while this one waited
+                return self._ended.get(session_id)
             extra = frozenset(self._open_secrets | self._handle_secrets(session.handle))  # survives _end() for waiters
             self._end(session_id, reason)
             try:
