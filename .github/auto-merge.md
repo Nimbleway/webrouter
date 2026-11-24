@@ -8,9 +8,8 @@ conversation resolution, and `qodo-ready`.
 flowchart TD
     A[PR into main opens or receives a new head] --> B
     subgraph Controller[Repository auto-merge controller]
-        B[Disable old auto-merge] --> C[Set qodo-ready pending]
-        C --> D[Remove old Qodo approved label]
-        D --> E{Qodo App added the label\nfor the live head?}
+        B[Set qodo-ready pending] --> C[Disable old auto-merge]
+        C --> E{Qodo App added the label\nfor the live head?}
         E -- No --> C
         E -- Yes --> F[Arm squash auto-merge\nfor the exact head SHA]
         F --> G[Set qodo-ready success]
@@ -35,6 +34,8 @@ arming auto-merge. When the pull request becomes ready, the controller requires 
 timeline actor and the current head's App-produced status to match before it arms auto-merge.
 Every accepted pull-request event re-reads that live timeline state. This means a later queued event
 cannot hide a removed or collaborator-reapplied label by replacing the original label event.
+Qodo owns its label lifecycle and removes approval on a new push. The controller never deletes that
+label, so a delayed reset cannot erase a newer approval; it only resets its own head-bound status.
 
 ## Scope
 
@@ -54,7 +55,6 @@ Install a repository-scoped GitHub App with these repository permissions:
 | Permission | Access | Used for |
 | --- | --- | --- |
 | Contents | Write | Authorize the App to create the eventual merge commit |
-| Issues | Write | Remove the stale `Qodo approved` label on a new head |
 | Pull requests | Write | Disable and enable auto-merge |
 | Commit statuses | Write | Publish the head-bound `qodo-ready` context |
 
@@ -77,10 +77,11 @@ Keep the existing `CI` check and every review and conversation rule unchanged th
 
 ## Failure and rollback
 
-The controller fails closed. A new head posts `qodo-ready` as pending. If arming fails after Qodo
-readiness was recorded, it changes that status to error. A label from any actor other than Qodo also
-leaves the status pending. Stale webhook events and pull requests that never targeted `main` make no
-changes; a pull request retargeted away from `main` has auto-merge disabled.
+The controller fails closed. A new head posts `qodo-ready` as pending before it attempts to disable
+old auto-merge, so a failure cannot leave the earlier success status active. If arming fails after
+Qodo readiness was recorded, it changes that status to error. A label from any actor other than Qodo
+also leaves the status pending. Stale webhook events and pull requests that never targeted `main`
+make no changes; a pull request retargeted away from `main` has auto-merge disabled.
 
 Converting an approved head back to draft disables auto-merge but preserves the authenticated,
 head-bound `qodo-ready` success so the same unchanged head can become ready again.

@@ -41,7 +41,6 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
-          permission-issues: write
           permission-pull-requests: write
           permission-statuses: write
 
@@ -104,7 +103,6 @@ jobs:
       - name: Reset or hold the current head
         if: steps.policy.outputs.decision == 'reset' || steps.policy.outputs.decision == 'hold'
         env:
-          DECISION: ${{ steps.policy.outputs.decision }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           HEAD: ${{ steps.policy.outputs.head }}
           PR: ${{ github.event.pull_request.number }}
@@ -112,20 +110,15 @@ jobs:
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [[ "$(gh pr view "$PR" --repo "$REPO" --json autoMergeRequest --jq '.autoMergeRequest != null')" == "true" ]]; then
-            gh pr merge "$PR" --repo "$REPO" --disable-auto
-          fi
-
-          if [[ "$DECISION" == "reset" ]] \
-            && jq -e '.labels[]? | select(.name == "Qodo approved")' "$RUNNER_TEMP/pull-request.json" >/dev/null; then
-            gh api --method DELETE "repos/$REPO/issues/$PR/labels/Qodo%20approved"
-          fi
-
           gh api --method POST "repos/$REPO/statuses/$HEAD" \
             -f state=pending \
             -f context=qodo-ready \
             -f description="Waiting: $REASON" \
             -f target_url="$RUN_URL"
+
+          if [[ "$(gh pr view "$PR" --repo "$REPO" --json autoMergeRequest --jq '.autoMergeRequest != null')" == "true" ]]; then
+            gh pr merge "$PR" --repo "$REPO" --disable-auto
+          fi
 
       - name: Disable auto-merge after leaving main
         if: steps.policy.outputs.decision == 'cleanup'
