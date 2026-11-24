@@ -1070,20 +1070,20 @@ def backend_lines(config: dict[str, Any]) -> list[tuple[str, str, str]]:
     Shared with ``page.py`` so the report and the page describe a request the same way.
     """
     lines = []
+    routed = (config.get("router") or {}).get("router")
     for tool in ("search", "extract"):
-        entry = config.get(tool)
-        if not entry:
+        if not (entry := config.get(tool)):
             continue
-        # A member auto passes over for this request is sent nothing, so it is left out of the order.
+        # A member auto passes over is sent nothing; a routed arm's search tries its router's picks first.
         chain = [m for m in entry.get("chain") or [] if "skipped" not in m]
         if chain:
             first, rest = chain[0], [m["provider"] for m in chain[1:]]
-            backend = f"auto: {first['provider']} first" + (f", then {', '.join(rest)}" if rest else "")
+            picks = f"the {routed} router's picks, then " if tool == "search" and routed else ""
+            backend = picks + f"auto: {first['provider']} first" + (f", then {', '.join(rest)}" if rest else "")
             lines.append((tool, backend, _request(first)))
         else:
             lines.append((tool, entry["provider"], _request(entry)))
-    # An mcp: arm: each of its servers, with the tools the agent was given.
-    lines += [("mcp", entry["provider"], _request(entry)) for entry in config.get("mcp") or []]
+    lines += [("mcp", entry["provider"], _request(entry)) for entry in config.get("mcp") or []]  # an mcp: arm's servers
     return lines
 
 

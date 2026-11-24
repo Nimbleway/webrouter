@@ -1,9 +1,11 @@
 """The agent benchmark's routed arms: web-router's tools on ``auto``, on a router of their own that a search asks.
 
 ``web-router:data-driven`` runs the same tools as ``web-router:auto``. The difference is its router: the default
-data-driven router, asked on every search (``route_tools=("search",)``), puts the search backends its provider
-table measured first, in its own order, and the rest after in ``auto``'s. ``web-router:auto`` never asks it, so
-against that arm the router's order is the one difference.
+data-driven router, asked on every search (``route_tools=("search",)``), first tries the search backends its
+provider table measured, each in the vendor tier it was measured in (``search:keenable:keenable-pro+fast``), then
+the rest in ``auto``'s order. ``web-router:auto`` never asks it, so against that arm the router's choice of
+backends and tiers is the one difference. A backend it picks is not tried again at its default tier, and with
+fewer than two measured backends to choose from it picks none, leaving ``auto``'s order.
 """
 
 from __future__ import annotations

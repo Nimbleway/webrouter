@@ -47,6 +47,23 @@ def test_no_routed_router_is_built_unless_its_arm_runs(run: ModuleType) -> None:
     assert run.routed_routers(run.WithholdingRouter, DATASET, {None, "auto-tuned"}, None) == {}
 
 
+async def test_the_routed_router_shares_the_other_arms_config_so_an_outage_reaches_it(run: ModuleType) -> None:
+    plain = {"auto": {"chain": {"search": ["keenable", "nimble"], "extract": ["nimble"]}}}
+    async with run.routed_routers(run.WithholdingRouter, DATASET, {"data-driven"}, plain)["data-driven"] as routed:
+        assert [name for name, _ in routed.get_provider("auto")._chain] == ["keenable", "nimble"]
+
+
+def test_the_report_names_a_routed_arms_picks_before_autos_order_on_search_alone(run: ModuleType) -> None:
+    import report
+
+    chain = {"chain": [{"provider": "perplexity", "body": {}}, {"provider": "nimble", "body": {}}]}
+    config = {"search": chain, "extract": chain, **run.routed_record("data-driven")}
+    (_, searched, _), (_, read, _) = report.backend_lines(config)
+    assert searched == "the data-driven router's picks, then auto: perplexity first, then nimble"
+    assert read == "auto: perplexity first, then nimble", "the router is not asked on a page read"
+    assert report.backend_lines({"search": chain})[0][1] == "auto: perplexity first, then nimble"
+
+
 def test_run_json_records_a_routed_arms_router_and_data_release_and_nothing_for_other_arms(run: ModuleType) -> None:
     from web_router.routing.data_driven import DataDrivenRouter
 
