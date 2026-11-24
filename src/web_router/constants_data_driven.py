@@ -34,9 +34,9 @@ DATA_DRIVEN_REASON_BACKENDS = "{reason}; search backends {order}, by the {measur
 """The reason's tail when the router ranks search's backends from its provider table."""
 
 DATA_DRIVEN_ORDERS = {
-    "cheap": "cheapest first",
+    "cheap": "cheapest first by benchmark prices",
     "fast": "fastest first",
-    None: "by measured quality, the cheapest of the best first",
+    None: "by measured quality, the cheapest of the best first by benchmark prices",
 }
 """How the search backends are ranked, by the preference: what :data:`DATA_DRIVEN_REASON_BACKENDS` says."""
 

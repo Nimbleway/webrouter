@@ -1,0 +1,1 @@
+The `data-driven` router's cost-order reasons now say they use benchmark prices. `prefer="cheap"` and the quality line use the provider table's prices; budget eligibility still uses the library price list, including page text. The guide states the difference and its Exa lite/Parallel advanced example.

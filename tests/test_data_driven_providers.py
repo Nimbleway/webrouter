@@ -21,7 +21,7 @@ SPEED_LINE = ["keenable:keenable-realtime+fast", "keenable:keenable-pro+fast", "
 SPEED_LINE += ["exa:exa-deep-lite+fast"]
 KNEE_FIRST = [COST_LINE[2], COST_LINE[3], COST_LINE[1], COST_LINE[0]]
 """Best first, after the knee: Parallel's advanced tier overlaps Exa's deep-lite and costs less."""
-BEST_FIRST = "by measured quality, the cheapest of the best first"
+BEST_FIRST = "by measured quality, the cheapest of the best first by benchmark prices"
 ROW = "data-driven 0.1.2: search for verb=question, url_target=none, plural=no, kw_research=no, ui_action=no"
 
 
@@ -53,7 +53,9 @@ def test_plan_tries_the_measured_search_backends_in_the_preferences_order(
     with WebRouter(router="data-driven", router_config=config) as router:
         decision = router.plan("who won the 2022 world cup").decision
     assert decision.merged[: len(first)] == [f"search:{entry}" for entry in first]
-    order = {"cheap": "cheapest first", "fast": "fastest first"}.get(config.get("prefer"), BEST_FIRST)
+    order = {"cheap": "cheapest first by benchmark prices", "fast": "fastest first"}.get(
+        config.get("prefer"), BEST_FIRST
+    )
     assert decision.prefer == config.get("prefer")
     assert decision.reason == f"{ROW}; search backends {order}, by the 2026-11-23 measures"
 

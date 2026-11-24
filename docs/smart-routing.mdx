@@ -360,13 +360,14 @@ request it was measured with, so the router names each as a candidate, such as
 From the rows the call can run -- the backends you hold keys for, within the
 budget -- it keeps a *line*: the points no other point beats on both quality
 and price (the cost line) or quality and latency (the speed line). What you
-prefer picks the line and the direction:
+prefer picks the line and the direction. The cost line uses the benchmark's
+prices, not the price list a budget charges:
 
 | `prefer` | Order |
 |---|---|
-| `"cheap"` | the cost line, cheapest first |
+| `"cheap"` | the cost line, cheapest first by the benchmark's prices |
 | `"fast"` | the speed line, fastest first |
-| `"accurate"` or unset | the cost line, best quality first; when cheaper points overlap the best one within their confidence intervals, the cheapest of them goes first |
+| `"accurate"` or unset | the cost line, best quality first; when cheaper points overlap the best one within their confidence intervals, the cheapest of them by the benchmark's prices goes first |
 
 ```python
 router = WebRouter(router="data-driven", router_config={"prefer": "cheap"})
@@ -403,7 +404,10 @@ Read the numbers for what they are:
 - **The lines use the table's own prices and latencies**, measured with the
   quality. A budget still filters on the library's
   [price list](/smart-routing#estimated-prices), whose estimates run higher
-  for backends that bill for page text.
+  for backends that bill for page text. For example, `cheap` can try Exa lite
+  (benchmark $4 per 1,000; budget estimate $14 with page text) before Parallel
+  advanced ($5 in both). Use a cost cap to filter what fits the budget's prices;
+  `cheap` itself does not promise the lowest estimated bill.
 - **Search only.** Research, extract and browse backends keep `auto`'s order.
 
 ### The release
