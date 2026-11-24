@@ -121,6 +121,26 @@ async def test_async_plan_resolves_urls_off_the_event_loop(monkeypatch: pytest.M
     assert seen and all(thread is not loop_thread for thread in seen)
 
 
+async def test_async_plan_builds_candidates_on_the_event_loop(
+    monkeypatch: pytest.MonkeyPatch, called: list[str]
+) -> None:
+    import threading
+    from typing import Any
+
+    from web_router.routing.candidates import CandidateSet, build_candidates
+
+    loop_thread = threading.current_thread()
+    seen: list[threading.Thread] = []
+
+    def recorded(*args: Any, **kwargs: Any) -> CandidateSet:
+        seen.append(threading.current_thread())
+        return build_candidates(*args, **kwargs)
+
+    monkeypatch.setattr("web_router.client_plan.build_candidates", recorded)
+    await _wr(AsyncWebRouter, router=chooser("answer")).plan(PROMPT)
+    assert seen and all(thread is loop_thread for thread in seen)
+
+
 async def test_async_plan_and_run_route_as_the_sync_ones_do(called: list[str]) -> None:
     wr = _wr(AsyncWebRouter, router=chooser("answer"))
     plan = await wr.plan(PROMPT)
