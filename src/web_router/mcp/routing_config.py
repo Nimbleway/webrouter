@@ -10,7 +10,7 @@ set or change them, since :mod:`web_router.mcp.env` loads credentials only:
   with the bearer key ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``, both read from the
   same environment; any other built-in router by name, such as ``fallback``,
   configured by ``WEB_ROUTER_MCP_ROUTER_CONFIG`` (:mod:`.routing_named`);
-  ``off`` for none. Unset, the built-in :func:`~web_router.routing.rules.rules`.
+  ``off`` for none. Unset, the built-in ``data-driven`` router (:mod:`web_router.routing.data_driven`).
 - ``WEB_ROUTER_MCP_MAX_COST_USD`` and ``WEB_ROUTER_MCP_TIME_LIMIT_S``: the
   ceiling on one connection, held by :mod:`web_router.mcp.budget`.
 
@@ -70,20 +70,18 @@ from web_router.exceptions import ConfigurationError
 from web_router.mcp.routing_named import display_name, hosts_in, read_config
 from web_router.routing.contract import Budget
 from web_router.routing.invoke import RouterLike
-from web_router.routing.registry import available_routers
-from web_router.routing.rules import rules
+from web_router.routing.registry import available_routers, is_builtin
 
 
 @dataclass(frozen=True)
 class McpRouting:
     """The server's routing as the operator set it: the router ``web_run`` plans with, and the ceiling.
 
-    The default is the :func:`~web_router.routing.rules.rules` function itself, not ``RulesRouter`` as the clients'
-    ``router="rules"`` builds it: the server has no ``route_tools`` to narrow, so it needs no wrapper."""
+    The default is the built-in ``data-driven`` router, by name, as the clients' ``router="data-driven"`` builds it."""
 
-    router: RouterLike | str | None = rules
-    router_name: str = RULES_ROUTER_NAME
-    """What the capabilities resource names it: ``rules``, ``off``, ``operator`` -- never the import path -- or
+    router: RouterLike | str | None = DATA_DRIVEN_ROUTER_NAME
+    router_name: str = DATA_DRIVEN_ROUTER_NAME
+    """What the capabilities resource names it: ``data-driven``, ``off``, ``operator`` -- never the import path -- or
     ``remote(<scheme>://<host>)``, and a built-in router by its name and its services' hosts."""
     ceiling: Budget = field(default_factory=Budget)
     router_config: Mapping[str, Any] | None = field(default=None, repr=False)
@@ -161,7 +159,8 @@ class McpRouting:
 
     def _runs(self) -> dict[str, str]:
         """Where the router runs, and for one that is not the library's own, a note on what it may send."""
-        if self.router_name in (RULES_ROUTER_NAME, DATA_DRIVEN_ROUTER_NAME, MCP_ROUTER_OFF):
+        ours = isinstance(self.router, str) and is_builtin(self.router)
+        if (ours and self.router in (DATA_DRIVEN_ROUTER_NAME, RULES_ROUTER_NAME)) or self.router_name == MCP_ROUTER_OFF:
             return {"router_runs": MCP_ROUTER_IN_PROCESS}
         if not isinstance(self.router, str):
             return {"router_runs": MCP_ROUTER_OPERATOR, "router_note": MCP_ROUTER_OPERATOR_NOTE}
@@ -188,7 +187,8 @@ def _imported(spec: str) -> RouterLike:
     """The object ``<module>:<attribute>`` names; the attribute may be dotted."""
     module_name, _, attribute = spec.partition(":")
     if not module_name or not attribute:
-        raise ConfigurationError(MCP_MSG_ROUTER_SPEC.format(env_var=ENV_MCP_ROUTER, value=spec))
+        known = ", ".join(available_routers())
+        raise ConfigurationError(MCP_MSG_ROUTER_SPEC.format(env_var=ENV_MCP_ROUTER, value=spec, known=known))
     try:
         module = importlib.import_module(module_name)
         found: RouterLike = functools.reduce(getattr, attribute.split("."), module)

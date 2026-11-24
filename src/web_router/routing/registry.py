@@ -2,10 +2,10 @@
 
 Experimental. A name maps to a factory, called with ``router_config``'s
 entries as keyword arguments when a router is built; what it returns is
-attached as any ``router=`` object is. ``rules``, the routers' default,
-``data-driven``, ``remote``, ``llm``, ``systemone``, ``gemini``, ``fallback``, which asks a list of
-routers in turn, ``preferred`` and its deprecated ``cheapest_first`` alias are built in and imported only when
-used; registering a name overrides a built-in one of that name, and
+attached as any ``router=`` object is. ``data-driven``, the routers' default,
+``remote``, ``llm``, ``systemone``, ``gemini``, ``fallback``, which asks a list of
+routers in turn, ``preferred``, its deprecated ``cheapest_first`` alias and the deprecated
+``rules`` router are built in and imported only when used; registering a name overrides a built-in one of that name, and
 unregistering it brings the built-in back.
 
 A router the routers build by name is theirs: closing them calls its
@@ -86,6 +86,11 @@ def unregister_router(name: str) -> None:
 def available_routers() -> list[str]:
     """Every router name ``router=`` takes: the built-in ones and those registered."""
     return sorted({*_BUILTIN_ROUTERS, *_CUSTOM_ROUTERS})
+
+
+def is_builtin(name: str) -> bool:
+    """Whether ``name`` builds the library's own router: a built-in name no registered factory has overridden."""
+    return name in _BUILTIN_ROUTERS and name not in _CUSTOM_ROUTERS
 
 
 def _factory(key: str) -> RouterFactory:

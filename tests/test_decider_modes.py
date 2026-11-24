@@ -134,7 +134,7 @@ def test_a_callers_route_modes_shows_a_built_in_modes_and_its_plan_runs_them(key
     assert "exa:exa-instant" in order and "exa" not in order[: order.index("exa:exa-instant")], "run in its mode first"
 
 
-def test_rules_shown_modes_still_picks_the_method_only(keys: Any) -> None:
-    with WebRouter(provider_config=CHAIN, router="rules", route_modes=True) as wr:
+def test_the_default_router_shown_modes_still_picks_the_method_only(keys: Any) -> None:
+    with WebRouter(provider_config=CHAIN, router="data-driven", route_modes=True) as wr:
         plan = wr.plan("q")
     assert plan.tool == "search" and plan.providers["search"][:2] == ("exa", "tavily")

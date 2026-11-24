@@ -70,3 +70,13 @@ def test_loading_a_matching_release_preserves_its_version_and_threshold(release:
     _write_release(release)
     table = shipped_table()
     assert (table.version, table.min_count, table.row("weather").counts) == ("9.9.9", 20, {"search": 1})
+
+
+@pytest.mark.parametrize("broken", ["missing", "not json", "no table entry"])
+def test_a_release_that_cannot_be_read_says_so_and_names_the_way_out(release: Path, broken: str) -> None:
+    if broken == "not json":
+        (release / DATA_DRIVEN_MANIFEST_FILE).write_text("{", encoding="utf-8")
+    elif broken == "no table entry":
+        (release / DATA_DRIVEN_MANIFEST_FILE).write_text('{"schema": 1, "version": "9.9.9"}', encoding="utf-8")
+    with pytest.raises(ConfigurationError, match=r"could not be read .*router=None runs without it"):
+        shipped_table()

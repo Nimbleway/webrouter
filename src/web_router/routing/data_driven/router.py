@@ -5,7 +5,8 @@ Experimental. It needs no key and calls nothing: five regular expressions read t
 values were served by. It ranks the methods of that row, most common first. When the call then searches, it
 orders the search backends a benchmark measured (:mod:`.providers`) along a cost or a speed line
 (:mod:`.lines`), and names their modes in ``extra_modes`` so the call is shown them; every other backend runs
-after, in ``auto``'s order. Like ``rules`` it declares ``route_tools=()``, so only
+after, in ``auto``'s order. It is the routers' default, attached unless ``router=`` says otherwise, and it
+declares ``route_tools=()``, so only
 :meth:`~web_router.WebRouter.plan` and :meth:`~web_router.WebRouter.run` ask it.
 
 Two methods are held back. ``browse`` is ranked only by a router built with ``browse=True``: a browser agent

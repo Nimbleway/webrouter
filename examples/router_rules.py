@@ -7,8 +7,8 @@ backend is configured, and the reason says which. Anything else gets no opinion 
 the call runs as it would with no router: a search, in `auto`'s order.
 
 It is here to copy and change: add a rule, or rank backends as well as methods.
-The library ships a smaller one, `web_router.routing.rules.rules` -- a URL
-extracts, anything else searches -- which the MCP server attaches by default.
+The library's default is another kind of router, `router="data-driven"`, which picks
+the method from a table trained on labelled requests.
 
 Runs offline with no key: `plan()` works out the method and backends without
 calling any of them.
