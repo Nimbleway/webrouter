@@ -60,6 +60,15 @@ EXTRACT_PIXEL_TEXT: Final = re.compile(
 )
 """What a tracking pixel's title or text says: ``A 1x1 image``, ``tracking pixel``, ``transparent gif``."""
 
+HTML_IMG: Final = re.compile(r"<img\b[^>]*>", re.IGNORECASE)
+"""An HTML body's ``<img>`` tags: an image-only pixel declares its size here, not in the page's text."""
+
+EXTRACT_PIXEL_IMG: Final = re.compile(
+    r"<img\b(?=[^>]*\bwidth\s*=\s*[\"']?\s*1(?:px)?\s*[\"']?)(?=[^>]*\bheight\s*=\s*[\"']?\s*1(?:px)?\s*[\"']?)[^>]*>",
+    re.IGNORECASE,
+)
+"""An ``<img>`` one pixel each way, its attributes in either order and the unit left off or written ``1px``."""
+
 EXTRACT_SHORTENER_HOSTS: Final = frozenset(
     {"t.co", "bit.ly", "goo.gl", "tinyurl.com", "ow.ly", "lnkd.in", "buff.ly", "is.gd", "cutt.ly", "rebrand.ly"}
 )

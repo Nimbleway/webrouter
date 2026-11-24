@@ -125,7 +125,8 @@ the title, and the text only of a short page, so an article that mentions a logi
 Three more kinds of page carry a warning in `document.warnings` instead:
 
 - **Almost no text.** Under 64 characters, often a shell its scripts fill in.
-- **A tracking pixel.** A short page that is a 1x1 image or a tracking pixel.
+- **A tracking pixel.** A short page that is a 1x1 image or a tracking pixel, read from its text or, in
+  HTML, from an `<img>` declared one pixel each way.
 - **Another site.** A redirect that landed on a different site from the one
   asked for, such as an ad server. A redirect from a link shortener
   (`bit.ly`, `t.co`, ...) does not count.

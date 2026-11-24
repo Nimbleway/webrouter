@@ -22,10 +22,12 @@ from web_router.constants_extract import (
     EXTRACT_LOGIN_TITLE,
     EXTRACT_LOGIN_URL_PARTS,
     EXTRACT_NEAR_EMPTY_CHARS,
+    EXTRACT_PIXEL_IMG,
     EXTRACT_PIXEL_MAX_CHARS,
     EXTRACT_PIXEL_TEXT,
     EXTRACT_SHORTENER_HOSTS,
     EXTRACT_WALL_MAX_CHARS,
+    HTML_IMG,
     HTML_NON_TEXT,
     MSG_EXTRACT_CHALLENGE,
     MSG_EXTRACT_LOGIN_WALL,
@@ -157,7 +159,7 @@ def _is_login_path(path: str) -> bool:
 def junk(document: ExtractedDocument, asked: str | None = None) -> list[str]:
     """The warnings ``document`` earns as junk: near-empty, a tracking pixel, another site than ``asked``'s."""
     text = _text(document)
-    pixel = len(text) < EXTRACT_PIXEL_MAX_CHARS and EXTRACT_PIXEL_TEXT.search(f"{document.title}\n{text}") is not None
+    pixel = len(text) < EXTRACT_PIXEL_MAX_CHARS and _pixel(document, text)
     flags = (
         (MSG_EXTRACT_NEAR_EMPTY, 0 < len(text) < EXTRACT_NEAR_EMPTY_CHARS),
         (MSG_EXTRACT_TRACKER_PIXEL, pixel),
@@ -177,6 +179,21 @@ def _site(url: str) -> str:  # The name a host is registered under: `example` fo
     country_suffix = len(labels) > 2 and len(labels[-1]) == 2 and labels[-2] in EXTRACT_COUNTRY_SECOND_LEVELS
     return labels[-3 if country_suffix else -2] if len(labels) > 1 else labels[0]
 
+
+def _pixel(document: ExtractedDocument, text: str) -> bool:
+    """Whether a short page is a tracking pixel: its text says so, or an image on it declares 1x1.
+
+    Stripping the tags drops an image's size and alt text with them, so an HTML body of one 1x1
+    ``<img>`` reads as a page with no text and never says what it is.
+    """
+    if EXTRACT_PIXEL_TEXT.search(f"{document.title}\n{text}") is not None:
+        return True
+    if document.format != "html":
+        return False
+    return any(
+        EXTRACT_PIXEL_TEXT.search(tag) is not None or EXTRACT_PIXEL_IMG.fullmatch(tag) is not None
+        for tag in HTML_IMG.findall(document.content)
+    )
 
 def _text(document: ExtractedDocument) -> str:  # Its text: an HTML body's without its tags, scripts and styles
     text = html.unescape(HTML_NON_TEXT.sub(" ", document.content)) if document.format == "html" else document.content

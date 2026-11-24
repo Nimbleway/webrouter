@@ -36,6 +36,33 @@ def test_a_junk_page_is_told_by_its_text_and_where_it_landed(content: str, url: 
     assert junk(ExtractedDocument(url=url, content=content), ROOMS) == warnings
 
 
+@pytest.mark.parametrize(
+    "img",
+    [
+        '<img src="https://t.example/p.gif" width="1" height="1" alt="tracking pixel">',
+        '<img height="1px" width="1px" src="p.gif">',
+        "<img width='1' height='1' src='p.gif'>",
+        '<img src="p.gif" alt="A 1x1 image">',
+    ],
+)
+def test_an_html_page_whose_only_image_is_a_pixel_is_a_tracking_pixel(img: str) -> None:
+    document = ExtractedDocument(url=ROOMS, content=f"<html><body>{img}</body></html>", format="html")
+
+    assert junk(document, ROOMS) == [MSG_EXTRACT_TRACKER_PIXEL]
+
+@pytest.mark.parametrize(
+    "img",
+    [
+        '<img src="photo.jpg" width="600" height="400" alt="the room">',
+        '<img src="banner.gif" width="600" height="1">',
+        '<img src="photo.jpg" width="1" height="400">',
+    ],
+)
+def test_a_page_whose_image_is_not_one_pixel_by_one_is_left_alone(img: str) -> None:
+    document = ExtractedDocument(url=ROOMS, content=f"<html><body>{img}</body></html>", format="html")
+
+    assert MSG_EXTRACT_TRACKER_PIXEL not in junk(document, ROOMS)
+
 def test_a_link_shortener_landing_elsewhere_is_not_off_site() -> None:
     assert junk(ExtractedDocument(url="https://example.org/story", content=TEXT), "https://bit.ly/abc") == []
 
