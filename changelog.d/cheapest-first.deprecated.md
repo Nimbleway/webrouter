@@ -1,1 +1,0 @@
-The `cheapest_first` router name and `web_router.cheapest_first` are deprecated for one release and will be removed in the following release. Both still work with a `DeprecationWarning`; use `PreferredRouter("cheap")`, or `router="preferred"` with `router_config={"prefer": "cheap"}`.
