@@ -104,6 +104,18 @@ def test_a_refused_option_is_an_invalid_parameter_error_naming_the_field(call, f
     assert "pydantic" not in str(error), "one line, no validator docs link"
 
 
+@pytest.mark.parametrize("url", ["example.com", "not-a-url", "ftp://example.com/x", "/etc/hosts", "https://"])
+def test_a_url_that_is_not_http_is_refused_before_any_backend_is_called(url: str, fake_extract_provider: type) -> None:
+    """Backends disagree on these: some fetch a bare domain over https, another over http, and one refuses it."""
+    router = WebRouter("fake")
+
+    with pytest.raises(InvalidParameterError) as caught:
+        router.extract(["https://example.com", url])
+
+    assert caught.value.field == "urls.1"
+    assert router.get_extract_provider().calls == []  # type: ignore[attr-defined]
+
+
 def test_a_budget_cap_that_is_not_a_number_is_an_invalid_parameter_error() -> None:
     with pytest.raises(InvalidParameterError) as caught:
         Budget(max_cost_usd=-1)

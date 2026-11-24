@@ -1,0 +1,1 @@
+`extract()` refuses a URL that is not a full `http://` or `https://` one (a bare domain, a path, `ftp://`) with `InvalidParameterError` before any backend is called. Such a value used to reach every backend `auto` tried, and each treated it differently: some fetched a bare domain and others refused it.

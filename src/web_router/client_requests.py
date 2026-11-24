@@ -19,6 +19,7 @@ from web_router.constants import AUTO_CLIENT_OPTION, DELEGATING_PROVIDERS
 from web_router.constants_production import MSG_INVALID_TIMEOUT
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.routing.contract import Budget
+from web_router.routing.url_policy import any_web_url
 from web_router.types import (
     BrowseRequest,
     BrowserRequest,
@@ -57,7 +58,7 @@ def build_extract_request(
     provider_options: dict[str, Any] | None,
     profile: str | None = None,
 ) -> ExtractRequest:
-    return ExtractRequest(
+    request = ExtractRequest(
         # One URL is the common case and reads better unwrapped; the
         # request model carries a list either way, so providers that batch
         # and providers that do not see the same shape.
@@ -66,6 +67,12 @@ def build_extract_request(
         profile=profile,
         provider_options=provider_options or {},
     )
+    # Backends disagree on anything else: a bare domain is fetched over https by some, over http by another and
+    # refused by a third.
+    for position, url in enumerate(request.urls):
+        if reason := any_web_url(url):
+            raise InvalidParameterError(f"urls.{position}", f"{reason}.")
+    return request
 
 
 @refused_as_parameter(ResearchRequest)
