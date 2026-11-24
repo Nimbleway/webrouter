@@ -8,12 +8,12 @@ import pytest
 
 from scripts import data_driven_router as importer
 from scripts.data_driven_manifest import PROVIDER_FILE
-from tests.test_data_driven_lookup_release import release as release
+from tests import test_data_driven_lookup_release as delivery_fixtures
+
+release = delivery_fixtures.release
 
 
-def test_a_changed_carried_provider_file_stops_publication(
-    release: tuple[Path, Path, Path],  # noqa: F811 - pytest injects the re-exported fixture
-) -> None:
+def test_a_changed_carried_provider_file_stops_publication(release: tuple[Path, Path, Path]) -> None:
     source, output, table = release
     importer.import_release(source, "0.1.1", [], table)
     providers = output / PROVIDER_FILE
