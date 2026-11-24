@@ -29,12 +29,16 @@ from weakref import WeakKeyDictionary
 
 from web_router.constants_cost import COST_STATED
 from web_router.exceptions import UnsupportedParameterError, WebRouterError
+from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._chain import nothing_started
 from web_router.providers._cooldown import CoolingDownError
 from web_router.routing.attempts import Attempt
 from web_router.routing.budget_hooks import LEDGERS, check_own
 from web_router.routing.ledger import Ledger
 from web_router.types_errors import TARGET_GONE_STATUSES
+
+_REFUSED_BEFORE_SENDING = (UnsupportedParameterError, InvalidParameterError)
+"""An option the backend does not map, and a value it cannot take (a mode clash on ``auto`` search)."""
 
 _LEFT: WeakKeyDictionary[BaseException, Ledger] = WeakKeyDictionary()
 """The ledger of the first call each error left: the innermost, as it leaves calls inside out."""
@@ -87,7 +91,7 @@ def _never_started(exc: WebRouterError, ledger: Ledger) -> bool:
     """
     if isinstance(exc, CoolingDownError):
         return True
-    if isinstance(exc, UnsupportedParameterError):
+    if isinstance(exc, _REFUSED_BEFORE_SENDING):
         return _LEFT.get(exc, ledger) is ledger
     return nothing_started(exc) and getattr(exc, "status_code", None) not in TARGET_GONE_STATUSES
 

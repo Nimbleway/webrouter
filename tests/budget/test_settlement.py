@@ -15,7 +15,8 @@ from tests.budget.conftest import Chain, Table, call, scoped
 from tests.conftest import FakeProvider
 from web_router import Budget, WebRouter
 from web_router.constants_cost import COST_REPORTED
-from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
+from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError, WebRouterError
+from web_router.exceptions_typed import InvalidParameterError
 from web_router.registry import register_provider, unregister_provider
 from web_router.routing.attempts import Attempt
 from web_router.routing.ledger import Ledger
@@ -75,9 +76,19 @@ def test_a_named_backend_that_never_started_is_charged_nothing(chain: Chain, pri
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.0, 0.0)
 
 
-@pytest.mark.parametrize("tool", ["answer"], indirect=True)  # auto passes a member's own refusal over on answer
-def test_a_member_refusing_an_option_is_charged_nothing_so_the_next_fits(chain: Chain, priced: Table) -> None:
-    chain.raises["first"] = UnsupportedParameterError("first", ["recency"])
+@pytest.mark.parametrize(
+    ("tool", "refusal"),
+    [
+        ("answer", UnsupportedParameterError("first", ["recency"])),
+        ("search", InvalidParameterError("effort", "the pinned mode sets it")),
+    ],
+    ids=["unmapped-option-on-answer", "mode-clash-on-search"],
+    indirect=["tool"],
+)  # the refusals auto passes a member over on, per method
+def test_a_member_refusing_an_option_is_charged_nothing_so_the_next_fits(
+    chain: Chain, priced: Table, refusal: WebRouterError
+) -> None:
+    chain.raises["first"] = refusal
     priced.update(first=(0.04, None), second=(0.04, None))
     response = call(chain, Budget(max_cost_usd=0.06))
     assert chain.called == ["first", "second"], "first sent nothing, so its estimate does not crowd out second"

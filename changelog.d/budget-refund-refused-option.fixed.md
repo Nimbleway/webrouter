@@ -1,1 +1,1 @@
-A budget no longer charges an `auto` member that refuses an option it does not map before sending anything, so under a tight cap the next member still fits and the call answers instead of failing with that refusal.
+A budget no longer charges an `auto` member that refuses an option it does not map, or a value it cannot take, before sending anything, so under a tight cap the next member still fits and the call answers instead of failing with that refusal.
