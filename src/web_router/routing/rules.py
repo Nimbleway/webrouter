@@ -45,7 +45,7 @@ class RulesRouter:
     router_name = RULES_ROUTER_NAME
 
     def __init__(self) -> None:
-        warnings.warn(MSG_RULES_DEPRECATED, DeprecationWarning, stacklevel=2)
+        warnings.warn(MSG_RULES_DEPRECATED, FutureWarning, stacklevel=2)
 
     def route(self, req: RouteRequest) -> RouteDecision:
         return rules(req)

@@ -112,7 +112,7 @@ def test_an_unknown_router_name_stops_the_server_and_lists_the_known_ones() -> N
 
 
 async def test_the_mcp_rules_router_builds_and_warns_once(members: list[str]) -> None:
-    with pytest.warns(DeprecationWarning, match="rules.*one release.*data-driven.*router=None") as seen:
+    with pytest.warns(FutureWarning, match="rules.*one release.*data-driven.*router=None") as seen:
         tools = routed(**{ENV_MCP_ROUTER: "rules"})
         try:
             for _ in range(2):
