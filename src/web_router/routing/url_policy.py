@@ -118,12 +118,10 @@ def public_only(url: str) -> str | None:
     host = _as_browser_host(written)
     if host is None:
         return MSG_URL_AMBIGUOUS
-    if is_metadata(host):
-        return MSG_URL_METADATA
-    if is_loopback(host) or host.endswith(LOCALHOST_SUFFIX):
+    if host.endswith(LOCALHOST_SUFFIX):
         return MSG_URL_LOOPBACK
-    if is_private(host):
-        return MSG_URL_PRIVATE
+    if why := _address_refusal(host):
+        return why
     if numeric_host(host) and not _canonical_address(host):
         # 010.0.0.1: a browser reads octal, macOS's getaddrinfo decimal; 127.0.0.09, no octal, decimal there too.
         # No public URL needs such a spelling, whether or not inet_aton reads it.
@@ -131,6 +129,17 @@ def public_only(url: str) -> str | None:
     if host_address(host) is None:
         # A name is only as public as the addresses it resolves to; a literal address was judged as it stands.
         return _resolved_refusal(host)
+    return None
+
+
+def _address_refusal(address: str) -> str | None:
+    """Why ``address`` may not be fetched, or ``None`` when it is public."""
+    if is_metadata(address):
+        return MSG_URL_METADATA
+    if is_loopback(address):
+        return MSG_URL_LOOPBACK
+    if is_private(address):
+        return MSG_URL_PRIVATE
     return None
 
 
@@ -144,24 +153,14 @@ def _answers(host: str) -> frozenset[str] | None:
 
 
 def _resolved_refusal(host: str) -> str | None:
-    """Why the addresses ``host`` resolves to may not be fetched, or ``None``.
-
-    A name of anyone's choosing can point at loopback, the metadata service or a
-    private address, which the written host never shows. One lookup is enough:
-    large sites rotate their answers between queries, so comparing two would
-    refuse them although every address is public.
-    """
+    """Why ``host``'s addresses may not be fetched, or ``None``; one lookup suffices as public sites rotate answers."""
     addresses = _answers(host)
     if addresses is None:
         # A name that does not resolve here reaches nothing when fetched either.
         return None
     for address in addresses:
-        if is_metadata(address):
-            return MSG_URL_METADATA
-        if is_loopback(address):
-            return MSG_URL_LOOPBACK
-        if is_private(address):
-            return MSG_URL_PRIVATE
+        if why := _address_refusal(address):
+            return why
     return None
 
 

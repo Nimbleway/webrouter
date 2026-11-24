@@ -181,8 +181,7 @@ class SyncPlan(_Planner, SyncRouted):
 class AsyncPlan(_Planner, AsyncRouted):
     async def plan(self, prompt: str, *, budget: Budget | None = None, tool: ToolName | None = None) -> Plan:
         """As :meth:`SyncPlan.plan`, asking the router without blocking the event loop."""
-        # Planning screens URLs synchronously, so keep its DNS lookup off the loop.
-        parts = await asyncio.to_thread(self._plan_request, prompt, budget, tool)
+        parts = await asyncio.to_thread(self._plan_request, prompt, budget, tool)  # DNS lookup off the loop
         req = parts[0]
         outcome = await self._router.acall(req) if self._router is not None and self._asks(req) else None
         return self._planned(parts, outcome)
