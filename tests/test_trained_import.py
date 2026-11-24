@@ -118,3 +118,28 @@ def test_a_matching_staged_release_publishes_the_replay(tmp_path: Path, monkeypa
     assert table.read_bytes() == (source / importer.SOURCE_TABLE).read_bytes()
     assert json.loads(manifest.read_bytes())["version"] == "0.1.0"
     assert [json.loads(line) for line in gzip.decompress(golden.read_bytes()).splitlines()] == rows
+
+
+@pytest.mark.parametrize("existing", [True, False])
+def test_a_failed_replacement_rolls_back_publication(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing: bool
+) -> None:
+    source, _ = _delivery(tmp_path, [1, 2])
+    files = _installed(tmp_path, monkeypatch)
+    if not existing:
+        for path in files:
+            path.unlink()
+    replace = Path.replace
+
+    def fail_golden_replacement(path: Path, destination: Path) -> Path:
+        if destination == files[2]:
+            raise OSError("golden replacement failed")
+        return replace(path, destination)
+
+    monkeypatch.setattr(Path, "replace", fail_golden_replacement)
+    with pytest.raises(OSError, match="golden replacement failed"):
+        importer.import_release(source, "0.1.0", [["weather", [], "search"]])
+    if existing:
+        _assert_unchanged(files)
+    else:
+        assert not any(path.exists() for path in files)

@@ -113,9 +113,26 @@ def import_release(source: Path, version: str, rows: list[list[Any]]) -> list[st
             return wrong
         DATA.mkdir(parents=True, exist_ok=True)
         GOLDEN.parent.mkdir(parents=True, exist_ok=True)
-        for name in (TABLE_FILE, TRAINED_MANIFEST_FILE):
-            (staged / name).replace(DATA / name)
-        golden.replace(GOLDEN)
+        outputs = [(staged / name, DATA / name) for name in (TABLE_FILE, TRAINED_MANIFEST_FILE)]
+        outputs.append((golden, GOLDEN))
+        backups = {}
+        for index, (_, destination) in enumerate(outputs):
+            if destination.exists():
+                backup = staged / f"previous-{index}"
+                backup.write_bytes(destination.read_bytes())
+                backups[destination] = backup
+        published = []
+        try:
+            for artifact, destination in outputs:
+                artifact.replace(destination)
+                published.append(destination)
+        except OSError:
+            for destination in reversed(published):
+                if backup := backups.get(destination):
+                    backup.replace(destination)
+                else:
+                    destination.unlink()
+            raise
     return []
 
 
