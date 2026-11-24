@@ -103,7 +103,7 @@ def test_ready_for_review_uses_authenticated_head_status() -> None:
     assert result == Decision("ready", HEAD, "Qodo approved the current head")
 
 
-def test_ready_for_review_rejects_untrusted_label_history() -> None:
+def test_ready_for_review_keeps_an_existing_head_approval() -> None:
     result = decide(
         "ready_for_review",
         HEAD,
@@ -113,10 +113,10 @@ def test_ready_for_review_rejects_untrusted_label_history() -> None:
         qodo_status="success",
     )
 
-    assert result == Decision("hold", HEAD, "Qodo label was not applied by Qodo")
+    assert result == Decision("ready", HEAD, "Qodo approved the current head")
 
 
-def test_ready_for_review_requires_the_draft_head_status() -> None:
+def test_ready_for_review_can_authenticate_the_live_qodo_label() -> None:
     result = decide(
         "ready_for_review",
         HEAD,
@@ -125,7 +125,7 @@ def test_ready_for_review_requires_the_draft_head_status() -> None:
         label_actor_id=QODO_ACTOR_ID,
     )
 
-    assert result == Decision("hold", HEAD, "current head is not Qodo approved")
+    assert result == Decision("ready", HEAD, "Qodo approved the current head")
 
 
 def test_ready_for_review_without_qodo_approval_holds() -> None:
@@ -175,6 +175,24 @@ def test_qodo_label_removal_holds() -> None:
     result = decide("unlabeled", HEAD, QODO_LABEL, pull_request())
 
     assert result == Decision("hold", HEAD, "current head is not Qodo approved")
+
+
+def test_same_head_approval_survives_label_removal() -> None:
+    result = decide("unlabeled", HEAD, QODO_LABEL, pull_request(), qodo_status="success")
+
+    assert result == Decision("ready", HEAD, "Qodo approved the current head")
+
+
+def test_same_head_draft_approval_survives_label_removal() -> None:
+    result = decide(
+        "converted_to_draft",
+        HEAD,
+        None,
+        pull_request(draft=True),
+        qodo_status="success",
+    )
+
+    assert result == Decision("approve", HEAD, "Qodo approved the current draft head")
 
 
 def test_stale_qodo_label_removal_cannot_undo_a_newer_approval() -> None:

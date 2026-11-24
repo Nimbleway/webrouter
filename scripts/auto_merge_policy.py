@@ -37,7 +37,7 @@ def decide(
         return Decision("reset", head, "new pull request state")
     if action == "edited" and previous_base:
         return Decision("reset", head, "base changed to main")
-    return _current_state_decision(action, head, pull_request, label_actor_id, qodo_status)
+    return _current_state_decision(head, pull_request, label_actor_id, qodo_status)
 
 
 def _guard_event(
@@ -59,20 +59,21 @@ def _guard_event(
 
 
 def _current_state_decision(
-    action: str,
     head: str,
     pull_request: dict[str, object],
     label_actor_id: str | None,
     qodo_status: str | None,
 ) -> Decision:
+    if qodo_status == "success":
+        if pull_request.get("draft") is True:
+            return Decision("approve", head, "Qodo approved the current draft head")
+        return Decision("ready", head, "Qodo approved the current head")
     if QODO_LABEL not in _label_names(pull_request):
         return Decision("hold", head, "current head is not Qodo approved")
     if label_actor_id != QODO_ACTOR_ID:
         return Decision("hold", head, "Qodo label was not applied by Qodo")
     if pull_request.get("draft") is True:
         return Decision("approve", head, "Qodo approved the current draft head")
-    if action == "ready_for_review" and qodo_status != "success":
-        return Decision("hold", head, "current head is not Qodo approved")
     return Decision("ready", head, "Qodo approved the current head")
 
 

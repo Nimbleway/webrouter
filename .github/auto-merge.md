@@ -28,14 +28,15 @@ trusted default branch and never checks out or executes pull-request code. It al
 request again before every ready transition and pins the auto-merge request with
 `--match-head-commit`.
 
-The label is accepted only when GitHub records Qodo's bot account, ID `151058649`, as its actor. On a
-draft pull request, that authenticated event records `qodo-ready` success on the exact head without
-arming auto-merge. When the pull request becomes ready, the controller requires the label's latest
-timeline actor and the current head's App-produced status to match before it arms auto-merge.
-Every accepted pull-request event re-reads that live timeline state. This means a later queued event
-cannot hide a removed or collaborator-reapplied label by replacing the original label event.
-Qodo owns its label lifecycle and removes approval on a new push. The controller never deletes that
-label, so a delayed reset cannot erase a newer approval; it only resets its own head-bound status.
+The label is accepted only when GitHub records Qodo's bot account, ID `151058649`, as its actor. It is
+an authenticated approval event, not the durable merge gate. The controller App records that approval
+as `qodo-ready` success on the exact commit. Once recorded, same-head label removal does not revoke
+the approval; only a new head needs a new approval and receives its own pending status.
+
+Before that durable status exists, every accepted pull-request event re-reads the live label timeline.
+This means a later queued event cannot hide a removed or collaborator-reapplied label by replacing
+the original label event. Qodo owns its label lifecycle and removes approval on a new push. The
+controller never deletes that label, so a delayed reset cannot erase a newer approval.
 
 ## Scope
 
@@ -84,7 +85,8 @@ also leaves the status pending. Stale webhook events and pull requests that neve
 make no changes; a pull request retargeted away from `main` has auto-merge disabled.
 
 Converting an approved head back to draft disables auto-merge but preserves the authenticated,
-head-bound `qodo-ready` success so the same unchanged head can become ready again.
+head-bound `qodo-ready` success so the same unchanged head can become ready again. A manual label
+removal on that same commit likewise does not revoke the recorded approval; pushing a commit does.
 
 To roll back automation, disable or remove the workflow and remove `qodo-ready` from required checks.
 Existing branch protection continues to block merges that lack CI, approval, or resolved conversations.
