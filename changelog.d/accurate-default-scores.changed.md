@@ -1,1 +1,0 @@
-`prefer="accurate"` now uses the shipped search and answer accuracy scores when `accuracy=` is omitted. Explicit scores replace the shipped set; an empty set is refused. Methods without shipped scores keep their default order. Model routers asked to favor accuracy by a router service also receive the shipped scores.
